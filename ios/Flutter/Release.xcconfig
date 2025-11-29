@@ -1,1 +1,5 @@
 #include "Generated.xcconfig"
+
+// Development Team ID
+// You can set this via environment variable or uncomment and set it here to configure code signing.
+// DEVELOPMENT_TEAM = YOUR_TEAM_ID
