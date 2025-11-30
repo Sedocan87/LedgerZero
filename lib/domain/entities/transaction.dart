@@ -72,6 +72,39 @@ class Transaction {
     this.updatedAt,
   });
 
+  /// Creates a copy of this [Transaction] but with the given fields replaced with the new values.
+  Transaction copyWith({
+    String? id,
+    String? accountId,
+    DateTime? date,
+    double? amount,
+    String? payeeId,
+    String? categoryId,
+    String? memo,
+    TransactionClearStatus? cleared,
+    bool? approved,
+    String? transferAccountId,
+    String? transferTransactionId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Transaction(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      date: date ?? this.date,
+      amount: amount ?? this.amount,
+      payeeId: payeeId ?? this.payeeId,
+      categoryId: categoryId ?? this.categoryId,
+      memo: memo ?? this.memo,
+      cleared: cleared ?? this.cleared,
+      approved: approved ?? this.approved,
+      transferAccountId: transferAccountId ?? this.transferAccountId,
+      transferTransactionId: transferTransactionId ?? this.transferTransactionId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   /// Creates a [Transaction] from a JSON object.
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(

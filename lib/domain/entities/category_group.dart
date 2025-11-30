@@ -22,6 +22,21 @@ class CategoryGroup {
     this.createdAt,
   });
 
+  /// Creates a copy of this [CategoryGroup] but with the given fields replaced with the new values.
+  CategoryGroup copyWith({
+    String? id,
+    String? name,
+    int? sortOrder,
+    DateTime? createdAt,
+  }) {
+    return CategoryGroup(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   /// Creates a [CategoryGroup] from a JSON object.
   factory CategoryGroup.fromJson(Map<String, dynamic> json) {
     return CategoryGroup(

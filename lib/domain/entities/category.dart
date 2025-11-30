@@ -30,6 +30,25 @@ class Category {
     this.createdAt,
   });
 
+  /// Creates a copy of this [Category] but with the given fields replaced with the new values.
+  Category copyWith({
+    String? id,
+    String? name,
+    String? categoryGroupId,
+    bool? isHidden,
+    int? sortOrder,
+    DateTime? createdAt,
+  }) {
+    return Category(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      categoryGroupId: categoryGroupId ?? this.categoryGroupId,
+      isHidden: isHidden ?? this.isHidden,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   /// Creates a [Category] from a JSON object.
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
