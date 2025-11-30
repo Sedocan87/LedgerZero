@@ -81,6 +81,25 @@ void main() {
       expect(fromJson.updatedAt, account.updatedAt);
     });
 
+    test('should handle missing optional fields during serialization', () {
+      final json = {
+        'id': '1',
+        'name': 'Test Account',
+        'type': 'checking',
+      };
+
+      final account = Account.fromJson(json);
+      expect(account.id, '1');
+      expect(account.name, 'Test Account');
+      expect(account.type, AccountType.checking);
+      expect(account.currency, 'USD'); // Default
+      expect(account.startingBalance, 0.0); // Default
+      expect(account.currentBalance, 0.0); // Default
+      expect(account.isClosed, false); // Default
+      expect(account.createdAt, isNull);
+      expect(account.updatedAt, isNull);
+    });
+
     test('should support equality', () {
       final account1 = Account(
         id: '1',
@@ -106,15 +125,26 @@ void main() {
         updatedAt: DateTime(2023, 1, 2),
       );
 
-      final account3 = Account(
+      const account3 = Account(
         id: '2',
         name: 'Other Account',
         type: AccountType.savings,
       );
 
+      // Reflexive
+      expect(account1, equals(account1));
+
+      // Symmetric
       expect(account1, equals(account2));
+      expect(account2, equals(account1));
+
+      // HashCode
       expect(account1.hashCode, equals(account2.hashCode));
+
+      // Not Equal
       expect(account1, isNot(equals(account3)));
+      expect(account1, isNot(equals('Not an Account')));
+      expect(account1, isNot(equals(null)));
     });
   });
 }

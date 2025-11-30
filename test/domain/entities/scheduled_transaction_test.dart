@@ -87,6 +87,24 @@ void main() {
       expect(fromJson.createdAt, scheduledTransaction.createdAt);
     });
 
+    test('should handle missing optional fields during serialization', () {
+      final json = {
+        'id': '1',
+      };
+
+      final scheduledTransaction = ScheduledTransaction.fromJson(json);
+      expect(scheduledTransaction.id, '1');
+      expect(scheduledTransaction.accountId, isNull);
+      expect(scheduledTransaction.payeeId, isNull);
+      expect(scheduledTransaction.categoryId, isNull);
+      expect(scheduledTransaction.amount, isNull);
+      expect(scheduledTransaction.frequency, isNull);
+      expect(scheduledTransaction.nextDate, isNull);
+      expect(scheduledTransaction.endDate, isNull);
+      expect(scheduledTransaction.autoApprove, false); // Default
+      expect(scheduledTransaction.createdAt, isNull);
+    });
+
     test('should support equality', () {
       final now = DateTime(2023, 10, 1);
       final scheduledTransaction1 = ScheduledTransaction(
@@ -115,14 +133,25 @@ void main() {
         createdAt: now,
       );
 
-      final scheduledTransaction3 = ScheduledTransaction(
+      const scheduledTransaction3 = ScheduledTransaction(
         id: '2',
         accountId: 'acc2',
       );
 
+      // Reflexive
+      expect(scheduledTransaction1, equals(scheduledTransaction1));
+
+      // Symmetric
       expect(scheduledTransaction1, equals(scheduledTransaction2));
+      expect(scheduledTransaction2, equals(scheduledTransaction1));
+
+      // HashCode
       expect(scheduledTransaction1.hashCode, equals(scheduledTransaction2.hashCode));
+
+      // Not Equal
       expect(scheduledTransaction1, isNot(equals(scheduledTransaction3)));
+      expect(scheduledTransaction1, isNot(equals('Not a ScheduledTransaction')));
+      expect(scheduledTransaction1, isNot(equals(null)));
     });
   });
 }

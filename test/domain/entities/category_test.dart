@@ -64,6 +64,21 @@ void main() {
       expect(fromJson.createdAt, category.createdAt);
     });
 
+    test('should handle missing optional fields during serialization', () {
+      final json = {
+        'id': '1',
+        'name': 'Groceries',
+      };
+
+      final category = Category.fromJson(json);
+      expect(category.id, '1');
+      expect(category.name, 'Groceries');
+      expect(category.categoryGroupId, isNull);
+      expect(category.isHidden, false); // Default
+      expect(category.sortOrder, isNull);
+      expect(category.createdAt, isNull);
+    });
+
     test('should support equality', () {
       final now = DateTime(2023, 10, 1);
       final category1 = Category(
@@ -84,14 +99,25 @@ void main() {
         createdAt: now,
       );
 
-      final category3 = Category(
+      const category3 = Category(
         id: '2',
         name: 'Rent',
       );
 
+      // Reflexive
+      expect(category1, equals(category1));
+
+      // Symmetric
       expect(category1, equals(category2));
+      expect(category2, equals(category1));
+
+      // HashCode
       expect(category1.hashCode, equals(category2.hashCode));
+
+      // Not Equal
       expect(category1, isNot(equals(category3)));
+      expect(category1, isNot(equals('Not a Category')));
+      expect(category1, isNot(equals(null)));
     });
   });
 }

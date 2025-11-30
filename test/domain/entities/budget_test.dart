@@ -76,6 +76,23 @@ void main() {
       expect(fromJson.updatedAt, budget.updatedAt);
     });
 
+    test('should handle missing optional fields during serialization', () {
+      final json = {
+        'id': '1',
+        'month': '2023-10',
+      };
+
+      final budget = Budget.fromJson(json);
+      expect(budget.id, '1');
+      expect(budget.categoryId, isNull);
+      expect(budget.month, '2023-10');
+      expect(budget.budgeted, 0.0); // Default
+      expect(budget.activity, 0.0); // Default
+      expect(budget.available, 0.0); // Default
+      expect(budget.createdAt, isNull);
+      expect(budget.updatedAt, isNull);
+    });
+
     test('should support equality', () {
       final now = DateTime(2023, 10, 1);
       final budget1 = Budget(
@@ -100,14 +117,25 @@ void main() {
         updatedAt: now,
       );
 
-      final budget3 = Budget(
+      const budget3 = Budget(
         id: '2',
         month: '2023-11',
       );
 
+      // Reflexive
+      expect(budget1, equals(budget1));
+
+      // Symmetric
       expect(budget1, equals(budget2));
+      expect(budget2, equals(budget1));
+
+      // HashCode
       expect(budget1.hashCode, equals(budget2.hashCode));
+
+      // Not Equal
       expect(budget1, isNot(equals(budget3)));
+      expect(budget1, isNot(equals('Not a Budget')));
+      expect(budget1, isNot(equals(null)));
     });
   });
 }
