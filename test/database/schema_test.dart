@@ -41,10 +41,10 @@ void main() {
         const CategoryGroupsCompanion(id: Value('grp_1'), name: Value('Living')),
       );
 
-      final category = CategoriesCompanion(
-        id: const Value('cat_1'),
-        name: const Value('Groceries'),
-        categoryGroupId: const Value('grp_1'),
+      const category = CategoriesCompanion(
+        id: Value('cat_1'),
+        name: Value('Groceries'),
+        categoryGroupId: Value('grp_1'),
       );
       await database.into(database.categories).insert(category);
       final result = await database.select(database.categories).getSingle();
@@ -78,10 +78,10 @@ void main() {
         const CategoriesCompanion(id: Value('cat_1'), name: Value('Groceries'), categoryGroupId: Value('grp_1')),
       );
 
-      final budget = BudgetsCompanion(
-        id: const Value('bud_1'),
-        categoryId: const Value('cat_1'),
-        month: const Value('2023-01'),
+      const budget = BudgetsCompanion(
+        id: Value('bud_1'),
+        categoryId: Value('cat_1'),
+        month: Value('2023-01'),
       );
       await database.into(database.budgets).insert(budget);
       final result = await database.select(database.budgets).getSingle();
@@ -92,8 +92,8 @@ void main() {
     });
 
     test('should create scheduled_transactions with default values', () async {
-      final sch = ScheduledTransactionsCompanion(
-        id: const Value('sch_1'),
+      const sch = ScheduledTransactionsCompanion(
+        id: Value('sch_1'),
       );
       await database.into(database.scheduledTransactions).insert(sch);
       final result = await database.select(database.scheduledTransactions).getSingle();
