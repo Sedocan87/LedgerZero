@@ -8,9 +8,7 @@ void main() {
 
   setUp(() {
     // Enable foreign keys for in-memory database
-    database = AppDatabase(NativeDatabase.memory(setup: (db) {
-      db.execute('PRAGMA foreign_keys = ON');
-    }));
+    database = AppDatabase(NativeDatabase.memory());
   });
 
   tearDown(() async {
