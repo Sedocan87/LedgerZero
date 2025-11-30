@@ -2,6 +2,9 @@ import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/tables/accounts.dart';
 import 'package:ledger_zero/data/database/tables/categories.dart';
 
+@TableIndex(name: 'idx_transactions_account', columns: {#accountId})
+@TableIndex(name: 'idx_transactions_date', columns: {#date})
+@TableIndex(name: 'idx_transactions_category', columns: {#categoryId})
 class Transactions extends Table {
   TextColumn get id => text()();
 

@@ -4046,6 +4046,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_budgets_month',
     'CREATE INDEX idx_budgets_month ON budgets (month)',
   );
+  late final Index idxTransactionsAccount = Index(
+    'idx_transactions_account',
+    'CREATE INDEX idx_transactions_account ON transactions (account_id)',
+  );
+  late final Index idxTransactionsDate = Index(
+    'idx_transactions_date',
+    'CREATE INDEX idx_transactions_date ON transactions (date)',
+  );
+  late final Index idxTransactionsCategory = Index(
+    'idx_transactions_category',
+    'CREATE INDEX idx_transactions_category ON transactions (category_id)',
+  );
   late final Index idxSyncLogApplied = Index(
     'idx_sync_log_applied',
     'CREATE INDEX idx_sync_log_applied ON sync_log (applied_at)',
@@ -4064,6 +4076,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     scheduledTransactions,
     syncLog,
     idxBudgetsMonth,
+    idxTransactionsAccount,
+    idxTransactionsDate,
+    idxTransactionsCategory,
     idxSyncLogApplied,
   ];
   @override
