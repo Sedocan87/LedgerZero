@@ -125,4 +125,20 @@ class Budget {
       updatedAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'Budget(id: $id, categoryId: $categoryId, month: $month, budgeted: $budgeted, activity: $activity, available: $available, createdAt: $createdAt, updatedAt: $updatedAt)';
+  }
+
+  /// Validates the [Budget] entity.
+  ///
+  /// Returns a list of error messages. If the list is empty, the entity is valid.
+  List<String> validate() {
+    final errors = <String>[];
+    if (!RegExp(r'^\d{4}-\d{2}$').hasMatch(month)) {
+      errors.add('Month must be in YYYY-MM format');
+    }
+    return errors;
+  }
 }

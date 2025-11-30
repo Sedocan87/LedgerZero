@@ -148,4 +148,23 @@ class Account {
       updatedAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, currentBalance: $currentBalance, isClosed: $isClosed, createdAt: $createdAt, updatedAt: $updatedAt)';
+  }
+
+  /// Validates the [Account] entity.
+  ///
+  /// Returns a list of error messages. If the list is empty, the entity is valid.
+  List<String> validate() {
+    final errors = <String>[];
+    if (name.trim().isEmpty) {
+      errors.add('Account name cannot be empty');
+    }
+    if (currency.length != 3) {
+      errors.add('Currency code must be 3 characters');
+    }
+    return errors;
+  }
 }
