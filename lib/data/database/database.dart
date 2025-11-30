@@ -2,10 +2,11 @@ import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/tables/accounts.dart';
 import 'package:ledger_zero/data/database/tables/categories.dart';
+import 'package:ledger_zero/data/database/tables/category_groups.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Accounts, Categories])
+@DriftDatabase(tables: [Accounts, Categories, CategoryGroups])
 class AppDatabase extends _$AppDatabase {
   // The QueryExecutor is passed to the super constructor.
   // This allows us to use different executors for testing (e.g. in-memory)
