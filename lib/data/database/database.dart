@@ -6,6 +6,7 @@ import 'package:ledger_zero/data/database/tables/categories.dart';
 import 'package:ledger_zero/data/database/tables/category_groups.dart';
 import 'package:ledger_zero/data/database/tables/payees.dart';
 import 'package:ledger_zero/data/database/tables/scheduled_transactions.dart';
+import 'package:ledger_zero/data/database/tables/sync_log.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
 
 part 'database.g.dart';
@@ -18,6 +19,7 @@ part 'database.g.dart';
   Transactions,
   Payees,
   ScheduledTransactions,
+  SyncLog,
 ])
 class AppDatabase extends _$AppDatabase {
   // The QueryExecutor is passed to the super constructor.
