@@ -108,6 +108,30 @@ void main() {
       expect(fromJson.updatedAt, transaction.updatedAt);
     });
 
+    test('should handle missing optional fields during serialization', () {
+      final json = {
+        'id': 'tx1',
+        'account_id': 'acc1',
+        'date': '2023-10-27T00:00:00.000',
+        'amount': -50.0,
+      };
+
+      final transaction = Transaction.fromJson(json);
+      expect(transaction.id, 'tx1');
+      expect(transaction.accountId, 'acc1');
+      expect(transaction.date, DateTime(2023, 10, 27));
+      expect(transaction.amount, -50.0);
+      expect(transaction.payeeId, isNull);
+      expect(transaction.categoryId, isNull);
+      expect(transaction.memo, isNull);
+      expect(transaction.cleared, TransactionClearStatus.uncleared); // Default
+      expect(transaction.approved, true); // Default
+      expect(transaction.transferAccountId, isNull);
+      expect(transaction.transferTransactionId, isNull);
+      expect(transaction.createdAt, isNull);
+      expect(transaction.updatedAt, isNull);
+    });
+
     test('should support equality', () {
       final now = DateTime(2023, 10, 1);
       final transaction1 = Transaction(
@@ -149,9 +173,20 @@ void main() {
         amount: 100.0,
       );
 
+      // Reflexive
+      expect(transaction1, equals(transaction1));
+
+      // Symmetric
       expect(transaction1, equals(transaction2));
+      expect(transaction2, equals(transaction1));
+
+      // HashCode
       expect(transaction1.hashCode, equals(transaction2.hashCode));
+
+      // Not Equal
       expect(transaction1, isNot(equals(transaction3)));
+      expect(transaction1, isNot(equals('Not a Transaction')));
+      expect(transaction1, isNot(equals(null)));
     });
   });
 }

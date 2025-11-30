@@ -52,6 +52,19 @@ void main() {
       expect(fromJson.createdAt, payee.createdAt);
     });
 
+    test('should handle missing optional fields during serialization', () {
+      final json = {
+        'id': '1',
+        'name': 'Test Payee',
+      };
+
+      final payee = Payee.fromJson(json);
+      expect(payee.id, '1');
+      expect(payee.name, 'Test Payee');
+      expect(payee.autoCategoryId, isNull);
+      expect(payee.createdAt, isNull);
+    });
+
     test('should support equality', () {
       final now = DateTime(2023, 10, 1);
       final payee1 = Payee(
@@ -68,14 +81,25 @@ void main() {
         createdAt: now,
       );
 
-      final payee3 = Payee(
+      const payee3 = Payee(
         id: '2',
         name: 'Other Payee',
       );
 
+      // Reflexive
+      expect(payee1, equals(payee1));
+
+      // Symmetric
       expect(payee1, equals(payee2));
+      expect(payee2, equals(payee1));
+
+      // HashCode
       expect(payee1.hashCode, equals(payee2.hashCode));
+
+      // Not Equal
       expect(payee1, isNot(equals(payee3)));
+      expect(payee1, isNot(equals('Not a Payee')));
+      expect(payee1, isNot(equals(null)));
     });
   });
 }
