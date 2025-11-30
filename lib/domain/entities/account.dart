@@ -1,0 +1,59 @@
+/// The type of an account.
+enum AccountType {
+  /// Checking account.
+  checking,
+
+  /// Savings account.
+  savings,
+
+  /// Credit card account.
+  credit,
+
+  /// Cash account.
+  cash,
+}
+
+/// Represents a financial account in the LedgerZero application.
+///
+/// An account holds transactions and has a balance.
+class Account {
+  /// The unique identifier of the account.
+  final String id;
+
+  /// The name of the account.
+  final String name;
+
+  /// The type of the account.
+  final AccountType type;
+
+  /// The currency code of the account (e.g., 'USD').
+  final String currency;
+
+  /// The starting balance of the account.
+  final double startingBalance;
+
+  /// The current balance of the account.
+  final double currentBalance;
+
+  /// Whether the account is closed.
+  final bool isClosed;
+
+  /// The date and time when the account was created.
+  final DateTime? createdAt;
+
+  /// The date and time when the account was last updated.
+  final DateTime? updatedAt;
+
+  /// Creates a new [Account] instance.
+  const Account({
+    required this.id,
+    required this.name,
+    required this.type,
+    this.currency = 'USD',
+    this.startingBalance = 0.0,
+    this.currentBalance = 0.0,
+    this.isClosed = false,
+    this.createdAt,
+    this.updatedAt,
+  });
+}
