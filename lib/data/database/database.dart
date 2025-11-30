@@ -9,18 +9,37 @@ import 'package:ledger_zero/data/database/tables/scheduled_transactions.dart';
 import 'package:ledger_zero/data/database/tables/sync_log.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
 
+import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
+import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
+import 'package:ledger_zero/data/database/daos/categories_dao.dart';
+import 'package:ledger_zero/data/database/daos/payees_dao.dart';
+import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
+import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
+import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
+
 part 'database.g.dart';
 
-@DriftDatabase(tables: [
-  Accounts,
-  Budgets,
-  Categories,
-  CategoryGroups,
-  Transactions,
-  Payees,
-  ScheduledTransactions,
-  SyncLog,
-])
+@DriftDatabase(
+  tables: [
+    Accounts,
+    Budgets,
+    Categories,
+    CategoryGroups,
+    Transactions,
+    Payees,
+    ScheduledTransactions,
+    SyncLog,
+  ],
+  daos: [
+    AccountsDao,
+    BudgetsDao,
+    CategoriesDao,
+    PayeesDao,
+    ScheduledTransactionsDao,
+    SyncLogDao,
+    TransactionsDao,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   // The QueryExecutor is passed to the super constructor.
   // This allows us to use different executors for testing (e.g. in-memory)

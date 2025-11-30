@@ -4068,6 +4068,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_sync_log_applied',
     'CREATE INDEX idx_sync_log_applied ON sync_log (applied_at)',
   );
+  late final AccountsDao accountsDao = AccountsDao(this as AppDatabase);
+  late final BudgetsDao budgetsDao = BudgetsDao(this as AppDatabase);
+  late final CategoriesDao categoriesDao = CategoriesDao(this as AppDatabase);
+  late final PayeesDao payeesDao = PayeesDao(this as AppDatabase);
+  late final ScheduledTransactionsDao scheduledTransactionsDao =
+      ScheduledTransactionsDao(this as AppDatabase);
+  late final SyncLogDao syncLogDao = SyncLogDao(this as AppDatabase);
+  late final TransactionsDao transactionsDao = TransactionsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
