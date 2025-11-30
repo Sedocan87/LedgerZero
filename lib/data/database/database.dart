@@ -30,6 +30,9 @@ class AppDatabase extends _$AppDatabase {
   // Default connection for the application
   AppDatabase.defaultConnection() : super(openConnection());
 
+  static final AppDatabase _instance = AppDatabase.defaultConnection();
+  static AppDatabase get instance => _instance;
+
   @override
   int get schemaVersion => 1;
 
