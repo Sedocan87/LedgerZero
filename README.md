@@ -304,6 +304,26 @@ dev_dependencies:
   integration_test: sdk: flutter
 ```
 
+## Internationalization Setup (Crucial for Europe/Germany)
+
+### Add Localization Packages
+- Run `flutter pub add flutter_localizations intl`.
+- Enable `generate: true` in your `pubspec.yaml`.
+
+### Configure L10n
+- Create a file `l10n.yaml` in root.
+- Set `template-arb-file: app_en.arb`.
+- Set `output-localization-file: app_localizations.dart`.
+
+### Create Language Files
+- Create `lib/l10n/app_en.arb` (English) and `lib/l10n/app_de.arb` (German).
+
+### Rule
+Never hardcode text like `Text("Budget")` in widgets. Always use `Text(AppLocalizations.of(context)!.budget)`.
+
+### Why
+It allows you to switch languages instantly and handles date formats automatically.
+
 ## Database Schema
 
 ### Tables

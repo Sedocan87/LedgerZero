@@ -160,6 +160,15 @@ This document breaks down the LedgerZero development into 5 phases with granular
 **Task 119:** Optimize transaction query performance  
 **Task 120:** Document transaction lifecycle  
 
+### Internationalization Setup
+
+**Task 120.1:** Add localization dependencies (flutter_localizations, intl)
+**Task 120.2:** Enable code generation in pubspec.yaml (generate: true)
+**Task 120.3:** Create l10n.yaml configuration file
+**Task 120.4:** Configure l10n.yaml (template-arb-file, output-localization-file)
+**Task 120.5:** Create initial ARB files (app_en.arb, app_de.arb)
+**Task 120.6:** Document L10n usage rule (AppLocalizations.of(context))
+
 ### App Theme & Design System
 
 **Task 121:** Create app color palette (primary, secondary, accent colors)  
