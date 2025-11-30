@@ -3546,6 +3546,490 @@ class ScheduledTransactionsCompanion
   }
 }
 
+class $SyncLogTable extends SyncLog with TableInfo<$SyncLogTable, SyncLogData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncLogTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deltaFilenameMeta = const VerificationMeta(
+    'deltaFilename',
+  );
+  @override
+  late final GeneratedColumn<String> deltaFilename = GeneratedColumn<String>(
+    'delta_filename',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _actionMeta = const VerificationMeta('action');
+  @override
+  late final GeneratedColumn<String> action = GeneratedColumn<String>(
+    'action',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetTableNameMeta = const VerificationMeta(
+    'targetTableName',
+  );
+  @override
+  late final GeneratedColumn<String> targetTableName = GeneratedColumn<String>(
+    'table_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _recordIdMeta = const VerificationMeta(
+    'recordId',
+  );
+  @override
+  late final GeneratedColumn<String> recordId = GeneratedColumn<String>(
+    'record_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _appliedAtMeta = const VerificationMeta(
+    'appliedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> appliedAt = GeneratedColumn<DateTime>(
+    'applied_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deviceUuidMeta = const VerificationMeta(
+    'deviceUuid',
+  );
+  @override
+  late final GeneratedColumn<String> deviceUuid = GeneratedColumn<String>(
+    'device_uuid',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    deltaFilename,
+    action,
+    targetTableName,
+    recordId,
+    appliedAt,
+    deviceUuid,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_log';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncLogData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('delta_filename')) {
+      context.handle(
+        _deltaFilenameMeta,
+        deltaFilename.isAcceptableOrUnknown(
+          data['delta_filename']!,
+          _deltaFilenameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('action')) {
+      context.handle(
+        _actionMeta,
+        action.isAcceptableOrUnknown(data['action']!, _actionMeta),
+      );
+    }
+    if (data.containsKey('table_name')) {
+      context.handle(
+        _targetTableNameMeta,
+        targetTableName.isAcceptableOrUnknown(
+          data['table_name']!,
+          _targetTableNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('record_id')) {
+      context.handle(
+        _recordIdMeta,
+        recordId.isAcceptableOrUnknown(data['record_id']!, _recordIdMeta),
+      );
+    }
+    if (data.containsKey('applied_at')) {
+      context.handle(
+        _appliedAtMeta,
+        appliedAt.isAcceptableOrUnknown(data['applied_at']!, _appliedAtMeta),
+      );
+    }
+    if (data.containsKey('device_uuid')) {
+      context.handle(
+        _deviceUuidMeta,
+        deviceUuid.isAcceptableOrUnknown(data['device_uuid']!, _deviceUuidMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SyncLogData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncLogData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      deltaFilename: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}delta_filename'],
+      ),
+      action: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}action'],
+      ),
+      targetTableName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}table_name'],
+      ),
+      recordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_id'],
+      ),
+      appliedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}applied_at'],
+      ),
+      deviceUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_uuid'],
+      ),
+    );
+  }
+
+  @override
+  $SyncLogTable createAlias(String alias) {
+    return $SyncLogTable(attachedDatabase, alias);
+  }
+}
+
+class SyncLogData extends DataClass implements Insertable<SyncLogData> {
+  final String id;
+  final String? deltaFilename;
+  final String? action;
+  final String? targetTableName;
+  final String? recordId;
+  final DateTime? appliedAt;
+  final String? deviceUuid;
+  const SyncLogData({
+    required this.id,
+    this.deltaFilename,
+    this.action,
+    this.targetTableName,
+    this.recordId,
+    this.appliedAt,
+    this.deviceUuid,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || deltaFilename != null) {
+      map['delta_filename'] = Variable<String>(deltaFilename);
+    }
+    if (!nullToAbsent || action != null) {
+      map['action'] = Variable<String>(action);
+    }
+    if (!nullToAbsent || targetTableName != null) {
+      map['table_name'] = Variable<String>(targetTableName);
+    }
+    if (!nullToAbsent || recordId != null) {
+      map['record_id'] = Variable<String>(recordId);
+    }
+    if (!nullToAbsent || appliedAt != null) {
+      map['applied_at'] = Variable<DateTime>(appliedAt);
+    }
+    if (!nullToAbsent || deviceUuid != null) {
+      map['device_uuid'] = Variable<String>(deviceUuid);
+    }
+    return map;
+  }
+
+  SyncLogCompanion toCompanion(bool nullToAbsent) {
+    return SyncLogCompanion(
+      id: Value(id),
+      deltaFilename: deltaFilename == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deltaFilename),
+      action: action == null && nullToAbsent
+          ? const Value.absent()
+          : Value(action),
+      targetTableName: targetTableName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetTableName),
+      recordId: recordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recordId),
+      appliedAt: appliedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(appliedAt),
+      deviceUuid: deviceUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceUuid),
+    );
+  }
+
+  factory SyncLogData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncLogData(
+      id: serializer.fromJson<String>(json['id']),
+      deltaFilename: serializer.fromJson<String?>(json['deltaFilename']),
+      action: serializer.fromJson<String?>(json['action']),
+      targetTableName: serializer.fromJson<String?>(json['targetTableName']),
+      recordId: serializer.fromJson<String?>(json['recordId']),
+      appliedAt: serializer.fromJson<DateTime?>(json['appliedAt']),
+      deviceUuid: serializer.fromJson<String?>(json['deviceUuid']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'deltaFilename': serializer.toJson<String?>(deltaFilename),
+      'action': serializer.toJson<String?>(action),
+      'targetTableName': serializer.toJson<String?>(targetTableName),
+      'recordId': serializer.toJson<String?>(recordId),
+      'appliedAt': serializer.toJson<DateTime?>(appliedAt),
+      'deviceUuid': serializer.toJson<String?>(deviceUuid),
+    };
+  }
+
+  SyncLogData copyWith({
+    String? id,
+    Value<String?> deltaFilename = const Value.absent(),
+    Value<String?> action = const Value.absent(),
+    Value<String?> targetTableName = const Value.absent(),
+    Value<String?> recordId = const Value.absent(),
+    Value<DateTime?> appliedAt = const Value.absent(),
+    Value<String?> deviceUuid = const Value.absent(),
+  }) => SyncLogData(
+    id: id ?? this.id,
+    deltaFilename: deltaFilename.present
+        ? deltaFilename.value
+        : this.deltaFilename,
+    action: action.present ? action.value : this.action,
+    targetTableName: targetTableName.present
+        ? targetTableName.value
+        : this.targetTableName,
+    recordId: recordId.present ? recordId.value : this.recordId,
+    appliedAt: appliedAt.present ? appliedAt.value : this.appliedAt,
+    deviceUuid: deviceUuid.present ? deviceUuid.value : this.deviceUuid,
+  );
+  SyncLogData copyWithCompanion(SyncLogCompanion data) {
+    return SyncLogData(
+      id: data.id.present ? data.id.value : this.id,
+      deltaFilename: data.deltaFilename.present
+          ? data.deltaFilename.value
+          : this.deltaFilename,
+      action: data.action.present ? data.action.value : this.action,
+      targetTableName: data.targetTableName.present
+          ? data.targetTableName.value
+          : this.targetTableName,
+      recordId: data.recordId.present ? data.recordId.value : this.recordId,
+      appliedAt: data.appliedAt.present ? data.appliedAt.value : this.appliedAt,
+      deviceUuid: data.deviceUuid.present
+          ? data.deviceUuid.value
+          : this.deviceUuid,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncLogData(')
+          ..write('id: $id, ')
+          ..write('deltaFilename: $deltaFilename, ')
+          ..write('action: $action, ')
+          ..write('targetTableName: $targetTableName, ')
+          ..write('recordId: $recordId, ')
+          ..write('appliedAt: $appliedAt, ')
+          ..write('deviceUuid: $deviceUuid')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    deltaFilename,
+    action,
+    targetTableName,
+    recordId,
+    appliedAt,
+    deviceUuid,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncLogData &&
+          other.id == this.id &&
+          other.deltaFilename == this.deltaFilename &&
+          other.action == this.action &&
+          other.targetTableName == this.targetTableName &&
+          other.recordId == this.recordId &&
+          other.appliedAt == this.appliedAt &&
+          other.deviceUuid == this.deviceUuid);
+}
+
+class SyncLogCompanion extends UpdateCompanion<SyncLogData> {
+  final Value<String> id;
+  final Value<String?> deltaFilename;
+  final Value<String?> action;
+  final Value<String?> targetTableName;
+  final Value<String?> recordId;
+  final Value<DateTime?> appliedAt;
+  final Value<String?> deviceUuid;
+  final Value<int> rowid;
+  const SyncLogCompanion({
+    this.id = const Value.absent(),
+    this.deltaFilename = const Value.absent(),
+    this.action = const Value.absent(),
+    this.targetTableName = const Value.absent(),
+    this.recordId = const Value.absent(),
+    this.appliedAt = const Value.absent(),
+    this.deviceUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncLogCompanion.insert({
+    required String id,
+    this.deltaFilename = const Value.absent(),
+    this.action = const Value.absent(),
+    this.targetTableName = const Value.absent(),
+    this.recordId = const Value.absent(),
+    this.appliedAt = const Value.absent(),
+    this.deviceUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id);
+  static Insertable<SyncLogData> custom({
+    Expression<String>? id,
+    Expression<String>? deltaFilename,
+    Expression<String>? action,
+    Expression<String>? targetTableName,
+    Expression<String>? recordId,
+    Expression<DateTime>? appliedAt,
+    Expression<String>? deviceUuid,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (deltaFilename != null) 'delta_filename': deltaFilename,
+      if (action != null) 'action': action,
+      if (targetTableName != null) 'table_name': targetTableName,
+      if (recordId != null) 'record_id': recordId,
+      if (appliedAt != null) 'applied_at': appliedAt,
+      if (deviceUuid != null) 'device_uuid': deviceUuid,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncLogCompanion copyWith({
+    Value<String>? id,
+    Value<String?>? deltaFilename,
+    Value<String?>? action,
+    Value<String?>? targetTableName,
+    Value<String?>? recordId,
+    Value<DateTime?>? appliedAt,
+    Value<String?>? deviceUuid,
+    Value<int>? rowid,
+  }) {
+    return SyncLogCompanion(
+      id: id ?? this.id,
+      deltaFilename: deltaFilename ?? this.deltaFilename,
+      action: action ?? this.action,
+      targetTableName: targetTableName ?? this.targetTableName,
+      recordId: recordId ?? this.recordId,
+      appliedAt: appliedAt ?? this.appliedAt,
+      deviceUuid: deviceUuid ?? this.deviceUuid,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (deltaFilename.present) {
+      map['delta_filename'] = Variable<String>(deltaFilename.value);
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(action.value);
+    }
+    if (targetTableName.present) {
+      map['table_name'] = Variable<String>(targetTableName.value);
+    }
+    if (recordId.present) {
+      map['record_id'] = Variable<String>(recordId.value);
+    }
+    if (appliedAt.present) {
+      map['applied_at'] = Variable<DateTime>(appliedAt.value);
+    }
+    if (deviceUuid.present) {
+      map['device_uuid'] = Variable<String>(deviceUuid.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncLogCompanion(')
+          ..write('id: $id, ')
+          ..write('deltaFilename: $deltaFilename, ')
+          ..write('action: $action, ')
+          ..write('targetTableName: $targetTableName, ')
+          ..write('recordId: $recordId, ')
+          ..write('appliedAt: $appliedAt, ')
+          ..write('deviceUuid: $deviceUuid, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3557,9 +4041,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PayeesTable payees = $PayeesTable(this);
   late final $ScheduledTransactionsTable scheduledTransactions =
       $ScheduledTransactionsTable(this);
+  late final $SyncLogTable syncLog = $SyncLogTable(this);
   late final Index idxBudgetsMonth = Index(
     'idx_budgets_month',
     'CREATE INDEX idx_budgets_month ON budgets (month)',
+  );
+  late final Index idxSyncLogApplied = Index(
+    'idx_sync_log_applied',
+    'CREATE INDEX idx_sync_log_applied ON sync_log (applied_at)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -3573,7 +4062,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     payees,
     scheduledTransactions,
+    syncLog,
     idxBudgetsMonth,
+    idxSyncLogApplied,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -7070,6 +7561,247 @@ typedef $$ScheduledTransactionsTableProcessedTableManager =
       ScheduledTransaction,
       PrefetchHooks Function({bool accountId, bool payeeId, bool categoryId})
     >;
+typedef $$SyncLogTableCreateCompanionBuilder =
+    SyncLogCompanion Function({
+      required String id,
+      Value<String?> deltaFilename,
+      Value<String?> action,
+      Value<String?> targetTableName,
+      Value<String?> recordId,
+      Value<DateTime?> appliedAt,
+      Value<String?> deviceUuid,
+      Value<int> rowid,
+    });
+typedef $$SyncLogTableUpdateCompanionBuilder =
+    SyncLogCompanion Function({
+      Value<String> id,
+      Value<String?> deltaFilename,
+      Value<String?> action,
+      Value<String?> targetTableName,
+      Value<String?> recordId,
+      Value<DateTime?> appliedAt,
+      Value<String?> deviceUuid,
+      Value<int> rowid,
+    });
+
+class $$SyncLogTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncLogTable> {
+  $$SyncLogTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deltaFilename => $composableBuilder(
+    column: $table.deltaFilename,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetTableName => $composableBuilder(
+    column: $table.targetTableName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordId => $composableBuilder(
+    column: $table.recordId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get appliedAt => $composableBuilder(
+    column: $table.appliedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceUuid => $composableBuilder(
+    column: $table.deviceUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncLogTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncLogTable> {
+  $$SyncLogTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deltaFilename => $composableBuilder(
+    column: $table.deltaFilename,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetTableName => $composableBuilder(
+    column: $table.targetTableName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordId => $composableBuilder(
+    column: $table.recordId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get appliedAt => $composableBuilder(
+    column: $table.appliedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceUuid => $composableBuilder(
+    column: $table.deviceUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncLogTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncLogTable> {
+  $$SyncLogTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get deltaFilename => $composableBuilder(
+    column: $table.deltaFilename,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get action =>
+      $composableBuilder(column: $table.action, builder: (column) => column);
+
+  GeneratedColumn<String> get targetTableName => $composableBuilder(
+    column: $table.targetTableName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recordId =>
+      $composableBuilder(column: $table.recordId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get appliedAt =>
+      $composableBuilder(column: $table.appliedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceUuid => $composableBuilder(
+    column: $table.deviceUuid,
+    builder: (column) => column,
+  );
+}
+
+class $$SyncLogTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncLogTable,
+          SyncLogData,
+          $$SyncLogTableFilterComposer,
+          $$SyncLogTableOrderingComposer,
+          $$SyncLogTableAnnotationComposer,
+          $$SyncLogTableCreateCompanionBuilder,
+          $$SyncLogTableUpdateCompanionBuilder,
+          (
+            SyncLogData,
+            BaseReferences<_$AppDatabase, $SyncLogTable, SyncLogData>,
+          ),
+          SyncLogData,
+          PrefetchHooks Function()
+        > {
+  $$SyncLogTableTableManager(_$AppDatabase db, $SyncLogTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncLogTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncLogTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncLogTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String?> deltaFilename = const Value.absent(),
+                Value<String?> action = const Value.absent(),
+                Value<String?> targetTableName = const Value.absent(),
+                Value<String?> recordId = const Value.absent(),
+                Value<DateTime?> appliedAt = const Value.absent(),
+                Value<String?> deviceUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncLogCompanion(
+                id: id,
+                deltaFilename: deltaFilename,
+                action: action,
+                targetTableName: targetTableName,
+                recordId: recordId,
+                appliedAt: appliedAt,
+                deviceUuid: deviceUuid,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String?> deltaFilename = const Value.absent(),
+                Value<String?> action = const Value.absent(),
+                Value<String?> targetTableName = const Value.absent(),
+                Value<String?> recordId = const Value.absent(),
+                Value<DateTime?> appliedAt = const Value.absent(),
+                Value<String?> deviceUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncLogCompanion.insert(
+                id: id,
+                deltaFilename: deltaFilename,
+                action: action,
+                targetTableName: targetTableName,
+                recordId: recordId,
+                appliedAt: appliedAt,
+                deviceUuid: deviceUuid,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncLogTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncLogTable,
+      SyncLogData,
+      $$SyncLogTableFilterComposer,
+      $$SyncLogTableOrderingComposer,
+      $$SyncLogTableAnnotationComposer,
+      $$SyncLogTableCreateCompanionBuilder,
+      $$SyncLogTableUpdateCompanionBuilder,
+      (SyncLogData, BaseReferences<_$AppDatabase, $SyncLogTable, SyncLogData>),
+      SyncLogData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7088,4 +7820,6 @@ class $AppDatabaseManager {
       $$PayeesTableTableManager(_db, _db.payees);
   $$ScheduledTransactionsTableTableManager get scheduledTransactions =>
       $$ScheduledTransactionsTableTableManager(_db, _db.scheduledTransactions);
+  $$SyncLogTableTableManager get syncLog =>
+      $$SyncLogTableTableManager(_db, _db.syncLog);
 }
