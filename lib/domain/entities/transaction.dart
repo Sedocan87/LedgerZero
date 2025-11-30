@@ -115,4 +115,43 @@ class Transaction {
       'updated_at': updatedAt?.toIso8601String(),
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Transaction &&
+        other.id == id &&
+        other.accountId == accountId &&
+        other.date == date &&
+        other.amount == amount &&
+        other.payeeId == payeeId &&
+        other.categoryId == categoryId &&
+        other.memo == memo &&
+        other.cleared == cleared &&
+        other.approved == approved &&
+        other.transferAccountId == transferAccountId &&
+        other.transferTransactionId == transferTransactionId &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      accountId,
+      date,
+      amount,
+      payeeId,
+      categoryId,
+      memo,
+      cleared,
+      approved,
+      transferAccountId,
+      transferTransactionId,
+      createdAt,
+      updatedAt,
+    );
+  }
 }

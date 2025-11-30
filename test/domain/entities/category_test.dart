@@ -63,5 +63,35 @@ void main() {
       expect(fromJson.sortOrder, category.sortOrder);
       expect(fromJson.createdAt, category.createdAt);
     });
+
+    test('should support equality', () {
+      final now = DateTime(2023, 10, 1);
+      final category1 = Category(
+        id: '1',
+        name: 'Groceries',
+        categoryGroupId: 'group1',
+        isHidden: true,
+        sortOrder: 1,
+        createdAt: now,
+      );
+
+      final category2 = Category(
+        id: '1',
+        name: 'Groceries',
+        categoryGroupId: 'group1',
+        isHidden: true,
+        sortOrder: 1,
+        createdAt: now,
+      );
+
+      final category3 = Category(
+        id: '2',
+        name: 'Rent',
+      );
+
+      expect(category1, equals(category2));
+      expect(category1.hashCode, equals(category2.hashCode));
+      expect(category1, isNot(equals(category3)));
+    });
   });
 }

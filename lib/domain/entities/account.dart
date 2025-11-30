@@ -90,4 +90,35 @@ class Account {
       'updated_at': updatedAt?.toIso8601String(),
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Account &&
+        other.id == id &&
+        other.name == name &&
+        other.type == type &&
+        other.currency == currency &&
+        other.startingBalance == startingBalance &&
+        other.currentBalance == currentBalance &&
+        other.isClosed == isClosed &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      name,
+      type,
+      currency,
+      startingBalance,
+      currentBalance,
+      isClosed,
+      createdAt,
+      updatedAt,
+    );
+  }
 }

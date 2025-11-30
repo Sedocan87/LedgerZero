@@ -86,5 +86,43 @@ void main() {
       expect(fromJson.autoApprove, scheduledTransaction.autoApprove);
       expect(fromJson.createdAt, scheduledTransaction.createdAt);
     });
+
+    test('should support equality', () {
+      final now = DateTime(2023, 10, 1);
+      final scheduledTransaction1 = ScheduledTransaction(
+        id: '1',
+        accountId: 'acc1',
+        payeeId: 'payee1',
+        categoryId: 'cat1',
+        amount: 100.0,
+        frequency: RecurrenceFrequency.monthly,
+        nextDate: now,
+        endDate: now,
+        autoApprove: true,
+        createdAt: now,
+      );
+
+      final scheduledTransaction2 = ScheduledTransaction(
+        id: '1',
+        accountId: 'acc1',
+        payeeId: 'payee1',
+        categoryId: 'cat1',
+        amount: 100.0,
+        frequency: RecurrenceFrequency.monthly,
+        nextDate: now,
+        endDate: now,
+        autoApprove: true,
+        createdAt: now,
+      );
+
+      final scheduledTransaction3 = ScheduledTransaction(
+        id: '2',
+        accountId: 'acc2',
+      );
+
+      expect(scheduledTransaction1, equals(scheduledTransaction2));
+      expect(scheduledTransaction1.hashCode, equals(scheduledTransaction2.hashCode));
+      expect(scheduledTransaction1, isNot(equals(scheduledTransaction3)));
+    });
   });
 }

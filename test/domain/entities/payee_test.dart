@@ -51,5 +51,31 @@ void main() {
       expect(fromJson.autoCategoryId, payee.autoCategoryId);
       expect(fromJson.createdAt, payee.createdAt);
     });
+
+    test('should support equality', () {
+      final now = DateTime(2023, 10, 1);
+      final payee1 = Payee(
+        id: '1',
+        name: 'Test Payee',
+        autoCategoryId: 'cat1',
+        createdAt: now,
+      );
+
+      final payee2 = Payee(
+        id: '1',
+        name: 'Test Payee',
+        autoCategoryId: 'cat1',
+        createdAt: now,
+      );
+
+      final payee3 = Payee(
+        id: '2',
+        name: 'Other Payee',
+      );
+
+      expect(payee1, equals(payee2));
+      expect(payee1.hashCode, equals(payee2.hashCode));
+      expect(payee1, isNot(equals(payee3)));
+    });
   });
 }

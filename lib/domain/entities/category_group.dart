@@ -43,4 +43,25 @@ class CategoryGroup {
       'created_at': createdAt?.toIso8601String(),
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is CategoryGroup &&
+        other.id == id &&
+        other.name == name &&
+        other.sortOrder == sortOrder &&
+        other.createdAt == createdAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      name,
+      sortOrder,
+      createdAt,
+    );
+  }
 }

@@ -43,4 +43,25 @@ class Payee {
       'created_at': createdAt?.toIso8601String(),
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Payee &&
+        other.id == id &&
+        other.name == name &&
+        other.autoCategoryId == autoCategoryId &&
+        other.createdAt == createdAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      name,
+      autoCategoryId,
+      createdAt,
+    );
+  }
 }

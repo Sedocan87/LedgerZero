@@ -80,5 +80,41 @@ void main() {
       expect(fromJson.createdAt, account.createdAt);
       expect(fromJson.updatedAt, account.updatedAt);
     });
+
+    test('should support equality', () {
+      final account1 = Account(
+        id: '1',
+        name: 'Test Account',
+        type: AccountType.checking,
+        currency: 'EUR',
+        startingBalance: 100.0,
+        currentBalance: 200.0,
+        isClosed: true,
+        createdAt: DateTime(2023, 1, 1),
+        updatedAt: DateTime(2023, 1, 2),
+      );
+
+      final account2 = Account(
+        id: '1',
+        name: 'Test Account',
+        type: AccountType.checking,
+        currency: 'EUR',
+        startingBalance: 100.0,
+        currentBalance: 200.0,
+        isClosed: true,
+        createdAt: DateTime(2023, 1, 1),
+        updatedAt: DateTime(2023, 1, 2),
+      );
+
+      final account3 = Account(
+        id: '2',
+        name: 'Other Account',
+        type: AccountType.savings,
+      );
+
+      expect(account1, equals(account2));
+      expect(account1.hashCode, equals(account2.hashCode));
+      expect(account1, isNot(equals(account3)));
+    });
   });
 }
