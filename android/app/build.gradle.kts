@@ -39,6 +39,27 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "env"
+
+    productFlavors {
+        create("development") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "LedgerZero Dev")
+        }
+        create("staging") {
+            dimension = "env"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            resValue("string", "app_name", "LedgerZero Staging")
+        }
+        create("production") {
+            dimension = "env"
+            resValue("string", "app_name", "LedgerZero")
+        }
+    }
+
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {

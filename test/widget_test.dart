@@ -8,10 +8,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ledger_zero/main.dart';
+import 'package:ledger_zero/app/app.dart';
+import 'package:ledger_zero/core/config/app_config.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Initialize AppConfig
+    AppConfig(
+      environment: AppEnvironment.development,
+      appTitle: 'LedgerZero Test',
+    );
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
