@@ -39,4 +39,36 @@ class Budget {
     this.createdAt,
     this.updatedAt,
   });
+
+  /// Creates a [Budget] from a JSON object.
+  factory Budget.fromJson(Map<String, dynamic> json) {
+    return Budget(
+      id: json['id'] as String,
+      categoryId: json['category_id'] as String?,
+      month: json['month'] as String,
+      budgeted: (json['budgeted'] as num?)?.toDouble() ?? 0.0,
+      activity: (json['activity'] as num?)?.toDouble() ?? 0.0,
+      available: (json['available'] as num?)?.toDouble() ?? 0.0,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+    );
+  }
+
+  /// Converts the [Budget] to a JSON object.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'category_id': categoryId,
+      'month': month,
+      'budgeted': budgeted,
+      'activity': activity,
+      'available': available,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
 }

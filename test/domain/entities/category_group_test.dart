@@ -29,5 +29,27 @@ void main() {
       expect(categoryGroup.sortOrder, isNull);
       expect(categoryGroup.createdAt, isNull);
     });
+
+    test('should support serialization', () {
+      final now = DateTime(2023, 10, 1);
+      final categoryGroup = CategoryGroup(
+        id: '1',
+        name: 'Monthly Bills',
+        sortOrder: 1,
+        createdAt: now,
+      );
+
+      final json = categoryGroup.toJson();
+      expect(json['id'], '1');
+      expect(json['name'], 'Monthly Bills');
+      expect(json['sort_order'], 1);
+      expect(json['created_at'], now.toIso8601String());
+
+      final fromJson = CategoryGroup.fromJson(json);
+      expect(fromJson.id, categoryGroup.id);
+      expect(fromJson.name, categoryGroup.name);
+      expect(fromJson.sortOrder, categoryGroup.sortOrder);
+      expect(fromJson.createdAt, categoryGroup.createdAt);
+    });
   });
 }

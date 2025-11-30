@@ -44,5 +44,41 @@ void main() {
       expect(account.createdAt, null);
       expect(account.updatedAt, null);
     });
+
+    test('should support serialization', () {
+      final account = Account(
+        id: '1',
+        name: 'Test Account',
+        type: AccountType.checking,
+        currency: 'EUR',
+        startingBalance: 100.0,
+        currentBalance: 200.0,
+        isClosed: true,
+        createdAt: DateTime(2023, 1, 1),
+        updatedAt: DateTime(2023, 1, 2),
+      );
+
+      final json = account.toJson();
+      expect(json['id'], '1');
+      expect(json['name'], 'Test Account');
+      expect(json['type'], 'checking');
+      expect(json['currency'], 'EUR');
+      expect(json['starting_balance'], 100.0);
+      expect(json['current_balance'], 200.0);
+      expect(json['is_closed'], true);
+      expect(json['created_at'], account.createdAt?.toIso8601String());
+      expect(json['updated_at'], account.updatedAt?.toIso8601String());
+
+      final fromJson = Account.fromJson(json);
+      expect(fromJson.id, account.id);
+      expect(fromJson.name, account.name);
+      expect(fromJson.type, account.type);
+      expect(fromJson.currency, account.currency);
+      expect(fromJson.startingBalance, account.startingBalance);
+      expect(fromJson.currentBalance, account.currentBalance);
+      expect(fromJson.isClosed, account.isClosed);
+      expect(fromJson.createdAt, account.createdAt);
+      expect(fromJson.updatedAt, account.updatedAt);
+    });
   });
 }

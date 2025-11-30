@@ -21,4 +21,26 @@ class Payee {
     this.autoCategoryId,
     this.createdAt,
   });
+
+  /// Creates a [Payee] from a JSON object.
+  factory Payee.fromJson(Map<String, dynamic> json) {
+    return Payee(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      autoCategoryId: json['auto_category_id'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+    );
+  }
+
+  /// Converts the [Payee] to a JSON object.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'auto_category_id': autoCategoryId,
+      'created_at': createdAt?.toIso8601String(),
+    };
+  }
 }

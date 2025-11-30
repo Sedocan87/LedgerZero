@@ -29,5 +29,27 @@ void main() {
       expect(payee.autoCategoryId, isNull);
       expect(payee.createdAt, isNull);
     });
+
+    test('should support serialization', () {
+      final now = DateTime(2023, 10, 1);
+      final payee = Payee(
+        id: '1',
+        name: 'Test Payee',
+        autoCategoryId: 'cat1',
+        createdAt: now,
+      );
+
+      final json = payee.toJson();
+      expect(json['id'], '1');
+      expect(json['name'], 'Test Payee');
+      expect(json['auto_category_id'], 'cat1');
+      expect(json['created_at'], now.toIso8601String());
+
+      final fromJson = Payee.fromJson(json);
+      expect(fromJson.id, payee.id);
+      expect(fromJson.name, payee.name);
+      expect(fromJson.autoCategoryId, payee.autoCategoryId);
+      expect(fromJson.createdAt, payee.createdAt);
+    });
   });
 }
