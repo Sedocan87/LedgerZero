@@ -107,5 +107,51 @@ void main() {
       expect(fromJson.createdAt, transaction.createdAt);
       expect(fromJson.updatedAt, transaction.updatedAt);
     });
+
+    test('should support equality', () {
+      final now = DateTime(2023, 10, 1);
+      final transaction1 = Transaction(
+        id: 'tx1',
+        accountId: 'acc1',
+        date: DateTime(2023, 10, 27),
+        amount: -50.0,
+        payeeId: 'payee1',
+        categoryId: 'cat1',
+        memo: 'Groceries',
+        cleared: TransactionClearStatus.cleared,
+        approved: false,
+        transferAccountId: 'acc2',
+        transferTransactionId: 'tx2',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final transaction2 = Transaction(
+        id: 'tx1',
+        accountId: 'acc1',
+        date: DateTime(2023, 10, 27),
+        amount: -50.0,
+        payeeId: 'payee1',
+        categoryId: 'cat1',
+        memo: 'Groceries',
+        cleared: TransactionClearStatus.cleared,
+        approved: false,
+        transferAccountId: 'acc2',
+        transferTransactionId: 'tx2',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final transaction3 = Transaction(
+        id: 'tx2',
+        accountId: 'acc1',
+        date: DateTime(2023, 10, 27),
+        amount: 100.0,
+      );
+
+      expect(transaction1, equals(transaction2));
+      expect(transaction1.hashCode, equals(transaction2.hashCode));
+      expect(transaction1, isNot(equals(transaction3)));
+    });
   });
 }

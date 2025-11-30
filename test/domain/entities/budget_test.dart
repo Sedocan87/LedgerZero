@@ -75,5 +75,39 @@ void main() {
       expect(fromJson.createdAt, budget.createdAt);
       expect(fromJson.updatedAt, budget.updatedAt);
     });
+
+    test('should support equality', () {
+      final now = DateTime(2023, 10, 1);
+      final budget1 = Budget(
+        id: '1',
+        categoryId: 'cat1',
+        month: '2023-10',
+        budgeted: 100.0,
+        activity: 50.0,
+        available: 50.0,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final budget2 = Budget(
+        id: '1',
+        categoryId: 'cat1',
+        month: '2023-10',
+        budgeted: 100.0,
+        activity: 50.0,
+        available: 50.0,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final budget3 = Budget(
+        id: '2',
+        month: '2023-11',
+      );
+
+      expect(budget1, equals(budget2));
+      expect(budget1.hashCode, equals(budget2.hashCode));
+      expect(budget1, isNot(equals(budget3)));
+    });
   });
 }

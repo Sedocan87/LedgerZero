@@ -100,4 +100,37 @@ class ScheduledTransaction {
       'created_at': createdAt?.toIso8601String(),
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is ScheduledTransaction &&
+        other.id == id &&
+        other.accountId == accountId &&
+        other.payeeId == payeeId &&
+        other.categoryId == categoryId &&
+        other.amount == amount &&
+        other.frequency == frequency &&
+        other.nextDate == nextDate &&
+        other.endDate == endDate &&
+        other.autoApprove == autoApprove &&
+        other.createdAt == createdAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      accountId,
+      payeeId,
+      categoryId,
+      amount,
+      frequency,
+      nextDate,
+      endDate,
+      autoApprove,
+      createdAt,
+    );
+  }
 }

@@ -71,4 +71,33 @@ class Budget {
       'updated_at': updatedAt?.toIso8601String(),
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Budget &&
+        other.id == id &&
+        other.categoryId == categoryId &&
+        other.month == month &&
+        other.budgeted == budgeted &&
+        other.activity == activity &&
+        other.available == available &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      categoryId,
+      month,
+      budgeted,
+      activity,
+      available,
+      createdAt,
+      updatedAt,
+    );
+  }
 }
