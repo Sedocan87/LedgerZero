@@ -7,4 +7,30 @@ part 'budgets_dao.g.dart';
 @DriftAccessor(tables: [Budgets])
 class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
   BudgetsDao(super.db);
+
+  Future<List<Budget>> getAllBudgets() => select(budgets).get();
+
+  Future<Budget?> getBudgetById(String id) =>
+      (select(budgets)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+
+  Future<int> insertBudget(BudgetsCompanion budget) =>
+      into(budgets).insert(budget);
+
+  Future<bool> updateBudget(BudgetsCompanion budget) =>
+      update(budgets).replace(budget);
+
+  Future<int> deleteBudget(String id) =>
+      (delete(budgets)..where((tbl) => tbl.id.equals(id))).go();
+
+  Future<Budget?> getBudgetByCategoryAndMonth(String categoryId, String month) =>
+      (select(budgets)
+            ..where(
+                (tbl) => tbl.categoryId.equals(categoryId) & tbl.month.equals(month)))
+          .getSingleOrNull();
+
+  Future<List<Budget>> getBudgetsForMonth(String month) =>
+      (select(budgets)..where((tbl) => tbl.month.equals(month))).get();
+
+  Stream<List<Budget>> watchBudgetsForMonth(String month) =>
+      (select(budgets)..where((tbl) => tbl.month.equals(month))).watch();
 }
