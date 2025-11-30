@@ -18,8 +18,8 @@ void main() {
     expect(database.schemaVersion, 1);
   });
 
-  group('Database Tables Creation', () {
-    test('should create accounts table and insert data', () async {
+  group('Database Tables Creation & Defaults', () {
+    test('should create accounts table with default values', () async {
       final account = AccountsCompanion(
         id: const Value('acc_1'),
         name: const Value('Checking'),
@@ -27,29 +27,18 @@ void main() {
         createdAt: Value(DateTime.now()),
       );
       await database.into(database.accounts).insert(account);
-      final result = await database.select(database.accounts).get();
-      expect(result.length, 1);
-      expect(result.first.id, 'acc_1');
+      final result = await database.select(database.accounts).getSingle();
+
+      expect(result.id, 'acc_1');
+      expect(result.currency, 'USD'); // Default
+      expect(result.startingBalance, 0.0); // Default
+      expect(result.currentBalance, 0.0); // Default
+      expect(result.isClosed, false); // Default (0 -> false)
     });
 
-    test('should create category_groups table and insert data', () async {
-      final group = CategoryGroupsCompanion(
-        id: const Value('grp_1'),
-        name: const Value('Living'),
-      );
-      await database.into(database.categoryGroups).insert(group);
-      final result = await database.select(database.categoryGroups).get();
-      expect(result.length, 1);
-      expect(result.first.id, 'grp_1');
-    });
-
-    test('should create categories table with foreign key', () async {
-      // FK constraint requires group to exist
+    test('should create categories table with default values', () async {
       await database.into(database.categoryGroups).insert(
-        const CategoryGroupsCompanion(
-          id: Value('grp_1'),
-          name: Value('Living'),
-        ),
+        const CategoryGroupsCompanion(id: Value('grp_1'), name: Value('Living')),
       );
 
       final category = CategoriesCompanion(
@@ -58,29 +47,14 @@ void main() {
         categoryGroupId: const Value('grp_1'),
       );
       await database.into(database.categories).insert(category);
-      final result = await database.select(database.categories).get();
-      expect(result.length, 1);
-      expect(result.first.categoryGroupId, 'grp_1');
+      final result = await database.select(database.categories).getSingle();
+
+      expect(result.isHidden, false); // Default
     });
 
-    test('should create payees table', () async {
-      final payee = PayeesCompanion(
-        id: const Value('pay_1'),
-        name: const Value('Supermarket'),
-      );
-      await database.into(database.payees).insert(payee);
-      final result = await database.select(database.payees).get();
-      expect(result.length, 1);
-    });
-
-    test('should create transactions table with FKs', () async {
-      // Setup FKs
+    test('should create transactions table with default values', () async {
       await database.into(database.accounts).insert(
-        const AccountsCompanion(
-          id: Value('acc_1'),
-          name: Value('Checking'),
-          type: Value('checking'),
-        ),
+        const AccountsCompanion(id: Value('acc_1'), name: Value('Checking'), type: Value('checking')),
       );
 
       final tx = TransactionsCompanion(
@@ -90,58 +64,58 @@ void main() {
         amount: const Value(-50.0),
       );
       await database.into(database.transactions).insert(tx);
-      final result = await database.select(database.transactions).get();
-      expect(result.length, 1);
-      expect(result.first.accountId, 'acc_1');
+      final result = await database.select(database.transactions).getSingle();
+
+      expect(result.cleared, 0); // Default
+      expect(result.approved, true); // Default
     });
 
-    test('should create budgets table with FKs', () async {
-       // Setup FKs
+    test('should create budgets table with default values', () async {
        await database.into(database.categoryGroups).insert(
-        const CategoryGroupsCompanion(
-          id: Value('grp_1'),
-          name: Value('Living'),
-        ),
+        const CategoryGroupsCompanion(id: Value('grp_1'), name: Value('Living')),
       );
       await database.into(database.categories).insert(
-        const CategoriesCompanion(
-          id: Value('cat_1'),
-          name: Value('Groceries'),
-          categoryGroupId: Value('grp_1'),
-        ),
+        const CategoriesCompanion(id: Value('cat_1'), name: Value('Groceries'), categoryGroupId: Value('grp_1')),
       );
 
       final budget = BudgetsCompanion(
         id: const Value('bud_1'),
         categoryId: const Value('cat_1'),
         month: const Value('2023-01'),
-        budgeted: const Value(100.0),
       );
       await database.into(database.budgets).insert(budget);
-      final result = await database.select(database.budgets).get();
-      expect(result.length, 1);
-      expect(result.first.categoryId, 'cat_1');
+      final result = await database.select(database.budgets).getSingle();
+
+      expect(result.budgeted, 0.0); // Default
+      expect(result.activity, 0.0); // Default
+      expect(result.available, 0.0); // Default
     });
 
-    test('should create scheduled_transactions table', () async {
-       final sch = ScheduledTransactionsCompanion(
+    test('should create scheduled_transactions with default values', () async {
+      final sch = ScheduledTransactionsCompanion(
         id: const Value('sch_1'),
-        autoApprove: const Value(false),
       );
       await database.into(database.scheduledTransactions).insert(sch);
-      final result = await database.select(database.scheduledTransactions).get();
-      expect(result.length, 1);
-    });
+      final result = await database.select(database.scheduledTransactions).getSingle();
 
-    test('should create sync_log table', () async {
-      final log = SyncLogCompanion(
-        id: const Value('log_1'),
-        deltaFilename: const Value('delta_1.json'),
-      );
-      await database.into(database.syncLog).insert(log);
-      final result = await database.select(database.syncLog).get();
-      expect(result.length, 1);
-      expect(result.first.deltaFilename, 'delta_1.json');
+      expect(result.autoApprove, false); // Default
+    });
+  });
+
+  group('Database Indexes', () {
+    test('should have expected indexes', () async {
+      // Query sqlite_master to verify indexes exist
+      final indexes = await database.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='index'"
+      ).get();
+
+      final indexNames = indexes.map((row) => row.read<String>('name')).toSet();
+
+      expect(indexNames, contains('idx_transactions_account'));
+      expect(indexNames, contains('idx_transactions_date'));
+      expect(indexNames, contains('idx_transactions_category'));
+      expect(indexNames, contains('idx_budgets_month'));
+      expect(indexNames, contains('idx_sync_log_applied'));
     });
   });
 }
