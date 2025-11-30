@@ -22,6 +22,21 @@ class Payee {
     this.createdAt,
   });
 
+  /// Creates a copy of this [Payee] but with the given fields replaced with the new values.
+  Payee copyWith({
+    String? id,
+    String? name,
+    String? autoCategoryId,
+    DateTime? createdAt,
+  }) {
+    return Payee(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      autoCategoryId: autoCategoryId ?? this.autoCategoryId,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   /// Creates a [Payee] from a JSON object.
   factory Payee.fromJson(Map<String, dynamic> json) {
     return Payee(

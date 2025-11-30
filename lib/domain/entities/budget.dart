@@ -40,6 +40,29 @@ class Budget {
     this.updatedAt,
   });
 
+  /// Creates a copy of this [Budget] but with the given fields replaced with the new values.
+  Budget copyWith({
+    String? id,
+    String? categoryId,
+    String? month,
+    double? budgeted,
+    double? activity,
+    double? available,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Budget(
+      id: id ?? this.id,
+      categoryId: categoryId ?? this.categoryId,
+      month: month ?? this.month,
+      budgeted: budgeted ?? this.budgeted,
+      activity: activity ?? this.activity,
+      available: available ?? this.available,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   /// Creates a [Budget] from a JSON object.
   factory Budget.fromJson(Map<String, dynamic> json) {
     return Budget(

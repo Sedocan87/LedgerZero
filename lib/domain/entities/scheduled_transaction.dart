@@ -61,6 +61,33 @@ class ScheduledTransaction {
     this.createdAt,
   });
 
+  /// Creates a copy of this [ScheduledTransaction] but with the given fields replaced with the new values.
+  ScheduledTransaction copyWith({
+    String? id,
+    String? accountId,
+    String? payeeId,
+    String? categoryId,
+    double? amount,
+    RecurrenceFrequency? frequency,
+    DateTime? nextDate,
+    DateTime? endDate,
+    bool? autoApprove,
+    DateTime? createdAt,
+  }) {
+    return ScheduledTransaction(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      payeeId: payeeId ?? this.payeeId,
+      categoryId: categoryId ?? this.categoryId,
+      amount: amount ?? this.amount,
+      frequency: frequency ?? this.frequency,
+      nextDate: nextDate ?? this.nextDate,
+      endDate: endDate ?? this.endDate,
+      autoApprove: autoApprove ?? this.autoApprove,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   /// Creates a [ScheduledTransaction] from a JSON object.
   factory ScheduledTransaction.fromJson(Map<String, dynamic> json) {
     return ScheduledTransaction(

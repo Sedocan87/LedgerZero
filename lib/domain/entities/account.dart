@@ -57,6 +57,31 @@ class Account {
     this.updatedAt,
   });
 
+  /// Creates a copy of this [Account] but with the given fields replaced with the new values.
+  Account copyWith({
+    String? id,
+    String? name,
+    AccountType? type,
+    String? currency,
+    double? startingBalance,
+    double? currentBalance,
+    bool? isClosed,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Account(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      currency: currency ?? this.currency,
+      startingBalance: startingBalance ?? this.startingBalance,
+      currentBalance: currentBalance ?? this.currentBalance,
+      isClosed: isClosed ?? this.isClosed,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   /// Creates an [Account] from a JSON object.
   factory Account.fromJson(Map<String, dynamic> json) {
     return Account(
