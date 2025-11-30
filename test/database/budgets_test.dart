@@ -16,19 +16,19 @@ void main() {
 
   test('should insert budget successfully', () async {
     // Need a category first
-    final categoryId = 'cat_1';
+    const categoryId = 'cat_1';
     await database.into(database.categories).insert(
-      CategoriesCompanion(
+      const CategoriesCompanion(
         id: Value(categoryId),
-        name: const Value('Groceries'),
+        name: Value('Groceries'),
       ),
     );
 
-    final budget = BudgetsCompanion(
-      id: const Value('budget_1'),
+    const budget = BudgetsCompanion(
+      id: Value('budget_1'),
       categoryId: Value(categoryId),
-      month: const Value('2023-10'),
-      budgeted: const Value(100.0),
+      month: Value('2023-10'),
+      budgeted: Value(100.0),
     );
 
     await database.into(database.budgets).insert(budget);
@@ -39,29 +39,29 @@ void main() {
   });
 
   test('should enforce unique constraint on categoryId and month', () async {
-    final categoryId = 'cat_1';
+    const categoryId = 'cat_1';
     await database.into(database.categories).insert(
-      CategoriesCompanion(
+      const CategoriesCompanion(
         id: Value(categoryId),
-        name: const Value('Groceries'),
+        name: Value('Groceries'),
       ),
     );
 
     await database.into(database.budgets).insert(
-      BudgetsCompanion(
-        id: const Value('budget_1'),
+      const BudgetsCompanion(
+        id: Value('budget_1'),
         categoryId: Value(categoryId),
-        month: const Value('2023-10'),
+        month: Value('2023-10'),
       ),
     );
 
     // Try inserting another budget for same category and month
     expect(
       () => database.into(database.budgets).insert(
-        BudgetsCompanion(
-          id: const Value('budget_2'),
+        const BudgetsCompanion(
+          id: Value('budget_2'),
           categoryId: Value(categoryId),
-          month: const Value('2023-10'),
+          month: Value('2023-10'),
         ),
       ),
       throwsA(isA<SqliteException>()),
