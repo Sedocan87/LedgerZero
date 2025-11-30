@@ -14,6 +14,10 @@ void main() {
     await database.close();
   });
 
+  test('schema version should be 1', () {
+    expect(database.schemaVersion, 1);
+  });
+
   test('category_groups table should allow inserting data', () async {
     final categoryGroup = CategoryGroupsCompanion(
       id: const Value('group_1'),
