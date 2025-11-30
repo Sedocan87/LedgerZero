@@ -16,9 +16,9 @@ void main() {
 
   test('category_groups table should allow inserting data', () async {
     final categoryGroup = CategoryGroupsCompanion(
-      id: Value('group_1'),
-      name: Value('Living Expenses'),
-      sortOrder: Value(1),
+      id: const Value('group_1'),
+      name: const Value('Living Expenses'),
+      sortOrder: const Value(1),
       createdAt: Value(DateTime.now()),
     );
 
