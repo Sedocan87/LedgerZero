@@ -71,4 +71,48 @@ class Transaction {
     this.createdAt,
     this.updatedAt,
   });
+
+  /// Creates a [Transaction] from a JSON object.
+  factory Transaction.fromJson(Map<String, dynamic> json) {
+    return Transaction(
+      id: json['id'] as String,
+      accountId: json['account_id'] as String,
+      date: DateTime.parse(json['date'] as String),
+      amount: (json['amount'] as num).toDouble(),
+      payeeId: json['payee_id'] as String?,
+      categoryId: json['category_id'] as String?,
+      memo: json['memo'] as String?,
+      cleared: json['cleared'] != null
+          ? TransactionClearStatus.values[json['cleared'] as int]
+          : TransactionClearStatus.uncleared,
+      approved: json['approved'] as bool? ?? true,
+      transferAccountId: json['transfer_account_id'] as String?,
+      transferTransactionId: json['transfer_transaction_id'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+    );
+  }
+
+  /// Converts the [Transaction] to a JSON object.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'account_id': accountId,
+      'date': date.toIso8601String(),
+      'amount': amount,
+      'payee_id': payeeId,
+      'category_id': categoryId,
+      'memo': memo,
+      'cleared': cleared.index,
+      'approved': approved,
+      'transfer_account_id': transferAccountId,
+      'transfer_transaction_id': transferTransactionId,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
 }

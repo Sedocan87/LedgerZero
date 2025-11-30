@@ -60,4 +60,44 @@ class ScheduledTransaction {
     this.autoApprove = false,
     this.createdAt,
   });
+
+  /// Creates a [ScheduledTransaction] from a JSON object.
+  factory ScheduledTransaction.fromJson(Map<String, dynamic> json) {
+    return ScheduledTransaction(
+      id: json['id'] as String,
+      accountId: json['account_id'] as String?,
+      payeeId: json['payee_id'] as String?,
+      categoryId: json['category_id'] as String?,
+      amount: (json['amount'] as num?)?.toDouble(),
+      frequency: json['frequency'] != null
+          ? RecurrenceFrequency.values.firstWhere((e) => e.name == json['frequency'])
+          : null,
+      nextDate: json['next_date'] != null
+          ? DateTime.parse(json['next_date'] as String)
+          : null,
+      endDate: json['end_date'] != null
+          ? DateTime.parse(json['end_date'] as String)
+          : null,
+      autoApprove: json['auto_approve'] as bool? ?? false,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+    );
+  }
+
+  /// Converts the [ScheduledTransaction] to a JSON object.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'account_id': accountId,
+      'payee_id': payeeId,
+      'category_id': categoryId,
+      'amount': amount,
+      'frequency': frequency?.name,
+      'next_date': nextDate?.toIso8601String(),
+      'end_date': endDate?.toIso8601String(),
+      'auto_approve': autoApprove,
+      'created_at': createdAt?.toIso8601String(),
+    };
+  }
 }

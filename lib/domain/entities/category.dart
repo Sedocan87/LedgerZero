@@ -29,4 +29,30 @@ class Category {
     this.sortOrder,
     this.createdAt,
   });
+
+  /// Creates a [Category] from a JSON object.
+  factory Category.fromJson(Map<String, dynamic> json) {
+    return Category(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      categoryGroupId: json['category_group_id'] as String?,
+      isHidden: json['is_hidden'] as bool? ?? false,
+      sortOrder: json['sort_order'] as int?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+    );
+  }
+
+  /// Converts the [Category] to a JSON object.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'category_group_id': categoryGroupId,
+      'is_hidden': isHidden,
+      'sort_order': sortOrder,
+      'created_at': createdAt?.toIso8601String(),
+    };
+  }
 }

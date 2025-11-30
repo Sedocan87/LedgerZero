@@ -56,4 +56,38 @@ class Account {
     this.createdAt,
     this.updatedAt,
   });
+
+  /// Creates an [Account] from a JSON object.
+  factory Account.fromJson(Map<String, dynamic> json) {
+    return Account(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      type: AccountType.values.firstWhere((e) => e.name == json['type']),
+      currency: json['currency'] as String? ?? 'USD',
+      startingBalance: (json['starting_balance'] as num?)?.toDouble() ?? 0.0,
+      currentBalance: (json['current_balance'] as num?)?.toDouble() ?? 0.0,
+      isClosed: json['is_closed'] as bool? ?? false,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+    );
+  }
+
+  /// Converts the [Account] to a JSON object.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type.name,
+      'currency': currency,
+      'starting_balance': startingBalance,
+      'current_balance': currentBalance,
+      'is_closed': isClosed,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
 }
