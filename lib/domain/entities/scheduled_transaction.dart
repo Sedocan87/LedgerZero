@@ -162,4 +162,23 @@ class ScheduledTransaction {
       createdAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'ScheduledTransaction(id: $id, accountId: $accountId, payeeId: $payeeId, categoryId: $categoryId, amount: $amount, frequency: $frequency, nextDate: $nextDate, endDate: $endDate, autoApprove: $autoApprove, createdAt: $createdAt)';
+  }
+
+  /// Validates the [ScheduledTransaction] entity.
+  ///
+  /// Returns a list of error messages. If the list is empty, the entity is valid.
+  List<String> validate() {
+    final errors = <String>[];
+    if (amount != null && amount == 0.0) {
+      errors.add('Scheduled transaction amount cannot be zero');
+    }
+    if (nextDate != null && endDate != null && endDate!.isBefore(nextDate!)) {
+      errors.add('End date cannot be before next date');
+    }
+    return errors;
+  }
 }

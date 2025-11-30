@@ -81,4 +81,20 @@ class CategoryGroup {
       createdAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'CategoryGroup(id: $id, name: $name, sortOrder: $sortOrder, createdAt: $createdAt)';
+  }
+
+  /// Validates the [CategoryGroup] entity.
+  ///
+  /// Returns a list of error messages. If the list is empty, the entity is valid.
+  List<String> validate() {
+    final errors = <String>[];
+    if (name.trim().isEmpty) {
+      errors.add('Category group name cannot be empty');
+    }
+    return errors;
+  }
 }

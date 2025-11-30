@@ -81,4 +81,20 @@ class Payee {
       createdAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'Payee(id: $id, name: $name, autoCategoryId: $autoCategoryId, createdAt: $createdAt)';
+  }
+
+  /// Validates the [Payee] entity.
+  ///
+  /// Returns a list of error messages. If the list is empty, the entity is valid.
+  List<String> validate() {
+    final errors = <String>[];
+    if (name.trim().isEmpty) {
+      errors.add('Payee name cannot be empty');
+    }
+    return errors;
+  }
 }

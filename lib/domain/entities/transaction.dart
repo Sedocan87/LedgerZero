@@ -189,4 +189,20 @@ class Transaction {
       updatedAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'Transaction(id: $id, accountId: $accountId, date: $date, amount: $amount, payeeId: $payeeId, categoryId: $categoryId, memo: $memo, cleared: $cleared, approved: $approved, transferAccountId: $transferAccountId, transferTransactionId: $transferTransactionId, createdAt: $createdAt, updatedAt: $updatedAt)';
+  }
+
+  /// Validates the [Transaction] entity.
+  ///
+  /// Returns a list of error messages. If the list is empty, the entity is valid.
+  List<String> validate() {
+    final errors = <String>[];
+    if (amount == 0.0) {
+      errors.add('Transaction amount cannot be zero');
+    }
+    return errors;
+  }
 }
