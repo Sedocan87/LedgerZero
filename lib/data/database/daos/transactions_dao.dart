@@ -9,7 +9,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     with _$TransactionsDaoMixin {
   TransactionsDao(super.db);
 
-  Future<List<Transaction>> getAllTransactions() => select(transactions).get();
+  Future<List<Transaction>> getAllTransactions() => (select(transactions)
+        ..where((t) => t.isDeleted.equals(false)))
+      .get();
 
   Future<Transaction?> getTransactionById(String id) =>
       (select(transactions)..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -23,19 +25,32 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   Future<int> deleteTransaction(String id) =>
       (delete(transactions)..where((t) => t.id.equals(id))).go();
 
-  Stream<List<Transaction>> watchAllTransactions() =>
-      select(transactions).watch();
+  Future<void> softDeleteTransaction(String id) =>
+      (update(transactions)..where((t) => t.id.equals(id)))
+          .write(const TransactionsCompanion(isDeleted: Value(true)));
+
+  Stream<List<Transaction>> watchAllTransactions() => (select(transactions)
+        ..where((t) => t.isDeleted.equals(false)))
+      .watch();
 
   Future<List<Transaction>> getTransactionsByAccount(String accountId) =>
-      (select(transactions)..where((t) => t.accountId.equals(accountId))).get();
+      (select(transactions)
+            ..where((t) =>
+                t.accountId.equals(accountId) & t.isDeleted.equals(false)))
+          .get();
 
   Stream<List<Transaction>> watchTransactionsByAccount(String accountId) =>
-      (select(transactions)..where((t) => t.accountId.equals(accountId)))
+      (select(transactions)
+            ..where((t) =>
+                t.accountId.equals(accountId) & t.isDeleted.equals(false)))
           .watch();
 
   Future<List<Transaction>> getTransactionsByDateRange(
           DateTime start, DateTime end) =>
-      (select(transactions)..where((t) => t.date.isBetween(Variable(start), Variable(end))))
+      (select(transactions)
+            ..where((t) =>
+                t.date.isBetween(Variable(start), Variable(end)) &
+                t.isDeleted.equals(false)))
           .get();
 
   Future<double> getIncomeSumByDateRange(DateTime start, DateTime end) {
@@ -43,7 +58,8 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     final query = selectOnly(transactions)
       ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
           transactions.amount.isBiggerThanValue(0) &
-          transactions.categoryId.isNull())
+          transactions.categoryId.isNull() &
+          transactions.isDeleted.equals(false))
       ..addColumns([amount]);
 
     return query.map((row) => row.read(amount) ?? 0.0).getSingle();
@@ -54,7 +70,8 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
       ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
-          transactions.categoryId.equals(categoryId))
+          transactions.categoryId.equals(categoryId) &
+          transactions.isDeleted.equals(false))
       ..addColumns([amount]);
 
     return query.map((row) => row.read(amount) ?? 0.0).getSingle();

@@ -15,6 +15,7 @@ void main() {
         memo: 'Groceries',
         cleared: TransactionClearStatus.cleared,
         approved: false,
+        isDeleted: true,
         transferAccountId: 'acc2',
         transferTransactionId: 'tx2',
         createdAt: now,
@@ -30,6 +31,7 @@ void main() {
       expect(transaction.memo, 'Groceries');
       expect(transaction.cleared, TransactionClearStatus.cleared);
       expect(transaction.approved, false);
+      expect(transaction.isDeleted, true);
       expect(transaction.transferAccountId, 'acc2');
       expect(transaction.transferTransactionId, 'tx2');
       expect(transaction.createdAt, now);
@@ -53,6 +55,7 @@ void main() {
       expect(transaction.memo, null);
       expect(transaction.cleared, TransactionClearStatus.uncleared);
       expect(transaction.approved, true);
+      expect(transaction.isDeleted, false);
       expect(transaction.transferAccountId, null);
       expect(transaction.transferTransactionId, null);
       expect(transaction.createdAt, null);
@@ -71,6 +74,7 @@ void main() {
         memo: 'Groceries',
         cleared: TransactionClearStatus.cleared,
         approved: false,
+        isDeleted: true,
         transferAccountId: 'acc2',
         transferTransactionId: 'tx2',
         createdAt: now,
@@ -87,6 +91,7 @@ void main() {
       expect(json['memo'], 'Groceries');
       expect(json['cleared'], 1); // cleared index is 1
       expect(json['approved'], false);
+      expect(json['is_deleted'], true);
       expect(json['transfer_account_id'], 'acc2');
       expect(json['transfer_transaction_id'], 'tx2');
       expect(json['created_at'], now.toIso8601String());
@@ -102,6 +107,7 @@ void main() {
       expect(fromJson.memo, transaction.memo);
       expect(fromJson.cleared, transaction.cleared);
       expect(fromJson.approved, transaction.approved);
+      expect(fromJson.isDeleted, transaction.isDeleted);
       expect(fromJson.transferAccountId, transaction.transferAccountId);
       expect(fromJson.transferTransactionId, transaction.transferTransactionId);
       expect(fromJson.createdAt, transaction.createdAt);
@@ -126,6 +132,7 @@ void main() {
       expect(transaction.memo, isNull);
       expect(transaction.cleared, TransactionClearStatus.uncleared); // Default
       expect(transaction.approved, true); // Default
+      expect(transaction.isDeleted, false); // Default
       expect(transaction.transferAccountId, isNull);
       expect(transaction.transferTransactionId, isNull);
       expect(transaction.createdAt, isNull);

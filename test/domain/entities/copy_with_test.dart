@@ -133,6 +133,7 @@ void main() {
       final updated = transaction.copyWith(
         amount: -60.0,
         payeeId: 'payee2',
+        isDeleted: true,
       );
 
       expect(updated.id, transaction.id);
@@ -140,6 +141,7 @@ void main() {
       expect(updated.date, transaction.date);
       expect(updated.amount, -60.0);
       expect(updated.payeeId, 'payee2');
+      expect(updated.isDeleted, true);
     });
   });
 }

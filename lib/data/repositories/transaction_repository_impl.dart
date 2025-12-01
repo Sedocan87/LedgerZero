@@ -64,9 +64,9 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<void> deleteTransaction(String id) async {
     try {
-      Logger.debug('Deleting transaction: $id');
-      await _transactionsDao.deleteTransaction(id);
-      Logger.info('Transaction deleted successfully: $id');
+      Logger.debug('Soft deleting transaction: $id');
+      await _transactionsDao.softDeleteTransaction(id);
+      Logger.info('Transaction soft deleted successfully: $id');
     } catch (e, stackTrace) {
       Logger.error('Failed to delete transaction $id', e, stackTrace);
       throw DatabaseException('Failed to delete transaction $id', e);
@@ -160,6 +160,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       memo: t.memo,
       cleared: TransactionClearStatus.values[t.cleared],
       approved: t.approved,
+      isDeleted: t.isDeleted,
       transferAccountId: t.transferAccountId,
       transferTransactionId: t.transferTransactionId,
       createdAt: t.createdAt,
@@ -178,6 +179,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       memo: Value(t.memo),
       cleared: Value(t.cleared.index),
       approved: Value(t.approved),
+      isDeleted: Value(t.isDeleted),
       transferAccountId: Value(t.transferAccountId),
       transferTransactionId: Value(t.transferTransactionId),
       createdAt: Value(t.createdAt),
