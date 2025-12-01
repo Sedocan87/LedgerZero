@@ -2,6 +2,8 @@ import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
+import 'package:ledger_zero/domain/services/undo_service.dart';
+import 'package:ledger_zero/domain/undo/transaction_undo_actions.dart';
 
 /// Service responsible for managing transactions.
 ///
@@ -9,8 +11,9 @@ import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 /// transactions, including validation and state management.
 class TransactionService {
   final TransactionRepository _transactionRepository;
+  final UndoService _undoService;
 
-  TransactionService(this._transactionRepository);
+  TransactionService(this._transactionRepository, this._undoService);
 
   /// Creates a new transaction.
   ///
@@ -30,6 +33,8 @@ class TransactionService {
       );
 
       await _transactionRepository.createTransaction(transactionToCreate);
+      _undoService.addAction(CreateTransactionAction(
+          _transactionRepository, transactionToCreate));
       Logger.info('Transaction created: ${transactionToCreate.id}');
     } catch (e, stackTrace) {
       Logger.error('Failed to create transaction', e, stackTrace);
@@ -48,11 +53,19 @@ class TransactionService {
         throw ValidationException(validationErrors.join(', '));
       }
 
+      final oldTransaction =
+          await _transactionRepository.getTransactionById(transaction.id);
+
       final transactionToUpdate = transaction.copyWith(
         updatedAt: DateTime.now(),
       );
 
       await _transactionRepository.updateTransaction(transactionToUpdate);
+
+      if (oldTransaction != null) {
+        _undoService.addAction(UpdateTransactionAction(
+            _transactionRepository, oldTransaction, transactionToUpdate));
+      }
       Logger.info('Transaction updated: ${transactionToUpdate.id}');
     } catch (e, stackTrace) {
       Logger.error('Failed to update transaction', e, stackTrace);
@@ -66,7 +79,27 @@ class TransactionService {
   /// If the transaction is linked (transfer or split), counterparts are also deleted.
   Future<void> deleteTransaction(String id) async {
     try {
+      final transaction = await _transactionRepository.getTransactionById(id);
+      if (transaction == null) return;
+
+      Transaction? related;
+      List<Transaction> children = [];
+
+      if (transaction.transferTransactionId != null) {
+        related = await _transactionRepository
+            .getTransactionById(transaction.transferTransactionId!);
+      } else {
+        children = await _transactionRepository.getSplitTransactions(id);
+      }
+
       await _transactionRepository.deleteLinkedTransaction(id);
+
+      _undoService.addAction(DeleteLinkedTransactionAction(
+        _transactionRepository,
+        transaction,
+        relatedTransaction: related,
+        children: children,
+      ));
       Logger.info('Transaction deleted: $id');
     } catch (e, stackTrace) {
       Logger.error('Failed to delete transaction', e, stackTrace);
@@ -102,6 +135,8 @@ class TransactionService {
 
       await _transactionRepository.createTransferTransaction(
           sourceToCreate, destToCreate);
+      _undoService.addAction(CreateTransferAction(
+          _transactionRepository, sourceToCreate, destToCreate));
       Logger.info('Transfer created: ${source.id} -> ${destination.id}');
     } catch (e, stackTrace) {
       Logger.error('Failed to create transfer', e, stackTrace);
@@ -145,6 +180,8 @@ class TransactionService {
 
       await _transactionRepository.createSplitTransaction(
           parentToCreate, childrenToCreate);
+      _undoService.addAction(CreateSplitTransactionAction(
+          _transactionRepository, parentToCreate, childrenToCreate));
       Logger.info('Split transaction created: ${parent.id}');
     } catch (e, stackTrace) {
       Logger.error('Failed to create split transaction', e, stackTrace);
@@ -157,7 +194,10 @@ class TransactionService {
     try {
       final t = await _transactionRepository.getTransactionById(id);
       if (t != null) {
-        await _transactionRepository.updateTransaction(t.copyWith(approved: true));
+        final updated = t.copyWith(approved: true);
+        await _transactionRepository.updateTransaction(updated);
+        _undoService.addAction(UpdateTransactionAction(
+            _transactionRepository, t, updated));
         Logger.info('Transaction approved: $id');
       }
     } catch (e, stackTrace) {
@@ -171,8 +211,10 @@ class TransactionService {
     try {
       final t = await _transactionRepository.getTransactionById(id);
       if (t != null) {
-        await _transactionRepository
-            .updateTransaction(t.copyWith(approved: false));
+        final updated = t.copyWith(approved: false);
+        await _transactionRepository.updateTransaction(updated);
+        _undoService.addAction(UpdateTransactionAction(
+            _transactionRepository, t, updated));
         Logger.info('Transaction rejected: $id');
       }
     } catch (e, stackTrace) {
@@ -187,8 +229,10 @@ class TransactionService {
     try {
       final t = await _transactionRepository.getTransactionById(id);
       if (t != null) {
-        await _transactionRepository
-            .updateTransaction(t.copyWith(cleared: status));
+        final updated = t.copyWith(cleared: status);
+        await _transactionRepository.updateTransaction(updated);
+        _undoService.addAction(UpdateTransactionAction(
+            _transactionRepository, t, updated));
         Logger.info('Transaction clearing status updated: $id -> $status');
       }
     } catch (e, stackTrace) {
@@ -200,12 +244,90 @@ class TransactionService {
   /// Marks a list of transactions as reconciled.
   Future<void> markAsReconciled(List<String> ids) async {
     try {
-      for (var id in ids) {
-        await updateClearingStatus(id, TransactionClearStatus.reconciled);
-      }
+      final transactions = await _transactionRepository.getTransactions(
+        filter: TransactionFilter(ids: ids),
+      );
+
+      final updatedTransactions = transactions.map((t) {
+        return t.copyWith(
+          cleared: TransactionClearStatus.reconciled,
+          updatedAt: DateTime.now(),
+        );
+      }).toList();
+
+      await _transactionRepository.batchUpdateTransactions(updatedTransactions);
+      _undoService.addAction(BatchUpdateTransactionsAction(
+          _transactionRepository, transactions, updatedTransactions));
       Logger.info('Transactions reconciled: ${ids.length}');
     } catch (e, stackTrace) {
       Logger.error('Failed to reconcile transactions', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Approves multiple transactions.
+  Future<void> bulkApprove(List<String> ids) async {
+    try {
+      final transactions = await _transactionRepository.getTransactions(
+        filter: TransactionFilter(ids: ids),
+      );
+
+      final updatedTransactions = transactions.map((t) {
+        return t.copyWith(
+          approved: true,
+          updatedAt: DateTime.now(),
+        );
+      }).toList();
+
+      await _transactionRepository.batchUpdateTransactions(updatedTransactions);
+      _undoService.addAction(BatchUpdateTransactionsAction(
+          _transactionRepository, transactions, updatedTransactions));
+      Logger.info('Transactions approved: ${ids.length}');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to approve transactions', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Rejects (unapproves) multiple transactions.
+  Future<void> bulkReject(List<String> ids) async {
+    try {
+      final transactions = await _transactionRepository.getTransactions(
+        filter: TransactionFilter(ids: ids),
+      );
+
+      final updatedTransactions = transactions.map((t) {
+        return t.copyWith(
+          approved: false,
+          updatedAt: DateTime.now(),
+        );
+      }).toList();
+
+      await _transactionRepository.batchUpdateTransactions(updatedTransactions);
+      _undoService.addAction(BatchUpdateTransactionsAction(
+          _transactionRepository, transactions, updatedTransactions));
+      Logger.info('Transactions rejected: ${ids.length}');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to reject transactions', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Soft-deletes multiple transactions.
+  Future<void> bulkDelete(List<String> ids) async {
+    try {
+      final transactions = await _transactionRepository.getTransactions(
+        filter: TransactionFilter(ids: ids),
+      );
+      await _transactionRepository.batchDeleteTransactions(ids);
+
+      if (transactions.isNotEmpty) {
+        _undoService.addAction(BatchDeleteTransactionsAction(
+            _transactionRepository, transactions));
+      }
+      Logger.info('Transactions deleted: ${ids.length}');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to delete transactions', e, stackTrace);
       rethrow;
     }
   }

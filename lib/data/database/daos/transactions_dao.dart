@@ -32,6 +32,17 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       (update(transactions)..where((t) => t.id.equals(id)))
           .write(const TransactionsCompanion(isDeleted: Value(true)));
 
+  Future<void> batchUpdateTransactions(List<TransactionsCompanion> list) async {
+    await batch((batch) {
+      batch.replaceAll(transactions, list);
+    });
+  }
+
+  Future<void> batchSoftDeleteTransactions(List<String> ids) async {
+    await (update(transactions)..where((t) => t.id.isIn(ids)))
+        .write(const TransactionsCompanion(isDeleted: Value(true)));
+  }
+
   Stream<List<Transaction>> watchAllTransactions() =>
       (select(transactions)..where((t) => t.isDeleted.equals(false))).watch();
 
@@ -92,6 +103,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     Expression<bool> whereClause = transactions.isDeleted.equals(false);
 
     if (filter != null) {
+      if (filter.ids != null && filter.ids!.isNotEmpty) {
+        whereClause = whereClause & transactions.id.isIn(filter.ids!);
+      }
       if (filter.accountIds != null && filter.accountIds!.isNotEmpty) {
         whereClause = whereClause & transactions.accountId.isIn(filter.accountIds!);
       }

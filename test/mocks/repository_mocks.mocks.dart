@@ -420,9 +420,29 @@ class MockTransactionRepository extends _i1.Mock
           as _i3.Future<void>);
 
   @override
+  _i3.Future<void> batchUpdateTransactions(
+    List<_i13.Transaction>? transactions,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#batchUpdateTransactions, [transactions]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
   _i3.Future<void> deleteTransaction(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteTransaction, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> batchDeleteTransactions(List<String>? ids) =>
+      (super.noSuchMethod(
+            Invocation.method(#batchDeleteTransactions, [ids]),
             returnValue: _i3.Future<void>.value(),
             returnValueForMissingStub: _i3.Future<void>.value(),
           )
