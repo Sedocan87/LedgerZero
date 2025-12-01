@@ -148,19 +148,19 @@ void main() {
   });
 
   group('deleteTransaction', () {
-    test('should call deleteTransaction on dao', () async {
+    test('should call softDeleteTransaction on dao', () async {
       // arrange
-      when(mockTransactionsDao.deleteTransaction(any))
-          .thenAnswer((_) async => 1);
+      when(mockTransactionsDao.softDeleteTransaction(any))
+          .thenAnswer((_) async {});
       // act
       await repository.deleteTransaction('tx1');
       // assert
-      verify(mockTransactionsDao.deleteTransaction('tx1')).called(1);
+      verify(mockTransactionsDao.softDeleteTransaction('tx1')).called(1);
     });
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.deleteTransaction(any))
+      when(mockTransactionsDao.softDeleteTransaction(any))
           .thenThrow(Exception('DB Error'));
       // act & assert
       expect(() => repository.deleteTransaction('tx1'),
