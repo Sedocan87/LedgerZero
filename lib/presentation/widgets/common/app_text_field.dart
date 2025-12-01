@@ -13,6 +13,11 @@ class AppTextField extends StatelessWidget {
   final int? maxLines;
   final bool readOnly;
   final VoidCallback? onTap;
+  final FormFieldValidator<String>? validator;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
+  final FocusNode? focusNode;
+  final String? helperText;
 
   const AppTextField({
     super.key,
@@ -28,6 +33,11 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.readOnly = false,
     this.onTap,
+    this.validator,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.focusNode,
+    this.helperText,
   });
 
   @override
@@ -40,9 +50,14 @@ class AppTextField extends StatelessWidget {
       maxLines: maxLines,
       readOnly: readOnly,
       onTap: onTap,
+      validator: validator,
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted,
+      focusNode: focusNode,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        helperText: helperText,
         errorText: errorText,
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
