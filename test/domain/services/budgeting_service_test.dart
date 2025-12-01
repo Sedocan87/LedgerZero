@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 
 import '../../mocks/repository_mocks.mocks.dart';
@@ -10,13 +11,16 @@ void main() {
   late BudgetingService budgetingService;
   late MockTransactionRepository mockTransactionRepository;
   late MockBudgetRepository mockBudgetRepository;
+  late MockCategoryRepository mockCategoryRepository;
 
   setUp(() {
     mockTransactionRepository = MockTransactionRepository();
     mockBudgetRepository = MockBudgetRepository();
+    mockCategoryRepository = MockCategoryRepository();
     budgetingService = BudgetingService(
       transactionRepository: mockTransactionRepository,
       budgetRepository: mockBudgetRepository,
+      categoryRepository: mockCategoryRepository,
     );
   });
 
@@ -444,6 +448,168 @@ void main() {
        final available = await budgetingService.calculateCategoryAvailable(categoryId, targetMonth);
 
        expect(available, 150.0);
+    });
+  });
+
+  group('setCategoryBudgetedAmount', () {
+    test('should update existing budget if it exists', () async {
+      final month = DateTime(2025, 5);
+      const categoryId = 'cat1';
+      const amount = 500.0;
+
+      const existingBudget = Budget(
+        id: 'existing_id',
+        categoryId: categoryId,
+        month: '2025-05',
+        budgeted: 100.0,
+      );
+
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth(categoryId, '2025-05'))
+          .thenAnswer((_) async => existingBudget);
+      when(mockBudgetRepository.updateBudget(any)).thenAnswer((_) async {});
+
+      await budgetingService.setCategoryBudgetedAmount(categoryId, amount, month);
+
+      verify(mockBudgetRepository.updateBudget(argThat(predicate((Budget b) {
+        return b.id == 'existing_id' && b.budgeted == 500.0;
+      })))).called(1);
+      verifyNever(mockBudgetRepository.createBudget(any));
+    });
+
+    test('should create new budget if it does not exist', () async {
+      final month = DateTime(2025, 5);
+      const categoryId = 'cat1';
+      const amount = 500.0;
+
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth(categoryId, '2025-05'))
+          .thenAnswer((_) async => null);
+      when(mockBudgetRepository.createBudget(any)).thenAnswer((_) async {});
+
+      await budgetingService.setCategoryBudgetedAmount(categoryId, amount, month);
+
+      verify(mockBudgetRepository.createBudget(argThat(predicate((Budget b) {
+        return b.categoryId == categoryId && b.month == '2025-05' && b.budgeted == 500.0;
+      })))).called(1);
+    });
+  });
+
+  group('moveMoney', () {
+    test('should move money between two existing budgets', () async {
+      final month = DateTime(2025, 5);
+      const fromCatId = 'cat1';
+      const toCatId = 'cat2';
+      const amount = 50.0;
+
+      const fromBudget = Budget(
+        id: 'b1',
+        categoryId: fromCatId,
+        month: '2025-05',
+        budgeted: 100.0,
+      );
+      const toBudget = Budget(
+        id: 'b2',
+        categoryId: toCatId,
+        month: '2025-05',
+        budgeted: 200.0,
+      );
+
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth(fromCatId, '2025-05'))
+          .thenAnswer((_) async => fromBudget);
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth(toCatId, '2025-05'))
+          .thenAnswer((_) async => toBudget);
+      when(mockBudgetRepository.updateBudget(any)).thenAnswer((_) async {});
+
+      await budgetingService.moveMoney(fromCatId, toCatId, amount, month);
+
+      // Verify updates
+      verify(mockBudgetRepository.updateBudget(argThat(predicate((Budget b) {
+        return b.id == 'b1' && b.budgeted == 50.0; // 100 - 50
+      })))).called(1);
+
+      verify(mockBudgetRepository.updateBudget(argThat(predicate((Budget b) {
+        return b.id == 'b2' && b.budgeted == 250.0; // 200 + 50
+      })))).called(1);
+    });
+
+    test('should create budgets if they do not exist during move', () async {
+      final month = DateTime(2025, 5);
+      const fromCatId = 'cat1';
+      const toCatId = 'cat2';
+      const amount = 50.0;
+
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth(fromCatId, '2025-05'))
+          .thenAnswer((_) async => null);
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth(toCatId, '2025-05'))
+          .thenAnswer((_) async => null);
+
+      // Capture created budget to return it for update step?
+      // Actually, my implementation creates it first, then updates it.
+      // But mock repository.createBudget just returns void.
+      // The service implementation retrieves it again? No, it uses the created object.
+      // Wait, let's check implementation of moveMoney again.
+
+      // Implementation:
+      // if (fromBudget == null) { create; }
+      // But `create` doesn't return the budget.
+      // The implementation creates a Budget object, calls createBudget, and then uses that object locally.
+      // So mocking createBudget is enough.
+
+      when(mockBudgetRepository.createBudget(any)).thenAnswer((_) async {});
+      when(mockBudgetRepository.updateBudget(any)).thenAnswer((_) async {});
+
+      await budgetingService.moveMoney(fromCatId, toCatId, amount, month);
+
+      // Should create both
+      verify(mockBudgetRepository.createBudget(argThat(predicate((Budget b) {
+         return b.categoryId == fromCatId && b.budgeted == 0.0;
+      })))).called(1);
+       verify(mockBudgetRepository.createBudget(argThat(predicate((Budget b) {
+         return b.categoryId == toCatId && b.budgeted == 0.0;
+      })))).called(1);
+
+      // And then update both
+      verify(mockBudgetRepository.updateBudget(argThat(predicate((Budget b) {
+        // Created with 0, subtracted 50 -> -50
+        return b.categoryId == fromCatId && b.budgeted == -50.0;
+      })))).called(1);
+
+      verify(mockBudgetRepository.updateBudget(argThat(predicate((Budget b) {
+        // Created with 0, added 50 -> 50
+        return b.categoryId == toCatId && b.budgeted == 50.0;
+      })))).called(1);
+    });
+  });
+
+  group('initializeMonthBudgets', () {
+    test('should create budgets for all categories if they do not exist', () async {
+      final month = DateTime(2025, 6);
+      const cat1 = Category(id: 'c1', name: 'Cat1', isHidden: false);
+      const cat2 = Category(id: 'c2', name: 'Cat2', isHidden: false);
+
+      when(mockCategoryRepository.getAllCategories())
+          .thenAnswer((_) async => [cat1, cat2]);
+
+      // c1 exists
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth('c1', '2025-06'))
+          .thenAnswer((_) async => const Budget(id: 'b1', categoryId: 'c1', month: '2025-06'));
+
+      // c2 does not exist
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth('c2', '2025-06'))
+          .thenAnswer((_) async => null);
+
+      when(mockBudgetRepository.createBudget(any)).thenAnswer((_) async {});
+
+      await budgetingService.initializeMonthBudgets(month);
+
+      // Should only create for c2
+      verify(mockBudgetRepository.createBudget(argThat(predicate((Budget b) {
+        return b.categoryId == 'c2' && b.month == '2025-06' && b.budgeted == 0.0;
+      })))).called(1);
+
+      // Should not create for c1 (it exists)
+       verifyNever(mockBudgetRepository.createBudget(argThat(predicate((Budget b) {
+        return b.categoryId == 'c1';
+      }))));
     });
   });
 }
