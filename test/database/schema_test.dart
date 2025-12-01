@@ -14,12 +14,12 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 3', () {
-    expect(database.schemaVersion, 3);
+  test('schema version should be 4', () {
+    expect(database.schemaVersion, 4);
   });
 
   group('Database Tables Creation & Defaults', () {
-    test('should create accounts table with default values', () async {
+    test('should create accounts table with default values and new columns', () async {
       final account = AccountsCompanion(
         id: const Value('acc_1'),
         name: const Value('Checking'),
@@ -34,6 +34,9 @@ void main() {
       expect(result.startingBalance, 0.0); // Default
       expect(result.currentBalance, 0.0); // Default
       expect(result.isClosed, false); // Default (0 -> false)
+      expect(result.color, isNull);
+      expect(result.icon, isNull);
+      expect(result.notes, isNull);
     });
 
     test('should create categories table with default values and new columns', () async {

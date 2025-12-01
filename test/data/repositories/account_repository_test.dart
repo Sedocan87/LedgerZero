@@ -171,4 +171,26 @@ void main() {
       expect(stream, emitsError(isA<DatabaseException>()));
     });
   });
+
+  group('watchAccount', () {
+    test('should stream account from dao', () {
+      // arrange
+      when(mockAccountsDao.watchAccount('acc1'))
+          .thenAnswer((_) => Stream.value(tDriftAccount));
+      // act
+      final stream = repository.watchAccount('acc1');
+      // assert
+      expect(stream, emits(tDomainAccount));
+    });
+
+    test('should emit null when account not found', () {
+      // arrange
+      when(mockAccountsDao.watchAccount('acc1'))
+          .thenAnswer((_) => Stream.value(null));
+      // act
+      final stream = repository.watchAccount('acc1');
+      // assert
+      expect(stream, emits(isNull));
+    });
+  });
 }

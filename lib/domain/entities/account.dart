@@ -38,6 +38,15 @@ class Account {
   /// Whether the account is closed.
   final bool isClosed;
 
+  /// The color of the account.
+  final int? color;
+
+  /// The icon of the account.
+  final String? icon;
+
+  /// Notes for the account.
+  final String? notes;
+
   /// The date and time when the account was created.
   final DateTime? createdAt;
 
@@ -53,6 +62,9 @@ class Account {
     this.startingBalance = 0.0,
     this.currentBalance = 0.0,
     this.isClosed = false,
+    this.color,
+    this.icon,
+    this.notes,
     this.createdAt,
     this.updatedAt,
   });
@@ -66,6 +78,9 @@ class Account {
     double? startingBalance,
     double? currentBalance,
     bool? isClosed,
+    int? color,
+    String? icon,
+    String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -77,6 +92,9 @@ class Account {
       startingBalance: startingBalance ?? this.startingBalance,
       currentBalance: currentBalance ?? this.currentBalance,
       isClosed: isClosed ?? this.isClosed,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -92,6 +110,9 @@ class Account {
       startingBalance: (json['starting_balance'] as num?)?.toDouble() ?? 0.0,
       currentBalance: (json['current_balance'] as num?)?.toDouble() ?? 0.0,
       isClosed: json['is_closed'] as bool? ?? false,
+      color: json['color'] as int?,
+      icon: json['icon'] as String?,
+      notes: json['notes'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -111,6 +132,9 @@ class Account {
       'starting_balance': startingBalance,
       'current_balance': currentBalance,
       'is_closed': isClosed,
+      'color': color,
+      'icon': icon,
+      'notes': notes,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -130,6 +154,9 @@ class Account {
         other.startingBalance == startingBalance &&
         other.currentBalance == currentBalance &&
         other.isClosed == isClosed &&
+        other.color == color &&
+        other.icon == icon &&
+        other.notes == notes &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -144,6 +171,9 @@ class Account {
       startingBalance,
       currentBalance,
       isClosed,
+      color,
+      icon,
+      notes,
       createdAt,
       updatedAt,
     );
@@ -151,7 +181,7 @@ class Account {
 
   @override
   String toString() {
-    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, currentBalance: $currentBalance, isClosed: $isClosed, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, currentBalance: $currentBalance, isClosed: $isClosed, color: $color, icon: $icon, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   /// Validates the [Account] entity.

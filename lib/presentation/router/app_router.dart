@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
+import 'package:ledger_zero/presentation/screens/accounts/account_detail_screen.dart';
+import 'package:ledger_zero/presentation/screens/accounts/reconciliation_screen.dart';
 import 'package:ledger_zero/presentation/screens/budget/budget_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
@@ -72,6 +74,49 @@ final routerProvider = Provider<GoRouter>((ref) {
                     return FadeTransition(opacity: animation, child: child);
                   },
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'add',
+                    name: 'add-account',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => Scaffold(
+                      appBar: AppBar(title: const Text('Add Account')),
+                      body: const Center(child: Text('Add Account Screen Placeholder')),
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    name: 'account-detail',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return AccountDetailScreen(accountId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        name: 'edit-account',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return Scaffold(
+                            appBar: AppBar(title: const Text('Edit Account')),
+                            body: const Center(child: Text('Edit Account Screen Placeholder')),
+                          );
+                        },
+                      ),
+                      GoRoute(
+                        path: 'reconcile',
+                        name: 'reconcile-account',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return ReconciliationScreen(accountId: id);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

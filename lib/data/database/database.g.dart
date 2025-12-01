@@ -86,6 +86,33 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<int> color = GeneratedColumn<int>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -117,6 +144,9 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     startingBalance,
     currentBalance,
     isClosed,
+    color,
+    icon,
+    notes,
     createdAt,
     updatedAt,
   ];
@@ -183,6 +213,24 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         isClosed.isAcceptableOrUnknown(data['is_closed']!, _isClosedMeta),
       );
     }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -232,6 +280,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_closed'],
       )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color'],
+      ),
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -257,6 +317,9 @@ class Account extends DataClass implements Insertable<Account> {
   final double startingBalance;
   final double currentBalance;
   final bool isClosed;
+  final int? color;
+  final String? icon;
+  final String? notes;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   const Account({
@@ -267,6 +330,9 @@ class Account extends DataClass implements Insertable<Account> {
     required this.startingBalance,
     required this.currentBalance,
     required this.isClosed,
+    this.color,
+    this.icon,
+    this.notes,
     this.createdAt,
     this.updatedAt,
   });
@@ -280,6 +346,15 @@ class Account extends DataClass implements Insertable<Account> {
     map['starting_balance'] = Variable<double>(startingBalance);
     map['current_balance'] = Variable<double>(currentBalance);
     map['is_closed'] = Variable<bool>(isClosed);
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<int>(color);
+    }
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
     }
@@ -298,6 +373,13 @@ class Account extends DataClass implements Insertable<Account> {
       startingBalance: Value(startingBalance),
       currentBalance: Value(currentBalance),
       isClosed: Value(isClosed),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -320,6 +402,9 @@ class Account extends DataClass implements Insertable<Account> {
       startingBalance: serializer.fromJson<double>(json['startingBalance']),
       currentBalance: serializer.fromJson<double>(json['currentBalance']),
       isClosed: serializer.fromJson<bool>(json['isClosed']),
+      color: serializer.fromJson<int?>(json['color']),
+      icon: serializer.fromJson<String?>(json['icon']),
+      notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
@@ -335,6 +420,9 @@ class Account extends DataClass implements Insertable<Account> {
       'startingBalance': serializer.toJson<double>(startingBalance),
       'currentBalance': serializer.toJson<double>(currentBalance),
       'isClosed': serializer.toJson<bool>(isClosed),
+      'color': serializer.toJson<int?>(color),
+      'icon': serializer.toJson<String?>(icon),
+      'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
@@ -348,6 +436,9 @@ class Account extends DataClass implements Insertable<Account> {
     double? startingBalance,
     double? currentBalance,
     bool? isClosed,
+    Value<int?> color = const Value.absent(),
+    Value<String?> icon = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => Account(
@@ -358,6 +449,9 @@ class Account extends DataClass implements Insertable<Account> {
     startingBalance: startingBalance ?? this.startingBalance,
     currentBalance: currentBalance ?? this.currentBalance,
     isClosed: isClosed ?? this.isClosed,
+    color: color.present ? color.value : this.color,
+    icon: icon.present ? icon.value : this.icon,
+    notes: notes.present ? notes.value : this.notes,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
@@ -374,6 +468,9 @@ class Account extends DataClass implements Insertable<Account> {
           ? data.currentBalance.value
           : this.currentBalance,
       isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
+      color: data.color.present ? data.color.value : this.color,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      notes: data.notes.present ? data.notes.value : this.notes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -389,6 +486,9 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('startingBalance: $startingBalance, ')
           ..write('currentBalance: $currentBalance, ')
           ..write('isClosed: $isClosed, ')
+          ..write('color: $color, ')
+          ..write('icon: $icon, ')
+          ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -404,6 +504,9 @@ class Account extends DataClass implements Insertable<Account> {
     startingBalance,
     currentBalance,
     isClosed,
+    color,
+    icon,
+    notes,
     createdAt,
     updatedAt,
   );
@@ -418,6 +521,9 @@ class Account extends DataClass implements Insertable<Account> {
           other.startingBalance == this.startingBalance &&
           other.currentBalance == this.currentBalance &&
           other.isClosed == this.isClosed &&
+          other.color == this.color &&
+          other.icon == this.icon &&
+          other.notes == this.notes &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -430,6 +536,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<double> startingBalance;
   final Value<double> currentBalance;
   final Value<bool> isClosed;
+  final Value<int?> color;
+  final Value<String?> icon;
+  final Value<String?> notes;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
   final Value<int> rowid;
@@ -441,6 +550,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.startingBalance = const Value.absent(),
     this.currentBalance = const Value.absent(),
     this.isClosed = const Value.absent(),
+    this.color = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -453,6 +565,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.startingBalance = const Value.absent(),
     this.currentBalance = const Value.absent(),
     this.isClosed = const Value.absent(),
+    this.color = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -467,6 +582,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<double>? startingBalance,
     Expression<double>? currentBalance,
     Expression<bool>? isClosed,
+    Expression<int>? color,
+    Expression<String>? icon,
+    Expression<String>? notes,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -479,6 +597,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (startingBalance != null) 'starting_balance': startingBalance,
       if (currentBalance != null) 'current_balance': currentBalance,
       if (isClosed != null) 'is_closed': isClosed,
+      if (color != null) 'color': color,
+      if (icon != null) 'icon': icon,
+      if (notes != null) 'notes': notes,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -493,6 +614,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<double>? startingBalance,
     Value<double>? currentBalance,
     Value<bool>? isClosed,
+    Value<int?>? color,
+    Value<String?>? icon,
+    Value<String?>? notes,
     Value<DateTime?>? createdAt,
     Value<DateTime?>? updatedAt,
     Value<int>? rowid,
@@ -505,6 +629,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       startingBalance: startingBalance ?? this.startingBalance,
       currentBalance: currentBalance ?? this.currentBalance,
       isClosed: isClosed ?? this.isClosed,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -535,6 +662,15 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (isClosed.present) {
       map['is_closed'] = Variable<bool>(isClosed.value);
     }
+    if (color.present) {
+      map['color'] = Variable<int>(color.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -557,6 +693,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('startingBalance: $startingBalance, ')
           ..write('currentBalance: $currentBalance, ')
           ..write('isClosed: $isClosed, ')
+          ..write('color: $color, ')
+          ..write('icon: $icon, ')
+          ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -4384,6 +4523,9 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<double> startingBalance,
       Value<double> currentBalance,
       Value<bool> isClosed,
+      Value<int?> color,
+      Value<String?> icon,
+      Value<String?> notes,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
       Value<int> rowid,
@@ -4397,6 +4539,9 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<double> startingBalance,
       Value<double> currentBalance,
       Value<bool> isClosed,
+      Value<int?> color,
+      Value<String?> icon,
+      Value<String?> notes,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
       Value<int> rowid,
@@ -4519,6 +4664,21 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get isClosed => $composableBuilder(
     column: $table.isClosed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4653,6 +4813,21 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4697,6 +4872,15 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<bool> get isClosed =>
       $composableBuilder(column: $table.isClosed, builder: (column) => column);
+
+  GeneratedColumn<int> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -4820,6 +5004,9 @@ class $$AccountsTableTableManager
                 Value<double> startingBalance = const Value.absent(),
                 Value<double> currentBalance = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
+                Value<int?> color = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4831,6 +5018,9 @@ class $$AccountsTableTableManager
                 startingBalance: startingBalance,
                 currentBalance: currentBalance,
                 isClosed: isClosed,
+                color: color,
+                icon: icon,
+                notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -4844,6 +5034,9 @@ class $$AccountsTableTableManager
                 Value<double> startingBalance = const Value.absent(),
                 Value<double> currentBalance = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
+                Value<int?> color = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4855,6 +5048,9 @@ class $$AccountsTableTableManager
                 startingBalance: startingBalance,
                 currentBalance: currentBalance,
                 isClosed: isClosed,
+                color: color,
+                icon: icon,
+                notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

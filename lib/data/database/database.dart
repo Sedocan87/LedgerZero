@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -71,6 +71,12 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           // Add is_deleted column to transactions table
           await m.addColumn(transactions, transactions.isDeleted);
+        }
+        if (from < 4) {
+          // Add new columns to accounts table
+          await m.addColumn(accounts, accounts.color);
+          await m.addColumn(accounts, accounts.icon);
+          await m.addColumn(accounts, accounts.notes);
         }
       },
       beforeOpen: (details) async {

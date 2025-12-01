@@ -50,5 +50,53 @@
   "createAccount": "Create Account",
   "@createAccount": {
     "description": "Button label to create an account"
-  }
+  },
+  "accountDetails": "Account Details",
+  "loading": "Loading...",
+  "error": "Error",
+  "accountNotFound": "Account not found",
+  "noTransactions": "No transactions",
+  "unknownPayee": "Unknown Payee",
+  "balanceTrend": "Balance Trend",
+  "noTransactionsTrend": "No transactions to show trend",
+  "deleteAccount": "Delete Account",
+  "closeAccount": "Close Account",
+  "reopenAccount": "Reopen Account",
+  "reconcileAccount": "Reconcile Account",
+  "exportToCsv": "Export to CSV",
+  "deleteAccountConfirmation": "Are you sure you want to delete this account? This cannot be undone.",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "exportedTo": "Exported to {path}",
+  "@exportedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "currentBalance": "Current Balance: {balance}",
+  "@currentBalance": {
+      "placeholders": {
+          "balance": {
+              "type": "double",
+              "format": "currency"
+          }
+      }
+  },
+  "enterActualBalance": "Enter Actual Balance",
+  "discrepancyFound": "Discrepancy Found",
+  "discrepancyMessage": "There is a difference of {diff}. Create an adjustment transaction?",
+  "@discrepancyMessage": {
+      "placeholders": {
+          "diff": {
+              "type": "String"
+          }
+      }
+  },
+  "yes": "Yes",
+  "no": "No",
+  "reconcile": "Reconcile",
+  "accountReconciled": "Account Reconciled!",
+  "adjustmentCreated": "Adjustment created and account reconciled."
 }
