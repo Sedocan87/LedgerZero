@@ -7,6 +7,9 @@ class Categories extends Table {
   TextColumn get categoryGroupId => text().nullable().references(CategoryGroups, #id)();
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().nullable()();
+  TextColumn get goalType => text().nullable()();
+  RealColumn get targetAmount => real().nullable()();
+  DateTimeColumn get targetDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
 
   @override

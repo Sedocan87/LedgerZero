@@ -5,6 +5,7 @@ import 'package:ledger_zero/data/database/daos/categories_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
+import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 
 class CategoryRepositoryImpl implements CategoryRepository {
@@ -175,6 +176,9 @@ class CategoryRepositoryImpl implements CategoryRepository {
       categoryGroupId: c.categoryGroupId,
       isHidden: c.isHidden,
       sortOrder: c.sortOrder,
+      goalType: GoalType.fromName(c.goalType),
+      targetAmount: c.targetAmount,
+      targetDate: c.targetDate,
       createdAt: c.createdAt,
     );
   }
@@ -186,6 +190,9 @@ class CategoryRepositoryImpl implements CategoryRepository {
       categoryGroupId: Value(c.categoryGroupId),
       isHidden: Value(c.isHidden),
       sortOrder: Value(c.sortOrder),
+      goalType: Value(c.goalType?.toName()),
+      targetAmount: Value(c.targetAmount),
+      targetDate: Value(c.targetDate),
       createdAt: Value(c.createdAt),
     );
   }

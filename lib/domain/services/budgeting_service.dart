@@ -5,6 +5,15 @@ import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
+
+enum AutoAssignRule {
+  underfunded,
+  averageSpent,
+  lastMonthSpent,
+  lastMonthBudgeted,
+}
 
 /// Service responsible for core budgeting calculations.
 class BudgetingService {
@@ -273,5 +282,126 @@ class BudgetingService {
         await _budgetRepository.createBudget(newBudget);
       }
     }));
+  }
+
+  /// Calculates the target amount to budget for a category for the given month based on its goal.
+  Future<double> calculateGoalTarget(Category category, DateTime month) async {
+    if (category.goalType == null || category.targetAmount == null) {
+      return 0.0;
+    }
+
+    final targetAmount = category.targetAmount!;
+    final prevMonth = DateTime(month.year, month.month - 1, 1);
+
+    switch (category.goalType!) {
+      case GoalType.monthlyFunding:
+        return targetAmount;
+
+      case GoalType.targetBalance:
+        final priorAvailable = await calculateCategoryAvailable(category.id, prevMonth);
+        final needed = targetAmount - priorAvailable;
+        return needed > 0 ? needed : 0.0;
+
+      case GoalType.targetBalanceByDate:
+        if (category.targetDate == null) {
+          return 0.0;
+        }
+
+        // Calculate months remaining, inclusive of current month and target month
+        final monthsDiff = _monthsDifference(month, category.targetDate!);
+        // If target date is in the past or this month, monthsDiff <= 0.
+        // We want to treat "this month" as 1 month remaining.
+        int monthsRemaining = monthsDiff + 1;
+
+        if (monthsRemaining <= 0) {
+          monthsRemaining = 1;
+        }
+
+        final priorAvailable = await calculateCategoryAvailable(category.id, prevMonth);
+        final needed = targetAmount - priorAvailable;
+
+        if (needed <= 0) {
+          return 0.0;
+        }
+
+        return needed / monthsRemaining;
+    }
+  }
+
+  /// Calculates the funded percentage for a category's goal in a specific month.
+  /// Returns a value between 0.0 and 1.0 (or higher if overfunded).
+  Future<double> calculateFundedPercentage(Category category, DateTime month) async {
+    if (category.goalType == null || category.targetAmount == null || category.targetAmount == 0) {
+      return 0.0;
+    }
+
+    final target = await calculateGoalTarget(category, month);
+    if (target == 0.0) {
+      return 1.0; // Goal met or no target needed
+    }
+
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final budget = await _budgetRepository.getBudgetByCategoryAndMonth(category.id, monthString);
+    final budgeted = budget?.budgeted ?? 0.0;
+
+    return budgeted / target;
+  }
+
+  /// Calculates the average spending for a category over the last [months] count (excluding current month).
+  Future<double> getAverageSpent(String categoryId, int months, DateTime referenceMonth) async {
+    final currentMonthStart = DateTime(referenceMonth.year, referenceMonth.month, 1);
+    final endDate = currentMonthStart.subtract(const Duration(milliseconds: 1));
+    final startDate = DateTime(referenceMonth.year, referenceMonth.month - months, 1);
+
+    final transactions = await _transactionRepository.getTransactionsByDateRange(startDate, endDate);
+
+    final totalSpent = transactions
+        .where((t) => t.categoryId == categoryId)
+        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
+
+    return (totalSpent / months).abs();
+  }
+
+  /// Gets the spending in the previous month.
+  Future<double> getLastMonthSpent(String categoryId, DateTime currentMonth) async {
+    final prevMonth = DateTime(currentMonth.year, currentMonth.month - 1, 1);
+    final activity = await calculateCategoryActivity(categoryId, prevMonth);
+    return activity.abs();
+  }
+
+  /// Gets the budgeted amount in the previous month.
+  Future<double> getLastMonthBudgeted(String categoryId, DateTime currentMonth) async {
+    final prevMonthString = DateFormat('yyyy-MM').format(DateTime(currentMonth.year, currentMonth.month - 1, 1));
+    final budget = await _budgetRepository.getBudgetByCategoryAndMonth(categoryId, prevMonthString);
+    return budget?.budgeted ?? 0.0;
+  }
+
+  /// Automatically assigns budget to a category based on a rule.
+  Future<void> autoAssign(String categoryId, DateTime month, AutoAssignRule rule) async {
+    double amount = 0.0;
+
+    switch (rule) {
+      case AutoAssignRule.underfunded:
+        final category = await _categoryRepository.getCategoryById(categoryId);
+        if (category != null) {
+          amount = await calculateGoalTarget(category, month);
+        }
+        break;
+      case AutoAssignRule.averageSpent:
+        amount = await getAverageSpent(categoryId, 3, month); // Default to 3 months average
+        break;
+      case AutoAssignRule.lastMonthSpent:
+        amount = await getLastMonthSpent(categoryId, month);
+        break;
+      case AutoAssignRule.lastMonthBudgeted:
+        amount = await getLastMonthBudgeted(categoryId, month);
+        break;
+    }
+
+    await setCategoryBudgetedAmount(categoryId, amount, month);
+  }
+
+  int _monthsDifference(DateTime from, DateTime to) {
+    return (to.year - from.year) * 12 + to.month - from.month;
   }
 }

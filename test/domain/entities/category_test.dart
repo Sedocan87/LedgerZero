@@ -1,16 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
 
 void main() {
   group('Category', () {
     test('should instantiate correctly', () {
       final now = DateTime.now();
+      final targetDate = DateTime(2023, 12, 31);
       final category = Category(
         id: '1',
         name: 'Groceries',
         categoryGroupId: 'group1',
         isHidden: true,
         sortOrder: 1,
+        goalType: GoalType.targetBalance,
+        targetAmount: 1000.0,
+        targetDate: targetDate,
         createdAt: now,
       );
 
@@ -19,6 +24,9 @@ void main() {
       expect(category.categoryGroupId, 'group1');
       expect(category.isHidden, true);
       expect(category.sortOrder, 1);
+      expect(category.goalType, GoalType.targetBalance);
+      expect(category.targetAmount, 1000.0);
+      expect(category.targetDate, targetDate);
       expect(category.createdAt, now);
     });
 
@@ -33,17 +41,24 @@ void main() {
       expect(category.categoryGroupId, isNull);
       expect(category.isHidden, false);
       expect(category.sortOrder, isNull);
+      expect(category.goalType, isNull);
+      expect(category.targetAmount, isNull);
+      expect(category.targetDate, isNull);
       expect(category.createdAt, isNull);
     });
 
     test('should support serialization', () {
       final now = DateTime(2023, 10, 1);
+      final targetDate = DateTime(2023, 12, 31);
       final category = Category(
         id: '1',
         name: 'Groceries',
         categoryGroupId: 'group1',
         isHidden: true,
         sortOrder: 1,
+        goalType: GoalType.targetBalanceByDate,
+        targetAmount: 1000.0,
+        targetDate: targetDate,
         createdAt: now,
       );
 
@@ -53,6 +68,9 @@ void main() {
       expect(json['category_group_id'], 'group1');
       expect(json['is_hidden'], true);
       expect(json['sort_order'], 1);
+      expect(json['goal_type'], 'targetBalanceByDate');
+      expect(json['target_amount'], 1000.0);
+      expect(json['target_date'], targetDate.toIso8601String());
       expect(json['created_at'], now.toIso8601String());
 
       final fromJson = Category.fromJson(json);
@@ -61,6 +79,9 @@ void main() {
       expect(fromJson.categoryGroupId, category.categoryGroupId);
       expect(fromJson.isHidden, category.isHidden);
       expect(fromJson.sortOrder, category.sortOrder);
+      expect(fromJson.goalType, category.goalType);
+      expect(fromJson.targetAmount, category.targetAmount);
+      expect(fromJson.targetDate, category.targetDate);
       expect(fromJson.createdAt, category.createdAt);
     });
 
@@ -76,17 +97,24 @@ void main() {
       expect(category.categoryGroupId, isNull);
       expect(category.isHidden, false); // Default
       expect(category.sortOrder, isNull);
+      expect(category.goalType, isNull);
+      expect(category.targetAmount, isNull);
+      expect(category.targetDate, isNull);
       expect(category.createdAt, isNull);
     });
 
     test('should support equality', () {
       final now = DateTime(2023, 10, 1);
+      final targetDate = DateTime(2023, 12, 31);
       final category1 = Category(
         id: '1',
         name: 'Groceries',
         categoryGroupId: 'group1',
         isHidden: true,
         sortOrder: 1,
+        goalType: GoalType.targetBalance,
+        targetAmount: 100.0,
+        targetDate: targetDate,
         createdAt: now,
       );
 
@@ -96,6 +124,9 @@ void main() {
         categoryGroupId: 'group1',
         isHidden: true,
         sortOrder: 1,
+        goalType: GoalType.targetBalance,
+        targetAmount: 100.0,
+        targetDate: targetDate,
         createdAt: now,
       );
 

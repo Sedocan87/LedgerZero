@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/data/database/database.dart';
@@ -14,8 +14,8 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 1', () {
-    expect(database.schemaVersion, 1);
+  test('schema version should be 2', () {
+    expect(database.schemaVersion, 2);
   });
 
   group('Database Tables Creation & Defaults', () {
@@ -36,7 +36,7 @@ void main() {
       expect(result.isClosed, false); // Default (0 -> false)
     });
 
-    test('should create categories table with default values', () async {
+    test('should create categories table with default values and new columns', () async {
       await database.into(database.categoryGroups).insert(
         const CategoryGroupsCompanion(id: Value('grp_1'), name: Value('Living')),
       );
@@ -50,6 +50,9 @@ void main() {
       final result = await database.select(database.categories).getSingle();
 
       expect(result.isHidden, false); // Default
+      expect(result.goalType, isNull);
+      expect(result.targetAmount, isNull);
+      expect(result.targetDate, isNull);
     });
 
     test('should create transactions table with default values', () async {
