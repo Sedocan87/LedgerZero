@@ -42,27 +42,15 @@ class BudgetingService {
     // 2. Fetch all transactions up to the end of the target month
     // We start from a very old date (Unix epoch) to capture all history
     final startOfTime = DateTime.fromMillisecondsSinceEpoch(0);
-    final transactions = await _transactionRepository.getTransactionsByDateRange(
+
+    final totalIncome = await _transactionRepository.getIncomeSumByDateRange(
       startOfTime,
       nextMonthStart.subtract(const Duration(milliseconds: 1)),
     );
 
-    // 3. Calculate Total Income
-    // Income is defined as transactions with a positive amount and a null categoryId.
-    final totalIncome = transactions
-        .where((t) => t.amount > 0 && t.categoryId == null)
-        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
-
-    // 4. Fetch all budgets
-    final allBudgets = await _budgetRepository.getAllBudgets();
-
-    // 5. Calculate Total Budgeted
-    // Filter budgets where month <= targetMonth (formatted as YYYY-MM)
+    // 3. Calculate Total Budgeted
     final targetMonthString = DateFormat('yyyy-MM').format(targetMonth);
-
-    final totalBudgeted = allBudgets
-        .where((b) => b.month.compareTo(targetMonthString) <= 0)
-        .fold<double>(0.0, (double sum, Budget b) => sum + b.budgeted);
+    final totalBudgeted = await _budgetRepository.getTotalBudgetedByMonthRange(targetMonthString);
 
     return totalIncome - totalBudgeted;
   }
@@ -74,14 +62,10 @@ class BudgetingService {
     final startOfMonth = DateTime(month.year, month.month, 1);
     final endOfMonth = DateTime(month.year, month.month + 1, 1).subtract(const Duration(milliseconds: 1));
 
-    final transactions = await _transactionRepository.getTransactionsByDateRange(
+    return await _transactionRepository.getIncomeSumByDateRange(
       startOfMonth,
       endOfMonth,
     );
-
-    return transactions
-        .where((t) => t.amount > 0 && t.categoryId == null)
-        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
   }
 
   /// Calculates total budgeted amount for a specific [month].
@@ -100,14 +84,11 @@ class BudgetingService {
     final startOfMonth = DateTime(month.year, month.month, 1);
     final endOfMonth = DateTime(month.year, month.month + 1, 1).subtract(const Duration(milliseconds: 1));
 
-    final transactions = await _transactionRepository.getTransactionsByDateRange(
+    return await _transactionRepository.getExpenseSumByCategoryAndDateRange(
+      categoryId,
       startOfMonth,
       endOfMonth,
     );
-
-    return transactions
-        .where((t) => t.categoryId == categoryId)
-        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
   }
 
   /// Calculates the available amount for a specific [categoryId] up to the end of [month].
@@ -121,24 +102,18 @@ class BudgetingService {
     final startOfTime = DateTime.fromMillisecondsSinceEpoch(0);
 
     // 2. Fetch all transactions for this category up to end of target month
-    // Note: Optimization would be to have getTransactionsByCategoryAndDateRange in repository
-    final allTransactions = await _transactionRepository.getTransactionsByDateRange(
+    final totalActivity = await _transactionRepository.getExpenseSumByCategoryAndDateRange(
+      categoryId,
       startOfTime,
       endOfTargetMonth,
     );
 
-    final totalActivity = allTransactions
-        .where((t) => t.categoryId == categoryId)
-        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
-
     // 3. Fetch all budgets
-    // Note: Optimization would be to have getBudgetsByCategory in repository
-    final allBudgets = await _budgetRepository.getAllBudgets();
     final targetMonthString = DateFormat('yyyy-MM').format(month);
-
-    final totalBudgeted = allBudgets
-        .where((b) => b.categoryId == categoryId && b.month.compareTo(targetMonthString) <= 0)
-        .fold<double>(0.0, (double sum, Budget b) => sum + b.budgeted);
+    final totalBudgeted = await _budgetRepository.getTotalBudgetedByCategoryAndMonthRange(
+      categoryId,
+      targetMonthString,
+    );
 
     return totalBudgeted + totalActivity;
   }

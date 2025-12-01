@@ -933,6 +933,30 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
           as _i5.Future<List<_i2.Transaction>>);
 
   @override
+  _i5.Future<double> getIncomeSumByDateRange(DateTime? start, DateTime? end) =>
+      (super.noSuchMethod(
+            Invocation.method(#getIncomeSumByDateRange, [start, end]),
+            returnValue: _i5.Future<double>.value(0.0),
+          )
+          as _i5.Future<double>);
+
+  @override
+  _i5.Future<double> getExpenseSumByCategoryAndDateRange(
+    String? categoryId,
+    DateTime? start,
+    DateTime? end,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getExpenseSumByCategoryAndDateRange, [
+              categoryId,
+              start,
+              end,
+            ]),
+            returnValue: _i5.Future<double>.value(0.0),
+          )
+          as _i5.Future<double>);
+
+  @override
   _i5.Stream<T> createStream<T extends Object>(
     _i4.QueryStreamFetcher<T>? stmt,
   ) =>

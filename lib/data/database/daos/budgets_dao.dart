@@ -33,4 +33,24 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
 
   Stream<List<Budget>> watchBudgetsForMonth(String month) =>
       (select(budgets)..where((tbl) => tbl.month.equals(month))).watch();
+
+  Future<double> getTotalBudgetedByMonthRange(String endMonth) {
+    final budgeted = budgets.budgeted.sum();
+    final query = selectOnly(budgets)
+      ..where(budgets.month.isSmallerOrEqualValue(endMonth))
+      ..addColumns([budgeted]);
+
+    return query.map((row) => row.read(budgeted) ?? 0.0).getSingle();
+  }
+
+  Future<double> getTotalBudgetedByCategoryAndMonthRange(
+      String categoryId, String endMonth) {
+    final budgeted = budgets.budgeted.sum();
+    final query = selectOnly(budgets)
+      ..where(budgets.categoryId.equals(categoryId) &
+          budgets.month.isSmallerOrEqualValue(endMonth))
+      ..addColumns([budgeted]);
+
+    return query.map((row) => row.read(budgeted) ?? 0.0).getSingle();
+  }
 }

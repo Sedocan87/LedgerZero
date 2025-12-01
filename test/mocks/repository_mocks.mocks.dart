@@ -175,6 +175,28 @@ class MockBudgetRepository extends _i1.Mock implements _i5.BudgetRepository {
             returnValue: _i3.Stream<List<_i6.Budget>>.empty(),
           )
           as _i3.Stream<List<_i6.Budget>>);
+
+  @override
+  _i3.Future<double> getTotalBudgetedByMonthRange(String? endMonth) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTotalBudgetedByMonthRange, [endMonth]),
+            returnValue: _i3.Future<double>.value(0.0),
+          )
+          as _i3.Future<double>);
+
+  @override
+  _i3.Future<double> getTotalBudgetedByCategoryAndMonthRange(
+    String? categoryId,
+    String? endMonth,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTotalBudgetedByCategoryAndMonthRange, [
+              categoryId,
+              endMonth,
+            ]),
+            returnValue: _i3.Future<double>.value(0.0),
+          )
+          as _i3.Future<double>);
 }
 
 /// A class which mocks [CategoryRepository].
@@ -447,4 +469,28 @@ class MockTransactionRepository extends _i1.Mock
             ),
           )
           as _i3.Future<List<_i13.Transaction>>);
+
+  @override
+  _i3.Future<double> getIncomeSumByDateRange(DateTime? start, DateTime? end) =>
+      (super.noSuchMethod(
+            Invocation.method(#getIncomeSumByDateRange, [start, end]),
+            returnValue: _i3.Future<double>.value(0.0),
+          )
+          as _i3.Future<double>);
+
+  @override
+  _i3.Future<double> getExpenseSumByCategoryAndDateRange(
+    String? categoryId,
+    DateTime? start,
+    DateTime? end,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getExpenseSumByCategoryAndDateRange, [
+              categoryId,
+              start,
+              end,
+            ]),
+            returnValue: _i3.Future<double>.value(0.0),
+          )
+          as _i3.Future<double>);
 }

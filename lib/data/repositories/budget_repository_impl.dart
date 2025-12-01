@@ -117,6 +117,31 @@ class BudgetRepositoryImpl implements BudgetRepository {
     });
   }
 
+  @override
+  Future<double> getTotalBudgetedByMonthRange(String endMonth) async {
+    try {
+      return await _budgetsDao.getTotalBudgetedByMonthRange(endMonth);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to calculate total budgeted', e, stackTrace);
+      throw DatabaseException('Failed to calculate total budgeted', e);
+    }
+  }
+
+  @override
+  Future<double> getTotalBudgetedByCategoryAndMonthRange(
+      String categoryId, String endMonth) async {
+    try {
+      return await _budgetsDao.getTotalBudgetedByCategoryAndMonthRange(
+          categoryId, endMonth);
+    } catch (e, stackTrace) {
+      Logger.error(
+          'Failed to calculate total budgeted for category $categoryId',
+          e,
+          stackTrace);
+      throw DatabaseException('Failed to calculate total budgeted', e);
+    }
+  }
+
   Budget _mapToDomain(db.Budget b) {
     return Budget(
       id: b.id,

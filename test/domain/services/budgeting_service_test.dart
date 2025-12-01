@@ -29,17 +29,15 @@ void main() {
   group('calculateTBB', () {
     test('should calculate TBB correctly with income and budgeted amounts', () async {
       final targetMonth = DateTime(2025, 3);
-      final income1 = Transaction(id: '1', accountId: 'acc1', date: DateTime(2025, 1, 15), amount: 1000.0, categoryId: null);
-      final income2 = Transaction(id: '2', accountId: 'acc1', date: DateTime(2025, 3, 10), amount: 500.0, categoryId: null);
-      final expense1 = Transaction(id: '3', accountId: 'acc1', date: DateTime(2025, 2, 20), amount: -50.0, categoryId: 'cat1');
-      const budget1 = Budget(id: 'b1', categoryId: 'cat1', month: '2025-01', budgeted: 200.0);
-      const budget2 = Budget(id: 'b2', categoryId: 'cat2', month: '2025-03', budgeted: 300.0);
-      const budgetFuture = Budget(id: 'b3', categoryId: 'cat1', month: '2025-04', budgeted: 100.0);
 
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
-          .thenAnswer((_) async => [income1, income2, expense1]);
-      when(mockBudgetRepository.getAllBudgets())
-          .thenAnswer((_) async => [budget1, budget2, budgetFuture]);
+      // Income = 1000 + 500 = 1500
+      // Budgeted = 200 + 300 = 500
+      // Expected = 1000
+
+      when(mockTransactionRepository.getIncomeSumByDateRange(any, any))
+          .thenAnswer((_) async => 1500.0);
+      when(mockBudgetRepository.getTotalBudgetedByMonthRange(any))
+          .thenAnswer((_) async => 500.0);
 
       final tbb = await budgetingService.calculateTBB(targetMonth);
       expect(tbb, 1000.0);
@@ -47,8 +45,8 @@ void main() {
 
     test('should return 0.0 if no income and no budgets', () async {
       final targetMonth = DateTime(2025, 3);
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any)).thenAnswer((_) async => []);
-      when(mockBudgetRepository.getAllBudgets()).thenAnswer((_) async => []);
+      when(mockTransactionRepository.getIncomeSumByDateRange(any, any)).thenAnswer((_) async => 0.0);
+      when(mockBudgetRepository.getTotalBudgetedByMonthRange(any)).thenAnswer((_) async => 0.0);
       final tbb = await budgetingService.calculateTBB(targetMonth);
       expect(tbb, 0.0);
     });
@@ -57,8 +55,7 @@ void main() {
   group('calculateTotalIncomeForMonth', () {
     test('should calculate income for specific month only', () async {
       final targetMonth = DateTime(2025, 3);
-      final income = Transaction(id: '1', accountId: 'acc1', date: DateTime(2025, 3, 15), amount: 500.0, categoryId: null);
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any)).thenAnswer((_) async => [income]);
+      when(mockTransactionRepository.getIncomeSumByDateRange(any, any)).thenAnswer((_) async => 500.0);
       final result = await budgetingService.calculateTotalIncomeForMonth(targetMonth);
       expect(result, 500.0);
     });
@@ -79,9 +76,8 @@ void main() {
     test('should calculate sum of transactions for category in month', () async {
       final targetMonth = DateTime(2025, 3);
       const categoryId = 'cat1';
-      final t1 = Transaction(id: '1', accountId: 'acc1', date: DateTime(2025, 3, 5), amount: -50.0, categoryId: categoryId);
-      final t2 = Transaction(id: '2', accountId: 'acc1', date: DateTime(2025, 3, 20), amount: -25.0, categoryId: categoryId);
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any)).thenAnswer((_) async => [t1, t2]);
+      when(mockTransactionRepository.getExpenseSumByCategoryAndDateRange(categoryId, any, any))
+          .thenAnswer((_) async => -75.0);
       final activity = await budgetingService.calculateCategoryActivity(categoryId, targetMonth);
       expect(activity, -75.0);
     });
@@ -91,10 +87,16 @@ void main() {
     test('should calculate available correctly (Budgeted + Activity)', () async {
       final targetMonth = DateTime(2025, 1);
       const categoryId = 'cat1';
-      const budget = Budget(id: 'b1', categoryId: categoryId, month: '2025-01', budgeted: 100.0);
-      final transaction = Transaction(id: 't1', accountId: 'acc1', date: DateTime(2025, 1, 15), amount: -50.0, categoryId: categoryId);
-      when(mockBudgetRepository.getAllBudgets()).thenAnswer((_) async => [budget]);
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any)).thenAnswer((_) async => [transaction]);
+
+      // Budgeted = 100
+      // Activity = -50
+      // Expected = 50
+
+      when(mockBudgetRepository.getTotalBudgetedByCategoryAndMonthRange(categoryId, any))
+          .thenAnswer((_) async => 100.0);
+      when(mockTransactionRepository.getExpenseSumByCategoryAndDateRange(categoryId, any, any))
+          .thenAnswer((_) async => -50.0);
+
       final available = await budgetingService.calculateCategoryAvailable(categoryId, targetMonth);
       expect(available, 50.0);
     });
@@ -114,10 +116,10 @@ void main() {
       final month = DateTime(2025, 3);
 
       // Prev Month: Feb 2025. Budget: 800. Spend: 0. Available: 800.
-      const prevBudget = Budget(id: 'b1', categoryId: 'c1', month: '2025-02', budgeted: 800.0);
-
-      when(mockBudgetRepository.getAllBudgets()).thenAnswer((_) async => [prevBudget]);
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any)).thenAnswer((_) async => []);
+      when(mockBudgetRepository.getTotalBudgetedByCategoryAndMonthRange('c1', any))
+          .thenAnswer((_) async => 800.0);
+      when(mockTransactionRepository.getExpenseSumByCategoryAndDateRange('c1', any, any))
+          .thenAnswer((_) async => 0.0);
 
       final target = await budgetingService.calculateGoalTarget(category, month);
       expect(target, 200.0); // 1000 - 800
@@ -131,8 +133,10 @@ void main() {
       final category = Category(id: 'c1', name: 'Xmas', goalType: GoalType.targetBalanceByDate, targetAmount: 1200.0, targetDate: targetDate);
       final month = DateTime(2025, 1);
 
-      when(mockBudgetRepository.getAllBudgets()).thenAnswer((_) async => []);
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any)).thenAnswer((_) async => []);
+      when(mockBudgetRepository.getTotalBudgetedByCategoryAndMonthRange('c1', any))
+          .thenAnswer((_) async => 0.0);
+      when(mockTransactionRepository.getExpenseSumByCategoryAndDateRange('c1', any, any))
+          .thenAnswer((_) async => 0.0);
 
       final target = await budgetingService.calculateGoalTarget(category, month);
       expect(target, 100.0); // 1200 / 12
@@ -172,10 +176,9 @@ void main() {
     test('should get last month spent', () async {
       final currentMonth = DateTime(2025, 3);
       const categoryId = 'c1';
-      final t1 = Transaction(id: '1', accountId: 'a1', date: DateTime(2025, 2, 10), amount: -150.0, categoryId: categoryId);
 
-      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
-          .thenAnswer((_) async => [t1]);
+      when(mockTransactionRepository.getExpenseSumByCategoryAndDateRange(categoryId, any, any))
+          .thenAnswer((_) async => -150.0);
 
       final spent = await budgetingService.getLastMonthSpent(categoryId, currentMonth);
       expect(spent, 150.0);

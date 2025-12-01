@@ -37,4 +37,26 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
           DateTime start, DateTime end) =>
       (select(transactions)..where((t) => t.date.isBetween(Variable(start), Variable(end))))
           .get();
+
+  Future<double> getIncomeSumByDateRange(DateTime start, DateTime end) {
+    final amount = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
+          transactions.amount.isBiggerThanValue(0) &
+          transactions.categoryId.isNull())
+      ..addColumns([amount]);
+
+    return query.map((row) => row.read(amount) ?? 0.0).getSingle();
+  }
+
+  Future<double> getExpenseSumByCategoryAndDateRange(
+      String categoryId, DateTime start, DateTime end) {
+    final amount = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
+          transactions.categoryId.equals(categoryId))
+      ..addColumns([amount]);
+
+    return query.map((row) => row.read(amount) ?? 0.0).getSingle();
+  }
 }
