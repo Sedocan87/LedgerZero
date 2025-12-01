@@ -2401,6 +2401,21 @@ class $TransactionsTable extends Transactions
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _transferAccountIdMeta = const VerificationMeta(
     'transferAccountId',
   );
@@ -2460,6 +2475,7 @@ class $TransactionsTable extends Transactions
     memo,
     cleared,
     approved,
+    isDeleted,
     transferAccountId,
     transferTransactionId,
     createdAt,
@@ -2534,6 +2550,12 @@ class $TransactionsTable extends Transactions
       context.handle(
         _approvedMeta,
         approved.isAcceptableOrUnknown(data['approved']!, _approvedMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
       );
     }
     if (data.containsKey('transfer_account_id')) {
@@ -2611,6 +2633,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.bool,
         data['${effectivePrefix}approved'],
       )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
       transferAccountId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}transfer_account_id'],
@@ -2646,6 +2672,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? memo;
   final int cleared;
   final bool approved;
+  final bool isDeleted;
   final String? transferAccountId;
   final String? transferTransactionId;
   final DateTime? createdAt;
@@ -2660,6 +2687,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     this.memo,
     required this.cleared,
     required this.approved,
+    required this.isDeleted,
     this.transferAccountId,
     this.transferTransactionId,
     this.createdAt,
@@ -2683,6 +2711,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     map['cleared'] = Variable<int>(cleared);
     map['approved'] = Variable<bool>(approved);
+    map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || transferAccountId != null) {
       map['transfer_account_id'] = Variable<String>(transferAccountId);
     }
@@ -2713,6 +2742,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       memo: memo == null && nullToAbsent ? const Value.absent() : Value(memo),
       cleared: Value(cleared),
       approved: Value(approved),
+      isDeleted: Value(isDeleted),
       transferAccountId: transferAccountId == null && nullToAbsent
           ? const Value.absent()
           : Value(transferAccountId),
@@ -2743,6 +2773,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       memo: serializer.fromJson<String?>(json['memo']),
       cleared: serializer.fromJson<int>(json['cleared']),
       approved: serializer.fromJson<bool>(json['approved']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       transferAccountId: serializer.fromJson<String?>(
         json['transferAccountId'],
       ),
@@ -2766,6 +2797,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'memo': serializer.toJson<String?>(memo),
       'cleared': serializer.toJson<int>(cleared),
       'approved': serializer.toJson<bool>(approved),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
       'transferAccountId': serializer.toJson<String?>(transferAccountId),
       'transferTransactionId': serializer.toJson<String?>(
         transferTransactionId,
@@ -2785,6 +2817,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     Value<String?> memo = const Value.absent(),
     int? cleared,
     bool? approved,
+    bool? isDeleted,
     Value<String?> transferAccountId = const Value.absent(),
     Value<String?> transferTransactionId = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
@@ -2799,6 +2832,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     memo: memo.present ? memo.value : this.memo,
     cleared: cleared ?? this.cleared,
     approved: approved ?? this.approved,
+    isDeleted: isDeleted ?? this.isDeleted,
     transferAccountId: transferAccountId.present
         ? transferAccountId.value
         : this.transferAccountId,
@@ -2821,6 +2855,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       memo: data.memo.present ? data.memo.value : this.memo,
       cleared: data.cleared.present ? data.cleared.value : this.cleared,
       approved: data.approved.present ? data.approved.value : this.approved,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       transferAccountId: data.transferAccountId.present
           ? data.transferAccountId.value
           : this.transferAccountId,
@@ -2844,6 +2879,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('memo: $memo, ')
           ..write('cleared: $cleared, ')
           ..write('approved: $approved, ')
+          ..write('isDeleted: $isDeleted, ')
           ..write('transferAccountId: $transferAccountId, ')
           ..write('transferTransactionId: $transferTransactionId, ')
           ..write('createdAt: $createdAt, ')
@@ -2863,6 +2899,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     memo,
     cleared,
     approved,
+    isDeleted,
     transferAccountId,
     transferTransactionId,
     createdAt,
@@ -2881,6 +2918,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.memo == this.memo &&
           other.cleared == this.cleared &&
           other.approved == this.approved &&
+          other.isDeleted == this.isDeleted &&
           other.transferAccountId == this.transferAccountId &&
           other.transferTransactionId == this.transferTransactionId &&
           other.createdAt == this.createdAt &&
@@ -2897,6 +2935,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> memo;
   final Value<int> cleared;
   final Value<bool> approved;
+  final Value<bool> isDeleted;
   final Value<String?> transferAccountId;
   final Value<String?> transferTransactionId;
   final Value<DateTime?> createdAt;
@@ -2912,6 +2951,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.memo = const Value.absent(),
     this.cleared = const Value.absent(),
     this.approved = const Value.absent(),
+    this.isDeleted = const Value.absent(),
     this.transferAccountId = const Value.absent(),
     this.transferTransactionId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2928,6 +2968,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.memo = const Value.absent(),
     this.cleared = const Value.absent(),
     this.approved = const Value.absent(),
+    this.isDeleted = const Value.absent(),
     this.transferAccountId = const Value.absent(),
     this.transferTransactionId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2947,6 +2988,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? memo,
     Expression<int>? cleared,
     Expression<bool>? approved,
+    Expression<bool>? isDeleted,
     Expression<String>? transferAccountId,
     Expression<String>? transferTransactionId,
     Expression<DateTime>? createdAt,
@@ -2963,6 +3005,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (memo != null) 'memo': memo,
       if (cleared != null) 'cleared': cleared,
       if (approved != null) 'approved': approved,
+      if (isDeleted != null) 'is_deleted': isDeleted,
       if (transferAccountId != null) 'transfer_account_id': transferAccountId,
       if (transferTransactionId != null)
         'transfer_transaction_id': transferTransactionId,
@@ -2982,6 +3025,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String?>? memo,
     Value<int>? cleared,
     Value<bool>? approved,
+    Value<bool>? isDeleted,
     Value<String?>? transferAccountId,
     Value<String?>? transferTransactionId,
     Value<DateTime?>? createdAt,
@@ -2998,6 +3042,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       memo: memo ?? this.memo,
       cleared: cleared ?? this.cleared,
       approved: approved ?? this.approved,
+      isDeleted: isDeleted ?? this.isDeleted,
       transferAccountId: transferAccountId ?? this.transferAccountId,
       transferTransactionId:
           transferTransactionId ?? this.transferTransactionId,
@@ -3037,6 +3082,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (approved.present) {
       map['approved'] = Variable<bool>(approved.value);
     }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
     if (transferAccountId.present) {
       map['transfer_account_id'] = Variable<String>(transferAccountId.value);
     }
@@ -3069,6 +3117,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('memo: $memo, ')
           ..write('cleared: $cleared, ')
           ..write('approved: $approved, ')
+          ..write('isDeleted: $isDeleted, ')
           ..write('transferAccountId: $transferAccountId, ')
           ..write('transferTransactionId: $transferTransactionId, ')
           ..write('createdAt: $createdAt, ')
@@ -6844,6 +6893,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> memo,
       Value<int> cleared,
       Value<bool> approved,
+      Value<bool> isDeleted,
       Value<String?> transferAccountId,
       Value<String?> transferTransactionId,
       Value<DateTime?> createdAt,
@@ -6861,6 +6911,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> memo,
       Value<int> cleared,
       Value<bool> approved,
+      Value<bool> isDeleted,
       Value<String?> transferAccountId,
       Value<String?> transferTransactionId,
       Value<DateTime?> createdAt,
@@ -6984,6 +7035,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get approved => $composableBuilder(
     column: $table.approved,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7134,6 +7190,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get transferTransactionId => $composableBuilder(
     column: $table.transferTransactionId,
     builder: (column) => ColumnOrderings(column),
@@ -7268,6 +7329,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<bool> get approved =>
       $composableBuilder(column: $table.approved, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
 
   GeneratedColumn<String> get transferTransactionId => $composableBuilder(
     column: $table.transferTransactionId,
@@ -7415,6 +7479,7 @@ class $$TransactionsTableTableManager
                 Value<String?> memo = const Value.absent(),
                 Value<int> cleared = const Value.absent(),
                 Value<bool> approved = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
                 Value<String?> transferAccountId = const Value.absent(),
                 Value<String?> transferTransactionId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
@@ -7430,6 +7495,7 @@ class $$TransactionsTableTableManager
                 memo: memo,
                 cleared: cleared,
                 approved: approved,
+                isDeleted: isDeleted,
                 transferAccountId: transferAccountId,
                 transferTransactionId: transferTransactionId,
                 createdAt: createdAt,
@@ -7447,6 +7513,7 @@ class $$TransactionsTableTableManager
                 Value<String?> memo = const Value.absent(),
                 Value<int> cleared = const Value.absent(),
                 Value<bool> approved = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
                 Value<String?> transferAccountId = const Value.absent(),
                 Value<String?> transferTransactionId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
@@ -7462,6 +7529,7 @@ class $$TransactionsTableTableManager
                 memo: memo,
                 cleared: cleared,
                 approved: approved,
+                isDeleted: isDeleted,
                 transferAccountId: transferAccountId,
                 transferTransactionId: transferTransactionId,
                 createdAt: createdAt,

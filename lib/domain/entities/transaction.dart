@@ -43,6 +43,9 @@ class Transaction {
   /// Whether the transaction has been approved.
   final bool approved;
 
+  /// Whether the transaction has been soft-deleted.
+  final bool isDeleted;
+
   /// The unique identifier of the destination account for transfers.
   final String? transferAccountId;
 
@@ -66,6 +69,7 @@ class Transaction {
     this.memo,
     this.cleared = TransactionClearStatus.uncleared,
     this.approved = true,
+    this.isDeleted = false,
     this.transferAccountId,
     this.transferTransactionId,
     this.createdAt,
@@ -83,6 +87,7 @@ class Transaction {
     String? memo,
     TransactionClearStatus? cleared,
     bool? approved,
+    bool? isDeleted,
     String? transferAccountId,
     String? transferTransactionId,
     DateTime? createdAt,
@@ -98,6 +103,7 @@ class Transaction {
       memo: memo ?? this.memo,
       cleared: cleared ?? this.cleared,
       approved: approved ?? this.approved,
+      isDeleted: isDeleted ?? this.isDeleted,
       transferAccountId: transferAccountId ?? this.transferAccountId,
       transferTransactionId: transferTransactionId ?? this.transferTransactionId,
       createdAt: createdAt ?? this.createdAt,
@@ -119,6 +125,7 @@ class Transaction {
           ? TransactionClearStatus.values[json['cleared'] as int]
           : TransactionClearStatus.uncleared,
       approved: json['approved'] as bool? ?? true,
+      isDeleted: json['is_deleted'] as bool? ?? false,
       transferAccountId: json['transfer_account_id'] as String?,
       transferTransactionId: json['transfer_transaction_id'] as String?,
       createdAt: json['created_at'] != null
@@ -142,6 +149,7 @@ class Transaction {
       'memo': memo,
       'cleared': cleared.index,
       'approved': approved,
+      'is_deleted': isDeleted,
       'transfer_account_id': transferAccountId,
       'transfer_transaction_id': transferTransactionId,
       'created_at': createdAt?.toIso8601String(),
@@ -165,6 +173,7 @@ class Transaction {
         other.memo == memo &&
         other.cleared == cleared &&
         other.approved == approved &&
+        other.isDeleted == isDeleted &&
         other.transferAccountId == transferAccountId &&
         other.transferTransactionId == transferTransactionId &&
         other.createdAt == createdAt &&
@@ -183,6 +192,7 @@ class Transaction {
       memo,
       cleared,
       approved,
+      isDeleted,
       transferAccountId,
       transferTransactionId,
       createdAt,
@@ -192,7 +202,7 @@ class Transaction {
 
   @override
   String toString() {
-    return 'Transaction(id: $id, accountId: $accountId, date: $date, amount: $amount, payeeId: $payeeId, categoryId: $categoryId, memo: $memo, cleared: $cleared, approved: $approved, transferAccountId: $transferAccountId, transferTransactionId: $transferTransactionId, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Transaction(id: $id, accountId: $accountId, date: $date, amount: $amount, payeeId: $payeeId, categoryId: $categoryId, memo: $memo, cleared: $cleared, approved: $approved, isDeleted: $isDeleted, transferAccountId: $transferAccountId, transferTransactionId: $transferTransactionId, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   /// Validates the [Transaction] entity.

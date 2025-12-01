@@ -19,6 +19,7 @@ class Transactions extends Table {
   TextColumn get memo => text().nullable()();
   IntColumn get cleared => integer().withDefault(const Constant(0))();
   BoolColumn get approved => boolean().withDefault(const Constant(true))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 
   @ReferenceName('transferTransactions')
   TextColumn get transferAccountId => text().nullable().references(Accounts, #id)();
