@@ -14,8 +14,8 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 2', () {
-    expect(database.schemaVersion, 2);
+  test('schema version should be 3', () {
+    expect(database.schemaVersion, 3);
   });
 
   group('Database Tables Creation & Defaults', () {

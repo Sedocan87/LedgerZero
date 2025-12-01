@@ -80,7 +80,9 @@ class TransactionService {
   Future<void> deleteTransaction(String id) async {
     try {
       final transaction = await _transactionRepository.getTransactionById(id);
-      if (transaction == null) return;
+      if (transaction == null) {
+        return;
+      }
 
       Transaction? related;
       List<Transaction> children = [];

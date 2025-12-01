@@ -1,0 +1,6 @@
+{
+  "budget": "Budget",
+  "@budget": {
+    "description": "The budget tab label"
+  }
+}
