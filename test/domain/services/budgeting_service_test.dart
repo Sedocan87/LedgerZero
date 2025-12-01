@@ -99,6 +99,34 @@ void main() {
       final tbb = await budgetingService.calculateTBB(targetMonth);
       expect(tbb, 0.0);
     });
+
+    test('should allow negative TBB (budgeted > income)', () async {
+      final targetMonth = DateTime(2025, 3);
+
+      final income = Transaction(
+        id: '1',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 1),
+        amount: 1000.0,
+        categoryId: null,
+      );
+
+      const budget = Budget(
+        id: 'b1',
+        categoryId: 'cat1',
+        month: '2025-03',
+        budgeted: 1500.0,
+      );
+
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [income]);
+      when(mockBudgetRepository.getAllBudgets())
+          .thenAnswer((_) async => [budget]);
+
+      final tbb = await budgetingService.calculateTBB(targetMonth);
+
+      expect(tbb, -500.0);
+    });
   });
 
   group('calculateTotalIncomeForMonth', () {
@@ -449,6 +477,36 @@ void main() {
 
        expect(available, 150.0);
     });
+
+    test('should handle overspending in multiple categories independently', () async {
+      final targetMonth = DateTime(2025, 1);
+      const cat1Id = 'cat1';
+      const cat2Id = 'cat2';
+
+      // Cat 1: Budget 100, Spent 150 -> Available -50
+      // Cat 2: Budget 200, Spent 250 -> Available -50
+
+      const budget1 = Budget(id: 'b1', categoryId: cat1Id, month: '2025-01', budgeted: 100.0);
+      const budget2 = Budget(id: 'b2', categoryId: cat2Id, month: '2025-01', budgeted: 200.0);
+
+      final t1 = Transaction(id: 't1', accountId: 'a1', date: DateTime(2025, 1, 10), amount: -150.0, categoryId: cat1Id);
+      final t2 = Transaction(id: 't2', accountId: 'a1', date: DateTime(2025, 1, 10), amount: -250.0, categoryId: cat2Id);
+
+      when(mockBudgetRepository.getAllBudgets())
+          .thenAnswer((_) async => [budget1, budget2]);
+
+      // When querying for cat1, return both or filter?
+      // calculateCategoryAvailable fetches ALL transactions and then filters in memory in the current implementation.
+      // "final allTransactions = await _transactionRepository.getTransactionsByDateRange(..."
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [t1, t2]);
+
+      final available1 = await budgetingService.calculateCategoryAvailable(cat1Id, targetMonth);
+      final available2 = await budgetingService.calculateCategoryAvailable(cat2Id, targetMonth);
+
+      expect(available1, -50.0);
+      expect(available2, -50.0);
+    });
   });
 
   group('setCategoryBudgetedAmount', () {
@@ -610,6 +668,49 @@ void main() {
        verifyNever(mockBudgetRepository.createBudget(argThat(predicate((Budget b) {
         return b.categoryId == 'c1';
       }))));
+    });
+  });
+
+  group('createBudgetSnapshot', () {
+    test('should calculate and update activity and available for all categories', () async {
+      final month = DateTime(2025, 3);
+      const cat1Id = 'cat1';
+      const cat1 = Category(id: cat1Id, name: 'Cat1', isHidden: false);
+
+      // Setup for calculation:
+      // Budget: 100. Activity: -20. Available: 80.
+      const budget1 = Budget(id: 'b1', categoryId: cat1Id, month: '2025-03', budgeted: 100.0);
+      final transaction1 = Transaction(id: 't1', accountId: 'a1', date: DateTime(2025, 3, 10), amount: -20.0, categoryId: cat1Id);
+
+      when(mockCategoryRepository.getAllCategories())
+          .thenAnswer((_) async => [cat1]);
+
+      // Mocks for calculateCategoryActivity
+      // Note: calculateCategoryActivity queries transactions by range.
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [transaction1]);
+
+      // Mocks for calculateCategoryAvailable
+      // Note: calculateCategoryAvailable queries all budgets and all transactions (to calc carry over)
+      when(mockBudgetRepository.getAllBudgets())
+          .thenAnswer((_) async => [budget1]);
+
+      // Need to mock getBudgetByCategoryAndMonth for the snapshot function to find the budget to update
+      when(mockBudgetRepository.getBudgetByCategoryAndMonth(cat1Id, '2025-03'))
+          .thenAnswer((_) async => budget1);
+
+      when(mockBudgetRepository.updateBudget(any)).thenAnswer((_) async {});
+      when(mockBudgetRepository.createBudget(any)).thenAnswer((_) async {});
+
+      await budgetingService.createBudgetSnapshot(month);
+
+      // Verify updateBudget is called with updated values
+      verify(mockBudgetRepository.updateBudget(argThat(predicate((Budget b) {
+        return b.categoryId == cat1Id &&
+               b.month == '2025-03' &&
+               b.activity == -20.0 &&
+               b.available == 80.0;
+      })))).called(1);
     });
   });
 }

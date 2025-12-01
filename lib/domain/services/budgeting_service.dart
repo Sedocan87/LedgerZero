@@ -233,4 +233,45 @@ class BudgetingService {
       }
     }
   }
+
+  /// Creates a snapshot of the budget for a specific [month].
+  ///
+  /// Calculates `activity` and `available` for all categories for the given month
+  /// and updates the Budget records in the database.
+  /// This freezes the calculated values into the database for that month.
+  Future<void> createBudgetSnapshot(DateTime month) async {
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final allCategories = await _categoryRepository.getAllCategories();
+
+    await Future.wait(allCategories.map((category) async {
+      final activity = await calculateCategoryActivity(category.id, month);
+      final available = await calculateCategoryAvailable(category.id, month);
+
+      final existingBudget =
+          await _budgetRepository.getBudgetByCategoryAndMonth(category.id, monthString);
+
+      if (existingBudget != null) {
+        final updatedBudget = existingBudget.copyWith(
+          activity: activity,
+          available: available,
+          updatedAt: DateTime.now(),
+        );
+        await _budgetRepository.updateBudget(updatedBudget);
+      } else {
+        // If budget doesn't exist, we create it.
+        // Assuming budgeted is 0 if it didn't exist.
+        final newBudget = Budget(
+          id: const Uuid().v4(),
+          categoryId: category.id,
+          month: monthString,
+          budgeted: 0.0,
+          activity: activity,
+          available: available,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await _budgetRepository.createBudget(newBudget);
+      }
+    }));
+  }
 }
