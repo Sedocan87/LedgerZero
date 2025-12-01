@@ -175,6 +175,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create Account'**
   String get createAccount;
+
+  /// No description provided for @accountDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Details'**
+  String get accountDetails;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loading;
+
+  /// No description provided for @error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// No description provided for @accountNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Account not found'**
+  String get accountNotFound;
+
+  /// No description provided for @noTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions'**
+  String get noTransactions;
+
+  /// No description provided for @unknownPayee.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Payee'**
+  String get unknownPayee;
+
+  /// No description provided for @balanceTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance Trend'**
+  String get balanceTrend;
+
+  /// No description provided for @noTransactionsTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions to show trend'**
+  String get noTransactionsTrend;
+
+  /// No description provided for @deleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account'**
+  String get deleteAccount;
+
+  /// No description provided for @closeAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Account'**
+  String get closeAccount;
+
+  /// No description provided for @reopenAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen Account'**
+  String get reopenAccount;
+
+  /// No description provided for @reconcileAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconcile Account'**
+  String get reconcileAccount;
+
+  /// No description provided for @exportToCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to CSV'**
+  String get exportToCsv;
+
+  /// No description provided for @deleteAccountConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this account? This cannot be undone.'**
+  String get deleteAccountConfirmation;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @exportedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported to {path}'**
+  String exportedTo(String path);
+
+  /// No description provided for @currentBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Balance: {balance}'**
+  String currentBalance(double balance);
+
+  /// No description provided for @enterActualBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Actual Balance'**
+  String get enterActualBalance;
+
+  /// No description provided for @discrepancyFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Discrepancy Found'**
+  String get discrepancyFound;
+
+  /// No description provided for @discrepancyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'There is a difference of {diff}. Create an adjustment transaction?'**
+  String discrepancyMessage(String diff);
+
+  /// No description provided for @yes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yes;
+
+  /// No description provided for @no.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get no;
+
+  /// No description provided for @reconcile.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconcile'**
+  String get reconcile;
+
+  /// No description provided for @accountReconciled.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Reconciled!'**
+  String get accountReconciled;
+
+  /// No description provided for @adjustmentCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjustment created and account reconciled.'**
+  String get adjustmentCreated;
 }
 
 class _AppLocalizationsDelegate

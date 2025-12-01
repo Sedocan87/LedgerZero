@@ -23,4 +23,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase> with _$AccountsDaoMixin 
       (delete(accounts)..where((tbl) => tbl.id.equals(id))).go();
 
   Stream<List<Account>> watchAllAccounts() => select(accounts).watch();
+
+  Stream<Account?> watchAccount(String id) =>
+      (select(accounts)..where((tbl) => tbl.id.equals(id))).watchSingleOrNull();
 }

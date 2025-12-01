@@ -19,4 +19,7 @@ abstract class AccountRepository {
 
   /// Watches all accounts for changes.
   Stream<List<Account>> watchAllAccounts();
+
+  /// Watches a specific account for changes.
+  Stream<Account?> watchAccount(String id);
 }

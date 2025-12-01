@@ -94,6 +94,14 @@ class MockAccountRepository extends _i1.Mock implements _i2.AccountRepository {
             returnValue: _i3.Stream<List<_i4.Account>>.empty(),
           )
           as _i3.Stream<List<_i4.Account>>);
+
+  @override
+  _i3.Stream<_i4.Account?> watchAccount(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#watchAccount, [id]),
+            returnValue: _i3.Stream<_i4.Account?>.empty(),
+          )
+          as _i3.Stream<_i4.Account?>);
 }
 
 /// A class which mocks [BudgetRepository].
@@ -565,11 +573,13 @@ class MockTransactionRepository extends _i1.Mock
   _i3.Future<List<_i13.Transaction>> getTransactions({
     _i14.TransactionFilter? filter,
     _i14.TransactionSort? sort,
+    int? limit,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#getTransactions, [], {
               #filter: filter,
               #sort: sort,
+              #limit: limit,
             }),
             returnValue: _i3.Future<List<_i13.Transaction>>.value(
               <_i13.Transaction>[],
@@ -581,11 +591,13 @@ class MockTransactionRepository extends _i1.Mock
   _i3.Stream<List<_i13.Transaction>> watchTransactions({
     _i14.TransactionFilter? filter,
     _i14.TransactionSort? sort,
+    int? limit,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#watchTransactions, [], {
               #filter: filter,
               #sort: sort,
+              #limit: limit,
             }),
             returnValue: _i3.Stream<List<_i13.Transaction>>.empty(),
           )

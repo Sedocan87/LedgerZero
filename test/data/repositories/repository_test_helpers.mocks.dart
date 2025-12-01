@@ -291,6 +291,14 @@ class MockAccountsDao extends _i1.Mock implements _i6.AccountsDao {
           as _i5.Stream<List<_i2.Account>>);
 
   @override
+  _i5.Stream<_i2.Account?> watchAccount(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#watchAccount, [id]),
+            returnValue: _i5.Stream<_i2.Account?>.empty(),
+          )
+          as _i5.Stream<_i2.Account?>);
+
+  @override
   _i5.Stream<T> createStream<T extends Object>(
     _i4.QueryStreamFetcher<T>? stmt,
   ) =>
@@ -1000,11 +1008,13 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
   _i5.Future<List<_i2.Transaction>> getTransactions({
     _i9.TransactionFilter? filter,
     _i9.TransactionSort? sort,
+    int? limit,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#getTransactions, [], {
               #filter: filter,
               #sort: sort,
+              #limit: limit,
             }),
             returnValue: _i5.Future<List<_i2.Transaction>>.value(
               <_i2.Transaction>[],
@@ -1016,11 +1026,13 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
   _i5.Stream<List<_i2.Transaction>> watchTransactions({
     _i9.TransactionFilter? filter,
     _i9.TransactionSort? sort,
+    int? limit,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#watchTransactions, [], {
               #filter: filter,
               #sort: sort,
+              #limit: limit,
             }),
             returnValue: _i5.Stream<List<_i2.Transaction>>.empty(),
           )

@@ -85,6 +85,16 @@ class AccountRepositoryImpl implements AccountRepository {
     });
   }
 
+  @override
+  Stream<domain.Account?> watchAccount(String id) {
+    return _accountsDao.watchAccount(id).map(
+      (account) => account == null ? null : _mapToDomain(account),
+    ).handleError((error, stackTrace) {
+      Logger.error('Error watching account $id', error, stackTrace);
+      throw DatabaseException('Error watching account $id', error);
+    });
+  }
+
   domain.Account _mapToDomain(Account account) {
     return domain.Account(
       id: account.id,
@@ -97,6 +107,9 @@ class AccountRepositoryImpl implements AccountRepository {
       startingBalance: account.startingBalance,
       currentBalance: account.currentBalance,
       isClosed: account.isClosed,
+      color: account.color,
+      icon: account.icon,
+      notes: account.notes,
       createdAt: account.createdAt,
       updatedAt: account.updatedAt,
     );
@@ -111,6 +124,9 @@ class AccountRepositoryImpl implements AccountRepository {
       startingBalance: Value(account.startingBalance),
       currentBalance: Value(account.currentBalance),
       isClosed: Value(account.isClosed),
+      color: Value(account.color),
+      icon: Value(account.icon),
+      notes: Value(account.notes),
       createdAt: Value(account.createdAt),
       updatedAt: Value(account.updatedAt),
     );
