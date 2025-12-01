@@ -52,6 +52,9 @@ class Transaction {
   /// The unique identifier of the counterpart transaction for transfers.
   final String? transferTransactionId;
 
+  /// The unique identifier of the parent transaction for splits.
+  final String? parentTransactionId;
+
   /// The date and time when the transaction was created.
   final DateTime? createdAt;
 
@@ -72,6 +75,7 @@ class Transaction {
     this.isDeleted = false,
     this.transferAccountId,
     this.transferTransactionId,
+    this.parentTransactionId,
     this.createdAt,
     this.updatedAt,
   });
@@ -90,6 +94,7 @@ class Transaction {
     bool? isDeleted,
     String? transferAccountId,
     String? transferTransactionId,
+    String? parentTransactionId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -106,6 +111,7 @@ class Transaction {
       isDeleted: isDeleted ?? this.isDeleted,
       transferAccountId: transferAccountId ?? this.transferAccountId,
       transferTransactionId: transferTransactionId ?? this.transferTransactionId,
+      parentTransactionId: parentTransactionId ?? this.parentTransactionId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -128,6 +134,7 @@ class Transaction {
       isDeleted: json['is_deleted'] as bool? ?? false,
       transferAccountId: json['transfer_account_id'] as String?,
       transferTransactionId: json['transfer_transaction_id'] as String?,
+      parentTransactionId: json['parent_transaction_id'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -152,6 +159,7 @@ class Transaction {
       'is_deleted': isDeleted,
       'transfer_account_id': transferAccountId,
       'transfer_transaction_id': transferTransactionId,
+      'parent_transaction_id': parentTransactionId,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -176,6 +184,7 @@ class Transaction {
         other.isDeleted == isDeleted &&
         other.transferAccountId == transferAccountId &&
         other.transferTransactionId == transferTransactionId &&
+        other.parentTransactionId == parentTransactionId &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -195,6 +204,7 @@ class Transaction {
       isDeleted,
       transferAccountId,
       transferTransactionId,
+      parentTransactionId,
       createdAt,
       updatedAt,
     );
@@ -202,7 +212,7 @@ class Transaction {
 
   @override
   String toString() {
-    return 'Transaction(id: $id, accountId: $accountId, date: $date, amount: $amount, payeeId: $payeeId, categoryId: $categoryId, memo: $memo, cleared: $cleared, approved: $approved, isDeleted: $isDeleted, transferAccountId: $transferAccountId, transferTransactionId: $transferTransactionId, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Transaction(id: $id, accountId: $accountId, date: $date, amount: $amount, payeeId: $payeeId, categoryId: $categoryId, memo: $memo, cleared: $cleared, approved: $approved, isDeleted: $isDeleted, transferAccountId: $transferAccountId, transferTransactionId: $transferTransactionId, parentTransactionId: $parentTransactionId, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   /// Validates the [Transaction] entity.

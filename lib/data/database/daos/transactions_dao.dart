@@ -59,6 +59,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
           transactions.amount.isBiggerThanValue(0) &
           transactions.categoryId.isNull() &
+          transactions.parentTransactionId.isNull() &
           transactions.isDeleted.equals(false))
       ..addColumns([amount]);
 
@@ -76,4 +77,11 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 
     return query.map((row) => row.read(amount) ?? 0.0).getSingle();
   }
+
+  Future<List<Transaction>> getSplitTransactions(String parentId) =>
+      (select(transactions)
+            ..where((t) =>
+                t.parentTransactionId.equals(parentId) &
+                t.isDeleted.equals(false)))
+          .get();
 }

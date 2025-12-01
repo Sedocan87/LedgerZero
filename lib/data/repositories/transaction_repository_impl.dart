@@ -149,6 +149,86 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
   }
 
+  @override
+  Future<void> createTransferTransaction(
+      Transaction source, Transaction destination) async {
+    try {
+      Logger.debug(
+          'Creating transfer between ${source.accountId} and ${destination.accountId}');
+      await _transactionsDao.db.transaction(() async {
+        await _transactionsDao.insertTransaction(_mapToCompanion(source));
+        await _transactionsDao.insertTransaction(_mapToCompanion(destination));
+      });
+      Logger.info('Transfer created successfully');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to create transfer', e, stackTrace);
+      throw DatabaseException('Failed to create transfer', e);
+    }
+  }
+
+  @override
+  Future<void> deleteLinkedTransaction(String id) async {
+    try {
+      Logger.debug('Deleting linked transaction: $id');
+      await _transactionsDao.db.transaction(() async {
+        final transaction = await _transactionsDao.getTransactionById(id);
+        if (transaction == null) {
+          return;
+        }
+
+        // Delete the transaction itself
+        await _transactionsDao.softDeleteTransaction(id);
+
+        // If transfer, delete counterpart
+        if (transaction.transferTransactionId != null) {
+          await _transactionsDao
+              .softDeleteTransaction(transaction.transferTransactionId!);
+        }
+
+        // If parent of split, delete children
+        final children = await _transactionsDao.getSplitTransactions(id);
+        for (var child in children) {
+          await _transactionsDao.softDeleteTransaction(child.id);
+        }
+      });
+      Logger.info('Linked transaction deleted successfully: $id');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to delete linked transaction $id', e, stackTrace);
+      throw DatabaseException('Failed to delete linked transaction $id', e);
+    }
+  }
+
+  @override
+  Future<void> createSplitTransaction(
+      Transaction parent, List<Transaction> children) async {
+    try {
+      Logger.debug('Creating split transaction parent: ${parent.id}');
+      await _transactionsDao.db.transaction(() async {
+        await _transactionsDao.insertTransaction(_mapToCompanion(parent));
+        for (var child in children) {
+          await _transactionsDao.insertTransaction(_mapToCompanion(child));
+        }
+      });
+      Logger.info('Split transaction created successfully');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to create split transaction', e, stackTrace);
+      throw DatabaseException('Failed to create split transaction', e);
+    }
+  }
+
+  @override
+  Future<List<Transaction>> getSplitTransactions(String parentId) async {
+    try {
+      Logger.debug('Fetching split transactions for parent: $parentId');
+      final transactions = await _transactionsDao.getSplitTransactions(parentId);
+      Logger.debug('Fetched ${transactions.length} split transactions');
+      return transactions.map(_mapToDomain).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch split transactions for $parentId', e, stackTrace);
+      throw DatabaseException('Failed to fetch split transactions', e);
+    }
+  }
+
   Transaction _mapToDomain(db.Transaction t) {
     return Transaction(
       id: t.id,
@@ -163,6 +243,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       isDeleted: t.isDeleted,
       transferAccountId: t.transferAccountId,
       transferTransactionId: t.transferTransactionId,
+      parentTransactionId: t.parentTransactionId,
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
     );
@@ -182,6 +263,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       isDeleted: Value(t.isDeleted),
       transferAccountId: Value(t.transferAccountId),
       transferTransactionId: Value(t.transferTransactionId),
+      parentTransactionId: Value(t.parentTransactionId),
       createdAt: Value(t.createdAt),
       updatedAt: Value(t.updatedAt),
     );
