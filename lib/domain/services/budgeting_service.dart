@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
+import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
 
@@ -8,12 +10,15 @@ import 'package:ledger_zero/domain/entities/budget.dart';
 class BudgetingService {
   final TransactionRepository _transactionRepository;
   final BudgetRepository _budgetRepository;
+  final CategoryRepository _categoryRepository;
 
   BudgetingService({
     required TransactionRepository transactionRepository,
     required BudgetRepository budgetRepository,
+    required CategoryRepository categoryRepository,
   }) : _transactionRepository = transactionRepository,
-       _budgetRepository = budgetRepository;
+       _budgetRepository = budgetRepository,
+       _categoryRepository = categoryRepository;
 
   /// Calculates the "To Be Budgeted" (TBB) amount up to the end of the specified [targetMonth].
   ///
@@ -127,5 +132,105 @@ class BudgetingService {
         .fold<double>(0.0, (double sum, Budget b) => sum + b.budgeted);
 
     return totalBudgeted + totalActivity;
+  }
+
+  /// Assigns a budgeted amount to a specific category for a specific month.
+  ///
+  /// If a budget already exists, updates it. Otherwise, creates a new one.
+  Future<void> setCategoryBudgetedAmount(String categoryId, double amount, DateTime month) async {
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final existingBudget = await _budgetRepository.getBudgetByCategoryAndMonth(categoryId, monthString);
+
+    if (existingBudget != null) {
+      final updatedBudget = existingBudget.copyWith(
+        budgeted: amount,
+        updatedAt: DateTime.now(),
+      );
+      await _budgetRepository.updateBudget(updatedBudget);
+    } else {
+      final newBudget = Budget(
+        id: const Uuid().v4(),
+        categoryId: categoryId,
+        month: monthString,
+        budgeted: amount,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await _budgetRepository.createBudget(newBudget);
+    }
+  }
+
+  /// Moves money from one category to another in a specific month.
+  ///
+  /// Reduces the budgeted amount in [fromCategoryId] and increases it in [toCategoryId].
+  Future<void> moveMoney(String fromCategoryId, String toCategoryId, double amount, DateTime month) async {
+    final monthString = DateFormat('yyyy-MM').format(month);
+
+    // Get source budget
+    var fromBudget = await _budgetRepository.getBudgetByCategoryAndMonth(fromCategoryId, monthString);
+    if (fromBudget == null) {
+      // Create if doesn't exist (assuming 0 budgeted initially)
+      fromBudget = Budget(
+        id: const Uuid().v4(),
+        categoryId: fromCategoryId,
+        month: monthString,
+        budgeted: 0.0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await _budgetRepository.createBudget(fromBudget);
+    }
+
+    // Get destination budget
+    var toBudget = await _budgetRepository.getBudgetByCategoryAndMonth(toCategoryId, monthString);
+    if (toBudget == null) {
+      toBudget = Budget(
+        id: const Uuid().v4(),
+        categoryId: toCategoryId,
+        month: monthString,
+        budgeted: 0.0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await _budgetRepository.createBudget(toBudget);
+    }
+
+    // Update amounts
+    final updatedFromBudget = fromBudget.copyWith(
+      budgeted: fromBudget.budgeted - amount,
+      updatedAt: DateTime.now(),
+    );
+    final updatedToBudget = toBudget.copyWith(
+      budgeted: toBudget.budgeted + amount,
+      updatedAt: DateTime.now(),
+    );
+
+    // Save changes
+    await _budgetRepository.updateBudget(updatedFromBudget);
+    await _budgetRepository.updateBudget(updatedToBudget);
+  }
+
+  /// Initializes budget entries for a new month for all active categories.
+  ///
+  /// Ensures that a Budget entity exists for every category for the given month.
+  Future<void> initializeMonthBudgets(DateTime month) async {
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final allCategories = await _categoryRepository.getAllCategories();
+
+    for (final category in allCategories) {
+      // Check if budget already exists
+      final existingBudget = await _budgetRepository.getBudgetByCategoryAndMonth(category.id, monthString);
+      if (existingBudget == null) {
+        final newBudget = Budget(
+          id: const Uuid().v4(),
+          categoryId: category.id,
+          month: monthString,
+          budgeted: 0.0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await _budgetRepository.createBudget(newBudget);
+      }
+    }
   }
 }
