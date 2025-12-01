@@ -28,8 +28,10 @@ void main() {
     memo: 'Lunch',
     cleared: 0, // uncleared
     approved: true,
+    isDeleted: false,
     transferAccountId: null,
     transferTransactionId: null,
+    parentTransactionId: null,
     createdAt: tDate,
     updatedAt: tDate,
   );

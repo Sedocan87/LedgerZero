@@ -890,6 +890,15 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
           as _i5.Future<int>);
 
   @override
+  _i5.Future<void> softDeleteTransaction(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#softDeleteTransaction, [id]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Stream<List<_i2.Transaction>> watchAllTransactions() =>
       (super.noSuchMethod(
             Invocation.method(#watchAllTransactions, []),
@@ -955,6 +964,16 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
             returnValue: _i5.Future<double>.value(0.0),
           )
           as _i5.Future<double>);
+
+  @override
+  _i5.Future<List<_i2.Transaction>> getSplitTransactions(String? parentId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getSplitTransactions, [parentId]),
+            returnValue: _i5.Future<List<_i2.Transaction>>.value(
+              <_i2.Transaction>[],
+            ),
+          )
+          as _i5.Future<List<_i2.Transaction>>);
 
   @override
   _i5.Stream<T> createStream<T extends Object>(

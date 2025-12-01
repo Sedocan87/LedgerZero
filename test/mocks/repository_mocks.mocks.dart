@@ -493,4 +493,50 @@ class MockTransactionRepository extends _i1.Mock
             returnValue: _i3.Future<double>.value(0.0),
           )
           as _i3.Future<double>);
+
+  @override
+  _i3.Future<void> createTransferTransaction(
+    _i13.Transaction? source,
+    _i13.Transaction? destination,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#createTransferTransaction, [
+              source,
+              destination,
+            ]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> deleteLinkedTransaction(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteLinkedTransaction, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> createSplitTransaction(
+    _i13.Transaction? parent,
+    List<_i13.Transaction>? children,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#createSplitTransaction, [parent, children]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<List<_i13.Transaction>> getSplitTransactions(String? parentId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getSplitTransactions, [parentId]),
+            returnValue: _i3.Future<List<_i13.Transaction>>.value(
+              <_i13.Transaction>[],
+            ),
+          )
+          as _i3.Future<List<_i13.Transaction>>);
 }

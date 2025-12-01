@@ -2442,6 +2442,20 @@ class $TransactionsTable extends Transactions
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _parentTransactionIdMeta =
+      const VerificationMeta('parentTransactionId');
+  @override
+  late final GeneratedColumn<String> parentTransactionId =
+      GeneratedColumn<String>(
+        'parent_transaction_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES transactions (id)',
+        ),
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2478,6 +2492,7 @@ class $TransactionsTable extends Transactions
     isDeleted,
     transferAccountId,
     transferTransactionId,
+    parentTransactionId,
     createdAt,
     updatedAt,
   ];
@@ -2576,6 +2591,15 @@ class $TransactionsTable extends Transactions
         ),
       );
     }
+    if (data.containsKey('parent_transaction_id')) {
+      context.handle(
+        _parentTransactionIdMeta,
+        parentTransactionId.isAcceptableOrUnknown(
+          data['parent_transaction_id']!,
+          _parentTransactionIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2645,6 +2669,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}transfer_transaction_id'],
       ),
+      parentTransactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_transaction_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2675,6 +2703,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final bool isDeleted;
   final String? transferAccountId;
   final String? transferTransactionId;
+  final String? parentTransactionId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   const Transaction({
@@ -2690,6 +2719,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.isDeleted,
     this.transferAccountId,
     this.transferTransactionId,
+    this.parentTransactionId,
     this.createdAt,
     this.updatedAt,
   });
@@ -2717,6 +2747,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     if (!nullToAbsent || transferTransactionId != null) {
       map['transfer_transaction_id'] = Variable<String>(transferTransactionId);
+    }
+    if (!nullToAbsent || parentTransactionId != null) {
+      map['parent_transaction_id'] = Variable<String>(parentTransactionId);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
@@ -2749,6 +2782,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       transferTransactionId: transferTransactionId == null && nullToAbsent
           ? const Value.absent()
           : Value(transferTransactionId),
+      parentTransactionId: parentTransactionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentTransactionId),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -2780,6 +2816,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       transferTransactionId: serializer.fromJson<String?>(
         json['transferTransactionId'],
       ),
+      parentTransactionId: serializer.fromJson<String?>(
+        json['parentTransactionId'],
+      ),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
@@ -2802,6 +2841,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'transferTransactionId': serializer.toJson<String?>(
         transferTransactionId,
       ),
+      'parentTransactionId': serializer.toJson<String?>(parentTransactionId),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
@@ -2820,6 +2860,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     bool? isDeleted,
     Value<String?> transferAccountId = const Value.absent(),
     Value<String?> transferTransactionId = const Value.absent(),
+    Value<String?> parentTransactionId = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => Transaction(
@@ -2839,6 +2880,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     transferTransactionId: transferTransactionId.present
         ? transferTransactionId.value
         : this.transferTransactionId,
+    parentTransactionId: parentTransactionId.present
+        ? parentTransactionId.value
+        : this.parentTransactionId,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
@@ -2862,6 +2906,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       transferTransactionId: data.transferTransactionId.present
           ? data.transferTransactionId.value
           : this.transferTransactionId,
+      parentTransactionId: data.parentTransactionId.present
+          ? data.parentTransactionId.value
+          : this.parentTransactionId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2882,6 +2929,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('isDeleted: $isDeleted, ')
           ..write('transferAccountId: $transferAccountId, ')
           ..write('transferTransactionId: $transferTransactionId, ')
+          ..write('parentTransactionId: $parentTransactionId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2902,6 +2950,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     isDeleted,
     transferAccountId,
     transferTransactionId,
+    parentTransactionId,
     createdAt,
     updatedAt,
   );
@@ -2921,6 +2970,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.isDeleted == this.isDeleted &&
           other.transferAccountId == this.transferAccountId &&
           other.transferTransactionId == this.transferTransactionId &&
+          other.parentTransactionId == this.parentTransactionId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2938,6 +2988,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<bool> isDeleted;
   final Value<String?> transferAccountId;
   final Value<String?> transferTransactionId;
+  final Value<String?> parentTransactionId;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
   final Value<int> rowid;
@@ -2954,6 +3005,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.isDeleted = const Value.absent(),
     this.transferAccountId = const Value.absent(),
     this.transferTransactionId = const Value.absent(),
+    this.parentTransactionId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2971,6 +3023,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.isDeleted = const Value.absent(),
     this.transferAccountId = const Value.absent(),
     this.transferTransactionId = const Value.absent(),
+    this.parentTransactionId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2991,6 +3044,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<bool>? isDeleted,
     Expression<String>? transferAccountId,
     Expression<String>? transferTransactionId,
+    Expression<String>? parentTransactionId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -3009,6 +3063,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (transferAccountId != null) 'transfer_account_id': transferAccountId,
       if (transferTransactionId != null)
         'transfer_transaction_id': transferTransactionId,
+      if (parentTransactionId != null)
+        'parent_transaction_id': parentTransactionId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3028,6 +3084,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<bool>? isDeleted,
     Value<String?>? transferAccountId,
     Value<String?>? transferTransactionId,
+    Value<String?>? parentTransactionId,
     Value<DateTime?>? createdAt,
     Value<DateTime?>? updatedAt,
     Value<int>? rowid,
@@ -3046,6 +3103,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       transferAccountId: transferAccountId ?? this.transferAccountId,
       transferTransactionId:
           transferTransactionId ?? this.transferTransactionId,
+      parentTransactionId: parentTransactionId ?? this.parentTransactionId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3093,6 +3151,11 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
         transferTransactionId.value,
       );
     }
+    if (parentTransactionId.present) {
+      map['parent_transaction_id'] = Variable<String>(
+        parentTransactionId.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3120,6 +3183,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('isDeleted: $isDeleted, ')
           ..write('transferAccountId: $transferAccountId, ')
           ..write('transferTransactionId: $transferTransactionId, ')
+          ..write('parentTransactionId: $parentTransactionId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -6896,6 +6960,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<bool> isDeleted,
       Value<String?> transferAccountId,
       Value<String?> transferTransactionId,
+      Value<String?> parentTransactionId,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
       Value<int> rowid,
@@ -6914,6 +6979,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<bool> isDeleted,
       Value<String?> transferAccountId,
       Value<String?> transferTransactionId,
+      Value<String?> parentTransactionId,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
       Value<int> rowid,
@@ -6992,6 +7058,28 @@ final class $$TransactionsTableReferences
       $_db.accounts,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_transferAccountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TransactionsTable _parentTransactionIdTable(_$AppDatabase db) =>
+      db.transactions.createAlias(
+        $_aliasNameGenerator(
+          db.transactions.parentTransactionId,
+          db.transactions.id,
+        ),
+      );
+
+  $$TransactionsTableProcessedTableManager? get parentTransactionId {
+    final $_column = $_itemColumn<String>('parent_transaction_id');
+    if ($_column == null) return null;
+    final manager = $$TransactionsTableTableManager(
+      $_db,
+      $_db.transactions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_parentTransactionIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -7141,6 +7229,29 @@ class $$TransactionsTableFilterComposer
           }) => $$AccountsTableFilterComposer(
             $db: $db,
             $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TransactionsTableFilterComposer get parentTransactionId {
+    final $$TransactionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentTransactionId,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionsTableFilterComposer(
+            $db: $db,
+            $table: $db.transactions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7301,6 +7412,29 @@ class $$TransactionsTableOrderingComposer
     );
     return composer;
   }
+
+  $$TransactionsTableOrderingComposer get parentTransactionId {
+    final $$TransactionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentTransactionId,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -7435,6 +7569,29 @@ class $$TransactionsTableAnnotationComposer
     );
     return composer;
   }
+
+  $$TransactionsTableAnnotationComposer get parentTransactionId {
+    final $$TransactionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentTransactionId,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TransactionsTableTableManager
@@ -7455,6 +7612,7 @@ class $$TransactionsTableTableManager
             bool payeeId,
             bool categoryId,
             bool transferAccountId,
+            bool parentTransactionId,
           })
         > {
   $$TransactionsTableTableManager(_$AppDatabase db, $TransactionsTable table)
@@ -7482,6 +7640,7 @@ class $$TransactionsTableTableManager
                 Value<bool> isDeleted = const Value.absent(),
                 Value<String?> transferAccountId = const Value.absent(),
                 Value<String?> transferTransactionId = const Value.absent(),
+                Value<String?> parentTransactionId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7498,6 +7657,7 @@ class $$TransactionsTableTableManager
                 isDeleted: isDeleted,
                 transferAccountId: transferAccountId,
                 transferTransactionId: transferTransactionId,
+                parentTransactionId: parentTransactionId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -7516,6 +7676,7 @@ class $$TransactionsTableTableManager
                 Value<bool> isDeleted = const Value.absent(),
                 Value<String?> transferAccountId = const Value.absent(),
                 Value<String?> transferTransactionId = const Value.absent(),
+                Value<String?> parentTransactionId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7532,6 +7693,7 @@ class $$TransactionsTableTableManager
                 isDeleted: isDeleted,
                 transferAccountId: transferAccountId,
                 transferTransactionId: transferTransactionId,
+                parentTransactionId: parentTransactionId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -7550,6 +7712,7 @@ class $$TransactionsTableTableManager
                 payeeId = false,
                 categoryId = false,
                 transferAccountId = false,
+                parentTransactionId = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -7630,6 +7793,21 @@ class $$TransactionsTableTableManager
                                   )
                                   as T;
                         }
+                        if (parentTransactionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.parentTransactionId,
+                                    referencedTable:
+                                        $$TransactionsTableReferences
+                                            ._parentTransactionIdTable(db),
+                                    referencedColumn:
+                                        $$TransactionsTableReferences
+                                            ._parentTransactionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
                         return state;
                       },
@@ -7659,6 +7837,7 @@ typedef $$TransactionsTableProcessedTableManager =
         bool payeeId,
         bool categoryId,
         bool transferAccountId,
+        bool parentTransactionId,
       })
     >;
 typedef $$ScheduledTransactionsTableCreateCompanionBuilder =

@@ -34,4 +34,16 @@ abstract class TransactionRepository {
 
   /// Calculates the total expenses (sum of amounts) for a specific category within a date range.
   Future<double> getExpenseSumByCategoryAndDateRange(String categoryId, DateTime start, DateTime end);
+
+  /// Creates a transfer consisting of two linked transactions.
+  Future<void> createTransferTransaction(Transaction source, Transaction destination);
+
+  /// Deletes a transaction and its linked counterparts (transfers or splits).
+  Future<void> deleteLinkedTransaction(String id);
+
+  /// Creates a split transaction consisting of a parent and multiple children.
+  Future<void> createSplitTransaction(Transaction parent, List<Transaction> children);
+
+  /// Retrieves the split children for a parent transaction.
+  Future<List<Transaction>> getSplitTransactions(String parentId);
 }

@@ -25,6 +25,10 @@ class Transactions extends Table {
   TextColumn get transferAccountId => text().nullable().references(Accounts, #id)();
 
   TextColumn get transferTransactionId => text().nullable()();
+
+  @ReferenceName('parentTransactions')
+  TextColumn get parentTransactionId => text().nullable().references(Transactions, #id)();
+
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
 

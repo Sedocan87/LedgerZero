@@ -130,15 +130,132 @@ void main() {
   });
 
   group('deleteTransaction', () {
-    test('should call deleteTransaction on repository', () async {
+    test('should call deleteLinkedTransaction on repository', () async {
       const id = 'tx1';
 
-      when(mockTransactionRepository.deleteTransaction(id))
+      when(mockTransactionRepository.deleteLinkedTransaction(id))
           .thenAnswer((_) async {});
 
       await transactionService.deleteTransaction(id);
 
-      verify(mockTransactionRepository.deleteTransaction(id)).called(1);
+      verify(mockTransactionRepository.deleteLinkedTransaction(id)).called(1);
     });
+  });
+
+  group('createTransferTransaction', () {
+    test('should call createTransferTransaction on repository with linked transactions', () async {
+      final source = Transaction(
+        id: 'tx1',
+        accountId: 'acc1',
+        date: DateTime.now(),
+        amount: -100.0,
+      );
+      final dest = Transaction(
+        id: 'tx2',
+        accountId: 'acc2',
+        date: DateTime.now(),
+        amount: 100.0,
+      );
+
+      when(mockTransactionRepository.createTransferTransaction(any, any))
+          .thenAnswer((_) async {});
+
+      await transactionService.createTransferTransaction(source, dest);
+
+      final captured = verify(mockTransactionRepository.createTransferTransaction(captureAny, captureAny)).captured;
+      final sourceCaptured = captured[0] as Transaction;
+      final destCaptured = captured[1] as Transaction;
+
+      expect(sourceCaptured.transferTransactionId, dest.id);
+      expect(sourceCaptured.transferAccountId, dest.accountId);
+      expect(destCaptured.transferTransactionId, source.id);
+      expect(destCaptured.transferAccountId, source.accountId);
+    });
+  });
+
+  group('createSplitTransaction', () {
+    test('should call createSplitTransaction on repository', () async {
+       final parent = Transaction(
+        id: 'parent',
+        accountId: 'acc1',
+        date: DateTime.now(),
+        amount: -100.0,
+      );
+      final child1 = Transaction(
+        id: 'child1',
+        accountId: 'acc1',
+        date: DateTime.now(),
+        amount: -60.0,
+        categoryId: 'cat1',
+      );
+       final child2 = Transaction(
+        id: 'child2',
+        accountId: 'acc1',
+        date: DateTime.now(),
+        amount: -40.0,
+        categoryId: 'cat2',
+      );
+
+      when(mockTransactionRepository.createSplitTransaction(any, any))
+          .thenAnswer((_) async {});
+
+      await transactionService.createSplitTransaction(parent, [child1, child2]);
+
+      verify(mockTransactionRepository.createSplitTransaction(any, any)).called(1);
+    });
+
+    test('should throw if sum does not match', () async {
+       final parent = Transaction(
+        id: 'parent',
+        accountId: 'acc1',
+        date: DateTime.now(),
+        amount: -100.0,
+      );
+      final child1 = Transaction(
+        id: 'child1',
+        accountId: 'acc1',
+        date: DateTime.now(),
+        amount: -50.0,
+      );
+
+      expect(
+          () => transactionService.createSplitTransaction(parent, [child1]),
+          throwsA(isA<ValidationException>()));
+    });
+  });
+
+  group('approve/reject/clear/reconcile', () {
+      test('approveTransaction sets approved=true', () async {
+          final t = Transaction(id: '1', accountId: 'a', date: DateTime.now(), amount: 10);
+          when(mockTransactionRepository.getTransactionById('1')).thenAnswer((_) async => t);
+          when(mockTransactionRepository.updateTransaction(any)).thenAnswer((_) async {});
+
+          await transactionService.approveTransaction('1');
+
+          final captured = verify(mockTransactionRepository.updateTransaction(captureAny)).captured.first as Transaction;
+          expect(captured.approved, true);
+      });
+
+      test('rejectTransaction sets approved=false', () async {
+          final t = Transaction(id: '1', accountId: 'a', date: DateTime.now(), amount: 10);
+          when(mockTransactionRepository.getTransactionById('1')).thenAnswer((_) async => t);
+          when(mockTransactionRepository.updateTransaction(any)).thenAnswer((_) async {});
+
+          await transactionService.rejectTransaction('1');
+
+          final captured = verify(mockTransactionRepository.updateTransaction(captureAny)).captured.first as Transaction;
+          expect(captured.approved, false);
+      });
+
+       test('markAsReconciled sets status to reconciled', () async {
+          final t = Transaction(id: '1', accountId: 'a', date: DateTime.now(), amount: 10);
+          when(mockTransactionRepository.getTransactionById('1')).thenAnswer((_) async => t);
+          when(mockTransactionRepository.updateTransaction(any)).thenAnswer((_) async {});
+
+          await transactionService.markAsReconciled(['1']);
+
+          final captured = verify(mockTransactionRepository.updateTransaction(captureAny)).captured.first as Transaction;
+          expect(captured.cleared, TransactionClearStatus.reconciled);
+      });
   });
 }
