@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/presentation/widgets/common/loading_indicator.dart';
 
 class AppButton extends StatelessWidget {
   final String label;
@@ -45,9 +46,7 @@ class AppButton extends StatelessWidget {
           const SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-            ),
+            child: LoadingIndicator(),
           ),
           const SizedBox(width: 8),
         ] else if (icon != null) ...[
