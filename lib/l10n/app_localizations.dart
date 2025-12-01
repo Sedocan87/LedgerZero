@@ -103,6 +103,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Budget'**
   String get budget;
+
+  /// The home tab label
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
+
+  /// The accounts tab label
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get accounts;
+
+  /// The transactions tab label
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions'**
+  String get transactions;
 }
 
 class _AppLocalizationsDelegate

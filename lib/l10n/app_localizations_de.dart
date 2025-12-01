@@ -10,4 +10,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get budget => 'Budget';
+
+  @override
+  String get home => 'Startseite';
+
+  @override
+  String get accounts => 'Konten';
+
+  @override
+  String get transactions => 'Transaktionen';
 }

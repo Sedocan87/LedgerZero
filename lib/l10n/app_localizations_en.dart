@@ -10,4 +10,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get budget => 'Budget';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get accounts => 'Accounts';
+
+  @override
+  String get transactions => 'Transactions';
 }

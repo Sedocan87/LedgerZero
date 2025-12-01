@@ -2,5 +2,17 @@
   "budget": "Budget",
   "@budget": {
     "description": "The budget tab label"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "The home tab label"
+  },
+  "accounts": "Accounts",
+  "@accounts": {
+    "description": "The accounts tab label"
+  },
+  "transactions": "Transactions",
+  "@transactions": {
+    "description": "The transactions tab label"
   }
 }
