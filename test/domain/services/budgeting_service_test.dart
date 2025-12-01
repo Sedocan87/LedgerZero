@@ -256,4 +256,194 @@ void main() {
        verify(mockBudgetRepository.getBudgetsForMonth('2025-01')).called(1);
     });
   });
+
+  group('calculateCategoryActivity', () {
+    test('should calculate sum of transactions for category in month', () async {
+      final targetMonth = DateTime(2025, 3);
+      const categoryId = 'cat1';
+
+      final t1 = Transaction(
+        id: '1',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 5),
+        amount: -50.0,
+        categoryId: categoryId,
+      );
+      final t2 = Transaction(
+        id: '2',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 20),
+        amount: -25.0,
+        categoryId: categoryId,
+      );
+      // Transaction for another category
+      final t3 = Transaction(
+        id: '3',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 25),
+        amount: -10.0,
+        categoryId: 'other_cat',
+      );
+
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [t1, t2, t3]);
+
+      final activity = await budgetingService.calculateCategoryActivity(categoryId, targetMonth);
+
+      expect(activity, -75.0);
+    });
+
+    test('should return 0.0 if no transactions for category', () async {
+      final targetMonth = DateTime(2025, 3);
+      const categoryId = 'cat1';
+
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => []);
+
+      final activity = await budgetingService.calculateCategoryActivity(categoryId, targetMonth);
+
+      expect(activity, 0.0);
+    });
+  });
+
+  group('calculateCategoryAvailable', () {
+    test('should calculate available correctly (Budgeted + Activity)', () async {
+      // Month 1: Budget 100, Activity -50 -> Available 50
+      final targetMonth = DateTime(2025, 1);
+      const categoryId = 'cat1';
+
+      const budget = Budget(
+        id: 'b1',
+        categoryId: categoryId,
+        month: '2025-01',
+        budgeted: 100.0,
+      );
+
+      final transaction = Transaction(
+        id: 't1',
+        accountId: 'acc1',
+        date: DateTime(2025, 1, 15),
+        amount: -50.0,
+        categoryId: categoryId,
+      );
+
+      when(mockBudgetRepository.getAllBudgets())
+          .thenAnswer((_) async => [budget]);
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [transaction]);
+
+      final available = await budgetingService.calculateCategoryAvailable(categoryId, targetMonth);
+
+      expect(available, 50.0);
+    });
+
+    test('should handle negative available (Task 85: Overspending)', () async {
+      // Month 1: Budget 100, Activity -150 -> Available -50
+      final targetMonth = DateTime(2025, 1);
+      const categoryId = 'cat1';
+
+      const budget = Budget(
+        id: 'b1',
+        categoryId: categoryId,
+        month: '2025-01',
+        budgeted: 100.0,
+      );
+
+      final transaction = Transaction(
+        id: 't1',
+        accountId: 'acc1',
+        date: DateTime(2025, 1, 15),
+        amount: -150.0,
+        categoryId: categoryId,
+      );
+
+      when(mockBudgetRepository.getAllBudgets())
+          .thenAnswer((_) async => [budget]);
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [transaction]);
+
+      final available = await budgetingService.calculateCategoryAvailable(categoryId, targetMonth);
+
+      expect(available, -50.0);
+    });
+
+    test('should implement overspending rollover (Task 86)', () async {
+      // Month 1: Budget 100, Spend 150 -> Available -50
+      // Month 2: Budget 100, Spend 0 -> Available 50 (100 + (-50))
+      final targetMonth = DateTime(2025, 2);
+      const categoryId = 'cat1';
+
+      const budget1 = Budget(
+        id: 'b1',
+        categoryId: categoryId,
+        month: '2025-01',
+        budgeted: 100.0,
+      );
+      const budget2 = Budget(
+        id: 'b2',
+        categoryId: categoryId,
+        month: '2025-02',
+        budgeted: 100.0,
+      );
+
+      final transaction1 = Transaction(
+        id: 't1',
+        accountId: 'acc1',
+        date: DateTime(2025, 1, 15),
+        amount: -150.0,
+        categoryId: categoryId,
+      );
+
+      when(mockBudgetRepository.getAllBudgets())
+          .thenAnswer((_) async => [budget1, budget2]);
+
+      // Should fetch history from beginning of time
+      when(mockTransactionRepository.getTransactionsByDateRange(
+        DateTime.fromMillisecondsSinceEpoch(0),
+        argThat(predicate((d) => d is DateTime && d.year == 2025 && d.month == 2 && d.day == 28)), // End of Feb
+      )).thenAnswer((_) async => [transaction1]);
+
+      final available = await budgetingService.calculateCategoryAvailable(categoryId, targetMonth);
+
+      expect(available, 50.0);
+    });
+
+    test('should accumulate positive carryover', () async {
+       // Month 1: Budget 100, Spend 50 -> Available 50
+       // Month 2: Budget 100, Spend 0 -> Available 150
+       final targetMonth = DateTime(2025, 2);
+       const categoryId = 'cat1';
+
+       const budget1 = Budget(
+         id: 'b1',
+         categoryId: categoryId,
+         month: '2025-01',
+         budgeted: 100.0,
+       );
+       const budget2 = Budget(
+         id: 'b2',
+         categoryId: categoryId,
+         month: '2025-02',
+         budgeted: 100.0,
+       );
+
+       final transaction1 = Transaction(
+         id: 't1',
+         accountId: 'acc1',
+         date: DateTime(2025, 1, 15),
+         amount: -50.0,
+         categoryId: categoryId,
+       );
+
+       when(mockBudgetRepository.getAllBudgets())
+           .thenAnswer((_) async => [budget1, budget2]);
+
+       when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+           .thenAnswer((_) async => [transaction1]);
+
+       final available = await budgetingService.calculateCategoryAvailable(categoryId, targetMonth);
+
+       expect(available, 150.0);
+    });
+  });
 }

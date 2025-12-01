@@ -77,4 +77,55 @@ class BudgetingService {
 
     return budgets.fold<double>(0.0, (double sum, Budget b) => sum + b.budgeted);
   }
+
+  /// Calculates the activity (spending) for a specific [categoryId] in a specific [month].
+  ///
+  /// Activity is the sum of all transactions for this category in the month.
+  /// Usually negative for outflows/spending.
+  Future<double> calculateCategoryActivity(String categoryId, DateTime month) async {
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final endOfMonth = DateTime(month.year, month.month + 1, 1).subtract(const Duration(milliseconds: 1));
+
+    final transactions = await _transactionRepository.getTransactionsByDateRange(
+      startOfMonth,
+      endOfMonth,
+    );
+
+    return transactions
+        .where((t) => t.categoryId == categoryId)
+        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
+  }
+
+  /// Calculates the available amount for a specific [categoryId] up to the end of [month].
+  ///
+  /// Available = Total Budgeted (all time up to month) + Total Activity (all time up to month).
+  /// This automatically handles positive carry-over and negative rollover (overspending).
+  Future<double> calculateCategoryAvailable(String categoryId, DateTime month) async {
+    // 1. Calculate end of the target month
+    final nextMonthStart = DateTime(month.year, month.month + 1, 1);
+    final endOfTargetMonth = nextMonthStart.subtract(const Duration(milliseconds: 1));
+    final startOfTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+    // 2. Fetch all transactions for this category up to end of target month
+    // Note: Optimization would be to have getTransactionsByCategoryAndDateRange in repository
+    final allTransactions = await _transactionRepository.getTransactionsByDateRange(
+      startOfTime,
+      endOfTargetMonth,
+    );
+
+    final totalActivity = allTransactions
+        .where((t) => t.categoryId == categoryId)
+        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
+
+    // 3. Fetch all budgets
+    // Note: Optimization would be to have getBudgetsByCategory in repository
+    final allBudgets = await _budgetRepository.getAllBudgets();
+    final targetMonthString = DateFormat('yyyy-MM').format(month);
+
+    final totalBudgeted = allBudgets
+        .where((b) => b.categoryId == categoryId && b.month.compareTo(targetMonthString) <= 0)
+        .fold<double>(0.0, (double sum, Budget b) => sum + b.budgeted);
+
+    return totalBudgeted + totalActivity;
+  }
 }
