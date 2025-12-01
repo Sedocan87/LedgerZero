@@ -55,8 +55,8 @@ abstract class TransactionRepository {
   Future<List<Transaction>> getSplitTransactions(String parentId);
 
   /// Retrieves transactions matching the provided filter and sorted by the provided sort options.
-  Future<List<Transaction>> getTransactions({TransactionFilter? filter, TransactionSort? sort});
+  Future<List<Transaction>> getTransactions({TransactionFilter? filter, TransactionSort? sort, int? limit});
 
   /// Watches transactions matching the provided filter and sorted by the provided sort options.
-  Stream<List<Transaction>> watchTransactions({TransactionFilter? filter, TransactionSort? sort});
+  Stream<List<Transaction>> watchTransactions({TransactionFilter? filter, TransactionSort? sort, int? limit});
 }

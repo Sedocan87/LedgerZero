@@ -49,6 +49,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
+      GoRoute(
+        path: '/add-transaction',
+        name: 'add-transaction',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const Scaffold(body: Center(child: Text('Add Transaction Placeholder'))),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return ScaffoldWithNavBar(navigationShell: navigationShell);
