@@ -1,3 +1,5 @@
+import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
+
 /// Represents a transaction category in the LedgerZero application.
 ///
 /// Categories are used to classify transactions and can be grouped into category groups.
@@ -17,6 +19,15 @@ class Category {
   /// The sort order of the category within its group.
   final int? sortOrder;
 
+  /// The type of goal for this category.
+  final GoalType? goalType;
+
+  /// The target amount for the goal.
+  final double? targetAmount;
+
+  /// The target date for the goal.
+  final DateTime? targetDate;
+
   /// The date and time when the category was created.
   final DateTime? createdAt;
 
@@ -27,6 +38,9 @@ class Category {
     this.categoryGroupId,
     this.isHidden = false,
     this.sortOrder,
+    this.goalType,
+    this.targetAmount,
+    this.targetDate,
     this.createdAt,
   });
 
@@ -37,6 +51,9 @@ class Category {
     String? categoryGroupId,
     bool? isHidden,
     int? sortOrder,
+    GoalType? goalType,
+    double? targetAmount,
+    DateTime? targetDate,
     DateTime? createdAt,
   }) {
     return Category(
@@ -45,6 +62,9 @@ class Category {
       categoryGroupId: categoryGroupId ?? this.categoryGroupId,
       isHidden: isHidden ?? this.isHidden,
       sortOrder: sortOrder ?? this.sortOrder,
+      goalType: goalType ?? this.goalType,
+      targetAmount: targetAmount ?? this.targetAmount,
+      targetDate: targetDate ?? this.targetDate,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -57,6 +77,11 @@ class Category {
       categoryGroupId: json['category_group_id'] as String?,
       isHidden: json['is_hidden'] as bool? ?? false,
       sortOrder: json['sort_order'] as int?,
+      goalType: GoalType.fromName(json['goal_type'] as String?),
+      targetAmount: (json['target_amount'] as num?)?.toDouble(),
+      targetDate: json['target_date'] != null
+          ? DateTime.parse(json['target_date'] as String)
+          : null,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -71,6 +96,9 @@ class Category {
       'category_group_id': categoryGroupId,
       'is_hidden': isHidden,
       'sort_order': sortOrder,
+      'goal_type': goalType?.toName(),
+      'target_amount': targetAmount,
+      'target_date': targetDate?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
     };
   }
@@ -87,6 +115,9 @@ class Category {
         other.categoryGroupId == categoryGroupId &&
         other.isHidden == isHidden &&
         other.sortOrder == sortOrder &&
+        other.goalType == goalType &&
+        other.targetAmount == targetAmount &&
+        other.targetDate == targetDate &&
         other.createdAt == createdAt;
   }
 
@@ -98,13 +129,16 @@ class Category {
       categoryGroupId,
       isHidden,
       sortOrder,
+      goalType,
+      targetAmount,
+      targetDate,
       createdAt,
     );
   }
 
   @override
   String toString() {
-    return 'Category(id: $id, name: $name, categoryGroupId: $categoryGroupId, isHidden: $isHidden, sortOrder: $sortOrder, createdAt: $createdAt)';
+    return 'Category(id: $id, name: $name, categoryGroupId: $categoryGroupId, isHidden: $isHidden, sortOrder: $sortOrder, goalType: $goalType, targetAmount: $targetAmount, targetDate: $targetDate, createdAt: $createdAt)';
   }
 
   /// Validates the [Category] entity.

@@ -939,6 +939,39 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _goalTypeMeta = const VerificationMeta(
+    'goalType',
+  );
+  @override
+  late final GeneratedColumn<String> goalType = GeneratedColumn<String>(
+    'goal_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetAmountMeta = const VerificationMeta(
+    'targetAmount',
+  );
+  @override
+  late final GeneratedColumn<double> targetAmount = GeneratedColumn<double>(
+    'target_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetDateMeta = const VerificationMeta(
+    'targetDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> targetDate = GeneratedColumn<DateTime>(
+    'target_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -957,6 +990,9 @@ class $CategoriesTable extends Categories
     categoryGroupId,
     isHidden,
     sortOrder,
+    goalType,
+    targetAmount,
+    targetDate,
     createdAt,
   ];
   @override
@@ -1005,6 +1041,27 @@ class $CategoriesTable extends Categories
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('goal_type')) {
+      context.handle(
+        _goalTypeMeta,
+        goalType.isAcceptableOrUnknown(data['goal_type']!, _goalTypeMeta),
+      );
+    }
+    if (data.containsKey('target_amount')) {
+      context.handle(
+        _targetAmountMeta,
+        targetAmount.isAcceptableOrUnknown(
+          data['target_amount']!,
+          _targetAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('target_date')) {
+      context.handle(
+        _targetDateMeta,
+        targetDate.isAcceptableOrUnknown(data['target_date']!, _targetDateMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1040,6 +1097,18 @@ class $CategoriesTable extends Categories
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       ),
+      goalType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}goal_type'],
+      ),
+      targetAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}target_amount'],
+      ),
+      targetDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}target_date'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1059,6 +1128,9 @@ class Category extends DataClass implements Insertable<Category> {
   final String? categoryGroupId;
   final bool isHidden;
   final int? sortOrder;
+  final String? goalType;
+  final double? targetAmount;
+  final DateTime? targetDate;
   final DateTime? createdAt;
   const Category({
     required this.id,
@@ -1066,6 +1138,9 @@ class Category extends DataClass implements Insertable<Category> {
     this.categoryGroupId,
     required this.isHidden,
     this.sortOrder,
+    this.goalType,
+    this.targetAmount,
+    this.targetDate,
     this.createdAt,
   });
   @override
@@ -1079,6 +1154,15 @@ class Category extends DataClass implements Insertable<Category> {
     map['is_hidden'] = Variable<bool>(isHidden);
     if (!nullToAbsent || sortOrder != null) {
       map['sort_order'] = Variable<int>(sortOrder);
+    }
+    if (!nullToAbsent || goalType != null) {
+      map['goal_type'] = Variable<String>(goalType);
+    }
+    if (!nullToAbsent || targetAmount != null) {
+      map['target_amount'] = Variable<double>(targetAmount);
+    }
+    if (!nullToAbsent || targetDate != null) {
+      map['target_date'] = Variable<DateTime>(targetDate);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
@@ -1097,6 +1181,15 @@ class Category extends DataClass implements Insertable<Category> {
       sortOrder: sortOrder == null && nullToAbsent
           ? const Value.absent()
           : Value(sortOrder),
+      goalType: goalType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(goalType),
+      targetAmount: targetAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetAmount),
+      targetDate: targetDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetDate),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -1114,6 +1207,9 @@ class Category extends DataClass implements Insertable<Category> {
       categoryGroupId: serializer.fromJson<String?>(json['categoryGroupId']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
       sortOrder: serializer.fromJson<int?>(json['sortOrder']),
+      goalType: serializer.fromJson<String?>(json['goalType']),
+      targetAmount: serializer.fromJson<double?>(json['targetAmount']),
+      targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
     );
   }
@@ -1126,6 +1222,9 @@ class Category extends DataClass implements Insertable<Category> {
       'categoryGroupId': serializer.toJson<String?>(categoryGroupId),
       'isHidden': serializer.toJson<bool>(isHidden),
       'sortOrder': serializer.toJson<int?>(sortOrder),
+      'goalType': serializer.toJson<String?>(goalType),
+      'targetAmount': serializer.toJson<double?>(targetAmount),
+      'targetDate': serializer.toJson<DateTime?>(targetDate),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
     };
   }
@@ -1136,6 +1235,9 @@ class Category extends DataClass implements Insertable<Category> {
     Value<String?> categoryGroupId = const Value.absent(),
     bool? isHidden,
     Value<int?> sortOrder = const Value.absent(),
+    Value<String?> goalType = const Value.absent(),
+    Value<double?> targetAmount = const Value.absent(),
+    Value<DateTime?> targetDate = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
   }) => Category(
     id: id ?? this.id,
@@ -1145,6 +1247,9 @@ class Category extends DataClass implements Insertable<Category> {
         : this.categoryGroupId,
     isHidden: isHidden ?? this.isHidden,
     sortOrder: sortOrder.present ? sortOrder.value : this.sortOrder,
+    goalType: goalType.present ? goalType.value : this.goalType,
+    targetAmount: targetAmount.present ? targetAmount.value : this.targetAmount,
+    targetDate: targetDate.present ? targetDate.value : this.targetDate,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
@@ -1156,6 +1261,13 @@ class Category extends DataClass implements Insertable<Category> {
           : this.categoryGroupId,
       isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      goalType: data.goalType.present ? data.goalType.value : this.goalType,
+      targetAmount: data.targetAmount.present
+          ? data.targetAmount.value
+          : this.targetAmount,
+      targetDate: data.targetDate.present
+          ? data.targetDate.value
+          : this.targetDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1168,14 +1280,26 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('categoryGroupId: $categoryGroupId, ')
           ..write('isHidden: $isHidden, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('goalType: $goalType, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('targetDate: $targetDate, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, categoryGroupId, isHidden, sortOrder, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    categoryGroupId,
+    isHidden,
+    sortOrder,
+    goalType,
+    targetAmount,
+    targetDate,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1185,6 +1309,9 @@ class Category extends DataClass implements Insertable<Category> {
           other.categoryGroupId == this.categoryGroupId &&
           other.isHidden == this.isHidden &&
           other.sortOrder == this.sortOrder &&
+          other.goalType == this.goalType &&
+          other.targetAmount == this.targetAmount &&
+          other.targetDate == this.targetDate &&
           other.createdAt == this.createdAt);
 }
 
@@ -1194,6 +1321,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String?> categoryGroupId;
   final Value<bool> isHidden;
   final Value<int?> sortOrder;
+  final Value<String?> goalType;
+  final Value<double?> targetAmount;
+  final Value<DateTime?> targetDate;
   final Value<DateTime?> createdAt;
   final Value<int> rowid;
   const CategoriesCompanion({
@@ -1202,6 +1332,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.categoryGroupId = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.goalType = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.targetDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1211,6 +1344,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.categoryGroupId = const Value.absent(),
     this.isHidden = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.goalType = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.targetDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1221,6 +1357,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? categoryGroupId,
     Expression<bool>? isHidden,
     Expression<int>? sortOrder,
+    Expression<String>? goalType,
+    Expression<double>? targetAmount,
+    Expression<DateTime>? targetDate,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1230,6 +1369,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (categoryGroupId != null) 'category_group_id': categoryGroupId,
       if (isHidden != null) 'is_hidden': isHidden,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (goalType != null) 'goal_type': goalType,
+      if (targetAmount != null) 'target_amount': targetAmount,
+      if (targetDate != null) 'target_date': targetDate,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1241,6 +1383,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String?>? categoryGroupId,
     Value<bool>? isHidden,
     Value<int?>? sortOrder,
+    Value<String?>? goalType,
+    Value<double?>? targetAmount,
+    Value<DateTime?>? targetDate,
     Value<DateTime?>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1250,6 +1395,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       categoryGroupId: categoryGroupId ?? this.categoryGroupId,
       isHidden: isHidden ?? this.isHidden,
       sortOrder: sortOrder ?? this.sortOrder,
+      goalType: goalType ?? this.goalType,
+      targetAmount: targetAmount ?? this.targetAmount,
+      targetDate: targetDate ?? this.targetDate,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1273,6 +1421,15 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (goalType.present) {
+      map['goal_type'] = Variable<String>(goalType.value);
+    }
+    if (targetAmount.present) {
+      map['target_amount'] = Variable<double>(targetAmount.value);
+    }
+    if (targetDate.present) {
+      map['target_date'] = Variable<DateTime>(targetDate.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1290,6 +1447,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('categoryGroupId: $categoryGroupId, ')
           ..write('isHidden: $isHidden, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('goalType: $goalType, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('targetDate: $targetDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4998,6 +5158,9 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<String?> categoryGroupId,
       Value<bool> isHidden,
       Value<int?> sortOrder,
+      Value<String?> goalType,
+      Value<double?> targetAmount,
+      Value<DateTime?> targetDate,
       Value<DateTime?> createdAt,
       Value<int> rowid,
     });
@@ -5008,6 +5171,9 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String?> categoryGroupId,
       Value<bool> isHidden,
       Value<int?> sortOrder,
+      Value<String?> goalType,
+      Value<double?> targetAmount,
+      Value<DateTime?> targetDate,
       Value<DateTime?> createdAt,
       Value<int> rowid,
     });
@@ -5152,6 +5318,21 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get goalType => $composableBuilder(
+    column: $table.goalType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5314,6 +5495,21 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get goalType => $composableBuilder(
+    column: $table.goalType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5363,6 +5559,19 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get goalType =>
+      $composableBuilder(column: $table.goalType, builder: (column) => column);
+
+  GeneratedColumn<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -5531,6 +5740,9 @@ class $$CategoriesTableTableManager
                 Value<String?> categoryGroupId = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<int?> sortOrder = const Value.absent(),
+                Value<String?> goalType = const Value.absent(),
+                Value<double?> targetAmount = const Value.absent(),
+                Value<DateTime?> targetDate = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion(
@@ -5539,6 +5751,9 @@ class $$CategoriesTableTableManager
                 categoryGroupId: categoryGroupId,
                 isHidden: isHidden,
                 sortOrder: sortOrder,
+                goalType: goalType,
+                targetAmount: targetAmount,
+                targetDate: targetDate,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -5549,6 +5764,9 @@ class $$CategoriesTableTableManager
                 Value<String?> categoryGroupId = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
                 Value<int?> sortOrder = const Value.absent(),
+                Value<String?> goalType = const Value.absent(),
+                Value<double?> targetAmount = const Value.absent(),
+                Value<DateTime?> targetDate = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion.insert(
@@ -5557,6 +5775,9 @@ class $$CategoriesTableTableManager
                 categoryGroupId: categoryGroupId,
                 isHidden: isHidden,
                 sortOrder: sortOrder,
+                goalType: goalType,
+                targetAmount: targetAmount,
+                targetDate: targetDate,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -62,7 +62,12 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Implementation for future upgrades
+        if (from < 2) {
+          // Add new columns to categories table
+          await m.addColumn(categories, categories.goalType);
+          await m.addColumn(categories, categories.targetAmount);
+          await m.addColumn(categories, categories.targetDate);
+        }
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
