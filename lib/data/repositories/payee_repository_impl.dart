@@ -1,4 +1,6 @@
 import 'package:drift/drift.dart';
+import 'package:ledger_zero/core/errors/exceptions.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
 import 'package:ledger_zero/domain/entities/payee.dart';
@@ -11,36 +13,76 @@ class PayeeRepositoryImpl implements PayeeRepository {
 
   @override
   Future<List<Payee>> getAllPayees() async {
-    final payees = await _payeesDao.getAllPayees();
-    return payees.map(_mapToDomain).toList();
+    try {
+      Logger.debug('Fetching all payees');
+      final payees = await _payeesDao.getAllPayees();
+      Logger.debug('Fetched ${payees.length} payees');
+      return payees.map(_mapToDomain).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch payees', e, stackTrace);
+      throw DatabaseException('Failed to fetch payees', e);
+    }
   }
 
   @override
   Future<Payee?> getPayeeById(String id) async {
-    final payee = await _payeesDao.getPayeeById(id);
-    return payee == null ? null : _mapToDomain(payee);
+    try {
+      Logger.debug('Fetching payee with id: $id');
+      final payee = await _payeesDao.getPayeeById(id);
+      Logger.debug('Payee found: ${payee != null}');
+      return payee == null ? null : _mapToDomain(payee);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch payee $id', e, stackTrace);
+      throw DatabaseException('Failed to fetch payee $id', e);
+    }
   }
 
   @override
   Future<void> createPayee(Payee payee) async {
-    await _payeesDao.insertPayee(_mapToCompanion(payee));
+    try {
+      Logger.debug('Creating payee: ${payee.name}');
+      await _payeesDao.insertPayee(_mapToCompanion(payee));
+      Logger.info('Payee created successfully: ${payee.id}');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to create payee ${payee.id}', e, stackTrace);
+      throw DatabaseException('Failed to create payee ${payee.id}', e);
+    }
   }
 
   @override
   Future<void> updatePayee(Payee payee) async {
-    await _payeesDao.updatePayee(_mapToCompanion(payee));
+    try {
+      Logger.debug('Updating payee: ${payee.id}');
+      await _payeesDao.updatePayee(_mapToCompanion(payee));
+      Logger.info('Payee updated successfully: ${payee.id}');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to update payee ${payee.id}', e, stackTrace);
+      throw DatabaseException('Failed to update payee ${payee.id}', e);
+    }
   }
 
   @override
   Future<void> deletePayee(String id) async {
-    await _payeesDao.deletePayee(id);
+    try {
+      Logger.debug('Deleting payee: $id');
+      await _payeesDao.deletePayee(id);
+      Logger.info('Payee deleted successfully: $id');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to delete payee $id', e, stackTrace);
+      throw DatabaseException('Failed to delete payee $id', e);
+    }
   }
 
   @override
   Stream<List<Payee>> watchAllPayees() {
     return _payeesDao.watchAllPayees().map(
-          (payees) => payees.map(_mapToDomain).toList(),
-        );
+      (payees) {
+        return payees.map(_mapToDomain).toList();
+      },
+    ).handleError((error, stackTrace) {
+      Logger.error('Error in watchAllPayees stream', error, stackTrace);
+      throw DatabaseException('Error watching payees', error);
+    });
   }
 
   Payee _mapToDomain(db.Payee p) {

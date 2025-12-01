@@ -1,4 +1,6 @@
 import 'package:drift/drift.dart';
+import 'package:ledger_zero/core/errors/exceptions.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
 import 'package:ledger_zero/domain/entities/transaction.dart';
@@ -11,58 +13,117 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<List<Transaction>> getAllTransactions() async {
-    final transactions = await _transactionsDao.getAllTransactions();
-    return transactions.map(_mapToDomain).toList();
+    try {
+      Logger.debug('Fetching all transactions');
+      final transactions = await _transactionsDao.getAllTransactions();
+      Logger.debug('Fetched ${transactions.length} transactions');
+      return transactions.map(_mapToDomain).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch transactions', e, stackTrace);
+      throw DatabaseException('Failed to fetch transactions', e);
+    }
   }
 
   @override
   Future<Transaction?> getTransactionById(String id) async {
-    final transaction = await _transactionsDao.getTransactionById(id);
-    return transaction == null ? null : _mapToDomain(transaction);
+    try {
+      Logger.debug('Fetching transaction with id: $id');
+      final transaction = await _transactionsDao.getTransactionById(id);
+      Logger.debug('Transaction found: ${transaction != null}');
+      return transaction == null ? null : _mapToDomain(transaction);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch transaction $id', e, stackTrace);
+      throw DatabaseException('Failed to fetch transaction $id', e);
+    }
   }
 
   @override
   Future<void> createTransaction(Transaction transaction) async {
-    await _transactionsDao.insertTransaction(_mapToCompanion(transaction));
+    try {
+      Logger.debug('Creating transaction: ${transaction.id}');
+      await _transactionsDao.insertTransaction(_mapToCompanion(transaction));
+      Logger.info('Transaction created successfully: ${transaction.id}');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to create transaction ${transaction.id}', e, stackTrace);
+      throw DatabaseException('Failed to create transaction ${transaction.id}', e);
+    }
   }
 
   @override
   Future<void> updateTransaction(Transaction transaction) async {
-    await _transactionsDao.updateTransaction(_mapToCompanion(transaction));
+    try {
+      Logger.debug('Updating transaction: ${transaction.id}');
+      await _transactionsDao.updateTransaction(_mapToCompanion(transaction));
+      Logger.info('Transaction updated successfully: ${transaction.id}');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to update transaction ${transaction.id}', e, stackTrace);
+      throw DatabaseException('Failed to update transaction ${transaction.id}', e);
+    }
   }
 
   @override
   Future<void> deleteTransaction(String id) async {
-    await _transactionsDao.deleteTransaction(id);
+    try {
+      Logger.debug('Deleting transaction: $id');
+      await _transactionsDao.deleteTransaction(id);
+      Logger.info('Transaction deleted successfully: $id');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to delete transaction $id', e, stackTrace);
+      throw DatabaseException('Failed to delete transaction $id', e);
+    }
   }
 
   @override
   Stream<List<Transaction>> watchAllTransactions() {
     return _transactionsDao.watchAllTransactions().map(
-          (transactions) => transactions.map(_mapToDomain).toList(),
-        );
+      (transactions) {
+        return transactions.map(_mapToDomain).toList();
+      },
+    ).handleError((error, stackTrace) {
+      Logger.error('Error in watchAllTransactions stream', error, stackTrace);
+      throw DatabaseException('Error watching transactions', error);
+    });
   }
 
   @override
   Future<List<Transaction>> getTransactionsByAccount(String accountId) async {
-    final transactions =
-        await _transactionsDao.getTransactionsByAccount(accountId);
-    return transactions.map(_mapToDomain).toList();
+    try {
+      Logger.debug('Fetching transactions for account: $accountId');
+      final transactions =
+          await _transactionsDao.getTransactionsByAccount(accountId);
+      Logger.debug('Fetched ${transactions.length} transactions for account $accountId');
+      return transactions.map(_mapToDomain).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch transactions for account $accountId', e, stackTrace);
+      throw DatabaseException('Failed to fetch transactions for account $accountId', e);
+    }
   }
 
   @override
   Stream<List<Transaction>> watchTransactionsByAccount(String accountId) {
     return _transactionsDao.watchTransactionsByAccount(accountId).map(
-          (transactions) => transactions.map(_mapToDomain).toList(),
-        );
+      (transactions) {
+        return transactions.map(_mapToDomain).toList();
+      },
+    ).handleError((error, stackTrace) {
+      Logger.error('Error in watchTransactionsByAccount stream for account $accountId', error, stackTrace);
+      throw DatabaseException('Error watching transactions for account $accountId', error);
+    });
   }
 
   @override
   Future<List<Transaction>> getTransactionsByDateRange(
       DateTime start, DateTime end) async {
-    final transactions =
-        await _transactionsDao.getTransactionsByDateRange(start, end);
-    return transactions.map(_mapToDomain).toList();
+    try {
+      Logger.debug('Fetching transactions between $start and $end');
+      final transactions =
+          await _transactionsDao.getTransactionsByDateRange(start, end);
+      Logger.debug('Fetched ${transactions.length} transactions in range');
+      return transactions.map(_mapToDomain).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch transactions in range $start - $end', e, stackTrace);
+      throw DatabaseException('Failed to fetch transactions in range', e);
+    }
   }
 
   Transaction _mapToDomain(db.Transaction t) {
