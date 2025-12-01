@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/entities/category.dart' as _i8;
 import 'package:ledger_zero/domain/entities/category_group.dart' as _i9;
 import 'package:ledger_zero/domain/entities/payee.dart' as _i11;
 import 'package:ledger_zero/domain/entities/transaction.dart' as _i13;
+import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i14;
 import 'package:ledger_zero/domain/repositories/account_repository.dart' as _i2;
 import 'package:ledger_zero/domain/repositories/budget_repository.dart' as _i5;
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
@@ -539,4 +540,34 @@ class MockTransactionRepository extends _i1.Mock
             ),
           )
           as _i3.Future<List<_i13.Transaction>>);
+
+  @override
+  _i3.Future<List<_i13.Transaction>> getTransactions({
+    _i14.TransactionFilter? filter,
+    _i14.TransactionSort? sort,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTransactions, [], {
+              #filter: filter,
+              #sort: sort,
+            }),
+            returnValue: _i3.Future<List<_i13.Transaction>>.value(
+              <_i13.Transaction>[],
+            ),
+          )
+          as _i3.Future<List<_i13.Transaction>>);
+
+  @override
+  _i3.Stream<List<_i13.Transaction>> watchTransactions({
+    _i14.TransactionFilter? filter,
+    _i14.TransactionSort? sort,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#watchTransactions, [], {
+              #filter: filter,
+              #sort: sort,
+            }),
+            returnValue: _i3.Stream<List<_i13.Transaction>>.empty(),
+          )
+          as _i3.Stream<List<_i13.Transaction>>);
 }

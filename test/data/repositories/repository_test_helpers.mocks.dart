@@ -10,6 +10,7 @@ import 'package:drift/src/runtime/executor/stream_queries.dart' as _i4;
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart' as _i6;
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart' as _i8;
 import 'package:ledger_zero/data/database/database.dart' as _i2;
+import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i9;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i7;
 
@@ -974,6 +975,36 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
             ),
           )
           as _i5.Future<List<_i2.Transaction>>);
+
+  @override
+  _i5.Future<List<_i2.Transaction>> getTransactions({
+    _i9.TransactionFilter? filter,
+    _i9.TransactionSort? sort,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTransactions, [], {
+              #filter: filter,
+              #sort: sort,
+            }),
+            returnValue: _i5.Future<List<_i2.Transaction>>.value(
+              <_i2.Transaction>[],
+            ),
+          )
+          as _i5.Future<List<_i2.Transaction>>);
+
+  @override
+  _i5.Stream<List<_i2.Transaction>> watchTransactions({
+    _i9.TransactionFilter? filter,
+    _i9.TransactionSort? sort,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#watchTransactions, [], {
+              #filter: filter,
+              #sort: sort,
+            }),
+            returnValue: _i5.Stream<List<_i2.Transaction>>.empty(),
+          )
+          as _i5.Stream<List<_i2.Transaction>>);
 
   @override
   _i5.Stream<T> createStream<T extends Object>(

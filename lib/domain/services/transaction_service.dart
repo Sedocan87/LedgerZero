@@ -1,5 +1,6 @@
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 
 /// Service responsible for managing transactions.
@@ -205,6 +206,63 @@ class TransactionService {
       Logger.info('Transactions reconciled: ${ids.length}');
     } catch (e, stackTrace) {
       Logger.error('Failed to reconcile transactions', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Searches and filters transactions based on criteria.
+  Future<List<Transaction>> searchTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+  }) async {
+    try {
+      return await _transactionRepository.getTransactions(
+        filter: filter,
+        sort: sort,
+      );
+    } catch (e, stackTrace) {
+      Logger.error('Failed to search transactions', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Watches transactions based on criteria.
+  Stream<List<Transaction>> watchTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+  }) {
+    return _transactionRepository.watchTransactions(
+      filter: filter,
+      sort: sort,
+    );
+  }
+
+  /// Finds potential duplicates for a given transaction.
+  ///
+  /// Criteria for duplication:
+  /// - Same amount
+  /// - Date within +/- 3 days
+  /// - Same payee (if set)
+  /// - Not the same transaction ID
+  Future<List<Transaction>> findPotentialDuplicates(
+      Transaction transaction) async {
+    try {
+      final filter = TransactionFilter(
+        minAmount: transaction.amount,
+        maxAmount: transaction.amount,
+        startDate: transaction.date.subtract(const Duration(days: 3)),
+        endDate: transaction.date.add(const Duration(days: 3)),
+        payeeIds:
+            transaction.payeeId != null ? [transaction.payeeId!] : null,
+      );
+
+      final candidates = await _transactionRepository.getTransactions(
+        filter: filter,
+      );
+
+      return candidates.where((t) => t.id != transaction.id).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to find potential duplicates', e, stackTrace);
       rethrow;
     }
   }
