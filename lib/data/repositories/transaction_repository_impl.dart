@@ -4,6 +4,7 @@ import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
@@ -227,6 +228,33 @@ class TransactionRepositoryImpl implements TransactionRepository {
       Logger.error('Failed to fetch split transactions for $parentId', e, stackTrace);
       throw DatabaseException('Failed to fetch split transactions', e);
     }
+  }
+
+  @override
+  Future<List<Transaction>> getTransactions(
+      {TransactionFilter? filter, TransactionSort? sort}) async {
+    try {
+      Logger.debug('Fetching transactions with filter and sort');
+      final transactions = await _transactionsDao.getTransactions(filter: filter, sort: sort);
+      Logger.debug('Fetched ${transactions.length} transactions');
+      return transactions.map(_mapToDomain).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch transactions with filter', e, stackTrace);
+      throw DatabaseException('Failed to fetch transactions with filter', e);
+    }
+  }
+
+  @override
+  Stream<List<Transaction>> watchTransactions(
+      {TransactionFilter? filter, TransactionSort? sort}) {
+    return _transactionsDao.watchTransactions(filter: filter, sort: sort).map(
+      (transactions) {
+        return transactions.map(_mapToDomain).toList();
+      },
+    ).handleError((error, stackTrace) {
+      Logger.error('Error in watchTransactions stream', error, stackTrace);
+      throw DatabaseException('Error watching transactions', error);
+    });
   }
 
   Transaction _mapToDomain(db.Transaction t) {

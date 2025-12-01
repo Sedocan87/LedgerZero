@@ -1,4 +1,5 @@
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 
 /// Repository interface for managing [Transaction] entities.
 abstract class TransactionRepository {
@@ -46,4 +47,10 @@ abstract class TransactionRepository {
 
   /// Retrieves the split children for a parent transaction.
   Future<List<Transaction>> getSplitTransactions(String parentId);
+
+  /// Retrieves transactions matching the provided filter and sorted by the provided sort options.
+  Future<List<Transaction>> getTransactions({TransactionFilter? filter, TransactionSort? sort});
+
+  /// Watches transactions matching the provided filter and sorted by the provided sort options.
+  Stream<List<Transaction>> watchTransactions({TransactionFilter? filter, TransactionSort? sort});
 }

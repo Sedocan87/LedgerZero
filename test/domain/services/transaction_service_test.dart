@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:mockito/mockito.dart';
 
@@ -257,5 +258,56 @@ void main() {
           final captured = verify(mockTransactionRepository.updateTransaction(captureAny)).captured.first as Transaction;
           expect(captured.cleared, TransactionClearStatus.reconciled);
       });
+  });
+
+  group('Search and Duplication Detection', () {
+    test('searchTransactions delegates to repository', () async {
+      const filter = TransactionFilter(accountIds: ['acc1']);
+      const sort = TransactionSort(field: TransactionSortField.date);
+
+      when(mockTransactionRepository.getTransactions(filter: anyNamed('filter'), sort: anyNamed('sort')))
+        .thenAnswer((_) async => []);
+
+      await transactionService.searchTransactions(filter: filter, sort: sort);
+
+      verify(mockTransactionRepository.getTransactions(filter: filter, sort: sort)).called(1);
+    });
+
+    test('findPotentialDuplicates queries repository with correct filter', () async {
+      final date = DateTime(2025, 1, 15);
+      final transaction = Transaction(
+        id: 'new_tx',
+        accountId: 'acc1',
+        date: date,
+        amount: -50.0,
+        payeeId: 'p1',
+      );
+
+      final potentialDuplicate = Transaction(
+        id: 'dup_tx',
+        accountId: 'acc1',
+        date: date.subtract(const Duration(days: 1)),
+        amount: -50.0,
+        payeeId: 'p1',
+      );
+
+      when(mockTransactionRepository.getTransactions(filter: anyNamed('filter')))
+        .thenAnswer((_) async => [potentialDuplicate, transaction]); // Return itself too
+
+      final duplicates = await transactionService.findPotentialDuplicates(transaction);
+
+      // Should exclude self
+      expect(duplicates.length, 1);
+      expect(duplicates.first.id, 'dup_tx');
+
+      // Verify filter args
+      final captured = verify(mockTransactionRepository.getTransactions(filter: captureAnyNamed('filter'))).captured.first as TransactionFilter;
+
+      expect(captured.minAmount, -50.0);
+      expect(captured.maxAmount, -50.0);
+      expect(captured.startDate, date.subtract(const Duration(days: 3)));
+      expect(captured.endDate, date.add(const Duration(days: 3)));
+      expect(captured.payeeIds, ['p1']);
+    });
   });
 }
