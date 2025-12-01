@@ -126,6 +126,29 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
   }
 
+  @override
+  Future<double> getIncomeSumByDateRange(DateTime start, DateTime end) async {
+    try {
+      return await _transactionsDao.getIncomeSumByDateRange(start, end);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to calculate income sum', e, stackTrace);
+      throw DatabaseException('Failed to calculate income sum', e);
+    }
+  }
+
+  @override
+  Future<double> getExpenseSumByCategoryAndDateRange(
+      String categoryId, DateTime start, DateTime end) async {
+    try {
+      return await _transactionsDao.getExpenseSumByCategoryAndDateRange(
+          categoryId, start, end);
+    } catch (e, stackTrace) {
+      Logger.error(
+          'Failed to calculate expense sum for category $categoryId', e, stackTrace);
+      throw DatabaseException('Failed to calculate expense sum', e);
+    }
+  }
+
   Transaction _mapToDomain(db.Transaction t) {
     return Transaction(
       id: t.id,

@@ -28,4 +28,10 @@ abstract class TransactionRepository {
 
   /// Retrieves transactions within a specific date range.
   Future<List<Transaction>> getTransactionsByDateRange(DateTime start, DateTime end);
+
+  /// Calculates the total income (positive amount, null category) within a date range.
+  Future<double> getIncomeSumByDateRange(DateTime start, DateTime end);
+
+  /// Calculates the total expenses (sum of amounts) for a specific category within a date range.
+  Future<double> getExpenseSumByCategoryAndDateRange(String categoryId, DateTime start, DateTime end);
 }

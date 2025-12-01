@@ -25,4 +25,10 @@ abstract class BudgetRepository {
 
   /// Watches all budgets for a specific month.
   Stream<List<Budget>> watchBudgetsForMonth(String month);
+
+  /// Calculates total budgeted amount across all categories up to (and including) [endMonth].
+  Future<double> getTotalBudgetedByMonthRange(String endMonth);
+
+  /// Calculates total budgeted amount for a specific category up to (and including) [endMonth].
+  Future<double> getTotalBudgetedByCategoryAndMonthRange(String categoryId, String endMonth);
 }
