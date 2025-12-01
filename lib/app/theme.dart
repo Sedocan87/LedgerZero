@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/core/constants/dimensions.dart';
 
 class AppColors {
   // Light Mode Colors
@@ -45,10 +46,45 @@ class AppColors {
   static const Color onSurfaceDark = Color(0xFFE0E0E0);
 }
 
+class AppTextStyles {
+  static const TextStyle heading1 = TextStyle(
+    fontSize: 32,
+    fontWeight: FontWeight.bold,
+    letterSpacing: -0.5,
+  );
+
+  static const TextStyle heading2 = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0,
+  );
+
+  static const TextStyle body = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.normal,
+    letterSpacing: 0.5,
+  );
+
+  static const TextStyle caption = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    letterSpacing: 0.4,
+  );
+}
+
 class AppTheme {
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
+    textTheme: const TextTheme(
+      displayLarge: AppTextStyles.heading1,
+      headlineMedium: AppTextStyles.heading2,
+      bodyLarge: AppTextStyles.body,
+      labelSmall: AppTextStyles.caption,
+    ).apply(
+      bodyColor: AppColors.onSurfaceLight,
+      displayColor: AppColors.onSurfaceLight,
+    ),
     colorScheme: const ColorScheme.light(
       primary: AppColors.primaryLight,
       onPrimary: AppColors.onPrimaryLight,
@@ -74,13 +110,22 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: AppColors.surfaceLight,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
     ),
   );
 
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
+    textTheme: const TextTheme(
+      displayLarge: AppTextStyles.heading1,
+      headlineMedium: AppTextStyles.heading2,
+      bodyLarge: AppTextStyles.body,
+      labelSmall: AppTextStyles.caption,
+    ).apply(
+      bodyColor: AppColors.onSurfaceDark,
+      displayColor: AppColors.onSurfaceDark,
+    ),
     colorScheme: const ColorScheme.dark(
       primary: AppColors.primaryDark,
       onPrimary: AppColors.onPrimaryDark,
@@ -107,12 +152,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: AppColors.surfaceDark,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ),
-    // Ensure text is readable on dark background
-    textTheme: const TextTheme(
-      bodyMedium: TextStyle(color: AppColors.onSurfaceDark),
-      bodyLarge: TextStyle(color: AppColors.onSurfaceDark),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
     ),
   );
 }
