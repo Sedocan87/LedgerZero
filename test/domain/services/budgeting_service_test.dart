@@ -39,9 +39,6 @@ void main() {
         amount: 500.0,
         categoryId: null,
       );
-      // Future income (should be ignored for March TBB?)
-      // Wait, getTransactionsByDateRange is called with end of March.
-      // So checking logic inside service.
 
       // Expense transaction (should be ignored for Income calculation)
       final expense1 = Transaction(
@@ -65,7 +62,7 @@ void main() {
         month: '2025-03',
         budgeted: 300.0,
       );
-      // Future budget (should be ignored)
+      // Future budget (should be ignored for TBB up to end of March)
       const budgetFuture = Budget(
         id: 'b3',
         categoryId: 'cat1',
@@ -123,6 +120,93 @@ void main() {
         argThat(predicate((d) => d is DateTime && d.year == 2025 && d.month == 3 && d.day == 31)),
       )).called(1);
     });
+
+    test('should ignore transactions with categoryId (expenses)', () async {
+      final targetMonth = DateTime(2025, 3);
+
+      final income = Transaction(
+        id: '1',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 15),
+        amount: 500.0,
+        categoryId: null,
+      );
+
+      final expense = Transaction(
+        id: '2',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 16),
+        amount: -50.0,
+        categoryId: 'cat1',
+      );
+
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [income, expense]);
+
+      final result = await budgetingService.calculateTotalIncomeForMonth(targetMonth);
+
+      expect(result, 500.0);
+    });
+
+    test('should ignore transactions with negative amount (outflows without category)', () async {
+      final targetMonth = DateTime(2025, 3);
+
+      final income = Transaction(
+        id: '1',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 15),
+        amount: 500.0,
+        categoryId: null,
+      );
+
+      // Weird case: negative amount but no category (maybe a transfer out or correction)
+      // Should not be counted as income.
+      final negativeUncategorized = Transaction(
+        id: '2',
+        accountId: 'acc1',
+        date: DateTime(2025, 3, 16),
+        amount: -50.0,
+        categoryId: null,
+      );
+
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => [income, negativeUncategorized]);
+
+      final result = await budgetingService.calculateTotalIncomeForMonth(targetMonth);
+
+      expect(result, 500.0);
+    });
+
+    test('should handle leap year February correctly', () async {
+      final targetMonth = DateTime(2024, 2); // Leap year
+
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => []);
+
+      await budgetingService.calculateTotalIncomeForMonth(targetMonth);
+
+      // Verify correct end date for leap year Feb (29th)
+      verify(mockTransactionRepository.getTransactionsByDateRange(
+        DateTime(2024, 2, 1),
+        argThat(predicate((d) => d is DateTime && d.year == 2024 && d.month == 2 && d.day == 29)),
+      )).called(1);
+    });
+
+    test('should handle month boundaries correctly', () async {
+      // Logic relies on repository filtering, but let's ensure we pass correct dates.
+      final targetMonth = DateTime(2025, 12); // December
+
+      when(mockTransactionRepository.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => []);
+
+      await budgetingService.calculateTotalIncomeForMonth(targetMonth);
+
+      // Verify correct dates for Dec
+      verify(mockTransactionRepository.getTransactionsByDateRange(
+        DateTime(2025, 12, 1),
+        argThat(predicate((d) => d is DateTime && d.year == 2025 && d.month == 12 && d.day == 31)),
+      )).called(1);
+    });
   });
 
   group('calculateTotalBudgetedForMonth', () {
@@ -148,6 +232,28 @@ void main() {
       final result = await budgetingService.calculateTotalBudgetedForMonth(targetMonth);
 
       expect(result, 300.0);
+    });
+
+    test('should return 0.0 if no budgets for the month', () async {
+      final targetMonth = DateTime(2025, 4);
+
+      when(mockBudgetRepository.getBudgetsForMonth('2025-04'))
+          .thenAnswer((_) async => []);
+
+      final result = await budgetingService.calculateTotalBudgetedForMonth(targetMonth);
+
+      expect(result, 0.0);
+    });
+
+    test('should format month string correctly for repository call', () async {
+       final targetMonth = DateTime(2025, 1); // January (single digit month)
+
+       when(mockBudgetRepository.getBudgetsForMonth(any))
+          .thenAnswer((_) async => []);
+
+       await budgetingService.calculateTotalBudgetedForMonth(targetMonth);
+
+       verify(mockBudgetRepository.getBudgetsForMonth('2025-01')).called(1);
     });
   });
 }
