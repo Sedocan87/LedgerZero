@@ -257,10 +257,10 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<List<Transaction>> getTransactions(
-      {TransactionFilter? filter, TransactionSort? sort}) async {
+      {TransactionFilter? filter, TransactionSort? sort, int? limit}) async {
     try {
       Logger.debug('Fetching transactions with filter and sort');
-      final transactions = await _transactionsDao.getTransactions(filter: filter, sort: sort);
+      final transactions = await _transactionsDao.getTransactions(filter: filter, sort: sort, limit: limit);
       Logger.debug('Fetched ${transactions.length} transactions');
       return transactions.map(_mapToDomain).toList();
     } catch (e, stackTrace) {
@@ -271,8 +271,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Stream<List<Transaction>> watchTransactions(
-      {TransactionFilter? filter, TransactionSort? sort}) {
-    return _transactionsDao.watchTransactions(filter: filter, sort: sort).map(
+      {TransactionFilter? filter, TransactionSort? sort, int? limit}) {
+    return _transactionsDao.watchTransactions(filter: filter, sort: sort, limit: limit).map(
       (transactions) {
         return transactions.map(_mapToDomain).toList();
       },

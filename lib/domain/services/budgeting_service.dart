@@ -68,6 +68,22 @@ class BudgetingService {
     );
   }
 
+  /// Calculates total spending (sum of all negative transactions) for a specific [month].
+  Future<double> calculateTotalSpendingForMonth(DateTime month) async {
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final endOfMonth = DateTime(month.year, month.month + 1, 1).subtract(const Duration(milliseconds: 1));
+
+    final transactions = await _transactionRepository.getTransactionsByDateRange(
+      startOfMonth,
+      endOfMonth,
+    );
+
+    // Sum only negative amounts
+    return transactions
+        .where((t) => t.amount < 0)
+        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
+  }
+
   /// Calculates total budgeted amount for a specific [month].
   Future<double> calculateTotalBudgetedForMonth(DateTime month) async {
     final monthString = DateFormat('yyyy-MM').format(month);

@@ -14,5 +14,41 @@
   "transactions": "Transactions",
   "@transactions": {
     "description": "The transactions tab label"
+  },
+  "toBeBudgeted": "To Be Budgeted",
+  "@toBeBudgeted": {
+    "description": "Label for To Be Budgeted amount"
+  },
+  "totalIncome": "Total Income",
+  "@totalIncome": {
+    "description": "Label for total income"
+  },
+  "totalSpending": "Total Spending",
+  "@totalSpending": {
+    "description": "Label for total spending"
+  },
+  "recentTransactions": "Recent Transactions",
+  "@recentTransactions": {
+    "description": "Label for recent transactions section"
+  },
+  "noRecentTransactions": "No recent transactions",
+  "@noRecentTransactions": {
+    "description": "Message shown when there are no recent transactions"
+  },
+  "addTransaction": "Add Transaction",
+  "@addTransaction": {
+    "description": "Tooltip for add transaction button"
+  },
+  "welcomeToLedgerZero": "Welcome to LedgerZero",
+  "@welcomeToLedgerZero": {
+    "description": "Welcome message for new users"
+  },
+  "createFirstAccountMessage": "Create your first account to get started with budgeting.",
+  "@createFirstAccountMessage": {
+    "description": "Message prompting user to create their first account"
+  },
+  "createAccount": "Create Account",
+  "@createAccount": {
+    "description": "Button label to create an account"
   }
 }

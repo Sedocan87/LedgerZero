@@ -121,6 +121,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transactions'**
   String get transactions;
+
+  /// Label for To Be Budgeted amount
+  ///
+  /// In en, this message translates to:
+  /// **'To Be Budgeted'**
+  String get toBeBudgeted;
+
+  /// Label for total income
+  ///
+  /// In en, this message translates to:
+  /// **'Total Income'**
+  String get totalIncome;
+
+  /// Label for total spending
+  ///
+  /// In en, this message translates to:
+  /// **'Total Spending'**
+  String get totalSpending;
+
+  /// Label for recent transactions section
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Transactions'**
+  String get recentTransactions;
+
+  /// Message shown when there are no recent transactions
+  ///
+  /// In en, this message translates to:
+  /// **'No recent transactions'**
+  String get noRecentTransactions;
+
+  /// Tooltip for add transaction button
+  ///
+  /// In en, this message translates to:
+  /// **'Add Transaction'**
+  String get addTransaction;
+
+  /// Welcome message for new users
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to LedgerZero'**
+  String get welcomeToLedgerZero;
+
+  /// Message prompting user to create their first account
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first account to get started with budgeting.'**
+  String get createFirstAccountMessage;
+
+  /// Button label to create an account
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get createAccount;
 }
 
 class _AppLocalizationsDelegate
