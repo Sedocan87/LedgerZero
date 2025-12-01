@@ -15,8 +15,14 @@ abstract class TransactionRepository {
   /// Updates an existing transaction.
   Future<void> updateTransaction(Transaction transaction);
 
+  /// Updates multiple transactions.
+  Future<void> batchUpdateTransactions(List<Transaction> transactions);
+
   /// Deletes a transaction by its unique identifier.
   Future<void> deleteTransaction(String id);
+
+  /// Deletes multiple transactions by their unique identifiers.
+  Future<void> batchDeleteTransactions(List<String> ids);
 
   /// Watches all transactions for changes.
   Stream<List<Transaction>> watchAllTransactions();

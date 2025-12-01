@@ -18,6 +18,7 @@ class TransactionSort {
 }
 
 class TransactionFilter {
+  final List<String>? ids;
   final List<String>? accountIds;
   final List<String>? categoryIds;
   final List<String>? payeeIds;
@@ -29,6 +30,7 @@ class TransactionFilter {
   final List<TransactionClearStatus>? clearedStatuses;
 
   const TransactionFilter({
+    this.ids,
     this.accountIds,
     this.categoryIds,
     this.payeeIds,
@@ -41,6 +43,7 @@ class TransactionFilter {
   });
 
   TransactionFilter copyWith({
+    List<String>? ids,
     List<String>? accountIds,
     List<String>? categoryIds,
     List<String>? payeeIds,
@@ -52,6 +55,7 @@ class TransactionFilter {
     List<TransactionClearStatus>? clearedStatuses,
   }) {
     return TransactionFilter(
+      ids: ids ?? this.ids,
       accountIds: accountIds ?? this.accountIds,
       categoryIds: categoryIds ?? this.categoryIds,
       payeeIds: payeeIds ?? this.payeeIds,

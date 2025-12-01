@@ -2,17 +2,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
+import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:mockito/mockito.dart';
 
 import '../../mocks/repository_mocks.mocks.dart';
 
+class MockUndoService extends Mock implements UndoService {}
+
 void main() {
   late TransactionService transactionService;
   late MockTransactionRepository mockTransactionRepository;
+  late MockUndoService mockUndoService;
 
   setUp(() {
     mockTransactionRepository = MockTransactionRepository();
-    transactionService = TransactionService(mockTransactionRepository);
+    mockUndoService = MockUndoService();
+    transactionService = TransactionService(mockTransactionRepository, mockUndoService);
   });
 
   group('createTransaction', () {
@@ -82,6 +87,8 @@ void main() {
         updatedAt: DateTime.now().subtract(const Duration(days: 1)),
       );
 
+      when(mockTransactionRepository.getTransactionById(transaction.id))
+          .thenAnswer((_) async => transaction);
       when(mockTransactionRepository.updateTransaction(any))
           .thenAnswer((_) async {});
 
@@ -101,6 +108,8 @@ void main() {
         updatedAt: oldDate,
       );
 
+      when(mockTransactionRepository.getTransactionById(transaction.id))
+          .thenAnswer((_) async => transaction);
       when(mockTransactionRepository.updateTransaction(any))
           .thenAnswer((_) async {});
 
@@ -133,7 +142,12 @@ void main() {
   group('deleteTransaction', () {
     test('should call deleteLinkedTransaction on repository', () async {
       const id = 'tx1';
+      final transaction = Transaction(id: id, accountId: 'acc1', date: DateTime.now(), amount: 10);
 
+      when(mockTransactionRepository.getTransactionById(id))
+          .thenAnswer((_) async => transaction);
+      when(mockTransactionRepository.getSplitTransactions(id))
+          .thenAnswer((_) async => []);
       when(mockTransactionRepository.deleteLinkedTransaction(id))
           .thenAnswer((_) async {});
 
@@ -250,13 +264,13 @@ void main() {
 
        test('markAsReconciled sets status to reconciled', () async {
           final t = Transaction(id: '1', accountId: 'a', date: DateTime.now(), amount: 10);
-          when(mockTransactionRepository.getTransactionById('1')).thenAnswer((_) async => t);
-          when(mockTransactionRepository.updateTransaction(any)).thenAnswer((_) async {});
+          when(mockTransactionRepository.getTransactions(filter: anyNamed('filter'))).thenAnswer((_) async => [t]);
+          when(mockTransactionRepository.batchUpdateTransactions(any)).thenAnswer((_) async {});
 
           await transactionService.markAsReconciled(['1']);
 
-          final captured = verify(mockTransactionRepository.updateTransaction(captureAny)).captured.first as Transaction;
-          expect(captured.cleared, TransactionClearStatus.reconciled);
+          final captured = verify(mockTransactionRepository.batchUpdateTransactions(captureAny)).captured.first as List<Transaction>;
+          expect(captured.first.cleared, TransactionClearStatus.reconciled);
       });
   });
 

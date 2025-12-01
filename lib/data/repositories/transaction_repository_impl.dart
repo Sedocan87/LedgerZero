@@ -63,6 +63,19 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<void> batchUpdateTransactions(List<Transaction> transactions) async {
+    try {
+      Logger.debug('Batch updating ${transactions.length} transactions');
+      await _transactionsDao.batchUpdateTransactions(
+          transactions.map(_mapToCompanion).toList());
+      Logger.info('Batch update successful');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to batch update transactions', e, stackTrace);
+      throw DatabaseException('Failed to batch update transactions', e);
+    }
+  }
+
+  @override
   Future<void> deleteTransaction(String id) async {
     try {
       Logger.debug('Soft deleting transaction: $id');
@@ -71,6 +84,18 @@ class TransactionRepositoryImpl implements TransactionRepository {
     } catch (e, stackTrace) {
       Logger.error('Failed to delete transaction $id', e, stackTrace);
       throw DatabaseException('Failed to delete transaction $id', e);
+    }
+  }
+
+  @override
+  Future<void> batchDeleteTransactions(List<String> ids) async {
+    try {
+      Logger.debug('Batch deleting ${ids.length} transactions');
+      await _transactionsDao.batchSoftDeleteTransactions(ids);
+      Logger.info('Batch delete successful');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to batch delete transactions', e, stackTrace);
+      throw DatabaseException('Failed to batch delete transactions', e);
     }
   }
 

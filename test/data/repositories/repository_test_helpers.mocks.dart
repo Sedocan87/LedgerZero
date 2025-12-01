@@ -900,6 +900,26 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
           as _i5.Future<void>);
 
   @override
+  _i5.Future<void> batchUpdateTransactions(
+    List<_i2.TransactionsCompanion>? list,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#batchUpdateTransactions, [list]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> batchSoftDeleteTransactions(List<String>? ids) =>
+      (super.noSuchMethod(
+            Invocation.method(#batchSoftDeleteTransactions, [ids]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Stream<List<_i2.Transaction>> watchAllTransactions() =>
       (super.noSuchMethod(
             Invocation.method(#watchAllTransactions, []),
