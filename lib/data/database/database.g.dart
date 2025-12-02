@@ -1111,6 +1111,24 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<int> color = GeneratedColumn<int>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1132,6 +1150,8 @@ class $CategoriesTable extends Categories
     goalType,
     targetAmount,
     targetDate,
+    color,
+    icon,
     createdAt,
   ];
   @override
@@ -1201,6 +1221,18 @@ class $CategoriesTable extends Categories
         targetDate.isAcceptableOrUnknown(data['target_date']!, _targetDateMeta),
       );
     }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1248,6 +1280,14 @@ class $CategoriesTable extends Categories
         DriftSqlType.dateTime,
         data['${effectivePrefix}target_date'],
       ),
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color'],
+      ),
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1270,6 +1310,8 @@ class Category extends DataClass implements Insertable<Category> {
   final String? goalType;
   final double? targetAmount;
   final DateTime? targetDate;
+  final int? color;
+  final String? icon;
   final DateTime? createdAt;
   const Category({
     required this.id,
@@ -1280,6 +1322,8 @@ class Category extends DataClass implements Insertable<Category> {
     this.goalType,
     this.targetAmount,
     this.targetDate,
+    this.color,
+    this.icon,
     this.createdAt,
   });
   @override
@@ -1302,6 +1346,12 @@ class Category extends DataClass implements Insertable<Category> {
     }
     if (!nullToAbsent || targetDate != null) {
       map['target_date'] = Variable<DateTime>(targetDate);
+    }
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<int>(color);
+    }
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
@@ -1329,6 +1379,10 @@ class Category extends DataClass implements Insertable<Category> {
       targetDate: targetDate == null && nullToAbsent
           ? const Value.absent()
           : Value(targetDate),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -1349,6 +1403,8 @@ class Category extends DataClass implements Insertable<Category> {
       goalType: serializer.fromJson<String?>(json['goalType']),
       targetAmount: serializer.fromJson<double?>(json['targetAmount']),
       targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
+      color: serializer.fromJson<int?>(json['color']),
+      icon: serializer.fromJson<String?>(json['icon']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
     );
   }
@@ -1364,6 +1420,8 @@ class Category extends DataClass implements Insertable<Category> {
       'goalType': serializer.toJson<String?>(goalType),
       'targetAmount': serializer.toJson<double?>(targetAmount),
       'targetDate': serializer.toJson<DateTime?>(targetDate),
+      'color': serializer.toJson<int?>(color),
+      'icon': serializer.toJson<String?>(icon),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
     };
   }
@@ -1377,6 +1435,8 @@ class Category extends DataClass implements Insertable<Category> {
     Value<String?> goalType = const Value.absent(),
     Value<double?> targetAmount = const Value.absent(),
     Value<DateTime?> targetDate = const Value.absent(),
+    Value<int?> color = const Value.absent(),
+    Value<String?> icon = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
   }) => Category(
     id: id ?? this.id,
@@ -1389,6 +1449,8 @@ class Category extends DataClass implements Insertable<Category> {
     goalType: goalType.present ? goalType.value : this.goalType,
     targetAmount: targetAmount.present ? targetAmount.value : this.targetAmount,
     targetDate: targetDate.present ? targetDate.value : this.targetDate,
+    color: color.present ? color.value : this.color,
+    icon: icon.present ? icon.value : this.icon,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
@@ -1407,6 +1469,8 @@ class Category extends DataClass implements Insertable<Category> {
       targetDate: data.targetDate.present
           ? data.targetDate.value
           : this.targetDate,
+      color: data.color.present ? data.color.value : this.color,
+      icon: data.icon.present ? data.icon.value : this.icon,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1422,6 +1486,8 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('goalType: $goalType, ')
           ..write('targetAmount: $targetAmount, ')
           ..write('targetDate: $targetDate, ')
+          ..write('color: $color, ')
+          ..write('icon: $icon, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1437,6 +1503,8 @@ class Category extends DataClass implements Insertable<Category> {
     goalType,
     targetAmount,
     targetDate,
+    color,
+    icon,
     createdAt,
   );
   @override
@@ -1451,6 +1519,8 @@ class Category extends DataClass implements Insertable<Category> {
           other.goalType == this.goalType &&
           other.targetAmount == this.targetAmount &&
           other.targetDate == this.targetDate &&
+          other.color == this.color &&
+          other.icon == this.icon &&
           other.createdAt == this.createdAt);
 }
 
@@ -1463,6 +1533,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String?> goalType;
   final Value<double?> targetAmount;
   final Value<DateTime?> targetDate;
+  final Value<int?> color;
+  final Value<String?> icon;
   final Value<DateTime?> createdAt;
   final Value<int> rowid;
   const CategoriesCompanion({
@@ -1474,6 +1546,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.goalType = const Value.absent(),
     this.targetAmount = const Value.absent(),
     this.targetDate = const Value.absent(),
+    this.color = const Value.absent(),
+    this.icon = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1486,6 +1560,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.goalType = const Value.absent(),
     this.targetAmount = const Value.absent(),
     this.targetDate = const Value.absent(),
+    this.color = const Value.absent(),
+    this.icon = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -1499,6 +1575,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? goalType,
     Expression<double>? targetAmount,
     Expression<DateTime>? targetDate,
+    Expression<int>? color,
+    Expression<String>? icon,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1511,6 +1589,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (goalType != null) 'goal_type': goalType,
       if (targetAmount != null) 'target_amount': targetAmount,
       if (targetDate != null) 'target_date': targetDate,
+      if (color != null) 'color': color,
+      if (icon != null) 'icon': icon,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1525,6 +1605,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String?>? goalType,
     Value<double?>? targetAmount,
     Value<DateTime?>? targetDate,
+    Value<int?>? color,
+    Value<String?>? icon,
     Value<DateTime?>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1537,6 +1619,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       goalType: goalType ?? this.goalType,
       targetAmount: targetAmount ?? this.targetAmount,
       targetDate: targetDate ?? this.targetDate,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1569,6 +1653,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (targetDate.present) {
       map['target_date'] = Variable<DateTime>(targetDate.value);
     }
+    if (color.present) {
+      map['color'] = Variable<int>(color.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1589,6 +1679,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('goalType: $goalType, ')
           ..write('targetAmount: $targetAmount, ')
           ..write('targetDate: $targetDate, ')
+          ..write('color: $color, ')
+          ..write('icon: $icon, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5470,6 +5562,8 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<String?> goalType,
       Value<double?> targetAmount,
       Value<DateTime?> targetDate,
+      Value<int?> color,
+      Value<String?> icon,
       Value<DateTime?> createdAt,
       Value<int> rowid,
     });
@@ -5483,6 +5577,8 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String?> goalType,
       Value<double?> targetAmount,
       Value<DateTime?> targetDate,
+      Value<int?> color,
+      Value<String?> icon,
       Value<DateTime?> createdAt,
       Value<int> rowid,
     });
@@ -5642,6 +5738,16 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<DateTime> get targetDate => $composableBuilder(
     column: $table.targetDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5819,6 +5925,16 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5881,6 +5997,12 @@ class $$CategoriesTableAnnotationComposer
     column: $table.targetDate,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -6052,6 +6174,8 @@ class $$CategoriesTableTableManager
                 Value<String?> goalType = const Value.absent(),
                 Value<double?> targetAmount = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
+                Value<int?> color = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion(
@@ -6063,6 +6187,8 @@ class $$CategoriesTableTableManager
                 goalType: goalType,
                 targetAmount: targetAmount,
                 targetDate: targetDate,
+                color: color,
+                icon: icon,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -6076,6 +6202,8 @@ class $$CategoriesTableTableManager
                 Value<String?> goalType = const Value.absent(),
                 Value<double?> targetAmount = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
+                Value<int?> color = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion.insert(
@@ -6087,6 +6215,8 @@ class $$CategoriesTableTableManager
                 goalType: goalType,
                 targetAmount: targetAmount,
                 targetDate: targetDate,
+                color: color,
+                icon: icon,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

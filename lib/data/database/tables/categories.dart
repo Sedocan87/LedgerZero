@@ -10,6 +10,8 @@ class Categories extends Table {
   TextColumn get goalType => text().nullable()();
   RealColumn get targetAmount => real().nullable()();
   DateTimeColumn get targetDate => dateTime().nullable()();
+  IntColumn get color => integer().nullable()();
+  TextColumn get icon => text().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
 
   @override

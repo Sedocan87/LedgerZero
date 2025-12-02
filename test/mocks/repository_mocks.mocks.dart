@@ -539,6 +539,21 @@ class MockTransactionRepository extends _i1.Mock
           as _i3.Future<void>);
 
   @override
+  _i3.Future<void> updateTransferTransaction(
+    _i13.Transaction? source,
+    _i13.Transaction? destination,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#updateTransferTransaction, [
+              source,
+              destination,
+            ]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
   _i3.Future<void> deleteLinkedTransaction(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteLinkedTransaction, [id]),
@@ -554,6 +569,18 @@ class MockTransactionRepository extends _i1.Mock
   ) =>
       (super.noSuchMethod(
             Invocation.method(#createSplitTransaction, [parent, children]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> updateSplitTransaction(
+    _i13.Transaction? parent,
+    List<_i13.Transaction>? children,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#updateSplitTransaction, [parent, children]),
             returnValue: _i3.Future<void>.value(),
             returnValueForMissingStub: _i3.Future<void>.value(),
           )

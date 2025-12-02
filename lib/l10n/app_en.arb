@@ -127,5 +127,38 @@
   "daily": "Daily",
   "weekly": "Weekly",
   "monthly": "Monthly",
-  "yearly": "Yearly"
+  "yearly": "Yearly",
+  "categories": "Categories",
+  "addCategory": "Add Category",
+  "manageCategories": "Manage Categories",
+  "categoryGroup": "Category Group",
+  "editCategory": "Edit Category",
+  "deleteCategory": "Delete Category",
+  "categoryName": "Category Name",
+  "createCategory": "Create Category",
+  "editCategoryGroup": "Edit Category Group",
+  "deleteCategoryGroup": "Delete Category Group",
+  "newCategoryGroup": "New Category Group",
+  "addCategoryGroup": "Add Category Group",
+  "groupName": "Group Name",
+  "hideCategory": "Hide Category",
+  "showCategory": "Show Category",
+  "hidden": "Hidden",
+  "reorderGroups": "Reorder Groups",
+  "reorderCategories": "Reorder Categories",
+  "color": "Color",
+  "icon": "Icon",
+  "categoryHasTransactions": "This category has {count} transactions. Select a new category for them.",
+  "@categoryHasTransactions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merge": "Merge",
+  "reassign": "Reassign",
+  "search": "Search",
+  "export": "Export",
+  "import": "Import"
 }

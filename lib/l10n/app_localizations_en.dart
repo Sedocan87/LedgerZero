@@ -215,4 +215,84 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get yearly => 'Yearly';
+
+  @override
+  String get categories => 'Categories';
+
+  @override
+  String get addCategory => 'Add Category';
+
+  @override
+  String get manageCategories => 'Manage Categories';
+
+  @override
+  String get categoryGroup => 'Category Group';
+
+  @override
+  String get editCategory => 'Edit Category';
+
+  @override
+  String get deleteCategory => 'Delete Category';
+
+  @override
+  String get categoryName => 'Category Name';
+
+  @override
+  String get createCategory => 'Create Category';
+
+  @override
+  String get editCategoryGroup => 'Edit Category Group';
+
+  @override
+  String get deleteCategoryGroup => 'Delete Category Group';
+
+  @override
+  String get newCategoryGroup => 'New Category Group';
+
+  @override
+  String get addCategoryGroup => 'Add Category Group';
+
+  @override
+  String get groupName => 'Group Name';
+
+  @override
+  String get hideCategory => 'Hide Category';
+
+  @override
+  String get showCategory => 'Show Category';
+
+  @override
+  String get hidden => 'Hidden';
+
+  @override
+  String get reorderGroups => 'Reorder Groups';
+
+  @override
+  String get reorderCategories => 'Reorder Categories';
+
+  @override
+  String get color => 'Color';
+
+  @override
+  String get icon => 'Icon';
+
+  @override
+  String categoryHasTransactions(int count) {
+    return 'This category has $count transactions. Select a new category for them.';
+  }
+
+  @override
+  String get merge => 'Merge';
+
+  @override
+  String get reassign => 'Reassign';
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get export => 'Export';
+
+  @override
+  String get import => 'Import';
 }

@@ -487,6 +487,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yearly'**
   String get yearly;
+
+  /// No description provided for @categories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get categories;
+
+  /// No description provided for @addCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Category'**
+  String get addCategory;
+
+  /// No description provided for @manageCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Categories'**
+  String get manageCategories;
+
+  /// No description provided for @categoryGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Category Group'**
+  String get categoryGroup;
+
+  /// No description provided for @editCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Category'**
+  String get editCategory;
+
+  /// No description provided for @deleteCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Category'**
+  String get deleteCategory;
+
+  /// No description provided for @categoryName.
+  ///
+  /// In en, this message translates to:
+  /// **'Category Name'**
+  String get categoryName;
+
+  /// No description provided for @createCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Category'**
+  String get createCategory;
+
+  /// No description provided for @editCategoryGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Category Group'**
+  String get editCategoryGroup;
+
+  /// No description provided for @deleteCategoryGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Category Group'**
+  String get deleteCategoryGroup;
+
+  /// No description provided for @newCategoryGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'New Category Group'**
+  String get newCategoryGroup;
+
+  /// No description provided for @addCategoryGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Category Group'**
+  String get addCategoryGroup;
+
+  /// No description provided for @groupName.
+  ///
+  /// In en, this message translates to:
+  /// **'Group Name'**
+  String get groupName;
+
+  /// No description provided for @hideCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Category'**
+  String get hideCategory;
+
+  /// No description provided for @showCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Category'**
+  String get showCategory;
+
+  /// No description provided for @hidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get hidden;
+
+  /// No description provided for @reorderGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder Groups'**
+  String get reorderGroups;
+
+  /// No description provided for @reorderCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder Categories'**
+  String get reorderCategories;
+
+  /// No description provided for @color.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get color;
+
+  /// No description provided for @icon.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon'**
+  String get icon;
+
+  /// No description provided for @categoryHasTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'This category has {count} transactions. Select a new category for them.'**
+  String categoryHasTransactions(int count);
+
+  /// No description provided for @merge.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge'**
+  String get merge;
+
+  /// No description provided for @reassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Reassign'**
+  String get reassign;
+
+  /// No description provided for @search.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get search;
+
+  /// No description provided for @export.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get export;
+
+  /// No description provided for @import.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get import;
 }
 
 class _AppLocalizationsDelegate

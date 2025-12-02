@@ -16,6 +16,7 @@ import 'package:ledger_zero/data/database/daos/payees_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
+import 'package:uuid/uuid.dart';
 
 part 'database.g.dart';
 
@@ -53,13 +54,14 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+        await _seedDefaultCategories();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -78,10 +80,77 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(accounts, accounts.icon);
           await m.addColumn(accounts, accounts.notes);
         }
+        if (from < 5) {
+          // Add new columns to categories table
+          await m.addColumn(categories, categories.color);
+          await m.addColumn(categories, categories.icon);
+        }
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');
       },
     );
+  }
+
+  Future<void> _seedDefaultCategories() async {
+    final uuid = const Uuid();
+    final now = DateTime.now();
+
+    // Define defaults
+    final defaults = {
+      'Immediate Obligations': [
+        'Rent/Mortgage',
+        'Electric',
+        'Water',
+        'Internet',
+        'Groceries',
+        'Transportation'
+      ],
+      'True Expenses': [
+        'Medical',
+        'Auto Maintenance',
+        'Home Maintenance',
+        'Renter\'s/Home Insurance',
+        'Software Subscriptions'
+      ],
+      'Debt Payments': ['Student Loan', 'Car Payment', 'Credit Card'],
+      'Quality of Life': [
+        'Vacation',
+        'Fitness',
+        'Education',
+        'Dining Out',
+        'Entertainment'
+      ],
+      'Just for Fun': ['Gaming', 'Music', 'Fun Money'],
+    };
+
+    int groupSort = 0;
+
+    await batch((batch) {
+      for (final entry in defaults.entries) {
+        final groupId = uuid.v4();
+        batch.insert(
+            categoryGroups,
+            CategoryGroupsCompanion.insert(
+              id: groupId,
+              name: entry.key,
+              sortOrder: Value(groupSort++),
+              createdAt: Value(now),
+            ));
+
+        int catSort = 0;
+        for (final catName in entry.value) {
+          batch.insert(
+              categories,
+              CategoriesCompanion.insert(
+                id: uuid.v4(),
+                name: catName,
+                categoryGroupId: Value(groupId),
+                sortOrder: Value(catSort++),
+                createdAt: Value(now),
+              ));
+        }
+      }
+    });
   }
 }
