@@ -293,4 +293,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get import => 'Importieren';
+
+  @override
+  String get budgeted => 'Budgetiert';
+
+  @override
+  String get activity => 'Aktivität';
+
+  @override
+  String get available => 'Verfügbar';
 }

@@ -160,5 +160,8 @@
   "reassign": "Reassign",
   "search": "Search",
   "export": "Export",
-  "import": "Import"
+  "import": "Import",
+  "budgeted": "Budgeted",
+  "activity": "Activity",
+  "available": "Available"
 }

@@ -89,5 +89,8 @@
   "reassign": "Neu zuweisen",
   "search": "Suche",
   "export": "Exportieren",
-  "import": "Importieren"
+  "import": "Importieren",
+  "budgeted": "Budgetiert",
+  "activity": "Aktivität",
+  "available": "Verfügbar"
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
 
 class BudgetScreen extends StatelessWidget {
   const BudgetScreen({super.key});
@@ -10,6 +13,7 @@ class BudgetScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.budget),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.category),
@@ -18,8 +22,19 @@ class BudgetScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(
-        child: Text('Budget Screen'),
+      body: const CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                SizedBox(height: 8),
+                MonthSelector(),
+                ToBeBudgetedBanner(),
+              ],
+            ),
+          ),
+          BudgetCategoryList(),
+        ],
       ),
     );
   }
