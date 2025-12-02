@@ -21,6 +21,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get transactions => 'Transaktionen';
 
   @override
+  String get reports => 'Berichte';
+
+  @override
   String get toBeBudgeted => 'Zu Budgetieren';
 
   @override

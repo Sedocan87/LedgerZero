@@ -15,6 +15,10 @@
   "@transactions": {
     "description": "The transactions tab label"
   },
+  "reports": "Reports",
+  "@reports": {
+    "description": "The reports tab label"
+  },
   "toBeBudgeted": "To Be Budgeted",
   "@toBeBudgeted": {
     "description": "Label for To Be Budgeted amount"

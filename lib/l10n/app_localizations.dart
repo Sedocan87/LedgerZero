@@ -122,6 +122,12 @@ abstract class AppLocalizations {
   /// **'Transactions'**
   String get transactions;
 
+  /// The reports tab label
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get reports;
+
   /// Label for To Be Budgeted amount
   ///
   /// In en, this message translates to:

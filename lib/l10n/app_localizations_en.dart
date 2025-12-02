@@ -21,6 +21,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactions => 'Transactions';
 
   @override
+  String get reports => 'Reports';
+
+  @override
   String get toBeBudgeted => 'To Be Budgeted';
 
   @override
