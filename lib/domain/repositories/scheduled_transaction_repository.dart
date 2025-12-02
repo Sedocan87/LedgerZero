@@ -1,0 +1,22 @@
+import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
+
+/// Repository interface for managing [ScheduledTransaction] entities.
+abstract class ScheduledTransactionRepository {
+  /// Retrieves all scheduled transactions.
+  Future<List<ScheduledTransaction>> getAllScheduledTransactions();
+
+  /// Retrieves a scheduled transaction by its unique identifier.
+  Future<ScheduledTransaction?> getScheduledTransactionById(String id);
+
+  /// Creates a new scheduled transaction.
+  Future<void> createScheduledTransaction(ScheduledTransaction transaction);
+
+  /// Updates an existing scheduled transaction.
+  Future<void> updateScheduledTransaction(ScheduledTransaction transaction);
+
+  /// Deletes a scheduled transaction by its unique identifier.
+  Future<void> deleteScheduledTransaction(String id);
+
+  /// Watches all scheduled transactions for changes.
+  Stream<List<ScheduledTransaction>> watchAllScheduledTransactions();
+}

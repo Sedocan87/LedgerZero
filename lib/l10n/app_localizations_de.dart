@@ -39,6 +39,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get addTransaction => 'Add Transaction';
 
   @override
+  String get editTransaction => 'Edit Transaction';
+
+  @override
   String get welcomeToLedgerZero => 'Welcome to LedgerZero';
 
   @override
@@ -137,4 +140,79 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get adjustmentCreated => 'Adjustment created and account reconciled.';
+
+  @override
+  String get amount => 'Amount';
+
+  @override
+  String get inflow => 'Inflow';
+
+  @override
+  String get outflow => 'Outflow';
+
+  @override
+  String get payee => 'Payee';
+
+  @override
+  String get category => 'Category';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get memo => 'Memo';
+
+  @override
+  String get notes => 'Notes';
+
+  @override
+  String get date => 'Date';
+
+  @override
+  String get cleared => 'Cleared';
+
+  @override
+  String get uncleared => 'Uncleared';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get saveAndAddAnother => 'Save & Add Another';
+
+  @override
+  String get transfer => 'Transfer';
+
+  @override
+  String get split => 'Split';
+
+  @override
+  String get recurring => 'Recurring';
+
+  @override
+  String get invalidAmount => 'Please enter a valid amount';
+
+  @override
+  String get selectAccount => 'Please select an account';
+
+  @override
+  String get transactionSaved => 'Transaction saved';
+
+  @override
+  String get toAccount => 'To Account';
+
+  @override
+  String get frequency => 'Frequency';
+
+  @override
+  String get daily => 'Daily';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get monthly => 'Monthly';
+
+  @override
+  String get yearly => 'Yearly';
 }

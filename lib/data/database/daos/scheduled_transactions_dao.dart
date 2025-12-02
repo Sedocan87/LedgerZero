@@ -8,4 +8,23 @@ part 'scheduled_transactions_dao.g.dart';
 class ScheduledTransactionsDao extends DatabaseAccessor<AppDatabase>
     with _$ScheduledTransactionsDaoMixin {
   ScheduledTransactionsDao(super.db);
+
+  Future<List<ScheduledTransaction>> getAllScheduledTransactions() =>
+      select(scheduledTransactions).get();
+
+  Stream<List<ScheduledTransaction>> watchAllScheduledTransactions() =>
+      select(scheduledTransactions).watch();
+
+  Future<ScheduledTransaction?> getScheduledTransactionById(String id) =>
+      (select(scheduledTransactions)..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+
+  Future<int> insertScheduledTransaction(ScheduledTransactionsCompanion entry) =>
+      into(scheduledTransactions).insert(entry);
+
+  Future<bool> updateScheduledTransaction(ScheduledTransactionsCompanion entry) =>
+      update(scheduledTransactions).replace(entry);
+
+  Future<int> deleteScheduledTransaction(String id) =>
+      (delete(scheduledTransactions)..where((t) => t.id.equals(id))).go();
 }

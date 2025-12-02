@@ -39,6 +39,10 @@
   "@addTransaction": {
     "description": "Tooltip for add transaction button"
   },
+  "editTransaction": "Edit Transaction",
+  "@editTransaction": {
+    "description": "Title for edit transaction screen"
+  },
   "welcomeToLedgerZero": "Welcome to LedgerZero",
   "@welcomeToLedgerZero": {
     "description": "Welcome message for new users"
@@ -98,5 +102,30 @@
   "no": "No",
   "reconcile": "Reconcile",
   "accountReconciled": "Account Reconciled!",
-  "adjustmentCreated": "Adjustment created and account reconciled."
+  "adjustmentCreated": "Adjustment created and account reconciled.",
+  "amount": "Amount",
+  "inflow": "Inflow",
+  "outflow": "Outflow",
+  "payee": "Payee",
+  "category": "Category",
+  "account": "Account",
+  "memo": "Memo",
+  "notes": "Notes",
+  "date": "Date",
+  "cleared": "Cleared",
+  "uncleared": "Uncleared",
+  "save": "Save",
+  "saveAndAddAnother": "Save & Add Another",
+  "transfer": "Transfer",
+  "split": "Split",
+  "recurring": "Recurring",
+  "invalidAmount": "Please enter a valid amount",
+  "selectAccount": "Please select an account",
+  "transactionSaved": "Transaction saved",
+  "toAccount": "To Account",
+  "frequency": "Frequency",
+  "daily": "Daily",
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "yearly": "Yearly"
 }
