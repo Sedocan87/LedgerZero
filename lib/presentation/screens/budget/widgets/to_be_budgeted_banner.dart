@@ -18,11 +18,26 @@ class ToBeBudgetedBanner extends ConsumerWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(
-              AppLocalizations.of(context)!.toBeBudgeted,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.toBeBudgeted,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: AppLocalizations.of(context)!.tbbTooltip,
+                  triggerMode: TooltipTriggerMode.tap,
+                  child: Icon(
+                    Icons.help_outline,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
                   ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             tbbAsync.when(

@@ -348,4 +348,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get total => 'Total';
+
+  @override
+  String get tbbTooltip =>
+      'Income minus budgeted amount. This is what you have left to assign.';
+
+  @override
+  String get budgetedTooltip =>
+      'The amount you\'ve assigned to this category for this month.';
+
+  @override
+  String get activityTooltip =>
+      'The sum of all transactions (spending) in this category for this month.';
+
+  @override
+  String get availableTooltip =>
+      'The amount available to spend. Calculated as Budgeted - Activity + Rollover.';
+
+  @override
+  String get categoryTooltip => 'Name of the category.';
 }

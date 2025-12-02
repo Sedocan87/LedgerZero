@@ -142,6 +142,16 @@ class BudgetRepositoryImpl implements BudgetRepository {
     }
   }
 
+  @override
+  Future<Map<String, double>> getAllTimeBudgetedSumsUpToMonth(String endMonth) async {
+    try {
+      return await _budgetsDao.getBudgetedSumsByMonthRange(endMonth);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to calculate budgeted sums', e, stackTrace);
+      throw DatabaseException('Failed to calculate budgeted sums', e);
+    }
+  }
+
   Budget _mapToDomain(db.Budget b) {
     return Budget(
       id: b.id,

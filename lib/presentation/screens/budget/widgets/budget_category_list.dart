@@ -96,10 +96,34 @@ class BudgetListHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text(AppLocalizations.of(context)!.category.toUpperCase(), style: Theme.of(context).textTheme.labelSmall)),
-          Expanded(flex: 2, child: Text(AppLocalizations.of(context)!.budgeted.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall)),
-          Expanded(flex: 2, child: Text(AppLocalizations.of(context)!.activity.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall)),
-          Expanded(flex: 2, child: Text(AppLocalizations.of(context)!.available.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall)),
+          Expanded(
+            flex: 3,
+            child: Tooltip(
+              message: AppLocalizations.of(context)!.categoryTooltip,
+              child: Text(AppLocalizations.of(context)!.category.toUpperCase(), style: Theme.of(context).textTheme.labelSmall),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Tooltip(
+              message: AppLocalizations.of(context)!.budgetedTooltip,
+              child: Text(AppLocalizations.of(context)!.budgeted.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Tooltip(
+              message: AppLocalizations.of(context)!.activityTooltip,
+              child: Text(AppLocalizations.of(context)!.activity.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Tooltip(
+              message: AppLocalizations.of(context)!.availableTooltip,
+              child: Text(AppLocalizations.of(context)!.available.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall),
+            ),
+          ),
           const SizedBox(width: 48), // Approximate width of ExpansionTile trailing icon to align with content
         ],
       ),

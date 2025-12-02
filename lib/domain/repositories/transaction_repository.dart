@@ -42,6 +42,10 @@ abstract class TransactionRepository {
   /// Calculates the total expenses (sum of amounts) for a specific category within a date range.
   Future<double> getExpenseSumByCategoryAndDateRange(String categoryId, DateTime start, DateTime end);
 
+  /// Calculates the total expenses (sum of amounts) for all categories within a date range.
+  /// Returns a map where key is categoryId and value is the sum.
+  Future<Map<String, double>> getExpenseSumsByDateRange(DateTime start, DateTime end);
+
   /// Creates a transfer consisting of two linked transactions.
   Future<void> createTransferTransaction(Transaction source, Transaction destination);
 

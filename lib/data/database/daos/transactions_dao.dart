@@ -99,6 +99,24 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
                 t.isDeleted.equals(false)))
           .get();
 
+  Future<Map<String, double>> getExpenseSumsByDateRange(
+      DateTime start, DateTime end) async {
+    final amount = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
+          transactions.categoryId.isNotNull() &
+          transactions.isDeleted.equals(false))
+      ..addColumns([transactions.categoryId, amount])
+      ..groupBy([transactions.categoryId]);
+
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        if (row.read(transactions.categoryId) != null)
+          row.read(transactions.categoryId)!: row.read(amount) ?? 0.0
+    };
+  }
+
   Expression<bool> _buildWhereClause(TransactionFilter? filter) {
     Expression<bool> whereClause = transactions.isDeleted.equals(false);
 

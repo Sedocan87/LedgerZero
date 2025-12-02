@@ -13,6 +13,9 @@ final selectedBudgetMonthProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month);
 });
 
+/// Provider for budget screen search query.
+final budgetSearchQueryProvider = StateProvider<String>((ref) => '');
+
 /// Provider for "To Be Budgeted" amount for the selected month.
 final tbbProvider = FutureProvider.autoDispose<double>((ref) async {
   final month = ref.watch(selectedBudgetMonthProvider);
@@ -51,6 +54,7 @@ class BudgetGroupViewModel {
 /// Provider that builds the list of budget groups and categories with their calculated amounts.
 final budgetViewModelProvider = FutureProvider.autoDispose<List<BudgetGroupViewModel>>((ref) async {
   final month = ref.watch(selectedBudgetMonthProvider);
+  final searchQuery = ref.watch(budgetSearchQueryProvider).toLowerCase();
 
   // Wait for category data streams to load.
   // This ensures the provider stays in 'loading' state until data is ready,
@@ -67,39 +71,49 @@ final budgetViewModelProvider = FutureProvider.autoDispose<List<BudgetGroupViewM
   final budgets = await budgetRepository.getBudgetsForMonth(monthString);
   final budgetMap = { for (var b in budgets) b.categoryId: b };
 
+  // Batch fetch performance data (Activity, Available) to avoid N+1 queries
+  final performanceData = await budgetingService.calculateBatchCategoryPerformance(month);
+
   // Sort groups by sortOrder
   final sortedGroups = List<CategoryGroup>.from(groups)
     ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
 
   final List<BudgetGroupViewModel> result = [];
 
-  // Parallelize calculations where possible
   for (final group in sortedGroups) {
-    final groupCategories = categories
+    var groupCategories = categories
         .where((c) => c.categoryGroupId == group.id)
-        .toList()
-        ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
+        .toList();
 
-    final categoryViewModels = await Future.wait(
-      groupCategories.map((category) async {
-        // Get budgeted amount from batch fetched map
-        final budget = budgetMap[category.id];
-        final budgeted = budget?.budgeted ?? 0.0;
+    // Apply search filter
+    if (searchQuery.isNotEmpty) {
+      groupCategories = groupCategories.where((c) => c.name.toLowerCase().contains(searchQuery)).toList();
+    }
 
-        // Calculate Activity and Available
-        // Ideally these should also be batched, but assuming local SQLite speed
-        // and reasonable category count, this is acceptable for MVP.
-        final activity = await budgetingService.calculateCategoryActivity(category.id, month);
-        final available = await budgetingService.calculateCategoryAvailable(category.id, month);
+    // Skip group if no categories match (and we are searching)
+    if (searchQuery.isNotEmpty && groupCategories.isEmpty) {
+      continue;
+    }
 
-        return BudgetCategoryViewModel(
-          category: category,
-          budgeted: budgeted,
-          activity: activity,
-          available: available,
-        );
-      })
-    );
+    groupCategories.sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
+
+    final categoryViewModels = groupCategories.map((category) {
+      // Get budgeted amount from batch fetched map
+      final budget = budgetMap[category.id];
+      final budgeted = budget?.budgeted ?? 0.0;
+
+      // Get calculated activity and available from batch data
+      final catPerf = performanceData[category.id];
+      final activity = catPerf?['activity'] ?? 0.0;
+      final available = catPerf?['available'] ?? 0.0;
+
+      return BudgetCategoryViewModel(
+        category: category,
+        budgeted: budgeted,
+        activity: activity,
+        available: available,
+      );
+    }).toList();
 
     result.add(BudgetGroupViewModel(
       group: group,

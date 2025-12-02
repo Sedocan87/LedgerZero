@@ -396,4 +396,50 @@ class BudgetingService {
   int _monthsDifference(DateTime from, DateTime to) {
     return (to.year - from.year) * 12 + to.month - from.month;
   }
+
+  /// Calculates activity and available amounts for all categories in a specific [month].
+  ///
+  /// Returns a map where the key is categoryId and the value is another map with 'activity' and 'available' keys.
+  /// This is an optimized batch operation.
+  Future<Map<String, Map<String, double>>> calculateBatchCategoryPerformance(DateTime month) async {
+    // 1. Current Month Activity
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final endOfMonth = DateTime(month.year, month.month + 1, 1).subtract(const Duration(milliseconds: 1));
+
+    final currentActivityMap = await _transactionRepository.getExpenseSumsByDateRange(
+      startOfMonth,
+      endOfMonth,
+    );
+
+    // 2. All time activity (for Available calculation)
+    final startOfTime = DateTime.fromMillisecondsSinceEpoch(0);
+    // Available includes current month's activity
+    final allTimeActivityMap = await _transactionRepository.getExpenseSumsByDateRange(
+      startOfTime,
+      endOfMonth,
+    );
+
+    // 3. All time budgeted (for Available calculation)
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final allTimeBudgetedMap = await _budgetRepository.getAllTimeBudgetedSumsUpToMonth(monthString);
+
+    // Combine results
+    Map<String, Map<String, double>> result = {};
+
+    final allKeys = {...currentActivityMap.keys, ...allTimeActivityMap.keys, ...allTimeBudgetedMap.keys};
+
+    for (var catId in allKeys) {
+      final activity = currentActivityMap[catId] ?? 0.0;
+      final totalActivity = allTimeActivityMap[catId] ?? 0.0;
+      final totalBudgeted = allTimeBudgetedMap[catId] ?? 0.0;
+      final available = totalBudgeted + totalActivity;
+
+      result[catId] = {
+        'activity': activity,
+        'available': available,
+      };
+    }
+
+    return result;
+  }
 }

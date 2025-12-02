@@ -745,6 +745,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total'**
   String get total;
+
+  /// No description provided for @tbbTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Income minus budgeted amount. This is what you have left to assign.'**
+  String get tbbTooltip;
+
+  /// No description provided for @budgetedTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'The amount you\'ve assigned to this category for this month.'**
+  String get budgetedTooltip;
+
+  /// No description provided for @activityTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'The sum of all transactions (spending) in this category for this month.'**
+  String get activityTooltip;
+
+  /// No description provided for @availableTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'The amount available to spend. Calculated as Budgeted - Activity + Rollover.'**
+  String get availableTooltip;
+
+  /// No description provided for @categoryTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Name of the category.'**
+  String get categoryTooltip;
 }
 
 class _AppLocalizationsDelegate
