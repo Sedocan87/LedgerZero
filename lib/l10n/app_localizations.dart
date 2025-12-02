@@ -158,6 +158,12 @@ abstract class AppLocalizations {
   /// **'Add Transaction'**
   String get addTransaction;
 
+  /// Title for edit transaction screen
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Transaction'**
+  String get editTransaction;
+
   /// Welcome message for new users
   ///
   /// In en, this message translates to:
@@ -331,6 +337,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adjustment created and account reconciled.'**
   String get adjustmentCreated;
+
+  /// No description provided for @amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get amount;
+
+  /// No description provided for @inflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Inflow'**
+  String get inflow;
+
+  /// No description provided for @outflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Outflow'**
+  String get outflow;
+
+  /// No description provided for @payee.
+  ///
+  /// In en, this message translates to:
+  /// **'Payee'**
+  String get payee;
+
+  /// No description provided for @category.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get category;
+
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// No description provided for @memo.
+  ///
+  /// In en, this message translates to:
+  /// **'Memo'**
+  String get memo;
+
+  /// No description provided for @notes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get notes;
+
+  /// No description provided for @date.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get date;
+
+  /// No description provided for @cleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared'**
+  String get cleared;
+
+  /// No description provided for @uncleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncleared'**
+  String get uncleared;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @saveAndAddAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'Save & Add Another'**
+  String get saveAndAddAnother;
+
+  /// No description provided for @transfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer'**
+  String get transfer;
+
+  /// No description provided for @split.
+  ///
+  /// In en, this message translates to:
+  /// **'Split'**
+  String get split;
+
+  /// No description provided for @recurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get recurring;
+
+  /// No description provided for @invalidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid amount'**
+  String get invalidAmount;
+
+  /// No description provided for @selectAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an account'**
+  String get selectAccount;
+
+  /// No description provided for @transactionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction saved'**
+  String get transactionSaved;
+
+  /// No description provided for @toAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'To Account'**
+  String get toAccount;
+
+  /// No description provided for @frequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get frequency;
+
+  /// No description provided for @daily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get daily;
+
+  /// No description provided for @weekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get weekly;
+
+  /// No description provided for @monthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get monthly;
+
+  /// No description provided for @yearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get yearly;
 }
 
 class _AppLocalizationsDelegate

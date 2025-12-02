@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/screens/budget/budget_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
+import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
 import 'package:ledger_zero/presentation/widgets/scaffold_with_navbar.dart';
 
@@ -56,7 +57,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/add-transaction',
         name: 'add-transaction',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const Scaffold(body: Center(child: Text('Add Transaction Placeholder'))),
+        builder: (context, state) {
+          final accountId = state.uri.queryParameters['accountId'];
+          return AddEditTransactionScreen(initialAccountId: accountId);
+        },
+      ),
+      GoRoute(
+        path: '/edit-transaction/:id',
+        name: 'edit-transaction',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final id = state.pathParameters['id'];
+          return AddEditTransactionScreen(transactionId: id);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

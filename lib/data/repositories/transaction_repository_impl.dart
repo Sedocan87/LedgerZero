@@ -26,6 +26,23 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<void> updateTransferTransaction(
+      Transaction source, Transaction destination) async {
+    try {
+      Logger.debug(
+          'Updating transfer between ${source.accountId} and ${destination.accountId}');
+      await _transactionsDao.db.transaction(() async {
+        await _transactionsDao.updateTransaction(_mapToCompanion(source));
+        await _transactionsDao.updateTransaction(_mapToCompanion(destination));
+      });
+      Logger.info('Transfer updated successfully');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to update transfer', e, stackTrace);
+      throw DatabaseException('Failed to update transfer', e);
+    }
+  }
+
+  @override
   Future<Transaction?> getTransactionById(String id) async {
     try {
       Logger.debug('Fetching transaction with id: $id');
@@ -239,6 +256,29 @@ class TransactionRepositoryImpl implements TransactionRepository {
     } catch (e, stackTrace) {
       Logger.error('Failed to create split transaction', e, stackTrace);
       throw DatabaseException('Failed to create split transaction', e);
+    }
+  }
+
+  @override
+  Future<void> updateSplitTransaction(
+      Transaction parent, List<Transaction> children) async {
+    try {
+      Logger.debug('Updating split transaction parent: ${parent.id}');
+      await _transactionsDao.db.transaction(() async {
+        await _transactionsDao.updateTransaction(_mapToCompanion(parent));
+
+        final existingChildren = await _transactionsDao.getSplitTransactions(parent.id);
+        final existingIds = existingChildren.map((t) => t.id).toList();
+        await _transactionsDao.batchSoftDeleteTransactions(existingIds);
+
+        for (var child in children) {
+          await _transactionsDao.insertTransaction(_mapToCompanion(child));
+        }
+      });
+      Logger.info('Split transaction updated successfully');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to update split transaction', e, stackTrace);
+      throw DatabaseException('Failed to update split transaction', e);
     }
   }
 

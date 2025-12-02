@@ -45,11 +45,17 @@ abstract class TransactionRepository {
   /// Creates a transfer consisting of two linked transactions.
   Future<void> createTransferTransaction(Transaction source, Transaction destination);
 
+  /// Updates a transfer consisting of two linked transactions.
+  Future<void> updateTransferTransaction(Transaction source, Transaction destination);
+
   /// Deletes a transaction and its linked counterparts (transfers or splits).
   Future<void> deleteLinkedTransaction(String id);
 
   /// Creates a split transaction consisting of a parent and multiple children.
   Future<void> createSplitTransaction(Transaction parent, List<Transaction> children);
+
+  /// Updates a split transaction (parent and children).
+  Future<void> updateSplitTransaction(Transaction parent, List<Transaction> children);
 
   /// Retrieves the split children for a parent transaction.
   Future<List<Transaction>> getSplitTransactions(String parentId);
