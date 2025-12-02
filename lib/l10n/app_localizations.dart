@@ -781,6 +781,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assign to {name}'**
   String assignTo(String name);
+
+  /// Tooltip for budget view mode toggle
+  ///
+  /// In en, this message translates to:
+  /// **'View Mode'**
+  String get viewMode;
+
+  /// Message shown when budget is updated
+  ///
+  /// In en, this message translates to:
+  /// **'Budget updated'**
+  String get budgetUpdated;
+
+  /// Label for undo action
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
 }
 
 class _AppLocalizationsDelegate

@@ -111,5 +111,9 @@
   "budgetedTooltip": "Der Betrag, den Sie diesem Monat dieser Kategorie zugewiesen haben.",
   "activityTooltip": "Summe aller Transaktionen (Ausgaben) in dieser Kategorie für diesen Monat.",
   "availableTooltip": "Verfügbarer Betrag. Berechnet aus Budgetiert - Aktivität + Übertrag.",
-  "categoryTooltip": "Name der Kategorie."
+  "categoryTooltip": "Name der Kategorie.",
+  "assignTo": "Zuweisen an {name}",
+  "viewMode": "Ansichtsmodus",
+  "budgetUpdated": "Budget aktualisiert",
+  "undo": "Rückgängig"
 }

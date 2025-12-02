@@ -372,4 +372,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String assignTo(String name) {
     return 'Assign to $name';
   }
+
+  @override
+  String get viewMode => 'View Mode';
+
+  @override
+  String get budgetUpdated => 'Budget updated';
+
+  @override
+  String get undo => 'Undo';
 }
