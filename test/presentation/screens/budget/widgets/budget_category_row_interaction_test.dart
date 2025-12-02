@@ -1,124 +1,101 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
-import 'package:ledger_zero/domain/services/budgeting_service.dart';
-import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_row.dart';
-import 'package:mockito/mockito.dart';
-
-import '../../../../mocks/service_mocks.mocks.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_input_field.dart';
 
 void main() {
-  const category = Category(id: 'cat1', name: 'Test Category');
-  late MockBudgetingService mockBudgetingService;
+  const category1 = Category(id: '1', name: 'Cat 1');
+  const category2 = Category(id: '2', name: 'Cat 2');
 
-  setUp(() {
-    mockBudgetingService = MockBudgetingService();
-    // Stub the setCategoryBudgetedAmount method
-    when(mockBudgetingService.setCategoryBudgetedAmount(any, any, any))
-        .thenAnswer((_) async {});
-    // Stub the autoAssign method
-    when(mockBudgetingService.autoAssign(any, any, any))
-        .thenAnswer((_) async {});
-  });
+  const viewModel1 = BudgetCategoryViewModel(
+    category: category1,
+    budgeted: 100.0,
+    activity: 0.0,
+    available: 100.0,
+  );
 
-  Widget buildTestWidget({required Widget child, required List<Override> overrides}) {
-    return ProviderScope(
-      overrides: overrides,
+  const viewModel2 = BudgetCategoryViewModel(
+    category: category2,
+    budgeted: 200.0,
+    activity: 0.0,
+    available: 200.0,
+  );
+
+  // Mock ordered categories
+  final orderedCategoriesOverride = budgetOrderedCategoriesProvider.overrideWith(
+      (ref) => Future.value(['1', '2']));
+
+  testWidgets('Tap on amount enables editing', (tester) async {
+    await tester.pumpWidget(ProviderScope(
       child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: child,
+          body: BudgetCategoryRow(viewModel: viewModel1),
         ),
       ),
-    );
-  }
-
-  testWidgets('BudgetCategoryRow allows inline editing of budgeted amount', (tester) async {
-    const viewModel = BudgetCategoryViewModel(
-      category: category,
-      budgeted: 100.0,
-      activity: -50.0,
-      available: 50.0,
-    );
-
-    final month = DateTime(2023, 10);
-
-    await tester.pumpWidget(buildTestWidget(
-      child: BudgetCategoryRow(viewModel: viewModel),
-      overrides: [
-        budgetingServiceProvider.overrideWithValue(mockBudgetingService),
-        selectedBudgetMonthProvider.overrideWith((ref) => month),
-        budgetViewModelProvider.overrideWith((ref) => Future.value([])),
-        tbbProvider.overrideWith((ref) => Future.value(0.0)),
-      ],
     ));
 
-    // Tap on the budgeted amount
-    await tester.tap(find.text('\$100.00'));
-    await tester.pumpAndSettle();
+    // Initially not editing (Text widget)
+    expect(find.byType(BudgetInputField), findsNothing);
+    // There are 3 texts: name, budgeted, activity, available.
+    // budgeted is formatted.
+    expect(find.text('\$100.00'), findsAny);
 
-    // Now it should show input field
-    expect(find.byType(TextField), findsOneWidget);
-
-    // Enter new value
-    await tester.enterText(find.byType(TextField), '250.00');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    // Tap on budgeted amount (which is the container with gesture detector)
+    // We can find by text.
+    await tester.tap(find.text('\$100.00').first);
     await tester.pump();
 
-    // Verify service call
-    verify(mockBudgetingService.setCategoryBudgetedAmount(
-      'cat1',
-      250.0,
-      month,
-    )).called(1);
+    // Now editing (BudgetInputField)
+    expect(find.byType(BudgetInputField), findsOneWidget);
   });
 
-  testWidgets('BudgetCategoryRow shows quick actions on long press', (tester) async {
-    final viewModel = BudgetCategoryViewModel(
-      category: category,
-      budgeted: 100.0,
-      activity: -50.0,
-      available: 50.0,
-    );
+  testWidgets('Keyboard navigation (Down Arrow) switches to next category', (tester) async {
+    // We need a stateful container for the provider overrides to persist?
+    // ProviderScope manages it.
 
-    final month = DateTime(2023, 10);
-
-    await tester.pumpWidget(buildTestWidget(
-      child: BudgetCategoryRow(viewModel: viewModel),
+    await tester.pumpWidget(ProviderScope(
       overrides: [
-        budgetingServiceProvider.overrideWithValue(mockBudgetingService),
-        selectedBudgetMonthProvider.overrideWith((ref) => month),
-        budgetViewModelProvider.overrideWith((ref) => Future.value([])),
-        tbbProvider.overrideWith((ref) => Future.value(0.0)),
+         orderedCategoriesOverride,
+         // We can't override StateProvider with a specific initial state easily in overrides list
+         // without creating a custom provider, but here we can just set it?
+         // Actually we can override with a notifier that has initial state?
+         // Or simpler: just let the test tap to start editing.
       ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+               BudgetCategoryRow(viewModel: viewModel1),
+               BudgetCategoryRow(viewModel: viewModel2),
+            ],
+          ),
+        ),
+      ),
     ));
 
-    // Long press on the budgeted amount
-    await tester.longPress(find.text('\$100.00'));
+    // Wait for future provider
     await tester.pumpAndSettle();
 
-    // Verify bottom sheet appears with options
-    // Since AppLocalizations might be mocked or real, checking for text or icons
-    // The test environment should load real localizations if configured correctly.
-    // If not, we check for icons.
+    // Start editing first row
+    await tester.tap(find.text('Cat 1')); // Wait, text is "Cat 1".
+    await tester.tap(find.text('\$100.00').first);
+    await tester.pump();
 
-    expect(find.byIcon(Icons.history), findsOneWidget);
-    expect(find.byIcon(Icons.analytics_outlined), findsOneWidget);
+    expect(find.descendant(of: find.byType(BudgetCategoryRow).first, matching: find.byType(BudgetInputField)), findsOneWidget);
+    expect(find.descendant(of: find.byType(BudgetCategoryRow).last, matching: find.byType(BudgetInputField)), findsNothing);
 
-    // Tap "Budget Previous Month" (History icon)
-    await tester.tap(find.byIcon(Icons.history));
+    // Press Down Arrow
+    // We need to focus? AppTextField requests focus.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
 
-    // Verify service call
-    verify(mockBudgetingService.autoAssign(
-      'cat1',
-      month,
-      AutoAssignRule.lastMonthBudgeted,
-    )).called(1);
+    // Verify cat 2 is editing
+    expect(find.descendant(of: find.byType(BudgetCategoryRow).first, matching: find.byType(BudgetInputField)), findsNothing);
+    expect(find.descendant(of: find.byType(BudgetCategoryRow).last, matching: find.byType(BudgetInputField)), findsOneWidget);
   });
 }

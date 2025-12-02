@@ -123,3 +123,12 @@ final budgetViewModelProvider = FutureProvider.autoDispose<List<BudgetGroupViewM
 
   return result;
 });
+
+/// Provider that returns a flat list of category IDs in the order they appear in the budget screen.
+/// Used for keyboard navigation.
+final budgetOrderedCategoriesProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+  final viewModels = await ref.watch(budgetViewModelProvider.future);
+  return viewModels
+      .expand((group) => group.categories.map((c) => c.category.id))
+      .toList();
+});

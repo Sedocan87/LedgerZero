@@ -182,5 +182,13 @@
   "budgetedTooltip": "The amount you've assigned to this category for this month.",
   "activityTooltip": "The sum of all transactions (spending) in this category for this month.",
   "availableTooltip": "The amount available to spend. Calculated as Budgeted - Activity + Rollover.",
-  "categoryTooltip": "Name of the category."
+  "categoryTooltip": "Name of the category.",
+  "assignTo": "Assign to {name}",
+  "@assignTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }
