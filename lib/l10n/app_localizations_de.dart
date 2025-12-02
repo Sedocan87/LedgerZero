@@ -365,4 +365,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get categoryTooltip => 'Name der Kategorie.';
+
+  @override
+  String assignTo(String name) {
+    return 'Assign to $name';
+  }
 }

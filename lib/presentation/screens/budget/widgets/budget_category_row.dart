@@ -5,8 +5,10 @@ import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_input_field.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/move_money_modal.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 
 class BudgetCategoryRow extends ConsumerStatefulWidget {
   final BudgetCategoryViewModel viewModel;
@@ -18,8 +20,6 @@ class BudgetCategoryRow extends ConsumerStatefulWidget {
 }
 
 class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
-  bool _isEditing = false;
-
   Future<void> _onSubmit(double value) async {
     final month = ref.read(selectedBudgetMonthProvider);
     final budgetingService = ref.read(budgetingServiceProvider);
@@ -30,15 +30,64 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       month,
     );
 
-    if (mounted) {
-      setState(() {
-        _isEditing = false;
-      });
+    // Only clear editing state if we are still the one editing.
+    // This prevents overwriting the state if navigation (Up/Down) has already moved focus to another category.
+    if (ref.read(editingCategoryProvider) == widget.viewModel.category.id) {
+      ref.read(editingCategoryProvider.notifier).state = null;
     }
 
     // Refresh the budget view to reflect changes
     ref.invalidate(budgetViewModelProvider);
     ref.invalidate(tbbProvider);
+  }
+
+  void _moveFocus(int direction) {
+    ref.read(budgetOrderedCategoriesProvider.future).then((orderedCategories) {
+      final currentIndex =
+          orderedCategories.indexOf(widget.viewModel.category.id);
+      if (currentIndex == -1) return;
+
+      final newIndex = currentIndex + direction;
+      if (newIndex >= 0 && newIndex < orderedCategories.length) {
+        ref.read(editingCategoryProvider.notifier).state =
+            orderedCategories[newIndex];
+      }
+    });
+  }
+
+  void _onDragAccept(double tbbAmount) {
+    showDialog(
+        context: context,
+        builder: (context) {
+          final controller =
+              TextEditingController(text: tbbAmount.toStringAsFixed(2));
+          return AlertDialog(
+            title: Text(AppLocalizations.of(context)!
+                .assignTo(widget.viewModel.category.name)),
+            content: AppTextField(
+              controller: controller,
+              label: AppLocalizations.of(context)!.amount,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(AppLocalizations.of(context)!.cancel)),
+              TextButton(
+                onPressed: () {
+                  final val = double.tryParse(controller.text) ?? 0.0;
+                  if (val > 0) {
+                    // Add to existing budgeted amount
+                    _onSubmit(widget.viewModel.budgeted + val);
+                  }
+                  Navigator.pop(context);
+                },
+                child: Text(AppLocalizations.of(context)!.save),
+              ),
+            ],
+          );
+        });
   }
 
   Future<void> _autoAssign(AutoAssignRule rule) async {
@@ -144,80 +193,94 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       textColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Text(
-              widget.viewModel.category.name,
-              style: Theme.of(context).textTheme.bodyMedium,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: _isEditing
-                ? BudgetInputField(
-                    initialValue: widget.viewModel.budgeted,
-                    onSubmitted: _onSubmit,
-                    onCancel: () {
-                      if (mounted) {
-                        setState(() {
-                          _isEditing = false;
-                        });
-                      }
-                    },
-                  )
-                : GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _isEditing = true;
-                      });
-                    },
-                    onLongPress: _showQuickActions,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                       alignment: Alignment.centerRight,
-                       padding: const EdgeInsets.symmetric(vertical: 8),
-                       child: Text(
-                        currency.format(widget.viewModel.budgeted),
-                        textAlign: TextAlign.right,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+    final editingCategoryId = ref.watch(editingCategoryProvider);
+    final isEditing = editingCategoryId == widget.viewModel.category.id;
+
+    return DragTarget<double>(
+      onWillAcceptWithDetails: (details) => details.data > 0,
+      onAcceptWithDetails: (details) => _onDragAccept(details.data),
+      builder: (context, candidateData, rejectedData) {
+        return Container(
+          color: candidateData.isNotEmpty
+              ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+              : Colors.transparent,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    widget.viewModel.category.name,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: isEditing
+                      ? BudgetInputField(
+                          initialValue: widget.viewModel.budgeted,
+                          onSubmitted: _onSubmit,
+                          onCancel: () {
+                            ref.read(editingCategoryProvider.notifier).state =
+                                null;
+                          },
+                          onNext: () => _moveFocus(1),
+                          onPrevious: () => _moveFocus(-1),
+                        )
+                      : GestureDetector(
+                          onTap: () {
+                            ref.read(editingCategoryProvider.notifier).state =
+                                widget.viewModel.category.id;
+                          },
+                          onLongPress: _showQuickActions,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              currency.format(widget.viewModel.budgeted),
+                              textAlign: TextAlign.right,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    currency.format(widget.viewModel.activity),
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: bubbleColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      currency.format(available),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              currency.format(widget.viewModel.activity),
-              textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Container(
-               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-               decoration: BoxDecoration(
-                 color: bubbleColor,
-                 borderRadius: BorderRadius.circular(8),
-               ),
-               alignment: Alignment.centerRight,
-               child: Text(
-                currency.format(available),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

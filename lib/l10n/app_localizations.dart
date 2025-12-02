@@ -775,6 +775,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name of the category.'**
   String get categoryTooltip;
+
+  /// No description provided for @assignTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to {name}'**
+  String assignTo(String name);
 }
 
 class _AppLocalizationsDelegate
