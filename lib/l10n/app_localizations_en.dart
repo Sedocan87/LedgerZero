@@ -312,5 +312,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get budgetAverageSpent => 'Budget Average Spent';
 
   @override
+  String get budgetZeroOut => 'Zero Out';
+
+  @override
+  String get moveMoney => 'Move Money';
+
+  @override
+  String get moveMoneyFrom => 'Move from';
+
+  @override
+  String get moveMoneyTo => 'Move to';
+
+  @override
   String get quickActions => 'Quick Actions';
+
+  @override
+  String get noCategoriesTitle => 'No Categories Yet';
+
+  @override
+  String get noCategoriesDescription =>
+      'Create categories to start budgeting your money.';
+
+  @override
+  String get setupBudget => 'Setup Budget';
+
+  @override
+  String get budgetTutorialTitle => 'Welcome to Budgeting';
+
+  @override
+  String get budgetTutorialDescription =>
+      'Tap on amounts to budget. Use quick actions for auto-assignment.';
+
+  @override
+  String get gotIt => 'Got it';
+
+  @override
+  String get total => 'Total';
 }

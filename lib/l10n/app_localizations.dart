@@ -674,11 +674,77 @@ abstract class AppLocalizations {
   /// **'Budget Average Spent'**
   String get budgetAverageSpent;
 
+  /// No description provided for @budgetZeroOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zero Out'**
+  String get budgetZeroOut;
+
+  /// No description provided for @moveMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Move Money'**
+  String get moveMoney;
+
+  /// No description provided for @moveMoneyFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Move from'**
+  String get moveMoneyFrom;
+
+  /// No description provided for @moveMoneyTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to'**
+  String get moveMoneyTo;
+
   /// No description provided for @quickActions.
   ///
   /// In en, this message translates to:
   /// **'Quick Actions'**
   String get quickActions;
+
+  /// No description provided for @noCategoriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Categories Yet'**
+  String get noCategoriesTitle;
+
+  /// No description provided for @noCategoriesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create categories to start budgeting your money.'**
+  String get noCategoriesDescription;
+
+  /// No description provided for @setupBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Setup Budget'**
+  String get setupBudget;
+
+  /// No description provided for @budgetTutorialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Budgeting'**
+  String get budgetTutorialTitle;
+
+  /// No description provided for @budgetTutorialDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap on amounts to budget. Use quick actions for auto-assignment.'**
+  String get budgetTutorialDescription;
+
+  /// No description provided for @gotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get gotIt;
+
+  /// No description provided for @total.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
 }
 
 class _AppLocalizationsDelegate

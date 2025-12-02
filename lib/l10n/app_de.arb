@@ -95,5 +95,16 @@
   "available": "Verfügbar",
   "budgetPreviousMonth": "Budget Vormonat",
   "budgetAverageSpent": "Durchschnittl. Ausgaben",
-  "quickActions": "Schnellaktionen"
+  "budgetZeroOut": "Auf Null setzen",
+  "moveMoney": "Geld verschieben",
+  "moveMoneyFrom": "Verschieben von",
+  "moveMoneyTo": "Verschieben nach",
+  "quickActions": "Schnellaktionen",
+  "noCategoriesTitle": "Keine Kategorien",
+  "noCategoriesDescription": "Erstellen Sie Kategorien, um zu budgetieren.",
+  "setupBudget": "Budget einrichten",
+  "budgetTutorialTitle": "Willkommen beim Budgetieren",
+  "budgetTutorialDescription": "Tippen Sie auf Beträge zum Budgetieren. Nutzen Sie Schnellaktionen.",
+  "gotIt": "Verstanden",
+  "total": "Gesamt"
 }

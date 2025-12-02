@@ -166,5 +166,16 @@
   "available": "Available",
   "budgetPreviousMonth": "Budget Previous Month",
   "budgetAverageSpent": "Budget Average Spent",
-  "quickActions": "Quick Actions"
+  "budgetZeroOut": "Zero Out",
+  "moveMoney": "Move Money",
+  "moveMoneyFrom": "Move from",
+  "moveMoneyTo": "Move to",
+  "quickActions": "Quick Actions",
+  "noCategoriesTitle": "No Categories Yet",
+  "noCategoriesDescription": "Create categories to start budgeting your money.",
+  "setupBudget": "Setup Budget",
+  "budgetTutorialTitle": "Welcome to Budgeting",
+  "budgetTutorialDescription": "Tap on amounts to budget. Use quick actions for auto-assignment.",
+  "gotIt": "Got it",
+  "total": "Total"
 }
