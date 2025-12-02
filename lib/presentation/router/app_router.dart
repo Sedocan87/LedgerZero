@@ -13,6 +13,7 @@ import 'package:ledger_zero/presentation/screens/categories/reorder_categories_s
 import 'package:ledger_zero/presentation/screens/categories/reorder_groups_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
+import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
@@ -210,6 +211,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const TransactionsScreen(),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/reports',
+                name: 'reports',
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  key: state.pageKey,
+                  child: const ReportsScreen(),
                   transitionsBuilder: (context, animation, secondaryAnimation, child) {
                     return FadeTransition(opacity: animation, child: child);
                   },

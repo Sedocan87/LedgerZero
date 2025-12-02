@@ -40,6 +40,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
             icon: const Icon(AppIcons.transactions),
             label: AppLocalizations.of(context)!.transactions,
           ),
+          NavigationDestination(
+            icon: const Icon(AppIcons.reports),
+            label: AppLocalizations.of(context)!.reports,
+          ),
         ],
       ),
     );
