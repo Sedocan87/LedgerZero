@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 
 class BudgetInputField extends StatefulWidget {
@@ -18,21 +19,26 @@ class BudgetInputField extends StatefulWidget {
 }
 
 class _BudgetInputFieldState extends State<BudgetInputField> {
-  late TextEditingController _controller;
+  TextEditingController? _controller;
   late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
-    // Convert initial value to string, removing trailing .0 if present
-    String text = widget.initialValue.toStringAsFixed(2);
-    if (text.endsWith('.00')) {
-      text = text.substring(0, text.length - 3);
-    }
-
-    _controller = TextEditingController(text: text);
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controller == null) {
+      final locale = Localizations.localeOf(context).toString();
+      // Use currency format without symbol to respect locale decimal/grouping separators
+      final format = NumberFormat.currency(locale: locale, symbol: '', decimalDigits: 2);
+      final text = format.format(widget.initialValue).trim();
+      _controller = TextEditingController(text: text);
+    }
   }
 
   void _onFocusChange() {
@@ -43,28 +49,41 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
 
   void _submit() {
-    // Basic parsing, could be enhanced with expression evaluation
+    if (_controller == null) {
+      return;
+    }
+
     double value;
     try {
-      // Handle simple cases manually to be safe or use NumberFormat
-      // For now, removing commas allows parsing standard format "1,000.00"
-      // Ideally we should use NumberFormat from intl package based on locale
-      value = double.parse(_controller.text.replaceAll(',', ''));
+      final locale = Localizations.localeOf(context).toString();
+      final format = NumberFormat.currency(locale: locale, symbol: '', decimalDigits: 2);
+      // parse() returns num, so we cast to double
+      value = format.parse(_controller!.text).toDouble();
     } catch (e) {
-      value = widget.initialValue;
+      // Fallback: try parsing with standard double.parse (e.g. if user wiped formatting)
+      try {
+         value = double.parse(_controller!.text.replaceAll(',', ''));
+      } catch (_) {
+         value = widget.initialValue;
+      }
     }
     widget.onSubmitted(value);
   }
 
   @override
   Widget build(BuildContext context) {
+    // If controller is still null (shouldn't happen after didChangeDependencies), show empty
+    if (_controller == null) {
+      return const SizedBox();
+    }
+
     return AppTextField(
       controller: _controller,
       focusNode: _focusNode,
@@ -73,9 +92,9 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
       onFieldSubmitted: (_) => _submit(),
       onTap: () {
         // Select all text on tap
-        _controller.selection = TextSelection(
+        _controller!.selection = TextSelection(
           baseOffset: 0,
-          extentOffset: _controller.text.length,
+          extentOffset: _controller!.text.length,
         );
       },
     );

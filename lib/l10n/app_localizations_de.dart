@@ -304,11 +304,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get available => 'Verfügbar';
 
   @override
-  String get budgetPreviousMonth => 'Budget Previous Month';
+  String get budgetPreviousMonth => 'Budget Vormonat';
 
   @override
-  String get budgetAverageSpent => 'Budget Average Spent';
+  String get budgetAverageSpent => 'Durchschnittl. Ausgaben';
 
   @override
-  String get quickActions => 'Quick Actions';
+  String get quickActions => 'Schnellaktionen';
 }

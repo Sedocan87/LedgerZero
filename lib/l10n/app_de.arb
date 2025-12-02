@@ -92,5 +92,8 @@
   "import": "Importieren",
   "budgeted": "Budgetiert",
   "activity": "Aktivität",
-  "available": "Verfügbar"
+  "available": "Verfügbar",
+  "budgetPreviousMonth": "Budget Vormonat",
+  "budgetAverageSpent": "Durchschnittl. Ausgaben",
+  "quickActions": "Schnellaktionen"
 }
