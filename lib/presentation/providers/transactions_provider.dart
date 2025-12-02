@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
@@ -62,16 +63,38 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
 
   Future<void> _loadPrefs() async {
     final prefs = ref.read(sharedPreferencesProvider);
+
+    // Load Sort
     final sortFieldIdx = prefs.getInt('tx_sort_field');
     final sortAsc = prefs.getBool('tx_sort_asc');
+    TransactionSort? loadedSort;
     if (sortFieldIdx != null && sortAsc != null) {
-      if (sortFieldIdx >= 0 && sortFieldIdx < TransactionSortField.values.length) {
-        state = state.copyWith(
-            sort: TransactionSort(
-                field: TransactionSortField.values[sortFieldIdx],
-                ascending: sortAsc));
-        _initStream();
+      if (sortFieldIdx >= 0 &&
+          sortFieldIdx < TransactionSortField.values.length) {
+        loadedSort = TransactionSort(
+            field: TransactionSortField.values[sortFieldIdx],
+            ascending: sortAsc);
       }
+    }
+
+    // Load Filter
+    TransactionFilter? loadedFilter;
+    final filterJson = prefs.getString('tx_filter');
+    if (filterJson != null) {
+      try {
+        final filterMap = jsonDecode(filterJson) as Map<String, dynamic>;
+        loadedFilter = TransactionFilter.fromJson(filterMap);
+      } catch (e) {
+        // Ignore error
+      }
+    }
+
+    if (loadedSort != null || loadedFilter != null) {
+       state = state.copyWith(
+         sort: loadedSort ?? state.sort,
+         filter: loadedFilter ?? state.filter,
+       );
+       _initStream();
     }
   }
 
@@ -111,6 +134,10 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
 
   void updateFilter(TransactionFilter filter) {
     state = state.copyWith(filter: filter);
+
+    final prefs = ref.read(sharedPreferencesProvider);
+    prefs.setString('tx_filter', jsonEncode(filter.toJson()));
+
     _initStream();
   }
 

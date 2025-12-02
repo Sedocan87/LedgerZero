@@ -175,7 +175,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         isSelectionMode: false,
         isSelected: false,
         onTap: () {
-          // Edit
+          // Task 221 will implement Add/Edit screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Edit feature coming soon')),
+          );
         },
         onLongPress: () {
           ref.read(transactionsProvider.notifier).toggleMultiSelectMode();

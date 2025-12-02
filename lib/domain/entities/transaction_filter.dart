@@ -67,4 +67,44 @@ class TransactionFilter {
       clearedStatuses: clearedStatuses ?? this.clearedStatuses,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (ids != null) 'ids': ids,
+      if (accountIds != null) 'accountIds': accountIds,
+      if (categoryIds != null) 'categoryIds': categoryIds,
+      if (payeeIds != null) 'payeeIds': payeeIds,
+      if (startDate != null) 'startDate': startDate!.toIso8601String(),
+      if (endDate != null) 'endDate': endDate!.toIso8601String(),
+      if (minAmount != null) 'minAmount': minAmount,
+      if (maxAmount != null) 'maxAmount': maxAmount,
+      if (memoSearch != null) 'memoSearch': memoSearch,
+      if (clearedStatuses != null)
+        'clearedStatuses': clearedStatuses!.map((e) => e.index).toList(),
+    };
+  }
+
+  factory TransactionFilter.fromJson(Map<String, dynamic> json) {
+    return TransactionFilter(
+      ids: (json['ids'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      accountIds: (json['accountIds'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      categoryIds: (json['categoryIds'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      payeeIds: (json['payeeIds'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      startDate:
+          json['startDate'] != null ? DateTime.parse(json['startDate']) : null,
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
+      minAmount: (json['minAmount'] as num?)?.toDouble(),
+      maxAmount: (json['maxAmount'] as num?)?.toDouble(),
+      memoSearch: json['memoSearch'] as String?,
+      clearedStatuses: (json['clearedStatuses'] as List<dynamic>?)
+          ?.map((e) => TransactionClearStatus.values[e as int])
+          .toList(),
+    );
+  }
 }
