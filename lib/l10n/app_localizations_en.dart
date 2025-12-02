@@ -295,4 +295,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get import => 'Import';
+
+  @override
+  String get budgeted => 'Budgeted';
+
+  @override
+  String get activity => 'Activity';
+
+  @override
+  String get available => 'Available';
 }
