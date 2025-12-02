@@ -103,7 +103,9 @@ class TransactionFilter {
       maxAmount: (json['maxAmount'] as num?)?.toDouble(),
       memoSearch: json['memoSearch'] as String?,
       clearedStatuses: (json['clearedStatuses'] as List<dynamic>?)
-          ?.map((e) => TransactionClearStatus.values[e as int])
+          ?.whereType<int>()
+          .where((e) => e >= 0 && e < TransactionClearStatus.values.length)
+          .map((e) => TransactionClearStatus.values[e])
           .toList(),
     );
   }

@@ -261,22 +261,36 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               // Task 218: Bulk approve
               final ids = state.selectedTransactionIds;
               if (ids.isNotEmpty && allTransactions != null) {
-                  final txsToApprove = allTransactions.where((t) => ids.contains(t.id)).map((t) => t.copyWith(approved: true)).toList();
-                  if (txsToApprove.isNotEmpty) {
-                      ref.read(transactionRepositoryProvider).batchUpdateTransactions(txsToApprove);
-                  }
-                  ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${ids.length} transactions approved')),
-                 );
+                final txsToApprove = allTransactions
+                    .where((t) => ids.contains(t.id))
+                    .map((t) => t.copyWith(approved: true))
+                    .toList();
+                if (txsToApprove.isNotEmpty) {
+                  ref
+                      .read(transactionRepositoryProvider)
+                      .batchUpdateTransactions(txsToApprove);
+                }
+                ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('${ids.length} transactions approved')),
+                );
               }
+            }),
+        IconButton(
+            icon: const Icon(Icons.folder),
+            onPressed: () {
+              // Task 218: Bulk categorize
+              _showBulkCategorizeDialog(context, state);
             }),
         IconButton(
             icon: const Icon(Icons.select_all),
             onPressed: () {
-               if (allTransactions != null) {
-                   ref.read(transactionsProvider.notifier).selectAll(allTransactions.map((t) => t.id).toList());
-               }
+              if (allTransactions != null) {
+                ref
+                    .read(transactionsProvider.notifier)
+                    .selectAll(allTransactions.map((t) => t.id).toList());
+              }
             }),
       ];
     }
@@ -339,6 +353,63 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       isScrollControlled: true,
       builder: (context) => const TransactionFilterSheet(),
     );
+  }
+
+  void _showBulkCategorizeDialog(
+      BuildContext context, TransactionsState state) {
+    final categories = ref.read(categoryMapProvider).value ?? {};
+    showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Categorize Selected'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: categories.isEmpty
+                  ? const Text('No categories found')
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        final catId = categories.keys.elementAt(index);
+                        final catName = categories[catId]!;
+                        return ListTile(
+                          title: Text(catName),
+                          onTap: () {
+                            _bulkCategorize(
+                                state.selectedTransactionIds, catId);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        });
+  }
+
+  void _bulkCategorize(Set<String> ids, String categoryId) {
+    final allTxs =
+        ref.read(transactionsProvider).transactions.asData?.value ?? [];
+    final txsToUpdate = allTxs
+        .where((t) => ids.contains(t.id))
+        .map((t) => t.copyWith(categoryId: categoryId))
+        .toList();
+
+    if (txsToUpdate.isNotEmpty) {
+      ref
+          .read(transactionRepositoryProvider)
+          .batchUpdateTransactions(txsToUpdate);
+      ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transactions categorized')));
+    }
   }
 
   Map<DateTime, List<Transaction>> _groupTransactions(
