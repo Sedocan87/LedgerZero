@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_tutorial_banner.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
@@ -73,6 +74,25 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               icon: const Icon(Icons.search),
               tooltip: AppLocalizations.of(context)!.search,
               onPressed: _toggleSearch,
+            ),
+          if (!_isSearching)
+            IconButton(
+              icon: Consumer(
+                builder: (context, ref, child) {
+                  final mode = ref.watch(budgetViewModeProvider);
+                  return Icon(mode == BudgetViewMode.standard
+                      ? Icons.bar_chart
+                      : Icons.list);
+                },
+              ),
+              tooltip: AppLocalizations.of(context)!.viewMode,
+              onPressed: () {
+                final current = ref.read(budgetViewModeProvider);
+                ref.read(budgetViewModeProvider.notifier).state =
+                    current == BudgetViewMode.standard
+                        ? BudgetViewMode.comparison
+                        : BudgetViewMode.standard;
+              },
             ),
           if (!_isSearching)
             IconButton(

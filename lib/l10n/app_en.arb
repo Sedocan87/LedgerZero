@@ -190,5 +190,17 @@
         "type": "String"
       }
     }
+  },
+  "viewMode": "View Mode",
+  "@viewMode": {
+    "description": "Tooltip for budget view mode toggle"
+  },
+  "budgetUpdated": "Budget updated",
+  "@budgetUpdated": {
+    "description": "Message shown when budget is updated"
+  },
+  "undo": "Undo",
+  "@undo": {
+    "description": "Label for undo action"
   }
 }

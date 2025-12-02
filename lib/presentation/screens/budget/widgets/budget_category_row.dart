@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
+import 'package:ledger_zero/domain/undo/budget_undo_actions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_input_field.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/move_money_modal.dart';
+import 'package:ledger_zero/presentation/widgets/common/animated_count_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 
 class BudgetCategoryRow extends ConsumerStatefulWidget {
@@ -21,14 +28,29 @@ class BudgetCategoryRow extends ConsumerStatefulWidget {
 
 class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
   Future<void> _onSubmit(double value) async {
+    HapticFeedback.selectionClick();
     final month = ref.read(selectedBudgetMonthProvider);
     final budgetingService = ref.read(budgetingServiceProvider);
+    final oldAmount = widget.viewModel.budgeted;
 
     await budgetingService.setCategoryBudgetedAmount(
       widget.viewModel.category.id,
       value,
       month,
     );
+
+    if (oldAmount != value) {
+      ref.read(undoServiceProvider).addAction(
+            BudgetChangeAction(
+              budgetingService: budgetingService,
+              categoryId: widget.viewModel.category.id,
+              month: month,
+              oldAmount: oldAmount,
+              newAmount: value,
+            ),
+          );
+      _showUndoSnackbar();
+    }
 
     // Only clear editing state if we are still the one editing.
     // This prevents overwriting the state if navigation (Up/Down) has already moved focus to another category.
@@ -91,8 +113,10 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
   }
 
   Future<void> _autoAssign(AutoAssignRule rule) async {
+    HapticFeedback.selectionClick();
     final month = ref.read(selectedBudgetMonthProvider);
     final budgetingService = ref.read(budgetingServiceProvider);
+    final oldAmount = widget.viewModel.budgeted;
 
     await budgetingService.autoAssign(
       widget.viewModel.category.id,
@@ -100,9 +124,64 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       rule,
     );
 
+    // Fetch new amount to record undo
+    final budgetRepo = ref.read(budgetRepositoryProvider);
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final newBudget = await budgetRepo.getBudgetByCategoryAndMonth(
+      widget.viewModel.category.id,
+      monthString,
+    );
+    final newAmount = newBudget?.budgeted ?? 0.0;
+
+    if (oldAmount != newAmount) {
+      ref.read(undoServiceProvider).addAction(
+            BudgetChangeAction(
+              budgetingService: budgetingService,
+              categoryId: widget.viewModel.category.id,
+              month: month,
+              oldAmount: oldAmount,
+              newAmount: newAmount,
+            ),
+          );
+      _showUndoSnackbar();
+    }
+
     // Refresh providers
     ref.invalidate(budgetViewModelProvider);
     ref.invalidate(tbbProvider);
+  }
+
+  void _showUndoSnackbar() {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.budgetUpdated),
+        action: SnackBarAction(
+          label: AppLocalizations.of(context)!.undo,
+          onPressed: () async {
+            await ref.read(undoServiceProvider).undo();
+            ref.invalidate(budgetViewModelProvider);
+            ref.invalidate(tbbProvider);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _inspectCategory() {
+    final month = ref.read(selectedBudgetMonthProvider);
+    final startDate = DateTime(month.year, month.month, 1);
+    final endDate = DateTime(month.year, month.month + 1, 1)
+        .subtract(const Duration(milliseconds: 1));
+
+    final filter = TransactionFilter(
+      categoryIds: [widget.viewModel.category.id],
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    ref.read(transactionsProvider.notifier).updateFilter(filter);
+    context.goNamed('transactions');
   }
 
   void _showQuickActions() {
@@ -195,6 +274,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
     final editingCategoryId = ref.watch(editingCategoryProvider);
     final isEditing = editingCategoryId == widget.viewModel.category.id;
+    final viewMode = ref.watch(budgetViewModeProvider);
 
     return DragTarget<double>(
       onWillAcceptWithDetails: (details) => details.data > 0,
@@ -217,65 +297,125 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Expanded(
-                  flex: 2,
-                  child: isEditing
-                      ? BudgetInputField(
-                          initialValue: widget.viewModel.budgeted,
-                          onSubmitted: _onSubmit,
-                          onCancel: () {
-                            ref.read(editingCategoryProvider.notifier).state =
-                                null;
-                          },
-                          onNext: () => _moveFocus(1),
-                          onPrevious: () => _moveFocus(-1),
-                        )
-                      : GestureDetector(
-                          onTap: () {
-                            ref.read(editingCategoryProvider.notifier).state =
-                                widget.viewModel.category.id;
-                          },
-                          onLongPress: _showQuickActions,
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Text(
-                              currency.format(widget.viewModel.budgeted),
-                              textAlign: TextAlign.right,
-                              style: Theme.of(context).textTheme.bodySmall,
+                if (viewMode == BudgetViewMode.standard) ...[
+                  Expanded(
+                    flex: 2,
+                    child: isEditing
+                        ? BudgetInputField(
+                            initialValue: widget.viewModel.budgeted,
+                            onSubmitted: _onSubmit,
+                            onCancel: () {
+                              ref.read(editingCategoryProvider.notifier).state =
+                                  null;
+                            },
+                            onNext: () => _moveFocus(1),
+                            onPrevious: () => _moveFocus(-1),
+                          )
+                        : GestureDetector(
+                            onTap: () {
+                              ref.read(editingCategoryProvider.notifier).state =
+                                  widget.viewModel.category.id;
+                            },
+                            onLongPress: _showQuickActions,
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: AnimatedCountText(
+                                value: widget.viewModel.budgeted,
+                                format: currency,
+                                textAlign: TextAlign.right,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
                             ),
                           ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: InkWell(
+                      onTap: _inspectCategory,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 4.0),
+                        child: AnimatedCountText(
+                          value: widget.viewModel.activity,
+                          format: currency,
+                          textAlign: TextAlign.right,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    decoration: TextDecoration.underline,
+                                    decorationStyle: TextDecorationStyle.dotted,
+                                  ),
                         ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    currency.format(widget.viewModel.activity),
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: bubbleColor,
-                      borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      currency.format(available),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.bold,
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: bubbleColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.centerRight,
+                      child: AnimatedCountText(
+                        value: available,
+                        format: currency,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Expanded(
+                    flex: 6,
+                    child: Builder(builder: (context) {
+                      final budgeted = widget.viewModel.budgeted;
+                      final spent = widget.viewModel.activity.abs();
+                      final progress = budgeted > 0
+                          ? (spent / budgeted).clamp(0.0, 1.0)
+                          : (spent > 0 ? 1.0 : 0.0);
+                      final isOverspent = spent > budgeted;
+                      final barColor =
+                          isOverspent ? Colors.red : Colors.green;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${currency.format(spent)} / ${currency.format(budgeted)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              Text(
+                                '${(progress * 100).toStringAsFixed(0)}%',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
                           ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                          const SizedBox(height: 4),
+                          LinearProgressIndicator(
+                            value: progress,
+                            color: barColor,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.surfaceContainerHighest,
+                            minHeight: 8,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ],
+                      );
+                    }),
                   ),
-                ),
+                ],
               ],
             ),
           ),

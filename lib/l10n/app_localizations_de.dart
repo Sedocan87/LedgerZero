@@ -368,6 +368,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String assignTo(String name) {
-    return 'Assign to $name';
+    return 'Zuweisen an $name';
   }
+
+  @override
+  String get viewMode => 'Ansichtsmodus';
+
+  @override
+  String get budgetUpdated => 'Budget aktualisiert';
+
+  @override
+  String get undo => 'Rückgängig';
 }
