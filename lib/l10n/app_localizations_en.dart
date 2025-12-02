@@ -381,4 +381,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get undo => 'Undo';
+
+  @override
+  String get variance => 'Variance';
+
+  @override
+  String get remaining => 'Remaining';
+
+  @override
+  String get overspent => 'Overspent';
+
+  @override
+  String get underfunded => 'Underfunded';
+
+  @override
+  String get goalTarget => 'Goal Target';
+
+  @override
+  String get saveAsTemplate => 'Save as Template';
+
+  @override
+  String get applyTemplate => 'Apply Template';
+
+  @override
+  String get templateName => 'Template Name';
+
+  @override
+  String get templateSaved => 'Template saved';
+
+  @override
+  String get copyFromPreviousMonth => 'Copy from Previous Month';
+
+  @override
+  String get resetBudget => 'Reset Budget';
+
+  @override
+  String resetBudgetConfirmation(String month) {
+    return 'Are you sure you want to reset the budget for $month? All budgeted amounts will be set to zero.';
+  }
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get templates => 'Templates';
+
+  @override
+  String get noTemplates => 'No Templates';
+
+  @override
+  String get createTemplateDescription =>
+      'Save your current budget allocations as a reusable template.';
+
+  @override
+  String get deleteTemplate => 'Delete Template';
 }

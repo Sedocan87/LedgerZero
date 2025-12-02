@@ -115,5 +115,22 @@
   "assignTo": "Zuweisen an {name}",
   "viewMode": "Ansichtsmodus",
   "budgetUpdated": "Budget aktualisiert",
-  "undo": "Rückgängig"
+  "undo": "Rückgängig",
+  "variance": "Varianz",
+  "remaining": "Verbleibend",
+  "overspent": "Überzogen",
+  "underfunded": "Unterfinanziert",
+  "goalTarget": "Zielbetrag",
+  "saveAsTemplate": "Als Vorlage speichern",
+  "applyTemplate": "Vorlage anwenden",
+  "templateName": "Vorlagenname",
+  "templateSaved": "Vorlage gespeichert",
+  "copyFromPreviousMonth": "Vom Vormonat kopieren",
+  "resetBudget": "Budget zurücksetzen",
+  "resetBudgetConfirmation": "Sind Sie sicher, dass Sie das Budget für {month} zurücksetzen möchten? Alle budgetierten Beträge werden auf Null gesetzt.",
+  "reset": "Zurücksetzen",
+  "templates": "Vorlagen",
+  "noTemplates": "Keine Vorlagen",
+  "createTemplateDescription": "Speichern Sie Ihre aktuellen Budgetzuweisungen als wiederverwendbare Vorlage.",
+  "deleteTemplate": "Vorlage löschen"
 }

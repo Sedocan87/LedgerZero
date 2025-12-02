@@ -3,9 +3,11 @@ import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
+import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
 
 enum AutoAssignRule {
@@ -20,14 +22,17 @@ class BudgetingService {
   final TransactionRepository _transactionRepository;
   final BudgetRepository _budgetRepository;
   final CategoryRepository _categoryRepository;
+  final BudgetTemplateRepository _budgetTemplateRepository;
 
   BudgetingService({
     required TransactionRepository transactionRepository,
     required BudgetRepository budgetRepository,
     required CategoryRepository categoryRepository,
+    required BudgetTemplateRepository budgetTemplateRepository,
   }) : _transactionRepository = transactionRepository,
        _budgetRepository = budgetRepository,
-       _categoryRepository = categoryRepository;
+       _categoryRepository = categoryRepository,
+       _budgetTemplateRepository = budgetTemplateRepository;
 
   /// Calculates the "To Be Budgeted" (TBB) amount up to the end of the specified [targetMonth].
   ///
@@ -393,6 +398,73 @@ class BudgetingService {
     await setCategoryBudgetedAmount(categoryId, amount, month);
   }
 
+  // --- Budget Templates ---
+
+  Future<void> saveBudgetTemplate(String name, DateTime month) async {
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
+
+    final Map<String, double> data = {};
+    for (final budget in budgets) {
+      if (budget.categoryId != null && budget.budgeted > 0) {
+        data[budget.categoryId!] = budget.budgeted;
+      }
+    }
+
+    final template = BudgetTemplate(
+      id: const Uuid().v4(),
+      name: name,
+      data: data,
+      createdAt: DateTime.now(),
+    );
+
+    await _budgetTemplateRepository.createTemplate(template);
+  }
+
+  Future<void> applyBudgetTemplate(String templateId, DateTime month) async {
+    final template = await _budgetTemplateRepository.getTemplateById(templateId);
+    if (template == null) return;
+
+    for (final entry in template.data.entries) {
+      await setCategoryBudgetedAmount(entry.key, entry.value, month);
+    }
+  }
+
+  Future<List<BudgetTemplate>> getAllTemplates() {
+    return _budgetTemplateRepository.getAllTemplates();
+  }
+
+  Future<void> deleteTemplate(String id) {
+    return _budgetTemplateRepository.deleteTemplate(id);
+  }
+
+  // --- Bulk Operations ---
+
+  Future<void> copyBudgetFromPreviousMonth(DateTime month) async {
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final prevMonth = DateTime(month.year, month.month - 1, 1);
+    final prevMonthString = DateFormat('yyyy-MM').format(prevMonth);
+
+    final prevBudgets = await _budgetRepository.getBudgetsForMonth(prevMonthString);
+
+    for (final budget in prevBudgets) {
+      if (budget.categoryId != null && budget.budgeted > 0) {
+        await setCategoryBudgetedAmount(budget.categoryId!, budget.budgeted, month);
+      }
+    }
+  }
+
+  Future<void> resetBudget(DateTime month) async {
+    final monthString = DateFormat('yyyy-MM').format(month);
+    final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
+
+    for (final budget in budgets) {
+      if (budget.categoryId != null && budget.budgeted != 0) {
+        await setCategoryBudgetedAmount(budget.categoryId!, 0.0, month);
+      }
+    }
+  }
+
   int _monthsDifference(DateTime from, DateTime to) {
     return (to.year - from.year) * 12 + to.month - from.month;
   }
@@ -441,5 +513,71 @@ class BudgetingService {
     }
 
     return result;
+  }
+
+  /// Calculates goal targets for a batch of categories for the given month.
+  ///
+  /// Returns a map where key is categoryId and value is the target amount.
+  Future<Map<String, double>> calculateBatchGoalTargets(
+      DateTime month, List<Category> categories) async {
+    final prevMonth = DateTime(month.year, month.month - 1, 1);
+
+    // We need previous month's available amounts for some goal types
+    // Optimization: Only calculate if we have categories that need it
+    Map<String, Map<String, double>>? prevMonthPerformance;
+
+    final needsPrevMonthData = categories.any((c) =>
+      c.goalType == GoalType.targetBalance ||
+      c.goalType == GoalType.targetBalanceByDate
+    );
+
+    if (needsPrevMonthData) {
+      prevMonthPerformance = await calculateBatchCategoryPerformance(prevMonth);
+    }
+
+    final Map<String, double> results = {};
+
+    for (final category in categories) {
+      if (category.goalType == null || category.targetAmount == null) {
+        results[category.id] = 0.0;
+        continue;
+      }
+
+      final targetAmount = category.targetAmount!;
+
+      switch (category.goalType!) {
+        case GoalType.monthlyFunding:
+          results[category.id] = targetAmount;
+          break;
+
+        case GoalType.targetBalance:
+          final priorAvailable = prevMonthPerformance?[category.id]?['available'] ?? 0.0;
+          final needed = targetAmount - priorAvailable;
+          results[category.id] = needed > 0 ? needed : 0.0;
+          break;
+
+        case GoalType.targetBalanceByDate:
+          if (category.targetDate == null) {
+            results[category.id] = 0.0;
+            break;
+          }
+
+          final monthsDiff = _monthsDifference(month, category.targetDate!);
+          int monthsRemaining = monthsDiff + 1;
+          if (monthsRemaining <= 0) monthsRemaining = 1;
+
+          final priorAvailable = prevMonthPerformance?[category.id]?['available'] ?? 0.0;
+          final needed = targetAmount - priorAvailable;
+
+          if (needed <= 0) {
+            results[category.id] = 0.0;
+          } else {
+            results[category.id] = needed / monthsRemaining;
+          }
+          break;
+      }
+    }
+
+    return results;
   }
 }

@@ -13,6 +13,7 @@ final budgetingServiceProvider = Provider<BudgetingService>((ref) {
     transactionRepository: ref.watch(transactionRepositoryProvider),
     budgetRepository: ref.watch(budgetRepositoryProvider),
     categoryRepository: ref.watch(categoryRepositoryProvider),
+    budgetTemplateRepository: ref.watch(budgetTemplateRepositoryProvider),
   );
 });
 

@@ -1005,6 +1005,19 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
           as _i5.Future<List<_i2.Transaction>>);
 
   @override
+  _i5.Future<Map<String, double>> getExpenseSumsByDateRange(
+    DateTime? start,
+    DateTime? end,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getExpenseSumsByDateRange, [start, end]),
+            returnValue: _i5.Future<Map<String, double>>.value(
+              <String, double>{},
+            ),
+          )
+          as _i5.Future<Map<String, double>>);
+
+  @override
   _i5.Future<List<_i2.Transaction>> getTransactions({
     _i9.TransactionFilter? filter,
     _i9.TransactionSort? sort,

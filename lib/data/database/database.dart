@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/tables/accounts.dart';
 import 'package:ledger_zero/data/database/tables/budgets.dart';
+import 'package:ledger_zero/data/database/tables/budget_templates.dart';
 import 'package:ledger_zero/data/database/tables/categories.dart';
 import 'package:ledger_zero/data/database/tables/category_groups.dart';
 import 'package:ledger_zero/data/database/tables/payees.dart';
@@ -11,6 +12,7 @@ import 'package:ledger_zero/data/database/tables/transactions.dart';
 
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
+import 'package:ledger_zero/data/database/daos/budget_templates_dao.dart';
 import 'package:ledger_zero/data/database/daos/categories_dao.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
@@ -24,6 +26,7 @@ part 'database.g.dart';
   tables: [
     Accounts,
     Budgets,
+    BudgetTemplates,
     Categories,
     CategoryGroups,
     Transactions,
@@ -34,6 +37,7 @@ part 'database.g.dart';
   daos: [
     AccountsDao,
     BudgetsDao,
+    BudgetTemplatesDao,
     CategoriesDao,
     PayeesDao,
     ScheduledTransactionsDao,
@@ -54,7 +58,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -84,6 +88,10 @@ class AppDatabase extends _$AppDatabase {
           // Add new columns to categories table
           await m.addColumn(categories, categories.color);
           await m.addColumn(categories, categories.icon);
+        }
+        if (from < 6) {
+          // Add budget templates table
+          await m.createTable(budgetTemplates);
         }
       },
       beforeOpen: (details) async {

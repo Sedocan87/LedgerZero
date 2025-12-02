@@ -321,11 +321,31 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                             child: Container(
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: AnimatedCountText(
-                                value: widget.viewModel.budgeted,
-                                format: currency,
-                                textAlign: TextAlign.right,
-                                style: Theme.of(context).textTheme.bodySmall,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (widget.viewModel.goalTarget > 0 &&
+                                      widget.viewModel.budgeted <
+                                          widget.viewModel.goalTarget)
+                                    Tooltip(
+                                      message: AppLocalizations.of(context)!
+                                          .underfunded,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 4.0),
+                                        child: Icon(
+                                          Icons.warning_amber_rounded,
+                                          size: 16,
+                                          color: Colors.orange.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                  AnimatedCountText(
+                                    value: widget.viewModel.budgeted,
+                                    format: currency,
+                                    textAlign: TextAlign.right,
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -361,14 +381,30 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.centerRight,
-                      child: AnimatedCountText(
-                        value: available,
-                        format: currency,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.bold,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                           if (available < 0)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 2.0),
+                              child: Icon(
+                                Icons.error_outline,
+                                size: 14,
+                                color: textColor,
+                              ),
                             ),
-                        overflow: TextOverflow.ellipsis,
+                          Flexible(
+                            child: AnimatedCountText(
+                              value: available,
+                              format: currency,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: textColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -385,6 +421,21 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                       final barColor =
                           isOverspent ? Colors.red : Colors.green;
 
+                      String varianceText;
+                      if (budgeted > 0) {
+                         final pct = ((budgeted - spent) / budgeted * 100);
+                         if (pct >= 0) {
+                            varianceText = '${AppLocalizations.of(context)!.remaining}: ${pct.toStringAsFixed(0)}%';
+                         } else {
+                            varianceText = '${AppLocalizations.of(context)!.overspent}: ${pct.abs().toStringAsFixed(0)}%';
+                         }
+                      } else if (spent > 0) {
+                         varianceText = AppLocalizations.of(context)!.overspent;
+                      } else {
+                         // Default text when nothing budgeted or spent
+                         varianceText = '${AppLocalizations.of(context)!.remaining}: 100%';
+                      }
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -397,8 +448,11 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                               Text(
-                                '${(progress * 100).toStringAsFixed(0)}%',
-                                style: Theme.of(context).textTheme.bodySmall,
+                                varianceText,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 10,
+                                  color: isOverspent ? Colors.red : null,
+                                ),
                               ),
                             ],
                           ),

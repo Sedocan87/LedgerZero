@@ -14,6 +14,7 @@ void main() {
       budgeted: 100.0,
       activity: -50.0,
       available: 50.0,
+      goalTarget: 0.0,
     );
 
     await tester.pumpWidget(ProviderScope(
@@ -51,6 +52,7 @@ void main() {
       budgeted: 0.0,
       activity: -50.0,
       available: -50.0,
+      goalTarget: 0.0,
     );
 
     await tester.pumpWidget(ProviderScope(
@@ -87,6 +89,7 @@ void main() {
       budgeted: 100.0,
       activity: -100.0,
       available: 0.0,
+      goalTarget: 0.0,
     );
 
     await tester.pumpWidget(ProviderScope(
