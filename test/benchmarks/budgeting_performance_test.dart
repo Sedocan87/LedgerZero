@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +9,6 @@ import 'package:ledger_zero/data/repositories/category_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_template_repository_impl.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 
-// ignore_for_file: avoid_print
 // ignore_for_file: prefer_const_constructors
 
 void main() {
@@ -141,8 +141,18 @@ void main() {
     print('calculateCategoryAvailable took: ${stopwatchCat.elapsedMilliseconds}ms');
     print('Available Result: $available');
 
-    // Expectations (just to make sure it runs)
+    // Measure calculateBatchCategoryPerformance
+    print('Running calculateBatchCategoryPerformance...');
+    final stopwatchBatch = Stopwatch()..start();
+    final batchResult = await budgetingService.calculateBatchCategoryPerformance(targetMonth);
+    stopwatchBatch.stop();
+    print('calculateBatchCategoryPerformance took: ${stopwatchBatch.elapsedMilliseconds}ms');
+    print('Batch Result Size: ${batchResult.length}');
+
+    // Expectations
     expect(tbb, isNotNull);
     expect(available, isNotNull);
+    expect(batchResult, isNotEmpty);
+    expect(stopwatchBatch.elapsedMilliseconds, lessThan(200)); // Should be fast
   });
 }

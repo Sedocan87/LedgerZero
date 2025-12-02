@@ -16,10 +16,18 @@ final selectedBudgetMonthProvider = StateProvider<DateTime>((ref) {
 /// Provider for budget screen search query.
 final budgetSearchQueryProvider = StateProvider<String>((ref) => '');
 
+/// Provider that emits when transactions change. Used to trigger rebuilds of budget view.
+final budgetTransactionUpdateProvider = StreamProvider.autoDispose<void>((ref) {
+  return ref.watch(transactionRepositoryProvider).watchTransactions(limit: 1).map((_) {});
+});
+
 /// Provider for "To Be Budgeted" amount for the selected month.
 final tbbProvider = FutureProvider.autoDispose<double>((ref) async {
   final month = ref.watch(selectedBudgetMonthProvider);
   final budgetingService = ref.watch(budgetingServiceProvider);
+
+  // Watch for transaction updates to trigger recalculation
+  ref.watch(budgetTransactionUpdateProvider);
 
   // Calculate TBB
   return budgetingService.calculateTBB(month);
@@ -57,6 +65,9 @@ class BudgetGroupViewModel {
 final budgetViewModelProvider = FutureProvider.autoDispose<List<BudgetGroupViewModel>>((ref) async {
   final month = ref.watch(selectedBudgetMonthProvider);
   final searchQuery = ref.watch(budgetSearchQueryProvider).toLowerCase();
+
+  // Watch for transaction updates to trigger recalculation
+  ref.watch(budgetTransactionUpdateProvider);
 
   // Wait for category data streams to load.
   // This ensures the provider stays in 'loading' state until data is ready,
