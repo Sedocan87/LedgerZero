@@ -310,5 +310,40 @@ class AppLocalizationsDe extends AppLocalizations {
   String get budgetAverageSpent => 'Durchschnittl. Ausgaben';
 
   @override
+  String get budgetZeroOut => 'Auf Null setzen';
+
+  @override
+  String get moveMoney => 'Geld verschieben';
+
+  @override
+  String get moveMoneyFrom => 'Verschieben von';
+
+  @override
+  String get moveMoneyTo => 'Verschieben nach';
+
+  @override
   String get quickActions => 'Schnellaktionen';
+
+  @override
+  String get noCategoriesTitle => 'Keine Kategorien';
+
+  @override
+  String get noCategoriesDescription =>
+      'Erstellen Sie Kategorien, um zu budgetieren.';
+
+  @override
+  String get setupBudget => 'Budget einrichten';
+
+  @override
+  String get budgetTutorialTitle => 'Willkommen beim Budgetieren';
+
+  @override
+  String get budgetTutorialDescription =>
+      'Tippen Sie auf Beträge zum Budgetieren. Nutzen Sie Schnellaktionen.';
+
+  @override
+  String get gotIt => 'Verstanden';
+
+  @override
+  String get total => 'Gesamt';
 }

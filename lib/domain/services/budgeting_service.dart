@@ -163,6 +163,7 @@ class BudgetingService {
   /// Moves money from one category to another in a specific month.
   ///
   /// Reduces the budgeted amount in [fromCategoryId] and increases it in [toCategoryId].
+  /// This guarantees that the total budget remains unchanged.
   Future<void> moveMoney(String fromCategoryId, String toCategoryId, double amount, DateTime month) async {
     final monthString = DateFormat('yyyy-MM').format(month);
 

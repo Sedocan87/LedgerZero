@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_tutorial_banner.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
 
@@ -30,6 +31,7 @@ class BudgetScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 MonthSelector(),
                 ToBeBudgetedBanner(),
+                BudgetTutorialBanner(),
               ],
             ),
           ),

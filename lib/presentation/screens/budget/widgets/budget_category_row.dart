@@ -6,6 +6,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_input_field.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/move_money_modal.dart';
 
 class BudgetCategoryRow extends ConsumerStatefulWidget {
   final BudgetCategoryViewModel viewModel;
@@ -84,6 +85,28 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 onTap: () {
                   Navigator.pop(context);
                   _autoAssign(AutoAssignRule.averageSpent);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.money_off),
+                title: Text(AppLocalizations.of(context)!.budgetZeroOut),
+                onTap: () {
+                  Navigator.pop(context);
+                  _onSubmit(0.0);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.swap_horiz),
+                title: Text(AppLocalizations.of(context)!.moveMoney),
+                onTap: () {
+                  Navigator.pop(context);
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (context) => MoveMoneyModal(
+                      initialFromCategoryId: widget.viewModel.category.id,
+                    ),
+                  );
                 },
               ),
             ],
