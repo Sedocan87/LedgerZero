@@ -661,6 +661,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Available'**
   String get available;
+
+  /// No description provided for @budgetPreviousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget Previous Month'**
+  String get budgetPreviousMonth;
+
+  /// No description provided for @budgetAverageSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget Average Spent'**
+  String get budgetAverageSpent;
+
+  /// No description provided for @quickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Actions'**
+  String get quickActions;
 }
 
 class _AppLocalizationsDelegate

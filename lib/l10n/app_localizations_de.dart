@@ -302,4 +302,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get available => 'Verfügbar';
+
+  @override
+  String get budgetPreviousMonth => 'Budget Previous Month';
+
+  @override
+  String get budgetAverageSpent => 'Budget Average Spent';
+
+  @override
+  String get quickActions => 'Quick Actions';
 }
