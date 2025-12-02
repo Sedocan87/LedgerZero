@@ -7,6 +7,10 @@ import 'package:ledger_zero/presentation/screens/accounts/account_detail_screen.
 import 'package:ledger_zero/presentation/screens/accounts/add_edit_account_screen.dart';
 import 'package:ledger_zero/presentation/screens/accounts/reconciliation_screen.dart';
 import 'package:ledger_zero/presentation/screens/budget/budget_screen.dart';
+import 'package:ledger_zero/presentation/screens/categories/add_edit_category_screen.dart';
+import 'package:ledger_zero/presentation/screens/categories/categories_screen.dart';
+import 'package:ledger_zero/presentation/screens/categories/reorder_categories_screen.dart';
+import 'package:ledger_zero/presentation/screens/categories/reorder_groups_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
@@ -103,6 +107,46 @@ final routerProvider = Provider<GoRouter>((ref) {
                     return FadeTransition(opacity: animation, child: child);
                   },
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'categories',
+                    name: 'categories',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const CategoriesScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'add',
+                        name: 'add-category',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) => const AddEditCategoryScreen(),
+                      ),
+                      GoRoute(
+                        path: ':id',
+                        name: 'edit-category',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) {
+                          final id = state.pathParameters['id'];
+                          return AddEditCategoryScreen(categoryId: id);
+                        },
+                      ),
+                      GoRoute(
+                        path: 'reorder-groups',
+                        name: 'reorder-groups',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) => const ReorderGroupsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'reorder-categories/:groupId',
+                        name: 'reorder-categories',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) {
+                          final groupId = state.pathParameters['groupId']!;
+                          return ReorderCategoriesScreen(groupId: groupId);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

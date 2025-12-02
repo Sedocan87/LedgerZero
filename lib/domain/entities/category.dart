@@ -28,6 +28,12 @@ class Category {
   /// The target date for the goal.
   final DateTime? targetDate;
 
+  /// The color of the category (as an integer).
+  final int? color;
+
+  /// The icon of the category (as a string identifier).
+  final String? icon;
+
   /// The date and time when the category was created.
   final DateTime? createdAt;
 
@@ -41,6 +47,8 @@ class Category {
     this.goalType,
     this.targetAmount,
     this.targetDate,
+    this.color,
+    this.icon,
     this.createdAt,
   });
 
@@ -54,6 +62,8 @@ class Category {
     GoalType? goalType,
     double? targetAmount,
     DateTime? targetDate,
+    int? color,
+    String? icon,
     DateTime? createdAt,
   }) {
     return Category(
@@ -65,6 +75,8 @@ class Category {
       goalType: goalType ?? this.goalType,
       targetAmount: targetAmount ?? this.targetAmount,
       targetDate: targetDate ?? this.targetDate,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -82,6 +94,8 @@ class Category {
       targetDate: json['target_date'] != null
           ? DateTime.parse(json['target_date'] as String)
           : null,
+      color: json['color'] as int?,
+      icon: json['icon'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -99,6 +113,8 @@ class Category {
       'goal_type': goalType?.toName(),
       'target_amount': targetAmount,
       'target_date': targetDate?.toIso8601String(),
+      'color': color,
+      'icon': icon,
       'created_at': createdAt?.toIso8601String(),
     };
   }
@@ -118,6 +134,8 @@ class Category {
         other.goalType == goalType &&
         other.targetAmount == targetAmount &&
         other.targetDate == targetDate &&
+        other.color == color &&
+        other.icon == icon &&
         other.createdAt == createdAt;
   }
 
@@ -132,13 +150,15 @@ class Category {
       goalType,
       targetAmount,
       targetDate,
+      color,
+      icon,
       createdAt,
     );
   }
 
   @override
   String toString() {
-    return 'Category(id: $id, name: $name, categoryGroupId: $categoryGroupId, isHidden: $isHidden, sortOrder: $sortOrder, goalType: $goalType, targetAmount: $targetAmount, targetDate: $targetDate, createdAt: $createdAt)';
+    return 'Category(id: $id, name: $name, categoryGroupId: $categoryGroupId, isHidden: $isHidden, sortOrder: $sortOrder, goalType: $goalType, targetAmount: $targetAmount, targetDate: $targetDate, color: $color, icon: $icon, createdAt: $createdAt)';
   }
 
   /// Validates the [Category] entity.

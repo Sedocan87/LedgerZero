@@ -21,88 +21,86 @@ class AppLocalizationsDe extends AppLocalizations {
   String get transactions => 'Transaktionen';
 
   @override
-  String get toBeBudgeted => 'To Be Budgeted';
+  String get toBeBudgeted => 'Zu Budgetieren';
 
   @override
-  String get totalIncome => 'Total Income';
+  String get totalIncome => 'Gesamteinkommen';
 
   @override
-  String get totalSpending => 'Total Spending';
+  String get totalSpending => 'Gesamtausgaben';
 
   @override
-  String get recentTransactions => 'Recent Transactions';
+  String get recentTransactions => 'Letzte Transaktionen';
 
   @override
-  String get noRecentTransactions => 'No recent transactions';
+  String get noRecentTransactions => 'Keine letzten Transaktionen';
 
   @override
-  String get addTransaction => 'Add Transaction';
+  String get addTransaction => 'Transaktion hinzufügen';
 
   @override
-  String get editTransaction => 'Edit Transaction';
+  String get editTransaction => 'Transaktion bearbeiten';
 
   @override
-  String get welcomeToLedgerZero => 'Welcome to LedgerZero';
+  String get welcomeToLedgerZero => 'Willkommen bei LedgerZero';
 
   @override
-  String get createFirstAccountMessage =>
-      'Create your first account to get started with budgeting.';
+  String get createFirstAccountMessage => 'Erstellen Sie Ihr erstes Konto.';
 
   @override
-  String get createAccount => 'Create Account';
+  String get createAccount => 'Konto erstellen';
 
   @override
-  String get accountDetails => 'Account Details';
+  String get accountDetails => 'Kontodetails';
 
   @override
-  String get loading => 'Loading...';
+  String get loading => 'Laden...';
 
   @override
-  String get error => 'Error';
+  String get error => 'Fehler';
 
   @override
-  String get accountNotFound => 'Account not found';
+  String get accountNotFound => 'Konto nicht gefunden';
 
   @override
-  String get noTransactions => 'No transactions';
+  String get noTransactions => 'Keine Transaktionen';
 
   @override
-  String get unknownPayee => 'Unknown Payee';
+  String get unknownPayee => 'Unbekannt';
 
   @override
-  String get balanceTrend => 'Balance Trend';
+  String get balanceTrend => 'Saldo-Trend';
 
   @override
-  String get noTransactionsTrend => 'No transactions to show trend';
+  String get noTransactionsTrend => 'Kein Trend';
 
   @override
-  String get deleteAccount => 'Delete Account';
+  String get deleteAccount => 'Konto löschen';
 
   @override
-  String get closeAccount => 'Close Account';
+  String get closeAccount => 'Konto schließen';
 
   @override
-  String get reopenAccount => 'Reopen Account';
+  String get reopenAccount => 'Konto öffnen';
 
   @override
-  String get reconcileAccount => 'Reconcile Account';
+  String get reconcileAccount => 'Abgleichen';
 
   @override
-  String get exportToCsv => 'Export to CSV';
+  String get exportToCsv => 'Export CSV';
 
   @override
-  String get deleteAccountConfirmation =>
-      'Are you sure you want to delete this account? This cannot be undone.';
+  String get deleteAccountConfirmation => 'Sind Sie sicher?';
 
   @override
-  String get cancel => 'Cancel';
+  String get cancel => 'Abbrechen';
 
   @override
-  String get delete => 'Delete';
+  String get delete => 'Löschen';
 
   @override
   String exportedTo(String path) {
-    return 'Exported to $path';
+    return 'Exportiert nach $path';
   }
 
   @override
@@ -112,107 +110,187 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     final String balanceString = balanceNumberFormat.format(balance);
 
-    return 'Current Balance: $balanceString';
+    return 'Saldo: $balanceString';
   }
 
   @override
-  String get enterActualBalance => 'Enter Actual Balance';
+  String get enterActualBalance => 'Saldo eingeben';
 
   @override
-  String get discrepancyFound => 'Discrepancy Found';
+  String get discrepancyFound => 'Abweichung';
 
   @override
   String discrepancyMessage(String diff) {
-    return 'There is a difference of $diff. Create an adjustment transaction?';
+    return 'Differenz von $diff. Anpassen?';
   }
 
   @override
-  String get yes => 'Yes';
+  String get yes => 'Ja';
 
   @override
-  String get no => 'No';
+  String get no => 'Nein';
 
   @override
-  String get reconcile => 'Reconcile';
+  String get reconcile => 'Abgleichen';
 
   @override
-  String get accountReconciled => 'Account Reconciled!';
+  String get accountReconciled => 'Abgeglichen!';
 
   @override
-  String get adjustmentCreated => 'Adjustment created and account reconciled.';
+  String get adjustmentCreated => 'Anpassung erstellt.';
 
   @override
-  String get amount => 'Amount';
+  String get amount => 'Betrag';
 
   @override
-  String get inflow => 'Inflow';
+  String get inflow => 'Einnahme';
 
   @override
-  String get outflow => 'Outflow';
+  String get outflow => 'Ausgabe';
 
   @override
-  String get payee => 'Payee';
+  String get payee => 'Empfänger';
 
   @override
-  String get category => 'Category';
+  String get category => 'Kategorie';
 
   @override
-  String get account => 'Account';
+  String get account => 'Konto';
 
   @override
   String get memo => 'Memo';
 
   @override
-  String get notes => 'Notes';
+  String get notes => 'Notizen';
 
   @override
-  String get date => 'Date';
+  String get date => 'Datum';
 
   @override
-  String get cleared => 'Cleared';
+  String get cleared => 'Gebucht';
 
   @override
-  String get uncleared => 'Uncleared';
+  String get uncleared => 'Offen';
 
   @override
-  String get save => 'Save';
+  String get save => 'Speichern';
 
   @override
-  String get saveAndAddAnother => 'Save & Add Another';
+  String get saveAndAddAnother => 'Speichern & Weiter';
 
   @override
-  String get transfer => 'Transfer';
+  String get transfer => 'Umbuchung';
 
   @override
   String get split => 'Split';
 
   @override
-  String get recurring => 'Recurring';
+  String get recurring => 'Wiederkehrend';
 
   @override
-  String get invalidAmount => 'Please enter a valid amount';
+  String get invalidAmount => 'Ungültiger Betrag';
 
   @override
-  String get selectAccount => 'Please select an account';
+  String get selectAccount => 'Konto wählen';
 
   @override
-  String get transactionSaved => 'Transaction saved';
+  String get transactionSaved => 'Gespeichert';
 
   @override
-  String get toAccount => 'To Account';
+  String get toAccount => 'Nach';
 
   @override
-  String get frequency => 'Frequency';
+  String get frequency => 'Frequenz';
 
   @override
-  String get daily => 'Daily';
+  String get daily => 'Täglich';
 
   @override
-  String get weekly => 'Weekly';
+  String get weekly => 'Wöchentlich';
 
   @override
-  String get monthly => 'Monthly';
+  String get monthly => 'Monatlich';
 
   @override
-  String get yearly => 'Yearly';
+  String get yearly => 'Jährlich';
+
+  @override
+  String get categories => 'Kategorien';
+
+  @override
+  String get addCategory => 'Kategorie hinzufügen';
+
+  @override
+  String get manageCategories => 'Verwalten';
+
+  @override
+  String get categoryGroup => 'Gruppe';
+
+  @override
+  String get editCategory => 'Bearbeiten';
+
+  @override
+  String get deleteCategory => 'Löschen';
+
+  @override
+  String get categoryName => 'Name';
+
+  @override
+  String get createCategory => 'Erstellen';
+
+  @override
+  String get editCategoryGroup => 'Gruppe bearbeiten';
+
+  @override
+  String get deleteCategoryGroup => 'Gruppe löschen';
+
+  @override
+  String get newCategoryGroup => 'Neue Gruppe';
+
+  @override
+  String get addCategoryGroup => 'Gruppe hinzufügen';
+
+  @override
+  String get groupName => 'Gruppenname';
+
+  @override
+  String get hideCategory => 'Verstecken';
+
+  @override
+  String get showCategory => 'Anzeigen';
+
+  @override
+  String get hidden => 'Versteckt';
+
+  @override
+  String get reorderGroups => 'Gruppen sortieren';
+
+  @override
+  String get reorderCategories => 'Kategorien sortieren';
+
+  @override
+  String get color => 'Farbe';
+
+  @override
+  String get icon => 'Icon';
+
+  @override
+  String categoryHasTransactions(int count) {
+    return 'Hat $count Transaktionen. Verschieben?';
+  }
+
+  @override
+  String get merge => 'Zusammenführen';
+
+  @override
+  String get reassign => 'Neu zuweisen';
+
+  @override
+  String get search => 'Suche';
+
+  @override
+  String get export => 'Exportieren';
+
+  @override
+  String get import => 'Importieren';
 }
