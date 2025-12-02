@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
+import 'package:ledger_zero/data/database/daos/budget_templates_dao.dart';
 import 'package:ledger_zero/data/database/daos/categories_dao.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
@@ -24,6 +25,11 @@ final accountsDaoProvider = Provider<AccountsDao>((ref) {
 /// Provides the [BudgetsDao].
 final budgetsDaoProvider = Provider<BudgetsDao>((ref) {
   return ref.watch(databaseProvider).budgetsDao;
+});
+
+/// Provides the [BudgetTemplatesDao].
+final budgetTemplatesDaoProvider = Provider<BudgetTemplatesDao>((ref) {
+  return ref.watch(databaseProvider).budgetTemplatesDao;
 });
 
 /// Provides the [CategoriesDao].

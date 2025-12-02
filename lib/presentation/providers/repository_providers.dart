@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/data/repositories/account_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_repository_impl.dart';
+import 'package:ledger_zero/data/repositories/budget_template_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/category_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/payee_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/scheduled_transaction_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/transaction_repository_impl.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_repository.dart';
+import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
@@ -21,6 +23,11 @@ final accountRepositoryProvider = Provider<AccountRepository>((ref) {
 /// Provides the [BudgetRepository].
 final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
   return BudgetRepositoryImpl(ref.watch(budgetsDaoProvider));
+});
+
+/// Provides the [BudgetTemplateRepository].
+final budgetTemplateRepositoryProvider = Provider<BudgetTemplateRepository>((ref) {
+  return BudgetTemplateRepositoryImpl(ref.watch(budgetTemplatesDaoProvider));
 });
 
 /// Provides the [CategoryRepository].

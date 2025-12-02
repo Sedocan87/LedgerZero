@@ -5,6 +5,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i3;
 
+import 'package:ledger_zero/domain/entities/budget_template.dart' as _i5;
 import 'package:ledger_zero/domain/entities/category.dart' as _i4;
 import 'package:ledger_zero/domain/services/budgeting_service.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
@@ -215,4 +216,83 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
             returnValueForMissingStub: _i3.Future<void>.value(),
           )
           as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> saveBudgetTemplate(String? name, DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#saveBudgetTemplate, [name, month]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> applyBudgetTemplate(String? templateId, DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#applyBudgetTemplate, [templateId, month]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<List<_i5.BudgetTemplate>> getAllTemplates() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllTemplates, []),
+            returnValue: _i3.Future<List<_i5.BudgetTemplate>>.value(
+              <_i5.BudgetTemplate>[],
+            ),
+          )
+          as _i3.Future<List<_i5.BudgetTemplate>>);
+
+  @override
+  _i3.Future<void> deleteTemplate(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteTemplate, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> copyBudgetFromPreviousMonth(DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#copyBudgetFromPreviousMonth, [month]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> resetBudget(DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#resetBudget, [month]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<Map<String, Map<String, double>>>
+  calculateBatchCategoryPerformance(DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#calculateBatchCategoryPerformance, [month]),
+            returnValue: _i3.Future<Map<String, Map<String, double>>>.value(
+              <String, Map<String, double>>{},
+            ),
+          )
+          as _i3.Future<Map<String, Map<String, double>>>);
+
+  @override
+  _i3.Future<Map<String, double>> calculateBatchGoalTargets(
+    DateTime? month,
+    List<_i4.Category>? categories,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#calculateBatchGoalTargets, [month, categories]),
+            returnValue: _i3.Future<Map<String, double>>.value(
+              <String, double>{},
+            ),
+          )
+          as _i3.Future<Map<String, double>>);
 }

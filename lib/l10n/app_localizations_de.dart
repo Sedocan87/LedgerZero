@@ -379,4 +379,58 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get undo => 'Rückgängig';
+
+  @override
+  String get variance => 'Varianz';
+
+  @override
+  String get remaining => 'Verbleibend';
+
+  @override
+  String get overspent => 'Überzogen';
+
+  @override
+  String get underfunded => 'Unterfinanziert';
+
+  @override
+  String get goalTarget => 'Zielbetrag';
+
+  @override
+  String get saveAsTemplate => 'Als Vorlage speichern';
+
+  @override
+  String get applyTemplate => 'Vorlage anwenden';
+
+  @override
+  String get templateName => 'Vorlagenname';
+
+  @override
+  String get templateSaved => 'Vorlage gespeichert';
+
+  @override
+  String get copyFromPreviousMonth => 'Vom Vormonat kopieren';
+
+  @override
+  String get resetBudget => 'Budget zurücksetzen';
+
+  @override
+  String resetBudgetConfirmation(String month) {
+    return 'Sind Sie sicher, dass Sie das Budget für $month zurücksetzen möchten? Alle budgetierten Beträge werden auf Null gesetzt.';
+  }
+
+  @override
+  String get reset => 'Zurücksetzen';
+
+  @override
+  String get templates => 'Vorlagen';
+
+  @override
+  String get noTemplates => 'Keine Vorlagen';
+
+  @override
+  String get createTemplateDescription =>
+      'Speichern Sie Ihre aktuellen Budgetzuweisungen als wiederverwendbare Vorlage.';
+
+  @override
+  String get deleteTemplate => 'Vorlage löschen';
 }

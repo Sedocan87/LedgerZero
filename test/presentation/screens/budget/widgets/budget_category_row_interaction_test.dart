@@ -17,6 +17,7 @@ void main() {
     budgeted: 100.0,
     activity: 0.0,
     available: 100.0,
+    goalTarget: 0.0,
   );
 
   const viewModel2 = BudgetCategoryViewModel(
@@ -24,6 +25,7 @@ void main() {
     budgeted: 200.0,
     activity: 0.0,
     available: 200.0,
+    goalTarget: 0.0,
   );
 
   // Mock ordered categories

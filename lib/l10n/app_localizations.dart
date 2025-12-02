@@ -799,6 +799,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo'**
   String get undo;
+
+  /// No description provided for @variance.
+  ///
+  /// In en, this message translates to:
+  /// **'Variance'**
+  String get variance;
+
+  /// No description provided for @remaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get remaining;
+
+  /// No description provided for @overspent.
+  ///
+  /// In en, this message translates to:
+  /// **'Overspent'**
+  String get overspent;
+
+  /// No description provided for @underfunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Underfunded'**
+  String get underfunded;
+
+  /// No description provided for @goalTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal Target'**
+  String get goalTarget;
+
+  /// No description provided for @saveAsTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as Template'**
+  String get saveAsTemplate;
+
+  /// No description provided for @applyTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Template'**
+  String get applyTemplate;
+
+  /// No description provided for @templateName.
+  ///
+  /// In en, this message translates to:
+  /// **'Template Name'**
+  String get templateName;
+
+  /// No description provided for @templateSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Template saved'**
+  String get templateSaved;
+
+  /// No description provided for @copyFromPreviousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy from Previous Month'**
+  String get copyFromPreviousMonth;
+
+  /// No description provided for @resetBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Budget'**
+  String get resetBudget;
+
+  /// No description provided for @resetBudgetConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to reset the budget for {month}? All budgeted amounts will be set to zero.'**
+  String resetBudgetConfirmation(String month);
+
+  /// No description provided for @reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// No description provided for @templates.
+  ///
+  /// In en, this message translates to:
+  /// **'Templates'**
+  String get templates;
+
+  /// No description provided for @noTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'No Templates'**
+  String get noTemplates;
+
+  /// No description provided for @createTemplateDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Save your current budget allocations as a reusable template.'**
+  String get createTemplateDescription;
+
+  /// No description provided for @deleteTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Template'**
+  String get deleteTemplate;
 }
 
 class _AppLocalizationsDelegate

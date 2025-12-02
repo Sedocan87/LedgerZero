@@ -31,12 +31,14 @@ class BudgetCategoryViewModel {
   final double budgeted;
   final double activity;
   final double available;
+  final double goalTarget;
 
   const BudgetCategoryViewModel({
     required this.category,
     required this.budgeted,
     required this.activity,
     required this.available,
+    required this.goalTarget,
   });
 }
 
@@ -74,6 +76,9 @@ final budgetViewModelProvider = FutureProvider.autoDispose<List<BudgetGroupViewM
   // Batch fetch performance data (Activity, Available) to avoid N+1 queries
   final performanceData = await budgetingService.calculateBatchCategoryPerformance(month);
 
+  // Batch fetch goal targets
+  final goalTargets = await budgetingService.calculateBatchGoalTargets(month, categories);
+
   // Sort groups by sortOrder
   final sortedGroups = List<CategoryGroup>.from(groups)
     ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
@@ -107,11 +112,15 @@ final budgetViewModelProvider = FutureProvider.autoDispose<List<BudgetGroupViewM
       final activity = catPerf?['activity'] ?? 0.0;
       final available = catPerf?['available'] ?? 0.0;
 
+      // Get calculated goal target
+      final goalTarget = goalTargets[category.id] ?? 0.0;
+
       return BudgetCategoryViewModel(
         category: category,
         budgeted: budgeted,
         activity: activity,
         available: available,
+        goalTarget: goalTarget,
       );
     }).toList();
 

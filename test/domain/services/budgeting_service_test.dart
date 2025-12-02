@@ -13,15 +13,18 @@ void main() {
   late MockTransactionRepository mockTransactionRepository;
   late MockBudgetRepository mockBudgetRepository;
   late MockCategoryRepository mockCategoryRepository;
+  late MockBudgetTemplateRepository mockBudgetTemplateRepository;
 
   setUp(() {
     mockTransactionRepository = MockTransactionRepository();
     mockBudgetRepository = MockBudgetRepository();
     mockCategoryRepository = MockCategoryRepository();
+    mockBudgetTemplateRepository = MockBudgetTemplateRepository();
     budgetingService = BudgetingService(
       transactionRepository: mockTransactionRepository,
       budgetRepository: mockBudgetRepository,
       categoryRepository: mockCategoryRepository,
+      budgetTemplateRepository: mockBudgetTemplateRepository,
     );
   });
 

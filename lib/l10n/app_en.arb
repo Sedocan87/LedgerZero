@@ -202,5 +202,29 @@
   "undo": "Undo",
   "@undo": {
     "description": "Label for undo action"
-  }
+  },
+  "variance": "Variance",
+  "remaining": "Remaining",
+  "overspent": "Overspent",
+  "underfunded": "Underfunded",
+  "goalTarget": "Goal Target",
+  "saveAsTemplate": "Save as Template",
+  "applyTemplate": "Apply Template",
+  "templateName": "Template Name",
+  "templateSaved": "Template saved",
+  "copyFromPreviousMonth": "Copy from Previous Month",
+  "resetBudget": "Reset Budget",
+  "resetBudgetConfirmation": "Are you sure you want to reset the budget for {month}? All budgeted amounts will be set to zero.",
+  "@resetBudgetConfirmation": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "reset": "Reset",
+  "templates": "Templates",
+  "noTemplates": "No Templates",
+  "createTemplateDescription": "Save your current budget allocations as a reusable template.",
+  "deleteTemplate": "Delete Template"
 }

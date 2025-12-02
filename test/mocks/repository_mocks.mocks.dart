@@ -7,6 +7,7 @@ import 'dart:async' as _i3;
 
 import 'package:ledger_zero/domain/entities/account.dart' as _i4;
 import 'package:ledger_zero/domain/entities/budget.dart' as _i6;
+import 'package:ledger_zero/domain/entities/budget_template.dart' as _i16;
 import 'package:ledger_zero/domain/entities/category.dart' as _i8;
 import 'package:ledger_zero/domain/entities/category_group.dart' as _i9;
 import 'package:ledger_zero/domain/entities/payee.dart' as _i11;
@@ -14,6 +15,8 @@ import 'package:ledger_zero/domain/entities/transaction.dart' as _i13;
 import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i14;
 import 'package:ledger_zero/domain/repositories/account_repository.dart' as _i2;
 import 'package:ledger_zero/domain/repositories/budget_repository.dart' as _i5;
+import 'package:ledger_zero/domain/repositories/budget_template_repository.dart'
+    as _i15;
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
     as _i7;
 import 'package:ledger_zero/domain/repositories/payee_repository.dart' as _i10;
@@ -206,6 +209,18 @@ class MockBudgetRepository extends _i1.Mock implements _i5.BudgetRepository {
             returnValue: _i3.Future<double>.value(0.0),
           )
           as _i3.Future<double>);
+
+  @override
+  _i3.Future<Map<String, double>> getAllTimeBudgetedSumsUpToMonth(
+    String? endMonth,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllTimeBudgetedSumsUpToMonth, [endMonth]),
+            returnValue: _i3.Future<Map<String, double>>.value(
+              <String, double>{},
+            ),
+          )
+          as _i3.Future<Map<String, double>>);
 }
 
 /// A class which mocks [CategoryRepository].
@@ -524,6 +539,19 @@ class MockTransactionRepository extends _i1.Mock
           as _i3.Future<double>);
 
   @override
+  _i3.Future<Map<String, double>> getExpenseSumsByDateRange(
+    DateTime? start,
+    DateTime? end,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getExpenseSumsByDateRange, [start, end]),
+            returnValue: _i3.Future<Map<String, double>>.value(
+              <String, double>{},
+            ),
+          )
+          as _i3.Future<Map<String, double>>);
+
+  @override
   _i3.Future<void> createTransferTransaction(
     _i13.Transaction? source,
     _i13.Transaction? destination,
@@ -629,4 +657,50 @@ class MockTransactionRepository extends _i1.Mock
             returnValue: _i3.Stream<List<_i13.Transaction>>.empty(),
           )
           as _i3.Stream<List<_i13.Transaction>>);
+}
+
+/// A class which mocks [BudgetTemplateRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockBudgetTemplateRepository extends _i1.Mock
+    implements _i15.BudgetTemplateRepository {
+  MockBudgetTemplateRepository() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i3.Future<List<_i16.BudgetTemplate>> getAllTemplates() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllTemplates, []),
+            returnValue: _i3.Future<List<_i16.BudgetTemplate>>.value(
+              <_i16.BudgetTemplate>[],
+            ),
+          )
+          as _i3.Future<List<_i16.BudgetTemplate>>);
+
+  @override
+  _i3.Future<_i16.BudgetTemplate?> getTemplateById(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTemplateById, [id]),
+            returnValue: _i3.Future<_i16.BudgetTemplate?>.value(),
+          )
+          as _i3.Future<_i16.BudgetTemplate?>);
+
+  @override
+  _i3.Future<void> createTemplate(_i16.BudgetTemplate? template) =>
+      (super.noSuchMethod(
+            Invocation.method(#createTemplate, [template]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> deleteTemplate(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteTemplate, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_template_dialogs.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_tutorial_banner.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
@@ -39,6 +42,51 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     if (!_isSearching) {
       _searchController.clear();
       ref.read(budgetSearchQueryProvider.notifier).state = '';
+    }
+  }
+
+  Future<void> _copyPreviousMonth() async {
+    final month = ref.read(selectedBudgetMonthProvider);
+    await ref.read(budgetingServiceProvider).copyBudgetFromPreviousMonth(month);
+    ref.invalidate(budgetViewModelProvider);
+    ref.invalidate(tbbProvider);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.budgetUpdated)),
+      );
+    }
+  }
+
+  Future<void> _resetBudget() async {
+    final month = ref.read(selectedBudgetMonthProvider);
+    final dateFormat = intl.DateFormat.yMMMM(Localizations.localeOf(context).toString());
+    final monthString = dateFormat.format(month);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppLocalizations.of(context)!.resetBudget),
+        content: Text(AppLocalizations.of(context)!.resetBudgetConfirmation(monthString)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(AppLocalizations.of(context)!.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(AppLocalizations.of(context)!.reset)),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ref.read(budgetingServiceProvider).resetBudget(month);
+      ref.invalidate(budgetViewModelProvider);
+      ref.invalidate(tbbProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.budgetUpdated)),
+        );
+      }
     }
   }
 
@@ -99,6 +147,30 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               icon: const Icon(Icons.category),
               tooltip: AppLocalizations.of(context)!.manageCategories,
               onPressed: () => context.pushNamed('categories'),
+            ),
+          if (!_isSearching)
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'save_template') await showSaveTemplateDialog(context, ref);
+                if (value == 'apply_template') await showApplyTemplateDialog(context, ref);
+                if (value == 'copy_previous') await _copyPreviousMonth();
+                if (value == 'reset') await _resetBudget();
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                    value: 'save_template',
+                    child: Text(AppLocalizations.of(context)!.saveAsTemplate)),
+                PopupMenuItem(
+                    value: 'apply_template',
+                    child: Text(AppLocalizations.of(context)!.applyTemplate)),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                    value: 'copy_previous',
+                    child: Text(AppLocalizations.of(context)!.copyFromPreviousMonth)),
+                PopupMenuItem(
+                    value: 'reset',
+                    child: Text(AppLocalizations.of(context)!.resetBudget)),
+              ],
             ),
         ],
       ),

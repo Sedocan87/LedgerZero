@@ -5,6 +5,7 @@ import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/repositories/transaction_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/category_repository_impl.dart';
+import 'package:ledger_zero/data/repositories/budget_template_repository_impl.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 
 // ignore_for_file: avoid_print
@@ -15,6 +16,7 @@ void main() {
   late TransactionRepositoryImpl transactionRepository;
   late BudgetRepositoryImpl budgetRepository;
   late CategoryRepositoryImpl categoryRepository;
+  late BudgetTemplateRepositoryImpl budgetTemplateRepository;
   late BudgetingService budgetingService;
 
   setUp(() {
@@ -22,10 +24,12 @@ void main() {
     transactionRepository = TransactionRepositoryImpl(database.transactionsDao);
     budgetRepository = BudgetRepositoryImpl(database.budgetsDao);
     categoryRepository = CategoryRepositoryImpl(database.categoriesDao);
+    budgetTemplateRepository = BudgetTemplateRepositoryImpl(database.budgetTemplatesDao);
     budgetingService = BudgetingService(
       transactionRepository: transactionRepository,
       budgetRepository: budgetRepository,
       categoryRepository: categoryRepository,
+      budgetTemplateRepository: budgetTemplateRepository,
     );
   });
 
