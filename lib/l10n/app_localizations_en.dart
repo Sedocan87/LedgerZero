@@ -438,4 +438,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteTemplate => 'Delete Template';
+
+  @override
+  String get spendingByCategory => 'Spending by Category';
+
+  @override
+  String get incomeVsExpense => 'Income vs Expense';
+
+  @override
+  String get netWorth => 'Net Worth';
 }

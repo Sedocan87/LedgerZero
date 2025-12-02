@@ -436,4 +436,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get deleteTemplate => 'Vorlage löschen';
+
+  @override
+  String get spendingByCategory => 'Ausgaben nach Kategorie';
+
+  @override
+  String get incomeVsExpense => 'Einnahmen vs Ausgaben';
+
+  @override
+  String get netWorth => 'Nettovermögen';
 }
