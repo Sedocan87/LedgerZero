@@ -29,7 +29,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
               data: (tbb) => Text(
                 NumberFormat.simpleCurrency(decimalDigits: 2).format(tbb),
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: tbb >= 0 ? const Color(0xFF00796B) : Theme.of(context).colorScheme.error,
+                      color: tbb >= 0 ? Colors.green.shade700 : Theme.of(context).colorScheme.error,
                       fontWeight: FontWeight.bold,
                     ),
               ),

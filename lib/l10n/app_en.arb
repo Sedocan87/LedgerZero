@@ -163,5 +163,8 @@
   "import": "Import",
   "budgeted": "Budgeted",
   "activity": "Activity",
-  "available": "Available"
+  "available": "Available",
+  "budgetPreviousMonth": "Budget Previous Month",
+  "budgetAverageSpent": "Budget Average Spent",
+  "quickActions": "Quick Actions"
 }
