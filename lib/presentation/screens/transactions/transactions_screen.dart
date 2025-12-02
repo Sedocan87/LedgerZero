@@ -142,10 +142,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           return true;
         } else {
           // Approve
+          // ignore: unawaited_futures
           ref.read(transactionRepositoryProvider).updateTransaction(
-            tx.copyWith(approved: true)
-          );
-           ScaffoldMessenger.of(context).showSnackBar(
+                tx.copyWith(approved: true),
+              );
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Transaction approved')),
           );
           return false; // Don't remove from list
@@ -160,7 +161,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               action: SnackBarAction(
                 label: 'Undo',
                 onPressed: () {
-                  // Task 216: Implement undo
+                  // ignore: unawaited_futures
+                  ref
+                      .read(transactionRepositoryProvider)
+                      .updateTransaction(tx.copyWith(isDeleted: false));
                 },
               ),
             ),
@@ -175,7 +179,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         isSelectionMode: false,
         isSelected: false,
         onTap: () {
-          // Task 221 will implement Add/Edit screen
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Edit feature coming soon')),
           );
@@ -186,10 +189,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         },
         onClearStatusChanged: (status) {
           final updated = tx.copyWith(cleared: status);
-          ref
-              .read(transactionRepositoryProvider)
-              .updateTransaction(updated)
-              .then((_) {});
+          // ignore: unawaited_futures
+          ref.read(transactionRepositoryProvider).updateTransaction(updated);
         },
       ),
     );
@@ -239,7 +240,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return null;
   }
 
-  List<Widget> _buildAppBarActions(TransactionsState state, List<Transaction>? allTransactions) {
+  List<Widget> _buildAppBarActions(
+      TransactionsState state, List<Transaction>? allTransactions) {
     if (state.isMultiSelectMode) {
       return [
         IconButton(
@@ -248,11 +250,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               // Task 218: Bulk delete
               final ids = state.selectedTransactionIds.toList();
               if (ids.isNotEmpty) {
-                 ref.read(transactionRepositoryProvider).batchDeleteTransactions(ids);
-                 ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-                 ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${ids.length} transactions deleted')),
-                 );
+                ref
+                    .read(transactionRepositoryProvider)
+                    .batchDeleteTransactions(ids);
+                ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${ids.length} transactions deleted')),
+                );
               }
             }),
         IconButton(
@@ -316,28 +320,28 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       IconButton(
           icon: const Icon(Icons.filter_list),
           onPressed: () {
-             _showFilterDialog(context, state);
+            _showFilterDialog(context, state);
           }),
-       // Task 214: Sorting
+      // Task 214: Sorting
       PopupMenuButton<TransactionSortField>(
         icon: const Icon(Icons.sort),
         onSelected: (field) {
-           final currentSort = state.sort;
-           final newAscending = currentSort.field == field ? !currentSort.ascending : true;
-           ref.read(transactionsProvider.notifier).updateSort(
-             TransactionSort(field: field, ascending: newAscending)
-           );
+          final currentSort = state.sort;
+          final newAscending =
+              currentSort.field == field ? !currentSort.ascending : true;
+          ref.read(transactionsProvider.notifier).updateSort(
+              TransactionSort(field: field, ascending: newAscending));
         },
         itemBuilder: (context) => [
           const PopupMenuItem(
             value: TransactionSortField.date,
             child: Text('Date'),
           ),
-           const PopupMenuItem(
+          const PopupMenuItem(
             value: TransactionSortField.amount,
             child: Text('Amount'),
           ),
-           const PopupMenuItem(
+          const PopupMenuItem(
             value: TransactionSortField.payeeName,
             child: Text('Payee'),
           ),
@@ -429,8 +433,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final list = <dynamic>[];
     final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
     for (var date in sortedKeys) {
-        list.add(date);
-        list.addAll(grouped[date]!);
+      list.add(date);
+      list.addAll(grouped[date]!);
     }
     return list;
   }
