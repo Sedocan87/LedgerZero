@@ -9,7 +9,7 @@ void main() {
   const category = Category(id: '1', name: 'Test Category');
 
   testWidgets('BudgetCategoryRow displays positive available amount in green', (tester) async {
-    final viewModel = BudgetCategoryViewModel(
+    const viewModel = BudgetCategoryViewModel(
       category: category,
       budgeted: 100.0,
       activity: -50.0,

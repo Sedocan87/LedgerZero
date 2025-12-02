@@ -39,7 +39,7 @@ void main() {
   }
 
   testWidgets('BudgetCategoryRow allows inline editing of budgeted amount', (tester) async {
-    final viewModel = BudgetCategoryViewModel(
+    const viewModel = BudgetCategoryViewModel(
       category: category,
       budgeted: 100.0,
       activity: -50.0,
