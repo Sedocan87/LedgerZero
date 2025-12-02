@@ -230,5 +230,17 @@
   "templates": "Templates",
   "noTemplates": "No Templates",
   "createTemplateDescription": "Save your current budget allocations as a reusable template.",
-  "deleteTemplate": "Delete Template"
+  "deleteTemplate": "Delete Template",
+  "spendingByCategory": "Spending by Category",
+  "@spendingByCategory": {
+    "description": "Label for spending by category report"
+  },
+  "incomeVsExpense": "Income vs Expense",
+  "@incomeVsExpense": {
+    "description": "Label for income vs expense report"
+  },
+  "netWorth": "Net Worth",
+  "@netWorth": {
+    "description": "Label for net worth report"
+  }
 }

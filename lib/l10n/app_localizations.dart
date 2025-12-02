@@ -907,6 +907,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete Template'**
   String get deleteTemplate;
+
+  /// Label for spending by category report
+  ///
+  /// In en, this message translates to:
+  /// **'Spending by Category'**
+  String get spendingByCategory;
+
+  /// Label for income vs expense report
+  ///
+  /// In en, this message translates to:
+  /// **'Income vs Expense'**
+  String get incomeVsExpense;
+
+  /// Label for net worth report
+  ///
+  /// In en, this message translates to:
+  /// **'Net Worth'**
+  String get netWorth;
 }
 
 class _AppLocalizationsDelegate

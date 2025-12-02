@@ -133,5 +133,8 @@
   "templates": "Vorlagen",
   "noTemplates": "Keine Vorlagen",
   "createTemplateDescription": "Speichern Sie Ihre aktuellen Budgetzuweisungen als wiederverwendbare Vorlage.",
-  "deleteTemplate": "Vorlage löschen"
+  "deleteTemplate": "Vorlage löschen",
+  "spendingByCategory": "Ausgaben nach Kategorie",
+  "incomeVsExpense": "Einnahmen vs Ausgaben",
+  "netWorth": "Nettovermögen"
 }
