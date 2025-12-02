@@ -346,4 +346,23 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get total => 'Gesamt';
+
+  @override
+  String get tbbTooltip =>
+      'Einkommen abzüglich budgetiertem Betrag. Das ist der verfügbare Rest.';
+
+  @override
+  String get budgetedTooltip =>
+      'Der Betrag, den Sie diesem Monat dieser Kategorie zugewiesen haben.';
+
+  @override
+  String get activityTooltip =>
+      'Summe aller Transaktionen (Ausgaben) in dieser Kategorie für diesen Monat.';
+
+  @override
+  String get availableTooltip =>
+      'Verfügbarer Betrag. Berechnet aus Budgetiert - Aktivität + Übertrag.';
+
+  @override
+  String get categoryTooltip => 'Name der Kategorie.';
 }

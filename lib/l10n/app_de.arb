@@ -106,5 +106,10 @@
   "budgetTutorialTitle": "Willkommen beim Budgetieren",
   "budgetTutorialDescription": "Tippen Sie auf Beträge zum Budgetieren. Nutzen Sie Schnellaktionen.",
   "gotIt": "Verstanden",
-  "total": "Gesamt"
+  "total": "Gesamt",
+  "tbbTooltip": "Einkommen abzüglich budgetiertem Betrag. Das ist der verfügbare Rest.",
+  "budgetedTooltip": "Der Betrag, den Sie diesem Monat dieser Kategorie zugewiesen haben.",
+  "activityTooltip": "Summe aller Transaktionen (Ausgaben) in dieser Kategorie für diesen Monat.",
+  "availableTooltip": "Verfügbarer Betrag. Berechnet aus Budgetiert - Aktivität + Übertrag.",
+  "categoryTooltip": "Name der Kategorie."
 }

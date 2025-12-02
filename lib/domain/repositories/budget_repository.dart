@@ -31,4 +31,8 @@ abstract class BudgetRepository {
 
   /// Calculates total budgeted amount for a specific category up to (and including) [endMonth].
   Future<double> getTotalBudgetedByCategoryAndMonthRange(String categoryId, String endMonth);
+
+  /// Calculates total budgeted amount for all categories up to (and including) [endMonth].
+  /// Returns a map where key is categoryId and value is the sum.
+  Future<Map<String, double>> getAllTimeBudgetedSumsUpToMonth(String endMonth);
 }

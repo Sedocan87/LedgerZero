@@ -53,4 +53,19 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
 
     return query.map((row) => row.read(budgeted) ?? 0.0).getSingle();
   }
+
+  Future<Map<String, double>> getBudgetedSumsByMonthRange(String endMonth) async {
+    final budgeted = budgets.budgeted.sum();
+    final query = selectOnly(budgets)
+      ..where(budgets.month.isSmallerOrEqualValue(endMonth))
+      ..addColumns([budgets.categoryId, budgeted])
+      ..groupBy([budgets.categoryId]);
+
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        if (row.read(budgets.categoryId) != null)
+          row.read(budgets.categoryId)!: row.read(budgeted) ?? 0.0
+    };
+  }
 }

@@ -193,6 +193,17 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<Map<String, double>> getExpenseSumsByDateRange(
+      DateTime start, DateTime end) async {
+    try {
+      return await _transactionsDao.getExpenseSumsByDateRange(start, end);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to calculate expense sums', e, stackTrace);
+      throw DatabaseException('Failed to calculate expense sums', e);
+    }
+  }
+
+  @override
   Future<void> createTransferTransaction(
       Transaction source, Transaction destination) async {
     try {

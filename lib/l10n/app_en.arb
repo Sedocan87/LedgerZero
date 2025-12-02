@@ -177,5 +177,10 @@
   "budgetTutorialTitle": "Welcome to Budgeting",
   "budgetTutorialDescription": "Tap on amounts to budget. Use quick actions for auto-assignment.",
   "gotIt": "Got it",
-  "total": "Total"
+  "total": "Total",
+  "tbbTooltip": "Income minus budgeted amount. This is what you have left to assign.",
+  "budgetedTooltip": "The amount you've assigned to this category for this month.",
+  "activityTooltip": "The sum of all transactions (spending) in this category for this month.",
+  "availableTooltip": "The amount available to spend. Calculated as Budgeted - Activity + Rollover.",
+  "categoryTooltip": "Name of the category."
 }
