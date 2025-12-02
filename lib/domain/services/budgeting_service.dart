@@ -161,7 +161,22 @@ class BudgetingService {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      await _budgetRepository.createBudget(newBudget);
+      try {
+        await _budgetRepository.createBudget(newBudget);
+      } catch (e) {
+        // Handle race condition where budget was created after check
+        // Retry update
+        final retryBudget = await _budgetRepository.getBudgetByCategoryAndMonth(categoryId, monthString);
+        if (retryBudget != null) {
+          final updatedBudget = retryBudget.copyWith(
+            budgeted: amount,
+            updatedAt: DateTime.now(),
+          );
+          await _budgetRepository.updateBudget(updatedBudget);
+        } else {
+          rethrow; // Something else failed
+        }
+      }
     }
   }
 
