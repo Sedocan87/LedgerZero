@@ -52,6 +52,8 @@ dependencies:
 
   collection: any
   equatable: ^2.0.7
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

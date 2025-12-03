@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/entities/budget_template.dart' as _i16;
 import 'package:ledger_zero/domain/entities/category.dart' as _i8;
 import 'package:ledger_zero/domain/entities/category_group.dart' as _i9;
 import 'package:ledger_zero/domain/entities/payee.dart' as _i11;
+import 'package:ledger_zero/domain/entities/scheduled_transaction.dart' as _i18;
 import 'package:ledger_zero/domain/entities/transaction.dart' as _i13;
 import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i14;
 import 'package:ledger_zero/domain/repositories/account_repository.dart' as _i2;
@@ -20,6 +21,8 @@ import 'package:ledger_zero/domain/repositories/budget_template_repository.dart'
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
     as _i7;
 import 'package:ledger_zero/domain/repositories/payee_repository.dart' as _i10;
+import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart'
+    as _i17;
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart'
     as _i12;
 import 'package:mockito/mockito.dart' as _i1;
@@ -711,4 +714,82 @@ class MockBudgetTemplateRepository extends _i1.Mock
             returnValueForMissingStub: _i3.Future<void>.value(),
           )
           as _i3.Future<void>);
+}
+
+/// A class which mocks [ScheduledTransactionRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockScheduledTransactionRepository extends _i1.Mock
+    implements _i17.ScheduledTransactionRepository {
+  MockScheduledTransactionRepository() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i3.Future<List<_i18.ScheduledTransaction>> getAllScheduledTransactions() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllScheduledTransactions, []),
+            returnValue: _i3.Future<List<_i18.ScheduledTransaction>>.value(
+              <_i18.ScheduledTransaction>[],
+            ),
+          )
+          as _i3.Future<List<_i18.ScheduledTransaction>>);
+
+  @override
+  _i3.Future<_i18.ScheduledTransaction?> getScheduledTransactionById(
+    String? id,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getScheduledTransactionById, [id]),
+            returnValue: _i3.Future<_i18.ScheduledTransaction?>.value(),
+          )
+          as _i3.Future<_i18.ScheduledTransaction?>);
+
+  @override
+  _i3.Future<void> createScheduledTransaction(
+    _i18.ScheduledTransaction? transaction,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#createScheduledTransaction, [transaction]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> updateScheduledTransaction(
+    _i18.ScheduledTransaction? transaction,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#updateScheduledTransaction, [transaction]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> deleteScheduledTransaction(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteScheduledTransaction, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> skipScheduledTransaction(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#skipScheduledTransaction, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Stream<List<_i18.ScheduledTransaction>> watchAllScheduledTransactions() =>
+      (super.noSuchMethod(
+            Invocation.method(#watchAllScheduledTransactions, []),
+            returnValue: _i3.Stream<List<_i18.ScheduledTransaction>>.empty(),
+          )
+          as _i3.Stream<List<_i18.ScheduledTransaction>>);
 }

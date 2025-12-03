@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
@@ -179,9 +180,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         isSelectionMode: false,
         isSelected: false,
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Edit feature coming soon')),
-          );
+          context.pushNamed('edit-transaction', pathParameters: {'id': tx.id});
         },
         onLongPress: () {
           ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
