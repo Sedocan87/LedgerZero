@@ -10,6 +10,13 @@ class SecurityManager {
   final FlutterSecureStorage _storage;
   final LocalAuthentication _localAuth;
 
+  // Static session key to be used by the database connection
+  static String? _sessionKey;
+  static String? get sessionKey => _sessionKey;
+  static void setSessionKey(String? key) {
+    _sessionKey = key;
+  }
+
   SecurityManager({
     FlutterSecureStorage? storage,
     LocalAuthentication? localAuth,
