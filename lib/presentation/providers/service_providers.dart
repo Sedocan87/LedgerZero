@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/domain/services/analytics_service.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
@@ -21,5 +22,12 @@ final transactionServiceProvider = Provider<TransactionService>((ref) {
   return TransactionService(
     ref.watch(transactionRepositoryProvider),
     ref.watch(undoServiceProvider),
+  );
+});
+
+final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
+  return AnalyticsService(
+    accountRepository: ref.watch(accountRepositoryProvider),
+    transactionRepository: ref.watch(transactionRepositoryProvider),
   );
 });
