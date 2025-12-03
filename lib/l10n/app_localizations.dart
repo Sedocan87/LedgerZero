@@ -1291,6 +1291,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Default'**
   String get defaultLabel;
+
+  /// No description provided for @scheduledTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Transactions'**
+  String get scheduledTransactions;
+
+  /// No description provided for @nextDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Date'**
+  String get nextDate;
+
+  /// No description provided for @endDate.
+  ///
+  /// In en, this message translates to:
+  /// **'End Date'**
+  String get endDate;
+
+  /// No description provided for @autoApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Approve'**
+  String get autoApprove;
+
+  /// No description provided for @createScheduledTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Scheduled Transaction'**
+  String get createScheduledTransaction;
+
+  /// No description provided for @editScheduledTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Scheduled Transaction'**
+  String get editScheduledTransaction;
+
+  /// No description provided for @schedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get schedule;
+
+  /// No description provided for @noScheduledTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'No Scheduled Transactions'**
+  String get noScheduledTransactions;
+
+  /// No description provided for @createScheduledTransactionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create scheduled transactions for recurring bills or income.'**
+  String get createScheduledTransactionDescription;
+
+  /// No description provided for @skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get skip;
 }
 
 class _AppLocalizationsDelegate

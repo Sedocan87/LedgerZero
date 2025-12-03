@@ -638,4 +638,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get defaultLabel => 'Default';
+
+  @override
+  String get scheduledTransactions => 'Scheduled Transactions';
+
+  @override
+  String get nextDate => 'Next Date';
+
+  @override
+  String get endDate => 'End Date';
+
+  @override
+  String get autoApprove => 'Auto Approve';
+
+  @override
+  String get createScheduledTransaction => 'Create Scheduled Transaction';
+
+  @override
+  String get editScheduledTransaction => 'Edit Scheduled Transaction';
+
+  @override
+  String get schedule => 'Schedule';
+
+  @override
+  String get noScheduledTransactions => 'No Scheduled Transactions';
+
+  @override
+  String get createScheduledTransactionDescription =>
+      'Create scheduled transactions for recurring bills or income.';
+
+  @override
+  String get skip => 'Skip';
 }
