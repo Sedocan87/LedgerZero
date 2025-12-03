@@ -341,5 +341,43 @@
   "schedule": "Schedule",
   "noScheduledTransactions": "No Scheduled Transactions",
   "createScheduledTransactionDescription": "Create scheduled transactions for recurring bills or income.",
-  "skip": "Skip"
+  "skip": "Skip",
+  "repeatEvery": "Repeat Every",
+  "unitDays": "{count, plural, =1{Day} other{Days}}",
+  "@unitDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unitWeeks": "{count, plural, =1{Week} other{Weeks}}",
+  "@unitWeeks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unitMonths": "{count, plural, =1{Month} other{Months}}",
+  "@unitMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unitYears": "{count, plural, =1{Year} other{Years}}",
+  "@unitYears": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "end": "End",
+  "never": "Never",
+  "onDate": "On Date",
+  "afterOccurrences": "After",
+  "occurrences": "Occurrences"
 }

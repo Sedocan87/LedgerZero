@@ -35,6 +35,12 @@ class ScheduledTransaction {
   /// The frequency of recurrence.
   final RecurrenceFrequency? frequency;
 
+  /// The interval of recurrence (e.g., every 2 weeks).
+  final int? interval;
+
+  /// The number of occurrences to run before stopping.
+  final int? occurrenceCount;
+
   /// The date of the next occurrence.
   final DateTime? nextDate;
 
@@ -55,6 +61,8 @@ class ScheduledTransaction {
     this.categoryId,
     this.amount,
     this.frequency,
+    this.interval,
+    this.occurrenceCount,
     this.nextDate,
     this.endDate,
     this.autoApprove = false,
@@ -69,6 +77,8 @@ class ScheduledTransaction {
     String? categoryId,
     double? amount,
     RecurrenceFrequency? frequency,
+    int? interval,
+    int? occurrenceCount,
     DateTime? nextDate,
     DateTime? endDate,
     bool? autoApprove,
@@ -81,6 +91,8 @@ class ScheduledTransaction {
       categoryId: categoryId ?? this.categoryId,
       amount: amount ?? this.amount,
       frequency: frequency ?? this.frequency,
+      interval: interval ?? this.interval,
+      occurrenceCount: occurrenceCount ?? this.occurrenceCount,
       nextDate: nextDate ?? this.nextDate,
       endDate: endDate ?? this.endDate,
       autoApprove: autoApprove ?? this.autoApprove,
@@ -99,6 +111,8 @@ class ScheduledTransaction {
       frequency: json['frequency'] != null
           ? RecurrenceFrequency.values.firstWhere((e) => e.name == json['frequency'])
           : null,
+      interval: json['interval'] as int?,
+      occurrenceCount: json['occurrence_count'] as int?,
       nextDate: json['next_date'] != null
           ? DateTime.parse(json['next_date'] as String)
           : null,
@@ -121,6 +135,8 @@ class ScheduledTransaction {
       'category_id': categoryId,
       'amount': amount,
       'frequency': frequency?.name,
+      'interval': interval,
+      'occurrence_count': occurrenceCount,
       'next_date': nextDate?.toIso8601String(),
       'end_date': endDate?.toIso8601String(),
       'auto_approve': autoApprove,
@@ -141,6 +157,8 @@ class ScheduledTransaction {
         other.categoryId == categoryId &&
         other.amount == amount &&
         other.frequency == frequency &&
+        other.interval == interval &&
+        other.occurrenceCount == occurrenceCount &&
         other.nextDate == nextDate &&
         other.endDate == endDate &&
         other.autoApprove == autoApprove &&
@@ -156,6 +174,8 @@ class ScheduledTransaction {
       categoryId,
       amount,
       frequency,
+      interval,
+      occurrenceCount,
       nextDate,
       endDate,
       autoApprove,
@@ -165,7 +185,7 @@ class ScheduledTransaction {
 
   @override
   String toString() {
-    return 'ScheduledTransaction(id: $id, accountId: $accountId, payeeId: $payeeId, categoryId: $categoryId, amount: $amount, frequency: $frequency, nextDate: $nextDate, endDate: $endDate, autoApprove: $autoApprove, createdAt: $createdAt)';
+    return 'ScheduledTransaction(id: $id, accountId: $accountId, payeeId: $payeeId, categoryId: $categoryId, amount: $amount, frequency: $frequency, interval: $interval, occurrenceCount: $occurrenceCount, nextDate: $nextDate, endDate: $endDate, autoApprove: $autoApprove, createdAt: $createdAt)';
   }
 
   /// Validates the [ScheduledTransaction] entity.
@@ -178,6 +198,12 @@ class ScheduledTransaction {
     }
     if (nextDate != null && endDate != null && endDate!.isBefore(nextDate!)) {
       errors.add('End date cannot be before next date');
+    }
+    if (interval != null && interval! < 1) {
+      errors.add('Interval must be at least 1');
+    }
+    if (occurrenceCount != null && occurrenceCount! < 1) {
+      errors.add('Occurrence count must be at least 1');
     }
     return errors;
   }

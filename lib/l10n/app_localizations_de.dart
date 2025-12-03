@@ -668,4 +668,66 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get skip => 'Überspringen';
+
+  @override
+  String get repeatEvery => 'Repeat Every';
+
+  @override
+  String unitDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Days',
+      one: 'Day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String unitWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Weeks',
+      one: 'Week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String unitMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Months',
+      one: 'Month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String unitYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Years',
+      one: 'Year',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get end => 'End';
+
+  @override
+  String get never => 'Never';
+
+  @override
+  String get onDate => 'On Date';
+
+  @override
+  String get afterOccurrences => 'After';
+
+  @override
+  String get occurrences => 'Occurrences';
 }

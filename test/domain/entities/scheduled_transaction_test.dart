@@ -12,6 +12,8 @@ void main() {
         categoryId: 'cat1',
         amount: 100.0,
         frequency: RecurrenceFrequency.monthly,
+        interval: 2,
+        occurrenceCount: 5,
         nextDate: now,
         endDate: now,
         autoApprove: true,
@@ -24,6 +26,8 @@ void main() {
       expect(scheduledTransaction.categoryId, 'cat1');
       expect(scheduledTransaction.amount, 100.0);
       expect(scheduledTransaction.frequency, RecurrenceFrequency.monthly);
+      expect(scheduledTransaction.interval, 2);
+      expect(scheduledTransaction.occurrenceCount, 5);
       expect(scheduledTransaction.nextDate, now);
       expect(scheduledTransaction.endDate, now);
       expect(scheduledTransaction.autoApprove, true);
@@ -41,6 +45,8 @@ void main() {
       expect(scheduledTransaction.categoryId, isNull);
       expect(scheduledTransaction.amount, isNull);
       expect(scheduledTransaction.frequency, isNull);
+      expect(scheduledTransaction.interval, isNull);
+      expect(scheduledTransaction.occurrenceCount, isNull);
       expect(scheduledTransaction.nextDate, isNull);
       expect(scheduledTransaction.endDate, isNull);
       expect(scheduledTransaction.autoApprove, false);
@@ -56,6 +62,8 @@ void main() {
         categoryId: 'cat1',
         amount: 100.0,
         frequency: RecurrenceFrequency.monthly,
+        interval: 2,
+        occurrenceCount: 5,
         nextDate: now,
         endDate: now,
         autoApprove: true,
@@ -69,6 +77,8 @@ void main() {
       expect(json['category_id'], 'cat1');
       expect(json['amount'], 100.0);
       expect(json['frequency'], 'monthly');
+      expect(json['interval'], 2);
+      expect(json['occurrence_count'], 5);
       expect(json['next_date'], now.toIso8601String());
       expect(json['end_date'], now.toIso8601String());
       expect(json['auto_approve'], true);
@@ -81,6 +91,8 @@ void main() {
       expect(fromJson.categoryId, scheduledTransaction.categoryId);
       expect(fromJson.amount, scheduledTransaction.amount);
       expect(fromJson.frequency, scheduledTransaction.frequency);
+      expect(fromJson.interval, scheduledTransaction.interval);
+      expect(fromJson.occurrenceCount, scheduledTransaction.occurrenceCount);
       expect(fromJson.nextDate, scheduledTransaction.nextDate);
       expect(fromJson.endDate, scheduledTransaction.endDate);
       expect(fromJson.autoApprove, scheduledTransaction.autoApprove);
@@ -99,6 +111,8 @@ void main() {
       expect(scheduledTransaction.categoryId, isNull);
       expect(scheduledTransaction.amount, isNull);
       expect(scheduledTransaction.frequency, isNull);
+      expect(scheduledTransaction.interval, isNull);
+      expect(scheduledTransaction.occurrenceCount, isNull);
       expect(scheduledTransaction.nextDate, isNull);
       expect(scheduledTransaction.endDate, isNull);
       expect(scheduledTransaction.autoApprove, false); // Default
@@ -114,6 +128,8 @@ void main() {
         categoryId: 'cat1',
         amount: 100.0,
         frequency: RecurrenceFrequency.monthly,
+        interval: 2,
+        occurrenceCount: 5,
         nextDate: now,
         endDate: now,
         autoApprove: true,
@@ -127,6 +143,8 @@ void main() {
         categoryId: 'cat1',
         amount: 100.0,
         frequency: RecurrenceFrequency.monthly,
+        interval: 2,
+        occurrenceCount: 5,
         nextDate: now,
         endDate: now,
         autoApprove: true,
