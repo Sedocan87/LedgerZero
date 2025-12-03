@@ -7,7 +7,7 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/services/encryption/security_manager.dart';
+import 'package:ledger_zero/services/security/auto_lock_service.dart';
 
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
@@ -33,15 +33,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      // Lock database on background
-      SecurityManager.setSessionKey(null);
+    final autoLockService = ref.read(autoLockServiceProvider);
 
-      // Only lock if we are currently authenticated to avoid loops or weird states
-      // (though setAuthenticated(false) is safe even if already false)
-      if (ref.read(authProvider).isAuthenticated) {
-        ref.read(authProvider.notifier).setAuthenticated(false);
-      }
+    if (state == AppLifecycleState.paused) {
+      autoLockService.onAppPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      autoLockService.onAppResumed();
     }
   }
 

@@ -20,6 +20,7 @@ import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
@@ -100,6 +101,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'recovery-key',
             name: 'recovery-key',
             builder: (context, state) => const RecoveryKeyScreen(),
+          ),
+          GoRoute(
+            path: 'change-password',
+            name: 'change-password',
+            builder: (context, state) => const ChangePasswordScreen(),
           ),
           GoRoute(
             path: 'payees',

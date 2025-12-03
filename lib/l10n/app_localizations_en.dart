@@ -743,4 +743,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get revealRecoveryKey => 'Reveal Recovery Key';
+
+  @override
+  String get autoLock => 'Auto-lock Timer';
+
+  @override
+  String get autoLockImmediate => 'Immediate';
+
+  @override
+  String autoLockMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Minutes',
+      one: '1 Minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get autoLockNever => 'Never';
+
+  @override
+  String get changePassword => 'Change Password';
+
+  @override
+  String get currentPassword => 'Current Password';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
+  String get confirmNewPassword => 'Confirm New Password';
+
+  @override
+  String get passwordChangedSuccess => 'Password changed successfully';
+
+  @override
+  String get incorrectPassword => 'Incorrect Password';
+
+  @override
+  String get passwordsDoNotMatch => 'Passwords do not match';
+
+  @override
+  String get passwordTooShort => 'Password must be at least 8 characters';
+
+  @override
+  String get biometrics => 'Biometric Authentication';
+
+  @override
+  String get useBiometricsDescription => 'Use Face ID / Fingerprint to unlock';
+
+  @override
+  String get biometricsSetupFailed => 'Biometric setup failed';
 }

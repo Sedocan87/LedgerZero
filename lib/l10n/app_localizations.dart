@@ -1435,6 +1435,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reveal Recovery Key'**
   String get revealRecoveryKey;
+
+  /// No description provided for @autoLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-lock Timer'**
+  String get autoLock;
+
+  /// No description provided for @autoLockImmediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Immediate'**
+  String get autoLockImmediate;
+
+  /// No description provided for @autoLockMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 Minute} other{{count} Minutes}}'**
+  String autoLockMinutes(int count);
+
+  /// No description provided for @autoLockNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get autoLockNever;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePassword;
+
+  /// No description provided for @currentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Password'**
+  String get currentPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New Password'**
+  String get newPassword;
+
+  /// No description provided for @confirmNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm New Password'**
+  String get confirmNewPassword;
+
+  /// No description provided for @passwordChangedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed successfully'**
+  String get passwordChangedSuccess;
+
+  /// No description provided for @incorrectPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect Password'**
+  String get incorrectPassword;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @passwordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get passwordTooShort;
+
+  /// No description provided for @biometrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric Authentication'**
+  String get biometrics;
+
+  /// No description provided for @useBiometricsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Face ID / Fingerprint to unlock'**
+  String get useBiometricsDescription;
+
+  /// No description provided for @biometricsSetupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric setup failed'**
+  String get biometricsSetupFailed;
 }
 
 class _AppLocalizationsDelegate
