@@ -55,6 +55,10 @@ class TransactionListItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          if (!transaction.approved) ...[
+            Icon(Icons.info_outline, size: 16, color: theme.colorScheme.tertiary),
+            const SizedBox(width: 4),
+          ],
           Text(
             // Task 203: Amount
             NumberFormat.simpleCurrency().format(transaction.amount),

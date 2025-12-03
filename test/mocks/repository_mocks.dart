@@ -5,6 +5,7 @@ import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
+import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 
 @GenerateMocks([
   AccountRepository,
@@ -13,5 +14,6 @@ import 'package:ledger_zero/domain/repositories/budget_template_repository.dart'
   PayeeRepository,
   TransactionRepository,
   BudgetTemplateRepository,
+  ScheduledTransactionRepository,
 ])
 void main() {}

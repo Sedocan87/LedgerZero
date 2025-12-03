@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/services/analytics_service.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
+import 'package:ledger_zero/domain/services/scheduled_transaction_service.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/services/notifications/notification_service.dart';
+import 'package:uuid/uuid.dart';
 
 final undoServiceProvider = Provider<UndoService>((ref) {
   return UndoService();
@@ -29,5 +32,18 @@ final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   return AnalyticsService(
     accountRepository: ref.watch(accountRepositoryProvider),
     transactionRepository: ref.watch(transactionRepositoryProvider),
+  );
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
+});
+
+final scheduledTransactionServiceProvider = Provider<ScheduledTransactionService>((ref) {
+  return ScheduledTransactionService(
+    ref.watch(scheduledTransactionRepositoryProvider),
+    ref.watch(transactionRepositoryProvider),
+    ref.watch(notificationServiceProvider),
+    const Uuid(),
   );
 });

@@ -4,6 +4,7 @@ import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
+import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 
 class ScheduledTransactionRepositoryImpl implements ScheduledTransactionRepository {
@@ -71,103 +72,40 @@ class ScheduledTransactionRepositoryImpl implements ScheduledTransactionReposito
         return;
       }
 
-      final nextDate = transaction.nextDate!;
-      final interval = transaction.interval ?? 1;
-      final frequency = transaction.frequency ?? RecurrenceFrequency.monthly;
-
-      DateTime newDate;
-      switch (frequency) {
-        case RecurrenceFrequency.daily:
-          newDate = nextDate.add(Duration(days: interval));
-          break;
-        case RecurrenceFrequency.weekly:
-          newDate = nextDate.add(Duration(days: interval * 7));
-          break;
-        case RecurrenceFrequency.monthly:
-          // Add months logic
-          if (nextDate.isUtc) {
-             newDate = DateTime.utc(
-               nextDate.year,
-               nextDate.month + interval,
-               nextDate.day,
-               nextDate.hour,
-               nextDate.minute,
-             );
-          } else {
-             newDate = DateTime(
-               nextDate.year,
-               nextDate.month + interval,
-               nextDate.day,
-               nextDate.hour,
-               nextDate.minute,
-             );
-          }
-
-          // Handle month overflow (e.g., Jan 31 + 1 month = Feb 31 -> Mar 3)
-          // Usually we want to clamp to the last day of the month.
-          final expectedMonth = (nextDate.month + interval - 1) % 12 + 1;
-          final expectedYear = nextDate.year + (nextDate.month + interval - 1) ~/ 12;
-
-          if (newDate.month != expectedMonth) {
-             // We overshot (e.g., Feb 31 -> Mar 3), so go back to last day of previous month
-             if (nextDate.isUtc) {
-                newDate = DateTime.utc(expectedYear, expectedMonth + 1, 0, nextDate.hour, nextDate.minute);
-             } else {
-                newDate = DateTime(expectedYear, expectedMonth + 1, 0, nextDate.hour, nextDate.minute);
-             }
-          }
-          break;
-        case RecurrenceFrequency.yearly:
-           if (nextDate.isUtc) {
-              newDate = DateTime.utc(
-                nextDate.year + interval,
-                nextDate.month,
-                nextDate.day,
-                nextDate.hour,
-                nextDate.minute,
-              );
-           } else {
-              newDate = DateTime(
-                nextDate.year + interval,
-                nextDate.month,
-                nextDate.day,
-                nextDate.hour,
-                nextDate.minute,
-              );
-           }
-           // Handle leap year (Feb 29 + 1 year -> Feb 29 non-leap = Mar 1).
-           if (nextDate.month == 2 && nextDate.day == 29 && newDate.month == 3) {
-             if (nextDate.isUtc) {
-               newDate = DateTime.utc(newDate.year, 2, 28, newDate.hour, newDate.minute);
-             } else {
-               newDate = DateTime(newDate.year, 2, 28, newDate.hour, newDate.minute);
-             }
-           }
-          break;
-      }
+      final newDate = transaction.calculateNextOccurrenceDate();
 
       int? newOccurrenceCount = transaction.occurrenceCount;
       if (newOccurrenceCount != null && newOccurrenceCount > 0) {
         newOccurrenceCount--;
       }
 
-      // Check end date
-      if (transaction.endDate != null && newDate.isAfter(transaction.endDate!)) {
-         // Stop recurrence?
-         // Maybe just update it, let the processing logic handle it, or maybe set nextDate to null?
-         // For now just update it.
+      ScheduledTransaction updated;
+      if (newDate == null) {
+        updated = ScheduledTransaction(
+          id: transaction.id,
+          accountId: transaction.accountId,
+          payeeId: transaction.payeeId,
+          categoryId: transaction.categoryId,
+          amount: transaction.amount,
+          frequency: transaction.frequency,
+          interval: transaction.interval,
+          occurrenceCount: newOccurrenceCount,
+          nextDate: null,
+          endDate: transaction.endDate,
+          autoApprove: transaction.autoApprove,
+          createdAt: transaction.createdAt,
+        );
+      } else {
+        updated = transaction.copyWith(
+          nextDate: newDate,
+          occurrenceCount: newOccurrenceCount,
+        );
       }
 
-      final updated = transaction.copyWith(
-        nextDate: newDate,
-        occurrenceCount: newOccurrenceCount,
-      );
-
       await updateScheduledTransaction(updated);
-
     } catch (e, stack) {
-       Logger.error('Failed to skip scheduled transaction $id', e, stack);
-       throw DatabaseException('Failed to skip scheduled transaction $id', e);
+      Logger.error('Failed to skip scheduled transaction $id', e, stack);
+      throw DatabaseException('Failed to skip scheduled transaction $id', e);
     }
   }
 

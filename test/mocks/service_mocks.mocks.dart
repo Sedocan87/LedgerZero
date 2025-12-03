@@ -8,6 +8,8 @@ import 'dart:async' as _i3;
 import 'package:ledger_zero/domain/entities/budget_template.dart' as _i5;
 import 'package:ledger_zero/domain/entities/category.dart' as _i4;
 import 'package:ledger_zero/domain/services/budgeting_service.dart' as _i2;
+import 'package:ledger_zero/services/notifications/notification_service.dart'
+    as _i6;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -295,4 +297,60 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
             ),
           )
           as _i3.Future<Map<String, double>>);
+}
+
+/// A class which mocks [NotificationService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockNotificationService extends _i1.Mock
+    implements _i6.NotificationService {
+  MockNotificationService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i3.Future<void> initialize() =>
+      (super.noSuchMethod(
+            Invocation.method(#initialize, []),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> requestPermissions() =>
+      (super.noSuchMethod(
+            Invocation.method(#requestPermissions, []),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> scheduleNotification({
+    required int? id,
+    required String? title,
+    required String? body,
+    required DateTime? scheduledDate,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#scheduleNotification, [], {
+              #id: id,
+              #title: title,
+              #body: body,
+              #scheduledDate: scheduledDate,
+            }),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> cancelNotification(int? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#cancelNotification, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
 }
