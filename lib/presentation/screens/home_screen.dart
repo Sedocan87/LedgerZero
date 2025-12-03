@@ -24,6 +24,13 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.home),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
+            tooltip: AppLocalizations.of(context)!.settings,
+          ),
+        ],
       ),
       body: SafeArea(
         child: hasAccountsAsync.when(
