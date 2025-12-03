@@ -14,8 +14,8 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 4', () {
-    expect(database.schemaVersion, 4);
+  test('schema version should be 10', () {
+    expect(database.schemaVersion, 10);
   });
 
   group('Database Tables Creation & Defaults', () {
@@ -50,7 +50,7 @@ void main() {
         categoryGroupId: Value('grp_1'),
       );
       await database.into(database.categories).insert(category);
-      final result = await database.select(database.categories).getSingle();
+      final result = await (database.select(database.categories)..where((tbl) => tbl.id.equals('cat_1'))).getSingle();
 
       expect(result.isHidden, false); // Default
       expect(result.goalType, isNull);
