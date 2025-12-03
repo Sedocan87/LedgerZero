@@ -670,6 +670,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get skip => 'Überspringen';
 
   @override
+  String get upcoming => 'Anstehend';
+
+  @override
   String get repeatEvery => 'Repeat Every';
 
   @override
