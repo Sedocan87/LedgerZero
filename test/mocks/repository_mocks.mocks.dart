@@ -445,6 +445,17 @@ class MockTransactionRepository extends _i1.Mock
           as _i3.Future<void>);
 
   @override
+  _i3.Future<void> batchCreateTransactions(
+    List<_i13.Transaction>? transactions,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#batchCreateTransactions, [transactions]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
   _i3.Future<void> updateTransaction(_i13.Transaction? transaction) =>
       (super.noSuchMethod(
             Invocation.method(#updateTransaction, [transaction]),
@@ -729,6 +740,18 @@ class MockScheduledTransactionRepository extends _i1.Mock
   _i3.Future<List<_i18.ScheduledTransaction>> getAllScheduledTransactions() =>
       (super.noSuchMethod(
             Invocation.method(#getAllScheduledTransactions, []),
+            returnValue: _i3.Future<List<_i18.ScheduledTransaction>>.value(
+              <_i18.ScheduledTransaction>[],
+            ),
+          )
+          as _i3.Future<List<_i18.ScheduledTransaction>>);
+
+  @override
+  _i3.Future<List<_i18.ScheduledTransaction>> getDueScheduledTransactions(
+    DateTime? date,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getDueScheduledTransactions, [date]),
             returnValue: _i3.Future<List<_i18.ScheduledTransaction>>.value(
               <_i18.ScheduledTransaction>[],
             ),

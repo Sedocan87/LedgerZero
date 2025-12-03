@@ -12,6 +12,9 @@ abstract class TransactionRepository {
   /// Creates a new transaction.
   Future<void> createTransaction(Transaction transaction);
 
+  /// Creates multiple transactions.
+  Future<void> batchCreateTransactions(List<Transaction> transactions);
+
   /// Updates an existing transaction.
   Future<void> updateTransaction(Transaction transaction);
 

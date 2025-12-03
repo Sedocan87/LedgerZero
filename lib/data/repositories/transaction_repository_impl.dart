@@ -68,6 +68,19 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<void> batchCreateTransactions(List<Transaction> transactions) async {
+    try {
+      Logger.debug('Batch creating ${transactions.length} transactions');
+      await _transactionsDao.batchCreateTransactions(
+          transactions.map(_mapToCompanion).toList());
+      Logger.info('Batch creation successful');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to batch create transactions', e, stackTrace);
+      throw DatabaseException('Failed to batch create transactions', e);
+    }
+  }
+
+  @override
   Future<void> updateTransaction(Transaction transaction) async {
     try {
       Logger.debug('Updating transaction: ${transaction.id}');

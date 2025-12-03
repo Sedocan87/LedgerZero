@@ -893,6 +893,17 @@ class MockTransactionsDao extends _i1.Mock implements _i8.TransactionsDao {
           as _i5.Future<int>);
 
   @override
+  _i5.Future<void> batchCreateTransactions(
+    List<_i2.TransactionsCompanion>? list,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#batchCreateTransactions, [list]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Future<bool> updateTransaction(_i2.TransactionsCompanion? transaction) =>
       (super.noSuchMethod(
             Invocation.method(#updateTransaction, [transaction]),
@@ -1647,6 +1658,18 @@ class MockScheduledTransactionsDao extends _i1.Mock
             returnValue: _i5.Future<_i2.ScheduledTransaction?>.value(),
           )
           as _i5.Future<_i2.ScheduledTransaction?>);
+
+  @override
+  _i5.Future<List<_i2.ScheduledTransaction>> getDueScheduledTransactions(
+    DateTime? date,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getDueScheduledTransactions, [date]),
+            returnValue: _i5.Future<List<_i2.ScheduledTransaction>>.value(
+              <_i2.ScheduledTransaction>[],
+            ),
+          )
+          as _i5.Future<List<_i2.ScheduledTransaction>>);
 
   @override
   _i5.Future<int> insertScheduledTransaction(

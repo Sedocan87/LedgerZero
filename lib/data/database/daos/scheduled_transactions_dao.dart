@@ -19,6 +19,12 @@ class ScheduledTransactionsDao extends DatabaseAccessor<AppDatabase>
       (select(scheduledTransactions)..where((t) => t.id.equals(id)))
           .getSingleOrNull();
 
+  Future<List<ScheduledTransaction>> getDueScheduledTransactions(
+          DateTime date) =>
+      (select(scheduledTransactions)
+            ..where((t) => t.nextDate.isSmallerOrEqualValue(date)))
+          .get();
+
   Future<int> insertScheduledTransaction(ScheduledTransactionsCompanion entry) =>
       into(scheduledTransactions).insert(entry);
 

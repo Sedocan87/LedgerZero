@@ -24,6 +24,18 @@ class ScheduledTransactionRepositoryImpl implements ScheduledTransactionReposito
   }
 
   @override
+  Future<List<ScheduledTransaction>> getDueScheduledTransactions(
+      DateTime date) async {
+    try {
+      final rows = await _dao.getDueScheduledTransactions(date);
+      return rows.map(_mapToDomain).toList();
+    } catch (e, stack) {
+      Logger.error('Failed to get due scheduled transactions', e, stack);
+      throw DatabaseException('Failed to get due scheduled transactions', e);
+    }
+  }
+
+  @override
   Future<ScheduledTransaction?> getScheduledTransactionById(String id) async {
     try {
       final row = await _dao.getScheduledTransactionById(id);

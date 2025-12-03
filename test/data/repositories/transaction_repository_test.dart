@@ -126,6 +126,27 @@ void main() {
     });
   });
 
+  group('batchCreateTransactions', () {
+    test('should call batchCreateTransactions on dao', () async {
+      // arrange
+      when(mockTransactionsDao.batchCreateTransactions(any))
+          .thenAnswer((_) async {});
+      // act
+      await repository.batchCreateTransactions([tDomainTransaction]);
+      // assert
+      verify(mockTransactionsDao.batchCreateTransactions(any)).called(1);
+    });
+
+    test('should throw DatabaseException when dao fails', () async {
+      // arrange
+      when(mockTransactionsDao.batchCreateTransactions(any))
+          .thenThrow(Exception('DB Error'));
+      // act & assert
+      expect(() => repository.batchCreateTransactions([tDomainTransaction]),
+          throwsA(isA<DatabaseException>()));
+    });
+  });
+
   group('updateTransaction', () {
     test('should call updateTransaction on dao', () async {
       // arrange

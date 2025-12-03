@@ -5,6 +5,9 @@ abstract class ScheduledTransactionRepository {
   /// Retrieves all scheduled transactions.
   Future<List<ScheduledTransaction>> getAllScheduledTransactions();
 
+  /// Retrieves all scheduled transactions due on or before the given date.
+  Future<List<ScheduledTransaction>> getDueScheduledTransactions(DateTime date);
+
   /// Retrieves a scheduled transaction by its unique identifier.
   Future<ScheduledTransaction?> getScheduledTransactionById(String id);
 
