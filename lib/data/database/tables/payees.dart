@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/tables/accounts.dart';
 import 'package:ledger_zero/data/database/tables/categories.dart';
 
+@TableIndex(name: 'idx_payees_name', columns: {#name})
+@TableIndex(name: 'idx_payees_is_favorite', columns: {#isFavorite})
 class Payees extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();

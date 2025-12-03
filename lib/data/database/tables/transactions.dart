@@ -6,6 +6,7 @@ import 'package:ledger_zero/data/database/tables/payees.dart';
 @TableIndex(name: 'idx_transactions_account', columns: {#accountId})
 @TableIndex(name: 'idx_transactions_date', columns: {#date})
 @TableIndex(name: 'idx_transactions_category', columns: {#categoryId})
+@TableIndex(name: 'idx_transactions_payee', columns: {#payeeId})
 class Transactions extends Table {
   TextColumn get id => text()();
 

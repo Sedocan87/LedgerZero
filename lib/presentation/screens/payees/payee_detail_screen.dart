@@ -291,11 +291,14 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                 ),
             ],
           ),
-          body: Column(
-            children: [
-               // Stats & Settings
-               transactionsAsync.when(
-                 data: (transactions) {
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: Column(
+                children: [
+                   // Stats & Settings
+                   transactionsAsync.when(
+                     data: (transactions) {
                     final count = transactions.length;
                     final totalSpent = transactions.fold<double>(0.0, (sum, t) => sum + (t.amount < 0 ? t.amount.abs() : 0));
                     final lastUsed = transactions.isNotEmpty ? transactions.first.date : null;
@@ -463,11 +466,13 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, s) => ErrorView(title: l10n.error, message: e.toString()),
-                ),
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, s) => ErrorView(title: l10n.error, message: e.toString()),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
