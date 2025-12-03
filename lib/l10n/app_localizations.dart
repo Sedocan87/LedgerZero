@@ -1063,6 +1063,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export failed: {error}'**
   String exportFailed(String error);
+
+  /// No description provided for @budgetVsActual.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget vs Actual'**
+  String get budgetVsActual;
+
+  /// No description provided for @filterCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter Categories'**
+  String get filterCategories;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @apply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get apply;
+
+  /// No description provided for @noNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'No notes for this period.'**
+  String get noNotes;
+
+  /// No description provided for @addNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Note'**
+  String get addNote;
+
+  /// No description provided for @editNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Note'**
+  String get editNote;
+
+  /// No description provided for @month.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get month;
+
+  /// No description provided for @note.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get note;
+
+  /// No description provided for @enterNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a note'**
+  String get enterNote;
+
+  /// No description provided for @deleteNoteConfirmationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Note?'**
+  String get deleteNoteConfirmationTitle;
+
+  /// No description provided for @deleteNoteConfirmationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone.'**
+  String get deleteNoteConfirmationMessage;
+
+  /// No description provided for @noteDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Note deleted'**
+  String get noteDeleted;
+
+  /// No description provided for @noteSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Note saved'**
+  String get noteSaved;
+
+  /// No description provided for @settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settings;
+
+  /// No description provided for @payees.
+  ///
+  /// In en, this message translates to:
+  /// **'Payees'**
+  String get payees;
+
+  /// No description provided for @payeeName.
+  ///
+  /// In en, this message translates to:
+  /// **'Payee Name'**
+  String get payeeName;
+
+  /// No description provided for @payeeDefaultCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Category'**
+  String get payeeDefaultCategory;
+
+  /// No description provided for @editPayee.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Payee'**
+  String get editPayee;
+
+  /// No description provided for @mergePayee.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge Payee'**
+  String get mergePayee;
+
+  /// No description provided for @mergePayeeInto.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge into {name}'**
+  String mergePayeeInto(String name);
+
+  /// No description provided for @deletePayeeConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Payee?'**
+  String get deletePayeeConfirmation;
+
+  /// No description provided for @deletePayeeWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {name}? Transactions will be preserved but the payee field will be cleared.'**
+  String deletePayeeWarning(String name);
+
+  /// No description provided for @mergeWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'All transactions from this payee will be moved to {target}. This action cannot be undone.'**
+  String mergeWarning(String target);
+
+  /// No description provided for @noPayees.
+  ///
+  /// In en, this message translates to:
+  /// **'No Payees'**
+  String get noPayees;
+
+  /// No description provided for @searchPayees.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Payees'**
+  String get searchPayees;
+
+  /// No description provided for @rename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get rename;
 }
 
 class _AppLocalizationsDelegate

@@ -286,5 +286,39 @@
   "deleteNoteConfirmationTitle": "Delete Note?",
   "deleteNoteConfirmationMessage": "This action cannot be undone.",
   "noteDeleted": "Note deleted",
-  "noteSaved": "Note saved"
+  "noteSaved": "Note saved",
+  "settings": "Settings",
+  "payees": "Payees",
+  "payeeName": "Payee Name",
+  "payeeDefaultCategory": "Default Category",
+  "editPayee": "Edit Payee",
+  "mergePayee": "Merge Payee",
+  "mergePayeeInto": "Merge into {name}",
+  "@mergePayeeInto": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePayeeConfirmation": "Delete Payee?",
+  "deletePayeeWarning": "Are you sure you want to delete {name}? Transactions will be preserved but the payee field will be cleared.",
+  "@deletePayeeWarning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mergeWarning": "All transactions from this payee will be moved to {target}. This action cannot be undone.",
+  "@mergeWarning": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "noPayees": "No Payees",
+  "searchPayees": "Search Payees",
+  "rename": "Rename"
 }

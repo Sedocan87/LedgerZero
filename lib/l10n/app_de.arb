@@ -173,5 +173,18 @@
   "deleteNoteConfirmationTitle": "Notiz löschen?",
   "deleteNoteConfirmationMessage": "Dies kann nicht rückgängig gemacht werden.",
   "noteDeleted": "Notiz gelöscht",
-  "noteSaved": "Notiz gespeichert"
+  "noteSaved": "Notiz gespeichert",
+  "settings": "Einstellungen",
+  "payees": "Empfänger",
+  "payeeName": "Name",
+  "payeeDefaultCategory": "Standardkategorie",
+  "editPayee": "Empfänger bearbeiten",
+  "mergePayee": "Zusammenführen",
+  "mergePayeeInto": "Zusammenführen mit {name}",
+  "deletePayeeConfirmation": "Löschen?",
+  "deletePayeeWarning": "{name} löschen? Transaktionen bleiben erhalten, Empfänger wird entfernt.",
+  "mergeWarning": "Alle Transaktionen werden zu {target} verschoben. Nicht rückgängig machbar.",
+  "noPayees": "Keine Empfänger",
+  "searchPayees": "Empfänger suchen",
+  "rename": "Umbenennen"
 }

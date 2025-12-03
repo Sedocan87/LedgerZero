@@ -447,49 +447,49 @@ class AppLocalizationsDe extends AppLocalizations {
   String get netWorth => 'Nettovermögen';
 
   @override
-  String get spendingTrends => 'Spending Trends';
+  String get spendingTrends => 'Ausgabentrends';
 
   @override
-  String get topPayees => 'Top Payees';
+  String get topPayees => 'Top Empfänger';
 
   @override
-  String get categoryBreakdown => 'Category Breakdown';
+  String get categoryBreakdown => 'Kategorie-Aufschlüsselung';
 
   @override
-  String get dateRange => 'Date Range';
+  String get dateRange => 'Datumsbereich';
 
   @override
-  String get thisMonth => 'This Month';
+  String get thisMonth => 'Dieser Monat';
 
   @override
-  String get lastMonth => 'Last Month';
+  String get lastMonth => 'Letzter Monat';
 
   @override
-  String get last3Months => 'Last 3 Months';
+  String get last3Months => 'Letzte 3 Monate';
 
   @override
-  String get last6Months => 'Last 6 Months';
+  String get last6Months => 'Letzte 6 Monate';
 
   @override
-  String get thisYear => 'This Year';
+  String get thisYear => 'Dieses Jahr';
 
   @override
-  String get lastYear => 'Last Year';
+  String get lastYear => 'Letztes Jahr';
 
   @override
-  String get allTime => 'All Time';
+  String get allTime => 'Gesamte Zeit';
 
   @override
-  String get custom => 'Custom';
+  String get custom => 'Benutzerdefiniert';
 
   @override
-  String get series => 'Series';
+  String get series => 'Serie';
 
   @override
-  String get exportReport => 'Export Report';
+  String get exportReport => 'Bericht exportieren';
 
   @override
-  String get selectReportToExport => 'Select Report';
+  String get selectReportToExport => 'Bericht wählen';
 
   @override
   String get exportFormat => 'Format';
@@ -501,19 +501,107 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pdf => 'PDF';
 
   @override
-  String get image => 'Image';
+  String get image => 'Bild';
 
   @override
-  String get share => 'Share';
+  String get share => 'Teilen';
 
   @override
-  String get exporting => 'Exporting...';
+  String get exporting => 'Exportieren...';
 
   @override
-  String get exportSuccess => 'Report exported successfully';
+  String get exportSuccess => 'Export erfolgreich';
 
   @override
   String exportFailed(String error) {
-    return 'Export failed: $error';
+    return 'Export fehlgeschlagen: $error';
   }
+
+  @override
+  String get budgetVsActual => 'Budget vs Ist';
+
+  @override
+  String get filterCategories => 'Kategorien filtern';
+
+  @override
+  String get clear => 'Leeren';
+
+  @override
+  String get apply => 'Anwenden';
+
+  @override
+  String get noNotes => 'Keine Notizen für diesen Zeitraum.';
+
+  @override
+  String get addNote => 'Notiz hinzufügen';
+
+  @override
+  String get editNote => 'Notiz bearbeiten';
+
+  @override
+  String get month => 'Monat';
+
+  @override
+  String get note => 'Notiz';
+
+  @override
+  String get enterNote => 'Bitte Notiz eingeben';
+
+  @override
+  String get deleteNoteConfirmationTitle => 'Notiz löschen?';
+
+  @override
+  String get deleteNoteConfirmationMessage =>
+      'Dies kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get noteDeleted => 'Notiz gelöscht';
+
+  @override
+  String get noteSaved => 'Notiz gespeichert';
+
+  @override
+  String get settings => 'Einstellungen';
+
+  @override
+  String get payees => 'Empfänger';
+
+  @override
+  String get payeeName => 'Name';
+
+  @override
+  String get payeeDefaultCategory => 'Standardkategorie';
+
+  @override
+  String get editPayee => 'Empfänger bearbeiten';
+
+  @override
+  String get mergePayee => 'Zusammenführen';
+
+  @override
+  String mergePayeeInto(String name) {
+    return 'Zusammenführen mit $name';
+  }
+
+  @override
+  String get deletePayeeConfirmation => 'Löschen?';
+
+  @override
+  String deletePayeeWarning(String name) {
+    return '$name löschen? Transaktionen bleiben erhalten, Empfänger wird entfernt.';
+  }
+
+  @override
+  String mergeWarning(String target) {
+    return 'Alle Transaktionen werden zu $target verschoben. Nicht rückgängig machbar.';
+  }
+
+  @override
+  String get noPayees => 'Keine Empfänger';
+
+  @override
+  String get searchPayees => 'Empfänger suchen';
+
+  @override
+  String get rename => 'Umbenennen';
 }

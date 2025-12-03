@@ -518,4 +518,91 @@ class AppLocalizationsEn extends AppLocalizations {
   String exportFailed(String error) {
     return 'Export failed: $error';
   }
+
+  @override
+  String get budgetVsActual => 'Budget vs Actual';
+
+  @override
+  String get filterCategories => 'Filter Categories';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get noNotes => 'No notes for this period.';
+
+  @override
+  String get addNote => 'Add Note';
+
+  @override
+  String get editNote => 'Edit Note';
+
+  @override
+  String get month => 'Month';
+
+  @override
+  String get note => 'Note';
+
+  @override
+  String get enterNote => 'Please enter a note';
+
+  @override
+  String get deleteNoteConfirmationTitle => 'Delete Note?';
+
+  @override
+  String get deleteNoteConfirmationMessage => 'This action cannot be undone.';
+
+  @override
+  String get noteDeleted => 'Note deleted';
+
+  @override
+  String get noteSaved => 'Note saved';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get payees => 'Payees';
+
+  @override
+  String get payeeName => 'Payee Name';
+
+  @override
+  String get payeeDefaultCategory => 'Default Category';
+
+  @override
+  String get editPayee => 'Edit Payee';
+
+  @override
+  String get mergePayee => 'Merge Payee';
+
+  @override
+  String mergePayeeInto(String name) {
+    return 'Merge into $name';
+  }
+
+  @override
+  String get deletePayeeConfirmation => 'Delete Payee?';
+
+  @override
+  String deletePayeeWarning(String name) {
+    return 'Are you sure you want to delete $name? Transactions will be preserved but the payee field will be cleared.';
+  }
+
+  @override
+  String mergeWarning(String target) {
+    return 'All transactions from this payee will be moved to $target. This action cannot be undone.';
+  }
+
+  @override
+  String get noPayees => 'No Payees';
+
+  @override
+  String get searchPayees => 'Search Payees';
+
+  @override
+  String get rename => 'Rename';
 }

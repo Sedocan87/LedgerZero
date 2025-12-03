@@ -13,7 +13,10 @@ import 'package:ledger_zero/presentation/screens/categories/reorder_categories_s
 import 'package:ledger_zero/presentation/screens/categories/reorder_groups_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
+import 'package:ledger_zero/presentation/screens/payees/payee_detail_screen.dart';
+import 'package:ledger_zero/presentation/screens/payees/payees_screen.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
@@ -75,6 +78,29 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id'];
           return AddEditTransactionScreen(transactionId: id);
         },
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'payees',
+            name: 'payees',
+            builder: (context, state) => const PayeesScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                name: 'payee-detail',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return PayeeDetailScreen(payeeId: id);
+                },
+              ),
+            ],
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
