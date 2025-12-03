@@ -113,6 +113,8 @@ ScheduledTransaction createTestScheduledTransaction({
   String? categoryId,
   double? amount,
   RecurrenceFrequency? frequency,
+  int? interval,
+  int? occurrenceCount,
   DateTime? nextDate,
   DateTime? endDate,
   bool autoApprove = false,

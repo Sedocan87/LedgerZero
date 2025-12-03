@@ -1351,6 +1351,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip'**
   String get skip;
+
+  /// No description provided for @repeatEvery.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat Every'**
+  String get repeatEvery;
+
+  /// No description provided for @unitDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Day} other{Days}}'**
+  String unitDays(int count);
+
+  /// No description provided for @unitWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Week} other{Weeks}}'**
+  String unitWeeks(int count);
+
+  /// No description provided for @unitMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Month} other{Months}}'**
+  String unitMonths(int count);
+
+  /// No description provided for @unitYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Year} other{Years}}'**
+  String unitYears(int count);
+
+  /// No description provided for @end.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get end;
+
+  /// No description provided for @never.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get never;
+
+  /// No description provided for @onDate.
+  ///
+  /// In en, this message translates to:
+  /// **'On Date'**
+  String get onDate;
+
+  /// No description provided for @afterOccurrences.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get afterOccurrences;
+
+  /// No description provided for @occurrences.
+  ///
+  /// In en, this message translates to:
+  /// **'Occurrences'**
+  String get occurrences;
 }
 
 class _AppLocalizationsDelegate

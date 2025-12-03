@@ -7,6 +7,7 @@ import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
+import 'package:ledger_zero/presentation/widgets/recurrence/recurrence_selector.dart';
 import 'package:uuid/uuid.dart';
 
 class AddEditScheduledTransactionScreen extends ConsumerStatefulWidget {
@@ -27,8 +28,10 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
   String? _categoryId;
   double _amount = 0.0;
   RecurrenceFrequency _frequency = RecurrenceFrequency.monthly;
+  int _interval = 1;
   DateTime _nextDate = DateTime.now();
   DateTime? _endDate;
+  int? _occurrenceCount;
   bool _autoApprove = false;
   DateTime? _createdAt;
 
@@ -58,8 +61,10 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
           _categoryId = transaction.categoryId;
           _amount = transaction.amount ?? 0.0;
           _frequency = transaction.frequency ?? RecurrenceFrequency.monthly;
+          _interval = transaction.interval ?? 1;
           _nextDate = transaction.nextDate ?? DateTime.now();
           _endDate = transaction.endDate;
+          _occurrenceCount = transaction.occurrenceCount;
           _autoApprove = transaction.autoApprove;
           _createdAt = transaction.createdAt;
         });
@@ -86,6 +91,8 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
         categoryId: _categoryId,
         amount: _amount,
         frequency: _frequency,
+        interval: _interval,
+        occurrenceCount: _occurrenceCount,
         nextDate: _nextDate,
         endDate: _endDate,
         autoApprove: _autoApprove,
@@ -187,22 +194,17 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
              ),
              const SizedBox(height: 16),
 
-             // Frequency
-             DropdownButtonFormField<RecurrenceFrequency>(
-               key: ValueKey(_frequency),
-               initialValue: _frequency,
-               decoration: InputDecoration(labelText: l10n.frequency),
-               items: RecurrenceFrequency.values.map((e) {
-                 String label = '';
-                 switch(e) {
-                   case RecurrenceFrequency.daily: label = l10n.daily; break;
-                   case RecurrenceFrequency.weekly: label = l10n.weekly; break;
-                   case RecurrenceFrequency.monthly: label = l10n.monthly; break;
-                   case RecurrenceFrequency.yearly: label = l10n.yearly; break;
-                 }
-                 return DropdownMenuItem(value: e, child: Text(label));
-               }).toList(),
-               onChanged: (value) => setState(() => _frequency = value!),
+             // Frequency & End Date
+             RecurrenceSelector(
+               frequency: _frequency,
+               onFrequencyChanged: (value) => setState(() => _frequency = value),
+               interval: _interval,
+               onIntervalChanged: (value) => setState(() => _interval = value),
+               endDate: _endDate,
+               onEndDateChanged: (value) => setState(() => _endDate = value),
+               occurrenceCount: _occurrenceCount,
+               onOccurrenceCountChanged: (value) => setState(() => _occurrenceCount = value),
+               nextDate: _nextDate,
              ),
              const SizedBox(height: 16),
 
@@ -222,30 +224,6 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
                    setState(() => _nextDate = date);
                  }
                },
-             ),
-
-             // End Date
-             ListTile(
-               title: Text(l10n.endDate),
-               subtitle: Text(_endDate == null ? l10n.none : DateFormat.yMMMd().format(_endDate!)),
-               trailing: IconButton(
-                 icon: Icon(_endDate == null ? AppIcons.add : AppIcons.close),
-                 onPressed: () async {
-                   if (_endDate == null) {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: _nextDate.add(const Duration(days: 30)),
-                        firstDate: _nextDate,
-                        lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
-                      );
-                      if (date != null) {
-                        setState(() => _endDate = date);
-                      }
-                   } else {
-                     setState(() => _endDate = null);
-                   }
-                 },
-               ),
              ),
 
              // Auto Approve

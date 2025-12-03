@@ -395,6 +395,14 @@ class MockPayeeRepository extends _i1.Mock implements _i10.PayeeRepository {
             returnValue: _i3.Stream<List<_i11.Payee>>.empty(),
           )
           as _i3.Stream<List<_i11.Payee>>);
+
+  @override
+  _i3.Stream<List<_i11.Payee>> watchSuggestedPayees() =>
+      (super.noSuchMethod(
+            Invocation.method(#watchSuggestedPayees, []),
+            returnValue: _i3.Stream<List<_i11.Payee>>.empty(),
+          )
+          as _i3.Stream<List<_i11.Payee>>);
 }
 
 /// A class which mocks [TransactionRepository].

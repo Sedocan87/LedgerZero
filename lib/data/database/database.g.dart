@@ -4424,6 +4424,28 @@ class $ScheduledTransactionsTable extends ScheduledTransactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _intervalMeta = const VerificationMeta(
+    'interval',
+  );
+  @override
+  late final GeneratedColumn<int> interval = GeneratedColumn<int>(
+    'interval',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _occurrenceCountMeta = const VerificationMeta(
+    'occurrenceCount',
+  );
+  @override
+  late final GeneratedColumn<int> occurrenceCount = GeneratedColumn<int>(
+    'occurrence_count',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _nextDateMeta = const VerificationMeta(
     'nextDate',
   );
@@ -4480,6 +4502,8 @@ class $ScheduledTransactionsTable extends ScheduledTransactions
     categoryId,
     amount,
     frequency,
+    interval,
+    occurrenceCount,
     nextDate,
     endDate,
     autoApprove,
@@ -4530,6 +4554,21 @@ class $ScheduledTransactionsTable extends ScheduledTransactions
       context.handle(
         _frequencyMeta,
         frequency.isAcceptableOrUnknown(data['frequency']!, _frequencyMeta),
+      );
+    }
+    if (data.containsKey('interval')) {
+      context.handle(
+        _intervalMeta,
+        interval.isAcceptableOrUnknown(data['interval']!, _intervalMeta),
+      );
+    }
+    if (data.containsKey('occurrence_count')) {
+      context.handle(
+        _occurrenceCountMeta,
+        occurrenceCount.isAcceptableOrUnknown(
+          data['occurrence_count']!,
+          _occurrenceCountMeta,
+        ),
       );
     }
     if (data.containsKey('next_date')) {
@@ -4592,6 +4631,14 @@ class $ScheduledTransactionsTable extends ScheduledTransactions
         DriftSqlType.string,
         data['${effectivePrefix}frequency'],
       ),
+      interval: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}interval'],
+      ),
+      occurrenceCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}occurrence_count'],
+      ),
       nextDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}next_date'],
@@ -4625,6 +4672,8 @@ class ScheduledTransaction extends DataClass
   final String? categoryId;
   final double? amount;
   final String? frequency;
+  final int? interval;
+  final int? occurrenceCount;
   final DateTime? nextDate;
   final DateTime? endDate;
   final bool autoApprove;
@@ -4636,6 +4685,8 @@ class ScheduledTransaction extends DataClass
     this.categoryId,
     this.amount,
     this.frequency,
+    this.interval,
+    this.occurrenceCount,
     this.nextDate,
     this.endDate,
     required this.autoApprove,
@@ -4659,6 +4710,12 @@ class ScheduledTransaction extends DataClass
     }
     if (!nullToAbsent || frequency != null) {
       map['frequency'] = Variable<String>(frequency);
+    }
+    if (!nullToAbsent || interval != null) {
+      map['interval'] = Variable<int>(interval);
+    }
+    if (!nullToAbsent || occurrenceCount != null) {
+      map['occurrence_count'] = Variable<int>(occurrenceCount);
     }
     if (!nullToAbsent || nextDate != null) {
       map['next_date'] = Variable<DateTime>(nextDate);
@@ -4691,6 +4748,12 @@ class ScheduledTransaction extends DataClass
       frequency: frequency == null && nullToAbsent
           ? const Value.absent()
           : Value(frequency),
+      interval: interval == null && nullToAbsent
+          ? const Value.absent()
+          : Value(interval),
+      occurrenceCount: occurrenceCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(occurrenceCount),
       nextDate: nextDate == null && nullToAbsent
           ? const Value.absent()
           : Value(nextDate),
@@ -4716,6 +4779,8 @@ class ScheduledTransaction extends DataClass
       categoryId: serializer.fromJson<String?>(json['categoryId']),
       amount: serializer.fromJson<double?>(json['amount']),
       frequency: serializer.fromJson<String?>(json['frequency']),
+      interval: serializer.fromJson<int?>(json['interval']),
+      occurrenceCount: serializer.fromJson<int?>(json['occurrenceCount']),
       nextDate: serializer.fromJson<DateTime?>(json['nextDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
       autoApprove: serializer.fromJson<bool>(json['autoApprove']),
@@ -4732,6 +4797,8 @@ class ScheduledTransaction extends DataClass
       'categoryId': serializer.toJson<String?>(categoryId),
       'amount': serializer.toJson<double?>(amount),
       'frequency': serializer.toJson<String?>(frequency),
+      'interval': serializer.toJson<int?>(interval),
+      'occurrenceCount': serializer.toJson<int?>(occurrenceCount),
       'nextDate': serializer.toJson<DateTime?>(nextDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
       'autoApprove': serializer.toJson<bool>(autoApprove),
@@ -4746,6 +4813,8 @@ class ScheduledTransaction extends DataClass
     Value<String?> categoryId = const Value.absent(),
     Value<double?> amount = const Value.absent(),
     Value<String?> frequency = const Value.absent(),
+    Value<int?> interval = const Value.absent(),
+    Value<int?> occurrenceCount = const Value.absent(),
     Value<DateTime?> nextDate = const Value.absent(),
     Value<DateTime?> endDate = const Value.absent(),
     bool? autoApprove,
@@ -4757,6 +4826,10 @@ class ScheduledTransaction extends DataClass
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
     amount: amount.present ? amount.value : this.amount,
     frequency: frequency.present ? frequency.value : this.frequency,
+    interval: interval.present ? interval.value : this.interval,
+    occurrenceCount: occurrenceCount.present
+        ? occurrenceCount.value
+        : this.occurrenceCount,
     nextDate: nextDate.present ? nextDate.value : this.nextDate,
     endDate: endDate.present ? endDate.value : this.endDate,
     autoApprove: autoApprove ?? this.autoApprove,
@@ -4772,6 +4845,10 @@ class ScheduledTransaction extends DataClass
           : this.categoryId,
       amount: data.amount.present ? data.amount.value : this.amount,
       frequency: data.frequency.present ? data.frequency.value : this.frequency,
+      interval: data.interval.present ? data.interval.value : this.interval,
+      occurrenceCount: data.occurrenceCount.present
+          ? data.occurrenceCount.value
+          : this.occurrenceCount,
       nextDate: data.nextDate.present ? data.nextDate.value : this.nextDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
       autoApprove: data.autoApprove.present
@@ -4790,6 +4867,8 @@ class ScheduledTransaction extends DataClass
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
           ..write('frequency: $frequency, ')
+          ..write('interval: $interval, ')
+          ..write('occurrenceCount: $occurrenceCount, ')
           ..write('nextDate: $nextDate, ')
           ..write('endDate: $endDate, ')
           ..write('autoApprove: $autoApprove, ')
@@ -4806,6 +4885,8 @@ class ScheduledTransaction extends DataClass
     categoryId,
     amount,
     frequency,
+    interval,
+    occurrenceCount,
     nextDate,
     endDate,
     autoApprove,
@@ -4821,6 +4902,8 @@ class ScheduledTransaction extends DataClass
           other.categoryId == this.categoryId &&
           other.amount == this.amount &&
           other.frequency == this.frequency &&
+          other.interval == this.interval &&
+          other.occurrenceCount == this.occurrenceCount &&
           other.nextDate == this.nextDate &&
           other.endDate == this.endDate &&
           other.autoApprove == this.autoApprove &&
@@ -4835,6 +4918,8 @@ class ScheduledTransactionsCompanion
   final Value<String?> categoryId;
   final Value<double?> amount;
   final Value<String?> frequency;
+  final Value<int?> interval;
+  final Value<int?> occurrenceCount;
   final Value<DateTime?> nextDate;
   final Value<DateTime?> endDate;
   final Value<bool> autoApprove;
@@ -4847,6 +4932,8 @@ class ScheduledTransactionsCompanion
     this.categoryId = const Value.absent(),
     this.amount = const Value.absent(),
     this.frequency = const Value.absent(),
+    this.interval = const Value.absent(),
+    this.occurrenceCount = const Value.absent(),
     this.nextDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.autoApprove = const Value.absent(),
@@ -4860,6 +4947,8 @@ class ScheduledTransactionsCompanion
     this.categoryId = const Value.absent(),
     this.amount = const Value.absent(),
     this.frequency = const Value.absent(),
+    this.interval = const Value.absent(),
+    this.occurrenceCount = const Value.absent(),
     this.nextDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.autoApprove = const Value.absent(),
@@ -4873,6 +4962,8 @@ class ScheduledTransactionsCompanion
     Expression<String>? categoryId,
     Expression<double>? amount,
     Expression<String>? frequency,
+    Expression<int>? interval,
+    Expression<int>? occurrenceCount,
     Expression<DateTime>? nextDate,
     Expression<DateTime>? endDate,
     Expression<bool>? autoApprove,
@@ -4886,6 +4977,8 @@ class ScheduledTransactionsCompanion
       if (categoryId != null) 'category_id': categoryId,
       if (amount != null) 'amount': amount,
       if (frequency != null) 'frequency': frequency,
+      if (interval != null) 'interval': interval,
+      if (occurrenceCount != null) 'occurrence_count': occurrenceCount,
       if (nextDate != null) 'next_date': nextDate,
       if (endDate != null) 'end_date': endDate,
       if (autoApprove != null) 'auto_approve': autoApprove,
@@ -4901,6 +4994,8 @@ class ScheduledTransactionsCompanion
     Value<String?>? categoryId,
     Value<double?>? amount,
     Value<String?>? frequency,
+    Value<int?>? interval,
+    Value<int?>? occurrenceCount,
     Value<DateTime?>? nextDate,
     Value<DateTime?>? endDate,
     Value<bool>? autoApprove,
@@ -4914,6 +5009,8 @@ class ScheduledTransactionsCompanion
       categoryId: categoryId ?? this.categoryId,
       amount: amount ?? this.amount,
       frequency: frequency ?? this.frequency,
+      interval: interval ?? this.interval,
+      occurrenceCount: occurrenceCount ?? this.occurrenceCount,
       nextDate: nextDate ?? this.nextDate,
       endDate: endDate ?? this.endDate,
       autoApprove: autoApprove ?? this.autoApprove,
@@ -4943,6 +5040,12 @@ class ScheduledTransactionsCompanion
     if (frequency.present) {
       map['frequency'] = Variable<String>(frequency.value);
     }
+    if (interval.present) {
+      map['interval'] = Variable<int>(interval.value);
+    }
+    if (occurrenceCount.present) {
+      map['occurrence_count'] = Variable<int>(occurrenceCount.value);
+    }
     if (nextDate.present) {
       map['next_date'] = Variable<DateTime>(nextDate.value);
     }
@@ -4970,6 +5073,8 @@ class ScheduledTransactionsCompanion
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
           ..write('frequency: $frequency, ')
+          ..write('interval: $interval, ')
+          ..write('occurrenceCount: $occurrenceCount, ')
           ..write('nextDate: $nextDate, ')
           ..write('endDate: $endDate, ')
           ..write('autoApprove: $autoApprove, ')
@@ -5496,6 +5601,18 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_transactions_category',
     'CREATE INDEX idx_transactions_category ON transactions (category_id)',
   );
+  late final Index idxTransactionsPayee = Index(
+    'idx_transactions_payee',
+    'CREATE INDEX idx_transactions_payee ON transactions (payee_id)',
+  );
+  late final Index idxPayeesName = Index(
+    'idx_payees_name',
+    'CREATE INDEX idx_payees_name ON payees (name)',
+  );
+  late final Index idxPayeesIsFavorite = Index(
+    'idx_payees_is_favorite',
+    'CREATE INDEX idx_payees_is_favorite ON payees (is_favorite)',
+  );
   late final Index idxSyncLogApplied = Index(
     'idx_sync_log_applied',
     'CREATE INDEX idx_sync_log_applied ON sync_log (applied_at)',
@@ -5535,6 +5652,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxTransactionsAccount,
     idxTransactionsDate,
     idxTransactionsCategory,
+    idxTransactionsPayee,
+    idxPayeesName,
+    idxPayeesIsFavorite,
     idxSyncLogApplied,
   ];
   @override
@@ -9778,6 +9898,8 @@ typedef $$ScheduledTransactionsTableCreateCompanionBuilder =
       Value<String?> categoryId,
       Value<double?> amount,
       Value<String?> frequency,
+      Value<int?> interval,
+      Value<int?> occurrenceCount,
       Value<DateTime?> nextDate,
       Value<DateTime?> endDate,
       Value<bool> autoApprove,
@@ -9792,6 +9914,8 @@ typedef $$ScheduledTransactionsTableUpdateCompanionBuilder =
       Value<String?> categoryId,
       Value<double?> amount,
       Value<String?> frequency,
+      Value<int?> interval,
+      Value<int?> occurrenceCount,
       Value<DateTime?> nextDate,
       Value<DateTime?> endDate,
       Value<bool> autoApprove,
@@ -9896,6 +10020,16 @@ class $$ScheduledTransactionsTableFilterComposer
 
   ColumnFilters<String> get frequency => $composableBuilder(
     column: $table.frequency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get interval => $composableBuilder(
+    column: $table.interval,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get occurrenceCount => $composableBuilder(
+    column: $table.occurrenceCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10013,6 +10147,16 @@ class $$ScheduledTransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get interval => $composableBuilder(
+    column: $table.interval,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get occurrenceCount => $composableBuilder(
+    column: $table.occurrenceCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get nextDate => $composableBuilder(
     column: $table.nextDate,
     builder: (column) => ColumnOrderings(column),
@@ -10120,6 +10264,14 @@ class $$ScheduledTransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get frequency =>
       $composableBuilder(column: $table.frequency, builder: (column) => column);
+
+  GeneratedColumn<int> get interval =>
+      $composableBuilder(column: $table.interval, builder: (column) => column);
+
+  GeneratedColumn<int> get occurrenceCount => $composableBuilder(
+    column: $table.occurrenceCount,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get nextDate =>
       $composableBuilder(column: $table.nextDate, builder: (column) => column);
@@ -10254,6 +10406,8 @@ class $$ScheduledTransactionsTableTableManager
                 Value<String?> categoryId = const Value.absent(),
                 Value<double?> amount = const Value.absent(),
                 Value<String?> frequency = const Value.absent(),
+                Value<int?> interval = const Value.absent(),
+                Value<int?> occurrenceCount = const Value.absent(),
                 Value<DateTime?> nextDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
                 Value<bool> autoApprove = const Value.absent(),
@@ -10266,6 +10420,8 @@ class $$ScheduledTransactionsTableTableManager
                 categoryId: categoryId,
                 amount: amount,
                 frequency: frequency,
+                interval: interval,
+                occurrenceCount: occurrenceCount,
                 nextDate: nextDate,
                 endDate: endDate,
                 autoApprove: autoApprove,
@@ -10280,6 +10436,8 @@ class $$ScheduledTransactionsTableTableManager
                 Value<String?> categoryId = const Value.absent(),
                 Value<double?> amount = const Value.absent(),
                 Value<String?> frequency = const Value.absent(),
+                Value<int?> interval = const Value.absent(),
+                Value<int?> occurrenceCount = const Value.absent(),
                 Value<DateTime?> nextDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
                 Value<bool> autoApprove = const Value.absent(),
@@ -10292,6 +10450,8 @@ class $$ScheduledTransactionsTableTableManager
                 categoryId: categoryId,
                 amount: amount,
                 frequency: frequency,
+                interval: interval,
+                occurrenceCount: occurrenceCount,
                 nextDate: nextDate,
                 endDate: endDate,
                 autoApprove: autoApprove,

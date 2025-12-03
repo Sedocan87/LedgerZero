@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -72,6 +72,11 @@ class AppDatabase extends _$AppDatabase {
         await _seedDefaultCategories();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 10) {
+          // Add interval and occurrenceCount to scheduled_transactions
+          await m.addColumn(scheduledTransactions, scheduledTransactions.interval);
+          await m.addColumn(scheduledTransactions, scheduledTransactions.occurrenceCount);
+        }
         if (from < 2) {
           // Add new columns to categories table
           await m.addColumn(categories, categories.goalType);
