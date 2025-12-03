@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -107,6 +107,12 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(payees, payees.color);
           await m.addColumn(payees, payees.notes);
           await m.addColumn(payees, payees.isFavorite);
+        }
+        if (from < 9) {
+          // Add indices for payee optimization
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_transactions_payee ON transactions (payee_id)');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_payees_name ON payees (name)');
+          await customStatement('CREATE INDEX IF NOT EXISTS idx_payees_is_favorite ON payees (is_favorite)');
         }
       },
       beforeOpen: (details) async {

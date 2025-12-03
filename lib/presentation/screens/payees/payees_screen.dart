@@ -5,6 +5,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/payee_provider.dart';
 import 'package:ledger_zero/presentation/screens/payees/widgets/payee_list_item.dart';
 import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
+import 'package:ledger_zero/services/csv/payee_export_service.dart';
 
 class PayeesScreen extends ConsumerWidget {
   const PayeesScreen({super.key});
@@ -17,12 +18,28 @@ class PayeesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.payees),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Export CSV', // TODO: Localize
+            onPressed: () {
+              payeesAsync.whenData((payees) {
+                if (payees.isNotEmpty) {
+                  PayeeExportService().exportPayees(payees);
+                }
+              });
+            },
+          ),
+        ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
               decoration: InputDecoration(
                 labelText: l10n.searchPayees,
                 prefixIcon: const Icon(Icons.search),
@@ -33,32 +50,34 @@ class PayeesScreen extends ConsumerWidget {
               },
             ),
           ),
-          Expanded(
-            child: payeesAsync.when(
-              data: (payees) {
-                if (payees.isEmpty) {
-                  return Center(
-                    child: Text(l10n.noPayees),
-                  );
-                }
-                return ListView.builder(
-                  itemCount: payees.length,
-                  itemBuilder: (context, index) {
-                    final payee = payees[index];
-                    return PayeeListItem(
-                      payee: payee,
-                      onTap: () {
-                        context.push('/settings/payees/${payee.id}');
+              Expanded(
+                child: payeesAsync.when(
+                  data: (payees) {
+                    if (payees.isEmpty) {
+                      return Center(
+                        child: Text(l10n.noPayees),
+                      );
+                    }
+                    return ListView.builder(
+                      itemCount: payees.length,
+                      itemBuilder: (context, index) {
+                        final payee = payees[index];
+                        return PayeeListItem(
+                          payee: payee,
+                          onTap: () {
+                            context.push('/settings/payees/${payee.id}');
+                          },
+                        );
                       },
                     );
                   },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => ErrorView(title: l10n.error, message: err.toString()),
-            ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => ErrorView(title: l10n.error, message: err.toString()),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
