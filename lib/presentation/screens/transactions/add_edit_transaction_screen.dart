@@ -1030,6 +1030,40 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                                 onSelected: (Payee selection) {
                                    setState(() {
                                      _selectedPayee = selection;
+
+                                     // Auto-categorization
+                                     if (selection.autoCategoryId != null && _selectedCategory == null) {
+                                        final categories = ref.read(categoriesProvider).valueOrNull;
+                                        if (categories != null) {
+                                            try {
+                                                final cat = categories.firstWhere((c) => c.id == selection.autoCategoryId);
+                                                _selectedCategory = cat;
+                                                _categoryController.text = cat.name;
+                                            } catch (_) {}
+                                        }
+                                     }
+
+                                     // Default Account
+                                     if (selection.defaultAccountId != null) {
+                                         final accounts = ref.read(accountsProvider).valueOrNull;
+                                         if (accounts != null) {
+                                             try {
+                                                 final acc = accounts.firstWhere((a) => a.id == selection.defaultAccountId);
+                                                 if (_selectedAccount == null || (_selectedAccount != null && _selectedAccount!.id != acc.id && widget.transactionId == null)) {
+                                                    // Only override if not editing existing tx (unless user changed payee?)
+                                                    // Or just if account is not set.
+                                                    // Let's be safe: If account is null, set it.
+                                                    // If account is set but different, and we are adding a NEW transaction, maybe switch?
+                                                    // I'll switch if it's a new transaction.
+                                                    if (widget.transactionId == null) {
+                                                        _selectedAccount = acc;
+                                                        _accountController.text = acc.name;
+                                                    }
+                                                 }
+                                             } catch (_) {}
+                                         }
+                                     }
+
                                      _triggerAutosave();
                                    });
                                 },

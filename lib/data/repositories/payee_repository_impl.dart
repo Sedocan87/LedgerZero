@@ -90,6 +90,7 @@ class PayeeRepositoryImpl implements PayeeRepository {
       id: p.id,
       name: p.name,
       autoCategoryId: p.autoCategoryId,
+      defaultAccountId: p.defaultAccountId,
       createdAt: p.createdAt,
     );
   }
@@ -99,6 +100,7 @@ class PayeeRepositoryImpl implements PayeeRepository {
       id: Value(p.id),
       name: Value(p.name),
       autoCategoryId: Value(p.autoCategoryId),
+      defaultAccountId: Value(p.defaultAccountId),
       createdAt: Value(p.createdAt),
     );
   }

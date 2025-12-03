@@ -11,6 +11,9 @@ class Payee {
   /// The unique identifier of the default category for this payee.
   final String? autoCategoryId;
 
+  /// The unique identifier of the default account for this payee.
+  final String? defaultAccountId;
+
   /// The date and time when the payee was created.
   final DateTime? createdAt;
 
@@ -19,6 +22,7 @@ class Payee {
     required this.id,
     required this.name,
     this.autoCategoryId,
+    this.defaultAccountId,
     this.createdAt,
   });
 
@@ -27,12 +31,14 @@ class Payee {
     String? id,
     String? name,
     String? autoCategoryId,
+    String? defaultAccountId,
     DateTime? createdAt,
   }) {
     return Payee(
       id: id ?? this.id,
       name: name ?? this.name,
       autoCategoryId: autoCategoryId ?? this.autoCategoryId,
+      defaultAccountId: defaultAccountId ?? this.defaultAccountId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -43,6 +49,7 @@ class Payee {
       id: json['id'] as String,
       name: json['name'] as String,
       autoCategoryId: json['auto_category_id'] as String?,
+      defaultAccountId: json['default_account_id'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -55,6 +62,7 @@ class Payee {
       'id': id,
       'name': name,
       'auto_category_id': autoCategoryId,
+      'default_account_id': defaultAccountId,
       'created_at': createdAt?.toIso8601String(),
     };
   }
@@ -69,6 +77,7 @@ class Payee {
         other.id == id &&
         other.name == name &&
         other.autoCategoryId == autoCategoryId &&
+        other.defaultAccountId == defaultAccountId &&
         other.createdAt == createdAt;
   }
 
@@ -78,13 +87,14 @@ class Payee {
       id,
       name,
       autoCategoryId,
+      defaultAccountId,
       createdAt,
     );
   }
 
   @override
   String toString() {
-    return 'Payee(id: $id, name: $name, autoCategoryId: $autoCategoryId, createdAt: $createdAt)';
+    return 'Payee(id: $id, name: $name, autoCategoryId: $autoCategoryId, defaultAccountId: $defaultAccountId, createdAt: $createdAt)';
   }
 
   /// Validates the [Payee] entity.

@@ -6,5 +6,6 @@ part of 'payees_dao.dart';
 mixin _$PayeesDaoMixin on DatabaseAccessor<AppDatabase> {
   $CategoryGroupsTable get categoryGroups => attachedDatabase.categoryGroups;
   $CategoriesTable get categories => attachedDatabase.categories;
+  $AccountsTable get accounts => attachedDatabase.accounts;
   $PayeesTable get payees => attachedDatabase.payees;
 }
