@@ -58,7 +58,28 @@ class PayeeController {
     final transactions = await transactionRepo.getTransactions(filter: filter);
 
     if (transactions.isNotEmpty) {
-      // Logic for handling transactions before delete would go here
+      Logger.info('Clearing payee from ${transactions.length} transactions before deleting payee $id');
+      final updatedTransactions = transactions.map((t) {
+        return Transaction(
+          id: t.id,
+          accountId: t.accountId,
+          date: t.date,
+          amount: t.amount,
+          payeeId: null, // Clear payee
+          categoryId: t.categoryId,
+          memo: t.memo,
+          cleared: t.cleared,
+          approved: t.approved,
+          isDeleted: t.isDeleted,
+          transferAccountId: t.transferAccountId,
+          transferTransactionId: t.transferTransactionId,
+          parentTransactionId: t.parentTransactionId,
+          createdAt: t.createdAt,
+          updatedAt: DateTime.now(),
+        );
+      }).toList();
+
+      await transactionRepo.batchUpdateTransactions(updatedTransactions);
     }
 
     await payeeRepo.deletePayee(id);

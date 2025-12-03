@@ -604,4 +604,22 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get rename => 'Umbenennen';
+
+  @override
+  String get defaultAccount => 'Default Account';
+
+  @override
+  String get usageStats => 'Usage Statistics';
+
+  @override
+  String get timesUsed => 'Times Used';
+
+  @override
+  String get totalSpent => 'Total Spent';
+
+  @override
+  String get lastUsed => 'Last Used';
+
+  @override
+  String get autoCategory => 'Auto Category';
 }

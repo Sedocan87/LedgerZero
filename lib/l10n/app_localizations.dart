@@ -1225,6 +1225,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rename'**
   String get rename;
+
+  /// No description provided for @defaultAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Account'**
+  String get defaultAccount;
+
+  /// No description provided for @usageStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage Statistics'**
+  String get usageStats;
+
+  /// No description provided for @timesUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Times Used'**
+  String get timesUsed;
+
+  /// No description provided for @totalSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Spent'**
+  String get totalSpent;
+
+  /// No description provided for @lastUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Used'**
+  String get lastUsed;
+
+  /// No description provided for @autoCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Category'**
+  String get autoCategory;
 }
 
 class _AppLocalizationsDelegate

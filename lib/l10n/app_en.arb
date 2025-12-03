@@ -320,5 +320,11 @@
   },
   "noPayees": "No Payees",
   "searchPayees": "Search Payees",
-  "rename": "Rename"
+  "rename": "Rename",
+  "defaultAccount": "Default Account",
+  "usageStats": "Usage Statistics",
+  "timesUsed": "Times Used",
+  "totalSpent": "Total Spent",
+  "lastUsed": "Last Used",
+  "autoCategory": "Auto Category"
 }

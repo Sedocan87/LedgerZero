@@ -93,12 +93,14 @@ Payee createTestPayee({
   String id = 'payee1',
   String name = 'Test Payee',
   String? autoCategoryId,
+  String? defaultAccountId,
   DateTime? createdAt,
 }) {
   return Payee(
     id: id,
     name: name,
     autoCategoryId: autoCategoryId,
+    defaultAccountId: defaultAccountId,
     createdAt: createdAt ?? DateTime.now(),
   );
 }

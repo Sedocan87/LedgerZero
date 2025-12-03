@@ -2546,6 +2546,20 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
       'REFERENCES categories (id)',
     ),
   );
+  static const VerificationMeta _defaultAccountIdMeta = const VerificationMeta(
+    'defaultAccountId',
+  );
+  @override
+  late final GeneratedColumn<String> defaultAccountId = GeneratedColumn<String>(
+    'default_account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES accounts (id)',
+    ),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2558,7 +2572,13 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
     requiredDuringInsert: false,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, autoCategoryId, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    autoCategoryId,
+    defaultAccountId,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2593,6 +2613,15 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
         ),
       );
     }
+    if (data.containsKey('default_account_id')) {
+      context.handle(
+        _defaultAccountIdMeta,
+        defaultAccountId.isAcceptableOrUnknown(
+          data['default_account_id']!,
+          _defaultAccountIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2620,6 +2649,10 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
         DriftSqlType.string,
         data['${effectivePrefix}auto_category_id'],
       ),
+      defaultAccountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}default_account_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2637,11 +2670,13 @@ class Payee extends DataClass implements Insertable<Payee> {
   final String id;
   final String name;
   final String? autoCategoryId;
+  final String? defaultAccountId;
   final DateTime? createdAt;
   const Payee({
     required this.id,
     required this.name,
     this.autoCategoryId,
+    this.defaultAccountId,
     this.createdAt,
   });
   @override
@@ -2651,6 +2686,9 @@ class Payee extends DataClass implements Insertable<Payee> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || autoCategoryId != null) {
       map['auto_category_id'] = Variable<String>(autoCategoryId);
+    }
+    if (!nullToAbsent || defaultAccountId != null) {
+      map['default_account_id'] = Variable<String>(defaultAccountId);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
@@ -2665,6 +2703,9 @@ class Payee extends DataClass implements Insertable<Payee> {
       autoCategoryId: autoCategoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(autoCategoryId),
+      defaultAccountId: defaultAccountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(defaultAccountId),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -2680,6 +2721,7 @@ class Payee extends DataClass implements Insertable<Payee> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       autoCategoryId: serializer.fromJson<String?>(json['autoCategoryId']),
+      defaultAccountId: serializer.fromJson<String?>(json['defaultAccountId']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
     );
   }
@@ -2690,6 +2732,7 @@ class Payee extends DataClass implements Insertable<Payee> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'autoCategoryId': serializer.toJson<String?>(autoCategoryId),
+      'defaultAccountId': serializer.toJson<String?>(defaultAccountId),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
     };
   }
@@ -2698,6 +2741,7 @@ class Payee extends DataClass implements Insertable<Payee> {
     String? id,
     String? name,
     Value<String?> autoCategoryId = const Value.absent(),
+    Value<String?> defaultAccountId = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
   }) => Payee(
     id: id ?? this.id,
@@ -2705,6 +2749,9 @@ class Payee extends DataClass implements Insertable<Payee> {
     autoCategoryId: autoCategoryId.present
         ? autoCategoryId.value
         : this.autoCategoryId,
+    defaultAccountId: defaultAccountId.present
+        ? defaultAccountId.value
+        : this.defaultAccountId,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
   );
   Payee copyWithCompanion(PayeesCompanion data) {
@@ -2714,6 +2761,9 @@ class Payee extends DataClass implements Insertable<Payee> {
       autoCategoryId: data.autoCategoryId.present
           ? data.autoCategoryId.value
           : this.autoCategoryId,
+      defaultAccountId: data.defaultAccountId.present
+          ? data.defaultAccountId.value
+          : this.defaultAccountId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2724,13 +2774,15 @@ class Payee extends DataClass implements Insertable<Payee> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('autoCategoryId: $autoCategoryId, ')
+          ..write('defaultAccountId: $defaultAccountId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, autoCategoryId, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, autoCategoryId, defaultAccountId, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2738,6 +2790,7 @@ class Payee extends DataClass implements Insertable<Payee> {
           other.id == this.id &&
           other.name == this.name &&
           other.autoCategoryId == this.autoCategoryId &&
+          other.defaultAccountId == this.defaultAccountId &&
           other.createdAt == this.createdAt);
 }
 
@@ -2745,12 +2798,14 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
   final Value<String> id;
   final Value<String> name;
   final Value<String?> autoCategoryId;
+  final Value<String?> defaultAccountId;
   final Value<DateTime?> createdAt;
   final Value<int> rowid;
   const PayeesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.autoCategoryId = const Value.absent(),
+    this.defaultAccountId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2758,6 +2813,7 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     required String id,
     required String name,
     this.autoCategoryId = const Value.absent(),
+    this.defaultAccountId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2766,6 +2822,7 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? autoCategoryId,
+    Expression<String>? defaultAccountId,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2773,6 +2830,7 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (autoCategoryId != null) 'auto_category_id': autoCategoryId,
+      if (defaultAccountId != null) 'default_account_id': defaultAccountId,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2782,6 +2840,7 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     Value<String>? id,
     Value<String>? name,
     Value<String?>? autoCategoryId,
+    Value<String?>? defaultAccountId,
     Value<DateTime?>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2789,6 +2848,7 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
       id: id ?? this.id,
       name: name ?? this.name,
       autoCategoryId: autoCategoryId ?? this.autoCategoryId,
+      defaultAccountId: defaultAccountId ?? this.defaultAccountId,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2806,6 +2866,9 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     if (autoCategoryId.present) {
       map['auto_category_id'] = Variable<String>(autoCategoryId.value);
     }
+    if (defaultAccountId.present) {
+      map['default_account_id'] = Variable<String>(defaultAccountId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2821,6 +2884,7 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('autoCategoryId: $autoCategoryId, ')
+          ..write('defaultAccountId: $defaultAccountId, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5320,6 +5384,24 @@ final class $$AccountsTableReferences
     extends BaseReferences<_$AppDatabase, $AccountsTable, Account> {
   $$AccountsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
+  static MultiTypedResultKey<$PayeesTable, List<Payee>> _payeesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.payees,
+    aliasName: $_aliasNameGenerator(db.accounts.id, db.payees.defaultAccountId),
+  );
+
+  $$PayeesTableProcessedTableManager get payeesRefs {
+    final manager = $$PayeesTableTableManager($_db, $_db.payees).filter(
+      (f) => f.defaultAccountId.id.sqlEquals($_itemColumn<String>('id')!),
+    );
+
+    final cache = $_typedResult.readTableOrNull(_payeesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$TransactionsTable, List<Transaction>>
   _accountTransactionsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.transactions,
@@ -5460,6 +5542,31 @@ class $$AccountsTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> payeesRefs(
+    Expression<bool> Function($$PayeesTableFilterComposer f) f,
+  ) {
+    final $$PayeesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.payees,
+      getReferencedColumn: (t) => t.defaultAccountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PayeesTableFilterComposer(
+            $db: $db,
+            $table: $db.payees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> accountTransactions(
     Expression<bool> Function($$TransactionsTableFilterComposer f) f,
@@ -5657,6 +5764,31 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  Expression<T> payeesRefs<T extends Object>(
+    Expression<T> Function($$PayeesTableAnnotationComposer a) f,
+  ) {
+    final $$PayeesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.payees,
+      getReferencedColumn: (t) => t.defaultAccountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PayeesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.payees,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> accountTransactions<T extends Object>(
     Expression<T> Function($$TransactionsTableAnnotationComposer a) f,
   ) {
@@ -5748,6 +5880,7 @@ class $$AccountsTableTableManager
           (Account, $$AccountsTableReferences),
           Account,
           PrefetchHooks Function({
+            bool payeesRefs,
             bool accountTransactions,
             bool transferTransactions,
             bool scheduledTransactionsRefs,
@@ -5834,6 +5967,7 @@ class $$AccountsTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
+                payeesRefs = false,
                 accountTransactions = false,
                 transferTransactions = false,
                 scheduledTransactionsRefs = false,
@@ -5841,6 +5975,7 @@ class $$AccountsTableTableManager
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
+                    if (payeesRefs) db.payees,
                     if (accountTransactions) db.transactions,
                     if (transferTransactions) db.transactions,
                     if (scheduledTransactionsRefs) db.scheduledTransactions,
@@ -5848,6 +5983,27 @@ class $$AccountsTableTableManager
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
                     return [
+                      if (payeesRefs)
+                        await $_getPrefetchedData<
+                          Account,
+                          $AccountsTable,
+                          Payee
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences
+                              ._payeesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AccountsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).payeesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.defaultAccountId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (accountTransactions)
                         await $_getPrefetchedData<
                           Account,
@@ -5932,6 +6088,7 @@ typedef $$AccountsTableProcessedTableManager =
       (Account, $$AccountsTableReferences),
       Account,
       PrefetchHooks Function({
+        bool payeesRefs,
         bool accountTransactions,
         bool transferTransactions,
         bool scheduledTransactionsRefs,
@@ -7636,6 +7793,7 @@ typedef $$PayeesTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<String?> autoCategoryId,
+      Value<String?> defaultAccountId,
       Value<DateTime?> createdAt,
       Value<int> rowid,
     });
@@ -7644,6 +7802,7 @@ typedef $$PayeesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String?> autoCategoryId,
+      Value<String?> defaultAccountId,
       Value<DateTime?> createdAt,
       Value<int> rowid,
     });
@@ -7665,6 +7824,25 @@ final class $$PayeesTableReferences
       $_db.categories,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_autoCategoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $AccountsTable _defaultAccountIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias(
+        $_aliasNameGenerator(db.payees.defaultAccountId, db.accounts.id),
+      );
+
+  $$AccountsTableProcessedTableManager? get defaultAccountId {
+    final $_column = $_itemColumn<String>('default_account_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_defaultAccountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -7756,6 +7934,29 @@ class $$PayeesTableFilterComposer
           }) => $$CategoriesTableFilterComposer(
             $db: $db,
             $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableFilterComposer get defaultAccountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.defaultAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7863,6 +8064,29 @@ class $$PayeesTableOrderingComposer
     );
     return composer;
   }
+
+  $$AccountsTableOrderingComposer get defaultAccountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.defaultAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$PayeesTableAnnotationComposer
@@ -7897,6 +8121,29 @@ class $$PayeesTableAnnotationComposer
           }) => $$CategoriesTableAnnotationComposer(
             $db: $db,
             $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableAnnotationComposer get defaultAccountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.defaultAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -7973,6 +8220,7 @@ class $$PayeesTableTableManager
           Payee,
           PrefetchHooks Function({
             bool autoCategoryId,
+            bool defaultAccountId,
             bool transactionsRefs,
             bool scheduledTransactionsRefs,
           })
@@ -7993,12 +8241,14 @@ class $$PayeesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> autoCategoryId = const Value.absent(),
+                Value<String?> defaultAccountId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PayeesCompanion(
                 id: id,
                 name: name,
                 autoCategoryId: autoCategoryId,
+                defaultAccountId: defaultAccountId,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -8007,12 +8257,14 @@ class $$PayeesTableTableManager
                 required String id,
                 required String name,
                 Value<String?> autoCategoryId = const Value.absent(),
+                Value<String?> defaultAccountId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PayeesCompanion.insert(
                 id: id,
                 name: name,
                 autoCategoryId: autoCategoryId,
+                defaultAccountId: defaultAccountId,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -8025,6 +8277,7 @@ class $$PayeesTableTableManager
           prefetchHooksCallback:
               ({
                 autoCategoryId = false,
+                defaultAccountId = false,
                 transactionsRefs = false,
                 scheduledTransactionsRefs = false,
               }) {
@@ -8059,6 +8312,19 @@ class $$PayeesTableTableManager
                                         ._autoCategoryIdTable(db),
                                     referencedColumn: $$PayeesTableReferences
                                         ._autoCategoryIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (defaultAccountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.defaultAccountId,
+                                    referencedTable: $$PayeesTableReferences
+                                        ._defaultAccountIdTable(db),
+                                    referencedColumn: $$PayeesTableReferences
+                                        ._defaultAccountIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -8132,6 +8398,7 @@ typedef $$PayeesTableProcessedTableManager =
       Payee,
       PrefetchHooks Function({
         bool autoCategoryId,
+        bool defaultAccountId,
         bool transactionsRefs,
         bool scheduledTransactionsRefs,
       })
