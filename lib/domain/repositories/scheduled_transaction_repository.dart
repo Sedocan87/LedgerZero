@@ -17,6 +17,9 @@ abstract class ScheduledTransactionRepository {
   /// Deletes a scheduled transaction by its unique identifier.
   Future<void> deleteScheduledTransaction(String id);
 
+  /// Skips the next occurrence of a scheduled transaction.
+  Future<void> skipScheduledTransaction(String id);
+
   /// Watches all scheduled transactions for changes.
   Stream<List<ScheduledTransaction>> watchAllScheduledTransactions();
 }

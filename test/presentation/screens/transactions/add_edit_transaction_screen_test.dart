@@ -28,6 +28,9 @@ class FakeScheduledTransactionRepository implements ScheduledTransactionReposito
 
   @override
   Stream<List<ScheduledTransaction>> watchAllScheduledTransactions() => Stream.value([]);
+
+  @override
+  Future<void> skipScheduledTransaction(String id) async {}
 }
 
 void main() {

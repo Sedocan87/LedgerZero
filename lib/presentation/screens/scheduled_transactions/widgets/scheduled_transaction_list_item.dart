@@ -10,6 +10,7 @@ class ScheduledTransactionListItem extends StatelessWidget {
   final String? accountName;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onSkip;
 
   const ScheduledTransactionListItem({
     super.key,
@@ -19,6 +20,7 @@ class ScheduledTransactionListItem extends StatelessWidget {
     this.accountName,
     this.onTap,
     this.onDelete,
+    this.onSkip,
   });
 
   @override
@@ -114,9 +116,21 @@ class ScheduledTransactionListItem extends StatelessWidget {
         onSelected: (value) {
           if (value == 'delete' && onDelete != null) {
             onDelete!();
+          } else if (value == 'skip' && onSkip != null) {
+            onSkip!();
           }
         },
         itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'skip',
+            child: Row(
+              children: [
+                Icon(Icons.skip_next, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(l10n.skip),
+              ],
+            ),
+          ),
           PopupMenuItem(
             value: 'delete',
             child: Row(
