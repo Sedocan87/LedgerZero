@@ -46,7 +46,8 @@ void main() {
       );
 
       await database.into(database.categories).insert(validCategory);
-      final result = await database.select(database.categories).get();
+      // Verify specifically that the inserted category exists
+      final result = await (database.select(database.categories)..where((tbl) => tbl.id.equals('cat_valid'))).get();
       expect(result.length, 1);
       expect(result.first.id, 'cat_valid');
 

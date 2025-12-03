@@ -1352,6 +1352,12 @@ abstract class AppLocalizations {
   /// **'Skip'**
   String get skip;
 
+  /// No description provided for @upcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get upcoming;
+
   /// No description provided for @repeatEvery.
   ///
   /// In en, this message translates to:

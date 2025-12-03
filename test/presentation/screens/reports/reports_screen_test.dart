@@ -27,6 +27,9 @@ void main() {
         netWorthHistoryProvider.overrideWith((ref) => Future.value([
            ChartSeries(name: 'Net Worth', color: Colors.blue, points: [TimeSeriesPoint(DateTime.now(), 1000)]),
         ])),
+        // Override all data providers to prevent loading states during test
+        budgetVsActualProvider.overrideWith((ref) => Future.value([])),
+        reportNotesListProvider.overrideWith((ref) => Future.value([])),
       ],
     );
 
