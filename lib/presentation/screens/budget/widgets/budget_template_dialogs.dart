@@ -4,7 +4,6 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
-import 'package:ledger_zero/domain/entities/budget_template.dart';
 
 Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
   final controller = TextEditingController();
@@ -52,10 +51,13 @@ Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
 }
 
 Future<void> showApplyTemplateDialog(BuildContext context, WidgetRef ref) async {
+  final l10n = AppLocalizations.of(context)!;
   // Fetch templates
   final templates = await ref.read(budgetingServiceProvider).getAllTemplates();
 
-  if (!context.mounted) return;
+  if (!context.mounted) {
+    return;
+  }
 
   if (templates.isEmpty) {
      ScaffoldMessenger.of(context).showSnackBar(
@@ -95,10 +97,10 @@ Future<void> showApplyTemplateDialog(BuildContext context, WidgetRef ref) async 
                    ref.invalidate(tbbProvider);
 
                    if (context.mounted) {
-                     Navigator.pop(context);
                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(AppLocalizations.of(context)!.budgetUpdated)),
+                        SnackBar(content: Text(l10n.budgetUpdated)),
                      );
+                     Navigator.pop(context);
                    }
                 },
               );

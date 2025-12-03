@@ -17,7 +17,7 @@ void main() {
       goalTarget: 0.0,
     );
 
-    await tester.pumpWidget(ProviderScope(
+    await tester.pumpWidget(const ProviderScope(
       child: MaterialApp(
         home: Scaffold(
           body: BudgetCategoryRow(viewModel: viewModel),
@@ -47,7 +47,7 @@ void main() {
   });
 
   testWidgets('BudgetCategoryRow displays negative available amount in red', (tester) async {
-    final viewModel = BudgetCategoryViewModel(
+    const viewModel = BudgetCategoryViewModel(
       category: category,
       budgeted: 0.0,
       activity: -50.0,
@@ -55,7 +55,7 @@ void main() {
       goalTarget: 0.0,
     );
 
-    await tester.pumpWidget(ProviderScope(
+    await tester.pumpWidget(const ProviderScope(
       child: MaterialApp(
         home: Scaffold(
           body: BudgetCategoryRow(viewModel: viewModel),
@@ -84,7 +84,7 @@ void main() {
   });
 
   testWidgets('BudgetCategoryRow displays zero available amount in grey', (tester) async {
-    final viewModel = BudgetCategoryViewModel(
+    const viewModel = BudgetCategoryViewModel(
       category: category,
       budgeted: 100.0,
       activity: -100.0,
@@ -92,7 +92,7 @@ void main() {
       goalTarget: 0.0,
     );
 
-    await tester.pumpWidget(ProviderScope(
+    await tester.pumpWidget(const ProviderScope(
       child: MaterialApp(
         home: Scaffold(
           body: BudgetCategoryRow(viewModel: viewModel),

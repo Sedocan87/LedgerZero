@@ -28,7 +28,7 @@ class BudgetCategoryRow extends ConsumerStatefulWidget {
 
 class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
   Future<void> _onSubmit(double value) async {
-    HapticFeedback.selectionClick();
+    await HapticFeedback.selectionClick();
     final month = ref.read(selectedBudgetMonthProvider);
     final budgetingService = ref.read(budgetingServiceProvider);
     final oldAmount = widget.viewModel.budgeted;
@@ -67,7 +67,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     ref.read(budgetOrderedCategoriesProvider.future).then((orderedCategories) {
       final currentIndex =
           orderedCategories.indexOf(widget.viewModel.category.id);
-      if (currentIndex == -1) return;
+      if (currentIndex == -1) {
+        return;
+      }
 
       final newIndex = currentIndex + direction;
       if (newIndex >= 0 && newIndex < orderedCategories.length) {
@@ -113,7 +115,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
   }
 
   Future<void> _autoAssign(AutoAssignRule rule) async {
-    HapticFeedback.selectionClick();
+    await HapticFeedback.selectionClick();
     final month = ref.read(selectedBudgetMonthProvider);
     final budgetingService = ref.read(budgetingServiceProvider);
     final oldAmount = widget.viewModel.budgeted;

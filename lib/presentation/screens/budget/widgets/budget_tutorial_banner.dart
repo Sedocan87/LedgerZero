@@ -24,7 +24,7 @@ class _BudgetTutorialBannerState extends ConsumerState<BudgetTutorialBanner> {
     }
   }
 
-  void _dismiss() async {
+  Future<void> _dismiss() async {
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setBool(_dismissKey, true);
     if (mounted) {

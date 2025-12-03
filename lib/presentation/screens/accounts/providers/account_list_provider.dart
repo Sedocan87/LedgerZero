@@ -10,8 +10,10 @@ final accountListProvider = StreamProvider.autoDispose<List<Account>>((ref) {
   final filter = ref.watch(accountFilterProvider);
 
   return repository.watchAllAccounts().map((accounts) {
-    var filtered = accounts.where((a) {
-      if (!filter.showClosed && a.isClosed) return false;
+    final filtered = accounts.where((a) {
+      if (!filter.showClosed && a.isClosed) {
+        return false;
+      }
       if (filter.searchQuery.isNotEmpty) {
         if (!a.name.toLowerCase().contains(filter.searchQuery.toLowerCase())) {
           return false;
@@ -36,7 +38,9 @@ final accountListProvider = StreamProvider.autoDispose<List<Account>>((ref) {
       case AccountSortOption.type:
         filtered.sort((a, b) {
           final typeCompare = a.type.index.compareTo(b.type.index);
-          if (typeCompare != 0) return typeCompare;
+          if (typeCompare != 0) {
+            return typeCompare;
+          }
           return a.name.compareTo(b.name);
         });
         break;

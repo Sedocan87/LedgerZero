@@ -55,15 +55,19 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     final actual = double.tryParse(_balanceController.text);
-                    if (actual == null) return;
+                    if (actual == null) {
+                      return;
+                    }
 
                     final diff = actual - account.currentBalance;
                     // Floating point comparison might be tricky, use epsilon
                     if (diff.abs() < 0.01) {
                       // Perfect match
-                      if (context.mounted) Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.accountReconciled)));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.accountReconciled)));
+                        Navigator.pop(context);
+                      }
                     } else {
                       final createAdj = await showDialog<bool>(
                         context: context,
@@ -94,9 +98,11 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
                         await ref
                             .read(transactionRepositoryProvider)
                             .createTransaction(transaction);
-                        if (context.mounted) Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(l10n.adjustmentCreated)));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(l10n.adjustmentCreated)));
+                          Navigator.pop(context);
+                        }
                       }
                     }
                   },

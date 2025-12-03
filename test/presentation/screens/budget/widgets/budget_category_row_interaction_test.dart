@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
-import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_row.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_input_field.dart';
 
@@ -33,7 +32,7 @@ void main() {
       (ref) => Future.value(['1', '2']));
 
   testWidgets('Tap on amount enables editing', (tester) async {
-    await tester.pumpWidget(ProviderScope(
+    await tester.pumpWidget(const ProviderScope(
       child: MaterialApp(
         home: Scaffold(
           body: BudgetCategoryRow(viewModel: viewModel1),
@@ -68,7 +67,7 @@ void main() {
          // Actually we can override with a notifier that has initial state?
          // Or simpler: just let the test tap to start editing.
       ],
-      child: MaterialApp(
+      child: const MaterialApp(
         home: Scaffold(
           body: Column(
             children: [

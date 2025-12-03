@@ -175,7 +175,9 @@ final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((ref) async
   DateTime toMonthStart(DateTime date) => DateTime(date.year, date.month, 1);
 
   for (var t in transactions) {
-     if (t.isTransfer) continue;
+     if (t.isTransfer) {
+       continue;
+     }
 
      final isIncome = t.amount > 0 && t.categoryId == null;
      if (!isIncome) {
@@ -209,7 +211,9 @@ final topPayeesProvider = FutureProvider<List<MapEntry<String, double>>>((ref) a
   final payeeTotals = <String, double>{};
 
   for (var t in transactions) {
-    if (t.isTransfer) continue;
+    if (t.isTransfer) {
+      continue;
+    }
 
     // Only count outflows (spending)
     if (t.amount < 0) {

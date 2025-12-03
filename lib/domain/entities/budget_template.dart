@@ -13,7 +13,9 @@ class BudgetTemplate {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
 
     return other is BudgetTemplate &&
         other.id == id &&
@@ -28,9 +30,13 @@ class BudgetTemplate {
   }
 
   bool _mapEquals(Map<String, double> a, Map<String, double> b) {
-    if (a.length != b.length) return false;
+    if (a.length != b.length) {
+      return false;
+    }
     for (final key in a.keys) {
-      if (!b.containsKey(key) || b[key] != a[key]) return false;
+      if (!b.containsKey(key) || b[key] != a[key]) {
+        return false;
+      }
     }
     return true;
   }

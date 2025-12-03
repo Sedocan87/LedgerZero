@@ -100,14 +100,24 @@ class MultiLineChartPainter extends CustomPainter {
       if (series.points.isEmpty) continue;
       for (var p in series.points) {
         final x = p.date.millisecondsSinceEpoch.toDouble();
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (p.value < minY) minY = p.value;
-        if (p.value > maxY) maxY = p.value;
+        if (x < minX) {
+          minX = x;
+        }
+        if (x > maxX) {
+          maxX = x;
+        }
+        if (p.value < minY) {
+          minY = p.value;
+        }
+        if (p.value > maxY) {
+          maxY = p.value;
+        }
       }
     }
 
-    if (minX == double.infinity) return;
+    if (minX == double.infinity) {
+      return;
+    }
 
     // Add padding to Y range
     final yRange = maxY - minY;
@@ -135,7 +145,7 @@ class MultiLineChartPainter extends CustomPainter {
     final labelStyle = TextStyle(color: labelColor, fontSize: 10);
 
     // Y-Axis Labels & Grid Lines (5 steps)
-    final ySteps = 4;
+    const ySteps = 4;
     for (int i = 0; i <= ySteps; i++) {
       final value = minY + (safeYRange / ySteps) * i;
       final y = getY(value);
@@ -155,7 +165,7 @@ class MultiLineChartPainter extends CustomPainter {
     }
 
     // X-Axis Labels (3 steps: Start, Middle, End)
-    final xSteps = 2; // Start, Mid, End
+    const xSteps = 2; // Start, Mid, End
     for (int i = 0; i <= xSteps; i++) {
       final t = minX + (safeXRange / xSteps) * i;
       final x = getX(t);
@@ -172,15 +182,21 @@ class MultiLineChartPainter extends CustomPainter {
 
       // Adjust position to keep within bounds
       double xPos = x - textPainter.width / 2;
-      if (i == 0) xPos = chartRect.left; // Align left
-      if (i == xSteps) xPos = chartRect.right - textPainter.width; // Align right
+      if (i == 0) {
+        xPos = chartRect.left; // Align left
+      }
+      if (i == xSteps) {
+        xPos = chartRect.right - textPainter.width; // Align right
+      }
 
       textPainter.paint(canvas, Offset(xPos, chartRect.bottom + 5));
     }
 
     // 3. Draw Lines
     for (var series in seriesList) {
-      if (series.points.isEmpty) continue;
+      if (series.points.isEmpty) {
+        continue;
+      }
 
       final paint = Paint()
         ..color = series.color
@@ -208,8 +224,12 @@ class MultiLineChartPainter extends CustomPainter {
   }
 
   String compactCurrency(double value) {
-    if (value.abs() >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
-    if (value.abs() >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    if (value.abs() >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    }
+    if (value.abs() >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
     return value.toStringAsFixed(0);
   }
 

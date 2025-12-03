@@ -104,8 +104,8 @@ void main() {
 
   testWidgets('UI: Switches to Transfer form', (tester) async {
     when(mockAccountRepo.watchAllAccounts()).thenAnswer((_) => Stream.value([
-      Account(id: '1', name: 'Checking', type: AccountType.checking, startingBalance: 0, currentBalance: 0),
-      Account(id: '2', name: 'Savings', type: AccountType.savings, startingBalance: 0, currentBalance: 0),
+      const Account(id: '1', name: 'Checking', type: AccountType.checking, startingBalance: 0, currentBalance: 0),
+      const Account(id: '2', name: 'Savings', type: AccountType.savings, startingBalance: 0, currentBalance: 0),
     ]));
     when(mockPayeeRepo.watchAllPayees()).thenAnswer((_) => Stream.value([]));
     when(mockCategoryRepo.watchAllCategories()).thenAnswer((_) => Stream.value([]));

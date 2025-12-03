@@ -42,8 +42,12 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_fromCategoryId == null || _toCategoryId == null) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (_fromCategoryId == null || _toCategoryId == null) {
+      return;
+    }
 
     // Prevent moving to same category
     if (_fromCategoryId == _toCategoryId) {
@@ -116,7 +120,8 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _fromCategoryId,
+                  key: ValueKey(_fromCategoryId),
+                  initialValue: _fromCategoryId,
                   decoration: InputDecoration(
                     labelText: AppLocalizations.of(context)!.moveMoneyFrom,
                     border: const OutlineInputBorder(),
@@ -138,7 +143,8 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _toCategoryId,
+                  key: ValueKey(_toCategoryId),
+                  initialValue: _toCategoryId,
                   decoration: InputDecoration(
                     labelText: AppLocalizations.of(context)!.moveMoneyTo,
                     border: const OutlineInputBorder(),

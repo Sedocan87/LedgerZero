@@ -25,7 +25,9 @@ class AssetLiabilityBreakdown {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
 
     return other is AssetLiabilityBreakdown &&
         other.totalAssets == totalAssets &&
@@ -65,7 +67,9 @@ class SpendingStats {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
 
     return other is SpendingStats &&
         other.averageDailySpending == averageDailySpending &&
@@ -104,7 +108,9 @@ class YearlySummary {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     return other is YearlySummary &&
         other.year == year &&
         other.income == income &&
@@ -131,19 +137,25 @@ class YearlyComparisonData {
 
   /// The percentage change in income (e.g., 0.10 for +10%).
   double get incomeChangePercentage {
-    if (previousYear.income == 0) return 0.0;
+    if (previousYear.income == 0) {
+      return 0.0;
+    }
     return (currentYear.income - previousYear.income) / previousYear.income;
   }
 
   /// The percentage change in expense.
   double get expenseChangePercentage {
-    if (previousYear.expense == 0) return 0.0;
+    if (previousYear.expense == 0) {
+      return 0.0;
+    }
     return (currentYear.expense - previousYear.expense) / previousYear.expense;
   }
 
   /// The percentage change in net savings.
   double get savingsChangePercentage {
-    if (previousYear.netSavings == 0) return 0.0;
+    if (previousYear.netSavings == 0) {
+      return 0.0;
+    }
     return (currentYear.netSavings - previousYear.netSavings) / previousYear.netSavings;
   }
 
@@ -154,7 +166,9 @@ class YearlyComparisonData {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     return other is YearlyComparisonData &&
         other.currentYear == currentYear &&
         other.previousYear == previousYear;

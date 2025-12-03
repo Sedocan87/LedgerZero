@@ -88,7 +88,7 @@ void main() {
       final range = container.read(reportDateRangeProvider);
 
       // Account with starting balance 1000
-      final account = Account(
+      const account = Account(
         id: 'a1',
         name: 'Checking',
         type: AccountType.checking,

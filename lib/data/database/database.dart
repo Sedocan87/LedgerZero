@@ -101,7 +101,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _seedDefaultCategories() async {
-    final uuid = const Uuid();
+    const uuid = Uuid();
     final now = DateTime.now();
 
     // Define defaults

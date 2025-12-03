@@ -12,10 +12,10 @@ void main() {
         overrides: [
           tbbProvider.overrideWith((ref) => Future.value(100.0)),
         ],
-        child: MaterialApp(
+        child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(
+          home: Scaffold(
             body: ToBeBudgetedBanner(),
           ),
         ),
@@ -38,10 +38,10 @@ void main() {
         overrides: [
           tbbProvider.overrideWith((ref) => Future.value(-50.0)),
         ],
-        child: MaterialApp(
+        child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(
+          home: Scaffold(
             body: ToBeBudgetedBanner(),
           ),
         ),

@@ -76,7 +76,9 @@ class ChartPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (points.isEmpty) return;
+    if (points.isEmpty) {
+      return;
+    }
 
     final paint = Paint()
       ..color = color

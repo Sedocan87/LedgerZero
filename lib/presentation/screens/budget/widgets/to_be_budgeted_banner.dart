@@ -52,7 +52,9 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                       ),
                 );
 
-                if (tbb <= 0) return textWidget;
+                if (tbb <= 0) {
+                  return textWidget;
+                }
 
                 return LongPressDraggable<double>(
                   data: tbb,
