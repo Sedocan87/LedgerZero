@@ -15,6 +15,12 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           ListTile(
+            leading: const Icon(Icons.security),
+            title: Text(AppLocalizations.of(context)!.recoveryKey),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/recovery-key'),
+          ),
+          ListTile(
             leading: const Icon(Icons.people),
             title: Text(AppLocalizations.of(context)!.payees),
             trailing: const Icon(Icons.chevron_right),

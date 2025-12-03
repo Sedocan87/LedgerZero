@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key});
@@ -12,13 +12,21 @@ class OnboardingScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Onboarding Screen'),
+            const Text('Welcome to LedgerZero', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32.0),
+              child: Text(
+                'Take control of your finances with a private, local-first budgeting app.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
-                ref.read(authProvider.notifier).setOnboarded(true);
+                context.goNamed('security-setup');
               },
-              child: const Text('Complete Onboarding'),
+              child: const Text('Get Started'),
             ),
           ],
         ),

@@ -380,5 +380,8 @@
   "never": "Never",
   "onDate": "On Date",
   "afterOccurrences": "After",
-  "occurrences": "Occurrences"
+  "occurrences": "Occurrences",
+  "recoveryKey": "Recovery Key",
+  "backupRecoveryKey": "Backup Recovery Key",
+  "revealRecoveryKey": "Reveal Recovery Key"
 }
