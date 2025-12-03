@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class SimpleBarChart extends StatelessWidget {
   final Map<String, double> data;
@@ -25,7 +26,7 @@ class SimpleBarChart extends StatelessWidget {
         height: height,
         child: Center(
           child: Text(
-            'No data available',
+            AppLocalizations.of(context)?.noTransactions ?? 'No data available',
             style: TextStyle(color: labelColor),
           ),
         ),
@@ -161,5 +162,23 @@ class BarChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant BarChartPainter oldDelegate) {
+    if (oldDelegate.barColor != barColor) {
+      return true;
+    }
+    if (oldDelegate.labelColor != labelColor) {
+      return true;
+    }
+    if (oldDelegate.data.length != data.length) {
+      return true;
+    }
+
+    for (int i = 0; i < data.length; i++) {
+      if (data[i].key != oldDelegate.data[i].key ||
+          data[i].value != oldDelegate.data[i].value) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

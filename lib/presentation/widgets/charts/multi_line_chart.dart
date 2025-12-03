@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
 
 class MultiLineChart extends StatelessWidget {
@@ -24,7 +25,7 @@ class MultiLineChart extends StatelessWidget {
         height: height,
         child: Center(
           child: Text(
-            'No data available',
+            AppLocalizations.of(context)?.noTransactions ?? 'No data available',
             style: TextStyle(color: labelColor),
           ),
         ),
@@ -97,7 +98,9 @@ class MultiLineChartPainter extends CustomPainter {
     double maxY = double.negativeInfinity;
 
     for (var series in seriesList) {
-      if (series.points.isEmpty) continue;
+      if (series.points.isEmpty) {
+        continue;
+      }
       for (var p in series.points) {
         final x = p.date.millisecondsSinceEpoch.toDouble();
         if (x < minX) {
@@ -234,5 +237,35 @@ class MultiLineChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant MultiLineChartPainter oldDelegate) {
+    if (oldDelegate.gridColor != gridColor) {
+      return true;
+    }
+    if (oldDelegate.labelColor != labelColor) {
+      return true;
+    }
+    if (oldDelegate.seriesList.length != seriesList.length) {
+      return true;
+    }
+
+    for (int i = 0; i < seriesList.length; i++) {
+      if (seriesList[i].name != oldDelegate.seriesList[i].name) {
+        return true;
+      }
+      if (seriesList[i].color != oldDelegate.seriesList[i].color) {
+        return true;
+      }
+      if (seriesList[i].points.length != oldDelegate.seriesList[i].points.length) {
+        return true;
+      }
+
+      for(int j=0; j<seriesList[i].points.length; j++) {
+         if (seriesList[i].points[j].date != oldDelegate.seriesList[i].points[j].date ||
+             seriesList[i].points[j].value != oldDelegate.seriesList[i].points[j].value) {
+           return true;
+         }
+      }
+    }
+    return false;
+  }
 }

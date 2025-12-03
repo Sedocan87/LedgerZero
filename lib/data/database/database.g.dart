@@ -3730,6 +3730,364 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   }
 }
 
+class $ReportNotesTable extends ReportNotes
+    with TableInfo<$ReportNotesTable, ReportNote> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReportNotesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, date, note, createdAt, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'report_notes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReportNote> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {date},
+  ];
+  @override
+  ReportNote map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReportNote(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      ),
+    );
+  }
+
+  @override
+  $ReportNotesTable createAlias(String alias) {
+    return $ReportNotesTable(attachedDatabase, alias);
+  }
+}
+
+class ReportNote extends DataClass implements Insertable<ReportNote> {
+  final String id;
+  final String date;
+  final String note;
+  final String? createdAt;
+  final String? updatedAt;
+  const ReportNote({
+    required this.id,
+    required this.date,
+    required this.note,
+    this.createdAt,
+    this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['date'] = Variable<String>(date);
+    map['note'] = Variable<String>(note);
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<String>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<String>(updatedAt);
+    }
+    return map;
+  }
+
+  ReportNotesCompanion toCompanion(bool nullToAbsent) {
+    return ReportNotesCompanion(
+      id: Value(id),
+      date: Value(date),
+      note: Value(note),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory ReportNote.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReportNote(
+      id: serializer.fromJson<String>(json['id']),
+      date: serializer.fromJson<String>(json['date']),
+      note: serializer.fromJson<String>(json['note']),
+      createdAt: serializer.fromJson<String?>(json['createdAt']),
+      updatedAt: serializer.fromJson<String?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'date': serializer.toJson<String>(date),
+      'note': serializer.toJson<String>(note),
+      'createdAt': serializer.toJson<String?>(createdAt),
+      'updatedAt': serializer.toJson<String?>(updatedAt),
+    };
+  }
+
+  ReportNote copyWith({
+    String? id,
+    String? date,
+    String? note,
+    Value<String?> createdAt = const Value.absent(),
+    Value<String?> updatedAt = const Value.absent(),
+  }) => ReportNote(
+    id: id ?? this.id,
+    date: date ?? this.date,
+    note: note ?? this.note,
+    createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+  );
+  ReportNote copyWithCompanion(ReportNotesCompanion data) {
+    return ReportNote(
+      id: data.id.present ? data.id.value : this.id,
+      date: data.date.present ? data.date.value : this.date,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportNote(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, date, note, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReportNote &&
+          other.id == this.id &&
+          other.date == this.date &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ReportNotesCompanion extends UpdateCompanion<ReportNote> {
+  final Value<String> id;
+  final Value<String> date;
+  final Value<String> note;
+  final Value<String?> createdAt;
+  final Value<String?> updatedAt;
+  final Value<int> rowid;
+  const ReportNotesCompanion({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReportNotesCompanion.insert({
+    required String id,
+    required String date,
+    required String note,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       date = Value(date),
+       note = Value(note);
+  static Insertable<ReportNote> custom({
+    Expression<String>? id,
+    Expression<String>? date,
+    Expression<String>? note,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (date != null) 'date': date,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReportNotesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? date,
+    Value<String>? note,
+    Value<String?>? createdAt,
+    Value<String?>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return ReportNotesCompanion(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportNotesCompanion(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ScheduledTransactionsTable extends ScheduledTransactions
     with TableInfo<$ScheduledTransactionsTable, ScheduledTransaction> {
   @override
@@ -4859,6 +5217,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $PayeesTable payees = $PayeesTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
+  late final $ReportNotesTable reportNotes = $ReportNotesTable(this);
   late final $ScheduledTransactionsTable scheduledTransactions =
       $ScheduledTransactionsTable(this);
   late final $SyncLogTable syncLog = $SyncLogTable(this);
@@ -4889,6 +5248,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final CategoriesDao categoriesDao = CategoriesDao(this as AppDatabase);
   late final PayeesDao payeesDao = PayeesDao(this as AppDatabase);
+  late final ReportNotesDao reportNotesDao = ReportNotesDao(
+    this as AppDatabase,
+  );
   late final ScheduledTransactionsDao scheduledTransactionsDao =
       ScheduledTransactionsDao(this as AppDatabase);
   late final SyncLogDao syncLogDao = SyncLogDao(this as AppDatabase);
@@ -4907,6 +5269,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     budgetTemplates,
     payees,
     transactions,
+    reportNotes,
     scheduledTransactions,
     syncLog,
     idxBudgetsMonth,
@@ -8667,6 +9030,206 @@ typedef $$TransactionsTableProcessedTableManager =
         bool parentTransactionId,
       })
     >;
+typedef $$ReportNotesTableCreateCompanionBuilder =
+    ReportNotesCompanion Function({
+      required String id,
+      required String date,
+      required String note,
+      Value<String?> createdAt,
+      Value<String?> updatedAt,
+      Value<int> rowid,
+    });
+typedef $$ReportNotesTableUpdateCompanionBuilder =
+    ReportNotesCompanion Function({
+      Value<String> id,
+      Value<String> date,
+      Value<String> note,
+      Value<String?> createdAt,
+      Value<String?> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$ReportNotesTableFilterComposer
+    extends Composer<_$AppDatabase, $ReportNotesTable> {
+  $$ReportNotesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ReportNotesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReportNotesTable> {
+  $$ReportNotesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReportNotesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReportNotesTable> {
+  $$ReportNotesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ReportNotesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReportNotesTable,
+          ReportNote,
+          $$ReportNotesTableFilterComposer,
+          $$ReportNotesTableOrderingComposer,
+          $$ReportNotesTableAnnotationComposer,
+          $$ReportNotesTableCreateCompanionBuilder,
+          $$ReportNotesTableUpdateCompanionBuilder,
+          (
+            ReportNote,
+            BaseReferences<_$AppDatabase, $ReportNotesTable, ReportNote>,
+          ),
+          ReportNote,
+          PrefetchHooks Function()
+        > {
+  $$ReportNotesTableTableManager(_$AppDatabase db, $ReportNotesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReportNotesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReportNotesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReportNotesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<String?> createdAt = const Value.absent(),
+                Value<String?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReportNotesCompanion(
+                id: id,
+                date: date,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String date,
+                required String note,
+                Value<String?> createdAt = const Value.absent(),
+                Value<String?> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReportNotesCompanion.insert(
+                id: id,
+                date: date,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ReportNotesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReportNotesTable,
+      ReportNote,
+      $$ReportNotesTableFilterComposer,
+      $$ReportNotesTableOrderingComposer,
+      $$ReportNotesTableAnnotationComposer,
+      $$ReportNotesTableCreateCompanionBuilder,
+      $$ReportNotesTableUpdateCompanionBuilder,
+      (
+        ReportNote,
+        BaseReferences<_$AppDatabase, $ReportNotesTable, ReportNote>,
+      ),
+      ReportNote,
+      PrefetchHooks Function()
+    >;
 typedef $$ScheduledTransactionsTableCreateCompanionBuilder =
     ScheduledTransactionsCompanion Function({
       required String id,
@@ -9554,6 +10117,8 @@ class $AppDatabaseManager {
       $$PayeesTableTableManager(_db, _db.payees);
   $$TransactionsTableTableManager get transactions =>
       $$TransactionsTableTableManager(_db, _db.transactions);
+  $$ReportNotesTableTableManager get reportNotes =>
+      $$ReportNotesTableTableManager(_db, _db.reportNotes);
   $$ScheduledTransactionsTableTableManager get scheduledTransactions =>
       $$ScheduledTransactionsTableTableManager(_db, _db.scheduledTransactions);
   $$SyncLogTableTableManager get syncLog =>

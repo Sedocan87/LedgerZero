@@ -18,3 +18,11 @@ class ChartSeries {
     required this.points,
   });
 }
+
+class BudgetVsActualItem {
+  final String categoryName;
+  final double budgeted;
+  final double actual;
+
+  BudgetVsActualItem({required this.categoryName, required this.budgeted, required this.actual});
+}

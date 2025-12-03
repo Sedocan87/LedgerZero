@@ -6,7 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
+import 'package:ledger_zero/presentation/screens/reports/widgets/budget_vs_actual_chart.dart';
+import 'package:ledger_zero/presentation/screens/reports/widgets/report_category_filter.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/report_date_selector.dart';
+import 'package:ledger_zero/presentation/screens/reports/widgets/report_notes_section.dart';
 import 'package:ledger_zero/presentation/widgets/charts/multi_line_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/pie_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/simple_bar_chart.dart';
@@ -28,6 +31,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     ReportType.incomeVsExpense: GlobalKey(),
     ReportType.netWorth: GlobalKey(),
     ReportType.topPayees: GlobalKey(),
+    ReportType.budgetVsActual: GlobalKey(),
   };
 
   Future<void> _exportReport(ReportType type, ExportFormat format, String title) async {
@@ -79,6 +83,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         case ReportType.topPayees:
           data = ref.read(topPayeesProvider).valueOrNull;
           break;
+        case ReportType.budgetVsActual:
+          data = ref.read(budgetVsActualProvider).valueOrNull;
+          break;
       }
 
       if (data == null && format == ExportFormat.csv) {
@@ -108,6 +115,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             break;
           case ReportType.topPayees:
             csvHeaders = [l10n.payee, l10n.amount];
+            break;
+          case ReportType.budgetVsActual:
+            csvHeaders = [l10n.category, l10n.budgeted, l10n.activity];
             break;
         }
       }
@@ -152,6 +162,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       appBar: AppBar(
         title: Text(l10n.reports),
         actions: [
+          const ReportCategoryFilter(),
           IconButton(
             icon: const Icon(Icons.ios_share),
             tooltip: l10n.export,
@@ -173,6 +184,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
+
+              const ReportNotesSection(),
+              const SizedBox(height: 32),
 
               // Spending Trends (Compare Months)
               Text(l10n.spendingTrends, style: Theme.of(context).textTheme.titleLarge),
@@ -245,6 +259,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+
+              // Budget vs Actual
+              Text('Budget vs Actual', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              RepaintBoundary(
+                key: _chartKeys[ReportType.budgetVsActual],
+                child: Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: const BudgetVsActualChart(),
+                ),
+              ),
+              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -277,6 +303,7 @@ class _ExportDialogState extends State<_ExportDialog> {
       ReportType.incomeVsExpense: l10n.incomeVsExpense,
       ReportType.netWorth: l10n.netWorth,
       ReportType.topPayees: l10n.topPayees,
+      ReportType.budgetVsActual: l10n.budgetVsActual,
     };
 
     return AlertDialog(
@@ -359,7 +386,7 @@ class _SpendingTrendsChart extends ConsumerWidget {
     return trendsAsync.when(
       data: (data) {
         if (data.isEmpty) {
-          return const SizedBox(height: 200, child: Center(child: Text('No data')));
+          return SizedBox(height: 200, child: Center(child: Text(AppLocalizations.of(context)!.noTransactions)));
         }
 
         final sortedKeys = data.keys.toList()..sort();
@@ -465,7 +492,7 @@ class _TopPayeesList extends ConsumerWidget {
     return payeesAsync.when(
       data: (data) {
         if (data.isEmpty) {
-          return const SizedBox(height: 100, child: Center(child: Text('No payee data')));
+          return SizedBox(height: 100, child: Center(child: Text(AppLocalizations.of(context)!.noTransactions)));
         }
 
         return Card(

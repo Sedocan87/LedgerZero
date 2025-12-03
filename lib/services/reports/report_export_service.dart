@@ -15,6 +15,7 @@ enum ReportType {
   incomeVsExpense,
   netWorth,
   topPayees,
+  budgetVsActual,
 }
 
 enum ExportFormat {
@@ -99,6 +100,12 @@ class ReportExportService {
            rows.add([entry.key, entry.value]);
          }
          break;
+      case ReportType.budgetVsActual:
+        final list = data as List<BudgetVsActualItem>;
+        for (var item in list) {
+          rows.add([item.categoryName, item.budgeted, item.actual]);
+        }
+        break;
     }
 
     final csv = const ListToCsvConverter().convert(rows);

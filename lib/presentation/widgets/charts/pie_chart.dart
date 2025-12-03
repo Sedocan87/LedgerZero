@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class PieChart extends StatelessWidget {
   final Map<String, double> data;
@@ -31,7 +32,7 @@ class PieChart extends StatelessWidget {
         height: height,
         child: Center(
           child: Text(
-            'No data available',
+            AppLocalizations.of(context)?.noTransactions ?? 'No data available',
             style: TextStyle(color: labelColor),
           ),
         ),
@@ -170,5 +171,20 @@ class PieChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant PieChartPainter oldDelegate) {
+    if (oldDelegate.total != total) {
+      return true;
+    }
+    if (oldDelegate.data.length != data.length) {
+      return true;
+    }
+
+    for (int i = 0; i < data.length; i++) {
+       if (data[i].key != oldDelegate.data[i].key ||
+           data[i].value != oldDelegate.data[i].value) {
+         return true;
+       }
+    }
+    return false;
+  }
 }

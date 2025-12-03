@@ -85,7 +85,9 @@ Future<void> showApplyTemplateDialog(BuildContext context, WidgetRef ref) async 
                   tooltip: AppLocalizations.of(context)!.deleteTemplate,
                   onPressed: () async {
                     await ref.read(budgetingServiceProvider).deleteTemplate(template.id);
-                    Navigator.pop(context);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                     // Re-open to refresh? Or just close. Simple to just close.
                   },
                 ),

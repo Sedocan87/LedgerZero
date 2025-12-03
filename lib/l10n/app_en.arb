@@ -272,5 +272,19 @@
         "type": "String"
       }
     }
-  }
+  },
+  "budgetVsActual": "Budget vs Actual",
+  "filterCategories": "Filter Categories",
+  "clear": "Clear",
+  "apply": "Apply",
+  "noNotes": "No notes for this period.",
+  "addNote": "Add Note",
+  "editNote": "Edit Note",
+  "month": "Month",
+  "note": "Note",
+  "enterNote": "Please enter a note",
+  "deleteNoteConfirmationTitle": "Delete Note?",
+  "deleteNoteConfirmationMessage": "This action cannot be undone.",
+  "noteDeleted": "Note deleted",
+  "noteSaved": "Note saved"
 }
