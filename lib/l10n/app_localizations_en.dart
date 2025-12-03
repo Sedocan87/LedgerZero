@@ -483,4 +483,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get custom => 'Custom';
+
+  @override
+  String get series => 'Series';
+
+  @override
+  String get exportReport => 'Export Report';
+
+  @override
+  String get selectReportToExport => 'Select Report';
+
+  @override
+  String get exportFormat => 'Format';
+
+  @override
+  String get csv => 'CSV';
+
+  @override
+  String get pdf => 'PDF';
+
+  @override
+  String get image => 'Image';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get exporting => 'Exporting...';
+
+  @override
+  String get exportSuccess => 'Report exported successfully';
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
 }
