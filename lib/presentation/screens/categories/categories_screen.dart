@@ -208,8 +208,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       child: Text(
                           "- Group similar expenses (e.g., 'Housing', 'Food').\n"
                           "- Use 'Hide Category' instead of deleting to preserve history.\n"
-                          "- Use emojis or icons for quick recognition.\n"
-                          "- Keep it simple: Start with broad categories and split if needed."),
+                          '- Use emojis or icons for quick recognition.\n'
+                          '- Keep it simple: Start with broad categories and split if needed.'),
                     ),
                     actions: [
                       TextButton(

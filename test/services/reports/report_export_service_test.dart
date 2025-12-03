@@ -11,11 +11,6 @@ class MockPathProviderPlatform extends PathProviderPlatform
   Future<String?> getApplicationDocumentsPath() async {
     return Directory.systemTemp.path;
   }
-
-  @override
-  Future<String?> getApplicationDocumentsDirectoryPath() async {
-    return Directory.systemTemp.path;
-  }
 }
 
 class MockSharePlatform extends SharePlatform

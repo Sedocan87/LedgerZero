@@ -34,7 +34,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     // Show loading
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.exporting)),
     );
@@ -287,7 +289,7 @@ class _ExportDialogState extends State<_ExportDialog> {
             Text(l10n.selectReportToExport, style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             DropdownButtonFormField<ReportType>(
-              value: _selectedType,
+              initialValue: _selectedType,
               isExpanded: true,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: ReportType.values.map((type) {
@@ -297,7 +299,9 @@ class _ExportDialogState extends State<_ExportDialog> {
                 );
               }).toList(),
               onChanged: (value) {
-                if (value != null) setState(() => _selectedType = value);
+                if (value != null) {
+                  setState(() => _selectedType = value);
+                }
               },
             ),
             const SizedBox(height: 16),

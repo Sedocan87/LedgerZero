@@ -142,7 +142,7 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
         // Find or Create Group
         var group = existingGroups.firstWhere(
           (g) => g.name.toLowerCase() == groupName.toLowerCase(),
-          orElse: () => CategoryGroup(id: 'placeholder', name: ''),
+          orElse: () => const CategoryGroup(id: 'placeholder', name: ''),
         );
 
         if (group.id == 'placeholder') {
@@ -158,7 +158,7 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
         // Find or Create Category
         var category = existingCats.firstWhere(
           (c) => c.name.toLowerCase() == catName.toLowerCase() && c.categoryGroupId == group.id,
-          orElse: () => Category(id: 'placeholder', name: ''),
+          orElse: () => const Category(id: 'placeholder', name: ''),
         );
 
         if (category.id == 'placeholder') {

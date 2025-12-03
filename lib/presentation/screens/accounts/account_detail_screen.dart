@@ -70,7 +70,9 @@ class AccountDetailScreen extends ConsumerWidget {
                   await ref
                       .read(accountRepositoryProvider)
                       .deleteAccount(accountId);
-                  if (context.mounted) context.pop();
+                  if (context.mounted) {
+                    context.pop();
+                  }
                 }
               } else if (value == 'close') {
                 final account = accountAsync.value;

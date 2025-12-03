@@ -31,7 +31,7 @@ class FakeAccountRepository implements AccountRepository {
 
 void main() {
   testWidgets('AccountsScreen shows accounts list', (WidgetTester tester) async {
-    final tAccount = Account(
+    const tAccount = Account(
       id: '1',
       name: 'Checking',
       type: AccountType.checking,
@@ -46,10 +46,10 @@ void main() {
         overrides: [
           accountRepositoryProvider.overrideWithValue(fakeRepo),
         ],
-        child: MaterialApp(
+        child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const AccountsScreen(),
+          home: AccountsScreen(),
         ),
       ),
     );
@@ -68,10 +68,10 @@ void main() {
         overrides: [
           accountRepositoryProvider.overrideWithValue(fakeRepo),
         ],
-        child: MaterialApp(
+        child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const AccountsScreen(),
+          home: AccountsScreen(),
         ),
       ),
     );

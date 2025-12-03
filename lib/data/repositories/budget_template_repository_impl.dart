@@ -60,7 +60,7 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
   }
 
   BudgetTemplate _mapToEntity(drift.BudgetTemplate row) {
-    Map<String, double> dataMap = {};
+    final Map<String, double> dataMap = {};
     try {
       final decoded = jsonDecode(row.data) as Map<String, dynamic>;
       decoded.forEach((key, value) {

@@ -438,7 +438,9 @@ class BudgetingService {
 
   Future<void> applyBudgetTemplate(String templateId, DateTime month) async {
     final template = await _budgetTemplateRepository.getTemplateById(templateId);
-    if (template == null) return;
+    if (template == null) {
+      return;
+    }
 
     for (final entry in template.data.entries) {
       await setCategoryBudgetedAmount(entry.key, entry.value, month);
@@ -456,7 +458,6 @@ class BudgetingService {
   // --- Bulk Operations ---
 
   Future<void> copyBudgetFromPreviousMonth(DateTime month) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
     final prevMonth = DateTime(month.year, month.month - 1, 1);
     final prevMonthString = DateFormat('yyyy-MM').format(prevMonth);
 
@@ -511,7 +512,7 @@ class BudgetingService {
     final allTimeBudgetedMap = await _budgetRepository.getAllTimeBudgetedSumsUpToMonth(monthString);
 
     // Combine results
-    Map<String, Map<String, double>> result = {};
+    final Map<String, Map<String, double>> result = {};
 
     final allKeys = {...currentActivityMap.keys, ...allTimeActivityMap.keys, ...allTimeBudgetedMap.keys};
 
@@ -579,7 +580,9 @@ class BudgetingService {
 
           final monthsDiff = _monthsDifference(month, category.targetDate!);
           int monthsRemaining = monthsDiff + 1;
-          if (monthsRemaining <= 0) monthsRemaining = 1;
+          if (monthsRemaining <= 0) {
+            monthsRemaining = 1;
+          }
 
           final priorAvailable = prevMonthPerformance?[category.id]?['available'] ?? 0.0;
           final needed = targetAmount - priorAvailable;

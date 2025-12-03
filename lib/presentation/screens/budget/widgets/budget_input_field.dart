@@ -102,7 +102,9 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
   }
 
   void _submit() {
-    if (_controller == null) return;
+    if (_controller == null) {
+      return;
+    }
     double value;
     try {
       value = _parseText(_controller!.text);
@@ -113,10 +115,12 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
   }
 
   void _adjustValue(double delta) {
-    if (_controller == null) return;
+    if (_controller == null) {
+      return;
+    }
     try {
-      double currentValue = _parseText(_controller!.text);
-      double newValue = currentValue + delta;
+      final double currentValue = _parseText(_controller!.text);
+      final double newValue = currentValue + delta;
 
       final locale = Localizations.localeOf(context).toString();
       final format = NumberFormat.currency(locale: locale, symbol: '', decimalDigits: 2);

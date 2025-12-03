@@ -210,12 +210,16 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     if (sort != null && (sort.field == TransactionSortField.payeeName || sort.field == TransactionSortField.categoryName)) {
        final joinedQuery = _applyJoin(rootQuery, sort);
        joinedQuery.orderBy(_buildOrderBy(sort));
-       if (limit != null) joinedQuery.limit(limit);
+       if (limit != null) {
+         joinedQuery.limit(limit);
+       }
        return joinedQuery.map((row) => row.readTable(transactions)).get();
     } else {
        final terms = _buildOrderBy(sort);
        rootQuery.orderBy(terms.map((term) => (t) => term).toList());
-       if (limit != null) rootQuery.limit(limit);
+       if (limit != null) {
+         rootQuery.limit(limit);
+       }
        return rootQuery.get();
     }
   }
@@ -231,12 +235,16 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     if (sort != null && (sort.field == TransactionSortField.payeeName || sort.field == TransactionSortField.categoryName)) {
        final joinedQuery = _applyJoin(rootQuery, sort);
        joinedQuery.orderBy(_buildOrderBy(sort));
-       if (limit != null) joinedQuery.limit(limit);
+       if (limit != null) {
+         joinedQuery.limit(limit);
+       }
        return joinedQuery.map((row) => row.readTable(transactions)).watch();
     } else {
        final terms = _buildOrderBy(sort);
        rootQuery.orderBy(terms.map((term) => (t) => term).toList());
-       if (limit != null) rootQuery.limit(limit);
+       if (limit != null) {
+         rootQuery.limit(limit);
+       }
        return rootQuery.watch();
     }
   }

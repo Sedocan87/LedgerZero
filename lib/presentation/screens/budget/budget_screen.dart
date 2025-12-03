@@ -151,10 +151,15 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
           if (!_isSearching)
             PopupMenuButton<String>(
               onSelected: (value) async {
-                if (value == 'save_template') await showSaveTemplateDialog(context, ref);
-                if (value == 'apply_template') await showApplyTemplateDialog(context, ref);
-                if (value == 'copy_previous') await _copyPreviousMonth();
-                if (value == 'reset') await _resetBudget();
+                if (value == 'save_template') {
+                  await showSaveTemplateDialog(context, ref);
+                } else if (value == 'apply_template') {
+                  await showApplyTemplateDialog(context, ref);
+                } else if (value == 'copy_previous') {
+                  await _copyPreviousMonth();
+                } else if (value == 'reset') {
+                  await _resetBudget();
+                }
               },
               itemBuilder: (context) => [
                 PopupMenuItem(

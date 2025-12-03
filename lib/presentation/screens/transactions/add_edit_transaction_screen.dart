@@ -164,16 +164,20 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
   }
 
   void _triggerAutosave() {
-    if (widget.transactionId != null) return; // Only autosave new transactions for now
+    if (widget.transactionId != null) {
+      return; // Only autosave new transactions for now
+    }
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(const Duration(milliseconds: 1000), _saveDraft);
   }
 
   Future<void> _saveDraft() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     try {
       final prefs = ref.read(sharedPreferencesProvider);
-      final key = 'draft_transaction_new';
+      const key = 'draft_transaction_new';
 
       final draft = {
         'amount': _amountController.text,
@@ -204,7 +208,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
   Future<void> _restoreDraft() async {
     try {
       final prefs = ref.read(sharedPreferencesProvider);
-      final key = 'draft_transaction_new';
+      const key = 'draft_transaction_new';
       final jsonStr = prefs.getString(key);
 
       if (jsonStr != null) {
@@ -275,7 +279,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
 
   Future<void> _clearDraft() async {
       final prefs = ref.read(sharedPreferencesProvider);
-      final key = 'draft_transaction_new';
+      const key = 'draft_transaction_new';
       await prefs.remove(key);
   }
 
@@ -293,7 +297,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
              splitTotal += val;
         }
         if ((splitTotal - amountVal).abs() > 0.01) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Split amounts must equal total amount")));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Split amounts must equal total amount')));
             return;
         }
     }
@@ -351,6 +355,9 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
             if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scheduled transaction created')));
                 await _clearDraft();
+                if (!mounted) {
+                  return;
+                }
                 if (popAfterSave) {
                   context.pop();
                 } else {
@@ -474,7 +481,12 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
 
         if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.transactionSaved)));
-            if (widget.transactionId == null) await _clearDraft();
+            if (widget.transactionId == null) {
+              await _clearDraft();
+            }
+            if (!mounted) {
+              return;
+            }
             if (popAfterSave) {
               context.pop();
             } else {
@@ -494,7 +506,9 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
     _categoryController.clear();
     _payeeController?.clear();
     _transferAccountController.clear();
-    for (var s in _splits) { s.dispose(); }
+    for (var s in _splits) {
+      s.dispose();
+    }
     _splits.clear();
 
     setState(() {
@@ -758,8 +772,12 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                           categoryId: child.categoryId,
                       );
                       item.amountController.text = child.amount.abs().toString();
-                      if (child.memo != null) item.memoController.text = child.memo!;
-                      if (cat != null) item.categoryController.text = cat.name;
+                      if (child.memo != null) {
+                        item.memoController.text = child.memo!;
+                      }
+                      if (cat != null) {
+                        item.categoryController.text = cat.name;
+                      }
                       _splits.add(item);
                   }
                   _initialSplitsLoaded = true;
@@ -1044,7 +1062,9 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                           onChanged: (val) {
                               setState(() {
                                   _isSplit = val;
-                                  if (_isSplit) _isRecurring = false; // Disable recurring
+                                  if (_isSplit) {
+                                    _isRecurring = false; // Disable recurring
+                                  }
                                   if (_isSplit && _splits.isEmpty) {
                                       // Initialize with 2 splits?
                                       _splits.add(SplitItem());
@@ -1125,7 +1145,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                               },
                           ),
                           AppButton.text(
-                              label: "Add Split", // TODO l10n
+                              label: 'Add Split', // TODO l10n
                               onPressed: () {
                                   setState(() {
                                       _splits.add(SplitItem());
@@ -1168,14 +1188,17 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                           onChanged: (val) {
                               setState(() {
                                   _isRecurring = val;
-                                  if (_isRecurring) _isSplit = false;
+                                  if (_isRecurring) {
+                                    _isSplit = false;
+                                  }
                                   _triggerAutosave();
                               });
                           },
                       ),
                       if (_isRecurring) ...[
                           DropdownButtonFormField<RecurrenceFrequency>(
-                              value: _frequency,
+                              key: ValueKey(_frequency),
+                              initialValue: _frequency,
                               items: RecurrenceFrequency.values.map((f) => DropdownMenuItem(
                                   value: f,
                                   child: Text(

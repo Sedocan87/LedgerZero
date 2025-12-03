@@ -4,7 +4,9 @@ class MathEvaluator {
   /// Returns the result as a double.
   /// Throws FormatException if the expression is invalid.
   static double evaluate(String expression) {
-    if (expression.trim().isEmpty) return 0.0;
+    if (expression.trim().isEmpty) {
+      return 0.0;
+    }
 
     // Remove all whitespace
     final cleanExpr = expression.replaceAll(' ', '');
@@ -28,22 +30,30 @@ class MathEvaluator {
   static double _parseExpression(String expr) {
     // 1. Tokenize
     final tokens = _tokenize(expr);
-    if (tokens.isEmpty) return 0.0;
+    if (tokens.isEmpty) {
+      return 0.0;
+    }
 
     // 2. Handle multiplication and division first
     final complexTokens = <String>[];
     for (int i = 0; i < tokens.length; i++) {
       final token = tokens[i];
       if (token == '*' || token == '/') {
-        if (complexTokens.isEmpty) throw const FormatException('Unexpected operator');
+        if (complexTokens.isEmpty) {
+          throw const FormatException('Unexpected operator');
+        }
         final prevVal = double.parse(complexTokens.removeLast());
-        if (i + 1 >= tokens.length) throw const FormatException('Missing operand');
+        if (i + 1 >= tokens.length) {
+          throw const FormatException('Missing operand');
+        }
         final nextVal = double.parse(tokens[++i]);
 
         if (token == '*') {
           complexTokens.add((prevVal * nextVal).toString());
         } else {
-          if (nextVal == 0) throw const FormatException('Division by zero');
+          if (nextVal == 0) {
+            throw const FormatException('Division by zero');
+          }
           complexTokens.add((prevVal / nextVal).toString());
         }
       } else {
