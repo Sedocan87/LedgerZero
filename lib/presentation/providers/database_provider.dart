@@ -4,6 +4,7 @@ import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
 import 'package:ledger_zero/data/database/daos/budget_templates_dao.dart';
 import 'package:ledger_zero/data/database/daos/categories_dao.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
+import 'package:ledger_zero/data/database/daos/report_notes_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
@@ -40,6 +41,11 @@ final categoriesDaoProvider = Provider<CategoriesDao>((ref) {
 /// Provides the [PayeesDao].
 final payeesDaoProvider = Provider<PayeesDao>((ref) {
   return ref.watch(databaseProvider).payeesDao;
+});
+
+/// Provides the [ReportNotesDao].
+final reportNotesDaoProvider = Provider<ReportNotesDao>((ref) {
+  return ref.watch(databaseProvider).reportNotesDao;
 });
 
 /// Provides the [ScheduledTransactionsDao].

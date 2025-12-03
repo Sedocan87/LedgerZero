@@ -6,6 +6,7 @@ import 'package:ledger_zero/data/database/tables/budget_templates.dart';
 import 'package:ledger_zero/data/database/tables/categories.dart';
 import 'package:ledger_zero/data/database/tables/category_groups.dart';
 import 'package:ledger_zero/data/database/tables/payees.dart';
+import 'package:ledger_zero/data/database/tables/report_notes.dart';
 import 'package:ledger_zero/data/database/tables/scheduled_transactions.dart';
 import 'package:ledger_zero/data/database/tables/sync_log.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
@@ -15,6 +16,7 @@ import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
 import 'package:ledger_zero/data/database/daos/budget_templates_dao.dart';
 import 'package:ledger_zero/data/database/daos/categories_dao.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
+import 'package:ledger_zero/data/database/daos/report_notes_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
@@ -31,6 +33,7 @@ part 'database.g.dart';
     CategoryGroups,
     Transactions,
     Payees,
+    ReportNotes,
     ScheduledTransactions,
     SyncLog,
   ],
@@ -40,6 +43,7 @@ part 'database.g.dart';
     BudgetTemplatesDao,
     CategoriesDao,
     PayeesDao,
+    ReportNotesDao,
     ScheduledTransactionsDao,
     SyncLogDao,
     TransactionsDao,
@@ -58,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -92,6 +96,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 6) {
           // Add budget templates table
           await m.createTable(budgetTemplates);
+        }
+        if (from < 7) {
+          // Add report notes table
+          await m.createTable(reportNotes);
         }
       },
       beforeOpen: (details) async {

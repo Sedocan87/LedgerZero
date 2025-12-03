@@ -4,6 +4,7 @@ import 'package:ledger_zero/data/repositories/budget_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_template_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/category_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/payee_repository_impl.dart';
+import 'package:ledger_zero/data/repositories/report_note_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/scheduled_transaction_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/transaction_repository_impl.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
@@ -11,6 +12,7 @@ import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
+import 'package:ledger_zero/domain/repositories/report_note_repository.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
@@ -38,6 +40,11 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
 /// Provides the [PayeeRepository].
 final payeeRepositoryProvider = Provider<PayeeRepository>((ref) {
   return PayeeRepositoryImpl(ref.watch(payeesDaoProvider));
+});
+
+/// Provides the [ReportNoteRepository].
+final reportNoteRepositoryProvider = Provider<ReportNoteRepository>((ref) {
+  return ReportNoteRepositoryImpl(ref.watch(reportNotesDaoProvider));
 });
 
 /// Provides the [ScheduledTransactionRepository].

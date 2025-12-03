@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:ledger_zero/domain/entities/report_note.dart';
 import 'package:ledger_zero/domain/extensions/transaction_extensions.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
@@ -14,10 +16,15 @@ final reportDateRangeProvider = StateProvider<DateTimeRange>((ref) {
   return DateTimeRange(start: start, end: end);
 });
 
+/// Provider for the selected categories filter in reports.
+/// If empty, all categories are included.
+final reportCategoryFilterProvider = StateProvider<Set<String>>((ref) => {});
+
 /// Provider for Spending by Category data.
 /// Returns a Map of Category Name -> Amount.
 final spendingByCategoryProvider = FutureProvider<Map<String, double>>((ref) async {
   final range = ref.watch(reportDateRangeProvider);
+  final categoryFilter = ref.watch(reportCategoryFilterProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
   final categoryRepo = ref.watch(categoryRepositoryProvider);
 
@@ -30,6 +37,11 @@ final spendingByCategoryProvider = FutureProvider<Map<String, double>>((ref) asy
 
   final result = <String, double>{};
   for (var entry in expenseMap.entries) {
+    // Apply filter
+    if (categoryFilter.isNotEmpty && !categoryFilter.contains(entry.key)) {
+      continue;
+    }
+
     final name = categoryNameMap[entry.key] ?? 'Unknown';
     // Expense sums are sums of signed amounts (negative for outflow).
     // We take absolute value for the chart.
@@ -167,6 +179,7 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
 /// Returns a Map of Month Start Date -> Total Expense Amount.
 final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((ref) async {
   final range = ref.watch(reportDateRangeProvider);
+  final categoryFilter = ref.watch(reportCategoryFilterProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
 
   final transactions = await transactionRepo.getTransactionsByDateRange(range.start, range.end);
@@ -176,6 +189,10 @@ final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((ref) async
 
   for (var t in transactions) {
      if (t.isTransfer) {
+       continue;
+     }
+
+     if (categoryFilter.isNotEmpty && (t.categoryId == null || !categoryFilter.contains(t.categoryId))) {
        continue;
      }
 
@@ -195,6 +212,93 @@ final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((ref) async
      }
   }
   return result;
+});
+
+/// Provider for Budget vs Actual data.
+final budgetVsActualProvider = FutureProvider<List<BudgetVsActualItem>>((ref) async {
+  final range = ref.watch(reportDateRangeProvider);
+  final categoryFilter = ref.watch(reportCategoryFilterProvider);
+  final budgetRepo = ref.watch(budgetRepositoryProvider);
+  final transactionRepo = ref.watch(transactionRepositoryProvider);
+  final categoryRepo = ref.watch(categoryRepositoryProvider);
+
+  // Since budgets are stored monthly, we iterate through months in the range
+  final startMonth = DateTime(range.start.year, range.start.month);
+  final endMonth = DateTime(range.end.year, range.end.month);
+
+  final budgetedMap = <String, double>{}; // CategoryId -> Total Budgeted
+
+  DateTime current = startMonth;
+  while (!current.isAfter(endMonth)) {
+    final monthStr = DateFormat('yyyy-MM').format(current);
+    final budgets = await budgetRepo.getBudgetsForMonth(monthStr);
+
+    for (var b in budgets) {
+      if (b.categoryId != null) {
+        budgetedMap[b.categoryId!] = (budgetedMap[b.categoryId!] ?? 0) + b.budgeted;
+      }
+    }
+
+    current = DateTime(current.year, current.month + 1);
+  }
+
+  // Actual spending (Expenses)
+  final expenseMap = await transactionRepo.getExpenseSumsByDateRange(range.start, range.end);
+
+  final categories = await categoryRepo.getAllCategories();
+  final categoryNameMap = {for (var c in categories) c.id: c.name};
+
+  final allCategoryIds = {...budgetedMap.keys, ...expenseMap.keys};
+  final items = <BudgetVsActualItem>[];
+
+  for (var catId in allCategoryIds) {
+    if (categoryFilter.isNotEmpty && !categoryFilter.contains(catId)) {
+      continue;
+    }
+
+    final budgeted = budgetedMap[catId] ?? 0.0;
+    final actual = (expenseMap[catId] ?? 0.0).abs(); // Spending is negative
+
+    if (budgeted > 0 || actual > 0) {
+      items.add(BudgetVsActualItem(
+        categoryName: categoryNameMap[catId] ?? 'Unknown',
+        budgeted: budgeted,
+        actual: actual,
+      ));
+    }
+  }
+
+  // Sort by highest budgeted
+  items.sort((a, b) => b.budgeted.compareTo(a.budgeted));
+
+  return items;
+});
+
+/// Provider for Report Notes in the selected range.
+final reportNotesListProvider = FutureProvider<List<ReportNote>>((ref) async {
+  final range = ref.watch(reportDateRangeProvider);
+  final noteRepo = ref.watch(reportNoteRepositoryProvider);
+
+  final allNotes = await noteRepo.getAllNotes(); // Optimized query would be better but get all is fine for now
+
+  final startMonth = DateTime(range.start.year, range.start.month);
+  final endMonth = DateTime(range.end.year, range.end.month);
+
+  // Filter notes by date string YYYY-MM
+  return allNotes.where((note) {
+    try {
+      final parts = note.date.split('-');
+      if (parts.length == 2) {
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        final noteDate = DateTime(year, month);
+        return !noteDate.isBefore(startMonth) && !noteDate.isAfter(endMonth);
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }).toList();
 });
 
 /// Provider for Top Payees.

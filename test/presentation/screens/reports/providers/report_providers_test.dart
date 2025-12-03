@@ -1,6 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/budget.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
@@ -10,132 +11,106 @@ import 'package:mockito/mockito.dart';
 import '../../../../mocks/repository_mocks.mocks.dart';
 
 void main() {
-  late MockTransactionRepository mockTransactionRepository;
-  late MockCategoryRepository mockCategoryRepository;
-  late MockAccountRepository mockAccountRepository;
+  late MockTransactionRepository mockTransactionRepo;
+  late MockCategoryRepository mockCategoryRepo;
+  late MockBudgetRepository mockBudgetRepo;
+  late ProviderContainer container;
 
   setUp(() {
-    mockTransactionRepository = MockTransactionRepository();
-    mockCategoryRepository = MockCategoryRepository();
-    mockAccountRepository = MockAccountRepository();
-  });
+    mockTransactionRepo = MockTransactionRepository();
+    mockCategoryRepo = MockCategoryRepository();
+    mockBudgetRepo = MockBudgetRepository();
 
-  ProviderContainer createContainer() {
-    return ProviderContainer(
+    container = ProviderContainer(
       overrides: [
-        transactionRepositoryProvider.overrideWithValue(mockTransactionRepository),
-        categoryRepositoryProvider.overrideWithValue(mockCategoryRepository),
-        accountRepositoryProvider.overrideWithValue(mockAccountRepository),
+        transactionRepositoryProvider.overrideWithValue(mockTransactionRepo),
+        categoryRepositoryProvider.overrideWithValue(mockCategoryRepo),
+        budgetRepositoryProvider.overrideWithValue(mockBudgetRepo),
       ],
     );
-  }
+  });
 
-  group('Report Providers', () {
-    test('spendingByCategoryProvider returns correct data', () async {
-      final container = createContainer();
-      final range = container.read(reportDateRangeProvider);
+  tearDown(() {
+    container.dispose();
+  });
 
-      when(mockTransactionRepository.getExpenseSumsByDateRange(range.start, range.end))
-          .thenAnswer((_) async => {'cat1': 100.0, 'cat2': 50.0});
+  group('Report Providers Tests', () {
+    test('spendingTrendsProvider aggregates monthly spending correctly across years', () async {
+      // Arrange
+      final start = DateTime(2023, 1, 1);
+      final end = DateTime(2024, 12, 31);
 
-      when(mockCategoryRepository.getAllCategories()).thenAnswer((_) async => [
-            const Category(id: 'cat1', name: 'Food', categoryGroupId: 'g1', color: 0, icon: 'icon'),
-            const Category(id: 'cat2', name: 'Transport', categoryGroupId: 'g1', color: 0, icon: 'icon'),
-          ]);
-
-      final result = await container.read(spendingByCategoryProvider.future);
-
-      expect(result, {'Food': 100.0, 'Transport': 50.0});
-    });
-
-    test('incomeVsExpenseHistoryProvider returns correct series', () async {
-      final container = createContainer();
-      final range = container.read(reportDateRangeProvider);
+      container.read(reportDateRangeProvider.notifier).state = DateTimeRange(start: start, end: end);
 
       final t1 = Transaction(
-        id: 't1',
-        accountId: 'a1',
-        date: DateTime(range.start.year, 1, 15),
-        amount: 1000,
-        categoryId: null, // Income
-        cleared: TransactionClearStatus.cleared,
-        approved: true,
+        id: '1', accountId: 'a1', date: DateTime(2023, 1, 15), amount: -100,
+        categoryId: 'c1', createdAt: DateTime.now()
       );
       final t2 = Transaction(
-        id: 't2',
-        accountId: 'a1',
-        date: DateTime(range.start.year, 1, 20),
-        amount: -200,
-        categoryId: 'cat1', // Expense
-        cleared: TransactionClearStatus.cleared,
-        approved: true,
+        id: '2', accountId: 'a1', date: DateTime(2023, 1, 20), amount: -50,
+        categoryId: 'c2', createdAt: DateTime.now()
+      );
+      final t3 = Transaction(
+        id: '3', accountId: 'a1', date: DateTime(2024, 5, 10), amount: -200,
+        categoryId: 'c1', createdAt: DateTime.now()
       );
 
-      when(mockTransactionRepository.getTransactionsByDateRange(range.start, range.end))
-          .thenAnswer((_) async => [t1, t2]);
+      // Income should be ignored
+      final t4 = Transaction(
+        id: '4', accountId: 'a1', date: DateTime(2023, 6, 1), amount: 1000,
+        categoryId: null, createdAt: DateTime.now()
+      );
 
-      final result = await container.read(incomeVsExpenseHistoryProvider.future);
+      when(mockTransactionRepo.getTransactionsByDateRange(start, end))
+          .thenAnswer((_) async => [t1, t2, t3, t4]);
 
-      expect(result.length, 2);
-      expect(result[0].name, 'Income');
-      expect(result[0].points.first.value, 1000.0);
-      expect(result[1].name, 'Expenses');
-      expect(result[1].points.first.value, 200.0);
+      // Act
+      final trends = await container.read(spendingTrendsProvider.future);
+
+      // Assert
+      expect(trends.length, 2);
+      expect(trends[DateTime(2023, 1, 1)], 150.0);
+      expect(trends[DateTime(2024, 5, 1)], 200.0);
     });
 
-    test('netWorthHistoryProvider calculates correctly', () async {
-      final container = createContainer();
-      final range = container.read(reportDateRangeProvider);
+    test('budgetVsActualProvider calculates comparison correctly', () async {
+      // Arrange
+      final start = DateTime(2024, 1, 1);
+      final end = DateTime(2024, 1, 31);
 
-      // Account with starting balance 1000
-      const account = Account(
-        id: 'a1',
-        name: 'Checking',
-        type: AccountType.checking,
-        startingBalance: 1000.0,
-      );
+      container.read(reportDateRangeProvider.notifier).state = DateTimeRange(start: start, end: end);
 
-      when(mockAccountRepository.getAllAccounts()).thenAnswer((_) async => [account]);
+      final cat1 = Category(id: 'c1', name: 'Food', categoryGroupId: 'g1', createdAt: DateTime.now());
+      final cat2 = Category(id: 'c2', name: 'Rent', categoryGroupId: 'g1', createdAt: DateTime.now());
 
-      // Transaction before range: -100 (Balance becomes 900)
-      final tBefore = Transaction(
-        id: 't0',
-        accountId: 'a1',
-        date: range.start.subtract(const Duration(days: 10)),
-        amount: -100,
-        cleared: TransactionClearStatus.cleared,
-        approved: true,
-      );
+      when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => [cat1, cat2]);
 
-      // Transaction in range: -50 (Balance becomes 850)
-      final tIn = Transaction(
-        id: 't1',
-        accountId: 'a1',
-        date: range.start.add(const Duration(days: 5)),
-        amount: -50,
-        cleared: TransactionClearStatus.cleared,
-        approved: true,
-      );
+      // Budget for Jan 2024
+      final b1 = Budget(id: 'b1', categoryId: 'c1', month: '2024-01', budgeted: 500, createdAt: DateTime.now());
+      final b2 = Budget(id: 'b2', categoryId: 'c2', month: '2024-01', budgeted: 1000, createdAt: DateTime.now());
 
-      when(mockTransactionRepository.getAllTransactions())
-          .thenAnswer((_) async => [tBefore, tIn]);
+      when(mockBudgetRepo.getBudgetsForMonth('2024-01')).thenAnswer((_) async => [b1, b2]);
 
-      final result = await container.read(netWorthHistoryProvider.future);
+      // Expenses
+      // Mock getExpenseSumsByDateRange
+      when(mockTransactionRepo.getExpenseSumsByDateRange(start, end)).thenAnswer((_) async => {
+        'c1': -450.0, // Spent 450 on Food
+        'c2': -1000.0, // Spent 1000 on Rent
+      });
 
-      expect(result.length, 1);
-      final points = result.first.points;
+      // Act
+      final items = await container.read(budgetVsActualProvider.future);
 
-      // Initial point at range start should be 900 (1000 - 100)
-      expect(points.first.date, range.start);
-      expect(points.first.value, 900.0);
+      // Assert
+      expect(items.length, 2);
 
-      // Point at tIn date should be 850 (900 - 50)
-      // Note: My implementation adds a point for tIn.date
-      expect(points[1].value, 850.0);
+      final foodItem = items.firstWhere((i) => i.categoryName == 'Food');
+      expect(foodItem.budgeted, 500.0);
+      expect(foodItem.actual, 450.0);
 
-      // Point at end of range should be 850
-      expect(points.last.date, range.end);
-      expect(points.last.value, 850.0);
+      final rentItem = items.firstWhere((i) => i.categoryName == 'Rent');
+      expect(rentItem.budgeted, 1000.0);
+      expect(rentItem.actual, 1000.0);
     });
   });
 }
