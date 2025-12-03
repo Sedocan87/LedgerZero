@@ -17,14 +17,25 @@ final filteredPayeesProvider = Provider<AsyncValue<List<Payee>>>((ref) {
   final query = ref.watch(payeeSearchQueryProvider).toLowerCase();
 
   return payeesAsync.whenData((payees) {
-    if (query.isEmpty) {
-      return [...payees]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    }
-    return payees
-        .where((p) => p.name.toLowerCase().contains(query))
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final filtered = query.isEmpty
+        ? [...payees]
+        : payees.where((p) => p.name.toLowerCase().contains(query)).toList();
+
+    // Sort by Favorite then Name
+    filtered.sort((a, b) {
+      if (a.isFavorite != b.isFavorite) {
+        return a.isFavorite ? -1 : 1;
+      }
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+
+    return filtered;
   });
+});
+
+final suggestedPayeesProvider = StreamProvider.autoDispose<List<Payee>>((ref) {
+  final repository = ref.watch(payeeRepositoryProvider);
+  return repository.watchSuggestedPayees();
 });
 
 final payeeProvider = FutureProvider.family<Payee?, String>((ref, id) {

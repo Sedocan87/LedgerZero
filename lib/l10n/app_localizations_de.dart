@@ -622,4 +622,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoCategory => 'Auto Category';
+
+  @override
+  String get configuration => 'Configuration';
+
+  @override
+  String get addToFavorites => 'Add to Favorites';
+
+  @override
+  String get removeFromFavorites => 'Remove from Favorites';
+
+  @override
+  String get none => 'None';
+
+  @override
+  String get defaultLabel => 'Default';
 }

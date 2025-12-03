@@ -19,4 +19,7 @@ abstract class PayeeRepository {
 
   /// Watches all payees for changes.
   Stream<List<Payee>> watchAllPayees();
+
+  /// Watches payees sorted by suggestions (Favorite, Usage, Recency).
+  Stream<List<Payee>> watchSuggestedPayees();
 }

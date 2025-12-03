@@ -326,5 +326,10 @@
   "timesUsed": "Times Used",
   "totalSpent": "Total Spent",
   "lastUsed": "Last Used",
-  "autoCategory": "Auto Category"
+  "autoCategory": "Auto Category",
+  "configuration": "Configuration",
+  "addToFavorites": "Add to Favorites",
+  "removeFromFavorites": "Remove from Favorites",
+  "none": "None",
+  "defaultLabel": "Default"
 }

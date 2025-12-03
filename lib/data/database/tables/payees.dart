@@ -9,6 +9,11 @@ class Payees extends Table {
   TextColumn get defaultAccountId => text().nullable().references(Accounts, #id)();
   DateTimeColumn get createdAt => dateTime().nullable()();
 
+  TextColumn get icon => text().nullable()();
+  IntColumn get color => integer().nullable()();
+  TextColumn get notes => text().nullable()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

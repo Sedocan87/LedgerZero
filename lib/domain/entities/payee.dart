@@ -17,6 +17,18 @@ class Payee {
   /// The date and time when the payee was created.
   final DateTime? createdAt;
 
+  /// The icon identifier for the payee.
+  final String? icon;
+
+  /// The color value (ARGB int) for the payee.
+  final int? color;
+
+  /// Custom notes for the payee.
+  final String? notes;
+
+  /// Whether this payee is marked as favorite/frequent.
+  final bool isFavorite;
+
   /// Creates a new [Payee] instance.
   const Payee({
     required this.id,
@@ -24,6 +36,10 @@ class Payee {
     this.autoCategoryId,
     this.defaultAccountId,
     this.createdAt,
+    this.icon,
+    this.color,
+    this.notes,
+    this.isFavorite = false,
   });
 
   /// Creates a copy of this [Payee] but with the given fields replaced with the new values.
@@ -33,6 +49,10 @@ class Payee {
     String? autoCategoryId,
     String? defaultAccountId,
     DateTime? createdAt,
+    String? icon,
+    int? color,
+    String? notes,
+    bool? isFavorite,
   }) {
     return Payee(
       id: id ?? this.id,
@@ -40,6 +60,10 @@ class Payee {
       autoCategoryId: autoCategoryId ?? this.autoCategoryId,
       defaultAccountId: defaultAccountId ?? this.defaultAccountId,
       createdAt: createdAt ?? this.createdAt,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
+      notes: notes ?? this.notes,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
@@ -53,6 +77,10 @@ class Payee {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
+      icon: json['icon'] as String?,
+      color: json['color'] as int?,
+      notes: json['notes'] as String?,
+      isFavorite: json['is_favorite'] as bool? ?? false,
     );
   }
 
@@ -64,6 +92,10 @@ class Payee {
       'auto_category_id': autoCategoryId,
       'default_account_id': defaultAccountId,
       'created_at': createdAt?.toIso8601String(),
+      'icon': icon,
+      'color': color,
+      'notes': notes,
+      'is_favorite': isFavorite,
     };
   }
 
@@ -78,7 +110,11 @@ class Payee {
         other.name == name &&
         other.autoCategoryId == autoCategoryId &&
         other.defaultAccountId == defaultAccountId &&
-        other.createdAt == createdAt;
+        other.createdAt == createdAt &&
+        other.icon == icon &&
+        other.color == color &&
+        other.notes == notes &&
+        other.isFavorite == isFavorite;
   }
 
   @override
@@ -89,12 +125,16 @@ class Payee {
       autoCategoryId,
       defaultAccountId,
       createdAt,
+      icon,
+      color,
+      notes,
+      isFavorite,
     );
   }
 
   @override
   String toString() {
-    return 'Payee(id: $id, name: $name, autoCategoryId: $autoCategoryId, defaultAccountId: $defaultAccountId, createdAt: $createdAt)';
+    return 'Payee(id: $id, name: $name, autoCategoryId: $autoCategoryId, defaultAccountId: $defaultAccountId, createdAt: $createdAt, icon: $icon, color: $color, notes: $notes, isFavorite: $isFavorite)';
   }
 
   /// Validates the [Payee] entity.
