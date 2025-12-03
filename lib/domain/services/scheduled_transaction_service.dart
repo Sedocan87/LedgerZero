@@ -25,106 +25,115 @@ class ScheduledTransactionService {
   Future<void> processDueTransactions() async {
     Logger.info('Processing due scheduled transactions...');
     try {
-      final allScheduled = await _scheduledTransactionRepository.getAllScheduledTransactions();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
+      final endOfToday = today
+          .add(const Duration(days: 1))
+          .subtract(const Duration(microseconds: 1));
+
+      // Optimization: Fetch only due transactions
+      final dueScheduled =
+          await _scheduledTransactionRepository.getDueScheduledTransactions(
+              endOfToday);
 
       int processedCount = 0;
 
-      for (final scheduled in allScheduled) {
+      for (final scheduled in dueScheduled) {
         if (scheduled.nextDate == null) {
           continue;
         }
 
         var currentScheduled = scheduled;
+        final transactionsToCreate = <Transaction>[];
 
         // Loop to catch up on missed occurrences
         while (currentScheduled.nextDate != null) {
-           final currentNextDate = currentScheduled.nextDate!;
-           final currentNextDateDateOnly = DateTime(
-             currentNextDate.year,
-             currentNextDate.month,
-             currentNextDate.day
-           );
+          final currentNextDate = currentScheduled.nextDate!;
+          final currentNextDateDateOnly = DateTime(
+              currentNextDate.year, currentNextDate.month, currentNextDate.day);
 
-           if (currentNextDateDateOnly.isAfter(today)) {
-             break;
-           }
+          if (currentNextDateDateOnly.isAfter(today)) {
+            break;
+          }
 
-           // Validate required fields
-           if (currentScheduled.accountId == null) {
-             Logger.warning('Skipping scheduled transaction ${currentScheduled.id} with missing accountId');
-             break; // Cannot process this one further
-           }
+          // Validate required fields
+          if (currentScheduled.accountId == null) {
+            Logger.warning(
+                'Skipping scheduled transaction ${currentScheduled.id} with missing accountId');
+            break; // Cannot process this one further
+          }
 
-           // Create Transaction
-           final newTransaction = Transaction(
-             id: _uuid.v4(),
-             accountId: currentScheduled.accountId!,
-             date: currentNextDate,
-             amount: currentScheduled.amount ?? 0.0,
-             payeeId: currentScheduled.payeeId,
-             categoryId: currentScheduled.categoryId,
-             memo: 'Scheduled Transaction', // TODO: Localize?
-             cleared: TransactionClearStatus.uncleared,
-             approved: currentScheduled.autoApprove,
-             createdAt: DateTime.now(),
-             updatedAt: DateTime.now(),
-           );
+          // Create Transaction
+          final newTransaction = Transaction(
+            id: _uuid.v4(),
+            accountId: currentScheduled.accountId!,
+            date: currentNextDate,
+            amount: currentScheduled.amount ?? 0.0,
+            payeeId: currentScheduled.payeeId,
+            categoryId: currentScheduled.categoryId,
+            memo: 'Scheduled Transaction', // TODO: Localize?
+            cleared: TransactionClearStatus.uncleared,
+            approved: currentScheduled.autoApprove,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
 
-           await _transactionRepository.createTransaction(newTransaction);
-           processedCount++;
+          transactionsToCreate.add(newTransaction);
 
-           // Update Scheduled Transaction to next date
-           final nextDate = currentScheduled.calculateNextOccurrenceDate();
+          // Update Scheduled Transaction to next date locally
+          final nextDate = currentScheduled.calculateNextOccurrenceDate();
 
-           int? newOccurrenceCount = currentScheduled.occurrenceCount;
-           if (newOccurrenceCount != null) {
-               newOccurrenceCount--;
-           }
+          int? newOccurrenceCount = currentScheduled.occurrenceCount;
+          if (newOccurrenceCount != null) {
+            newOccurrenceCount--;
+          }
 
-           // Determine if schedule is finished
-           bool isFinished = nextDate == null;
-           if (newOccurrenceCount != null && newOccurrenceCount <= 0) {
-             isFinished = true;
-           }
+          // Determine if schedule is finished
+          bool isFinished = nextDate == null;
+          if (newOccurrenceCount != null && newOccurrenceCount <= 0) {
+            isFinished = true;
+          }
 
-           ScheduledTransaction updated;
-           if (isFinished) {
-             updated = ScheduledTransaction(
-               id: currentScheduled.id,
-               accountId: currentScheduled.accountId,
-               payeeId: currentScheduled.payeeId,
-               categoryId: currentScheduled.categoryId,
-               amount: currentScheduled.amount,
-               frequency: currentScheduled.frequency,
-               interval: currentScheduled.interval,
-               occurrenceCount: 0, // Force 0 if it was the cause
-               nextDate: null,
-               endDate: currentScheduled.endDate,
-               autoApprove: currentScheduled.autoApprove,
-               createdAt: currentScheduled.createdAt,
-             );
-           } else {
-             updated = currentScheduled.copyWith(
-               nextDate: nextDate,
-               occurrenceCount: newOccurrenceCount,
-             );
-           }
+          if (isFinished) {
+            currentScheduled = ScheduledTransaction(
+              id: currentScheduled.id,
+              accountId: currentScheduled.accountId,
+              payeeId: currentScheduled.payeeId,
+              categoryId: currentScheduled.categoryId,
+              amount: currentScheduled.amount,
+              frequency: currentScheduled.frequency,
+              interval: currentScheduled.interval,
+              occurrenceCount: 0, // Force 0 if it was the cause
+              nextDate: null,
+              endDate: currentScheduled.endDate,
+              autoApprove: currentScheduled.autoApprove,
+              createdAt: currentScheduled.createdAt,
+            );
+            break;
+          } else {
+            currentScheduled = currentScheduled.copyWith(
+              nextDate: nextDate,
+              occurrenceCount: newOccurrenceCount,
+            );
+          }
+        }
 
-           await _scheduledTransactionRepository.updateScheduledTransaction(updated);
-           currentScheduled = updated;
+        if (transactionsToCreate.isNotEmpty) {
+          // Batch Create Transactions
+          await _transactionRepository.batchCreateTransactions(
+              transactionsToCreate);
+          processedCount += transactionsToCreate.length;
 
-           // If finished, break the loop
-           if (isFinished) {
-             break;
-           }
+          // Update Scheduled Transaction once
+          await _scheduledTransactionRepository.updateScheduledTransaction(
+              currentScheduled);
         }
 
         if (currentScheduled.nextDate != null) {
           await scheduleNotification(currentScheduled);
         } else {
-          await _notificationService.cancelNotification(currentScheduled.id.hashCode);
+          await _notificationService.cancelNotification(
+              currentScheduled.id.hashCode);
         }
       }
       if (processedCount > 0) {

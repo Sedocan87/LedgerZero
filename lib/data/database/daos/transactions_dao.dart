@@ -22,6 +22,12 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   Future<int> insertTransaction(TransactionsCompanion transaction) =>
       into(transactions).insert(transaction);
 
+  Future<void> batchCreateTransactions(List<TransactionsCompanion> list) async {
+    await batch((batch) {
+      batch.insertAll(transactions, list);
+    });
+  }
+
   Future<bool> updateTransaction(TransactionsCompanion transaction) =>
       update(transactions).replace(transaction);
 

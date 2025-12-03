@@ -41,10 +41,11 @@ void main() {
           interval: 1,
        );
 
-       when(mockScheduledRepo.getAllScheduledTransactions())
+       // Mock getDueScheduledTransactions instead of getAllScheduledTransactions
+       when(mockScheduledRepo.getDueScheduledTransactions(any))
            .thenAnswer((_) async => [scheduled]);
 
-       when(mockTransactionRepo.createTransaction(any)).thenAnswer((_) async => {});
+       when(mockTransactionRepo.batchCreateTransactions(any)).thenAnswer((_) async => {});
        when(mockScheduledRepo.updateScheduledTransaction(any)).thenAnswer((_) async => {});
        when(mockNotificationService.scheduleNotification(
             id: anyNamed('id'),
@@ -56,12 +57,13 @@ void main() {
 
        await service.processDueTransactions();
 
-       // Verify transaction created
-       verify(mockTransactionRepo.createTransaction(argThat(
-           predicate<Transaction>((t) =>
-               t.accountId == 'acc1' &&
-               t.amount == 100 &&
-               t.date == due
+       // Verify transaction created via batch
+       verify(mockTransactionRepo.batchCreateTransactions(argThat(
+           predicate<List<Transaction>>((list) =>
+               list.length == 1 &&
+               list.first.accountId == 'acc1' &&
+               list.first.amount == 100 &&
+               list.first.date == due
            )
        ))).called(1);
 
@@ -94,10 +96,10 @@ void main() {
           interval: 1,
        );
 
-       when(mockScheduledRepo.getAllScheduledTransactions())
+       when(mockScheduledRepo.getDueScheduledTransactions(any))
            .thenAnswer((_) async => [scheduled]);
 
-       when(mockTransactionRepo.createTransaction(any)).thenAnswer((_) async => {});
+       when(mockTransactionRepo.batchCreateTransactions(any)).thenAnswer((_) async => {});
        when(mockScheduledRepo.updateScheduledTransaction(any)).thenAnswer((_) async => {});
         when(mockNotificationService.scheduleNotification(
             id: anyNamed('id'),
@@ -114,10 +116,12 @@ void main() {
        // 2. Due date + 1 month (approx 10 days ago)
        // Next date should be future (approx 20 days from now)
 
-       verify(mockTransactionRepo.createTransaction(any)).called(2);
+       verify(mockTransactionRepo.batchCreateTransactions(argThat(
+           predicate<List<Transaction>>((list) => list.length == 2)
+       ))).called(1);
 
-       // It updates scheduled transaction multiple times (in loop)
-       verify(mockScheduledRepo.updateScheduledTransaction(any)).called(2);
+       // Verify update called once (optimization)
+       verify(mockScheduledRepo.updateScheduledTransaction(any)).called(1);
     });
 
     test('processDueTransactions skips if nextDate is null', () async {
@@ -128,29 +132,33 @@ void main() {
           nextDate: null,
        );
 
-       when(mockScheduledRepo.getAllScheduledTransactions())
+       when(mockScheduledRepo.getDueScheduledTransactions(any))
            .thenAnswer((_) async => [scheduled]);
 
        await service.processDueTransactions();
 
-       verifyNever(mockTransactionRepo.createTransaction(any));
+       verifyNever(mockTransactionRepo.batchCreateTransactions(any));
     });
 
     test('processDueTransactions schedules notification for future transaction', () async {
+      // Logic changed: processDueTransactions uses getDueScheduledTransactions.
+      // If a transaction is NOT due, it won't even be returned by getDueScheduledTransactions.
+      // So this test case is slightly different. If the repository returns a transaction
+      // that is NOT due (e.g. repo bug or whatever), the service handles it.
+      // But for testing purposes, we simulate the repo returning it.
+
       final now = DateTime.now();
       final future = now.add(const Duration(days: 5));
 
-      const scheduled = ScheduledTransaction(
+      final scheduled = ScheduledTransaction(
         id: '1',
         accountId: 'acc1',
         amount: 100,
-        nextDate: null, // Wait, I need non-null nextDate for this test
+        nextDate: future,
       );
-      // I need to use copyWith or create new
-      final scheduledFuture = scheduled.copyWith(nextDate: future);
 
-      when(mockScheduledRepo.getAllScheduledTransactions())
-          .thenAnswer((_) async => [scheduledFuture]);
+      when(mockScheduledRepo.getDueScheduledTransactions(any))
+          .thenAnswer((_) async => [scheduled]);
 
       when(mockNotificationService.scheduleNotification(
               id: anyNamed('id'),
@@ -163,7 +171,7 @@ void main() {
 
       await service.processDueTransactions();
 
-      verifyNever(mockTransactionRepo.createTransaction(any));
+      verifyNever(mockTransactionRepo.batchCreateTransactions(any));
       verify(mockNotificationService.scheduleNotification(
           id: anyNamed('id'),
           title: anyNamed('title'),

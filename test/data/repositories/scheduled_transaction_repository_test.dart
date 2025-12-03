@@ -60,6 +60,20 @@ void main() {
     });
   });
 
+  group('getDueScheduledTransactions', () {
+    test('should return list of due scheduled transactions from dao', () async {
+      // arrange
+      final date = DateTime.now();
+      when(mockDao.getDueScheduledTransactions(date))
+          .thenAnswer((_) async => [tDriftScheduledTransaction]);
+      // act
+      final result = await repository.getDueScheduledTransactions(date);
+      // assert
+      expect(result, equals([tDomainScheduledTransaction]));
+      verify(mockDao.getDueScheduledTransactions(date)).called(1);
+    });
+  });
+
   group('createScheduledTransaction', () {
     test('should call insertScheduledTransaction on dao with correct fields', () async {
       // arrange
