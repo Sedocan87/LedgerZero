@@ -29,7 +29,7 @@ void main() {
       ProviderScope(
         overrides: [
              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier()..setOnboarded(true)..setAuthenticated(true)),
+             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(true)..setAuthenticated(true)),
              databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),
@@ -52,7 +52,7 @@ void main() {
       ProviderScope(
         overrides: [
              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier()..setOnboarded(false)),
+             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(false)),
              databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),
@@ -74,7 +74,7 @@ void main() {
       ProviderScope(
          overrides: [
              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier()..setOnboarded(true)..setAuthenticated(false)),
+             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(true)..setAuthenticated(false)),
              databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),
@@ -96,7 +96,7 @@ void main() {
       ProviderScope(
         overrides: [
              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier()..setOnboarded(true)..setAuthenticated(true)),
+             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(true)..setAuthenticated(true)),
              databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),

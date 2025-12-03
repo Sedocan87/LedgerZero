@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/services/encryption/security_manager.dart';
 
 class SecuritySetupScreen extends ConsumerStatefulWidget {
   const SecuritySetupScreen({super.key});
@@ -87,6 +88,9 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
         // Ensure no key is stored if biometrics disabled
         await securityManager.clearKey();
       }
+
+      // Set session key for immediate DB access
+      SecurityManager.setSessionKey(key);
 
       // 5. Complete Onboarding
       if (mounted) {

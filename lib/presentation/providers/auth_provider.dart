@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthState {
   final bool isOnboarded;
@@ -15,10 +17,17 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  // Default to false to verify guards.
-  AuthNotifier() : super(const AuthState(isOnboarded: false, isAuthenticated: false));
+  final SharedPreferences _prefs;
+  static const _onboardedKey = 'user_onboarded';
+
+  AuthNotifier(this._prefs)
+      : super(AuthState(
+          isOnboarded: _prefs.getBool(_onboardedKey) ?? false,
+          isAuthenticated: false,
+        ));
 
   void setOnboarded(bool value) {
+    _prefs.setBool(_onboardedKey, value);
     state = state.copyWith(isOnboarded: value);
   }
 
@@ -28,5 +37,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return AuthNotifier(prefs);
 });
