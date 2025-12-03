@@ -16,6 +16,11 @@ class ScheduledTransactionController {
     final repository = ref.read(scheduledTransactionRepositoryProvider);
     await repository.deleteScheduledTransaction(id);
   }
+
+  Future<void> skipScheduledTransaction(String id) async {
+    final repository = ref.read(scheduledTransactionRepositoryProvider);
+    await repository.skipScheduledTransaction(id);
+  }
 }
 
 final scheduledTransactionControllerProvider = Provider((ref) => ScheduledTransactionController(ref));

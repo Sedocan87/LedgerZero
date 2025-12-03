@@ -196,5 +196,6 @@
   "schedule": "Zeitplan",
   "noScheduledTransactions": "Keine geplanten Transaktionen",
   "createScheduledTransactionDescription": "Erstellen Sie geplante Transaktionen für wiederkehrende Rechnungen oder Einnahmen.",
-  "skip": "Überspringen"
+  "skip": "Überspringen",
+  "upcoming": "Anstehend"
 }
