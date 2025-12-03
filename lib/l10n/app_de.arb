@@ -186,5 +186,15 @@
   "mergeWarning": "Alle Transaktionen werden zu {target} verschoben. Nicht rückgängig machbar.",
   "noPayees": "Keine Empfänger",
   "searchPayees": "Empfänger suchen",
-  "rename": "Umbenennen"
+  "rename": "Umbenennen",
+  "scheduledTransactions": "Geplante Transaktionen",
+  "nextDate": "Nächstes Datum",
+  "endDate": "Enddatum",
+  "autoApprove": "Automatisch genehmigen",
+  "createScheduledTransaction": "Geplante Transaktion erstellen",
+  "editScheduledTransaction": "Geplante Transaktion bearbeiten",
+  "schedule": "Zeitplan",
+  "noScheduledTransactions": "Keine geplanten Transaktionen",
+  "createScheduledTransactionDescription": "Erstellen Sie geplante Transaktionen für wiederkehrende Rechnungen oder Einnahmen.",
+  "skip": "Überspringen"
 }

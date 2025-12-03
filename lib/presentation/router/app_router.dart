@@ -15,6 +15,8 @@ import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
 import 'package:ledger_zero/presentation/screens/payees/payee_detail_screen.dart';
 import 'package:ledger_zero/presentation/screens/payees/payees_screen.dart';
+import 'package:ledger_zero/presentation/screens/scheduled_transactions/scheduled_transactions_screen.dart';
+import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit_scheduled_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
@@ -96,6 +98,26 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) {
                   final id = state.pathParameters['id']!;
                   return PayeeDetailScreen(payeeId: id);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'scheduled-transactions',
+            name: 'scheduled-transactions',
+            builder: (context, state) => const ScheduledTransactionsScreen(),
+            routes: [
+              GoRoute(
+                path: 'add',
+                name: 'add-scheduled-transaction',
+                builder: (context, state) => const AddEditScheduledTransactionScreen(),
+              ),
+              GoRoute(
+                path: 'edit/:id',
+                name: 'edit-scheduled-transaction',
+                builder: (context, state) {
+                  final id = state.pathParameters['id'];
+                  return AddEditScheduledTransactionScreen(transactionId: id);
                 },
               ),
             ],

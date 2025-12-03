@@ -331,5 +331,15 @@
   "addToFavorites": "Add to Favorites",
   "removeFromFavorites": "Remove from Favorites",
   "none": "None",
-  "defaultLabel": "Default"
+  "defaultLabel": "Default",
+  "scheduledTransactions": "Scheduled Transactions",
+  "nextDate": "Next Date",
+  "endDate": "End Date",
+  "autoApprove": "Auto Approve",
+  "createScheduledTransaction": "Create Scheduled Transaction",
+  "editScheduledTransaction": "Edit Scheduled Transaction",
+  "schedule": "Schedule",
+  "noScheduledTransactions": "No Scheduled Transactions",
+  "createScheduledTransactionDescription": "Create scheduled transactions for recurring bills or income.",
+  "skip": "Skip"
 }

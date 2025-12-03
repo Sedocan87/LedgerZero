@@ -637,4 +637,35 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get defaultLabel => 'Default';
+
+  @override
+  String get scheduledTransactions => 'Geplante Transaktionen';
+
+  @override
+  String get nextDate => 'Nächstes Datum';
+
+  @override
+  String get endDate => 'Enddatum';
+
+  @override
+  String get autoApprove => 'Automatisch genehmigen';
+
+  @override
+  String get createScheduledTransaction => 'Geplante Transaktion erstellen';
+
+  @override
+  String get editScheduledTransaction => 'Geplante Transaktion bearbeiten';
+
+  @override
+  String get schedule => 'Zeitplan';
+
+  @override
+  String get noScheduledTransactions => 'Keine geplanten Transaktionen';
+
+  @override
+  String get createScheduledTransactionDescription =>
+      'Erstellen Sie geplante Transaktionen für wiederkehrende Rechnungen oder Einnahmen.';
+
+  @override
+  String get skip => 'Überspringen';
 }
