@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -100,6 +100,13 @@ class AppDatabase extends _$AppDatabase {
         if (from < 7) {
           // Add report notes table
           await m.createTable(reportNotes);
+        }
+        if (from < 8) {
+          // Add new columns to payees table
+          await m.addColumn(payees, payees.icon);
+          await m.addColumn(payees, payees.color);
+          await m.addColumn(payees, payees.notes);
+          await m.addColumn(payees, payees.isFavorite);
         }
       },
       beforeOpen: (details) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -28,12 +29,35 @@ class PayeeDetailScreen extends ConsumerStatefulWidget {
 
 class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  final FocusNode _notesFocusNode = FocusNode();
+
   bool _isEditing = false;
+  bool _notesDirty = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesFocusNode.addListener(_onNotesFocusChange);
+  }
 
   @override
   void dispose() {
+    _notesFocusNode.removeListener(_onNotesFocusChange);
+    _notesFocusNode.dispose();
     _nameController.dispose();
+    _notesController.dispose();
     super.dispose();
+  }
+
+  void _onNotesFocusChange() {
+    if (!_notesFocusNode.hasFocus && _notesDirty) {
+      final payee = ref.read(payeeProvider(widget.payeeId)).value;
+      if (payee != null) {
+        _updatePayee(payee.copyWith(notes: _notesController.text));
+        _notesDirty = false;
+      }
+    }
   }
 
   Future<void> _updatePayee(Payee payee) async {
@@ -77,6 +101,117 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
     );
   }
 
+  void _showIconPicker(BuildContext context, Payee payee) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.icon),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                 IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: l10n.none,
+                    onPressed: () {
+                      _updatePayee(Payee(
+                        id: payee.id,
+                        name: payee.name,
+                        autoCategoryId: payee.autoCategoryId,
+                        defaultAccountId: payee.defaultAccountId,
+                        createdAt: payee.createdAt,
+                        icon: null,
+                        color: payee.color,
+                        notes: payee.notes,
+                        isFavorite: payee.isFavorite,
+                      ));
+                      Navigator.pop(context);
+                    },
+                 ),
+                 ...categoryIcons.entries.map((entry) {
+                  return IconButton(
+                    icon: Icon(entry.value),
+                    color: payee.icon == entry.key ? Theme.of(context).primaryColor : null,
+                    onPressed: () {
+                      _updatePayee(payee.copyWith(icon: entry.key));
+                      Navigator.pop(context);
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showColorPicker(BuildContext context, Payee payee) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.color),
+        content: SingleChildScrollView(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+               GestureDetector(
+                onTap: () {
+                   _updatePayee(Payee(
+                        id: payee.id,
+                        name: payee.name,
+                        autoCategoryId: payee.autoCategoryId,
+                        defaultAccountId: payee.defaultAccountId,
+                        createdAt: payee.createdAt,
+                        icon: payee.icon,
+                        color: null,
+                        notes: payee.notes,
+                        isFavorite: payee.isFavorite,
+                      ));
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey),
+                  ),
+                  child: const Icon(Icons.close, size: 16, color: Colors.grey),
+                ),
+              ),
+              ...categoryColors.map((colorValue) {
+                return GestureDetector(
+                  onTap: () {
+                    _updatePayee(payee.copyWith(color: colorValue));
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Color(colorValue),
+                      shape: BoxShape.circle,
+                      border: payee.color == colorValue
+                          ? Border.all(color: Colors.black, width: 2)
+                          : null,
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final payeeAsync = ref.watch(payeeProvider(widget.payeeId));
@@ -97,6 +232,13 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
           );
         }
 
+        // Initialize controllers if not editing to keep them in sync
+        if (!_notesFocusNode.hasFocus) {
+           if (_notesController.text != (payee.notes ?? '')) {
+             _notesController.text = payee.notes ?? '';
+           }
+        }
+
         return Scaffold(
           appBar: AppBar(
             title: _isEditing
@@ -108,6 +250,12 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                   )
                 : Text(payee.name),
             actions: [
+              IconButton(
+                icon: Icon(payee.isFavorite ? Icons.star : Icons.star_border),
+                color: payee.isFavorite ? Colors.amber : null,
+                tooltip: payee.isFavorite ? l10n.removeFromFavorites : l10n.addToFavorites,
+                onPressed: () => _updatePayee(payee.copyWith(isFavorite: !payee.isFavorite)),
+              ),
               if (_isEditing)
                 IconButton(
                   icon: const Icon(Icons.check),
@@ -169,7 +317,66 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                   _StatItem(label: l10n.lastUsed, value: lastUsed != null ? DateFormat.yMMMd().format(lastUsed) : '-'),
                                 ],
                               ),
-                              const Divider(height: 32),
+                              const Divider(height: 24),
+
+                              // Configuration
+                              Text(l10n.configuration, style: Theme.of(context).textTheme.titleMedium),
+                              const SizedBox(height: 16),
+
+                              // Icon & Color
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => _showIconPicker(context, payee),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                                payee.icon != null ? categoryIcons[payee.icon] ?? Icons.category : Icons.category,
+                                                color: payee.color != null ? Color(payee.color!) : Colors.grey,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(l10n.icon, style: Theme.of(context).textTheme.bodySmall),
+                                                Text(payee.icon ?? 'Default', style: Theme.of(context).textTheme.bodyMedium),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => _showColorPicker(context, payee),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              backgroundColor: payee.color != null ? Color(payee.color!) : Colors.grey,
+                                              radius: 12,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(l10n.color, style: Theme.of(context).textTheme.bodySmall),
+                                                Text(payee.color != null ? l10n.custom : l10n.defaultLabel, style: Theme.of(context).textTheme.bodyMedium),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
 
                               // Auto Category
                               categoriesAsync.when(
@@ -179,7 +386,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                   initialValue: payee.autoCategoryId,
                                   isExpanded: true,
                                   items: [
-                                    const DropdownMenuItem(value: null, child: Text('None')), // TODO l10n
+                                    DropdownMenuItem(value: null, child: Text(l10n.none)),
                                     ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis))),
                                   ],
                                   onChanged: (value) {
@@ -191,7 +398,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                 loading: () => const LinearProgressIndicator(),
                                 error: (_, __) => const SizedBox(),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 8),
 
                               // Default Account
                               accountsAsync.when(
@@ -201,7 +408,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                   initialValue: payee.defaultAccountId,
                                   isExpanded: true,
                                   items: [
-                                    const DropdownMenuItem(value: null, child: Text('None')), // TODO l10n
+                                    DropdownMenuItem(value: null, child: Text(l10n.none)),
                                     ...accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name, overflow: TextOverflow.ellipsis))),
                                   ],
                                   onChanged: (value) {
@@ -212,6 +419,18 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                 ),
                                 loading: () => const LinearProgressIndicator(),
                                 error: (_, __) => const SizedBox(),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Notes
+                              TextFormField(
+                                controller: _notesController,
+                                focusNode: _notesFocusNode,
+                                decoration: InputDecoration(labelText: l10n.notes),
+                                maxLines: 2,
+                                onChanged: (_) {
+                                  _notesDirty = true;
+                                },
                               ),
                            ],
                         ),

@@ -2571,6 +2571,48 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<int> color = GeneratedColumn<int>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isFavoriteMeta = const VerificationMeta(
+    'isFavorite',
+  );
+  @override
+  late final GeneratedColumn<bool> isFavorite = GeneratedColumn<bool>(
+    'is_favorite',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_favorite" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2578,6 +2620,10 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
     autoCategoryId,
     defaultAccountId,
     createdAt,
+    icon,
+    color,
+    notes,
+    isFavorite,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2628,6 +2674,30 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('is_favorite')) {
+      context.handle(
+        _isFavoriteMeta,
+        isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
+      );
+    }
     return context;
   }
 
@@ -2657,6 +2727,22 @@ class $PayeesTable extends Payees with TableInfo<$PayeesTable, Payee> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       ),
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      ),
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      isFavorite: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_favorite'],
+      )!,
     );
   }
 
@@ -2672,12 +2758,20 @@ class Payee extends DataClass implements Insertable<Payee> {
   final String? autoCategoryId;
   final String? defaultAccountId;
   final DateTime? createdAt;
+  final String? icon;
+  final int? color;
+  final String? notes;
+  final bool isFavorite;
   const Payee({
     required this.id,
     required this.name,
     this.autoCategoryId,
     this.defaultAccountId,
     this.createdAt,
+    this.icon,
+    this.color,
+    this.notes,
+    required this.isFavorite,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2693,6 +2787,16 @@ class Payee extends DataClass implements Insertable<Payee> {
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
     }
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
+    }
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<int>(color);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['is_favorite'] = Variable<bool>(isFavorite);
     return map;
   }
 
@@ -2709,6 +2813,14 @@ class Payee extends DataClass implements Insertable<Payee> {
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      isFavorite: Value(isFavorite),
     );
   }
 
@@ -2723,6 +2835,10 @@ class Payee extends DataClass implements Insertable<Payee> {
       autoCategoryId: serializer.fromJson<String?>(json['autoCategoryId']),
       defaultAccountId: serializer.fromJson<String?>(json['defaultAccountId']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+      icon: serializer.fromJson<String?>(json['icon']),
+      color: serializer.fromJson<int?>(json['color']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      isFavorite: serializer.fromJson<bool>(json['isFavorite']),
     );
   }
   @override
@@ -2734,6 +2850,10 @@ class Payee extends DataClass implements Insertable<Payee> {
       'autoCategoryId': serializer.toJson<String?>(autoCategoryId),
       'defaultAccountId': serializer.toJson<String?>(defaultAccountId),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
+      'icon': serializer.toJson<String?>(icon),
+      'color': serializer.toJson<int?>(color),
+      'notes': serializer.toJson<String?>(notes),
+      'isFavorite': serializer.toJson<bool>(isFavorite),
     };
   }
 
@@ -2743,6 +2863,10 @@ class Payee extends DataClass implements Insertable<Payee> {
     Value<String?> autoCategoryId = const Value.absent(),
     Value<String?> defaultAccountId = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
+    Value<String?> icon = const Value.absent(),
+    Value<int?> color = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    bool? isFavorite,
   }) => Payee(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -2753,6 +2877,10 @@ class Payee extends DataClass implements Insertable<Payee> {
         ? defaultAccountId.value
         : this.defaultAccountId,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    icon: icon.present ? icon.value : this.icon,
+    color: color.present ? color.value : this.color,
+    notes: notes.present ? notes.value : this.notes,
+    isFavorite: isFavorite ?? this.isFavorite,
   );
   Payee copyWithCompanion(PayeesCompanion data) {
     return Payee(
@@ -2765,6 +2893,12 @@ class Payee extends DataClass implements Insertable<Payee> {
           ? data.defaultAccountId.value
           : this.defaultAccountId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      color: data.color.present ? data.color.value : this.color,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      isFavorite: data.isFavorite.present
+          ? data.isFavorite.value
+          : this.isFavorite,
     );
   }
 
@@ -2775,14 +2909,27 @@ class Payee extends DataClass implements Insertable<Payee> {
           ..write('name: $name, ')
           ..write('autoCategoryId: $autoCategoryId, ')
           ..write('defaultAccountId: $defaultAccountId, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
+          ..write('notes: $notes, ')
+          ..write('isFavorite: $isFavorite')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, autoCategoryId, defaultAccountId, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    autoCategoryId,
+    defaultAccountId,
+    createdAt,
+    icon,
+    color,
+    notes,
+    isFavorite,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2791,7 +2938,11 @@ class Payee extends DataClass implements Insertable<Payee> {
           other.name == this.name &&
           other.autoCategoryId == this.autoCategoryId &&
           other.defaultAccountId == this.defaultAccountId &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.icon == this.icon &&
+          other.color == this.color &&
+          other.notes == this.notes &&
+          other.isFavorite == this.isFavorite);
 }
 
 class PayeesCompanion extends UpdateCompanion<Payee> {
@@ -2800,6 +2951,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
   final Value<String?> autoCategoryId;
   final Value<String?> defaultAccountId;
   final Value<DateTime?> createdAt;
+  final Value<String?> icon;
+  final Value<int?> color;
+  final Value<String?> notes;
+  final Value<bool> isFavorite;
   final Value<int> rowid;
   const PayeesCompanion({
     this.id = const Value.absent(),
@@ -2807,6 +2962,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     this.autoCategoryId = const Value.absent(),
     this.defaultAccountId = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isFavorite = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PayeesCompanion.insert({
@@ -2815,6 +2974,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     this.autoCategoryId = const Value.absent(),
     this.defaultAccountId = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isFavorite = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name);
@@ -2824,6 +2987,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     Expression<String>? autoCategoryId,
     Expression<String>? defaultAccountId,
     Expression<DateTime>? createdAt,
+    Expression<String>? icon,
+    Expression<int>? color,
+    Expression<String>? notes,
+    Expression<bool>? isFavorite,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2832,6 +2999,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
       if (autoCategoryId != null) 'auto_category_id': autoCategoryId,
       if (defaultAccountId != null) 'default_account_id': defaultAccountId,
       if (createdAt != null) 'created_at': createdAt,
+      if (icon != null) 'icon': icon,
+      if (color != null) 'color': color,
+      if (notes != null) 'notes': notes,
+      if (isFavorite != null) 'is_favorite': isFavorite,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2842,6 +3013,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     Value<String?>? autoCategoryId,
     Value<String?>? defaultAccountId,
     Value<DateTime?>? createdAt,
+    Value<String?>? icon,
+    Value<int?>? color,
+    Value<String?>? notes,
+    Value<bool>? isFavorite,
     Value<int>? rowid,
   }) {
     return PayeesCompanion(
@@ -2850,6 +3025,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
       autoCategoryId: autoCategoryId ?? this.autoCategoryId,
       defaultAccountId: defaultAccountId ?? this.defaultAccountId,
       createdAt: createdAt ?? this.createdAt,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
+      notes: notes ?? this.notes,
+      isFavorite: isFavorite ?? this.isFavorite,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2872,6 +3051,18 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<int>(color.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (isFavorite.present) {
+      map['is_favorite'] = Variable<bool>(isFavorite.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2886,6 +3077,10 @@ class PayeesCompanion extends UpdateCompanion<Payee> {
           ..write('autoCategoryId: $autoCategoryId, ')
           ..write('defaultAccountId: $defaultAccountId, ')
           ..write('createdAt: $createdAt, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
+          ..write('notes: $notes, ')
+          ..write('isFavorite: $isFavorite, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7795,6 +7990,10 @@ typedef $$PayeesTableCreateCompanionBuilder =
       Value<String?> autoCategoryId,
       Value<String?> defaultAccountId,
       Value<DateTime?> createdAt,
+      Value<String?> icon,
+      Value<int?> color,
+      Value<String?> notes,
+      Value<bool> isFavorite,
       Value<int> rowid,
     });
 typedef $$PayeesTableUpdateCompanionBuilder =
@@ -7804,6 +8003,10 @@ typedef $$PayeesTableUpdateCompanionBuilder =
       Value<String?> autoCategoryId,
       Value<String?> defaultAccountId,
       Value<DateTime?> createdAt,
+      Value<String?> icon,
+      Value<int?> color,
+      Value<String?> notes,
+      Value<bool> isFavorite,
       Value<int> rowid,
     });
 
@@ -7917,6 +8120,26 @@ class $$PayeesTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8042,6 +8265,26 @@ class $$PayeesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get autoCategoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -8106,6 +8349,20 @@ class $$PayeesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<int> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => column,
+  );
 
   $$CategoriesTableAnnotationComposer get autoCategoryId {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -8243,6 +8500,10 @@ class $$PayeesTableTableManager
                 Value<String?> autoCategoryId = const Value.absent(),
                 Value<String?> defaultAccountId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<int?> color = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> isFavorite = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PayeesCompanion(
                 id: id,
@@ -8250,6 +8511,10 @@ class $$PayeesTableTableManager
                 autoCategoryId: autoCategoryId,
                 defaultAccountId: defaultAccountId,
                 createdAt: createdAt,
+                icon: icon,
+                color: color,
+                notes: notes,
+                isFavorite: isFavorite,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -8259,6 +8524,10 @@ class $$PayeesTableTableManager
                 Value<String?> autoCategoryId = const Value.absent(),
                 Value<String?> defaultAccountId = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
+                Value<int?> color = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> isFavorite = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PayeesCompanion.insert(
                 id: id,
@@ -8266,6 +8535,10 @@ class $$PayeesTableTableManager
                 autoCategoryId: autoCategoryId,
                 defaultAccountId: defaultAccountId,
                 createdAt: createdAt,
+                icon: icon,
+                color: color,
+                notes: notes,
+                isFavorite: isFavorite,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

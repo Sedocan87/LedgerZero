@@ -85,6 +85,18 @@ class PayeeRepositoryImpl implements PayeeRepository {
     });
   }
 
+  @override
+  Stream<List<Payee>> watchSuggestedPayees() {
+    return _payeesDao.watchSuggestedPayees().map(
+      (payees) {
+        return payees.map(_mapToDomain).toList();
+      },
+    ).handleError((error, stackTrace) {
+      Logger.error('Error in watchSuggestedPayees stream', error, stackTrace);
+      throw DatabaseException('Error watching suggested payees', error);
+    });
+  }
+
   Payee _mapToDomain(db.Payee p) {
     return Payee(
       id: p.id,
@@ -92,6 +104,10 @@ class PayeeRepositoryImpl implements PayeeRepository {
       autoCategoryId: p.autoCategoryId,
       defaultAccountId: p.defaultAccountId,
       createdAt: p.createdAt,
+      icon: p.icon,
+      color: p.color,
+      notes: p.notes,
+      isFavorite: p.isFavorite,
     );
   }
 
@@ -102,6 +118,10 @@ class PayeeRepositoryImpl implements PayeeRepository {
       autoCategoryId: Value(p.autoCategoryId),
       defaultAccountId: Value(p.defaultAccountId),
       createdAt: Value(p.createdAt),
+      icon: Value(p.icon),
+      color: Value(p.color),
+      notes: Value(p.notes),
+      isFavorite: Value(p.isFavorite),
     );
   }
 }

@@ -14,14 +14,11 @@ import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/payee_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
 import 'package:uuid/uuid.dart';
-
-final payeeListProvider = StreamProvider.autoDispose<List<Payee>>((ref) {
-  return ref.watch(payeeRepositoryProvider).watchAllPayees();
-});
 
 final accountsProvider = StreamProvider.autoDispose<List<Account>>((ref) {
   return ref.watch(accountRepositoryProvider).watchAllAccounts();
@@ -252,12 +249,6 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
            });
 
            // Trigger immediate check if providers are ready
-           // (Listeners will handle if they update later, but if already loaded, we need to check)
-           // But actually, ref.listen doesn't fire on current state.
-           // Since we set _draftAccountId, the listeners below (which run in build) will pick it up?
-           // No, listeners in build only run when PROVIDER updates.
-           // We need to manually check here too.
-
            final accounts = ref.read(accountsProvider).valueOrNull;
            if (accounts != null && _draftAccountId != null && _selectedAccount == null) {
               try {
@@ -269,7 +260,6 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                 });
               } catch (_) {}
            }
-           // Same for others if needed, but listeners should handle subsequent loads.
          }
       }
     } catch (e) {
@@ -322,8 +312,33 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
     final amount = (_formType == TransactionFormType.income) ? amountVal : -amountVal;
 
     String? payeeId;
-    if (_formType != TransactionFormType.transfer && _selectedPayee != null) {
-       payeeId = _selectedPayee!.id;
+    if (_formType != TransactionFormType.transfer) {
+       if (_selectedPayee != null) {
+          payeeId = _selectedPayee!.id;
+       } else if (_payeeController?.text.isNotEmpty == true) {
+           // Create new payee or find existing by name
+           final name = _payeeController!.text.trim();
+           final payees = ref.read(suggestedPayeesProvider).valueOrNull ?? [];
+           final existing = payees.where((p) => p.name.toLowerCase() == name.toLowerCase()).firstOrNull;
+
+           if (existing != null) {
+              payeeId = existing.id;
+              _selectedPayee = existing;
+           } else {
+              final newPayee = Payee(
+                 id: const Uuid().v4(),
+                 name: name,
+                 createdAt: DateTime.now(),
+              );
+              await ref.read(payeeRepositoryProvider).createPayee(newPayee);
+              payeeId = newPayee.id;
+              _selectedPayee = newPayee;
+           }
+       }
+    }
+
+    if (!mounted) {
+      return;
     }
 
     final transactionId = widget.transactionId ?? const Uuid().v4();
@@ -728,7 +743,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                  }
               }
 
-              final payees = ref.read(payeeListProvider).valueOrNull;
+              final payees = ref.read(suggestedPayeesProvider).valueOrNull;
               if (payees != null && t.payeeId != null && _selectedPayee == null) {
                   try {
                       _selectedPayee = payees.firstWhere((p) => p.id == t.payeeId);
@@ -786,7 +801,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
       });
 
       // Payee Lookup
-      ref.listen(payeeListProvider, (prev, next) {
+      ref.listen(suggestedPayeesProvider, (prev, next) {
          // Draft logic for Payee
          if (_draftPayeeId != null && _selectedPayee == null && next.hasValue) {
              try {
@@ -1001,7 +1016,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                   if (_formType != TransactionFormType.transfer) ...[
                       Consumer(
                         builder: (context, ref, child) {
-                          final payeesAsync = ref.watch(payeeListProvider);
+                          final payeesAsync = ref.watch(suggestedPayeesProvider);
 
                           return payeesAsync.when(
                             data: (payees) {
@@ -1050,11 +1065,6 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                                              try {
                                                  final acc = accounts.firstWhere((a) => a.id == selection.defaultAccountId);
                                                  if (_selectedAccount == null || (_selectedAccount != null && _selectedAccount!.id != acc.id && widget.transactionId == null)) {
-                                                    // Only override if not editing existing tx (unless user changed payee?)
-                                                    // Or just if account is not set.
-                                                    // Let's be safe: If account is null, set it.
-                                                    // If account is set but different, and we are adding a NEW transaction, maybe switch?
-                                                    // I'll switch if it's a new transaction.
                                                     if (widget.transactionId == null) {
                                                         _selectedAccount = acc;
                                                         _accountController.text = acc.name;
