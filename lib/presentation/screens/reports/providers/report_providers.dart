@@ -66,18 +66,11 @@ final incomeVsExpenseHistoryProvider = FutureProvider<List<ChartSeries>>((ref) a
     final monthDate = toMonthStart(t.date);
 
     // Income is defined as positive amount with no category (To Be Budgeted)
-    // per project memory.
     final isIncome = t.amount > 0 && t.categoryId == null;
 
     if (isIncome) {
       incomePoints[monthDate] = (incomePoints[monthDate] ?? 0) + t.amount;
     } else {
-      // Everything else is treated as Expense (or refund reducing expense)
-      // We sum the signed amounts. Expenses are negative, refunds are positive.
-      // Net result for the month: -200 (expense) + 50 (refund) = -150.
-      // We want to plot 150. So we subtract the signed amount (or add absolute of negative).
-      // Ideally: sum += t.amount. Then plot sum.abs().
-      // But we can just accumulate t.amount and flip sign at the end.
       expensePoints[monthDate] = (expensePoints[monthDate] ?? 0) + t.amount;
     }
   }
@@ -91,9 +84,6 @@ final incomeVsExpenseHistoryProvider = FutureProvider<List<ChartSeries>>((ref) a
 
   for (var date in sortedDates) {
     incomeSeriesPoints.add(TimeSeriesPoint(date, incomePoints[date] ?? 0));
-    // Flip sign for expense points (Negative sum becomes Positive value)
-    // If net positive (more refunds than expenses), show as 0 or negative expense?
-    // Showing 0 is safer for "Expense" chart.
     final netExpense = -(expensePoints[date] ?? 0);
     expenseSeriesPoints.add(TimeSeriesPoint(date, netExpense < 0 ? 0 : netExpense));
   }
@@ -119,7 +109,6 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
   final transactionRepo = ref.watch(transactionRepositoryProvider);
 
   final accounts = await accountRepo.getAllAccounts();
-  // Fetch all transactions to calculate running balance correctly from start
   final allTransactions = await transactionRepo.getAllTransactions();
 
   // Sort transactions by date
@@ -148,19 +137,17 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
   for (var t in transactionsInRange) {
     currentBalance += t.amount;
 
-    // Only add one point per day (last balance of the day)
+    // Only add one point per day
     final date = DateTime(t.date.year, t.date.month, t.date.day);
     if (lastDate != date) {
       points.add(TimeSeriesPoint(date, currentBalance));
       lastDate = date;
     } else {
-      // Update last point value
       points.removeLast();
       points.add(TimeSeriesPoint(date, currentBalance));
     }
   }
 
-  // Ensure we have a point at the end if no transactions recently
   if (points.isNotEmpty && points.last.date.isBefore(range.end)) {
     points.add(TimeSeriesPoint(range.end, currentBalance));
   } else if (points.isEmpty) {
@@ -174,4 +161,65 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
       points: points,
     ),
   ];
+});
+
+/// Provider for Spending Trends (Monthly Spending Totals).
+/// Returns a Map of Month Start Date -> Total Expense Amount.
+final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((ref) async {
+  final range = ref.watch(reportDateRangeProvider);
+  final transactionRepo = ref.watch(transactionRepositoryProvider);
+
+  final transactions = await transactionRepo.getTransactionsByDateRange(range.start, range.end);
+  final trends = <DateTime, double>{};
+
+  DateTime toMonthStart(DateTime date) => DateTime(date.year, date.month, 1);
+
+  for (var t in transactions) {
+     if (t.isTransfer) continue;
+
+     final isIncome = t.amount > 0 && t.categoryId == null;
+     if (!isIncome) {
+        final monthDate = toMonthStart(t.date);
+        trends[monthDate] = (trends[monthDate] ?? 0) + t.amount;
+     }
+  }
+
+  final result = <DateTime, double>{};
+  for (var entry in trends.entries) {
+     if (entry.value < 0) {
+        result[entry.key] = entry.value.abs();
+     } else {
+        result[entry.key] = 0.0;
+     }
+  }
+  return result;
+});
+
+/// Provider for Top Payees.
+/// Returns list of (Payee Name, Amount).
+final topPayeesProvider = FutureProvider<List<MapEntry<String, double>>>((ref) async {
+  final range = ref.watch(reportDateRangeProvider);
+  final transactionRepo = ref.watch(transactionRepositoryProvider);
+  final payeeRepo = ref.watch(payeeRepositoryProvider);
+
+  final transactions = await transactionRepo.getTransactionsByDateRange(range.start, range.end);
+  final payees = await payeeRepo.getAllPayees();
+  final payeeNameMap = {for (var p in payees) p.id: p.name};
+
+  final payeeTotals = <String, double>{};
+
+  for (var t in transactions) {
+    if (t.isTransfer) continue;
+
+    // Only count outflows (spending)
+    if (t.amount < 0) {
+      final payeeName = t.payeeId != null ? (payeeNameMap[t.payeeId!] ?? 'Unknown') : 'No Payee';
+      payeeTotals[payeeName] = (payeeTotals[payeeName] ?? 0) + t.amount.abs();
+    }
+  }
+
+  final sortedList = payeeTotals.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+
+  return sortedList.take(10).toList();
 });

@@ -925,6 +925,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Net Worth'**
   String get netWorth;
+
+  /// No description provided for @spendingTrends.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending Trends'**
+  String get spendingTrends;
+
+  /// No description provided for @topPayees.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Payees'**
+  String get topPayees;
+
+  /// No description provided for @categoryBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Category Breakdown'**
+  String get categoryBreakdown;
+
+  /// No description provided for @dateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Date Range'**
+  String get dateRange;
+
+  /// No description provided for @thisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This Month'**
+  String get thisMonth;
+
+  /// No description provided for @lastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Month'**
+  String get lastMonth;
+
+  /// No description provided for @last3Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 3 Months'**
+  String get last3Months;
+
+  /// No description provided for @last6Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 6 Months'**
+  String get last6Months;
+
+  /// No description provided for @thisYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This Year'**
+  String get thisYear;
+
+  /// No description provided for @lastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Year'**
+  String get lastYear;
+
+  /// No description provided for @allTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All Time'**
+  String get allTime;
+
+  /// No description provided for @custom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get custom;
 }
 
 class _AppLocalizationsDelegate
