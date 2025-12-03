@@ -5,8 +5,13 @@ import 'package:ledger_zero/domain/services/scheduled_transaction_service.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/services/encryption/security_manager.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:uuid/uuid.dart';
+
+final securityManagerProvider = Provider<SecurityManager>((ref) {
+  return SecurityManager();
+});
 
 final undoServiceProvider = Provider<UndoService>((ref) {
   return UndoService();

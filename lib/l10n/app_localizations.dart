@@ -1417,6 +1417,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Occurrences'**
   String get occurrences;
+
+  /// No description provided for @recoveryKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery Key'**
+  String get recoveryKey;
+
+  /// No description provided for @backupRecoveryKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Recovery Key'**
+  String get backupRecoveryKey;
+
+  /// No description provided for @revealRecoveryKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal Recovery Key'**
+  String get revealRecoveryKey;
 }
 
 class _AppLocalizationsDelegate

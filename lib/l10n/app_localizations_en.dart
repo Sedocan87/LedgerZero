@@ -734,4 +734,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get occurrences => 'Occurrences';
+
+  @override
+  String get recoveryKey => 'Recovery Key';
+
+  @override
+  String get backupRecoveryKey => 'Backup Recovery Key';
+
+  @override
+  String get revealRecoveryKey => 'Reveal Recovery Key';
 }
