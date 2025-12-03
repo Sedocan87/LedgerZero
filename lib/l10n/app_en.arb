@@ -384,4 +384,29 @@
   "recoveryKey": "Recovery Key",
   "backupRecoveryKey": "Backup Recovery Key",
   "revealRecoveryKey": "Reveal Recovery Key"
+,
+  "autoLock": "Auto-lock Timer",
+  "autoLockImmediate": "Immediate",
+  "autoLockMinutes": "{count, plural, =1{1 Minute} other{{count} Minutes}}",
+  "@autoLockMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "autoLockNever": "Never"
+,
+  "changePassword": "Change Password",
+  "currentPassword": "Current Password",
+  "newPassword": "New Password",
+  "confirmNewPassword": "Confirm New Password",
+  "passwordChangedSuccess": "Password changed successfully",
+  "incorrectPassword": "Incorrect Password",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "passwordTooShort": "Password must be at least 8 characters"
+,
+  "biometrics": "Biometric Authentication",
+  "useBiometricsDescription": "Use Face ID / Fingerprint to unlock",
+  "biometricsSetupFailed": "Biometric setup failed"
 }
