@@ -242,5 +242,17 @@
   "netWorth": "Net Worth",
   "@netWorth": {
     "description": "Label for net worth report"
-  }
+  },
+  "spendingTrends": "Spending Trends",
+  "topPayees": "Top Payees",
+  "categoryBreakdown": "Category Breakdown",
+  "dateRange": "Date Range",
+  "thisMonth": "This Month",
+  "lastMonth": "Last Month",
+  "last3Months": "Last 3 Months",
+  "last6Months": "Last 6 Months",
+  "thisYear": "This Year",
+  "lastYear": "Last Year",
+  "allTime": "All Time",
+  "custom": "Custom"
 }

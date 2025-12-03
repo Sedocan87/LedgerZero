@@ -447,4 +447,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get netWorth => 'Net Worth';
+
+  @override
+  String get spendingTrends => 'Spending Trends';
+
+  @override
+  String get topPayees => 'Top Payees';
+
+  @override
+  String get categoryBreakdown => 'Category Breakdown';
+
+  @override
+  String get dateRange => 'Date Range';
+
+  @override
+  String get thisMonth => 'This Month';
+
+  @override
+  String get lastMonth => 'Last Month';
+
+  @override
+  String get last3Months => 'Last 3 Months';
+
+  @override
+  String get last6Months => 'Last 6 Months';
+
+  @override
+  String get thisYear => 'This Year';
+
+  @override
+  String get lastYear => 'Last Year';
+
+  @override
+  String get allTime => 'All Time';
+
+  @override
+  String get custom => 'Custom';
 }

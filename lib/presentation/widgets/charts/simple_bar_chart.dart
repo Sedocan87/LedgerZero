@@ -7,6 +7,7 @@ class SimpleBarChart extends StatelessWidget {
   final double height;
   final Color barColor;
   final Color labelColor;
+  final bool preserveOrder;
 
   const SimpleBarChart({
     super.key,
@@ -14,6 +15,7 @@ class SimpleBarChart extends StatelessWidget {
     this.height = 200,
     required this.barColor,
     required this.labelColor,
+    this.preserveOrder = false,
   });
 
   @override
@@ -30,14 +32,19 @@ class SimpleBarChart extends StatelessWidget {
       );
     }
 
-    final sortedEntries = data.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value)); // Descending
+    List<MapEntry<String, double>> entries;
+    if (preserveOrder) {
+      entries = data.entries.toList();
+    } else {
+      final sortedEntries = data.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value)); // Descending
 
-    // Show top 7 categories + Others
-    final topEntries = sortedEntries.take(7).toList();
-    if (sortedEntries.length > 7) {
-      final otherSum = sortedEntries.skip(7).fold(0.0, (sum, item) => sum + item.value);
-      topEntries.add(MapEntry('Others', otherSum));
+      // Show top 7 categories + Others
+      entries = sortedEntries.take(7).toList();
+      if (sortedEntries.length > 7) {
+        final otherSum = sortedEntries.skip(7).fold(0.0, (sum, item) => sum + item.value);
+        entries.add(MapEntry('Others', otherSum));
+      }
     }
 
     return LayoutBuilder(
@@ -47,7 +54,7 @@ class SimpleBarChart extends StatelessWidget {
           width: constraints.maxWidth,
           child: CustomPaint(
             painter: BarChartPainter(
-              data: topEntries,
+              data: entries,
               barColor: barColor,
               labelColor: labelColor,
             ),
@@ -147,7 +154,9 @@ class BarChartPainter extends CustomPainter {
   }
 
   String compactCurrency(double value) {
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
     return value.toStringAsFixed(0);
   }
 
