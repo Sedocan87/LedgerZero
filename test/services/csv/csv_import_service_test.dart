@@ -37,14 +37,12 @@ void main() {
       expect(data.rows.length, 1);
     });
 
-    test('handles empty file', () async {
+    test('throws exception on empty file', () async {
        final csvContent = '';
        final bytes = utf8.encode(csvContent);
        final file = PlatformFile(name: 'test.csv', size: bytes.length, bytes: Uint8List.fromList(bytes));
 
-       final data = await service.parseCsvFile(file);
-       expect(data.rows, isEmpty);
-       expect(data.headers, isEmpty);
+       expect(() => service.parseCsvFile(file), throwsA(isA<ImportException>()));
     });
   });
 }

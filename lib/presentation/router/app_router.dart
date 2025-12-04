@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
 import 'package:ledger_zero/presentation/screens/accounts/account_detail_screen.dart';
@@ -19,6 +20,7 @@ import 'package:ledger_zero/presentation/screens/scheduled_transactions/schedule
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit_scheduled_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/import/csv_import_screen.dart';
+import 'package:ledger_zero/presentation/screens/import/import_confirmation_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_debug_screen.dart';
@@ -134,6 +136,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'import-csv',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => const CsvImportScreen(),
+            routes: [
+              GoRoute(
+                path: 'confirm',
+                name: 'import-confirm',
+                parentNavigatorKey: _rootNavigatorKey,
+                builder: (context, state) {
+                  final transactions = state.extra as List<ImportTransaction>;
+                  return ImportConfirmationScreen(transactions: transactions);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: 'payees',

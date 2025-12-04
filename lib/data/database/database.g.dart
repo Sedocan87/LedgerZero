@@ -6655,6 +6655,701 @@ class ParsingRulesCompanion extends UpdateCompanion<ParsingRule> {
   }
 }
 
+class $ImportProfilesTable extends ImportProfiles
+    with TableInfo<$ImportProfilesTable, ImportProfile> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ImportProfilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateFormatMeta = const VerificationMeta(
+    'dateFormat',
+  );
+  @override
+  late final GeneratedColumn<String> dateFormat = GeneratedColumn<String>(
+    'date_format',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _decimalSeparatorMeta = const VerificationMeta(
+    'decimalSeparator',
+  );
+  @override
+  late final GeneratedColumn<String> decimalSeparator = GeneratedColumn<String>(
+    'decimal_separator',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _outflowIsNegativeMeta = const VerificationMeta(
+    'outflowIsNegative',
+  );
+  @override
+  late final GeneratedColumn<bool> outflowIsNegative = GeneratedColumn<bool>(
+    'outflow_is_negative',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("outflow_is_negative" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _dateColumnMeta = const VerificationMeta(
+    'dateColumn',
+  );
+  @override
+  late final GeneratedColumn<String> dateColumn = GeneratedColumn<String>(
+    'date_column',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _amountColumnMeta = const VerificationMeta(
+    'amountColumn',
+  );
+  @override
+  late final GeneratedColumn<String> amountColumn = GeneratedColumn<String>(
+    'amount_column',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _payeeColumnMeta = const VerificationMeta(
+    'payeeColumn',
+  );
+  @override
+  late final GeneratedColumn<String> payeeColumn = GeneratedColumn<String>(
+    'payee_column',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _memoColumnMeta = const VerificationMeta(
+    'memoColumn',
+  );
+  @override
+  late final GeneratedColumn<String> memoColumn = GeneratedColumn<String>(
+    'memo_column',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryColumnMeta = const VerificationMeta(
+    'categoryColumn',
+  );
+  @override
+  late final GeneratedColumn<String> categoryColumn = GeneratedColumn<String>(
+    'category_column',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    dateFormat,
+    decimalSeparator,
+    outflowIsNegative,
+    dateColumn,
+    amountColumn,
+    payeeColumn,
+    memoColumn,
+    categoryColumn,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'import_profiles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ImportProfile> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('date_format')) {
+      context.handle(
+        _dateFormatMeta,
+        dateFormat.isAcceptableOrUnknown(data['date_format']!, _dateFormatMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateFormatMeta);
+    }
+    if (data.containsKey('decimal_separator')) {
+      context.handle(
+        _decimalSeparatorMeta,
+        decimalSeparator.isAcceptableOrUnknown(
+          data['decimal_separator']!,
+          _decimalSeparatorMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_decimalSeparatorMeta);
+    }
+    if (data.containsKey('outflow_is_negative')) {
+      context.handle(
+        _outflowIsNegativeMeta,
+        outflowIsNegative.isAcceptableOrUnknown(
+          data['outflow_is_negative']!,
+          _outflowIsNegativeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_outflowIsNegativeMeta);
+    }
+    if (data.containsKey('date_column')) {
+      context.handle(
+        _dateColumnMeta,
+        dateColumn.isAcceptableOrUnknown(data['date_column']!, _dateColumnMeta),
+      );
+    }
+    if (data.containsKey('amount_column')) {
+      context.handle(
+        _amountColumnMeta,
+        amountColumn.isAcceptableOrUnknown(
+          data['amount_column']!,
+          _amountColumnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('payee_column')) {
+      context.handle(
+        _payeeColumnMeta,
+        payeeColumn.isAcceptableOrUnknown(
+          data['payee_column']!,
+          _payeeColumnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('memo_column')) {
+      context.handle(
+        _memoColumnMeta,
+        memoColumn.isAcceptableOrUnknown(data['memo_column']!, _memoColumnMeta),
+      );
+    }
+    if (data.containsKey('category_column')) {
+      context.handle(
+        _categoryColumnMeta,
+        categoryColumn.isAcceptableOrUnknown(
+          data['category_column']!,
+          _categoryColumnMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ImportProfile map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ImportProfile(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      dateFormat: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date_format'],
+      )!,
+      decimalSeparator: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decimal_separator'],
+      )!,
+      outflowIsNegative: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}outflow_is_negative'],
+      )!,
+      dateColumn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date_column'],
+      ),
+      amountColumn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}amount_column'],
+      ),
+      payeeColumn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payee_column'],
+      ),
+      memoColumn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}memo_column'],
+      ),
+      categoryColumn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_column'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ImportProfilesTable createAlias(String alias) {
+    return $ImportProfilesTable(attachedDatabase, alias);
+  }
+}
+
+class ImportProfile extends DataClass implements Insertable<ImportProfile> {
+  final String id;
+  final String name;
+  final String dateFormat;
+  final String decimalSeparator;
+  final bool outflowIsNegative;
+  final String? dateColumn;
+  final String? amountColumn;
+  final String? payeeColumn;
+  final String? memoColumn;
+  final String? categoryColumn;
+  final String createdAt;
+  const ImportProfile({
+    required this.id,
+    required this.name,
+    required this.dateFormat,
+    required this.decimalSeparator,
+    required this.outflowIsNegative,
+    this.dateColumn,
+    this.amountColumn,
+    this.payeeColumn,
+    this.memoColumn,
+    this.categoryColumn,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['date_format'] = Variable<String>(dateFormat);
+    map['decimal_separator'] = Variable<String>(decimalSeparator);
+    map['outflow_is_negative'] = Variable<bool>(outflowIsNegative);
+    if (!nullToAbsent || dateColumn != null) {
+      map['date_column'] = Variable<String>(dateColumn);
+    }
+    if (!nullToAbsent || amountColumn != null) {
+      map['amount_column'] = Variable<String>(amountColumn);
+    }
+    if (!nullToAbsent || payeeColumn != null) {
+      map['payee_column'] = Variable<String>(payeeColumn);
+    }
+    if (!nullToAbsent || memoColumn != null) {
+      map['memo_column'] = Variable<String>(memoColumn);
+    }
+    if (!nullToAbsent || categoryColumn != null) {
+      map['category_column'] = Variable<String>(categoryColumn);
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    return map;
+  }
+
+  ImportProfilesCompanion toCompanion(bool nullToAbsent) {
+    return ImportProfilesCompanion(
+      id: Value(id),
+      name: Value(name),
+      dateFormat: Value(dateFormat),
+      decimalSeparator: Value(decimalSeparator),
+      outflowIsNegative: Value(outflowIsNegative),
+      dateColumn: dateColumn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dateColumn),
+      amountColumn: amountColumn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amountColumn),
+      payeeColumn: payeeColumn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payeeColumn),
+      memoColumn: memoColumn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(memoColumn),
+      categoryColumn: categoryColumn == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryColumn),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ImportProfile.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ImportProfile(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      dateFormat: serializer.fromJson<String>(json['dateFormat']),
+      decimalSeparator: serializer.fromJson<String>(json['decimalSeparator']),
+      outflowIsNegative: serializer.fromJson<bool>(json['outflowIsNegative']),
+      dateColumn: serializer.fromJson<String?>(json['dateColumn']),
+      amountColumn: serializer.fromJson<String?>(json['amountColumn']),
+      payeeColumn: serializer.fromJson<String?>(json['payeeColumn']),
+      memoColumn: serializer.fromJson<String?>(json['memoColumn']),
+      categoryColumn: serializer.fromJson<String?>(json['categoryColumn']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'dateFormat': serializer.toJson<String>(dateFormat),
+      'decimalSeparator': serializer.toJson<String>(decimalSeparator),
+      'outflowIsNegative': serializer.toJson<bool>(outflowIsNegative),
+      'dateColumn': serializer.toJson<String?>(dateColumn),
+      'amountColumn': serializer.toJson<String?>(amountColumn),
+      'payeeColumn': serializer.toJson<String?>(payeeColumn),
+      'memoColumn': serializer.toJson<String?>(memoColumn),
+      'categoryColumn': serializer.toJson<String?>(categoryColumn),
+      'createdAt': serializer.toJson<String>(createdAt),
+    };
+  }
+
+  ImportProfile copyWith({
+    String? id,
+    String? name,
+    String? dateFormat,
+    String? decimalSeparator,
+    bool? outflowIsNegative,
+    Value<String?> dateColumn = const Value.absent(),
+    Value<String?> amountColumn = const Value.absent(),
+    Value<String?> payeeColumn = const Value.absent(),
+    Value<String?> memoColumn = const Value.absent(),
+    Value<String?> categoryColumn = const Value.absent(),
+    String? createdAt,
+  }) => ImportProfile(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    dateFormat: dateFormat ?? this.dateFormat,
+    decimalSeparator: decimalSeparator ?? this.decimalSeparator,
+    outflowIsNegative: outflowIsNegative ?? this.outflowIsNegative,
+    dateColumn: dateColumn.present ? dateColumn.value : this.dateColumn,
+    amountColumn: amountColumn.present ? amountColumn.value : this.amountColumn,
+    payeeColumn: payeeColumn.present ? payeeColumn.value : this.payeeColumn,
+    memoColumn: memoColumn.present ? memoColumn.value : this.memoColumn,
+    categoryColumn: categoryColumn.present
+        ? categoryColumn.value
+        : this.categoryColumn,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ImportProfile copyWithCompanion(ImportProfilesCompanion data) {
+    return ImportProfile(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      dateFormat: data.dateFormat.present
+          ? data.dateFormat.value
+          : this.dateFormat,
+      decimalSeparator: data.decimalSeparator.present
+          ? data.decimalSeparator.value
+          : this.decimalSeparator,
+      outflowIsNegative: data.outflowIsNegative.present
+          ? data.outflowIsNegative.value
+          : this.outflowIsNegative,
+      dateColumn: data.dateColumn.present
+          ? data.dateColumn.value
+          : this.dateColumn,
+      amountColumn: data.amountColumn.present
+          ? data.amountColumn.value
+          : this.amountColumn,
+      payeeColumn: data.payeeColumn.present
+          ? data.payeeColumn.value
+          : this.payeeColumn,
+      memoColumn: data.memoColumn.present
+          ? data.memoColumn.value
+          : this.memoColumn,
+      categoryColumn: data.categoryColumn.present
+          ? data.categoryColumn.value
+          : this.categoryColumn,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImportProfile(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('dateFormat: $dateFormat, ')
+          ..write('decimalSeparator: $decimalSeparator, ')
+          ..write('outflowIsNegative: $outflowIsNegative, ')
+          ..write('dateColumn: $dateColumn, ')
+          ..write('amountColumn: $amountColumn, ')
+          ..write('payeeColumn: $payeeColumn, ')
+          ..write('memoColumn: $memoColumn, ')
+          ..write('categoryColumn: $categoryColumn, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    dateFormat,
+    decimalSeparator,
+    outflowIsNegative,
+    dateColumn,
+    amountColumn,
+    payeeColumn,
+    memoColumn,
+    categoryColumn,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ImportProfile &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.dateFormat == this.dateFormat &&
+          other.decimalSeparator == this.decimalSeparator &&
+          other.outflowIsNegative == this.outflowIsNegative &&
+          other.dateColumn == this.dateColumn &&
+          other.amountColumn == this.amountColumn &&
+          other.payeeColumn == this.payeeColumn &&
+          other.memoColumn == this.memoColumn &&
+          other.categoryColumn == this.categoryColumn &&
+          other.createdAt == this.createdAt);
+}
+
+class ImportProfilesCompanion extends UpdateCompanion<ImportProfile> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> dateFormat;
+  final Value<String> decimalSeparator;
+  final Value<bool> outflowIsNegative;
+  final Value<String?> dateColumn;
+  final Value<String?> amountColumn;
+  final Value<String?> payeeColumn;
+  final Value<String?> memoColumn;
+  final Value<String?> categoryColumn;
+  final Value<String> createdAt;
+  final Value<int> rowid;
+  const ImportProfilesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.dateFormat = const Value.absent(),
+    this.decimalSeparator = const Value.absent(),
+    this.outflowIsNegative = const Value.absent(),
+    this.dateColumn = const Value.absent(),
+    this.amountColumn = const Value.absent(),
+    this.payeeColumn = const Value.absent(),
+    this.memoColumn = const Value.absent(),
+    this.categoryColumn = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ImportProfilesCompanion.insert({
+    required String id,
+    required String name,
+    required String dateFormat,
+    required String decimalSeparator,
+    required bool outflowIsNegative,
+    this.dateColumn = const Value.absent(),
+    this.amountColumn = const Value.absent(),
+    this.payeeColumn = const Value.absent(),
+    this.memoColumn = const Value.absent(),
+    this.categoryColumn = const Value.absent(),
+    required String createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       dateFormat = Value(dateFormat),
+       decimalSeparator = Value(decimalSeparator),
+       outflowIsNegative = Value(outflowIsNegative),
+       createdAt = Value(createdAt);
+  static Insertable<ImportProfile> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? dateFormat,
+    Expression<String>? decimalSeparator,
+    Expression<bool>? outflowIsNegative,
+    Expression<String>? dateColumn,
+    Expression<String>? amountColumn,
+    Expression<String>? payeeColumn,
+    Expression<String>? memoColumn,
+    Expression<String>? categoryColumn,
+    Expression<String>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (dateFormat != null) 'date_format': dateFormat,
+      if (decimalSeparator != null) 'decimal_separator': decimalSeparator,
+      if (outflowIsNegative != null) 'outflow_is_negative': outflowIsNegative,
+      if (dateColumn != null) 'date_column': dateColumn,
+      if (amountColumn != null) 'amount_column': amountColumn,
+      if (payeeColumn != null) 'payee_column': payeeColumn,
+      if (memoColumn != null) 'memo_column': memoColumn,
+      if (categoryColumn != null) 'category_column': categoryColumn,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ImportProfilesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? dateFormat,
+    Value<String>? decimalSeparator,
+    Value<bool>? outflowIsNegative,
+    Value<String?>? dateColumn,
+    Value<String?>? amountColumn,
+    Value<String?>? payeeColumn,
+    Value<String?>? memoColumn,
+    Value<String?>? categoryColumn,
+    Value<String>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ImportProfilesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      dateFormat: dateFormat ?? this.dateFormat,
+      decimalSeparator: decimalSeparator ?? this.decimalSeparator,
+      outflowIsNegative: outflowIsNegative ?? this.outflowIsNegative,
+      dateColumn: dateColumn ?? this.dateColumn,
+      amountColumn: amountColumn ?? this.amountColumn,
+      payeeColumn: payeeColumn ?? this.payeeColumn,
+      memoColumn: memoColumn ?? this.memoColumn,
+      categoryColumn: categoryColumn ?? this.categoryColumn,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (dateFormat.present) {
+      map['date_format'] = Variable<String>(dateFormat.value);
+    }
+    if (decimalSeparator.present) {
+      map['decimal_separator'] = Variable<String>(decimalSeparator.value);
+    }
+    if (outflowIsNegative.present) {
+      map['outflow_is_negative'] = Variable<bool>(outflowIsNegative.value);
+    }
+    if (dateColumn.present) {
+      map['date_column'] = Variable<String>(dateColumn.value);
+    }
+    if (amountColumn.present) {
+      map['amount_column'] = Variable<String>(amountColumn.value);
+    }
+    if (payeeColumn.present) {
+      map['payee_column'] = Variable<String>(payeeColumn.value);
+    }
+    if (memoColumn.present) {
+      map['memo_column'] = Variable<String>(memoColumn.value);
+    }
+    if (categoryColumn.present) {
+      map['category_column'] = Variable<String>(categoryColumn.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImportProfilesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('dateFormat: $dateFormat, ')
+          ..write('decimalSeparator: $decimalSeparator, ')
+          ..write('outflowIsNegative: $outflowIsNegative, ')
+          ..write('dateColumn: $dateColumn, ')
+          ..write('amountColumn: $amountColumn, ')
+          ..write('payeeColumn: $payeeColumn, ')
+          ..write('memoColumn: $memoColumn, ')
+          ..write('categoryColumn: $categoryColumn, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6675,6 +7370,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $PendingSyncChangesTable(this);
   late final $ParsingHistoryTable parsingHistory = $ParsingHistoryTable(this);
   late final $ParsingRulesTable parsingRules = $ParsingRulesTable(this);
+  late final $ImportProfilesTable importProfiles = $ImportProfilesTable(this);
   late final Index idxBudgetsMonth = Index(
     'idx_budgets_month',
     'CREATE INDEX idx_budgets_month ON budgets (month)',
@@ -6731,6 +7427,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ParsingRulesDao parsingRulesDao = ParsingRulesDao(
     this as AppDatabase,
   );
+  late final ImportProfilesDao importProfilesDao = ImportProfilesDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6749,6 +7448,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     pendingSyncChanges,
     parsingHistory,
     parsingRules,
+    importProfiles,
     idxBudgetsMonth,
     idxTransactionsAccount,
     idxTransactionsDate,
@@ -12519,6 +13219,338 @@ typedef $$ParsingRulesTableProcessedTableManager =
       ParsingRule,
       PrefetchHooks Function()
     >;
+typedef $$ImportProfilesTableCreateCompanionBuilder =
+    ImportProfilesCompanion Function({
+      required String id,
+      required String name,
+      required String dateFormat,
+      required String decimalSeparator,
+      required bool outflowIsNegative,
+      Value<String?> dateColumn,
+      Value<String?> amountColumn,
+      Value<String?> payeeColumn,
+      Value<String?> memoColumn,
+      Value<String?> categoryColumn,
+      required String createdAt,
+      Value<int> rowid,
+    });
+typedef $$ImportProfilesTableUpdateCompanionBuilder =
+    ImportProfilesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> dateFormat,
+      Value<String> decimalSeparator,
+      Value<bool> outflowIsNegative,
+      Value<String?> dateColumn,
+      Value<String?> amountColumn,
+      Value<String?> payeeColumn,
+      Value<String?> memoColumn,
+      Value<String?> categoryColumn,
+      Value<String> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ImportProfilesTableFilterComposer
+    extends Composer<_$AppDatabase, $ImportProfilesTable> {
+  $$ImportProfilesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dateFormat => $composableBuilder(
+    column: $table.dateFormat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decimalSeparator => $composableBuilder(
+    column: $table.decimalSeparator,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get outflowIsNegative => $composableBuilder(
+    column: $table.outflowIsNegative,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dateColumn => $composableBuilder(
+    column: $table.dateColumn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get amountColumn => $composableBuilder(
+    column: $table.amountColumn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payeeColumn => $composableBuilder(
+    column: $table.payeeColumn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get memoColumn => $composableBuilder(
+    column: $table.memoColumn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryColumn => $composableBuilder(
+    column: $table.categoryColumn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ImportProfilesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ImportProfilesTable> {
+  $$ImportProfilesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dateFormat => $composableBuilder(
+    column: $table.dateFormat,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decimalSeparator => $composableBuilder(
+    column: $table.decimalSeparator,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get outflowIsNegative => $composableBuilder(
+    column: $table.outflowIsNegative,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dateColumn => $composableBuilder(
+    column: $table.dateColumn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get amountColumn => $composableBuilder(
+    column: $table.amountColumn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payeeColumn => $composableBuilder(
+    column: $table.payeeColumn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get memoColumn => $composableBuilder(
+    column: $table.memoColumn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryColumn => $composableBuilder(
+    column: $table.categoryColumn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ImportProfilesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ImportProfilesTable> {
+  $$ImportProfilesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get dateFormat => $composableBuilder(
+    column: $table.dateFormat,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get decimalSeparator => $composableBuilder(
+    column: $table.decimalSeparator,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get outflowIsNegative => $composableBuilder(
+    column: $table.outflowIsNegative,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get dateColumn => $composableBuilder(
+    column: $table.dateColumn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get amountColumn => $composableBuilder(
+    column: $table.amountColumn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payeeColumn => $composableBuilder(
+    column: $table.payeeColumn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get memoColumn => $composableBuilder(
+    column: $table.memoColumn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get categoryColumn => $composableBuilder(
+    column: $table.categoryColumn,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ImportProfilesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ImportProfilesTable,
+          ImportProfile,
+          $$ImportProfilesTableFilterComposer,
+          $$ImportProfilesTableOrderingComposer,
+          $$ImportProfilesTableAnnotationComposer,
+          $$ImportProfilesTableCreateCompanionBuilder,
+          $$ImportProfilesTableUpdateCompanionBuilder,
+          (
+            ImportProfile,
+            BaseReferences<_$AppDatabase, $ImportProfilesTable, ImportProfile>,
+          ),
+          ImportProfile,
+          PrefetchHooks Function()
+        > {
+  $$ImportProfilesTableTableManager(
+    _$AppDatabase db,
+    $ImportProfilesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ImportProfilesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ImportProfilesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ImportProfilesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> dateFormat = const Value.absent(),
+                Value<String> decimalSeparator = const Value.absent(),
+                Value<bool> outflowIsNegative = const Value.absent(),
+                Value<String?> dateColumn = const Value.absent(),
+                Value<String?> amountColumn = const Value.absent(),
+                Value<String?> payeeColumn = const Value.absent(),
+                Value<String?> memoColumn = const Value.absent(),
+                Value<String?> categoryColumn = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ImportProfilesCompanion(
+                id: id,
+                name: name,
+                dateFormat: dateFormat,
+                decimalSeparator: decimalSeparator,
+                outflowIsNegative: outflowIsNegative,
+                dateColumn: dateColumn,
+                amountColumn: amountColumn,
+                payeeColumn: payeeColumn,
+                memoColumn: memoColumn,
+                categoryColumn: categoryColumn,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String dateFormat,
+                required String decimalSeparator,
+                required bool outflowIsNegative,
+                Value<String?> dateColumn = const Value.absent(),
+                Value<String?> amountColumn = const Value.absent(),
+                Value<String?> payeeColumn = const Value.absent(),
+                Value<String?> memoColumn = const Value.absent(),
+                Value<String?> categoryColumn = const Value.absent(),
+                required String createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ImportProfilesCompanion.insert(
+                id: id,
+                name: name,
+                dateFormat: dateFormat,
+                decimalSeparator: decimalSeparator,
+                outflowIsNegative: outflowIsNegative,
+                dateColumn: dateColumn,
+                amountColumn: amountColumn,
+                payeeColumn: payeeColumn,
+                memoColumn: memoColumn,
+                categoryColumn: categoryColumn,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ImportProfilesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ImportProfilesTable,
+      ImportProfile,
+      $$ImportProfilesTableFilterComposer,
+      $$ImportProfilesTableOrderingComposer,
+      $$ImportProfilesTableAnnotationComposer,
+      $$ImportProfilesTableCreateCompanionBuilder,
+      $$ImportProfilesTableUpdateCompanionBuilder,
+      (
+        ImportProfile,
+        BaseReferences<_$AppDatabase, $ImportProfilesTable, ImportProfile>,
+      ),
+      ImportProfile,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12549,4 +13581,6 @@ class $AppDatabaseManager {
       $$ParsingHistoryTableTableManager(_db, _db.parsingHistory);
   $$ParsingRulesTableTableManager get parsingRules =>
       $$ParsingRulesTableTableManager(_db, _db.parsingRules);
+  $$ImportProfilesTableTableManager get importProfiles =>
+      $$ImportProfilesTableTableManager(_db, _db.importProfiles);
 }
