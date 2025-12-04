@@ -135,7 +135,7 @@ void main() {
 
     test('Database file should not have standard SQLite header', () async {
       // 1. Create and write with correct key
-      var db = await openDb(correctKey);
+      final db = await openDb(correctKey);
       await db.into(db.accounts).insert(
         AccountsCompanion.insert(
           id: 'acc1',
