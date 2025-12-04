@@ -140,7 +140,8 @@ class LocalDeltaQueue {
   /// Moves a downloaded file to the incoming queue.
   /// The file is expected to be a valid GZIP compressed JSON SyncDelta.
   /// Returns the file in its new location.
-  Future<File> enqueueIncoming(File downloadedFile, String originalFilename) async {
+  Future<File> enqueueIncoming(
+      File downloadedFile, String originalFilename) async {
     final incomingDir = await _incomingDir;
     final destination = File('${incomingDir.path}/$originalFilename');
 
@@ -213,5 +214,153 @@ class LocalDeltaQueue {
       }
     }
     return deletedCount;
+  }
+
+  // --- Task 472: Queue Pruning ---
+
+  /// Prunes the pending delta queue by removing redundant operations.
+  /// For example, squashes multiple updates to the same record.
+  /// Returns the number of files removed.
+  Future<int> pruneQueue() async {
+    final pendingFiles = await getPendingDeltas();
+    if (pendingFiles.isEmpty) return 0;
+
+    // Load all deltas
+    final Map<File, SyncDelta> deltasMap = {};
+    for (final file in pendingFiles) {
+      try {
+        deltasMap[file] = await readDelta(file);
+      } catch (e) {
+        Logger.error('Failed to read delta file for pruning: ${file.path}', e);
+        // Ignore corrupt files for now, or maybe delete them?
+      }
+    }
+
+    // Group by Table + Record ID
+    final Map<String, List<File>> groupedFiles = {};
+    for (final entry in deltasMap.entries) {
+      final file = entry.key;
+      final delta = entry.value;
+
+      String? recordId;
+      if (delta.action == SyncAction.delete) {
+        recordId = delta.data?['id']?.toString();
+      } else {
+        recordId = delta.data?['id']?.toString();
+      }
+
+      if (recordId != null) {
+        final key = '${delta.tableName}:$recordId';
+        groupedFiles.putIfAbsent(key, () => []).add(file);
+      }
+    }
+
+    int removedCount = 0;
+
+    for (final group in groupedFiles.values) {
+      if (group.length <= 1) continue;
+
+      // Sort by sequence (files are already sorted by name which implies time/sequence, but let's be safe)
+      group.sort(
+          (a, b) => deltasMap[a]!.sequence.compareTo(deltasMap[b]!.sequence));
+
+      final firstFile = group.first;
+      final lastFile = group.last;
+
+      final firstDelta = deltasMap[firstFile]!;
+      final lastDelta = deltasMap[lastFile]!;
+
+      bool shouldSquash = false;
+      SyncAction? effectiveAction;
+      Map<String, dynamic>? effectiveData;
+
+      // Squashing Logic
+      if (lastDelta.action == SyncAction.delete) {
+        if (firstDelta.action == SyncAction.insert) {
+          // INSERT + ... + DELETE = Nothing (created then deleted locally)
+          // Remove ALL files in this group
+          for (final file in group) {
+            await file.delete();
+            removedCount++;
+          }
+          continue; // Done with this group
+        } else {
+          // UPDATE + ... + DELETE = DELETE
+          effectiveAction = SyncAction.delete;
+          effectiveData = {'id': lastDelta.data?['id']};
+          shouldSquash = true;
+        }
+      } else {
+        // Last action is INSERT or UPDATE
+        if (firstDelta.action == SyncAction.insert) {
+          // INSERT + ... + UPDATE = INSERT (with latest data)
+          effectiveAction = SyncAction.insert;
+          effectiveData = lastDelta.data;
+          shouldSquash = true;
+        } else {
+          // UPDATE + ... + UPDATE = UPDATE (with latest data)
+          effectiveAction = SyncAction.update;
+          effectiveData = lastDelta.data;
+          shouldSquash = true;
+        }
+      }
+
+      if (shouldSquash && effectiveAction != null) {
+        // Create new squashed delta
+        // We use the sequence and timestamp of the LAST delta to preserve ordering relative to other records
+        final squashedDelta = lastDelta.copyWith(
+          action: effectiveAction,
+          data: effectiveData,
+          // Re-calculate checksum since data changed
+          checksum: null,
+        );
+
+        // Calculate checksum
+        final checksum = squashedDelta.calculateChecksum();
+        final finalDelta = squashedDelta.copyWith(checksum: checksum);
+
+        // We replace the LAST file with the new delta content
+        // And delete all other files in the group
+
+        // Write to last file
+        final jsonString = jsonEncode(finalDelta.toJson());
+        final bytes = utf8.encode(jsonString);
+        final compressed = GZipCodec().encode(bytes);
+        await lastFile.writeAsBytes(compressed);
+
+        // Delete others
+        for (final file in group) {
+          if (file.path != lastFile.path) {
+            await file.delete();
+            removedCount++;
+          }
+        }
+      }
+    }
+
+    return removedCount;
+  }
+
+  // --- Task 473: Queue Export ---
+
+  Future<void> exportQueue(File outputFile) async {
+    final pendingFiles = await getPendingDeltas();
+    final List<Map<String, dynamic>> exportList = [];
+
+    for (final file in pendingFiles) {
+      try {
+        final delta = await readDelta(file);
+        exportList.add(delta.toJson());
+      } catch (e) {
+        exportList.add({
+          'error': 'Failed to read file',
+          'path': file.path,
+          'exception': e.toString(),
+        });
+      }
+    }
+
+    final jsonString = jsonEncode(exportList);
+    await outputFile.writeAsString(jsonString);
   }
 }

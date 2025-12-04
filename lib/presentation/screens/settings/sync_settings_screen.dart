@@ -68,6 +68,13 @@ class SyncSettingsScreen extends ConsumerWidget {
               }
             },
           ),
+          const SizedBox(height: 16),
+
+          SwitchListTile(
+            title: Text(l10n.syncOnlyOnWifi),
+            value: state.wifiOnly,
+            onChanged: (value) => controller.setWifiOnly(value),
+          ),
           const SizedBox(height: 24),
 
           // Provider Specific UI

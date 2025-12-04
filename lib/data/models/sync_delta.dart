@@ -66,16 +66,26 @@ class SyncDelta extends Equatable {
     };
   }
 
-  SyncDelta copyWith({String? checksum}) {
+  SyncDelta copyWith({
+    DateTime? timestamp,
+    String? deviceUuid,
+    int? sequence,
+    SyncAction? action,
+    String? tableName,
+    Map<String, dynamic>? data,
+    int? schemaVersion,
+    String? appVersion,
+    String? checksum,
+  }) {
     return SyncDelta(
-      timestamp: timestamp,
-      deviceUuid: deviceUuid,
-      sequence: sequence,
-      action: action,
-      tableName: tableName,
-      data: data,
-      schemaVersion: schemaVersion,
-      appVersion: appVersion,
+      timestamp: timestamp ?? this.timestamp,
+      deviceUuid: deviceUuid ?? this.deviceUuid,
+      sequence: sequence ?? this.sequence,
+      action: action ?? this.action,
+      tableName: tableName ?? this.tableName,
+      data: data ?? this.data,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      appVersion: appVersion ?? this.appVersion,
       checksum: checksum ?? this.checksum,
     );
   }

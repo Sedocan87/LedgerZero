@@ -69,13 +69,15 @@ class SyncEngine {
   void pause() {
     _isPaused = true;
     Logger.info('SyncEngine paused.');
-    _updateState(_currentState.copyWith(status: SyncStatus.idle, message: 'Paused'));
+    _updateState(
+        _currentState.copyWith(status: SyncStatus.idle, message: 'Paused'));
   }
 
   void resume() {
     _isPaused = false;
     Logger.info('SyncEngine resumed.');
-    _updateState(_currentState.copyWith(status: SyncStatus.idle, message: null));
+    _updateState(
+        _currentState.copyWith(status: SyncStatus.idle, message: null));
     // Trigger sync immediately upon resume?
     sync();
   }
@@ -104,7 +106,8 @@ class SyncEngine {
 
   void _scheduleRetry() {
     if (_retryCount >= _maxRetries) {
-      Logger.error('Max sync retries reached. Giving up until next scheduled sync.');
+      Logger.error(
+          'Max sync retries reached. Giving up until next scheduled sync.');
       _notificationService.showSyncFailureNotification(
         title: 'Sync Failed',
         body: 'Max retries reached. Tap to retry manually.',
@@ -114,7 +117,8 @@ class SyncEngine {
     }
 
     _retryCount++;
-    final delay = Duration(seconds: 2 * (1 << (_retryCount - 1))); // 2, 4, 8, 16, 32...
+    final delay = Duration(
+        seconds: 2 * (1 << (_retryCount - 1))); // 2, 4, 8, 16, 32...
     Logger.info('Scheduling sync retry #$_retryCount in $delay');
 
     // We don't block the timer, but we could schedule a one-off task.
@@ -137,7 +141,8 @@ class SyncEngine {
     Logger.info('Background sync stopped.');
   }
 
-  Future<void> sync({bool background = false, bool forceFullSync = false}) async {
+  Future<void> sync(
+      {bool background = false, bool forceFullSync = false}) async {
     if (_isPaused) {
       Logger.info('Sync skipped (paused).');
       return;
@@ -160,13 +165,17 @@ class SyncEngine {
       _isCancelled = false; // Reset cancellation flag
       try {
         if (!background) {
-            _updateState(_currentState.copyWith(status: SyncStatus.syncing, progress: 0.0, message: 'Starting sync...'));
+          _updateState(_currentState.copyWith(
+              status: SyncStatus.syncing,
+              progress: 0.0,
+              message: 'Starting sync...'));
         }
         Logger.info('Sync started (${provider.name})...');
 
         // 1. Generate local deltas
         if (_isCancelled) return;
-        _updateState(_currentState.copyWith(message: 'Processing local changes...'));
+        _updateState(
+            _currentState.copyWith(message: 'Processing local changes...'));
         await _deltaGenerationService.processPendingChanges();
 
         // Check connectivity
@@ -179,83 +188,106 @@ class SyncEngine {
           return;
         }
 
+        // Task 474: Check Wi-Fi only preference
+        // Only enforce for background syncs. Manual syncs override this setting.
+        if (background) {
+          final wifiOnly = _prefs.getBool('sync_on_wifi_only') ?? false;
+          if (wifiOnly && !await _connectivityService.isWifi) {
+            Logger.info('Sync deferred: Wi-Fi only enabled and not on Wi-Fi.');
+            return;
+          }
+        }
+
         // 2. Upload Pending Deltas
         if (_isCancelled) return;
         final pendingUploads = await _deltaQueue.getPendingDeltas();
         if (pendingUploads.isNotEmpty) {
-           Logger.info('Uploading ${pendingUploads.length} pending deltas...');
-           int uploadedCount = 0;
-           for (final file in pendingUploads) {
-              if (_isCancelled) break;
-              _updateState(_currentState.copyWith(
-                  message: 'Uploading ${uploadedCount + 1}/${pendingUploads.length}',
-                  progress: 0.1 + (0.2 * (uploadedCount / pendingUploads.length)) // 10% to 30%
-              ));
+          Logger.info('Uploading ${pendingUploads.length} pending deltas...');
+          int uploadedCount = 0;
+          for (final file in pendingUploads) {
+            if (_isCancelled) break;
+            _updateState(_currentState.copyWith(
+                message:
+                    'Uploading ${uploadedCount + 1}/${pendingUploads.length}',
+                progress: 0.1 +
+                    (0.2 *
+                        (uploadedCount /
+                            pendingUploads.length)) // 10% to 30%
+                ));
 
-              final filename = file.uri.pathSegments.last;
-              if (provider == SyncProviderType.googleDrive) {
-                 await _googleDriveService.uploadDelta(file, filename);
-              } else {
-                 await _iCloudService.uploadDelta(file, filename);
-              }
-              await _deltaQueue.markAsUploaded(file);
-              uploadedCount++;
-           }
+            final filename = file.uri.pathSegments.last;
+            if (provider == SyncProviderType.googleDrive) {
+              await _googleDriveService.uploadDelta(file, filename);
+            } else {
+              await _iCloudService.uploadDelta(file, filename);
+            }
+            await _deltaQueue.markAsUploaded(file);
+            uploadedCount++;
+          }
         }
 
         if (_isCancelled) {
-             Logger.info('Sync cancelled during upload.');
-             _updateState(_currentState.copyWith(status: SyncStatus.idle, message: 'Sync cancelled'));
-             return;
+          Logger.info('Sync cancelled during upload.');
+          _updateState(_currentState.copyWith(
+              status: SyncStatus.idle, message: 'Sync cancelled'));
+          return;
         }
 
         // 3. Download & Replay Remote Deltas
-        _updateState(_currentState.copyWith(message: 'Checking remote files...', progress: 0.3));
+        _updateState(_currentState.copyWith(
+            message: 'Checking remote files...', progress: 0.3));
 
         // Task 452: Full Sync (ignore processed files)
-        final processedRemoteFiles = forceFullSync ? <String>{} : await _getProcessedRemoteFiles();
+        final processedRemoteFiles =
+            forceFullSync ? <String>{} : await _getProcessedRemoteFiles();
         final tempDir = await getTemporaryDirectory();
 
         List<RemoteFile> remoteFiles = [];
         if (provider == SyncProviderType.googleDrive) {
-            final files = await _googleDriveService.listDeltas();
-            remoteFiles = files.map((f) => RemoteFile(f.name!, f.id!)).toList();
+          final files = await _googleDriveService.listDeltas();
+          remoteFiles = files.map((f) => RemoteFile(f.name!, f.id!)).toList();
         } else {
-            final files = await _iCloudService.listDeltas();
-            remoteFiles = files.map((f) => RemoteFile(f.relativePath, f.relativePath)).toList();
+          final files = await _iCloudService.listDeltas();
+          remoteFiles = files
+              .map((f) => RemoteFile(f.relativePath, f.relativePath))
+              .toList();
         }
 
-        remoteFiles.sort((a, b) => a.name.compareTo(b.name)); // Sort by name (timestamp)
+        remoteFiles
+            .sort((a, b) => a.name.compareTo(b.name)); // Sort by name (timestamp)
 
         // Task 451: Incremental Sync (filter out processed)
-        final pendingRemoteFiles = remoteFiles.where((f) => !processedRemoteFiles.contains(f.name)).toList();
+        final pendingRemoteFiles = remoteFiles
+            .where((f) => !processedRemoteFiles.contains(f.name))
+            .toList();
 
         if (pendingRemoteFiles.isNotEmpty) {
-             Logger.info('Found ${pendingRemoteFiles.length} new remote deltas.');
+          Logger.info('Found ${pendingRemoteFiles.length} new remote deltas.');
 
-             // Task 459: Batch Operations (Chunking)
-             const batchSize = 10;
-             int processedCount = 0;
-             final total = pendingRemoteFiles.length;
+          // Task 459: Batch Operations (Chunking)
+          const batchSize = 10;
+          int processedCount = 0;
+          final total = pendingRemoteFiles.length;
 
-             for (var i = 0; i < total; i += batchSize) {
-                 if (_isCancelled) break;
+          for (var i = 0; i < total; i += batchSize) {
+            if (_isCancelled) break;
 
-                 final end = (i + batchSize < total) ? i + batchSize : total;
-                 final batch = pendingRemoteFiles.sublist(i, end);
+            final end = (i + batchSize < total) ? i + batchSize : total;
+            final batch = pendingRemoteFiles.sublist(i, end);
 
-                 _updateState(_currentState.copyWith(
-                     message: 'Downloading ${processedCount + 1}-${end}/$total',
-                     progress: 0.3 + (0.7 * (processedCount / total)) // 30% to 100%
-                 ));
+            _updateState(_currentState.copyWith(
+                message: 'Downloading ${processedCount + 1}-${end}/$total',
+                progress: 0.3 + (0.7 * (processedCount / total)) // 30% to 100%
+                ));
 
-                 // Actually we read delta objects
-                 final downloadedDeltas = <SyncDelta>[];
-                 final queuedFiles = <File>[];
+            // Actually we read delta objects
+            final downloadedDeltas = <SyncDelta>[];
+            final queuedFiles = <File>[];
 
-                 // Download batch in parallel?
-                 // Using Future.wait might be faster but riskier on rate limits.
-                 // Let's do parallel for small batch.
+            // Download batch in parallel?
+            // Using Future.wait might be faster but riskier on rate limits.
+            // Let's do parallel for small batch.
+            /*
                  await Future.wait(batch.map((remoteFile) async {
                      final savePath = '${tempDir.path}/${remoteFile.name}';
                      File downloadedFile;
@@ -274,55 +306,62 @@ class SyncEngine {
                      final delta = await _deltaQueue.readDelta(queuedFile);
                      downloadedDeltas.add(delta);
                  }));
+                 */
 
-                 // Sort downloaded deltas by sequence/timestamp to ensure correct replay order within batch
-                 // Filenames are already sorted, so if we process in order of `batch`, it should be fine.
-                 // But Future.wait might complete out of order.
-                 // So we should re-sort `downloadedDeltas` or process sequentially.
+            // Sort downloaded deltas by sequence/timestamp to ensure correct replay order within batch
+            // Filenames are already sorted, so if we process in order of `batch`, it should be fine.
+            // But Future.wait might complete out of order.
+            // So we should re-sort `downloadedDeltas` or process sequentially.
 
-                 // To correspond queuedFiles with deltas, we better do it sequentially inside the loop or map carefully.
-                 // Let's do sequential download for safety against rate limits and ordering.
+            // To correspond queuedFiles with deltas, we better do it sequentially inside the loop or map carefully.
+            // Let's do sequential download for safety against rate limits and ordering.
 
-                 downloadedDeltas.clear();
-                 queuedFiles.clear();
+            downloadedDeltas.clear();
+            queuedFiles.clear();
 
-                 for (final remoteFile in batch) {
-                     if (_isCancelled) break;
-                     final savePath = '${tempDir.path}/${remoteFile.name}';
-                     File downloadedFile;
-                     if (provider == SyncProviderType.googleDrive) {
-                         downloadedFile = await _googleDriveService.downloadDelta(remoteFile.id, savePath);
-                     } else {
-                         downloadedFile = await _iCloudService.downloadDelta(remoteFile.name, savePath);
-                     }
-                     final queuedFile = await _deltaQueue.enqueueIncoming(downloadedFile, remoteFile.name);
-                     queuedFiles.add(queuedFile);
-                     final delta = await _deltaQueue.readDelta(queuedFile);
-                     downloadedDeltas.add(delta);
-                 }
+            for (final remoteFile in batch) {
+              if (_isCancelled) break;
+              final savePath = '${tempDir.path}/${remoteFile.name}';
+              File downloadedFile;
+              if (provider == SyncProviderType.googleDrive) {
+                downloadedFile = await _googleDriveService.downloadDelta(
+                    remoteFile.id, savePath);
+              } else {
+                downloadedFile = await _iCloudService.downloadDelta(
+                    remoteFile.name, savePath);
+              }
+              final queuedFile = await _deltaQueue.enqueueIncoming(
+                  downloadedFile, remoteFile.name);
+              queuedFiles.add(queuedFile);
+              final delta = await _deltaQueue.readDelta(queuedFile);
+              downloadedDeltas.add(delta);
+            }
 
-                 if (_isCancelled) break;
+            if (_isCancelled) break;
 
-                 // Replay Batch
-                 await _deltaReplayService.replayBatch(downloadedDeltas, filenames: batch.map((f) => f.name).toList());
+            // Replay Batch
+            await _deltaReplayService.replayBatch(downloadedDeltas,
+                filenames: batch.map((f) => f.name).toList());
 
-                 // Mark Applied
-                 for (final queuedFile in queuedFiles) {
-                     await _deltaQueue.markAsApplied(queuedFile);
-                 }
+            // Mark Applied
+            for (final queuedFile in queuedFiles) {
+              await _deltaQueue.markAsApplied(queuedFile);
+            }
 
-                 processedCount += batch.length;
-             }
+            processedCount += batch.length;
+          }
 
-             if (processedCount > 0) {
-                 Logger.info('Downloaded and applied $processedCount remote deltas.');
-             }
+          if (processedCount > 0) {
+            Logger.info(
+                'Downloaded and applied $processedCount remote deltas.');
+          }
         }
 
         if (_isCancelled) {
-             Logger.info('Sync cancelled during download.');
-             _updateState(_currentState.copyWith(status: SyncStatus.idle, message: 'Sync cancelled'));
-             return;
+          Logger.info('Sync cancelled during download.');
+          _updateState(_currentState.copyWith(
+              status: SyncStatus.idle, message: 'Sync cancelled'));
+          return;
         }
 
         final now = DateTime.now();
@@ -330,21 +369,20 @@ class SyncEngine {
         await _recordSuccess();
 
         if (!background) {
-            _updateState(_currentState.copyWith(
-                status: SyncStatus.connected,
-                lastSyncTime: now,
-                progress: 1.0,
-                message: 'Sync completed'
-            ));
+          _updateState(_currentState.copyWith(
+              status: SyncStatus.connected,
+              lastSyncTime: now,
+              progress: 1.0,
+              message: 'Sync completed'));
         }
         Logger.info('Sync completed.');
         _retryCount = 0; // Reset retry on success
-
       } catch (e, stack) {
         Logger.error('Sync failed', e, stack);
         await _recordFailure();
         if (!background) {
-            _updateState(_currentState.copyWith(status: SyncStatus.error, errorMessage: e.toString()));
+          _updateState(_currentState.copyWith(
+              status: SyncStatus.error, errorMessage: e.toString()));
         }
         rethrow; // For background retry logic
       }
@@ -357,18 +395,18 @@ class SyncEngine {
   }
 
   Future<Set<String>> _getProcessedRemoteFiles() async {
-      // We need a way to check if a filename is in SyncLog.
-      // We can query SyncLogDao.
-      // Since we don't have direct access to DAO here, we rely on a service or inject DAO?
-      // DeltaReplayService has DB access. Maybe expose a method there?
-      // Or pass DB to SyncEngine.
-      // SyncEngine usually has high level control.
-      // I'll add a method to DeltaGenerationService or DeltaReplayService to get applied filenames?
-      // Or better, inject AppDatabase or SyncLogDao into SyncEngine.
-      // I'll assume I can access it.
-      // For now, I'll rely on SyncLogDao being available via DeltaGenerationService (it has _db).
-      // I'll add a method to DeltaGenerationService to `getAppliedDeltaFilenames()`.
-      return _deltaGenerationService.getAppliedDeltaFilenames();
+    // We need a way to check if a filename is in SyncLog.
+    // We can query SyncLogDao.
+    // Since we don't have direct access to DAO here, we rely on a service or inject DAO?
+    // DeltaReplayService has DB access. Maybe expose a method there?
+    // Or pass DB to SyncEngine.
+    // SyncEngine usually has high level control.
+    // I'll add a method to DeltaGenerationService or DeltaReplayService to get applied filenames?
+    // Or better, inject AppDatabase or SyncLogDao into SyncEngine.
+    // I'll assume I can access it.
+    // For now, I'll rely on SyncLogDao being available via DeltaGenerationService (it has _db).
+    // I'll add a method to DeltaGenerationService to `getAppliedDeltaFilenames()`.
+    return _deltaGenerationService.getAppliedDeltaFilenames();
   }
 
   Future<void> _recordSuccess() async {
@@ -386,21 +424,23 @@ class SyncEngine {
 
   // Task 450: Health Check
   Future<Map<String, dynamic>> checkHealth() async {
-     return {
-        'pending_uploads': (await _deltaQueue.getPendingDeltas()).length,
-        'pending_incoming': (await _deltaQueue.getPendingIncomingDeltas()).length,
-        'is_paused': _isPaused,
-        'provider': _prefs.getString('sync_provider'),
-        'last_sync': _prefs.getString('sync_last_sync_time'),
-        'success_count': _prefs.getInt('sync_stats_success_count') ?? 0,
-        'failure_count': _prefs.getInt('sync_stats_failure_count') ?? 0,
-        'consecutive_failures': _prefs.getInt('sync_stats_consecutive_failures') ?? 0,
-     };
+    return {
+      'pending_uploads': (await _deltaQueue.getPendingDeltas()).length,
+      'pending_incoming':
+          (await _deltaQueue.getPendingIncomingDeltas()).length,
+      'is_paused': _isPaused,
+      'provider': _prefs.getString('sync_provider'),
+      'last_sync': _prefs.getString('sync_last_sync_time'),
+      'success_count': _prefs.getInt('sync_stats_success_count') ?? 0,
+      'failure_count': _prefs.getInt('sync_stats_failure_count') ?? 0,
+      'consecutive_failures':
+          _prefs.getInt('sync_stats_consecutive_failures') ?? 0,
+    };
   }
 }
 
 class RemoteFile {
-    final String name;
-    final String id;
-    RemoteFile(this.name, this.id);
+  final String name;
+  final String id;
+  RemoteFile(this.name, this.id);
 }

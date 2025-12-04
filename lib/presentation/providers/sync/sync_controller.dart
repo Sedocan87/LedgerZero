@@ -14,6 +14,7 @@ class SyncController extends StateNotifier<SyncState> {
 
   static const String _lastSyncKey = 'sync_last_sync_time';
   static const String _syncProviderKey = 'sync_provider';
+  static const String _syncWifiOnlyKey = 'sync_on_wifi_only';
 
   SyncController(
     this._authService,
@@ -52,6 +53,10 @@ class SyncController extends StateNotifier<SyncState> {
       );
       state = state.copyWith(selectedProvider: provider);
     }
+
+    // Load Wi-Fi only setting
+    final wifiOnly = _prefs.getBool(_syncWifiOnlyKey) ?? false;
+    state = state.copyWith(wifiOnly: wifiOnly);
 
     // Listen to auth changes
     _authService.onCurrentUserChanged.listen((account) {
@@ -117,6 +122,10 @@ class SyncController extends StateNotifier<SyncState> {
     }
   }
 
+  Future<void> setWifiOnly(bool enabled) async {
+    await _prefs.setBool(_syncWifiOnlyKey, enabled);
+    state = state.copyWith(wifiOnly: enabled);
+  }
 
   Future<void> connect() async {
     state = state.copyWith(status: SyncStatus.syncing); // Optimistic UI

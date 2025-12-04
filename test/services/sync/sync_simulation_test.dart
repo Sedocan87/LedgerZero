@@ -33,7 +33,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   // Mock Package Info Channel
-  const MethodChannel('dev.fluttercommunity.plus/package_info').setMockMethodCallHandler((call) async {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('dev.fluttercommunity.plus/package_info'), (call) async {
     if (call.method == 'getAll') {
       return {
         'appName': 'LedgerZero',
@@ -46,7 +46,7 @@ void main() {
   });
 
   // Mock Path Provider
-  const MethodChannel('plugins.flutter.io/path_provider').setMockMethodCallHandler((call) async {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'), (call) async {
     if (call.method == 'getTemporaryDirectory') {
       return Directory.systemTemp.path;
     }

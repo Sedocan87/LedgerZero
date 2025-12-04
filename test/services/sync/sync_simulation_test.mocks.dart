@@ -330,6 +330,14 @@ class MockConnectivityService extends _i1.Mock
             returnValue: _i4.Future<bool>.value(false),
           )
           as _i4.Future<bool>);
+
+  @override
+  _i4.Future<bool> get isWifi =>
+      (super.noSuchMethod(
+            Invocation.getter(#isWifi),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
 }
 
 /// A class which mocks [NotificationService].
