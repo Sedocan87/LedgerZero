@@ -861,4 +861,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncOnlyOnWifi => 'Sync only on Wi-Fi';
+
+  @override
+  String get quickAdd => 'Quick Add';
+
+  @override
+  String get preview => 'Preview';
+
+  @override
+  String get confidence => 'Confidence';
+
+  @override
+  String get noAmount => 'No amount';
+
+  @override
+  String get payeeNotFound => 'Payee not found';
+
+  @override
+  String get uncategorized => 'Uncategorized';
+
+  @override
+  String get editDetails => 'Edit Details';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get parsingTips => 'Parsing Tips';
+
+  @override
+  String get parsingTipsDescription => 'Type naturally to create transactions.';
+
+  @override
+  String get examples => 'Examples';
+
+  @override
+  String get appDetects => 'The app detects';
 }

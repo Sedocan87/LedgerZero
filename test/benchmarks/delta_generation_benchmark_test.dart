@@ -42,7 +42,7 @@ void main() {
     when(mockPrefs.getInt(any)).thenReturn(0);
     when(mockPrefs.setInt(any, any)).thenAnswer((_) async => true);
     when(mockQueue.enqueue(any)).thenAnswer((invocation) async {
-        return File('dummy_${Uuid().v4()}.json.gz');
+        return File('dummy_${const Uuid().v4()}.json.gz');
     });
 
     service = DeltaGenerationService(db, mockQueue, mockPrefs);
@@ -59,7 +59,7 @@ void main() {
     final accounts = <AccountsCompanion>[];
     for (var i = 0; i < count; i++) {
         accounts.add(AccountsCompanion.insert(
-            id: Uuid().v4(),
+            id: const Uuid().v4(),
             name: 'Account $i',
             type: 'checking',
             createdAt: Value(DateTime.now()),

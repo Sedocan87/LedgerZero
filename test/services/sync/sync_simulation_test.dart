@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/data/database/database.dart';
-import 'package:ledger_zero/data/models/sync_delta.dart';
 import 'package:ledger_zero/services/sync/delta_generation_service.dart';
 import 'package:ledger_zero/services/sync/delta_replay_service.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
@@ -80,7 +79,9 @@ void main() {
       final id = invocation.positionalArguments[0] as String;
       final savePath = invocation.positionalArguments[1] as String;
       final content = cloudStorage[id];
-      if (content == null) throw Exception('File not found: $id');
+      if (content == null) {
+        throw Exception('File not found: $id');
+      }
       final file = File(savePath);
       await file.parent.create(recursive: true);
       await file.writeAsBytes(content);

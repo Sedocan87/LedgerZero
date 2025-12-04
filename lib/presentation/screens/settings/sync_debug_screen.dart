@@ -22,7 +22,7 @@ class SyncDebugScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.refresh(syncLogListProvider);
+              ref.invalidate(syncLogListProvider);
             },
           ),
         ],
@@ -32,7 +32,9 @@ class SyncDebugScreen extends ConsumerWidget {
           final asyncLogs = ref.watch(syncLogListProvider);
           return asyncLogs.when(
             data: (logs) {
-              if (logs.isEmpty) return const Center(child: Text('No sync logs'));
+              if (logs.isEmpty) {
+                return const Center(child: Text('No sync logs'));
+              }
               return ListView.builder(
                 itemCount: logs.length,
                 itemBuilder: (context, index) {
@@ -82,7 +84,7 @@ class SyncDebugScreen extends ConsumerWidget {
           final engine = ref.read(syncEngineProvider);
           final health = await engine.checkHealth();
           if (context.mounted) {
-            showDialog(
+            await showDialog(
               context: context,
               builder: (c) => AlertDialog(
                 title: const Text('Health Check'),

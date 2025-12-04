@@ -40,7 +40,7 @@ void main() {
   test('emits offline when connection is lost', () async {
     service = ConnectivityService(connectivity: mockConnectivity);
 
-    expectLater(
+    final expectation = expectLater(
       service.connectionStatusStream,
       emitsInOrder([
         ConnectionStatus.online, // Initial check
@@ -53,6 +53,8 @@ void main() {
 
     // Change to none
     controller.add([ConnectivityResult.none]);
+
+    await expectation;
   });
 
   test('emits online when connection is restored', () async {
@@ -62,7 +64,7 @@ void main() {
 
     service = ConnectivityService(connectivity: mockConnectivity);
 
-    expectLater(
+    final expectation = expectLater(
       service.connectionStatusStream,
       emitsInOrder([
         ConnectionStatus.offline, // Initial
@@ -74,5 +76,7 @@ void main() {
 
     // Change to wifi
     controller.add([ConnectivityResult.wifi]);
+
+    await expectation;
   });
 }

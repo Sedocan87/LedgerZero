@@ -98,8 +98,8 @@ void main() {
       await db.accountsDao.updateAccount(
         AccountsCompanion(
           id: Value(accountId),
-          name: Value('Updated Account'),
-          type: Value('checking'), // Required
+          name: const Value('Updated Account'),
+          type: const Value('checking'), // Required
         ),
       );
 
@@ -152,8 +152,8 @@ void main() {
       await db.accountsDao.updateAccount(
         AccountsCompanion(
           id: Value(accountId),
-          name: Value('Updated Account'),
-          type: Value('checking'), // Required
+          name: const Value('Updated Account'),
+          type: const Value('checking'), // Required
         ),
       );
 
@@ -185,8 +185,8 @@ void main() {
       await db.accountsDao.updateAccount(
         AccountsCompanion(
           id: Value(accountId),
-          name: Value('Updated Account'),
-          type: Value('checking'), // Required
+          name: const Value('Updated Account'),
+          type: const Value('checking'), // Required
         ),
       );
 
@@ -238,16 +238,16 @@ void main() {
       await db.accountsDao.updateAccount(
         AccountsCompanion(
           id: Value(accountId),
-          name: Value('Updated 1'),
-          type: Value('checking'), // Required
+          name: const Value('Updated 1'),
+          type: const Value('checking'), // Required
         ),
       );
 
       await db.accountsDao.updateAccount(
         AccountsCompanion(
           id: Value(accountId),
-          name: Value('Updated 2'),
-          type: Value('checking'), // Required
+          name: const Value('Updated 2'),
+          type: const Value('checking'), // Required
         ),
       );
 

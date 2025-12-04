@@ -120,11 +120,12 @@ void main() {
       final merchants = ['Walmart', 'Target', 'Costco', 'Kroger', 'Whole Foods', 'Shell', 'BP', 'Exxon', 'Uber', 'Lyft', 'McDonalds', 'Burger King', 'Subway', 'Starbucks', 'Dunkin', 'Netflix', 'Hulu', 'Spotify', 'Amazon', 'Apple', 'Google'];
       final amounts = [10.0, 15.50, 20.00, 9.99, 100, 5, 4.25, 50.0, 12.34, 1.0];
 
-      int count = 0;
       // Generate standard "Merchant Amount" cases
       for (var m in merchants) {
         for (var a in amounts) {
-           if (cases.length >= 120) break;
+           if (cases.length >= 120) {
+             break;
+           }
 
            // We expect payee match only if in mockPayees
            final expectedPayee = mockPayees.any((p) => p.name == m) ? m : null;

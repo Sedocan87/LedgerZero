@@ -162,16 +162,24 @@ class TransactionParser {
     double score = 0.0;
 
     // Amount is crucial for a transaction
-    if (amount != null) score += 0.4;
+    if (amount != null) {
+      score += 0.4;
+    }
 
     // Payee is also very important
-    if (payee != null) score += 0.3;
+    if (payee != null) {
+      score += 0.3;
+    }
 
     // Category adds significant value
-    if (category != null) score += 0.2;
+    if (category != null) {
+      score += 0.2;
+    }
 
     // Date adds some confidence, but default (today/tomorrow) is often implicit
-    if (date != null) score += 0.1;
+    if (date != null) {
+      score += 0.1;
+    }
 
     return score;
   }

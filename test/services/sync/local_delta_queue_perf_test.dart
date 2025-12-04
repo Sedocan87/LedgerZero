@@ -21,7 +21,7 @@ void main() {
     });
 
     test('Handle 1000+ pending operations', () async {
-      final int operationCount = 1000;
+      const int operationCount = 1000;
       final stopwatch = Stopwatch()..start();
 
       // 1. Enqueue 1000 operations

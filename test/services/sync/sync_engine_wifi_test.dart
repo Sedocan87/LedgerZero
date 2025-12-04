@@ -42,7 +42,7 @@ void main() {
 
     // Default mock behaviors
     when(mockConnectivityService.connectionStatusStream)
-        .thenAnswer((_) => Stream.empty());
+        .thenAnswer((_) => const Stream.empty());
 
     // Default provider to Google Drive so it doesn't exit early on "none"
     when(mockPrefs.getString('sync_provider')).thenReturn('googleDrive');
