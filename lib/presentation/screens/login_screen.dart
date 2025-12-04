@@ -175,10 +175,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: const Text('Use Biometrics'),
                 ),
               ],
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _isLoading ? null : _showRecoveryKeyDialog,
+                child: const Text('Use Recovery Key'),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _showRecoveryKeyDialog() async {
+    final controller = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter Recovery Key'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Paste your recovery key here',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _loginWithKey(controller.text.trim());
+            },
+            child: const Text('Unlock'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _loginWithKey(String keyInput) async {
+    if (keyInput.isEmpty) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final securityManager = ref.read(securityManagerProvider);
+      // Verify if this key is valid
+      final isValid = await securityManager.verifyKey(keyInput);
+      if (isValid) {
+        _loginSuccess(keyInput);
+      } else {
+        _showError('Invalid recovery key');
+      }
+    } catch (e) {
+      _showError('Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

@@ -1525,6 +1525,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Biometric setup failed'**
   String get biometricsSetupFailed;
+
+  /// No description provided for @encryptionStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Encryption Status'**
+  String get encryptionStatus;
+
+  /// No description provided for @encrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted'**
+  String get encrypted;
+
+  /// No description provided for @notEncrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Encrypted'**
+  String get notEncrypted;
+
+  /// No description provided for @secure.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure'**
+  String get secure;
 }
 
 class _AppLocalizationsDelegate

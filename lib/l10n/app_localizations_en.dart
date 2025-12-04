@@ -796,4 +796,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get biometricsSetupFailed => 'Biometric setup failed';
+
+  @override
+  String get encryptionStatus => 'Encryption Status';
+
+  @override
+  String get encrypted => 'Encrypted';
+
+  @override
+  String get notEncrypted => 'Not Encrypted';
+
+  @override
+  String get secure => 'Secure';
 }

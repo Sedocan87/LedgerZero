@@ -67,6 +67,7 @@ dev_dependencies:
   share_plus_platform_interface: ^6.1.0
   plugin_platform_interface: ^2.1.8
   path_provider_platform_interface: ^2.1.2
+  sqlite3: ^2.9.4
 
 flutter:
   uses-material-design: true
