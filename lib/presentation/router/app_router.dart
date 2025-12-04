@@ -18,6 +18,7 @@ import 'package:ledger_zero/presentation/screens/payees/payees_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/scheduled_transactions_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit_scheduled_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
+import 'package:ledger_zero/presentation/screens/import/csv_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_debug_screen.dart';
@@ -127,6 +128,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'change-password',
             name: 'change-password',
             builder: (context, state) => const ChangePasswordScreen(),
+          ),
+          GoRoute(
+            path: 'import-csv',
+            name: 'import-csv',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => const CsvImportScreen(),
           ),
           GoRoute(
             path: 'payees',
