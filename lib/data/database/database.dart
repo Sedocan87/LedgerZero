@@ -1,31 +1,33 @@
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/tables/accounts.dart';
-import 'package:ledger_zero/data/database/tables/budgets.dart';
 import 'package:ledger_zero/data/database/tables/budget_templates.dart';
+import 'package:ledger_zero/data/database/tables/budgets.dart';
 import 'package:ledger_zero/data/database/tables/categories.dart';
 import 'package:ledger_zero/data/database/tables/category_groups.dart';
+import 'package:ledger_zero/data/database/tables/import_profiles.dart';
+import 'package:ledger_zero/data/database/tables/parsing_history.dart';
+import 'package:ledger_zero/data/database/tables/parsing_rules.dart';
 import 'package:ledger_zero/data/database/tables/payees.dart';
+import 'package:ledger_zero/data/database/tables/pending_sync_changes.dart';
 import 'package:ledger_zero/data/database/tables/report_notes.dart';
 import 'package:ledger_zero/data/database/tables/scheduled_transactions.dart';
 import 'package:ledger_zero/data/database/tables/sync_log.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
-import 'package:ledger_zero/data/database/tables/pending_sync_changes.dart';
-import 'package:ledger_zero/data/database/tables/parsing_history.dart';
-import 'package:ledger_zero/data/database/tables/parsing_rules.dart';
 
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
 import 'package:ledger_zero/data/database/daos/budget_templates_dao.dart';
 import 'package:ledger_zero/data/database/daos/categories_dao.dart';
+import 'package:ledger_zero/data/database/daos/import_profiles_dao.dart';
+import 'package:ledger_zero/data/database/daos/parsing_history_dao.dart';
+import 'package:ledger_zero/data/database/daos/parsing_rules_dao.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
 import 'package:ledger_zero/data/database/daos/report_notes_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/pending_sync_changes_dao.dart';
-import 'package:ledger_zero/data/database/daos/parsing_history_dao.dart';
-import 'package:ledger_zero/data/database/daos/parsing_rules_dao.dart';
 import 'package:uuid/uuid.dart';
 
 part 'database.g.dart';
@@ -45,6 +47,7 @@ part 'database.g.dart';
     PendingSyncChanges,
     ParsingHistory,
     ParsingRules,
+    ImportProfiles,
   ],
   daos: [
     AccountsDao,
@@ -59,6 +62,7 @@ part 'database.g.dart';
     PendingSyncChangesDao,
     ParsingHistoryDao,
     ParsingRulesDao,
+    ImportProfilesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -74,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -85,6 +89,9 @@ class AppDatabase extends _$AppDatabase {
         await _createSyncTriggers();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 13) {
+           await m.createTable(importProfiles);
+        }
         if (from < 12) {
           await m.createTable(parsingHistory);
           await m.createTable(parsingRules);
@@ -158,6 +165,7 @@ class AppDatabase extends _$AppDatabase {
       'scheduled_transactions',
       'budget_templates',
       'report_notes',
+      'import_profiles',
     ];
 
     for (final table in tables) {

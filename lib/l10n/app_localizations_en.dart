@@ -64,6 +64,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get error => 'Error';
 
   @override
+  String get warning => 'Warning';
+
+  @override
   String get accountNotFound => 'Account not found';
 
   @override
@@ -298,6 +301,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get import => 'Import';
+
+  @override
+  String get importCsv => 'Import CSV';
+
+  @override
+  String get selectFileToImport => 'Select a CSV file to import';
+
+  @override
+  String get changeFile => 'Change File';
+
+  @override
+  String get selectFile => 'Select File';
+
+  @override
+  String get dateFormat => 'Date Format';
+
+  @override
+  String get decimalSeparator => 'Decimal Separator';
+
+  @override
+  String get dot => 'Dot (.)';
+
+  @override
+  String get comma => 'Comma (,)';
+
+  @override
+  String get negativeValuesAreOutflows => 'Negative values are outflows';
+
+  @override
+  String get columnMapping => 'Column Mapping';
+
+  @override
+  String get selectColumn => 'Select Column';
+
+  @override
+  String get ignore => 'Ignore';
+
+  @override
+  String get continueToReview => 'Continue to Review';
+
+  @override
+  String failedToParseCsv(String error) {
+    return 'Failed to parse CSV: $error';
+  }
+
+  @override
+  String errorPickingFile(String error) {
+    return 'Error picking file: $error';
+  }
+
+  @override
+  String get validationPassed => 'Validation passed (Simulated)';
+
+  @override
+  String pleaseMapColumn(String column) {
+    return 'Please map the \"$column\" column';
+  }
 
   @override
   String get budgeted => 'Budgeted';
@@ -897,4 +957,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appDetects => 'The app detects';
+
+  @override
+  String get saveImportProfile => 'Save Import Profile';
+
+  @override
+  String get profileName => 'Profile Name';
+
+  @override
+  String get profileSaved => 'Import profile saved';
+
+  @override
+  String get loadImportProfile => 'Load Profile';
+
+  @override
+  String get deleteProfileConfirmation =>
+      'Are you sure you want to delete this profile?';
+
+  @override
+  String get confirmImport => 'Confirm Import';
+
+  @override
+  String get confirmImportDescription =>
+      'Review and confirm transactions to import.';
+
+  @override
+  String importedTransactions(int count) {
+    return 'Imported $count Transactions';
+  }
+
+  @override
+  String get importSuccess => 'Import Successful';
+
+  @override
+  String get potentialDuplicates => 'Potential Duplicates';
+
+  @override
+  String get duplicateWarning =>
+      'Warning: This transaction might be a duplicate.';
+
+  @override
+  String deduplicationComplete(int count) {
+    return 'Deduplication complete. $count duplicates found.';
+  }
+
+  @override
+  String get importCancelled => 'Import Cancelled';
 }

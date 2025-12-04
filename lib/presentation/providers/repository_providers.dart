@@ -3,6 +3,7 @@ import 'package:ledger_zero/data/repositories/account_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_template_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/category_repository_impl.dart';
+import 'package:ledger_zero/data/repositories/import_profile_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/payee_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/parsing_history_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/parsing_rules_repository_impl.dart';
@@ -13,6 +14,7 @@ import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
+import 'package:ledger_zero/domain/repositories/import_profile_repository.dart';
 import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
 import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
@@ -69,4 +71,9 @@ final parsingHistoryRepositoryProvider = Provider<ParsingHistoryRepository>((ref
 /// Provides the [ParsingRulesRepository].
 final parsingRulesRepositoryProvider = Provider<ParsingRulesRepository>((ref) {
   return ParsingRulesRepositoryImpl(ref.watch(parsingRulesDaoProvider));
+});
+
+/// Provides the [ImportProfileRepository].
+final importProfileRepositoryProvider = Provider<ImportProfileRepository>((ref) {
+  return ImportProfileRepositoryImpl(ref.read(databaseProvider));
 });

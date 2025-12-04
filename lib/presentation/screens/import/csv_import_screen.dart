@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
+import 'package:ledger_zero/domain/entities/import_profile.dart';
+import 'package:ledger_zero/domain/entities/transaction_filter.dart';
+import 'package:uuid/uuid.dart';
+
+final importProfilesProvider = StreamProvider<List<ImportProfile>>((ref) {
+  return ref.watch(importProfileRepositoryProvider).watchAllProfiles();
+});
 
 class CsvImportScreen extends ConsumerStatefulWidget {
   const CsvImportScreen({super.key});
@@ -61,6 +71,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             _isLoading = false;
             _autoMapColumns(data.headers);
           });
+        } on ImportException catch (e) {
+          setState(() => _isLoading = false);
+          _showError(e.message);
         } catch (e) {
           setState(() => _isLoading = false);
           _showError(l10n.failedToParseCsv(e.toString()));
@@ -122,13 +135,180 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     }
   }
 
+  Future<void> _saveProfile() async {
+    final l10n = AppLocalizations.of(context)!;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        String input = '';
+        return AlertDialog(
+          title: Text(l10n.saveImportProfile),
+          content: TextField(
+            decoration: InputDecoration(labelText: l10n.profileName),
+            onChanged: (v) => input = v,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, input),
+              child: Text(l10n.save),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (name != null && name.isNotEmpty) {
+      final profile = ImportProfile(
+        id: const Uuid().v4(),
+        name: name,
+        dateFormat: _dateFormat,
+        decimalSeparator: _decimalSeparator,
+        outflowIsNegative: _outflowIsNegative,
+        dateColumn: _columnMapping['Date'],
+        amountColumn: _columnMapping['Amount'],
+        payeeColumn: _columnMapping['Payee'],
+        memoColumn: _columnMapping['Memo'],
+        categoryColumn: _columnMapping['Category'],
+        createdAt: DateTime.now(),
+      );
+
+      await ref.read(importProfileRepositoryProvider).createProfile(profile);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.profileSaved)),
+        );
+      }
+    }
+  }
+
+  void _loadProfile(ImportProfile profile) {
+    setState(() {
+      _dateFormat = profile.dateFormat;
+      _decimalSeparator = profile.decimalSeparator;
+      _outflowIsNegative = profile.outflowIsNegative;
+
+      // Apply mappings if headers exist in current CSV
+      if (_csvData != null) {
+        if (profile.dateColumn != null && _csvData!.headers.contains(profile.dateColumn)) {
+          _columnMapping['Date'] = profile.dateColumn;
+        }
+        if (profile.amountColumn != null && _csvData!.headers.contains(profile.amountColumn)) {
+          _columnMapping['Amount'] = profile.amountColumn;
+        }
+        if (profile.payeeColumn != null && _csvData!.headers.contains(profile.payeeColumn)) {
+          _columnMapping['Payee'] = profile.payeeColumn;
+        }
+        if (profile.memoColumn != null && _csvData!.headers.contains(profile.memoColumn)) {
+          _columnMapping['Memo'] = profile.memoColumn;
+        }
+        if (profile.categoryColumn != null && _csvData!.headers.contains(profile.categoryColumn)) {
+          _columnMapping['Category'] = profile.categoryColumn;
+        }
+      }
+    });
+  }
+
+  Future<void> _showLoadProfileDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(l10n.loadImportProfile),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final profilesAsync = ref.watch(importProfilesProvider);
+                return profilesAsync.when(
+                  data: (profiles) {
+                    if (profiles.isEmpty) {
+                      return Center(child: Text(l10n.noTemplates));
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: profiles.length,
+                      itemBuilder: (context, index) {
+                        final profile = profiles[index];
+                        return ListTile(
+                          title: Text(profile.name),
+                          subtitle: Text(DateFormat.yMMMd().format(profile.createdAt)),
+                          onTap: () {
+                            _loadProfile(profile);
+                            Navigator.pop(context);
+                          },
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text(l10n.deleteTemplate),
+                                  content: Text(l10n.deleteProfileConfirmation),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: Text(l10n.cancel),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: Text(l10n.delete),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                await ref.read(importProfileRepositoryProvider).deleteProfile(profile.id);
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Text(l10n.error),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.importCsv)),
+      appBar: AppBar(
+        title: Text(l10n.importCsv),
+        actions: [
+          IconButton(
+             icon: const Icon(Icons.file_upload),
+             onPressed: _showLoadProfileDialog,
+             tooltip: l10n.loadImportProfile,
+          ),
+          if (_csvData != null)
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: _saveProfile,
+              tooltip: l10n.saveImportProfile,
+            ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -294,10 +474,10 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                           DropdownMenuItem<String>(value: null, child: Text(l10n.ignore)),
                           ..._csvData!.headers.map((h) => DropdownMenuItem(value: h, child: Text(h))),
                         ],
-                        onChanged: (v) {
-                          setState(() => _columnMapping[field] = v);
-                          if (field == 'Date') _autoDetectDateFormat();
-                        },
+                        onChanged: (v) => setState(() {
+                            _columnMapping[field] = v;
+                            if (field == 'Date') _autoDetectDateFormat();
+                          }),
                       ),
                     ),
                   ],
@@ -342,17 +522,122 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
   void _validateAndImport() {
     final l10n = AppLocalizations.of(context)!;
-    if (_columnMapping['Date'] == null) {
-      _showError(l10n.pleaseMapColumn(l10n.date));
-      return;
-    }
-    if (_columnMapping['Amount'] == null) {
-      _showError(l10n.pleaseMapColumn(l10n.amount));
-      return;
-    }
+    final service = ref.read(csvImportServiceProvider);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.validationPassed)),
+    final result = service.validateCsvData(
+      data: _csvData!,
+      columnMapping: _columnMapping,
+      dateFormat: _dateFormat,
+      decimalSeparator: _decimalSeparator,
     );
+
+    if (!result.isValid) {
+      // Show errors (blocking)
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.error),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: result.errors.map((e) => Text('• $e')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.gotIt),
+            ),
+          ],
+        ),
+      );
+    } else if (result.warnings.isNotEmpty) {
+      // Show warnings (cancellable)
+       showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.warning),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: result.warnings.map((e) => Text('• $e')).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+             FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _proceedToImport();
+              },
+              child: Text(l10n.continueToReview),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _proceedToImport();
+    }
+  }
+
+  Future<void> _proceedToImport() async {
+      setState(() => _isLoading = true);
+      final l10n = AppLocalizations.of(context)!;
+      final service = ref.read(csvImportServiceProvider);
+      final repo = ref.read(transactionRepositoryProvider);
+      final payeeRepo = ref.read(payeeRepositoryProvider);
+
+      try {
+        final transactions = service.convertCsvToTransactions(
+          data: _csvData!,
+          columnMapping: _columnMapping,
+          dateFormat: _dateFormat,
+          decimalSeparator: _decimalSeparator,
+          outflowIsNegative: _outflowIsNegative,
+        );
+
+        if (transactions.isNotEmpty) {
+          final minDate = transactions.map((t) => t.date).reduce((a, b) => a.isBefore(b) ? a : b);
+          final maxDate = transactions.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
+
+          final existing = await repo.getTransactions(
+            filter: TransactionFilter(
+              startDate: minDate.subtract(const Duration(days: 1)),
+              endDate: maxDate.add(const Duration(days: 1)),
+            ),
+          );
+
+          final payees = await payeeRepo.getAllPayees();
+          final payeeMap = {for (var p in payees) p.id: p.name};
+
+          service.checkForDuplicates(
+            imported: transactions,
+            existing: existing,
+            payeeMap: payeeMap,
+          );
+
+          if (transactions.any((t) => t.isDuplicate)) {
+             if (mounted) {
+               ScaffoldMessenger.of(context).showSnackBar(
+                 SnackBar(content: Text(l10n.deduplicationComplete(transactions.where((t) => t.isDuplicate).length))),
+               );
+             }
+          }
+        }
+
+        if (mounted) {
+          await context.pushNamed(
+            'import-confirm',
+            extra: transactions,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          _showError(l10n.failedToParseCsv(e.toString()));
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
   }
 }

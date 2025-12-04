@@ -206,6 +206,12 @@ abstract class AppLocalizations {
   /// **'Error'**
   String get error;
 
+  /// No description provided for @warning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning'**
+  String get warning;
+
   /// No description provided for @accountNotFound.
   ///
   /// In en, this message translates to:
@@ -649,6 +655,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import'**
   String get import;
+
+  /// No description provided for @importCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Import CSV'**
+  String get importCsv;
+
+  /// No description provided for @selectFileToImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a CSV file to import'**
+  String get selectFileToImport;
+
+  /// No description provided for @changeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Change File'**
+  String get changeFile;
+
+  /// No description provided for @selectFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Select File'**
+  String get selectFile;
+
+  /// No description provided for @dateFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Date Format'**
+  String get dateFormat;
+
+  /// No description provided for @decimalSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **'Decimal Separator'**
+  String get decimalSeparator;
+
+  /// No description provided for @dot.
+  ///
+  /// In en, this message translates to:
+  /// **'Dot (.)'**
+  String get dot;
+
+  /// No description provided for @comma.
+  ///
+  /// In en, this message translates to:
+  /// **'Comma (,)'**
+  String get comma;
+
+  /// No description provided for @negativeValuesAreOutflows.
+  ///
+  /// In en, this message translates to:
+  /// **'Negative values are outflows'**
+  String get negativeValuesAreOutflows;
+
+  /// No description provided for @columnMapping.
+  ///
+  /// In en, this message translates to:
+  /// **'Column Mapping'**
+  String get columnMapping;
+
+  /// No description provided for @selectColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Column'**
+  String get selectColumn;
+
+  /// No description provided for @ignore.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignore'**
+  String get ignore;
+
+  /// No description provided for @continueToReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to Review'**
+  String get continueToReview;
+
+  /// No description provided for @failedToParseCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to parse CSV: {error}'**
+  String failedToParseCsv(String error);
+
+  /// No description provided for @errorPickingFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Error picking file: {error}'**
+  String errorPickingFile(String error);
+
+  /// No description provided for @validationPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Validation passed (Simulated)'**
+  String get validationPassed;
+
+  /// No description provided for @pleaseMapColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Please map the \"{column}\" column'**
+  String pleaseMapColumn(String column);
 
   /// No description provided for @budgeted.
   ///
@@ -1723,6 +1831,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The app detects'**
   String get appDetects;
+
+  /// No description provided for @saveImportProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Import Profile'**
+  String get saveImportProfile;
+
+  /// No description provided for @profileName.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Name'**
+  String get profileName;
+
+  /// No description provided for @profileSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Import profile saved'**
+  String get profileSaved;
+
+  /// No description provided for @loadImportProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Load Profile'**
+  String get loadImportProfile;
+
+  /// No description provided for @deleteProfileConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this profile?'**
+  String get deleteProfileConfirmation;
+
+  /// No description provided for @confirmImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Import'**
+  String get confirmImport;
+
+  /// No description provided for @confirmImportDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and confirm transactions to import.'**
+  String get confirmImportDescription;
+
+  /// No description provided for @importedTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count} Transactions'**
+  String importedTransactions(int count);
+
+  /// No description provided for @importSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Successful'**
+  String get importSuccess;
+
+  /// No description provided for @potentialDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Potential Duplicates'**
+  String get potentialDuplicates;
+
+  /// No description provided for @duplicateWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning: This transaction might be a duplicate.'**
+  String get duplicateWarning;
+
+  /// No description provided for @deduplicationComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Deduplication complete. {count} duplicates found.'**
+  String deduplicationComplete(int count);
+
+  /// No description provided for @importCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Import Cancelled'**
+  String get importCancelled;
 }
 
 class _AppLocalizationsDelegate
