@@ -77,7 +77,7 @@ void main() {
     mockDeltaReplayService = MockDeltaReplayService();
 
     // Default connectivity: Offline initially
-    when(mockConnectivityService.connectionStatusStream).thenAnswer((_) => Stream.empty());
+    when(mockConnectivityService.connectionStatusStream).thenAnswer((_) => const Stream.empty());
     when(mockConnectivityService.isConnected).thenAnswer((_) async => false);
 
     syncEngine = SyncEngine(

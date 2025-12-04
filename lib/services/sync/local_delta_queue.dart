@@ -223,7 +223,9 @@ class LocalDeltaQueue {
   /// Returns the number of files removed.
   Future<int> pruneQueue() async {
     final pendingFiles = await getPendingDeltas();
-    if (pendingFiles.isEmpty) return 0;
+    if (pendingFiles.isEmpty) {
+      return 0;
+    }
 
     // Load all deltas
     final Map<File, SyncDelta> deltasMap = {};
@@ -258,7 +260,9 @@ class LocalDeltaQueue {
     int removedCount = 0;
 
     for (final group in groupedFiles.values) {
-      if (group.length <= 1) continue;
+      if (group.length <= 1) {
+        continue;
+      }
 
       // Sort by sequence (files are already sorted by name which implies time/sequence, but let's be safe)
       group.sort(
@@ -305,7 +309,7 @@ class LocalDeltaQueue {
         }
       }
 
-      if (shouldSquash && effectiveAction != null) {
+      if (shouldSquash) {
         // Create new squashed delta
         // We use the sequence and timestamp of the LAST delta to preserve ordering relative to other records
         final squashedDelta = lastDelta.copyWith(

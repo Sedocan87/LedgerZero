@@ -55,7 +55,9 @@ class DeltaGenerationService {
       final fetchNeeded = <String, Set<String>>{};
 
       for (final group in groupedChanges.values) {
-        if (group.isEmpty) continue;
+        if (group.isEmpty) {
+          continue;
+        }
         group.sort((a, b) => a.id.compareTo(b.id));
 
         final first = group.first;
@@ -72,7 +74,9 @@ class DeltaGenerationService {
 
       for (final table in fetchNeeded.keys) {
         final ids = fetchNeeded[table]!.toList();
-        if (ids.isEmpty) continue;
+        if (ids.isEmpty) {
+          continue;
+        }
 
         const chunkSize = 500;
         for (var i = 0; i < ids.length; i += chunkSize) {
@@ -95,7 +99,9 @@ class DeltaGenerationService {
       }
 
       for (final group in groupedChanges.values) {
-        if (group.isEmpty) continue;
+        if (group.isEmpty) {
+          continue;
+        }
 
         final firstChange = group.first;
         final lastChange = group.last;

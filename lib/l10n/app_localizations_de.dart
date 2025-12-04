@@ -860,4 +860,41 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get syncOnlyOnWifi => 'Sync only on Wi-Fi';
+
+  @override
+  String get quickAdd => 'Schnell hinzufügen';
+
+  @override
+  String get preview => 'Vorschau';
+
+  @override
+  String get confidence => 'Konfidenz';
+
+  @override
+  String get noAmount => 'Kein Betrag';
+
+  @override
+  String get payeeNotFound => 'Empfänger nicht gefunden';
+
+  @override
+  String get uncategorized => 'Nicht kategorisiert';
+
+  @override
+  String get editDetails => 'Details bearbeiten';
+
+  @override
+  String get create => 'Erstellen';
+
+  @override
+  String get parsingTips => 'Parsing Tipps';
+
+  @override
+  String get parsingTipsDescription =>
+      'Tippen Sie natürlich, um Transaktionen zu erstellen.';
+
+  @override
+  String get examples => 'Beispiele';
+
+  @override
+  String get appDetects => 'Die App erkennt';
 }

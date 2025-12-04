@@ -13,7 +13,9 @@ class DeltaReplayService {
 
   // Task 459: Batch Operations
   Future<void> replayBatch(List<SyncDelta> deltas, {List<String>? filenames}) async {
-    if (deltas.isEmpty) return;
+    if (deltas.isEmpty) {
+      return;
+    }
 
     await _db.transaction(() async {
       for (var i = 0; i < deltas.length; i++) {
@@ -54,12 +56,12 @@ class DeltaReplayService {
       } else {
         // INSERT / UPDATE
         if (data == null) {
-           Logger.error('Skipping ${action} delta with missing data: $delta');
+           Logger.error('Skipping $action delta with missing data: $delta');
            return;
         }
         final id = data['id'] as String?;
         if (id == null) {
-           Logger.error('Skipping ${action} delta with missing ID: $delta');
+           Logger.error('Skipping $action delta with missing ID: $delta');
            return;
         }
 
@@ -293,9 +295,15 @@ class DeltaReplayService {
   }
 
   Value<DateTime?> _parseDate(dynamic value) {
-    if (value == null) return const Value(null);
-    if (value is String) return Value(DateTime.parse(value));
-    if (value is int) return Value(DateTime.fromMillisecondsSinceEpoch(value));
+    if (value == null) {
+      return const Value(null);
+    }
+    if (value is String) {
+      return Value(DateTime.parse(value));
+    }
+    if (value is int) {
+      return Value(DateTime.fromMillisecondsSinceEpoch(value));
+    }
     return const Value(null);
   }
 

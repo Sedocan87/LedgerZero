@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';

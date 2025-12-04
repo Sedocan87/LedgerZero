@@ -12,11 +12,15 @@ import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
+import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
 import 'package:ledger_zero/services/nlp/transaction_parser.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:uuid/uuid.dart';
+
+final _allAccountsProvider = StreamProvider.autoDispose<List<Account>>((ref) {
+  return ref.watch(accountRepositoryProvider).watchAllAccounts();
+});
 
 class NaturalLanguageInputScreen extends ConsumerStatefulWidget {
   const NaturalLanguageInputScreen({super.key});
@@ -118,7 +122,9 @@ class _NaturalLanguageInputScreenState
   }
 
   Future<void> _editDetails() async {
-    if (_parsedTransaction == null) return;
+    if (_parsedTransaction == null) {
+      return;
+    }
 
     // Save as draft to be picked up by AddEditTransactionScreen
     final prefs = ref.read(sharedPreferencesProvider);
@@ -138,7 +144,7 @@ class _NaturalLanguageInputScreenState
     await prefs.setString(key, jsonEncode(draft));
 
     if (mounted) {
-      context.pushNamed('add-transaction'); // This opens the screen which restores the draft
+      await context.pushNamed('add-transaction'); // This opens the screen which restores the draft
     }
   }
 
@@ -153,9 +159,9 @@ class _NaturalLanguageInputScreenState
     final l10n = AppLocalizations.of(context)!;
 
     // Initialize account selection
-    final accountsStream = ref.watch(accountRepositoryProvider).watchAllAccounts();
+    final accountsAsync = ref.watch(_allAccountsProvider);
 
-    accountsStream.whenData((accounts) {
+    accountsAsync.whenData((accounts) {
        if (!_accountInitialized && accounts.isNotEmpty) {
            // Default to first checking account or just first account
            final defaultAccount = accounts.firstWhere(
@@ -218,9 +224,9 @@ class _NaturalLanguageInputScreenState
             const SizedBox(height: AppSpacing.lg),
 
             // Account Selector
-            accountsStream.when(
+            accountsAsync.when(
               data: (accounts) => DropdownButtonFormField<Account>(
-                value: _selectedAccount,
+                initialValue: _selectedAccount,
                 decoration: InputDecoration(
                   labelText: l10n.account,
                   border: OutlineInputBorder(
@@ -371,8 +377,12 @@ class _NaturalLanguageInputScreenState
   }
 
   Color _getConfidenceColor(double confidence) {
-    if (confidence >= 0.8) return AppColors.success;
-    if (confidence >= 0.5) return AppColors.warning;
+    if (confidence >= 0.8) {
+      return AppColors.success;
+    }
+    if (confidence >= 0.5) {
+      return AppColors.warning;
+    }
     return AppColors.error;
   }
 

@@ -158,7 +158,9 @@ class SyncEngine {
       orElse: () => SyncProviderType.none,
     );
 
-    if (provider == SyncProviderType.none) return;
+    if (provider == SyncProviderType.none) {
+      return;
+    }
 
     // Use lock to prevent concurrent syncs
     await _lock.synchronized(() async {
@@ -173,7 +175,9 @@ class SyncEngine {
         Logger.info('Sync started (${provider.name})...');
 
         // 1. Generate local deltas
-        if (_isCancelled) return;
+        if (_isCancelled) {
+          return;
+        }
         _updateState(
             _currentState.copyWith(message: 'Processing local changes...'));
         await _deltaGenerationService.processPendingChanges();
@@ -199,13 +203,17 @@ class SyncEngine {
         }
 
         // 2. Upload Pending Deltas
-        if (_isCancelled) return;
+        if (_isCancelled) {
+          return;
+        }
         final pendingUploads = await _deltaQueue.getPendingDeltas();
         if (pendingUploads.isNotEmpty) {
           Logger.info('Uploading ${pendingUploads.length} pending deltas...');
           int uploadedCount = 0;
           for (final file in pendingUploads) {
-            if (_isCancelled) break;
+            if (_isCancelled) {
+              break;
+            }
             _updateState(_currentState.copyWith(
                 message:
                     'Uploading ${uploadedCount + 1}/${pendingUploads.length}',
@@ -270,13 +278,15 @@ class SyncEngine {
           final total = pendingRemoteFiles.length;
 
           for (var i = 0; i < total; i += batchSize) {
-            if (_isCancelled) break;
+            if (_isCancelled) {
+              break;
+            }
 
             final end = (i + batchSize < total) ? i + batchSize : total;
             final batch = pendingRemoteFiles.sublist(i, end);
 
             _updateState(_currentState.copyWith(
-                message: 'Downloading ${processedCount + 1}-${end}/$total',
+                message: 'Downloading ${processedCount + 1}-$end/$total',
                 progress: 0.3 + (0.7 * (processedCount / total)) // 30% to 100%
                 ));
 
@@ -320,7 +330,9 @@ class SyncEngine {
             queuedFiles.clear();
 
             for (final remoteFile in batch) {
-              if (_isCancelled) break;
+              if (_isCancelled) {
+                break;
+              }
               final savePath = '${tempDir.path}/${remoteFile.name}';
               File downloadedFile;
               if (provider == SyncProviderType.googleDrive) {
@@ -337,7 +349,9 @@ class SyncEngine {
               downloadedDeltas.add(delta);
             }
 
-            if (_isCancelled) break;
+            if (_isCancelled) {
+              break;
+            }
 
             // Replay Batch
             await _deltaReplayService.replayBatch(downloadedDeltas,

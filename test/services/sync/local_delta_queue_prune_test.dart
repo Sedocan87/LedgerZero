@@ -28,17 +28,17 @@ void main() {
         sequence: 1,
         action: SyncAction.insert,
         tableName: 't1',
-        data: {'id': '1', 'val': 'a'},
+        data: const {'id': '1', 'val': 'a'},
       ));
 
       // 2. Update
       await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(Duration(seconds: 1)),
+        timestamp: DateTime.now().add(const Duration(seconds: 1)),
         deviceUuid: 'dev1',
         sequence: 2,
         action: SyncAction.update,
         tableName: 't1',
-        data: {'id': '1', 'val': 'b'},
+        data: const {'id': '1', 'val': 'b'},
       ));
 
       final count = await queue.pruneQueue();
@@ -60,16 +60,16 @@ void main() {
         sequence: 1,
         action: SyncAction.update,
         tableName: 't1',
-        data: {'id': '1', 'val': 'a'},
+        data: const {'id': '1', 'val': 'a'},
       ));
 
       await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(Duration(seconds: 1)),
+        timestamp: DateTime.now().add(const Duration(seconds: 1)),
         deviceUuid: 'dev1',
         sequence: 2,
         action: SyncAction.update,
         tableName: 't1',
-        data: {'id': '1', 'val': 'b'},
+        data: const {'id': '1', 'val': 'b'},
       ));
 
       final count = await queue.pruneQueue();
@@ -90,16 +90,16 @@ void main() {
         sequence: 1,
         action: SyncAction.insert,
         tableName: 't1',
-        data: {'id': '1', 'val': 'a'},
+        data: const {'id': '1', 'val': 'a'},
       ));
 
       await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(Duration(seconds: 1)),
+        timestamp: DateTime.now().add(const Duration(seconds: 1)),
         deviceUuid: 'dev1',
         sequence: 2,
         action: SyncAction.delete,
         tableName: 't1',
-        data: {'id': '1'},
+        data: const {'id': '1'},
       ));
 
       final count = await queue.pruneQueue();
@@ -116,16 +116,16 @@ void main() {
         sequence: 1,
         action: SyncAction.update,
         tableName: 't1',
-        data: {'id': '1', 'val': 'a'},
+        data: const {'id': '1', 'val': 'a'},
       ));
 
       await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(Duration(seconds: 1)),
+        timestamp: DateTime.now().add(const Duration(seconds: 1)),
         deviceUuid: 'dev1',
         sequence: 2,
         action: SyncAction.delete,
         tableName: 't1',
-        data: {'id': '1'},
+        data: const {'id': '1'},
       ));
 
       final count = await queue.pruneQueue();
@@ -145,7 +145,7 @@ void main() {
         sequence: 1,
         action: SyncAction.insert,
         tableName: 't1',
-        data: {'id': '1', 'val': 'a'},
+        data: const {'id': '1', 'val': 'a'},
       ));
 
       final exportFile = File('${tempDir.path}/export.json');

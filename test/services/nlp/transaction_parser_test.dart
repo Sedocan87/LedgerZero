@@ -186,7 +186,7 @@ void main() {
     );
 
     test('extracts category from payee auto-assign', () async {
-      final payee = Payee(id: 'p1', name: 'Walmart', autoCategoryId: 'c1');
+      const payee = Payee(id: 'p1', name: 'Walmart', autoCategoryId: 'c1');
       when(mockCategoryRepository.getCategoryById('c1'))
           .thenAnswer((_) async => categoryGroceries);
 

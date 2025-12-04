@@ -1651,6 +1651,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sync only on Wi-Fi'**
   String get syncOnlyOnWifi;
+
+  /// No description provided for @quickAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Add'**
+  String get quickAdd;
+
+  /// No description provided for @preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get preview;
+
+  /// No description provided for @confidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Confidence'**
+  String get confidence;
+
+  /// No description provided for @noAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'No amount'**
+  String get noAmount;
+
+  /// No description provided for @payeeNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Payee not found'**
+  String get payeeNotFound;
+
+  /// No description provided for @uncategorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncategorized'**
+  String get uncategorized;
+
+  /// No description provided for @editDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Details'**
+  String get editDetails;
+
+  /// No description provided for @create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// No description provided for @parsingTips.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsing Tips'**
+  String get parsingTips;
+
+  /// No description provided for @parsingTipsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Type naturally to create transactions.'**
+  String get parsingTipsDescription;
+
+  /// No description provided for @examples.
+  ///
+  /// In en, this message translates to:
+  /// **'Examples'**
+  String get examples;
+
+  /// No description provided for @appDetects.
+  ///
+  /// In en, this message translates to:
+  /// **'The app detects'**
+  String get appDetects;
 }
 
 class _AppLocalizationsDelegate
