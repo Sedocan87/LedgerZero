@@ -1645,6 +1645,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Offline Mode'**
   String get offlineMode;
+
+  /// No description provided for @syncOnlyOnWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync only on Wi-Fi'**
+  String get syncOnlyOnWifi;
 }
 
 class _AppLocalizationsDelegate
