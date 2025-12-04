@@ -20,7 +20,7 @@ class FakeSyncEngine extends Fake implements SyncEngine {
   Stream<SyncState> get statusStream => _controller.stream;
 
   @override
-  Future<void> sync({bool background = false}) async {}
+  Future<void> sync({bool background = false, bool forceFullSync = false}) async {}
 }
 
 void main() {

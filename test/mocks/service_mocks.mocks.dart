@@ -600,6 +600,14 @@ class MockDeltaGenerationService extends _i1.Mock
             returnValueForMissingStub: _i5.Future<void>.value(),
           )
           as _i5.Future<void>);
+
+  @override
+  _i5.Future<Set<String>> getAppliedDeltaFilenames() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAppliedDeltaFilenames, []),
+            returnValue: _i5.Future<Set<String>>.value(<String>{}),
+          )
+          as _i5.Future<Set<String>>);
 }
 
 /// A class which mocks [LocalDeltaQueue].
@@ -651,6 +659,53 @@ class MockLocalDeltaQueue extends _i1.Mock implements _i19.LocalDeltaQueue {
   _i5.Future<int> cleanupOldUploadedDeltas(Duration? retentionPeriod) =>
       (super.noSuchMethod(
             Invocation.method(#cleanupOldUploadedDeltas, [retentionPeriod]),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
+  _i5.Future<_i2.File> enqueueIncoming(
+    _i2.File? downloadedFile,
+    String? originalFilename,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#enqueueIncoming, [
+              downloadedFile,
+              originalFilename,
+            ]),
+            returnValue: _i5.Future<_i2.File>.value(
+              _FakeFile_0(
+                this,
+                Invocation.method(#enqueueIncoming, [
+                  downloadedFile,
+                  originalFilename,
+                ]),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.File>);
+
+  @override
+  _i5.Future<List<_i2.File>> getPendingIncomingDeltas() =>
+      (super.noSuchMethod(
+            Invocation.method(#getPendingIncomingDeltas, []),
+            returnValue: _i5.Future<List<_i2.File>>.value(<_i2.File>[]),
+          )
+          as _i5.Future<List<_i2.File>>);
+
+  @override
+  _i5.Future<void> markAsApplied(_i2.File? file) =>
+      (super.noSuchMethod(
+            Invocation.method(#markAsApplied, [file]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<int> cleanupOldAppliedDeltas(Duration? retentionPeriod) =>
+      (super.noSuchMethod(
+            Invocation.method(#cleanupOldAppliedDeltas, [retentionPeriod]),
             returnValue: _i5.Future<int>.value(0),
           )
           as _i5.Future<int>);

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/delta_generation_service.dart';
+import 'package:ledger_zero/data/models/sync_delta.dart';
 import 'package:ledger_zero/services/sync/delta_replay_service.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
@@ -28,6 +29,9 @@ class SyncEngine {
   final Lock _lock = Lock();
   Timer? _backgroundTimer;
   bool _isPaused = false;
+  bool _isCancelled = false; // Task 454: Cancellation flag
+  int _retryCount = 0;
+  static const int _maxRetries = 5;
 
   SyncEngine(
     this._deltaGenerationService,
@@ -55,13 +59,51 @@ class SyncEngine {
     sync();
   }
 
+  // Task 454: Sync Cancellation
+  void cancel() {
+    _isCancelled = true;
+    Logger.info('Sync cancellation requested.');
+  }
+
   // Task 442: Background Worker
+  // Task 455: Retry on failure (exponential backoff)
   void startBackgroundSync(Duration interval) {
     _backgroundTimer?.cancel();
-    _backgroundTimer = Timer.periodic(interval, (_) {
-      sync(background: true);
+    _backgroundTimer = Timer.periodic(interval, (_) async {
+      try {
+        await sync(background: true);
+        _retryCount = 0; // Reset retry count on success
+      } catch (e) {
+        Logger.error('Background sync failed', e);
+        _scheduleRetry();
+      }
     });
     Logger.info('Background sync started with interval: $interval');
+  }
+
+  void _scheduleRetry() {
+    if (_retryCount >= _maxRetries) {
+      Logger.error('Max sync retries reached. Giving up until next scheduled sync.');
+      _retryCount = 0;
+      return;
+    }
+
+    _retryCount++;
+    final delay = Duration(seconds: 2 * (1 << (_retryCount - 1))); // 2, 4, 8, 16, 32...
+    Logger.info('Scheduling sync retry #$_retryCount in $delay');
+
+    // We don't block the timer, but we could schedule a one-off task.
+    // However, since we have a periodic timer, maybe we should just let the next period handle it?
+    // But if period is 1 hour, we want to retry sooner.
+    Timer(delay, () async {
+      try {
+        await sync(background: true);
+        // If we are here, success. _retryCount reset inside sync.
+      } catch (e) {
+        Logger.error('Retry #$_retryCount failed', e);
+        _scheduleRetry(); // Recursive call for next retry
+      }
+    });
   }
 
   void stopBackgroundSync() {
@@ -70,7 +112,7 @@ class SyncEngine {
     Logger.info('Background sync stopped.');
   }
 
-  Future<void> sync({bool background = false}) async {
+  Future<void> sync({bool background = false, bool forceFullSync = false}) async {
     if (_isPaused) {
       Logger.info('Sync skipped (paused).');
       return;
@@ -90,20 +132,31 @@ class SyncEngine {
 
     // Use lock to prevent concurrent syncs
     await _lock.synchronized(() async {
+      _isCancelled = false; // Reset cancellation flag
       try {
         if (!background) {
-            _updateState(_currentState.copyWith(status: SyncStatus.syncing));
+            _updateState(_currentState.copyWith(status: SyncStatus.syncing, progress: 0.0, message: 'Starting sync...'));
         }
         Logger.info('Sync started (${provider.name})...');
 
         // 1. Generate local deltas
+        if (_isCancelled) return;
+        _updateState(_currentState.copyWith(message: 'Processing local changes...'));
         await _deltaGenerationService.processPendingChanges();
 
         // 2. Upload Pending Deltas
+        if (_isCancelled) return;
         final pendingUploads = await _deltaQueue.getPendingDeltas();
         if (pendingUploads.isNotEmpty) {
            Logger.info('Uploading ${pendingUploads.length} pending deltas...');
+           int uploadedCount = 0;
            for (final file in pendingUploads) {
+              if (_isCancelled) break;
+              _updateState(_currentState.copyWith(
+                  message: 'Uploading ${uploadedCount + 1}/${pendingUploads.length}',
+                  progress: 0.1 + (0.2 * (uploadedCount / pendingUploads.length)) // 10% to 30%
+              ));
+
               final filename = file.uri.pathSegments.last;
               if (provider == SyncProviderType.googleDrive) {
                  await _googleDriveService.uploadDelta(file, filename);
@@ -111,11 +164,21 @@ class SyncEngine {
                  await _iCloudService.uploadDelta(file, filename);
               }
               await _deltaQueue.markAsUploaded(file);
+              uploadedCount++;
            }
         }
 
+        if (_isCancelled) {
+             Logger.info('Sync cancelled during upload.');
+             _updateState(_currentState.copyWith(status: SyncStatus.idle, message: 'Sync cancelled'));
+             return;
+        }
+
         // 3. Download & Replay Remote Deltas
-        final processedRemoteFiles = await _getProcessedRemoteFiles();
+        _updateState(_currentState.copyWith(message: 'Checking remote files...', progress: 0.3));
+
+        // Task 452: Full Sync (ignore processed files)
+        final processedRemoteFiles = forceFullSync ? <String>{} : await _getProcessedRemoteFiles();
         final tempDir = await getTemporaryDirectory();
 
         List<RemoteFile> remoteFiles = [];
@@ -127,77 +190,126 @@ class SyncEngine {
             remoteFiles = files.map((f) => RemoteFile(f.relativePath, f.relativePath)).toList();
         }
 
-        // Filter out files we generated or already processed
-        // We might upload files we just generated, so we need to know OUR device UUID or check if we have it in uploaded folder?
-        // Actually, if we just uploaded it, it's in 'uploaded' folder.
-        // And we record applied deltas in SyncLog.
-        // We should skip files present in SyncLog OR files present in 'uploaded' directory (our own).
-
-        // Better: SyncLog contains applied deltas.
-        // But what about our OWN deltas? We don't apply them via ReplayService (we applied them via regular app use).
-        // Does SyncLog record local changes?
-        // Yes, DeltaGenerationService inserts into SyncLog!
-        // So SyncLog contains ALL deltas (local and remote).
-        // So we just check SyncLog.
-
-        // Optimization: We could fetch all filenames from SyncLog.
-        // But listing all might be slow if huge.
-        // But remoteFiles list is what we iterate.
-        // For each remote file, check if it exists in SyncLog.
-        // This requires an efficient check (e.g. Set<String> of processed filenames).
-        // Or db check one by one?
-        // If we sort remote files by timestamp, we can optimize.
-
-        // For now, let's fetch all processed filenames from SyncLog (assuming not millions yet).
-        // We can limit query to filenames in the list if needed, but `WHERE filename IN (...)` has limits.
-
         remoteFiles.sort((a, b) => a.name.compareTo(b.name)); // Sort by name (timestamp)
 
-        int downloadCount = 0;
-        for (final remoteFile in remoteFiles) {
-             if (processedRemoteFiles.contains(remoteFile.name)) {
-                 continue;
+        // Task 451: Incremental Sync (filter out processed)
+        final pendingRemoteFiles = remoteFiles.where((f) => !processedRemoteFiles.contains(f.name)).toList();
+
+        if (pendingRemoteFiles.isNotEmpty) {
+             Logger.info('Found ${pendingRemoteFiles.length} new remote deltas.');
+
+             // Task 459: Batch Operations (Chunking)
+             const batchSize = 10;
+             int processedCount = 0;
+             final total = pendingRemoteFiles.length;
+
+             for (var i = 0; i < total; i += batchSize) {
+                 if (_isCancelled) break;
+
+                 final end = (i + batchSize < total) ? i + batchSize : total;
+                 final batch = pendingRemoteFiles.sublist(i, end);
+
+                 _updateState(_currentState.copyWith(
+                     message: 'Downloading ${processedCount + 1}-${end}/$total',
+                     progress: 0.3 + (0.7 * (processedCount / total)) // 30% to 100%
+                 ));
+
+                 // Actually we read delta objects
+                 final downloadedDeltas = <SyncDelta>[];
+                 final queuedFiles = <File>[];
+
+                 // Download batch in parallel?
+                 // Using Future.wait might be faster but riskier on rate limits.
+                 // Let's do parallel for small batch.
+                 await Future.wait(batch.map((remoteFile) async {
+                     final savePath = '${tempDir.path}/${remoteFile.name}';
+                     File downloadedFile;
+                     if (provider == SyncProviderType.googleDrive) {
+                         downloadedFile = await _googleDriveService.downloadDelta(remoteFile.id, savePath);
+                     } else {
+                         downloadedFile = await _iCloudService.downloadDelta(remoteFile.name, savePath);
+                     }
+
+                     final queuedFile = await _deltaQueue.enqueueIncoming(downloadedFile, remoteFile.name);
+                     // We need to synchronize access to queuedFiles list if running in parallel?
+                     // Future.wait runs concurrently. List is not thread safe?
+                     // Dart is single threaded event loop, so adding to list is safe after await.
+                     queuedFiles.add(queuedFile);
+
+                     final delta = await _deltaQueue.readDelta(queuedFile);
+                     downloadedDeltas.add(delta);
+                 }));
+
+                 // Sort downloaded deltas by sequence/timestamp to ensure correct replay order within batch
+                 // Filenames are already sorted, so if we process in order of `batch`, it should be fine.
+                 // But Future.wait might complete out of order.
+                 // So we should re-sort `downloadedDeltas` or process sequentially.
+
+                 // To correspond queuedFiles with deltas, we better do it sequentially inside the loop or map carefully.
+                 // Let's do sequential download for safety against rate limits and ordering.
+
+                 downloadedDeltas.clear();
+                 queuedFiles.clear();
+
+                 for (final remoteFile in batch) {
+                     if (_isCancelled) break;
+                     final savePath = '${tempDir.path}/${remoteFile.name}';
+                     File downloadedFile;
+                     if (provider == SyncProviderType.googleDrive) {
+                         downloadedFile = await _googleDriveService.downloadDelta(remoteFile.id, savePath);
+                     } else {
+                         downloadedFile = await _iCloudService.downloadDelta(remoteFile.name, savePath);
+                     }
+                     final queuedFile = await _deltaQueue.enqueueIncoming(downloadedFile, remoteFile.name);
+                     queuedFiles.add(queuedFile);
+                     final delta = await _deltaQueue.readDelta(queuedFile);
+                     downloadedDeltas.add(delta);
+                 }
+
+                 if (_isCancelled) break;
+
+                 // Replay Batch
+                 await _deltaReplayService.replayBatch(downloadedDeltas, filenames: batch.map((f) => f.name).toList());
+
+                 // Mark Applied
+                 for (final queuedFile in queuedFiles) {
+                     await _deltaQueue.markAsApplied(queuedFile);
+                 }
+
+                 processedCount += batch.length;
              }
 
-             // Download
-             final savePath = '${tempDir.path}/${remoteFile.name}';
-             File downloadedFile;
-             if (provider == SyncProviderType.googleDrive) {
-                 downloadedFile = await _googleDriveService.downloadDelta(remoteFile.id, savePath);
-             } else {
-                 downloadedFile = await _iCloudService.downloadDelta(remoteFile.name, savePath);
+             if (processedCount > 0) {
+                 Logger.info('Downloaded and applied $processedCount remote deltas.');
              }
-
-             // Enqueue Incoming
-             final queuedFile = await _deltaQueue.enqueueIncoming(downloadedFile, remoteFile.name);
-
-             // Replay
-             final delta = await _deltaQueue.readDelta(queuedFile);
-             await _deltaReplayService.replay(delta);
-
-             // Mark Applied
-             await _deltaQueue.markAsApplied(queuedFile);
-
-             downloadCount++;
         }
 
-        if (downloadCount > 0) {
-            Logger.info('Downloaded and applied $downloadCount remote deltas.');
+        if (_isCancelled) {
+             Logger.info('Sync cancelled during download.');
+             _updateState(_currentState.copyWith(status: SyncStatus.idle, message: 'Sync cancelled'));
+             return;
         }
 
         final now = DateTime.now();
         await _prefs.setString('sync_last_sync_time', now.toIso8601String());
 
         if (!background) {
-            _updateState(_currentState.copyWith(status: SyncStatus.connected, lastSyncTime: now));
+            _updateState(_currentState.copyWith(
+                status: SyncStatus.connected,
+                lastSyncTime: now,
+                progress: 1.0,
+                message: 'Sync completed'
+            ));
         }
         Logger.info('Sync completed.');
+        _retryCount = 0; // Reset retry on success
 
       } catch (e, stack) {
         Logger.error('Sync failed', e, stack);
         if (!background) {
             _updateState(_currentState.copyWith(status: SyncStatus.error, errorMessage: e.toString()));
         }
+        rethrow; // For background retry logic
       }
     });
   }
