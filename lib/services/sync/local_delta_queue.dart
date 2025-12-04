@@ -8,11 +8,12 @@ import 'package:path_provider/path_provider.dart';
 
 class LocalDeltaQueue {
   final DeltaFilenameGenerator _filenameGenerator;
+  final Directory? _rootDir; // For testing
 
-  LocalDeltaQueue(this._filenameGenerator);
+  LocalDeltaQueue(this._filenameGenerator, [this._rootDir]);
 
   Future<Directory> get _deltasDir async {
-    final docDir = await getApplicationDocumentsDirectory();
+    final docDir = _rootDir ?? await getApplicationDocumentsDirectory();
     final dir = Directory('${docDir.path}/deltas');
     if (!await dir.exists()) {
       await dir.create(recursive: true);

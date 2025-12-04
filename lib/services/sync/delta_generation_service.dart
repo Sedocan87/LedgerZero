@@ -14,11 +14,13 @@ class DeltaGenerationService {
   final AppDatabase _db;
   final LocalDeltaQueue _localDeltaQueue;
   final SharedPreferences _prefs;
+  final String? _deviceUuidOverride; // For testing
   final _sequenceLock = _Mutex();
 
   static const String _lastSequenceKey = 'last_delta_sequence';
 
-  DeltaGenerationService(this._db, this._localDeltaQueue, this._prefs);
+  DeltaGenerationService(this._db, this._localDeltaQueue, this._prefs, {String? deviceUuid})
+      : _deviceUuidOverride = deviceUuid;
 
   Future<int> _getNextSequence() {
     return _sequenceLock.protect(() async {
@@ -30,7 +32,7 @@ class DeltaGenerationService {
   }
 
   Future<void> processPendingChanges() async {
-    final deviceUuid = await DeviceUtils.getDeviceUuid();
+    final deviceUuid = _deviceUuidOverride ?? await DeviceUtils.getDeviceUuid();
     final packageInfo = await PackageInfo.fromPlatform();
     final appVersion = packageInfo.version;
     final schemaVersion = _db.schemaVersion;

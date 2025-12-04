@@ -44,7 +44,8 @@ final iCloudDriveServiceProvider = Provider<ICloudDriveService>((ref) {
 
 final deltaReplayServiceProvider = Provider<DeltaReplayService>((ref) {
   final db = ref.watch(databaseProvider);
-  return DeltaReplayService(db);
+  final queue = ref.watch(localDeltaQueueProvider);
+  return DeltaReplayService(db, queue);
 });
 
 final syncEngineProvider = Provider<SyncEngine>((ref) {

@@ -2,14 +2,29 @@ import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/models/sync_delta.dart';
+import 'package:ledger_zero/services/sync/local_delta_queue.dart';
 import 'package:uuid/uuid.dart';
 
 class DeltaReplayService {
   final AppDatabase _db;
+  final LocalDeltaQueue _deltaQueue;
 
-  DeltaReplayService(this._db);
+  DeltaReplayService(this._db, this._deltaQueue);
 
-  Future<void> replay(SyncDelta delta) async {
+  // Task 459: Batch Operations
+  Future<void> replayBatch(List<SyncDelta> deltas, {List<String>? filenames}) async {
+    if (deltas.isEmpty) return;
+
+    await _db.transaction(() async {
+      for (var i = 0; i < deltas.length; i++) {
+        final delta = deltas[i];
+        final filename = (filenames != null && i < filenames.length) ? filenames[i] : null;
+        await replay(delta, filename: filename);
+      }
+    });
+  }
+
+  Future<void> replay(SyncDelta delta, {String? filename}) async {
     final tableName = delta.tableName;
     final action = delta.action;
     final data = delta.data;
@@ -28,13 +43,13 @@ class DeltaReplayService {
 
         // Conflict check
         if (await _shouldIgnore(tableName, id as String, delta.timestamp)) {
-             await _logSync(delta, status: 'IGNORED_CONFLICT');
+             await _logSync(delta, status: 'IGNORED_CONFLICT', filename: filename);
              return;
         }
 
         await _deleteRecord(tableName, id);
         await _clearPending(tableName, id);
-        await _logSync(delta, status: 'APPLIED');
+        await _logSync(delta, status: 'APPLIED', filename: filename);
 
       } else {
         // INSERT / UPDATE
@@ -49,7 +64,7 @@ class DeltaReplayService {
         }
 
         if (await _shouldIgnore(tableName, id, delta.timestamp)) {
-             await _logSync(delta, status: 'IGNORED_CONFLICT');
+             await _logSync(delta, status: 'IGNORED_CONFLICT', filename: filename);
              return;
         }
 
@@ -67,7 +82,7 @@ class DeltaReplayService {
       }
     } catch (e, stack) {
       Logger.error('Error replaying delta for $tableName', e, stack);
-      await _logSync(delta, status: 'ERROR', errorMessage: e.toString());
+      await _logSync(delta, status: 'ERROR', errorMessage: e.toString(), filename: filename);
       rethrow; // Replay failure should stop the queue? Or skip?
                // If we skip, we might break dependency order. Better to stop/retry.
     }
@@ -75,14 +90,52 @@ class DeltaReplayService {
 
   Future<bool> _shouldIgnore(String tableName, String id, DateTime deltaTimestamp) async {
     // Task 445: Last-Writer-Wins
-    // If we have a pending local change, we IGNORE the incoming delta.
-    // This allows the local user's latest work to persist and overwrite remote eventually.
 
+    // 1. Check pending sync changes (not yet generated)
     final pending = await _db.pendingSyncChangesDao.getChange(tableName, id);
     if (pending != null) {
       Logger.info('Conflict: Local pending change exists for $tableName:$id. Ignoring remote delta.');
       return true;
     }
+
+    // 2. Check queued deltas (already generated but not uploaded)
+    try {
+      final pendingFiles = await _deltaQueue.getPendingDeltas();
+      for (final file in pendingFiles) {
+        final localDelta = await _deltaQueue.readDelta(file);
+        if (localDelta.tableName == tableName && localDelta.data?['id'] == id) {
+           if (localDelta.timestamp.isAfter(deltaTimestamp)) {
+               Logger.info('Conflict: Local delta ${localDelta.timestamp} is newer than remote $deltaTimestamp for $tableName:$id. Ignoring remote.');
+               return true;
+           }
+        }
+      }
+    } catch (e) {
+      Logger.warning('Failed to check local delta queue for conflicts: $e');
+    }
+
+    // 3. Check existing record timestamp (LWW)
+    try {
+      final result = await _db.customSelect(
+         'SELECT updated_at FROM $tableName WHERE id = ?',
+         variables: [Variable.withString(id)]
+      ).getSingleOrNull();
+
+      if (result != null) {
+         final updatedAtRaw = result.data['updated_at'];
+         if (updatedAtRaw != null && updatedAtRaw is String) {
+             final updatedAt = DateTime.parse(updatedAtRaw);
+             // Ensure we check if it is really strictly after
+             if (updatedAt.isAfter(deltaTimestamp)) {
+                  Logger.info('Conflict: Local record updated at $updatedAt is newer than remote $deltaTimestamp for $tableName:$id. Ignoring.');
+                  return true;
+             }
+         }
+      }
+    } catch (e) {
+      // Ignore if table has no updated_at or other issue
+    }
+
     return false;
   }
 
@@ -216,7 +269,9 @@ class DeltaReplayService {
           id: Value(data['id']),
           name: Value(data['name']),
           data: Value(data['data']),
-          createdAt: _parseDate(data['created_at']),
+          createdAt: data['created_at'] != null
+              ? Value(data['created_at'] as String?)
+              : const Value.absent(),
         ));
         break;
        case 'report_notes':
@@ -244,11 +299,11 @@ class DeltaReplayService {
     return const Value(null);
   }
 
-  Future<void> _logSync(SyncDelta delta, {required String status, String? errorMessage}) async {
+  Future<void> _logSync(SyncDelta delta, {required String status, String? errorMessage, String? filename}) async {
     await _db.syncLogDao.insertSyncLog(
       SyncLogCompanion.insert(
         id: const Uuid().v4(),
-        deltaFilename: Value(null), // We'll need to pass this if we want it
+        deltaFilename: Value(filename),
         action: Value(status), // Using Action column for Status (APPLIED, IGNORED)
         targetTableName: Value(delta.tableName),
         recordId: Value(delta.data?['id']),
