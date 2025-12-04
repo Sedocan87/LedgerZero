@@ -37,4 +37,5 @@ class AppIcons {
   static const IconData category = Icons.category;
   static const IconData group = Icons.folder;
   static const IconData reports = Icons.insights;
+  static const IconData payee = Icons.store;
 }

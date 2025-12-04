@@ -130,9 +130,21 @@ class TransactionParser {
       }
     }
 
-    // Fallback: If no known payee found, we might try to guess the payee
-    // from the remaining text after removing date and amount.
-    // This is complex and might be part of confidence scoring later.
+    // 3. Fuzzy matching for Payees
+    final payeeNames = payees.map((p) => p.name).toList();
+    final fuse = Fuzzy(
+      payeeNames,
+      options: FuzzyOptions(
+        threshold: 0.3,
+      ),
+    );
+
+    final result = fuse.search(input);
+    if (result.isNotEmpty) {
+      final bestMatchName = result.first.item;
+      return payees.firstWhere((p) => p.name == bestMatchName);
+    }
+
     return null;
   }
 
