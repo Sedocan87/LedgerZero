@@ -22,6 +22,7 @@ class SyncState extends Equatable {
   final String? accountEmail;
   final String? message;
   final double? progress;
+  final bool wifiOnly;
 
   const SyncState({
     this.status = SyncStatus.disconnected,
@@ -31,6 +32,7 @@ class SyncState extends Equatable {
     this.accountEmail,
     this.message,
     this.progress,
+    this.wifiOnly = false,
   });
 
   SyncState copyWith({
@@ -41,6 +43,7 @@ class SyncState extends Equatable {
     String? accountEmail,
     String? message,
     double? progress,
+    bool? wifiOnly,
   }) {
     return SyncState(
       status: status ?? this.status,
@@ -50,6 +53,7 @@ class SyncState extends Equatable {
       accountEmail: accountEmail ?? this.accountEmail,
       message: message ?? this.message,
       progress: progress ?? this.progress,
+      wifiOnly: wifiOnly ?? this.wifiOnly,
     );
   }
 
@@ -62,5 +66,6 @@ class SyncState extends Equatable {
         accountEmail,
         message,
         progress,
+        wifiOnly,
       ];
 }

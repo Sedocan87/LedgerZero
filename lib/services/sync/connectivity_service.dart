@@ -36,4 +36,9 @@ class ConnectivityService {
     final result = await _connectivity.checkConnectivity();
     return !result.contains(ConnectivityResult.none);
   }
+
+  Future<bool> get isWifi async {
+    final result = await _connectivity.checkConnectivity();
+    return result.contains(ConnectivityResult.wifi);
+  }
 }

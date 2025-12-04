@@ -16,8 +16,10 @@ import 'package:ledger_zero/domain/entities/category.dart' as _i6;
 import 'package:ledger_zero/domain/services/budgeting_service.dart' as _i4;
 import 'package:ledger_zero/services/notifications/notification_service.dart'
     as _i8;
+import 'package:ledger_zero/services/sync/connectivity_service.dart' as _i21;
 import 'package:ledger_zero/services/sync/delta_generation_service.dart'
     as _i18;
+import 'package:ledger_zero/services/sync/delta_replay_service.dart' as _i22;
 import 'package:ledger_zero/services/sync/google_auth_service.dart' as _i9;
 import 'package:ledger_zero/services/sync/google_drive_sync.dart' as _i12;
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart' as _i15;
@@ -724,6 +726,23 @@ class MockLocalDeltaQueue extends _i1.Mock implements _i19.LocalDeltaQueue {
             returnValue: _i5.Future<int>.value(0),
           )
           as _i5.Future<int>);
+
+  @override
+  _i5.Future<int> pruneQueue() =>
+      (super.noSuchMethod(
+            Invocation.method(#pruneQueue, []),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+
+  @override
+  _i5.Future<void> exportQueue(_i2.File? outputFile) =>
+      (super.noSuchMethod(
+            Invocation.method(#exportQueue, [outputFile]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 }
 
 /// A class which mocks [SharedPreferences].
@@ -843,6 +862,71 @@ class MockSharedPreferences extends _i1.Mock implements _i20.SharedPreferences {
   _i5.Future<void> reload() =>
       (super.noSuchMethod(
             Invocation.method(#reload, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+}
+
+/// A class which mocks [ConnectivityService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockConnectivityService extends _i1.Mock
+    implements _i21.ConnectivityService {
+  MockConnectivityService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Stream<_i21.ConnectionStatus> get connectionStatusStream =>
+      (super.noSuchMethod(
+            Invocation.getter(#connectionStatusStream),
+            returnValue: _i5.Stream<_i21.ConnectionStatus>.empty(),
+          )
+          as _i5.Stream<_i21.ConnectionStatus>);
+
+  @override
+  _i5.Future<bool> get isConnected =>
+      (super.noSuchMethod(
+            Invocation.getter(#isConnected),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> get isWifi =>
+      (super.noSuchMethod(
+            Invocation.getter(#isWifi),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+}
+
+/// A class which mocks [DeltaReplayService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockDeltaReplayService extends _i1.Mock
+    implements _i22.DeltaReplayService {
+  MockDeltaReplayService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<void> replayBatch(
+    List<_i3.SyncDelta>? deltas, {
+    List<String>? filenames,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#replayBatch, [deltas], {#filenames: filenames}),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> replay(_i3.SyncDelta? delta, {String? filename}) =>
+      (super.noSuchMethod(
+            Invocation.method(#replay, [delta], {#filename: filename}),
             returnValue: _i5.Future<void>.value(),
             returnValueForMissingStub: _i5.Future<void>.value(),
           )
