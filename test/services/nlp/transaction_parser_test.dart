@@ -6,19 +6,39 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
+import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
+import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 
-@GenerateNiceMocks([MockSpec<PayeeRepository>(), MockSpec<CategoryRepository>()])
+@GenerateNiceMocks([
+  MockSpec<PayeeRepository>(),
+  MockSpec<CategoryRepository>(),
+  MockSpec<ParsingHistoryRepository>(),
+  MockSpec<ParsingRulesRepository>(),
+])
 import 'transaction_parser_test.mocks.dart';
 
 void main() {
   late TransactionParser parser;
   late MockPayeeRepository mockPayeeRepository;
   late MockCategoryRepository mockCategoryRepository;
+  late MockParsingHistoryRepository mockParsingHistoryRepository;
+  late MockParsingRulesRepository mockParsingRulesRepository;
 
   setUp(() {
     mockPayeeRepository = MockPayeeRepository();
     mockCategoryRepository = MockCategoryRepository();
-    parser = TransactionParser(mockPayeeRepository, mockCategoryRepository);
+    mockParsingHistoryRepository = MockParsingHistoryRepository();
+    mockParsingRulesRepository = MockParsingRulesRepository();
+
+    when(mockParsingHistoryRepository.getHistory(any)).thenAnswer((_) async => []);
+    when(mockParsingRulesRepository.getAllRules()).thenAnswer((_) async => []);
+
+    parser = TransactionParser(
+      mockPayeeRepository,
+      mockCategoryRepository,
+      mockParsingHistoryRepository,
+      mockParsingRulesRepository,
+    );
   });
 
   group('TransactionParser - Amount Extraction', () {

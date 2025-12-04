@@ -198,5 +198,17 @@
   "createScheduledTransactionDescription": "Erstellen Sie geplante Transaktionen für wiederkehrende Rechnungen oder Einnahmen.",
   "skip": "Überspringen",
   "upcoming": "Anstehend",
-  "offlineMode": "Offline-Modus"
+  "offlineMode": "Offline-Modus",
+  "quickAdd": "Schnell hinzufügen",
+  "preview": "Vorschau",
+  "confidence": "Konfidenz",
+  "noAmount": "Kein Betrag",
+  "payeeNotFound": "Empfänger nicht gefunden",
+  "uncategorized": "Nicht kategorisiert",
+  "editDetails": "Details bearbeiten",
+  "create": "Erstellen",
+  "parsingTips": "Parsing Tipps",
+  "parsingTipsDescription": "Tippen Sie natürlich, um Transaktionen zu erstellen.",
+  "examples": "Beispiele",
+  "appDetects": "Die App erkennt"
 }

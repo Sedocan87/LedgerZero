@@ -96,6 +96,19 @@ class _NaturalLanguageInputScreenState
 
     await ref.read(transactionRepositoryProvider).createTransaction(transaction);
 
+    // Task 494: Save Parsing History
+    // We only save if we successfully created the transaction.
+    // We save the original input and the final IDs.
+    try {
+      await ref.read(parsingHistoryRepositoryProvider).addHistory(
+        _controller.text,
+        payeeId,
+        tx.categoryId,
+      );
+    } catch (_) {
+      // Ignore history save errors
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.transactionSaved)),
@@ -137,6 +150,8 @@ class _NaturalLanguageInputScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     // Initialize account selection
     final accountsStream = ref.watch(accountRepositoryProvider).watchAllAccounts();
 
@@ -162,7 +177,7 @@ class _NaturalLanguageInputScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quick Add'),
+        title: Text(l10n.quickAdd),
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline),
@@ -207,7 +222,7 @@ class _NaturalLanguageInputScreenState
               data: (accounts) => DropdownButtonFormField<Account>(
                 value: _selectedAccount,
                 decoration: InputDecoration(
-                  labelText: 'Account',
+                  labelText: l10n.account,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
@@ -236,7 +251,7 @@ class _NaturalLanguageInputScreenState
                  children: [
                    Expanded(
                      child: AppButton.secondary(
-                       label: 'Edit Details',
+                       label: l10n.editDetails,
                        onPressed: _editDetails,
                        icon: Icons.edit,
                      ),
@@ -244,7 +259,7 @@ class _NaturalLanguageInputScreenState
                    const SizedBox(width: AppSpacing.md),
                    Expanded(
                      child: AppButton.primary(
-                       label: 'Create',
+                       label: l10n.create,
                        onPressed: (_parsedTransaction!.amount != null && _selectedAccount != null)
                          ? _createTransaction
                          : null,
@@ -261,6 +276,7 @@ class _NaturalLanguageInputScreenState
   }
 
   Widget _buildPreviewCard(ParsedTransaction transaction) {
+    final l10n = AppLocalizations.of(context)!;
     final hasAmount = transaction.amount != null;
     final hasPayee = transaction.payeeName != null;
     final hasCategory = transaction.categoryName != null;
@@ -279,7 +295,7 @@ class _NaturalLanguageInputScreenState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Preview',
+                  l10n.preview,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Container(
@@ -289,7 +305,7 @@ class _NaturalLanguageInputScreenState
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
-                    '${(transaction.confidence * 100).toInt()}% Confidence',
+                    '${(transaction.confidence * 100).toInt()}% ${l10n.confidence}',
                     style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),
@@ -310,7 +326,7 @@ class _NaturalLanguageInputScreenState
                      Text(
                        hasAmount
                          ? '$amountPrefix${NumberFormat.simpleCurrency(name: transaction.currency ?? '').format(transaction.amount).substring(1)}' // simplistic formatting
-                         : 'No amount',
+                         : l10n.noAmount,
                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                          color: hasAmount ? amountColor : Colors.grey,
                          fontWeight: FontWeight.bold,
@@ -331,8 +347,8 @@ class _NaturalLanguageInputScreenState
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(AppIcons.payee),
-              title: Text(transaction.payeeName ?? 'Unknown Payee'),
-              subtitle: Text(hasPayee ? 'Payee' : 'Payee not found'),
+              title: Text(transaction.payeeName ?? l10n.unknownPayee),
+              subtitle: Text(hasPayee ? l10n.payee : l10n.payeeNotFound),
               trailing: hasPayee
                 ? const Icon(Icons.check_circle, color: AppColors.success)
                 : const Icon(Icons.help_outline, color: AppColors.warning),
@@ -342,8 +358,8 @@ class _NaturalLanguageInputScreenState
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(AppIcons.category),
-              title: Text(transaction.categoryName ?? 'Uncategorized'),
-              subtitle: Text(hasCategory ? 'Category' : 'Category not found'),
+              title: Text(transaction.categoryName ?? l10n.uncategorized),
+              subtitle: Text(hasCategory ? l10n.category : l10n.uncategorized),
                trailing: hasCategory
                 ? const Icon(Icons.check_circle, color: AppColors.success)
                 : const Icon(Icons.help_outline, color: AppColors.warning),
@@ -361,37 +377,38 @@ class _NaturalLanguageInputScreenState
   }
 
   void _showCheatSheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Parsing Tips'),
-        content: const SingleChildScrollView(
+        title: Text(l10n.parsingTips),
+        content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Type naturally to create transactions.'),
-              SizedBox(height: 16),
-              Text('Examples:', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('• "Lunch 15"'),
-              Text('• "Coffee \$5 at Starbucks"'),
-              Text('• "Uber 25 tomorrow"'),
-              Text('• "Salary 3000" (Income)'),
-              SizedBox(height: 16),
-              Text('The app detects:', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('• Amount (required)'),
-              Text('• Payee (e.g. Starbucks)'),
-              Text('• Category (e.g. Dining Out)'),
-              Text('• Date (e.g. tomorrow, friday)'),
+              Text(l10n.parsingTipsDescription),
+              const SizedBox(height: 16),
+              Text('${l10n.examples}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('• "Lunch 15"'),
+              const Text('• "Coffee \$5 at Starbucks"'),
+              const Text('• "Uber 25 tomorrow"'),
+              const Text('• "Salary 3000" (Income)'),
+              const SizedBox(height: 16),
+              Text('${l10n.appDetects}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('• ${l10n.amount}'),
+              Text('• ${l10n.payee}'),
+              Text('• ${l10n.category}'),
+              Text('• ${l10n.date}'),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(l10n.gotIt),
           ),
         ],
       ),

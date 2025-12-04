@@ -6,14 +6,23 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
+import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
+import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 
-@GenerateNiceMocks([MockSpec<PayeeRepository>(), MockSpec<CategoryRepository>()])
+@GenerateNiceMocks([
+  MockSpec<PayeeRepository>(),
+  MockSpec<CategoryRepository>(),
+  MockSpec<ParsingHistoryRepository>(),
+  MockSpec<ParsingRulesRepository>(),
+])
 import 'parsing_dataset_test.mocks.dart';
 
 void main() {
   late TransactionParser parser;
   late MockPayeeRepository mockPayeeRepository;
   late MockCategoryRepository mockCategoryRepository;
+  late MockParsingHistoryRepository mockParsingHistoryRepository;
+  late MockParsingRulesRepository mockParsingRulesRepository;
 
   // Mock Data
   final mockPayees = [
@@ -40,9 +49,13 @@ void main() {
   setUp(() {
     mockPayeeRepository = MockPayeeRepository();
     mockCategoryRepository = MockCategoryRepository();
+    mockParsingHistoryRepository = MockParsingHistoryRepository();
+    mockParsingRulesRepository = MockParsingRulesRepository();
 
     when(mockPayeeRepository.getAllPayees()).thenAnswer((_) async => mockPayees);
     when(mockCategoryRepository.getAllCategories()).thenAnswer((_) async => mockCategories);
+    when(mockParsingHistoryRepository.getHistory(any)).thenAnswer((_) async => []);
+    when(mockParsingRulesRepository.getAllRules()).thenAnswer((_) async => []);
 
     // Mock getCategoryById for auto-assign
     for (var p in mockPayees) {
@@ -52,7 +65,12 @@ void main() {
       }
     }
 
-    parser = TransactionParser(mockPayeeRepository, mockCategoryRepository);
+    parser = TransactionParser(
+      mockPayeeRepository,
+      mockCategoryRepository,
+      mockParsingHistoryRepository,
+      mockParsingRulesRepository,
+    );
   });
 
   group('Parsing Dataset (100+ Phrases)', () {

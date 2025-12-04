@@ -11,6 +11,8 @@ import 'package:ledger_zero/data/database/tables/scheduled_transactions.dart';
 import 'package:ledger_zero/data/database/tables/sync_log.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
 import 'package:ledger_zero/data/database/tables/pending_sync_changes.dart';
+import 'package:ledger_zero/data/database/tables/parsing_history.dart';
+import 'package:ledger_zero/data/database/tables/parsing_rules.dart';
 
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
@@ -22,6 +24,8 @@ import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/pending_sync_changes_dao.dart';
+import 'package:ledger_zero/data/database/daos/parsing_history_dao.dart';
+import 'package:ledger_zero/data/database/daos/parsing_rules_dao.dart';
 import 'package:uuid/uuid.dart';
 
 part 'database.g.dart';
@@ -39,6 +43,8 @@ part 'database.g.dart';
     ScheduledTransactions,
     SyncLog,
     PendingSyncChanges,
+    ParsingHistory,
+    ParsingRules,
   ],
   daos: [
     AccountsDao,
@@ -51,6 +57,8 @@ part 'database.g.dart';
     SyncLogDao,
     TransactionsDao,
     PendingSyncChangesDao,
+    ParsingHistoryDao,
+    ParsingRulesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -66,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -77,6 +85,10 @@ class AppDatabase extends _$AppDatabase {
         await _createSyncTriggers();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 12) {
+          await m.createTable(parsingHistory);
+          await m.createTable(parsingRules);
+        }
         if (from < 11) {
           await m.createTable(pendingSyncChanges);
           await _createSyncTriggers();

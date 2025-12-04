@@ -6,6 +6,8 @@ import 'package:ledger_zero/data/database/daos/categories_dao.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
 import 'package:ledger_zero/data/database/daos/report_notes_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
+import 'package:ledger_zero/data/database/daos/parsing_history_dao.dart';
+import 'package:ledger_zero/data/database/daos/parsing_rules_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart';
@@ -62,4 +64,14 @@ final syncLogDaoProvider = Provider<SyncLogDao>((ref) {
 /// Provides the [TransactionsDao].
 final transactionsDaoProvider = Provider<TransactionsDao>((ref) {
   return ref.watch(databaseProvider).transactionsDao;
+});
+
+/// Provides the [ParsingHistoryDao].
+final parsingHistoryDaoProvider = Provider<ParsingHistoryDao>((ref) {
+  return ref.watch(databaseProvider).parsingHistoryDao;
+});
+
+/// Provides the [ParsingRulesDao].
+final parsingRulesDaoProvider = Provider<ParsingRulesDao>((ref) {
+  return ref.watch(databaseProvider).parsingRulesDao;
 });

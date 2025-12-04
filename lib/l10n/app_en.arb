@@ -436,5 +436,17 @@
   "providerICloud": "iCloud Drive",
   "disconnect": "Disconnect",
   "offlineMode": "Offline Mode",
-  "syncOnlyOnWifi": "Sync only on Wi-Fi"
+  "syncOnlyOnWifi": "Sync only on Wi-Fi",
+  "quickAdd": "Quick Add",
+  "preview": "Preview",
+  "confidence": "Confidence",
+  "noAmount": "No amount",
+  "payeeNotFound": "Payee not found",
+  "uncategorized": "Uncategorized",
+  "editDetails": "Edit Details",
+  "create": "Create",
+  "parsingTips": "Parsing Tips",
+  "parsingTipsDescription": "Type naturally to create transactions.",
+  "examples": "Examples",
+  "appDetects": "The app detects"
 }
