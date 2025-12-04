@@ -408,5 +408,9 @@
 ,
   "biometrics": "Biometric Authentication",
   "useBiometricsDescription": "Use Face ID / Fingerprint to unlock",
-  "biometricsSetupFailed": "Biometric setup failed"
+  "biometricsSetupFailed": "Biometric setup failed",
+  "encryptionStatus": "Encryption Status",
+  "encrypted": "Encrypted",
+  "notEncrypted": "Not Encrypted",
+  "secure": "Secure"
 }

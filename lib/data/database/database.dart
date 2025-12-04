@@ -126,6 +126,19 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Checks if the database is currently using encryption (SQLCipher).
+  Future<bool> get isEncrypted async {
+    try {
+      final result = await customSelect(
+        'PRAGMA cipher_version',
+        readsFrom: {},
+      ).get();
+      return result.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> _seedDefaultCategories() async {
     const uuid = Uuid();
     final now = DateTime.now();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/biometrics_controller.dart';
 
@@ -41,6 +42,21 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
+          FutureBuilder<bool>(
+            future: ref.watch(databaseProvider).isEncrypted,
+            builder: (context, snapshot) {
+              final isEncrypted = snapshot.data ?? false;
+              return ListTile(
+                leading: Icon(
+                  isEncrypted ? Icons.lock : Icons.lock_open,
+                  color: isEncrypted ? Colors.green : Colors.red,
+                ),
+                title: Text(l10n.encryptionStatus),
+                subtitle:
+                    Text(isEncrypted ? l10n.encrypted : l10n.notEncrypted),
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.security),
             title: Text(l10n.recoveryKey),
