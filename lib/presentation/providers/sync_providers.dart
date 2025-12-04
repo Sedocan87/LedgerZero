@@ -7,6 +7,7 @@ import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
+import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
 
 final deltaFilenameGeneratorProvider = Provider<DeltaFilenameGenerator>((ref) {
@@ -35,16 +36,22 @@ final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
   return GoogleDriveService(authService, prefs);
 });
 
+final iCloudDriveServiceProvider = Provider<ICloudDriveService>((ref) {
+  return ICloudDriveService();
+});
+
 final syncControllerProvider =
     StateNotifierProvider<SyncController, SyncState>((ref) {
   final authService = ref.watch(googleAuthServiceProvider);
   final driveService = ref.watch(googleDriveServiceProvider);
+  final iCloudService = ref.watch(iCloudDriveServiceProvider);
   final deltaService = ref.watch(deltaGenerationServiceProvider);
   final deltaQueue = ref.watch(localDeltaQueueProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
   return SyncController(
     authService,
     driveService,
+    iCloudService,
     deltaService,
     deltaQueue,
     prefs,

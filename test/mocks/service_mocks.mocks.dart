@@ -9,6 +9,7 @@ import 'dart:io' as _i2;
 import 'package:google_sign_in/google_sign_in.dart' as _i10;
 import 'package:googleapis/drive/v3.dart' as _i14;
 import 'package:googleapis_auth/googleapis_auth.dart' as _i11;
+import 'package:icloud_storage/icloud_storage.dart' as _i17;
 import 'package:ledger_zero/data/models/sync_delta.dart' as _i3;
 import 'package:ledger_zero/domain/entities/budget_template.dart' as _i7;
 import 'package:ledger_zero/domain/entities/category.dart' as _i6;
@@ -16,13 +17,15 @@ import 'package:ledger_zero/domain/services/budgeting_service.dart' as _i4;
 import 'package:ledger_zero/services/notifications/notification_service.dart'
     as _i8;
 import 'package:ledger_zero/services/sync/delta_generation_service.dart'
-    as _i15;
+    as _i18;
 import 'package:ledger_zero/services/sync/google_auth_service.dart' as _i9;
 import 'package:ledger_zero/services/sync/google_drive_sync.dart' as _i12;
-import 'package:ledger_zero/services/sync/local_delta_queue.dart' as _i16;
+import 'package:ledger_zero/services/sync/icloud_drive_service.dart' as _i15;
+import 'package:ledger_zero/services/sync/local_delta_queue.dart' as _i19;
+import 'package:ledger_zero/services/sync/sync_status.dart' as _i16;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i13;
-import 'package:shared_preferences/shared_preferences.dart' as _i17;
+import 'package:shared_preferences/shared_preferences.dart' as _i20;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -496,11 +499,95 @@ class MockGoogleDriveService extends _i1.Mock
           as _i5.Future<void>);
 }
 
+/// A class which mocks [ICloudDriveService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockICloudDriveService extends _i1.Mock
+    implements _i15.ICloudDriveService {
+  MockICloudDriveService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  String get containerId =>
+      (super.noSuchMethod(
+            Invocation.getter(#containerId),
+            returnValue: _i13.dummyValue<String>(
+              this,
+              Invocation.getter(#containerId),
+            ),
+          )
+          as String);
+
+  @override
+  _i5.Stream<_i16.SyncState> get status =>
+      (super.noSuchMethod(
+            Invocation.getter(#status),
+            returnValue: _i5.Stream<_i16.SyncState>.empty(),
+          )
+          as _i5.Stream<_i16.SyncState>);
+
+  @override
+  void dispose() => super.noSuchMethod(
+    Invocation.method(#dispose, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i5.Future<void> verifyContainerAccess() =>
+      (super.noSuchMethod(
+            Invocation.method(#verifyContainerAccess, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> uploadDelta(_i2.File? localFile, String? filename) =>
+      (super.noSuchMethod(
+            Invocation.method(#uploadDelta, [localFile, filename]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<_i2.File> downloadDelta(String? filename, String? savePath) =>
+      (super.noSuchMethod(
+            Invocation.method(#downloadDelta, [filename, savePath]),
+            returnValue: _i5.Future<_i2.File>.value(
+              _FakeFile_0(
+                this,
+                Invocation.method(#downloadDelta, [filename, savePath]),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.File>);
+
+  @override
+  _i5.Future<List<_i17.ICloudFile>> listDeltas() =>
+      (super.noSuchMethod(
+            Invocation.method(#listDeltas, []),
+            returnValue: _i5.Future<List<_i17.ICloudFile>>.value(
+              <_i17.ICloudFile>[],
+            ),
+          )
+          as _i5.Future<List<_i17.ICloudFile>>);
+
+  @override
+  _i5.Stream<List<String>> watchDeltas() =>
+      (super.noSuchMethod(
+            Invocation.method(#watchDeltas, []),
+            returnValue: _i5.Stream<List<String>>.empty(),
+          )
+          as _i5.Stream<List<String>>);
+}
+
 /// A class which mocks [DeltaGenerationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockDeltaGenerationService extends _i1.Mock
-    implements _i15.DeltaGenerationService {
+    implements _i18.DeltaGenerationService {
   MockDeltaGenerationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -518,7 +605,7 @@ class MockDeltaGenerationService extends _i1.Mock
 /// A class which mocks [LocalDeltaQueue].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLocalDeltaQueue extends _i1.Mock implements _i16.LocalDeltaQueue {
+class MockLocalDeltaQueue extends _i1.Mock implements _i19.LocalDeltaQueue {
   MockLocalDeltaQueue() {
     _i1.throwOnMissingStub(this);
   }
@@ -572,7 +659,7 @@ class MockLocalDeltaQueue extends _i1.Mock implements _i16.LocalDeltaQueue {
 /// A class which mocks [SharedPreferences].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSharedPreferences extends _i1.Mock implements _i17.SharedPreferences {
+class MockSharedPreferences extends _i1.Mock implements _i20.SharedPreferences {
   MockSharedPreferences() {
     _i1.throwOnMissingStub(this);
   }

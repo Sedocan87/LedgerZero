@@ -833,4 +833,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get syncFailed => 'Sync failed';
+
+  @override
+  String get iCloudDriveSync => 'iCloud Drive Sync';
+
+  @override
+  String get syncProvider => 'Sync Provider';
+
+  @override
+  String get connectToICloud => 'Connect to iCloud';
+
+  @override
+  String get providerNone => 'None';
+
+  @override
+  String get providerGoogleDrive => 'Google Drive';
+
+  @override
+  String get providerICloud => 'iCloud Drive';
+
+  @override
+  String get disconnect => 'Disconnect';
 }

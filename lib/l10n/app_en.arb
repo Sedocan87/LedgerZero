@@ -427,5 +427,12 @@
       }
   },
   "syncSuccess": "Sync completed successfully",
-  "syncFailed": "Sync failed"
+  "syncFailed": "Sync failed",
+  "iCloudDriveSync": "iCloud Drive Sync",
+  "syncProvider": "Sync Provider",
+  "connectToICloud": "Connect to iCloud",
+  "providerNone": "None",
+  "providerGoogleDrive": "Google Drive",
+  "providerICloud": "iCloud Drive",
+  "disconnect": "Disconnect"
 }
