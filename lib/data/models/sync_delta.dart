@@ -19,6 +19,8 @@ class SyncDelta extends Equatable {
   final SyncAction action;
   final String tableName;
   final Map<String, dynamic>? data;
+  final int schemaVersion;
+  final String appVersion;
 
   const SyncDelta({
     required this.timestamp,
@@ -27,6 +29,8 @@ class SyncDelta extends Equatable {
     required this.action,
     required this.tableName,
     this.data,
+    this.schemaVersion = 1, // Default to 1 for backward compatibility/initial
+    this.appVersion = '0.0.0',
   });
 
   factory SyncDelta.fromJson(Map<String, dynamic> json) {
@@ -37,6 +41,8 @@ class SyncDelta extends Equatable {
       action: SyncAction.fromJson(json['action'] as String),
       tableName: json['table'] as String,
       data: json['data'] as Map<String, dynamic>?,
+      schemaVersion: json['schemaVersion'] as int? ?? 1,
+      appVersion: json['appVersion'] as String? ?? '0.0.0',
     );
   }
 
@@ -47,6 +53,8 @@ class SyncDelta extends Equatable {
       'sequence': sequence,
       'action': action.toJson(),
       'table': tableName,
+      'schemaVersion': schemaVersion,
+      'appVersion': appVersion,
       if (data != null) 'data': data,
     };
   }
@@ -59,5 +67,7 @@ class SyncDelta extends Equatable {
         action,
         tableName,
         data,
+        schemaVersion,
+        appVersion,
       ];
 }
