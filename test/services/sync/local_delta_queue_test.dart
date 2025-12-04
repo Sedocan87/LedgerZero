@@ -120,6 +120,43 @@ void main() {
     expect(await newFile.exists(), isTrue);
     expect(await otherFile.exists(), isTrue);
   });
+
+  test('enqueueIncoming moves file and getPendingIncomingDeltas returns sorted files', () async {
+    // Simulate a downloaded file in a temp location
+    final tempDownloadDir = Directory('${tempDir.path}/temp_downloads');
+    await tempDownloadDir.create(recursive: true);
+
+    final file1 = File('${tempDownloadDir.path}/2_delta.json.gz');
+    await file1.create();
+
+    final file2 = File('${tempDownloadDir.path}/1_delta.json.gz');
+    await file2.create();
+
+    await queue.enqueueIncoming(file1, '2_delta.json.gz');
+    await queue.enqueueIncoming(file2, '1_delta.json.gz');
+
+    final pending = await queue.getPendingIncomingDeltas();
+    expect(pending.length, 2);
+    expect(pending[0].path, endsWith('1_delta.json.gz'));
+    expect(pending[1].path, endsWith('2_delta.json.gz'));
+  });
+
+  test('markAsApplied moves file to applied', () async {
+    // Manually create file in incoming since getPendingIncomingDeltas relies on it
+    // But we can use enqueueIncoming to put it there
+    final tempDownloadDir = Directory('${tempDir.path}/temp_downloads');
+    await tempDownloadDir.create(recursive: true);
+    final tempFile = File('${tempDownloadDir.path}/test_applied.json.gz');
+    await tempFile.create();
+
+    final file = await queue.enqueueIncoming(tempFile, 'test_applied.json.gz');
+
+    await queue.markAsApplied(file);
+
+    expect(await file.exists(), isFalse);
+    final appliedFile = File('${tempDir.path}/deltas/applied/test_applied.json.gz');
+    expect(await appliedFile.exists(), isTrue);
+  });
 }
 
 class FakePathProviderPlatform extends PathProviderPlatform {

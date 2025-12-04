@@ -9,6 +9,8 @@ import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
+import 'package:ledger_zero/services/sync/delta_replay_service.dart';
+import 'package:ledger_zero/services/sync/sync_engine.dart';
 
 final deltaFilenameGeneratorProvider = Provider<DeltaFilenameGenerator>((ref) {
   return DeltaFilenameGenerator();
@@ -40,20 +42,33 @@ final iCloudDriveServiceProvider = Provider<ICloudDriveService>((ref) {
   return ICloudDriveService();
 });
 
+final deltaReplayServiceProvider = Provider<DeltaReplayService>((ref) {
+  final db = ref.watch(databaseProvider);
+  return DeltaReplayService(db);
+});
+
+final syncEngineProvider = Provider<SyncEngine>((ref) {
+  final genService = ref.watch(deltaGenerationServiceProvider);
+  final queue = ref.watch(localDeltaQueueProvider);
+  final replayService = ref.watch(deltaReplayServiceProvider);
+  final driveService = ref.watch(googleDriveServiceProvider);
+  final iCloudService = ref.watch(iCloudDriveServiceProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  return SyncEngine(
+      genService, queue, replayService, driveService, iCloudService, prefs);
+});
+
 final syncControllerProvider =
     StateNotifierProvider<SyncController, SyncState>((ref) {
   final authService = ref.watch(googleAuthServiceProvider);
-  final driveService = ref.watch(googleDriveServiceProvider);
   final iCloudService = ref.watch(iCloudDriveServiceProvider);
-  final deltaService = ref.watch(deltaGenerationServiceProvider);
-  final deltaQueue = ref.watch(localDeltaQueueProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
+  final engine = ref.watch(syncEngineProvider);
   return SyncController(
     authService,
-    driveService,
     iCloudService,
-    deltaService,
-    deltaQueue,
     prefs,
+    engine,
   );
 });

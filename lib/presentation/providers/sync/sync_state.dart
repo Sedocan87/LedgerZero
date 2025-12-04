@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 enum SyncStatus {
+  idle,
   disconnected,
   connected,
   syncing,
@@ -19,6 +20,8 @@ class SyncState extends Equatable {
   final DateTime? lastSyncTime;
   final String? errorMessage;
   final String? accountEmail;
+  final String? message;
+  final double? progress;
 
   const SyncState({
     this.status = SyncStatus.disconnected,
@@ -26,6 +29,8 @@ class SyncState extends Equatable {
     this.lastSyncTime,
     this.errorMessage,
     this.accountEmail,
+    this.message,
+    this.progress,
   });
 
   SyncState copyWith({
@@ -34,6 +39,8 @@ class SyncState extends Equatable {
     DateTime? lastSyncTime,
     String? errorMessage,
     String? accountEmail,
+    String? message,
+    double? progress,
   }) {
     return SyncState(
       status: status ?? this.status,
@@ -41,6 +48,8 @@ class SyncState extends Equatable {
       lastSyncTime: lastSyncTime ?? this.lastSyncTime,
       errorMessage: errorMessage ?? this.errorMessage,
       accountEmail: accountEmail ?? this.accountEmail,
+      message: message ?? this.message,
+      progress: progress ?? this.progress,
     );
   }
 
@@ -51,5 +60,7 @@ class SyncState extends Equatable {
         lastSyncTime,
         errorMessage,
         accountEmail,
+        message,
+        progress,
       ];
 }
