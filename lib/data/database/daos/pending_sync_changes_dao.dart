@@ -23,4 +23,19 @@ class PendingSyncChangesDao extends DatabaseAccessor<AppDatabase>
   Future<void> deleteChanges(List<int> ids) {
     return (delete(pendingSyncChanges)..where((t) => t.id.isIn(ids))).go();
   }
+
+  Future<PendingSyncChange?> getChange(String tableName, String recordId) {
+    return (select(pendingSyncChanges)
+          ..where((t) =>
+              t.targetTableName.equals(tableName) & t.recordId.equals(recordId))
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<void> deleteChangeByTableAndId(String tableName, String recordId) {
+    return (delete(pendingSyncChanges)
+          ..where((t) =>
+              t.targetTableName.equals(tableName) & t.recordId.equals(recordId)))
+        .go();
+  }
 }

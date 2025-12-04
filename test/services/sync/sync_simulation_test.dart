@@ -1,11 +1,11 @@
 // ignore_for_file: must_be_immutable
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
+import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:mockito/mockito.dart';
 
 import '../../mocks/service_mocks.mocks.dart';
@@ -15,24 +15,35 @@ class MockGoogleSignInAccount extends Mock implements GoogleSignInAccount {
   String get email => 'test@example.com';
 }
 
+class FakeSyncEngine extends Fake implements SyncEngine {
+  final _controller = StreamController<SyncState>.broadcast();
+  bool syncCalled = false;
+
+  @override
+  Stream<SyncState> get statusStream => _controller.stream;
+
+  @override
+  Future<void> sync({bool background = false}) async {
+    syncCalled = true;
+    _controller.add(
+        const SyncState(status: SyncStatus.connected, lastSyncTime: null));
+  }
+}
+
 void main() {
   late MockGoogleAuthService mockAuthService;
-  late MockGoogleDriveService mockDriveService;
   late MockICloudDriveService mockICloudService;
-  late MockDeltaGenerationService mockDeltaService;
-  late MockLocalDeltaQueue mockDeltaQueue;
   late MockSharedPreferences mockPrefs;
   late SyncController controller;
   late StreamController<GoogleSignInAccount?> authStreamController;
+  late FakeSyncEngine fakeSyncEngine;
 
   setUp(() {
     mockAuthService = MockGoogleAuthService();
-    mockDriveService = MockGoogleDriveService();
     mockICloudService = MockICloudDriveService();
-    mockDeltaService = MockDeltaGenerationService();
-    mockDeltaQueue = MockLocalDeltaQueue();
     mockPrefs = MockSharedPreferences();
     authStreamController = StreamController<GoogleSignInAccount?>.broadcast();
+    fakeSyncEngine = FakeSyncEngine();
 
     when(mockPrefs.getString(any)).thenReturn(null);
     when(mockAuthService.onCurrentUserChanged)
@@ -42,11 +53,9 @@ void main() {
 
     controller = SyncController(
       mockAuthService,
-      mockDriveService,
       mockICloudService,
-      mockDeltaService,
-      mockDeltaQueue,
       mockPrefs,
+      fakeSyncEngine,
     );
   });
 
@@ -59,66 +68,44 @@ void main() {
   });
 
   test('Updates state when user signs in (Google Drive)', () async {
-    // Need to set provider to Google Drive first
     when(mockPrefs.getString('sync_provider')).thenReturn('googleDrive');
     when(mockPrefs.getString('sync_last_sync_time')).thenReturn(null);
-    // Re-init controller to pick up pref
-     controller = SyncController(
+
+    controller = SyncController(
       mockAuthService,
-      mockDriveService,
       mockICloudService,
-      mockDeltaService,
-      mockDeltaQueue,
       mockPrefs,
+      fakeSyncEngine,
     );
 
     final mockAccount = MockGoogleSignInAccount();
     authStreamController.add(mockAccount);
 
-    await Future.microtask(() {}); // Process stream
+    await Future.microtask(() {});
 
     expect(controller.state.status, SyncStatus.connected);
     expect(controller.state.accountEmail, 'test@example.com');
   });
 
-  test('SyncNow calls services (Google Drive)', () async {
-    // Setup connected state
+  test('SyncNow calls SyncEngine', () async {
     final mockAccount = MockGoogleSignInAccount();
-    // Simulate init check finding a user
     when(mockAuthService.isSignedIn()).thenAnswer((_) async => true);
     when(mockAuthService.currentUser).thenReturn(mockAccount);
     when(mockPrefs.getString('sync_provider')).thenReturn('googleDrive');
 
-    // Re-init to pick up connected state
     controller = SyncController(
       mockAuthService,
-      mockDriveService,
       mockICloudService,
-      mockDeltaService,
-      mockDeltaQueue,
       mockPrefs,
+      fakeSyncEngine,
     );
 
-    // Wait for init
     await Future.delayed(Duration.zero);
 
     expect(controller.state.status, SyncStatus.connected);
 
-    // Mock sync dependencies
-    when(mockDeltaService.processPendingChanges()).thenAnswer((_) async {});
-    when(mockDeltaQueue.getPendingDeltas())
-        .thenAnswer((_) async => [File('test_delta.json.gz')]);
-    when(mockDriveService.uploadDelta(any, any))
-        .thenAnswer((_) async => 'file_id');
-    when(mockDeltaQueue.markAsUploaded(any)).thenAnswer((_) async {});
-    when(mockPrefs.setString(any, any)).thenAnswer((_) async => true);
-
     await controller.syncNow();
 
-    verify(mockDeltaService.processPendingChanges()).called(1);
-    verify(mockDeltaQueue.getPendingDeltas()).called(1);
-    verify(mockDriveService.uploadDelta(any, any)).called(1);
-    verify(mockDeltaQueue.markAsUploaded(any)).called(1);
-    expect(controller.state.lastSyncTime, isNotNull);
+    expect(fakeSyncEngine.syncCalled, isTrue);
   });
 }

@@ -17,6 +17,7 @@ class SyncStatusIndicator extends ConsumerWidget {
 
     switch (state.status) {
       case SyncStatus.connected:
+      case SyncStatus.idle:
         icon = Icons.cloud_done;
         color = Colors.green;
         statusText = state.accountEmail != null

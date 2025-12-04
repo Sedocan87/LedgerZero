@@ -20,6 +20,7 @@ import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/sync_debug_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
@@ -102,6 +103,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'sync',
             name: 'sync-settings',
             builder: (context, state) => const SyncSettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'debug',
+                name: 'sync-debug',
+                builder: (context, state) => const SyncDebugScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: 'recovery-key',

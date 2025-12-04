@@ -6,40 +6,47 @@ import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
+import 'dart:async';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:mockito/mockito.dart';
 
 import '../../../mocks/service_mocks.mocks.dart';
 
+class FakeSyncEngine extends Fake implements SyncEngine {
+  final _controller = StreamController<SyncState>.broadcast();
+
+  @override
+  Stream<SyncState> get statusStream => _controller.stream;
+
+  @override
+  Future<void> sync({bool background = false}) async {}
+}
+
 void main() {
   late MockGoogleAuthService mockAuthService;
-  late MockGoogleDriveService mockDriveService;
   late MockICloudDriveService mockICloudService;
-  late MockDeltaGenerationService mockDeltaService;
-  late MockLocalDeltaQueue mockDeltaQueue;
   late MockSharedPreferences mockPrefs;
+  late FakeSyncEngine fakeSyncEngine;
   late SyncController controller;
 
   setUp(() {
     mockAuthService = MockGoogleAuthService();
-    mockDriveService = MockGoogleDriveService();
     mockICloudService = MockICloudDriveService();
-    mockDeltaService = MockDeltaGenerationService();
-    mockDeltaQueue = MockLocalDeltaQueue();
     mockPrefs = MockSharedPreferences();
+    fakeSyncEngine = FakeSyncEngine();
 
     // Stub common calls
     when(mockPrefs.getString(any)).thenReturn(null);
-    when(mockAuthService.onCurrentUserChanged).thenAnswer((_) => const Stream.empty());
+    when(mockAuthService.onCurrentUserChanged)
+        .thenAnswer((_) => const Stream.empty());
     when(mockAuthService.isSignedIn()).thenAnswer((_) async => false);
 
     controller = SyncController(
       mockAuthService,
-      mockDriveService,
       mockICloudService,
-      mockDeltaService,
-      mockDeltaQueue,
       mockPrefs,
+      fakeSyncEngine,
     );
   });
 
@@ -82,11 +89,9 @@ void main() {
     // Re-create controller to pick up pref
     controller = SyncController(
       mockAuthService,
-      mockDriveService,
       mockICloudService,
-      mockDeltaService,
-      mockDeltaQueue,
       mockPrefs,
+      fakeSyncEngine,
     );
 
     await tester.pumpWidget(createWidget());
