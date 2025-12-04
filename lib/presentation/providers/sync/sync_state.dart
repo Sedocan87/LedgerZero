@@ -7,14 +7,22 @@ enum SyncStatus {
   error,
 }
 
+enum SyncProviderType {
+  none,
+  googleDrive,
+  iCloud,
+}
+
 class SyncState extends Equatable {
   final SyncStatus status;
+  final SyncProviderType selectedProvider;
   final DateTime? lastSyncTime;
   final String? errorMessage;
   final String? accountEmail;
 
   const SyncState({
     this.status = SyncStatus.disconnected,
+    this.selectedProvider = SyncProviderType.none,
     this.lastSyncTime,
     this.errorMessage,
     this.accountEmail,
@@ -22,12 +30,14 @@ class SyncState extends Equatable {
 
   SyncState copyWith({
     SyncStatus? status,
+    SyncProviderType? selectedProvider,
     DateTime? lastSyncTime,
     String? errorMessage,
     String? accountEmail,
   }) {
     return SyncState(
       status: status ?? this.status,
+      selectedProvider: selectedProvider ?? this.selectedProvider,
       lastSyncTime: lastSyncTime ?? this.lastSyncTime,
       errorMessage: errorMessage ?? this.errorMessage,
       accountEmail: accountEmail ?? this.accountEmail,
@@ -35,5 +45,11 @@ class SyncState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, lastSyncTime, errorMessage, accountEmail];
+  List<Object?> get props => [
+        status,
+        selectedProvider,
+        lastSyncTime,
+        errorMessage,
+        accountEmail,
+      ];
 }

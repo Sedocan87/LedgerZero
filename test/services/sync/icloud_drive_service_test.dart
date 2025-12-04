@@ -42,6 +42,18 @@ void main() {
         throwsA(isA<SyncException>()),
       );
     });
+
+    test('should throw SyncException with "iCloud storage is full" message on quota error', () async {
+      when(mockStorage.gatherFiles())
+          .thenThrow(PlatformException(code: 'error', message: 'Quota exceeded'));
+
+      try {
+        await service.verifyContainerAccess();
+        fail('Should have thrown SyncException');
+      } on SyncException catch (e) {
+        expect(e.message, 'iCloud storage is full');
+      }
+    });
   });
 
   group('uploadDelta', () {

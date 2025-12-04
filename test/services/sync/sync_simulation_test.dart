@@ -18,6 +18,7 @@ class MockGoogleSignInAccount extends Mock implements GoogleSignInAccount {
 void main() {
   late MockGoogleAuthService mockAuthService;
   late MockGoogleDriveService mockDriveService;
+  late MockICloudDriveService mockICloudService;
   late MockDeltaGenerationService mockDeltaService;
   late MockLocalDeltaQueue mockDeltaQueue;
   late MockSharedPreferences mockPrefs;
@@ -27,6 +28,7 @@ void main() {
   setUp(() {
     mockAuthService = MockGoogleAuthService();
     mockDriveService = MockGoogleDriveService();
+    mockICloudService = MockICloudDriveService();
     mockDeltaService = MockDeltaGenerationService();
     mockDeltaQueue = MockLocalDeltaQueue();
     mockPrefs = MockSharedPreferences();
@@ -41,6 +43,7 @@ void main() {
     controller = SyncController(
       mockAuthService,
       mockDriveService,
+      mockICloudService,
       mockDeltaService,
       mockDeltaQueue,
       mockPrefs,
@@ -55,7 +58,20 @@ void main() {
     expect(controller.state.status, SyncStatus.disconnected);
   });
 
-  test('Updates state when user signs in', () async {
+  test('Updates state when user signs in (Google Drive)', () async {
+    // Need to set provider to Google Drive first
+    when(mockPrefs.getString('sync_provider')).thenReturn('googleDrive');
+    when(mockPrefs.getString('sync_last_sync_time')).thenReturn(null);
+    // Re-init controller to pick up pref
+     controller = SyncController(
+      mockAuthService,
+      mockDriveService,
+      mockICloudService,
+      mockDeltaService,
+      mockDeltaQueue,
+      mockPrefs,
+    );
+
     final mockAccount = MockGoogleSignInAccount();
     authStreamController.add(mockAccount);
 
@@ -65,17 +81,19 @@ void main() {
     expect(controller.state.accountEmail, 'test@example.com');
   });
 
-  test('SyncNow calls services', () async {
+  test('SyncNow calls services (Google Drive)', () async {
     // Setup connected state
     final mockAccount = MockGoogleSignInAccount();
     // Simulate init check finding a user
     when(mockAuthService.isSignedIn()).thenAnswer((_) async => true);
     when(mockAuthService.currentUser).thenReturn(mockAccount);
+    when(mockPrefs.getString('sync_provider')).thenReturn('googleDrive');
 
     // Re-init to pick up connected state
     controller = SyncController(
       mockAuthService,
       mockDriveService,
+      mockICloudService,
       mockDeltaService,
       mockDeltaQueue,
       mockPrefs,

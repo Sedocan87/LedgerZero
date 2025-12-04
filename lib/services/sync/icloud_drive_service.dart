@@ -137,6 +137,11 @@ class ICloudDriveService {
       if (error.code == 'cloud_disabled') {
         return SyncException('iCloud is disabled', originalError: error);
       }
+      // Check for quota/storage issues
+      if (error.message?.toLowerCase().contains('quota') == true ||
+          error.message?.toLowerCase().contains('full') == true) {
+        return SyncException('iCloud storage is full', originalError: error);
+      }
       return SyncException(error.message ?? defaultMessage, originalError: error);
     }
     return SyncException(defaultMessage, originalError: error);

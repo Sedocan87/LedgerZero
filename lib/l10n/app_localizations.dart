@@ -1597,6 +1597,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sync failed'**
   String get syncFailed;
+
+  /// No description provided for @iCloudDriveSync.
+  ///
+  /// In en, this message translates to:
+  /// **'iCloud Drive Sync'**
+  String get iCloudDriveSync;
+
+  /// No description provided for @syncProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Provider'**
+  String get syncProvider;
+
+  /// No description provided for @connectToICloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to iCloud'**
+  String get connectToICloud;
+
+  /// No description provided for @providerNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get providerNone;
+
+  /// No description provided for @providerGoogleDrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Drive'**
+  String get providerGoogleDrive;
+
+  /// No description provided for @providerICloud.
+  ///
+  /// In en, this message translates to:
+  /// **'iCloud Drive'**
+  String get providerICloud;
+
+  /// No description provided for @disconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnect;
 }
 
 class _AppLocalizationsDelegate
