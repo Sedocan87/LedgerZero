@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:equatable/equatable.dart';
 
 enum SyncAction {
@@ -21,6 +24,7 @@ class SyncDelta extends Equatable {
   final Map<String, dynamic>? data;
   final int schemaVersion;
   final String appVersion;
+  final String? checksum;
 
   const SyncDelta({
     required this.timestamp,
@@ -31,6 +35,7 @@ class SyncDelta extends Equatable {
     this.data,
     this.schemaVersion = 1, // Default to 1 for backward compatibility/initial
     this.appVersion = '0.0.0',
+    this.checksum,
   });
 
   factory SyncDelta.fromJson(Map<String, dynamic> json) {
@@ -43,6 +48,7 @@ class SyncDelta extends Equatable {
       data: json['data'] as Map<String, dynamic>?,
       schemaVersion: json['schemaVersion'] as int? ?? 1,
       appVersion: json['appVersion'] as String? ?? '0.0.0',
+      checksum: json['checksum'] as String?,
     );
   }
 
@@ -56,7 +62,40 @@ class SyncDelta extends Equatable {
       'schemaVersion': schemaVersion,
       'appVersion': appVersion,
       if (data != null) 'data': data,
+      if (checksum != null) 'checksum': checksum,
     };
+  }
+
+  SyncDelta copyWith({String? checksum}) {
+    return SyncDelta(
+      timestamp: timestamp,
+      deviceUuid: deviceUuid,
+      sequence: sequence,
+      action: action,
+      tableName: tableName,
+      data: data,
+      schemaVersion: schemaVersion,
+      appVersion: appVersion,
+      checksum: checksum ?? this.checksum,
+    );
+  }
+
+  String calculateChecksum() {
+    // Exclude checksum field from calculation
+    final map = toJson();
+    map.remove('checksum');
+
+    final jsonString = jsonEncode(map);
+    final bytes = utf8.encode(jsonString);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  bool verifyChecksum() {
+    if (checksum == null) {
+      return false;
+    }
+    return checksum == calculateChecksum();
   }
 
   @override
@@ -69,5 +108,30 @@ class SyncDelta extends Equatable {
         data,
         schemaVersion,
         appVersion,
+        checksum,
       ];
+
+  void validate() {
+    if (tableName.isEmpty) {
+      throw const FormatException('SyncDelta validation failed: tableName is empty');
+    }
+    if (deviceUuid.isEmpty) {
+      throw const FormatException('SyncDelta validation failed: deviceUuid is empty');
+    }
+    // Allow for some clock skew (e.g. 5 minutes into the future), but generally future timestamps are bad.
+    if (timestamp.isAfter(DateTime.now().toUtc().add(const Duration(minutes: 5)))) {
+      throw FormatException('SyncDelta validation failed: timestamp is in the future (${timestamp.toIso8601String()})');
+    }
+
+    if (action == SyncAction.insert || action == SyncAction.update) {
+      if (data == null || data!.isEmpty) {
+        throw const FormatException('SyncDelta validation failed: data is missing for INSERT/UPDATE');
+      }
+    } else if (action == SyncAction.delete) {
+      // For delete, we expect at least the ID in the data
+      if (data == null || !data!.containsKey('id')) {
+        throw const FormatException('SyncDelta validation failed: ID is missing in data for DELETE');
+      }
+    }
+  }
 }

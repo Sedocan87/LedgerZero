@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/models/sync_delta.dart';
 import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
 import 'package:path_provider/path_provider.dart';
@@ -69,6 +70,13 @@ class LocalDeltaQueue {
     final filename = file.uri.pathSegments.last;
     final destination = '${uploadedDir.path}/$filename';
     await file.rename(destination);
+
+    // Trigger cleanup (fire and forget with error logging)
+    try {
+      await cleanupOldUploadedDeltas(const Duration(days: 30));
+    } catch (e, stack) {
+      Logger.error('Error cleaning up old uploaded deltas', e, stack);
+    }
   }
 
   Future<SyncDelta> readDelta(File file) async {
@@ -77,5 +85,33 @@ class LocalDeltaQueue {
     final jsonString = utf8.decode(bytes);
     final json = jsonDecode(jsonString) as Map<String, dynamic>;
     return SyncDelta.fromJson(json);
+  }
+
+  Future<int> cleanupOldUploadedDeltas(Duration retentionPeriod) async {
+    final uploadedDir = await _uploadedDir;
+    final entities = await uploadedDir.list().toList();
+    final now = DateTime.now();
+    int deletedCount = 0;
+
+    for (final entity in entities) {
+      if (entity is File && entity.path.endsWith('.json.gz')) {
+        final filename = entity.uri.pathSegments.last;
+        // Filename format: timestamp_deviceUUID_sequence.json.gz
+        // We handle .json.gz
+        final nameWithoutExt = filename.replaceAll('.json.gz', '');
+        final parts = nameWithoutExt.split('_');
+        if (parts.isNotEmpty) {
+          final timestampMs = int.tryParse(parts[0]);
+          if (timestampMs != null) {
+            final timestamp = DateTime.fromMillisecondsSinceEpoch(timestampMs);
+            if (now.difference(timestamp) > retentionPeriod) {
+              await entity.delete();
+              deletedCount++;
+            }
+          }
+        }
+      }
+    }
+    return deletedCount;
   }
 }

@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,10 +23,11 @@ void main() {
   setUp(() async {
     // Mock SharedPreferences
     SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
 
     db = AppDatabase(NativeDatabase.memory());
     mockQueue = MockLocalDeltaQueue();
-    service = DeltaGenerationService(db, mockQueue);
+    service = DeltaGenerationService(db, mockQueue, prefs);
 
     // Mock PackageInfo
     const channel = MethodChannel('dev.fluttercommunity.plus/package_info');
@@ -103,9 +104,13 @@ void main() {
     expect(catDelta.data!['name'], 'Updated Name');
     expect(catDelta.appVersion, '1.0.0');
     expect(catDelta.schemaVersion, 11);
+    expect(catDelta.checksum, isNotNull);
+    expect(catDelta.verifyChecksum(), isTrue);
 
     final groupDelta = captured.firstWhere((d) => (d as SyncDelta).tableName == 'category_groups') as SyncDelta;
     expect(groupDelta.action, SyncAction.insert);
+    expect(groupDelta.checksum, isNotNull);
+    expect(groupDelta.verifyChecksum(), isTrue);
 
     // Verify pending changes cleared
     expect(await db.pendingSyncChangesDao.getPendingChanges(), isEmpty);

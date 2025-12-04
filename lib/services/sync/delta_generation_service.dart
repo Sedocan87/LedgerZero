@@ -3,15 +3,31 @@ import 'package:ledger_zero/core/utils/device_utils.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/models/sync_delta.dart';
+import 'dart:async';
+
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class DeltaGenerationService {
   final AppDatabase _db;
   final LocalDeltaQueue _localDeltaQueue;
+  final SharedPreferences _prefs;
+  final _sequenceLock = _Mutex();
 
-  DeltaGenerationService(this._db, this._localDeltaQueue);
+  static const String _lastSequenceKey = 'last_delta_sequence';
+
+  DeltaGenerationService(this._db, this._localDeltaQueue, this._prefs);
+
+  Future<int> _getNextSequence() {
+    return _sequenceLock.protect(() async {
+      final current = _prefs.getInt(_lastSequenceKey) ?? 0;
+      final next = current + 1;
+      await _prefs.setInt(_lastSequenceKey, next);
+      return next;
+    });
+  }
 
   Future<void> processPendingChanges() async {
     final deviceUuid = await DeviceUtils.getDeviceUuid();
@@ -91,11 +107,10 @@ class DeltaGenerationService {
         }
 
         if (shouldGenerateDelta && effectiveAction != null) {
-          // Use the ID of the last change for the sequence number of the delta
-          // This ensures strict ordering if we have multiple deltas for different records.
-          final sequence = lastChange.id;
+          // Task 391: Use a strictly increasing sequence number per device
+          final sequence = await _getNextSequence();
 
-          final delta = SyncDelta(
+          var delta = SyncDelta(
             timestamp: DateTime.now().toUtc(),
             deviceUuid: deviceUuid,
             sequence: sequence,
@@ -105,6 +120,13 @@ class DeltaGenerationService {
             schemaVersion: schemaVersion,
             appVersion: appVersion,
           );
+
+          // Task 393: Calculate and set checksum
+          final checksum = delta.calculateChecksum();
+          delta = delta.copyWith(checksum: checksum);
+
+          // Task 392: Validate delta before enqueueing
+          delta.validate();
 
           // Task 386 & 387 & 389: Enqueue (writes compressed file)
           final file = await _localDeltaQueue.enqueue(delta);
@@ -135,6 +157,22 @@ class DeltaGenerationService {
         Logger.error('Error processing changes for $tableName:$recordId', e, stackTrace);
         // We do NOT delete the changes if an error occurs, so we can retry.
       }
+    }
+  }
+}
+
+class _Mutex {
+  Future<void> _last = Future.value();
+
+  Future<T> protect<T>(Future<T> Function() block) async {
+    final prev = _last;
+    final completer = Completer<void>();
+    _last = completer.future;
+    try {
+      await prev;
+      return await block();
+    } finally {
+      completer.complete();
     }
   }
 }
