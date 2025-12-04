@@ -19,6 +19,7 @@ import 'package:ledger_zero/presentation/screens/scheduled_transactions/schedule
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit_scheduled_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
@@ -97,6 +98,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
         routes: [
+          GoRoute(
+            path: 'sync',
+            name: 'sync-settings',
+            builder: (context, state) => const SyncSettingsScreen(),
+          ),
           GoRoute(
             path: 'recovery-key',
             name: 'recovery-key',

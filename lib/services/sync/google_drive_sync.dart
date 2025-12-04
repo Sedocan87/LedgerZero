@@ -1,19 +1,23 @@
 import 'dart:io';
 
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GoogleDriveService {
   final GoogleAuthService _authService;
+  final SharedPreferences _prefs;
   String? _syncFolderId;
+  static const String _folderIdKey = 'drive_sync_folder_id';
 
-  GoogleDriveService(this._authService);
+  GoogleDriveService(this._authService, this._prefs);
 
   Future<drive.DriveApi> _getDriveApi() async {
     final client = await _authService.getAuthenticatedClient();
     if (client == null) {
-      throw Exception('User not signed in');
+      throw SyncException('User not signed in');
     }
     return drive.DriveApi(client);
   }
@@ -21,6 +25,13 @@ class GoogleDriveService {
   Future<String> ensureSyncFolderExists() async {
     if (_syncFolderId != null) {
       return _syncFolderId!;
+    }
+
+    // Check persistent cache
+    final cachedId = _prefs.getString(_folderIdKey);
+    if (cachedId != null) {
+      _syncFolderId = cachedId;
+      return cachedId;
     }
 
     final api = await _getDriveApi();
@@ -35,6 +46,7 @@ class GoogleDriveService {
     syncFolderId ??= await _createFolder(api, 'Sync', parentId: rootFolderId);
 
     _syncFolderId = syncFolderId;
+    await _prefs.setString(_folderIdKey, syncFolderId);
     return syncFolderId;
   }
 
@@ -64,7 +76,7 @@ class GoogleDriveService {
   }
 
   Future<String?> uploadDelta(File localFile, String filename) async {
-    try {
+    return _retry(() async {
       final folderId = await ensureSyncFolderExists();
       final api = await _getDriveApi();
 
@@ -81,14 +93,11 @@ class GoogleDriveService {
 
       Logger.info('Uploaded delta: $filename (ID: ${result.id})');
       return result.id;
-    } catch (e) {
-      Logger.error('Failed to upload delta $filename: $e');
-      rethrow;
-    }
+    }, 'Failed to upload delta');
   }
 
   Future<File> downloadDelta(String fileId, String savePath) async {
-    try {
+    return _retry(() async {
       final api = await _getDriveApi();
       final media = await api.files.get(
         fileId,
@@ -105,14 +114,11 @@ class GoogleDriveService {
 
       Logger.info('Downloaded delta: $fileId to $savePath');
       return file;
-    } catch (e) {
-      Logger.error('Failed to download delta $fileId: $e');
-      rethrow;
-    }
+    }, 'Failed to download delta');
   }
 
   Future<List<drive.File>> listDeltas() async {
-    try {
+    return _retry(() async {
       final folderId = await ensureSyncFolderExists();
       final api = await _getDriveApi();
 
@@ -125,10 +131,58 @@ class GoogleDriveService {
       );
 
       return fileList.files ?? [];
-    } catch (e) {
-      Logger.error('Failed to list deltas: $e');
-      rethrow;
+    }, 'Failed to list deltas');
+  }
+
+  Future<T> _retry<T>(
+      Future<T> Function() operation, String errorMessage) async {
+    int attempts = 0;
+    while (true) {
+      try {
+        attempts++;
+        return await operation();
+      } catch (e) {
+        final syncEx = _handleError(e, errorMessage);
+        if (attempts >= 3 || !syncEx.isRetryable) {
+          Logger.error('$errorMessage: $e');
+          throw syncEx;
+        }
+        final delay = Duration(seconds: 1 << attempts);
+        Logger.info(
+            'Retrying operation in ${delay.inSeconds}s (Attempt $attempts)');
+        await Future.delayed(delay);
+      }
     }
+  }
+
+  SyncException _handleError(Object error, String defaultMessage) {
+    if (error is drive.DetailedApiRequestError) {
+      final status = error.status;
+      final isRetryable = status == 408 || // Request Timeout
+          status == 429 || // Too Many Requests
+          (status != null && status >= 500 && status < 600); // Server Error
+
+      String message = defaultMessage;
+      if (status == 403 &&
+          error.message?.contains('usageLimits') == true) {
+        message = 'Storage quota exceeded';
+      } else if (status == 401) {
+        message = 'Authentication failed. Please reconnect.';
+      }
+
+      return SyncException(
+        message,
+        originalError: error,
+        isRetryable: isRetryable,
+      );
+    } else if (error is SocketException) {
+      return SyncException(
+        'Network error. Please check your connection.',
+        originalError: error,
+        isRetryable: true,
+      );
+    }
+    return SyncException(defaultMessage, originalError: error);
   }
 
   Future<void> deleteFile(String fileId) async {

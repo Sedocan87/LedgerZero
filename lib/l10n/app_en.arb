@@ -412,5 +412,20 @@
   "encryptionStatus": "Encryption Status",
   "encrypted": "Encrypted",
   "notEncrypted": "Not Encrypted",
-  "secure": "Secure"
+  "secure": "Secure",
+  "syncSettings": "Sync Settings",
+  "connectToGoogleDrive": "Connect to Google Drive",
+  "disconnectFromGoogleDrive": "Disconnect",
+  "syncNow": "Sync Now",
+  "googleDriveSync": "Google Drive Sync",
+  "lastSynced": "Last Synced: {time}",
+  "@lastSynced": {
+      "placeholders": {
+          "time": {
+              "type": "String"
+          }
+      }
+  },
+  "syncSuccess": "Sync completed successfully",
+  "syncFailed": "Sync failed"
 }

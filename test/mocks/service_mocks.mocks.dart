@@ -3,14 +3,26 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i3;
+import 'dart:async' as _i5;
+import 'dart:io' as _i2;
 
-import 'package:ledger_zero/domain/entities/budget_template.dart' as _i5;
-import 'package:ledger_zero/domain/entities/category.dart' as _i4;
-import 'package:ledger_zero/domain/services/budgeting_service.dart' as _i2;
+import 'package:google_sign_in/google_sign_in.dart' as _i10;
+import 'package:googleapis/drive/v3.dart' as _i14;
+import 'package:googleapis_auth/googleapis_auth.dart' as _i11;
+import 'package:ledger_zero/data/models/sync_delta.dart' as _i3;
+import 'package:ledger_zero/domain/entities/budget_template.dart' as _i7;
+import 'package:ledger_zero/domain/entities/category.dart' as _i6;
+import 'package:ledger_zero/domain/services/budgeting_service.dart' as _i4;
 import 'package:ledger_zero/services/notifications/notification_service.dart'
-    as _i6;
+    as _i8;
+import 'package:ledger_zero/services/sync/delta_generation_service.dart'
+    as _i15;
+import 'package:ledger_zero/services/sync/google_auth_service.dart' as _i9;
+import 'package:ledger_zero/services/sync/google_drive_sync.dart' as _i12;
+import 'package:ledger_zero/services/sync/local_delta_queue.dart' as _i16;
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:mockito/src/dummies.dart' as _i13;
+import 'package:shared_preferences/shared_preferences.dart' as _i17;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -27,70 +39,80 @@ import 'package:mockito/mockito.dart' as _i1;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
+class _FakeFile_0 extends _i1.SmartFake implements _i2.File {
+  _FakeFile_0(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakeSyncDelta_1 extends _i1.SmartFake implements _i3.SyncDelta {
+  _FakeSyncDelta_1(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
 /// A class which mocks [BudgetingService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
+class MockBudgetingService extends _i1.Mock implements _i4.BudgetingService {
   MockBudgetingService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i3.Future<double> calculateTBB(DateTime? targetMonth) =>
+  _i5.Future<double> calculateTBB(DateTime? targetMonth) =>
       (super.noSuchMethod(
             Invocation.method(#calculateTBB, [targetMonth]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> calculateTotalIncomeForMonth(DateTime? month) =>
+  _i5.Future<double> calculateTotalIncomeForMonth(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#calculateTotalIncomeForMonth, [month]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> calculateTotalSpendingForMonth(DateTime? month) =>
+  _i5.Future<double> calculateTotalSpendingForMonth(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#calculateTotalSpendingForMonth, [month]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> calculateTotalBudgetedForMonth(DateTime? month) =>
+  _i5.Future<double> calculateTotalBudgetedForMonth(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#calculateTotalBudgetedForMonth, [month]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> calculateCategoryActivity(
+  _i5.Future<double> calculateCategoryActivity(
     String? categoryId,
     DateTime? month,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#calculateCategoryActivity, [categoryId, month]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> calculateCategoryAvailable(
+  _i5.Future<double> calculateCategoryAvailable(
     String? categoryId,
     DateTime? month,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#calculateCategoryAvailable, [categoryId, month]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<void> setCategoryBudgetedAmount(
+  _i5.Future<void> setCategoryBudgetedAmount(
     String? categoryId,
     double? amount,
     DateTime? month,
@@ -101,13 +123,13 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
               amount,
               month,
             ]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> moveMoney(
+  _i5.Future<void> moveMoney(
     String? fromCategoryId,
     String? toCategoryId,
     double? amount,
@@ -120,53 +142,53 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
               amount,
               month,
             ]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> initializeMonthBudgets(DateTime? month) =>
+  _i5.Future<void> initializeMonthBudgets(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#initializeMonthBudgets, [month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> createBudgetSnapshot(DateTime? month) =>
+  _i5.Future<void> createBudgetSnapshot(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#createBudgetSnapshot, [month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<double> calculateGoalTarget(
-    _i4.Category? category,
+  _i5.Future<double> calculateGoalTarget(
+    _i6.Category? category,
     DateTime? month,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#calculateGoalTarget, [category, month]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> calculateFundedPercentage(
-    _i4.Category? category,
+  _i5.Future<double> calculateFundedPercentage(
+    _i6.Category? category,
     DateTime? month,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#calculateFundedPercentage, [category, month]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> getAverageSpent(
+  _i5.Future<double> getAverageSpent(
     String? categoryId,
     int? months,
     DateTime? referenceMonth,
@@ -177,23 +199,23 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
               months,
               referenceMonth,
             ]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> getLastMonthSpent(
+  _i5.Future<double> getLastMonthSpent(
     String? categoryId,
     DateTime? currentMonth,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#getLastMonthSpent, [categoryId, currentMonth]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<double> getLastMonthBudgeted(
+  _i5.Future<double> getLastMonthBudgeted(
     String? categoryId,
     DateTime? currentMonth,
   ) =>
@@ -202,132 +224,132 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
               categoryId,
               currentMonth,
             ]),
-            returnValue: _i3.Future<double>.value(0.0),
+            returnValue: _i5.Future<double>.value(0.0),
           )
-          as _i3.Future<double>);
+          as _i5.Future<double>);
 
   @override
-  _i3.Future<void> autoAssign(
+  _i5.Future<void> autoAssign(
     String? categoryId,
     DateTime? month,
-    _i2.AutoAssignRule? rule,
+    _i4.AutoAssignRule? rule,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#autoAssign, [categoryId, month, rule]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> saveBudgetTemplate(String? name, DateTime? month) =>
+  _i5.Future<void> saveBudgetTemplate(String? name, DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#saveBudgetTemplate, [name, month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> applyBudgetTemplate(String? templateId, DateTime? month) =>
+  _i5.Future<void> applyBudgetTemplate(String? templateId, DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#applyBudgetTemplate, [templateId, month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<List<_i5.BudgetTemplate>> getAllTemplates() =>
+  _i5.Future<List<_i7.BudgetTemplate>> getAllTemplates() =>
       (super.noSuchMethod(
             Invocation.method(#getAllTemplates, []),
-            returnValue: _i3.Future<List<_i5.BudgetTemplate>>.value(
-              <_i5.BudgetTemplate>[],
+            returnValue: _i5.Future<List<_i7.BudgetTemplate>>.value(
+              <_i7.BudgetTemplate>[],
             ),
           )
-          as _i3.Future<List<_i5.BudgetTemplate>>);
+          as _i5.Future<List<_i7.BudgetTemplate>>);
 
   @override
-  _i3.Future<void> deleteTemplate(String? id) =>
+  _i5.Future<void> deleteTemplate(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteTemplate, [id]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> copyBudgetFromPreviousMonth(DateTime? month) =>
+  _i5.Future<void> copyBudgetFromPreviousMonth(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#copyBudgetFromPreviousMonth, [month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> resetBudget(DateTime? month) =>
+  _i5.Future<void> resetBudget(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#resetBudget, [month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<Map<String, Map<String, double>>>
+  _i5.Future<Map<String, Map<String, double>>>
   calculateBatchCategoryPerformance(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#calculateBatchCategoryPerformance, [month]),
-            returnValue: _i3.Future<Map<String, Map<String, double>>>.value(
+            returnValue: _i5.Future<Map<String, Map<String, double>>>.value(
               <String, Map<String, double>>{},
             ),
           )
-          as _i3.Future<Map<String, Map<String, double>>>);
+          as _i5.Future<Map<String, Map<String, double>>>);
 
   @override
-  _i3.Future<Map<String, double>> calculateBatchGoalTargets(
+  _i5.Future<Map<String, double>> calculateBatchGoalTargets(
     DateTime? month,
-    List<_i4.Category>? categories,
+    List<_i6.Category>? categories,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#calculateBatchGoalTargets, [month, categories]),
-            returnValue: _i3.Future<Map<String, double>>.value(
+            returnValue: _i5.Future<Map<String, double>>.value(
               <String, double>{},
             ),
           )
-          as _i3.Future<Map<String, double>>);
+          as _i5.Future<Map<String, double>>);
 }
 
 /// A class which mocks [NotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockNotificationService extends _i1.Mock
-    implements _i6.NotificationService {
+    implements _i8.NotificationService {
   MockNotificationService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i3.Future<void> initialize() =>
+  _i5.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> requestPermissions() =>
+  _i5.Future<void> requestPermissions() =>
       (super.noSuchMethod(
             Invocation.method(#requestPermissions, []),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> scheduleNotification({
+  _i5.Future<void> scheduleNotification({
     required int? id,
     required String? title,
     required String? body,
@@ -340,17 +362,332 @@ class MockNotificationService extends _i1.Mock
               #body: body,
               #scheduledDate: scheduledDate,
             }),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i3.Future<void> cancelNotification(int? id) =>
+  _i5.Future<void> cancelNotification(int? id) =>
       (super.noSuchMethod(
             Invocation.method(#cancelNotification, [id]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i3.Future<void>);
+          as _i5.Future<void>);
+}
+
+/// A class which mocks [GoogleAuthService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockGoogleAuthService extends _i1.Mock implements _i9.GoogleAuthService {
+  MockGoogleAuthService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Stream<_i10.GoogleSignInAccount?> get onCurrentUserChanged =>
+      (super.noSuchMethod(
+            Invocation.getter(#onCurrentUserChanged),
+            returnValue: _i5.Stream<_i10.GoogleSignInAccount?>.empty(),
+          )
+          as _i5.Stream<_i10.GoogleSignInAccount?>);
+
+  @override
+  _i5.Future<_i10.GoogleSignInAccount?> signIn() =>
+      (super.noSuchMethod(
+            Invocation.method(#signIn, []),
+            returnValue: _i5.Future<_i10.GoogleSignInAccount?>.value(),
+          )
+          as _i5.Future<_i10.GoogleSignInAccount?>);
+
+  @override
+  _i5.Future<_i10.GoogleSignInAccount?> signOut() =>
+      (super.noSuchMethod(
+            Invocation.method(#signOut, []),
+            returnValue: _i5.Future<_i10.GoogleSignInAccount?>.value(),
+          )
+          as _i5.Future<_i10.GoogleSignInAccount?>);
+
+  @override
+  _i5.Future<_i11.AuthClient?> getAuthenticatedClient() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAuthenticatedClient, []),
+            returnValue: _i5.Future<_i11.AuthClient?>.value(),
+          )
+          as _i5.Future<_i11.AuthClient?>);
+
+  @override
+  _i5.Future<bool> isSignedIn() =>
+      (super.noSuchMethod(
+            Invocation.method(#isSignedIn, []),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<void> signInSilently() =>
+      (super.noSuchMethod(
+            Invocation.method(#signInSilently, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+}
+
+/// A class which mocks [GoogleDriveService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockGoogleDriveService extends _i1.Mock
+    implements _i12.GoogleDriveService {
+  MockGoogleDriveService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<String> ensureSyncFolderExists() =>
+      (super.noSuchMethod(
+            Invocation.method(#ensureSyncFolderExists, []),
+            returnValue: _i5.Future<String>.value(
+              _i13.dummyValue<String>(
+                this,
+                Invocation.method(#ensureSyncFolderExists, []),
+              ),
+            ),
+          )
+          as _i5.Future<String>);
+
+  @override
+  _i5.Future<String?> uploadDelta(_i2.File? localFile, String? filename) =>
+      (super.noSuchMethod(
+            Invocation.method(#uploadDelta, [localFile, filename]),
+            returnValue: _i5.Future<String?>.value(),
+          )
+          as _i5.Future<String?>);
+
+  @override
+  _i5.Future<_i2.File> downloadDelta(String? fileId, String? savePath) =>
+      (super.noSuchMethod(
+            Invocation.method(#downloadDelta, [fileId, savePath]),
+            returnValue: _i5.Future<_i2.File>.value(
+              _FakeFile_0(
+                this,
+                Invocation.method(#downloadDelta, [fileId, savePath]),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.File>);
+
+  @override
+  _i5.Future<List<_i14.File>> listDeltas() =>
+      (super.noSuchMethod(
+            Invocation.method(#listDeltas, []),
+            returnValue: _i5.Future<List<_i14.File>>.value(<_i14.File>[]),
+          )
+          as _i5.Future<List<_i14.File>>);
+
+  @override
+  _i5.Future<void> deleteFile(String? fileId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteFile, [fileId]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+}
+
+/// A class which mocks [DeltaGenerationService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockDeltaGenerationService extends _i1.Mock
+    implements _i15.DeltaGenerationService {
+  MockDeltaGenerationService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<void> processPendingChanges() =>
+      (super.noSuchMethod(
+            Invocation.method(#processPendingChanges, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+}
+
+/// A class which mocks [LocalDeltaQueue].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockLocalDeltaQueue extends _i1.Mock implements _i16.LocalDeltaQueue {
+  MockLocalDeltaQueue() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<_i2.File> enqueue(_i3.SyncDelta? delta) =>
+      (super.noSuchMethod(
+            Invocation.method(#enqueue, [delta]),
+            returnValue: _i5.Future<_i2.File>.value(
+              _FakeFile_0(this, Invocation.method(#enqueue, [delta])),
+            ),
+          )
+          as _i5.Future<_i2.File>);
+
+  @override
+  _i5.Future<List<_i2.File>> getPendingDeltas() =>
+      (super.noSuchMethod(
+            Invocation.method(#getPendingDeltas, []),
+            returnValue: _i5.Future<List<_i2.File>>.value(<_i2.File>[]),
+          )
+          as _i5.Future<List<_i2.File>>);
+
+  @override
+  _i5.Future<void> markAsUploaded(_i2.File? file) =>
+      (super.noSuchMethod(
+            Invocation.method(#markAsUploaded, [file]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<_i3.SyncDelta> readDelta(_i2.File? file) =>
+      (super.noSuchMethod(
+            Invocation.method(#readDelta, [file]),
+            returnValue: _i5.Future<_i3.SyncDelta>.value(
+              _FakeSyncDelta_1(this, Invocation.method(#readDelta, [file])),
+            ),
+          )
+          as _i5.Future<_i3.SyncDelta>);
+
+  @override
+  _i5.Future<int> cleanupOldUploadedDeltas(Duration? retentionPeriod) =>
+      (super.noSuchMethod(
+            Invocation.method(#cleanupOldUploadedDeltas, [retentionPeriod]),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
+}
+
+/// A class which mocks [SharedPreferences].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockSharedPreferences extends _i1.Mock implements _i17.SharedPreferences {
+  MockSharedPreferences() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  Set<String> getKeys() =>
+      (super.noSuchMethod(
+            Invocation.method(#getKeys, []),
+            returnValue: <String>{},
+          )
+          as Set<String>);
+
+  @override
+  Object? get(String? key) =>
+      (super.noSuchMethod(Invocation.method(#get, [key])) as Object?);
+
+  @override
+  bool? getBool(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getBool, [key])) as bool?);
+
+  @override
+  int? getInt(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getInt, [key])) as int?);
+
+  @override
+  double? getDouble(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getDouble, [key])) as double?);
+
+  @override
+  String? getString(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getString, [key])) as String?);
+
+  @override
+  bool containsKey(String? key) =>
+      (super.noSuchMethod(
+            Invocation.method(#containsKey, [key]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  List<String>? getStringList(String? key) =>
+      (super.noSuchMethod(Invocation.method(#getStringList, [key]))
+          as List<String>?);
+
+  @override
+  _i5.Future<bool> setBool(String? key, bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setBool, [key, value]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> setInt(String? key, int? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setInt, [key, value]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> setDouble(String? key, double? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setDouble, [key, value]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> setString(String? key, String? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setString, [key, value]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> setStringList(String? key, List<String>? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setStringList, [key, value]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> remove(String? key) =>
+      (super.noSuchMethod(
+            Invocation.method(#remove, [key]),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> commit() =>
+      (super.noSuchMethod(
+            Invocation.method(#commit, []),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> clear() =>
+      (super.noSuchMethod(
+            Invocation.method(#clear, []),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
+
+  @override
+  _i5.Future<void> reload() =>
+      (super.noSuchMethod(
+            Invocation.method(#reload, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 }
