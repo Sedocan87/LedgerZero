@@ -165,6 +165,44 @@
   "search": "Search",
   "export": "Export",
   "import": "Import",
+  "importCsv": "Import CSV",
+  "selectFileToImport": "Select a CSV file to import",
+  "changeFile": "Change File",
+  "selectFile": "Select File",
+  "dateFormat": "Date Format",
+  "decimalSeparator": "Decimal Separator",
+  "dot": "Dot (.)",
+  "comma": "Comma (,)",
+  "negativeValuesAreOutflows": "Negative values are outflows",
+  "columnMapping": "Column Mapping",
+  "selectColumn": "Select Column",
+  "ignore": "Ignore",
+  "continueToReview": "Continue to Review",
+  "failedToParseCsv": "Failed to parse CSV: {error}",
+  "@failedToParseCsv": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorPickingFile": "Error picking file: {error}",
+  "@errorPickingFile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "validationPassed": "Validation passed (Simulated)",
+  "pleaseMapColumn": "Please map the \"{column}\" column",
+  "@pleaseMapColumn": {
+    "placeholders": {
+      "column": {
+        "type": "String"
+      }
+    }
+  },
   "budgeted": "Budgeted",
   "activity": "Activity",
   "available": "Available",

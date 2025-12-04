@@ -129,6 +129,12 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: Text(l10n.importCsv),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/import-csv'),
+          ),
+          ListTile(
             leading: const Icon(Icons.people),
             title: Text(l10n.payees),
             trailing: const Icon(Icons.chevron_right),
