@@ -79,4 +79,12 @@ class MockLocalDeltaQueue extends _i1.Mock implements _i4.LocalDeltaQueue {
             ),
           )
           as _i5.Future<_i3.SyncDelta>);
+
+  @override
+  _i5.Future<int> cleanupOldUploadedDeltas(Duration? retentionPeriod) =>
+      (super.noSuchMethod(
+            Invocation.method(#cleanupOldUploadedDeltas, [retentionPeriod]),
+            returnValue: _i5.Future<int>.value(0),
+          )
+          as _i5.Future<int>);
 }

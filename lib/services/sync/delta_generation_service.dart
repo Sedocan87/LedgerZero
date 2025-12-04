@@ -37,19 +37,77 @@ class DeltaGenerationService {
     final appVersion = packageInfo.version;
     final schemaVersion = _db.schemaVersion;
 
-    // Fetch changes - increased limit for better batching/squashing
-    final changes = await _db.pendingSyncChangesDao.getPendingChanges(limit: 100);
+    while (true) {
+      // Fetch changes - increased limit for better batching/squashing
+      final changes =
+          await _db.pendingSyncChangesDao.getPendingChanges(limit: 500);
 
-    if (changes.isEmpty) {
-      return;
-    }
+      if (changes.isEmpty) {
+        break;
+      }
 
-    // Task 390: Deduplication / Squashing
-    // Group changes by table and record ID
-    final groupedChanges = <String, List<PendingSyncChange>>{};
-    for (final change in changes) {
+      int processedChangesCount = 0;
+
+      // Task 390: Deduplication / Squashing
+      // Group changes by table and record ID
+      final groupedChanges = <String, List<PendingSyncChange>>{};
+      for (final change in changes) {
       final key = '${change.targetTableName}:${change.recordId}';
       groupedChanges.putIfAbsent(key, () => []).add(change);
+    }
+
+    // Step 1: Identify records to fetch
+    final fetchNeeded = <String, Set<String>>{};
+
+    for (final group in groupedChanges.values) {
+      if (group.isEmpty) {
+        continue;
+      }
+      // Sort by ID to ensure correct sequence
+      group.sort((a, b) => a.id.compareTo(b.id));
+
+      final first = group.first;
+      final last = group.last;
+
+      if (last.action == 'DELETE') {
+        // No data fetch needed (unless insert+delete which is skip, handled later)
+      } else {
+        // INSERT or UPDATE - need data
+        // Check for edge case: Insert + Delete is handled in loop, but if it's not delete, we need data.
+        fetchNeeded
+            .putIfAbsent(first.targetTableName, () => {})
+            .add(first.recordId);
+      }
+    }
+
+    // Step 2: Batch fetch
+    final fetchedData = <String, Map<String, Map<String, dynamic>>>{};
+
+    for (final table in fetchNeeded.keys) {
+      final ids = fetchNeeded[table]!.toList();
+      if (ids.isEmpty) {
+        continue;
+      }
+
+      // Split into chunks if too many IDs (sqlite limit is usually 999)
+      const chunkSize = 500;
+      for (var i = 0; i < ids.length; i += chunkSize) {
+        final chunk = ids.sublist(
+            i, i + chunkSize < ids.length ? i + chunkSize : ids.length);
+
+        final sql =
+            'SELECT * FROM $table WHERE id IN (${chunk.map((_) => '?').join(',')})';
+        final rows = await _db.customSelect(
+          sql,
+          variables: chunk.map((id) => Variable.withString(id)).toList(),
+          readsFrom: {},
+        ).get();
+
+        for (final row in rows) {
+          fetchedData.putIfAbsent(table, () => {})[row.data['id'].toString()] =
+              row.data;
+        }
+      }
     }
 
     for (final group in groupedChanges.values) {
@@ -57,8 +115,7 @@ class DeltaGenerationService {
         continue;
       }
 
-      // Sort by ID to ensure correct sequence
-      group.sort((a, b) => a.id.compareTo(b.id));
+      // Already sorted above
 
       final firstChange = group.first;
       final lastChange = group.last;
@@ -81,21 +138,16 @@ class DeltaGenerationService {
           }
         } else {
           // INSERT or UPDATE
-          // Fetch current data
-          final result = await _db.customSelect(
-            'SELECT * FROM $tableName WHERE id = ?',
-            variables: [Variable.withString(recordId)],
-            readsFrom: {},
-          ).getSingleOrNull();
+          // Fetch current data from cache
+          data = fetchedData[tableName]?[recordId];
 
-          if (result == null) {
+          if (data == null) {
             // Data missing despite last action being INSERT/UPDATE.
             // This suggests inconsistent state or concurrent deletion not yet picked up.
             // We will skip generating a delta but consume the changes to unblock the queue.
             Logger.warning('Data missing for $tableName:$recordId during delta generation. Skipping.');
             shouldGenerateDelta = false;
           } else {
-            data = result.data;
             // If the first action was INSERT, we treat the net result as INSERT.
             // Otherwise, it's an UPDATE.
             if (firstChange.action == 'INSERT') {
@@ -152,13 +204,21 @@ class DeltaGenerationService {
         for (final change in group) {
           await _db.pendingSyncChangesDao.deleteChange(change.id);
         }
-
+        processedChangesCount += group.length;
       } catch (e, stackTrace) {
-        Logger.error('Error processing changes for $tableName:$recordId', e, stackTrace);
+        Logger.error(
+            'Error processing changes for $tableName:$recordId', e, stackTrace);
         // We do NOT delete the changes if an error occurs, so we can retry.
       }
     }
+
+    if (processedChangesCount == 0) {
+      Logger.warning(
+          'ProcessPendingChanges: Fetched ${changes.length} changes but failed to process any. Breaking to avoid infinite loop.');
+      break;
+    }
   }
+}
 }
 
 class _Mutex {
