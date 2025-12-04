@@ -807,4 +807,30 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get secure => 'Secure';
+
+  @override
+  String get syncSettings => 'Sync Settings';
+
+  @override
+  String get connectToGoogleDrive => 'Connect to Google Drive';
+
+  @override
+  String get disconnectFromGoogleDrive => 'Disconnect';
+
+  @override
+  String get syncNow => 'Sync Now';
+
+  @override
+  String get googleDriveSync => 'Google Drive Sync';
+
+  @override
+  String lastSynced(String time) {
+    return 'Last Synced: $time';
+  }
+
+  @override
+  String get syncSuccess => 'Sync completed successfully';
+
+  @override
+  String get syncFailed => 'Sync failed';
 }

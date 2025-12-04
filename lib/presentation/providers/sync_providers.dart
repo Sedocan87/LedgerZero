@@ -3,6 +3,8 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
 import 'package:ledger_zero/services/sync/delta_generation_service.dart';
+import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
+import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
@@ -29,5 +31,22 @@ final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
 
 final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
   final authService = ref.watch(googleAuthServiceProvider);
-  return GoogleDriveService(authService);
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return GoogleDriveService(authService, prefs);
+});
+
+final syncControllerProvider =
+    StateNotifierProvider<SyncController, SyncState>((ref) {
+  final authService = ref.watch(googleAuthServiceProvider);
+  final driveService = ref.watch(googleDriveServiceProvider);
+  final deltaService = ref.watch(deltaGenerationServiceProvider);
+  final deltaQueue = ref.watch(localDeltaQueueProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return SyncController(
+    authService,
+    driveService,
+    deltaService,
+    deltaQueue,
+    prefs,
+  );
 });

@@ -58,6 +58,12 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.sync),
+            title: Text(l10n.syncSettings),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/sync'),
+          ),
+          ListTile(
             leading: const Icon(Icons.security),
             title: Text(l10n.recoveryKey),
             trailing: const Icon(Icons.chevron_right),

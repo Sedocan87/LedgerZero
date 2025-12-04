@@ -1549,6 +1549,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Secure'**
   String get secure;
+
+  /// No description provided for @syncSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Settings'**
+  String get syncSettings;
+
+  /// No description provided for @connectToGoogleDrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to Google Drive'**
+  String get connectToGoogleDrive;
+
+  /// No description provided for @disconnectFromGoogleDrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnectFromGoogleDrive;
+
+  /// No description provided for @syncNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Now'**
+  String get syncNow;
+
+  /// No description provided for @googleDriveSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Drive Sync'**
+  String get googleDriveSync;
+
+  /// No description provided for @lastSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Synced: {time}'**
+  String lastSynced(String time);
+
+  /// No description provided for @syncSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync completed successfully'**
+  String get syncSuccess;
+
+  /// No description provided for @syncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed'**
+  String get syncFailed;
 }
 
 class _AppLocalizationsDelegate

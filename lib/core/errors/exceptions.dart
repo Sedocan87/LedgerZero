@@ -16,3 +16,14 @@ class DatabaseException implements Exception {
   @override
   String toString() => 'DatabaseException: $message ${originalError != null ? "($originalError)" : ""}';
 }
+
+class SyncException implements Exception {
+  final String message;
+  final Object? originalError;
+  final bool isRetryable;
+
+  SyncException(this.message, {this.originalError, this.isRetryable = false});
+
+  @override
+  String toString() => 'SyncException: $message ${originalError != null ? "($originalError)" : ""}';
+}
