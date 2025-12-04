@@ -60,6 +60,7 @@ dependencies:
   extension_google_sign_in_as_googleapis_auth: ^2.0.12
   synchronized: ^3.4.0
   connectivity_plus: ^7.0.0
+  fuzzy: ^0.5.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

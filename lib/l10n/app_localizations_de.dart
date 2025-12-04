@@ -857,4 +857,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get offlineMode => 'Offline-Modus';
+
+  @override
+  String get syncOnlyOnWifi => 'Sync only on Wi-Fi';
 }
