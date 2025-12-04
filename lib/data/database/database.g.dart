@@ -5569,6 +5569,361 @@ class SyncLogCompanion extends UpdateCompanion<SyncLogData> {
   }
 }
 
+class $PendingSyncChangesTable extends PendingSyncChanges
+    with TableInfo<$PendingSyncChangesTable, PendingSyncChange> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PendingSyncChangesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _targetTableNameMeta = const VerificationMeta(
+    'targetTableName',
+  );
+  @override
+  late final GeneratedColumn<String> targetTableName = GeneratedColumn<String>(
+    'table_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordIdMeta = const VerificationMeta(
+    'recordId',
+  );
+  @override
+  late final GeneratedColumn<String> recordId = GeneratedColumn<String>(
+    'record_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _actionMeta = const VerificationMeta('action');
+  @override
+  late final GeneratedColumn<String> action = GeneratedColumn<String>(
+    'action',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _changedAtMeta = const VerificationMeta(
+    'changedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> changedAt = GeneratedColumn<DateTime>(
+    'changed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    targetTableName,
+    recordId,
+    action,
+    changedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pending_sync_changes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PendingSyncChange> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('table_name')) {
+      context.handle(
+        _targetTableNameMeta,
+        targetTableName.isAcceptableOrUnknown(
+          data['table_name']!,
+          _targetTableNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetTableNameMeta);
+    }
+    if (data.containsKey('record_id')) {
+      context.handle(
+        _recordIdMeta,
+        recordId.isAcceptableOrUnknown(data['record_id']!, _recordIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordIdMeta);
+    }
+    if (data.containsKey('action')) {
+      context.handle(
+        _actionMeta,
+        action.isAcceptableOrUnknown(data['action']!, _actionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_actionMeta);
+    }
+    if (data.containsKey('changed_at')) {
+      context.handle(
+        _changedAtMeta,
+        changedAt.isAcceptableOrUnknown(data['changed_at']!, _changedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PendingSyncChange map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PendingSyncChange(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      targetTableName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}table_name'],
+      )!,
+      recordId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_id'],
+      )!,
+      action: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}action'],
+      )!,
+      changedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}changed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PendingSyncChangesTable createAlias(String alias) {
+    return $PendingSyncChangesTable(attachedDatabase, alias);
+  }
+}
+
+class PendingSyncChange extends DataClass
+    implements Insertable<PendingSyncChange> {
+  final int id;
+  final String targetTableName;
+  final String recordId;
+  final String action;
+  final DateTime changedAt;
+  const PendingSyncChange({
+    required this.id,
+    required this.targetTableName,
+    required this.recordId,
+    required this.action,
+    required this.changedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['table_name'] = Variable<String>(targetTableName);
+    map['record_id'] = Variable<String>(recordId);
+    map['action'] = Variable<String>(action);
+    map['changed_at'] = Variable<DateTime>(changedAt);
+    return map;
+  }
+
+  PendingSyncChangesCompanion toCompanion(bool nullToAbsent) {
+    return PendingSyncChangesCompanion(
+      id: Value(id),
+      targetTableName: Value(targetTableName),
+      recordId: Value(recordId),
+      action: Value(action),
+      changedAt: Value(changedAt),
+    );
+  }
+
+  factory PendingSyncChange.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PendingSyncChange(
+      id: serializer.fromJson<int>(json['id']),
+      targetTableName: serializer.fromJson<String>(json['targetTableName']),
+      recordId: serializer.fromJson<String>(json['recordId']),
+      action: serializer.fromJson<String>(json['action']),
+      changedAt: serializer.fromJson<DateTime>(json['changedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'targetTableName': serializer.toJson<String>(targetTableName),
+      'recordId': serializer.toJson<String>(recordId),
+      'action': serializer.toJson<String>(action),
+      'changedAt': serializer.toJson<DateTime>(changedAt),
+    };
+  }
+
+  PendingSyncChange copyWith({
+    int? id,
+    String? targetTableName,
+    String? recordId,
+    String? action,
+    DateTime? changedAt,
+  }) => PendingSyncChange(
+    id: id ?? this.id,
+    targetTableName: targetTableName ?? this.targetTableName,
+    recordId: recordId ?? this.recordId,
+    action: action ?? this.action,
+    changedAt: changedAt ?? this.changedAt,
+  );
+  PendingSyncChange copyWithCompanion(PendingSyncChangesCompanion data) {
+    return PendingSyncChange(
+      id: data.id.present ? data.id.value : this.id,
+      targetTableName: data.targetTableName.present
+          ? data.targetTableName.value
+          : this.targetTableName,
+      recordId: data.recordId.present ? data.recordId.value : this.recordId,
+      action: data.action.present ? data.action.value : this.action,
+      changedAt: data.changedAt.present ? data.changedAt.value : this.changedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingSyncChange(')
+          ..write('id: $id, ')
+          ..write('targetTableName: $targetTableName, ')
+          ..write('recordId: $recordId, ')
+          ..write('action: $action, ')
+          ..write('changedAt: $changedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, targetTableName, recordId, action, changedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PendingSyncChange &&
+          other.id == this.id &&
+          other.targetTableName == this.targetTableName &&
+          other.recordId == this.recordId &&
+          other.action == this.action &&
+          other.changedAt == this.changedAt);
+}
+
+class PendingSyncChangesCompanion extends UpdateCompanion<PendingSyncChange> {
+  final Value<int> id;
+  final Value<String> targetTableName;
+  final Value<String> recordId;
+  final Value<String> action;
+  final Value<DateTime> changedAt;
+  const PendingSyncChangesCompanion({
+    this.id = const Value.absent(),
+    this.targetTableName = const Value.absent(),
+    this.recordId = const Value.absent(),
+    this.action = const Value.absent(),
+    this.changedAt = const Value.absent(),
+  });
+  PendingSyncChangesCompanion.insert({
+    this.id = const Value.absent(),
+    required String targetTableName,
+    required String recordId,
+    required String action,
+    this.changedAt = const Value.absent(),
+  }) : targetTableName = Value(targetTableName),
+       recordId = Value(recordId),
+       action = Value(action);
+  static Insertable<PendingSyncChange> custom({
+    Expression<int>? id,
+    Expression<String>? targetTableName,
+    Expression<String>? recordId,
+    Expression<String>? action,
+    Expression<DateTime>? changedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (targetTableName != null) 'table_name': targetTableName,
+      if (recordId != null) 'record_id': recordId,
+      if (action != null) 'action': action,
+      if (changedAt != null) 'changed_at': changedAt,
+    });
+  }
+
+  PendingSyncChangesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? targetTableName,
+    Value<String>? recordId,
+    Value<String>? action,
+    Value<DateTime>? changedAt,
+  }) {
+    return PendingSyncChangesCompanion(
+      id: id ?? this.id,
+      targetTableName: targetTableName ?? this.targetTableName,
+      recordId: recordId ?? this.recordId,
+      action: action ?? this.action,
+      changedAt: changedAt ?? this.changedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (targetTableName.present) {
+      map['table_name'] = Variable<String>(targetTableName.value);
+    }
+    if (recordId.present) {
+      map['record_id'] = Variable<String>(recordId.value);
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(action.value);
+    }
+    if (changedAt.present) {
+      map['changed_at'] = Variable<DateTime>(changedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingSyncChangesCompanion(')
+          ..write('id: $id, ')
+          ..write('targetTableName: $targetTableName, ')
+          ..write('recordId: $recordId, ')
+          ..write('action: $action, ')
+          ..write('changedAt: $changedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5585,6 +5940,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ScheduledTransactionsTable scheduledTransactions =
       $ScheduledTransactionsTable(this);
   late final $SyncLogTable syncLog = $SyncLogTable(this);
+  late final $PendingSyncChangesTable pendingSyncChanges =
+      $PendingSyncChangesTable(this);
   late final Index idxBudgetsMonth = Index(
     'idx_budgets_month',
     'CREATE INDEX idx_budgets_month ON budgets (month)',
@@ -5633,6 +5990,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final TransactionsDao transactionsDao = TransactionsDao(
     this as AppDatabase,
   );
+  late final PendingSyncChangesDao pendingSyncChangesDao =
+      PendingSyncChangesDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5648,6 +6007,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     reportNotes,
     scheduledTransactions,
     syncLog,
+    pendingSyncChanges,
     idxBudgetsMonth,
     idxTransactionsAccount,
     idxTransactionsDate,
@@ -10799,6 +11159,215 @@ typedef $$SyncLogTableProcessedTableManager =
       SyncLogData,
       PrefetchHooks Function()
     >;
+typedef $$PendingSyncChangesTableCreateCompanionBuilder =
+    PendingSyncChangesCompanion Function({
+      Value<int> id,
+      required String targetTableName,
+      required String recordId,
+      required String action,
+      Value<DateTime> changedAt,
+    });
+typedef $$PendingSyncChangesTableUpdateCompanionBuilder =
+    PendingSyncChangesCompanion Function({
+      Value<int> id,
+      Value<String> targetTableName,
+      Value<String> recordId,
+      Value<String> action,
+      Value<DateTime> changedAt,
+    });
+
+class $$PendingSyncChangesTableFilterComposer
+    extends Composer<_$AppDatabase, $PendingSyncChangesTable> {
+  $$PendingSyncChangesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetTableName => $composableBuilder(
+    column: $table.targetTableName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordId => $composableBuilder(
+    column: $table.recordId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get changedAt => $composableBuilder(
+    column: $table.changedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PendingSyncChangesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PendingSyncChangesTable> {
+  $$PendingSyncChangesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetTableName => $composableBuilder(
+    column: $table.targetTableName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordId => $composableBuilder(
+    column: $table.recordId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get action => $composableBuilder(
+    column: $table.action,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get changedAt => $composableBuilder(
+    column: $table.changedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PendingSyncChangesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PendingSyncChangesTable> {
+  $$PendingSyncChangesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get targetTableName => $composableBuilder(
+    column: $table.targetTableName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recordId =>
+      $composableBuilder(column: $table.recordId, builder: (column) => column);
+
+  GeneratedColumn<String> get action =>
+      $composableBuilder(column: $table.action, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get changedAt =>
+      $composableBuilder(column: $table.changedAt, builder: (column) => column);
+}
+
+class $$PendingSyncChangesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PendingSyncChangesTable,
+          PendingSyncChange,
+          $$PendingSyncChangesTableFilterComposer,
+          $$PendingSyncChangesTableOrderingComposer,
+          $$PendingSyncChangesTableAnnotationComposer,
+          $$PendingSyncChangesTableCreateCompanionBuilder,
+          $$PendingSyncChangesTableUpdateCompanionBuilder,
+          (
+            PendingSyncChange,
+            BaseReferences<
+              _$AppDatabase,
+              $PendingSyncChangesTable,
+              PendingSyncChange
+            >,
+          ),
+          PendingSyncChange,
+          PrefetchHooks Function()
+        > {
+  $$PendingSyncChangesTableTableManager(
+    _$AppDatabase db,
+    $PendingSyncChangesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PendingSyncChangesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PendingSyncChangesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PendingSyncChangesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> targetTableName = const Value.absent(),
+                Value<String> recordId = const Value.absent(),
+                Value<String> action = const Value.absent(),
+                Value<DateTime> changedAt = const Value.absent(),
+              }) => PendingSyncChangesCompanion(
+                id: id,
+                targetTableName: targetTableName,
+                recordId: recordId,
+                action: action,
+                changedAt: changedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String targetTableName,
+                required String recordId,
+                required String action,
+                Value<DateTime> changedAt = const Value.absent(),
+              }) => PendingSyncChangesCompanion.insert(
+                id: id,
+                targetTableName: targetTableName,
+                recordId: recordId,
+                action: action,
+                changedAt: changedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PendingSyncChangesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PendingSyncChangesTable,
+      PendingSyncChange,
+      $$PendingSyncChangesTableFilterComposer,
+      $$PendingSyncChangesTableOrderingComposer,
+      $$PendingSyncChangesTableAnnotationComposer,
+      $$PendingSyncChangesTableCreateCompanionBuilder,
+      $$PendingSyncChangesTableUpdateCompanionBuilder,
+      (
+        PendingSyncChange,
+        BaseReferences<
+          _$AppDatabase,
+          $PendingSyncChangesTable,
+          PendingSyncChange
+        >,
+      ),
+      PendingSyncChange,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10823,4 +11392,6 @@ class $AppDatabaseManager {
       $$ScheduledTransactionsTableTableManager(_db, _db.scheduledTransactions);
   $$SyncLogTableTableManager get syncLog =>
       $$SyncLogTableTableManager(_db, _db.syncLog);
+  $$PendingSyncChangesTableTableManager get pendingSyncChanges =>
+      $$PendingSyncChangesTableTableManager(_db, _db.pendingSyncChanges);
 }

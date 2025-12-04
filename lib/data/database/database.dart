@@ -10,6 +10,7 @@ import 'package:ledger_zero/data/database/tables/report_notes.dart';
 import 'package:ledger_zero/data/database/tables/scheduled_transactions.dart';
 import 'package:ledger_zero/data/database/tables/sync_log.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
+import 'package:ledger_zero/data/database/tables/pending_sync_changes.dart';
 
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/database/daos/budgets_dao.dart';
@@ -20,6 +21,7 @@ import 'package:ledger_zero/data/database/daos/report_notes_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
+import 'package:ledger_zero/data/database/daos/pending_sync_changes_dao.dart';
 import 'package:uuid/uuid.dart';
 
 part 'database.g.dart';
@@ -36,6 +38,7 @@ part 'database.g.dart';
     ReportNotes,
     ScheduledTransactions,
     SyncLog,
+    PendingSyncChanges,
   ],
   daos: [
     AccountsDao,
@@ -47,6 +50,7 @@ part 'database.g.dart';
     ScheduledTransactionsDao,
     SyncLogDao,
     TransactionsDao,
+    PendingSyncChangesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -62,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -70,8 +74,13 @@ class AppDatabase extends _$AppDatabase {
       onCreate: (Migrator m) async {
         await m.createAll();
         await _seedDefaultCategories();
+        await _createSyncTriggers();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 11) {
+          await m.createTable(pendingSyncChanges);
+          await _createSyncTriggers();
+        }
         if (from < 10) {
           // Add interval and occurrenceCount to scheduled_transactions
           await m.addColumn(scheduledTransactions, scheduledTransactions.interval);
@@ -124,6 +133,52 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('PRAGMA foreign_keys = ON');
       },
     );
+  }
+
+  Future<void> _createSyncTriggers() async {
+    final tables = [
+      'accounts',
+      'categories',
+      'category_groups',
+      'transactions',
+      'payees',
+      'budgets',
+      'scheduled_transactions',
+      'budget_templates',
+      'report_notes',
+    ];
+
+    for (final table in tables) {
+      // INSERT
+      await customStatement('''
+        CREATE TRIGGER IF NOT EXISTS ${table}_insert_trigger
+        AFTER INSERT ON $table
+        BEGIN
+          INSERT INTO pending_sync_changes (table_name, record_id, action)
+          VALUES ('$table', NEW.id, 'INSERT');
+        END;
+      ''');
+
+      // UPDATE
+      await customStatement('''
+        CREATE TRIGGER IF NOT EXISTS ${table}_update_trigger
+        AFTER UPDATE ON $table
+        BEGIN
+          INSERT INTO pending_sync_changes (table_name, record_id, action)
+          VALUES ('$table', NEW.id, 'UPDATE');
+        END;
+      ''');
+
+      // DELETE
+      await customStatement('''
+        CREATE TRIGGER IF NOT EXISTS ${table}_delete_trigger
+        AFTER DELETE ON $table
+        BEGIN
+          INSERT INTO pending_sync_changes (table_name, record_id, action)
+          VALUES ('$table', OLD.id, 'DELETE');
+        END;
+      ''');
+    }
   }
 
   /// Checks if the database is currently using encryption (SQLCipher).
