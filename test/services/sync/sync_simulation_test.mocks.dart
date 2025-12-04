@@ -8,6 +8,9 @@ import 'dart:io' as _i2;
 
 import 'package:googleapis/drive/v3.dart' as _i6;
 import 'package:icloud_storage/icloud_storage.dart' as _i9;
+import 'package:ledger_zero/services/notifications/notification_service.dart'
+    as _i12;
+import 'package:ledger_zero/services/sync/connectivity_service.dart' as _i11;
 import 'package:ledger_zero/services/sync/google_drive_sync.dart' as _i3;
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart' as _i7;
 import 'package:ledger_zero/services/sync/sync_status.dart' as _i8;
@@ -297,6 +300,103 @@ class MockSharedPreferences extends _i1.Mock implements _i10.SharedPreferences {
   _i4.Future<void> reload() =>
       (super.noSuchMethod(
             Invocation.method(#reload, []),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+}
+
+/// A class which mocks [ConnectivityService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockConnectivityService extends _i1.Mock
+    implements _i11.ConnectivityService {
+  MockConnectivityService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Stream<_i11.ConnectionStatus> get connectionStatusStream =>
+      (super.noSuchMethod(
+            Invocation.getter(#connectionStatusStream),
+            returnValue: _i4.Stream<_i11.ConnectionStatus>.empty(),
+          )
+          as _i4.Stream<_i11.ConnectionStatus>);
+
+  @override
+  _i4.Future<bool> get isConnected =>
+      (super.noSuchMethod(
+            Invocation.getter(#isConnected),
+            returnValue: _i4.Future<bool>.value(false),
+          )
+          as _i4.Future<bool>);
+}
+
+/// A class which mocks [NotificationService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockNotificationService extends _i1.Mock
+    implements _i12.NotificationService {
+  MockNotificationService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i4.Future<void> initialize() =>
+      (super.noSuchMethod(
+            Invocation.method(#initialize, []),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> requestPermissions() =>
+      (super.noSuchMethod(
+            Invocation.method(#requestPermissions, []),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> scheduleNotification({
+    required int? id,
+    required String? title,
+    required String? body,
+    required DateTime? scheduledDate,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#scheduleNotification, [], {
+              #id: id,
+              #title: title,
+              #body: body,
+              #scheduledDate: scheduledDate,
+            }),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> cancelNotification(int? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#cancelNotification, [id]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> showSyncFailureNotification({
+    required String? title,
+    required String? body,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#showSyncFailureNotification, [], {
+              #title: title,
+              #body: body,
+            }),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
 import 'package:ledger_zero/presentation/widgets/home/home_empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
@@ -43,10 +44,12 @@ class HomeScreen extends ConsumerWidget {
                 final now = DateTime.now();
                 final currentMonth = DateTime(now.year, now.month);
 
+                // Trigger sync alongside data refresh
                 await Future.wait([
-                   ref.refresh(tbbProvider(currentMonth).future),
-                   ref.refresh(monthlyStatsProvider(currentMonth).future),
-                   ref.refresh(recentTransactionsProvider.future),
+                  ref.refresh(tbbProvider(currentMonth).future),
+                  ref.refresh(monthlyStatsProvider(currentMonth).future),
+                  ref.refresh(recentTransactionsProvider.future),
+                  ref.read(syncControllerProvider.notifier).syncNow(),
                 ]);
               },
               child: const SingleChildScrollView(

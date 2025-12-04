@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/connectivity_provider.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
 import 'package:ledger_zero/services/sync/delta_generation_service.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
@@ -55,9 +57,13 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
   final driveService = ref.watch(googleDriveServiceProvider);
   final iCloudService = ref.watch(iCloudDriveServiceProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
+  final connectivity = ref.watch(connectivityServiceProvider);
+  final notificationService = ref.watch(notificationServiceProvider);
 
-  return SyncEngine(
-      genService, queue, replayService, driveService, iCloudService, prefs);
+  final engine = SyncEngine(genService, queue, replayService, driveService,
+      iCloudService, prefs, connectivity, notificationService);
+  ref.onDispose(engine.dispose);
+  return engine;
 });
 
 final syncControllerProvider =

@@ -854,4 +854,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get disconnect => 'Disconnect';
+
+  @override
+  String get offlineMode => 'Offline-Modus';
 }
