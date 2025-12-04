@@ -90,6 +90,36 @@ void main() {
     final uploadedFile = File('${dir.path}/uploaded/test.json.gz');
     expect(await uploadedFile.exists(), isTrue);
   });
+
+  test('cleanupOldUploadedDeltas removes old files', () async {
+    final dir = Directory('${tempDir.path}/deltas/uploaded');
+    await dir.create(recursive: true);
+
+    final now = DateTime.now();
+    final oldTime = now.subtract(const Duration(days: 31));
+    final newTime = now.subtract(const Duration(days: 1));
+
+    // Old file
+    final oldFilename = '${oldTime.millisecondsSinceEpoch}_uuid_1.json.gz';
+    final oldFile = File('${dir.path}/$oldFilename');
+    await oldFile.create();
+
+    // New file
+    final newFilename = '${newTime.millisecondsSinceEpoch}_uuid_2.json.gz';
+    final newFile = File('${dir.path}/$newFilename');
+    await newFile.create();
+
+    // Random file that shouldn't be touched (bad format)
+    final otherFile = File('${dir.path}/other.txt');
+    await otherFile.create();
+
+    final count = await queue.cleanupOldUploadedDeltas(const Duration(days: 30));
+
+    expect(count, 1);
+    expect(await oldFile.exists(), isFalse);
+    expect(await newFile.exists(), isTrue);
+    expect(await otherFile.exists(), isTrue);
+  });
 }
 
 class FakePathProviderPlatform extends PathProviderPlatform {
