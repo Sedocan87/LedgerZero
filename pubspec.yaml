@@ -56,6 +56,8 @@ dependencies:
   timezone: ^0.10.1
   pointycastle: ^4.0.0
   crypto: ^3.0.7
+  google_sign_in: ^6.2.1
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12
 dev_dependencies:
   flutter_test:
     sdk: flutter
