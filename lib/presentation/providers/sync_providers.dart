@@ -3,6 +3,8 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
 import 'package:ledger_zero/services/sync/delta_generation_service.dart';
+import 'package:ledger_zero/services/sync/google_auth_service.dart';
+import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
 
 final deltaFilenameGeneratorProvider = Provider<DeltaFilenameGenerator>((ref) {
@@ -19,4 +21,13 @@ final deltaGenerationServiceProvider = Provider<DeltaGenerationService>((ref) {
   final localDeltaQueue = ref.watch(localDeltaQueueProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
   return DeltaGenerationService(db, localDeltaQueue, prefs);
+});
+
+final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
+  return GoogleAuthService();
+});
+
+final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
+  final authService = ref.watch(googleAuthServiceProvider);
+  return GoogleDriveService(authService);
 });
