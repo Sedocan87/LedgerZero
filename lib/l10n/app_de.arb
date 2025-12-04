@@ -197,5 +197,6 @@
   "noScheduledTransactions": "Keine geplanten Transaktionen",
   "createScheduledTransactionDescription": "Erstellen Sie geplante Transaktionen für wiederkehrende Rechnungen oder Einnahmen.",
   "skip": "Überspringen",
-  "upcoming": "Anstehend"
+  "upcoming": "Anstehend",
+  "offlineMode": "Offline-Modus"
 }

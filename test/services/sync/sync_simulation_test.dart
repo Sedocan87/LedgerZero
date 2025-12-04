@@ -9,6 +9,8 @@ import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
+import 'package:ledger_zero/services/sync/connectivity_service.dart';
+import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,7 +23,9 @@ import 'package:flutter/services.dart';
 @GenerateMocks([
   GoogleDriveService,
   ICloudDriveService,
-  SharedPreferences
+  SharedPreferences,
+  ConnectivityService,
+  NotificationService
 ])
 import 'sync_simulation_test.mocks.dart';
 
@@ -113,7 +117,13 @@ void main() {
      final deltaGen = DeltaGenerationService(db, queue, devicePrefs, deviceUuid: deviceUuid);
      final deltaReplay = DeltaReplayService(db, queue);
 
-     return SyncEngine(deltaGen, queue, deltaReplay, mockDrive, mockICloud, devicePrefs);
+     final mockConnectivity = MockConnectivityService();
+     when(mockConnectivity.isConnected).thenAnswer((_) async => true);
+     when(mockConnectivity.connectionStatusStream).thenAnswer((_) => Stream.value(ConnectionStatus.online));
+
+     final mockNotification = MockNotificationService();
+
+     return SyncEngine(deltaGen, queue, deltaReplay, mockDrive, mockICloud, devicePrefs, mockConnectivity, mockNotification);
   }
 
   test('Task 456: Multi-device Sync', () async {

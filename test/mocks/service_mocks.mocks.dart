@@ -378,6 +378,21 @@ class MockNotificationService extends _i1.Mock
             returnValueForMissingStub: _i5.Future<void>.value(),
           )
           as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> showSyncFailureNotification({
+    required String? title,
+    required String? body,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#showSyncFailureNotification, [], {
+              #title: title,
+              #body: body,
+            }),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 }
 
 /// A class which mocks [GoogleAuthService].

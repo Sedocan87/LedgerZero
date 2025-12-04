@@ -9,6 +9,8 @@ import 'package:ledger_zero/services/sync/delta_replay_service.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
+import 'package:ledger_zero/services/sync/connectivity_service.dart';
+import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:synchronized/synchronized.dart';
@@ -21,6 +23,8 @@ class SyncEngine {
   final GoogleDriveService _googleDriveService;
   final ICloudDriveService _iCloudService;
   final SharedPreferences _prefs;
+  final ConnectivityService _connectivityService;
+  final NotificationService _notificationService;
 
   final _statusController = StreamController<SyncState>.broadcast();
   Stream<SyncState> get statusStream => _statusController.stream;
@@ -28,6 +32,7 @@ class SyncEngine {
 
   final Lock _lock = Lock();
   Timer? _backgroundTimer;
+  StreamSubscription<ConnectionStatus>? _connectivitySubscription;
   bool _isPaused = false;
   bool _isCancelled = false; // Task 454: Cancellation flag
   int _retryCount = 0;
@@ -40,7 +45,23 @@ class SyncEngine {
     this._googleDriveService,
     this._iCloudService,
     this._prefs,
-  );
+    this._connectivityService,
+    this._notificationService,
+  ) {
+    _connectivitySubscription =
+        _connectivityService.connectionStatusStream.listen((status) {
+      if (status == ConnectionStatus.online) {
+        Logger.info('Network restored. Triggering sync.');
+        sync(background: true);
+      }
+    });
+  }
+
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    _backgroundTimer?.cancel();
+    _statusController.close();
+  }
 
   // Task 448: Sync Pause
   bool get isPaused => _isPaused;
@@ -84,6 +105,10 @@ class SyncEngine {
   void _scheduleRetry() {
     if (_retryCount >= _maxRetries) {
       Logger.error('Max sync retries reached. Giving up until next scheduled sync.');
+      _notificationService.showSyncFailureNotification(
+        title: 'Sync Failed',
+        body: 'Max retries reached. Tap to retry manually.',
+      );
       _retryCount = 0;
       return;
     }
@@ -143,6 +168,16 @@ class SyncEngine {
         if (_isCancelled) return;
         _updateState(_currentState.copyWith(message: 'Processing local changes...'));
         await _deltaGenerationService.processPendingChanges();
+
+        // Check connectivity
+        if (!await _connectivityService.isConnected) {
+          Logger.info('Sync deferred: Device is offline.');
+          if (!background) {
+            _updateState(_currentState.copyWith(
+                status: SyncStatus.idle, message: 'Offline: Changes queued'));
+          }
+          return;
+        }
 
         // 2. Upload Pending Deltas
         if (_isCancelled) return;
@@ -292,6 +327,7 @@ class SyncEngine {
 
         final now = DateTime.now();
         await _prefs.setString('sync_last_sync_time', now.toIso8601String());
+        await _recordSuccess();
 
         if (!background) {
             _updateState(_currentState.copyWith(
@@ -306,6 +342,7 @@ class SyncEngine {
 
       } catch (e, stack) {
         Logger.error('Sync failed', e, stack);
+        await _recordFailure();
         if (!background) {
             _updateState(_currentState.copyWith(status: SyncStatus.error, errorMessage: e.toString()));
         }
@@ -334,6 +371,19 @@ class SyncEngine {
       return _deltaGenerationService.getAppliedDeltaFilenames();
   }
 
+  Future<void> _recordSuccess() async {
+    final successCount = _prefs.getInt('sync_stats_success_count') ?? 0;
+    await _prefs.setInt('sync_stats_success_count', successCount + 1);
+    await _prefs.setInt('sync_stats_consecutive_failures', 0);
+  }
+
+  Future<void> _recordFailure() async {
+    final failureCount = _prefs.getInt('sync_stats_failure_count') ?? 0;
+    final consecutive = _prefs.getInt('sync_stats_consecutive_failures') ?? 0;
+    await _prefs.setInt('sync_stats_failure_count', failureCount + 1);
+    await _prefs.setInt('sync_stats_consecutive_failures', consecutive + 1);
+  }
+
   // Task 450: Health Check
   Future<Map<String, dynamic>> checkHealth() async {
      return {
@@ -342,6 +392,9 @@ class SyncEngine {
         'is_paused': _isPaused,
         'provider': _prefs.getString('sync_provider'),
         'last_sync': _prefs.getString('sync_last_sync_time'),
+        'success_count': _prefs.getInt('sync_stats_success_count') ?? 0,
+        'failure_count': _prefs.getInt('sync_stats_failure_count') ?? 0,
+        'consecutive_failures': _prefs.getInt('sync_stats_consecutive_failures') ?? 0,
      };
   }
 }

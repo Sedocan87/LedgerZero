@@ -434,5 +434,6 @@
   "providerNone": "None",
   "providerGoogleDrive": "Google Drive",
   "providerICloud": "iCloud Drive",
-  "disconnect": "Disconnect"
+  "disconnect": "Disconnect",
+  "offlineMode": "Offline Mode"
 }

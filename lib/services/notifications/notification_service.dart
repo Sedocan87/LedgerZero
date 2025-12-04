@@ -112,4 +112,29 @@ class NotificationService {
   Future<void> cancelNotification(int id) async {
     await _notificationsPlugin.cancel(id);
   }
+
+  Future<void> showSyncFailureNotification({
+    required String title,
+    required String body,
+  }) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'sync_status',
+      'Sync Status',
+      channelDescription: 'Notifications for sync status',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await _notificationsPlugin.show(
+      999, // Fixed ID for sync failure
+      title,
+      body,
+      details,
+    );
+  }
 }
