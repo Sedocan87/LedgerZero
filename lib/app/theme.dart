@@ -44,6 +44,13 @@ class AppColors {
   static const Color backgroundDark = Color(0xFF121212);
   static const Color surfaceDark = Color(0xFF1E1E1E);
   static const Color onSurfaceDark = Color(0xFFE0E0E0);
+
+  // Semantic Colors (Shared)
+  static const Color income = Color(0xFF4CAF50); // Green 500
+  static const Color expense = Color(0xFFB00020); // Red 700
+  static const Color success = Color(0xFF4CAF50); // Green 500
+  static const Color warning = Color(0xFFFFC107); // Amber 500
+  static const Color error = Color(0xFFB00020); // Red 700
 }
 
 class AppTextStyles {

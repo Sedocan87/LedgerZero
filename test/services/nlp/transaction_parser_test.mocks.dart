@@ -10,6 +10,10 @@ import 'package:ledger_zero/domain/entities/category_group.dart' as _i7;
 import 'package:ledger_zero/domain/entities/payee.dart' as _i4;
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
     as _i5;
+import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart'
+    as _i8;
+import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart'
+    as _i9;
 import 'package:ledger_zero/domain/repositories/payee_repository.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
 
@@ -218,4 +222,79 @@ class MockCategoryRepository extends _i1.Mock
                 _i3.Stream<List<_i7.CategoryGroup>>.empty(),
           )
           as _i3.Stream<List<_i7.CategoryGroup>>);
+}
+
+/// A class which mocks [ParsingHistoryRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockParsingHistoryRepository extends _i1.Mock
+    implements _i8.ParsingHistoryRepository {
+  @override
+  _i3.Future<void> addHistory(
+    String? input,
+    String? payeeId,
+    String? categoryId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addHistory, [input, payeeId, categoryId]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<List<Map<String, dynamic>>> getHistory(String? input) =>
+      (super.noSuchMethod(
+            Invocation.method(#getHistory, [input]),
+            returnValue: _i3.Future<List<Map<String, dynamic>>>.value(
+              <Map<String, dynamic>>[],
+            ),
+            returnValueForMissingStub:
+                _i3.Future<List<Map<String, dynamic>>>.value(
+                  <Map<String, dynamic>>[],
+                ),
+          )
+          as _i3.Future<List<Map<String, dynamic>>>);
+}
+
+/// A class which mocks [ParsingRulesRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockParsingRulesRepository extends _i1.Mock
+    implements _i9.ParsingRulesRepository {
+  @override
+  _i3.Future<void> addRule(
+    String? keyword,
+    String? payeeId,
+    String? categoryId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addRule, [keyword, payeeId, categoryId]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> deleteRule(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteRule, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<List<Map<String, dynamic>>> getAllRules() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllRules, []),
+            returnValue: _i3.Future<List<Map<String, dynamic>>>.value(
+              <Map<String, dynamic>>[],
+            ),
+            returnValueForMissingStub:
+                _i3.Future<List<Map<String, dynamic>>>.value(
+                  <Map<String, dynamic>>[],
+                ),
+          )
+          as _i3.Future<List<Map<String, dynamic>>>);
 }

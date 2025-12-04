@@ -5924,6 +5924,737 @@ class PendingSyncChangesCompanion extends UpdateCompanion<PendingSyncChange> {
   }
 }
 
+class $ParsingHistoryTable extends ParsingHistory
+    with TableInfo<$ParsingHistoryTable, ParsingHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParsingHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _inputMeta = const VerificationMeta('input');
+  @override
+  late final GeneratedColumn<String> input = GeneratedColumn<String>(
+    'input',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payeeIdMeta = const VerificationMeta(
+    'payeeId',
+  );
+  @override
+  late final GeneratedColumn<String> payeeId = GeneratedColumn<String>(
+    'payee_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    input,
+    payeeId,
+    categoryId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'parsing_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ParsingHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('input')) {
+      context.handle(
+        _inputMeta,
+        input.isAcceptableOrUnknown(data['input']!, _inputMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_inputMeta);
+    }
+    if (data.containsKey('payee_id')) {
+      context.handle(
+        _payeeIdMeta,
+        payeeId.isAcceptableOrUnknown(data['payee_id']!, _payeeIdMeta),
+      );
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ParsingHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ParsingHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      input: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}input'],
+      )!,
+      payeeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payee_id'],
+      ),
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ParsingHistoryTable createAlias(String alias) {
+    return $ParsingHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class ParsingHistoryData extends DataClass
+    implements Insertable<ParsingHistoryData> {
+  final String id;
+  final String input;
+  final String? payeeId;
+  final String? categoryId;
+  final String createdAt;
+  const ParsingHistoryData({
+    required this.id,
+    required this.input,
+    this.payeeId,
+    this.categoryId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['input'] = Variable<String>(input);
+    if (!nullToAbsent || payeeId != null) {
+      map['payee_id'] = Variable<String>(payeeId);
+    }
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    return map;
+  }
+
+  ParsingHistoryCompanion toCompanion(bool nullToAbsent) {
+    return ParsingHistoryCompanion(
+      id: Value(id),
+      input: Value(input),
+      payeeId: payeeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payeeId),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ParsingHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ParsingHistoryData(
+      id: serializer.fromJson<String>(json['id']),
+      input: serializer.fromJson<String>(json['input']),
+      payeeId: serializer.fromJson<String?>(json['payeeId']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'input': serializer.toJson<String>(input),
+      'payeeId': serializer.toJson<String?>(payeeId),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'createdAt': serializer.toJson<String>(createdAt),
+    };
+  }
+
+  ParsingHistoryData copyWith({
+    String? id,
+    String? input,
+    Value<String?> payeeId = const Value.absent(),
+    Value<String?> categoryId = const Value.absent(),
+    String? createdAt,
+  }) => ParsingHistoryData(
+    id: id ?? this.id,
+    input: input ?? this.input,
+    payeeId: payeeId.present ? payeeId.value : this.payeeId,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ParsingHistoryData copyWithCompanion(ParsingHistoryCompanion data) {
+    return ParsingHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      input: data.input.present ? data.input.value : this.input,
+      payeeId: data.payeeId.present ? data.payeeId.value : this.payeeId,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParsingHistoryData(')
+          ..write('id: $id, ')
+          ..write('input: $input, ')
+          ..write('payeeId: $payeeId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, input, payeeId, categoryId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ParsingHistoryData &&
+          other.id == this.id &&
+          other.input == this.input &&
+          other.payeeId == this.payeeId &&
+          other.categoryId == this.categoryId &&
+          other.createdAt == this.createdAt);
+}
+
+class ParsingHistoryCompanion extends UpdateCompanion<ParsingHistoryData> {
+  final Value<String> id;
+  final Value<String> input;
+  final Value<String?> payeeId;
+  final Value<String?> categoryId;
+  final Value<String> createdAt;
+  final Value<int> rowid;
+  const ParsingHistoryCompanion({
+    this.id = const Value.absent(),
+    this.input = const Value.absent(),
+    this.payeeId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ParsingHistoryCompanion.insert({
+    required String id,
+    required String input,
+    this.payeeId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    required String createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       input = Value(input),
+       createdAt = Value(createdAt);
+  static Insertable<ParsingHistoryData> custom({
+    Expression<String>? id,
+    Expression<String>? input,
+    Expression<String>? payeeId,
+    Expression<String>? categoryId,
+    Expression<String>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (input != null) 'input': input,
+      if (payeeId != null) 'payee_id': payeeId,
+      if (categoryId != null) 'category_id': categoryId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ParsingHistoryCompanion copyWith({
+    Value<String>? id,
+    Value<String>? input,
+    Value<String?>? payeeId,
+    Value<String?>? categoryId,
+    Value<String>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ParsingHistoryCompanion(
+      id: id ?? this.id,
+      input: input ?? this.input,
+      payeeId: payeeId ?? this.payeeId,
+      categoryId: categoryId ?? this.categoryId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (input.present) {
+      map['input'] = Variable<String>(input.value);
+    }
+    if (payeeId.present) {
+      map['payee_id'] = Variable<String>(payeeId.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParsingHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('input: $input, ')
+          ..write('payeeId: $payeeId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ParsingRulesTable extends ParsingRules
+    with TableInfo<$ParsingRulesTable, ParsingRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParsingRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _keywordMeta = const VerificationMeta(
+    'keyword',
+  );
+  @override
+  late final GeneratedColumn<String> keyword = GeneratedColumn<String>(
+    'keyword',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _payeeIdMeta = const VerificationMeta(
+    'payeeId',
+  );
+  @override
+  late final GeneratedColumn<String> payeeId = GeneratedColumn<String>(
+    'payee_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    keyword,
+    categoryId,
+    payeeId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'parsing_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ParsingRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('keyword')) {
+      context.handle(
+        _keywordMeta,
+        keyword.isAcceptableOrUnknown(data['keyword']!, _keywordMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keywordMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('payee_id')) {
+      context.handle(
+        _payeeIdMeta,
+        payeeId.isAcceptableOrUnknown(data['payee_id']!, _payeeIdMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ParsingRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ParsingRule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      keyword: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}keyword'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
+      payeeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payee_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ParsingRulesTable createAlias(String alias) {
+    return $ParsingRulesTable(attachedDatabase, alias);
+  }
+}
+
+class ParsingRule extends DataClass implements Insertable<ParsingRule> {
+  final String id;
+  final String keyword;
+  final String? categoryId;
+  final String? payeeId;
+  final String createdAt;
+  const ParsingRule({
+    required this.id,
+    required this.keyword,
+    this.categoryId,
+    this.payeeId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['keyword'] = Variable<String>(keyword);
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || payeeId != null) {
+      map['payee_id'] = Variable<String>(payeeId);
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    return map;
+  }
+
+  ParsingRulesCompanion toCompanion(bool nullToAbsent) {
+    return ParsingRulesCompanion(
+      id: Value(id),
+      keyword: Value(keyword),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      payeeId: payeeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payeeId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ParsingRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ParsingRule(
+      id: serializer.fromJson<String>(json['id']),
+      keyword: serializer.fromJson<String>(json['keyword']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      payeeId: serializer.fromJson<String?>(json['payeeId']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'keyword': serializer.toJson<String>(keyword),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'payeeId': serializer.toJson<String?>(payeeId),
+      'createdAt': serializer.toJson<String>(createdAt),
+    };
+  }
+
+  ParsingRule copyWith({
+    String? id,
+    String? keyword,
+    Value<String?> categoryId = const Value.absent(),
+    Value<String?> payeeId = const Value.absent(),
+    String? createdAt,
+  }) => ParsingRule(
+    id: id ?? this.id,
+    keyword: keyword ?? this.keyword,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    payeeId: payeeId.present ? payeeId.value : this.payeeId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ParsingRule copyWithCompanion(ParsingRulesCompanion data) {
+    return ParsingRule(
+      id: data.id.present ? data.id.value : this.id,
+      keyword: data.keyword.present ? data.keyword.value : this.keyword,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      payeeId: data.payeeId.present ? data.payeeId.value : this.payeeId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParsingRule(')
+          ..write('id: $id, ')
+          ..write('keyword: $keyword, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('payeeId: $payeeId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, keyword, categoryId, payeeId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ParsingRule &&
+          other.id == this.id &&
+          other.keyword == this.keyword &&
+          other.categoryId == this.categoryId &&
+          other.payeeId == this.payeeId &&
+          other.createdAt == this.createdAt);
+}
+
+class ParsingRulesCompanion extends UpdateCompanion<ParsingRule> {
+  final Value<String> id;
+  final Value<String> keyword;
+  final Value<String?> categoryId;
+  final Value<String?> payeeId;
+  final Value<String> createdAt;
+  final Value<int> rowid;
+  const ParsingRulesCompanion({
+    this.id = const Value.absent(),
+    this.keyword = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.payeeId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ParsingRulesCompanion.insert({
+    required String id,
+    required String keyword,
+    this.categoryId = const Value.absent(),
+    this.payeeId = const Value.absent(),
+    required String createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       keyword = Value(keyword),
+       createdAt = Value(createdAt);
+  static Insertable<ParsingRule> custom({
+    Expression<String>? id,
+    Expression<String>? keyword,
+    Expression<String>? categoryId,
+    Expression<String>? payeeId,
+    Expression<String>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (keyword != null) 'keyword': keyword,
+      if (categoryId != null) 'category_id': categoryId,
+      if (payeeId != null) 'payee_id': payeeId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ParsingRulesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? keyword,
+    Value<String?>? categoryId,
+    Value<String?>? payeeId,
+    Value<String>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ParsingRulesCompanion(
+      id: id ?? this.id,
+      keyword: keyword ?? this.keyword,
+      categoryId: categoryId ?? this.categoryId,
+      payeeId: payeeId ?? this.payeeId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (keyword.present) {
+      map['keyword'] = Variable<String>(keyword.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (payeeId.present) {
+      map['payee_id'] = Variable<String>(payeeId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParsingRulesCompanion(')
+          ..write('id: $id, ')
+          ..write('keyword: $keyword, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('payeeId: $payeeId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5942,6 +6673,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SyncLogTable syncLog = $SyncLogTable(this);
   late final $PendingSyncChangesTable pendingSyncChanges =
       $PendingSyncChangesTable(this);
+  late final $ParsingHistoryTable parsingHistory = $ParsingHistoryTable(this);
+  late final $ParsingRulesTable parsingRules = $ParsingRulesTable(this);
   late final Index idxBudgetsMonth = Index(
     'idx_budgets_month',
     'CREATE INDEX idx_budgets_month ON budgets (month)',
@@ -5992,6 +6725,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final PendingSyncChangesDao pendingSyncChangesDao =
       PendingSyncChangesDao(this as AppDatabase);
+  late final ParsingHistoryDao parsingHistoryDao = ParsingHistoryDao(
+    this as AppDatabase,
+  );
+  late final ParsingRulesDao parsingRulesDao = ParsingRulesDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6008,6 +6747,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     scheduledTransactions,
     syncLog,
     pendingSyncChanges,
+    parsingHistory,
+    parsingRules,
     idxBudgetsMonth,
     idxTransactionsAccount,
     idxTransactionsDate,
@@ -11368,6 +12109,416 @@ typedef $$PendingSyncChangesTableProcessedTableManager =
       PendingSyncChange,
       PrefetchHooks Function()
     >;
+typedef $$ParsingHistoryTableCreateCompanionBuilder =
+    ParsingHistoryCompanion Function({
+      required String id,
+      required String input,
+      Value<String?> payeeId,
+      Value<String?> categoryId,
+      required String createdAt,
+      Value<int> rowid,
+    });
+typedef $$ParsingHistoryTableUpdateCompanionBuilder =
+    ParsingHistoryCompanion Function({
+      Value<String> id,
+      Value<String> input,
+      Value<String?> payeeId,
+      Value<String?> categoryId,
+      Value<String> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ParsingHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $ParsingHistoryTable> {
+  $$ParsingHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get input => $composableBuilder(
+    column: $table.input,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payeeId => $composableBuilder(
+    column: $table.payeeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ParsingHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $ParsingHistoryTable> {
+  $$ParsingHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get input => $composableBuilder(
+    column: $table.input,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payeeId => $composableBuilder(
+    column: $table.payeeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ParsingHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ParsingHistoryTable> {
+  $$ParsingHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get input =>
+      $composableBuilder(column: $table.input, builder: (column) => column);
+
+  GeneratedColumn<String> get payeeId =>
+      $composableBuilder(column: $table.payeeId, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ParsingHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ParsingHistoryTable,
+          ParsingHistoryData,
+          $$ParsingHistoryTableFilterComposer,
+          $$ParsingHistoryTableOrderingComposer,
+          $$ParsingHistoryTableAnnotationComposer,
+          $$ParsingHistoryTableCreateCompanionBuilder,
+          $$ParsingHistoryTableUpdateCompanionBuilder,
+          (
+            ParsingHistoryData,
+            BaseReferences<
+              _$AppDatabase,
+              $ParsingHistoryTable,
+              ParsingHistoryData
+            >,
+          ),
+          ParsingHistoryData,
+          PrefetchHooks Function()
+        > {
+  $$ParsingHistoryTableTableManager(
+    _$AppDatabase db,
+    $ParsingHistoryTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParsingHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ParsingHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ParsingHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> input = const Value.absent(),
+                Value<String?> payeeId = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ParsingHistoryCompanion(
+                id: id,
+                input: input,
+                payeeId: payeeId,
+                categoryId: categoryId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String input,
+                Value<String?> payeeId = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                required String createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ParsingHistoryCompanion.insert(
+                id: id,
+                input: input,
+                payeeId: payeeId,
+                categoryId: categoryId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ParsingHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ParsingHistoryTable,
+      ParsingHistoryData,
+      $$ParsingHistoryTableFilterComposer,
+      $$ParsingHistoryTableOrderingComposer,
+      $$ParsingHistoryTableAnnotationComposer,
+      $$ParsingHistoryTableCreateCompanionBuilder,
+      $$ParsingHistoryTableUpdateCompanionBuilder,
+      (
+        ParsingHistoryData,
+        BaseReferences<_$AppDatabase, $ParsingHistoryTable, ParsingHistoryData>,
+      ),
+      ParsingHistoryData,
+      PrefetchHooks Function()
+    >;
+typedef $$ParsingRulesTableCreateCompanionBuilder =
+    ParsingRulesCompanion Function({
+      required String id,
+      required String keyword,
+      Value<String?> categoryId,
+      Value<String?> payeeId,
+      required String createdAt,
+      Value<int> rowid,
+    });
+typedef $$ParsingRulesTableUpdateCompanionBuilder =
+    ParsingRulesCompanion Function({
+      Value<String> id,
+      Value<String> keyword,
+      Value<String?> categoryId,
+      Value<String?> payeeId,
+      Value<String> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ParsingRulesTableFilterComposer
+    extends Composer<_$AppDatabase, $ParsingRulesTable> {
+  $$ParsingRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get keyword => $composableBuilder(
+    column: $table.keyword,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payeeId => $composableBuilder(
+    column: $table.payeeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ParsingRulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ParsingRulesTable> {
+  $$ParsingRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get keyword => $composableBuilder(
+    column: $table.keyword,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payeeId => $composableBuilder(
+    column: $table.payeeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ParsingRulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ParsingRulesTable> {
+  $$ParsingRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get keyword =>
+      $composableBuilder(column: $table.keyword, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payeeId =>
+      $composableBuilder(column: $table.payeeId, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ParsingRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ParsingRulesTable,
+          ParsingRule,
+          $$ParsingRulesTableFilterComposer,
+          $$ParsingRulesTableOrderingComposer,
+          $$ParsingRulesTableAnnotationComposer,
+          $$ParsingRulesTableCreateCompanionBuilder,
+          $$ParsingRulesTableUpdateCompanionBuilder,
+          (
+            ParsingRule,
+            BaseReferences<_$AppDatabase, $ParsingRulesTable, ParsingRule>,
+          ),
+          ParsingRule,
+          PrefetchHooks Function()
+        > {
+  $$ParsingRulesTableTableManager(_$AppDatabase db, $ParsingRulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParsingRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ParsingRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ParsingRulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> keyword = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> payeeId = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ParsingRulesCompanion(
+                id: id,
+                keyword: keyword,
+                categoryId: categoryId,
+                payeeId: payeeId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String keyword,
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> payeeId = const Value.absent(),
+                required String createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ParsingRulesCompanion.insert(
+                id: id,
+                keyword: keyword,
+                categoryId: categoryId,
+                payeeId: payeeId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ParsingRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ParsingRulesTable,
+      ParsingRule,
+      $$ParsingRulesTableFilterComposer,
+      $$ParsingRulesTableOrderingComposer,
+      $$ParsingRulesTableAnnotationComposer,
+      $$ParsingRulesTableCreateCompanionBuilder,
+      $$ParsingRulesTableUpdateCompanionBuilder,
+      (
+        ParsingRule,
+        BaseReferences<_$AppDatabase, $ParsingRulesTable, ParsingRule>,
+      ),
+      ParsingRule,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11394,4 +12545,8 @@ class $AppDatabaseManager {
       $$SyncLogTableTableManager(_db, _db.syncLog);
   $$PendingSyncChangesTableTableManager get pendingSyncChanges =>
       $$PendingSyncChangesTableTableManager(_db, _db.pendingSyncChanges);
+  $$ParsingHistoryTableTableManager get parsingHistory =>
+      $$ParsingHistoryTableTableManager(_db, _db.parsingHistory);
+  $$ParsingRulesTableTableManager get parsingRules =>
+      $$ParsingRulesTableTableManager(_db, _db.parsingRules);
 }

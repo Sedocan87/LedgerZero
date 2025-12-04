@@ -315,6 +315,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               _isSearchMode = true;
             });
           }),
+      // Task 491: Quick Add (Natural Language)
+      IconButton(
+        icon: const Icon(Icons.flash_on),
+        tooltip: 'Quick Add',
+        onPressed: () {
+          context.pushNamed('quick-add');
+        },
+      ),
       // Task 211: Filtering
       IconButton(
           icon: const Icon(Icons.filter_list),

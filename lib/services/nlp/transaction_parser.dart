@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
+import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
+import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 import 'package:chrono_dart/chrono_dart.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
@@ -41,13 +43,97 @@ class ParsedTransaction {
 class TransactionParser {
   final PayeeRepository _payeeRepository;
   final CategoryRepository _categoryRepository;
+  final ParsingHistoryRepository _historyRepository;
+  final ParsingRulesRepository _rulesRepository;
 
-  TransactionParser(this._payeeRepository, this._categoryRepository);
+  TransactionParser(
+    this._payeeRepository,
+    this._categoryRepository,
+    this._historyRepository,
+    this._rulesRepository,
+  );
 
   Future<ParsedTransaction> parse(String input) async {
+    // 0. Check History
+    final history = await _historyRepository.getHistory(input);
+    if (history.isNotEmpty) {
+      final entry = history.first; // Use most recent match logic if multiple?
+      final payeeId = entry['payeeId'] as String?;
+      final categoryId = entry['categoryId'] as String?;
+
+      Payee? payee;
+      if (payeeId != null) {
+        // Try fetching payee (might be deleted?) - assuming generic fetch
+        final payees = await _payeeRepository.getAllPayees();
+        try {
+          payee = payees.firstWhere((p) => p.id == payeeId);
+        } catch (_) {}
+      }
+
+      Category? category;
+      if (categoryId != null) {
+        category = await _categoryRepository.getCategoryById(categoryId);
+      }
+
+      // If we found something relevant in history, combine with standard extraction for Amount/Date
+      final amount = extractAmount(input);
+      final currency = extractCurrency(input);
+      final date = extractDate(input);
+
+      return ParsedTransaction(
+        amount: amount,
+        currency: currency,
+        date: date,
+        payeeName: payee?.name,
+        payeeId: payee?.id,
+        categoryId: category?.id,
+        categoryName: category?.name,
+        isIncome: detectIncome(input),
+        confidence: 1.0, // High confidence from history
+      );
+    }
+
     final amount = extractAmount(input);
     final currency = extractCurrency(input);
     final date = extractDate(input);
+
+    // 1. Rules Logic
+    final rules = await _rulesRepository.getAllRules();
+    for (final rule in rules) {
+      final keyword = rule['keyword'] as String;
+      if (input.toLowerCase().contains(keyword.toLowerCase())) {
+        final payeeId = rule['payeeId'] as String?;
+        final categoryId = rule['categoryId'] as String?;
+
+        Payee? payee;
+        if (payeeId != null) {
+           final payees = await _payeeRepository.getAllPayees();
+           try {
+             payee = payees.firstWhere((p) => p.id == payeeId);
+           } catch (_) {}
+        }
+
+        Category? category;
+        if (categoryId != null) {
+          category = await _categoryRepository.getCategoryById(categoryId);
+        }
+
+        if (payee != null || category != null) {
+           return ParsedTransaction(
+            amount: amount,
+            currency: currency,
+            date: date,
+            payeeName: payee?.name,
+            payeeId: payee?.id,
+            categoryId: category?.id,
+            categoryName: category?.name,
+            isIncome: detectIncome(input),
+            confidence: 0.9, // High confidence from rule
+          );
+        }
+      }
+    }
+
     final payeeMatch = await extractPayee(input);
     final categoryMatch = await extractCategory(input, payeeMatch);
     final isIncome = detectIncome(input);
@@ -130,9 +216,21 @@ class TransactionParser {
       }
     }
 
-    // Fallback: If no known payee found, we might try to guess the payee
-    // from the remaining text after removing date and amount.
-    // This is complex and might be part of confidence scoring later.
+    // 3. Fuzzy matching for Payees
+    final payeeNames = payees.map((p) => p.name).toList();
+    final fuse = Fuzzy(
+      payeeNames,
+      options: FuzzyOptions(
+        threshold: 0.3,
+      ),
+    );
+
+    final result = fuse.search(input);
+    if (result.isNotEmpty) {
+      final bestMatchName = result.first.item;
+      return payees.firstWhere((p) => p.name == bestMatchName);
+    }
+
     return null;
   }
 
@@ -293,5 +391,7 @@ final transactionParserProvider = Provider<TransactionParser>((ref) {
   return TransactionParser(
     ref.watch(payeeRepositoryProvider),
     ref.watch(categoryRepositoryProvider),
+    ref.watch(parsingHistoryRepositoryProvider),
+    ref.watch(parsingRulesRepositoryProvider),
   );
 });

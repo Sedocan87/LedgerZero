@@ -26,6 +26,7 @@ import 'package:ledger_zero/presentation/screens/settings/security/change_passwo
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
+import 'package:ledger_zero/presentation/screens/transactions/natural_language_input_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
 import 'package:ledger_zero/presentation/widgets/scaffold_with_navbar.dart';
 
@@ -92,6 +93,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id'];
           return AddEditTransactionScreen(transactionId: id);
         },
+      ),
+      GoRoute(
+        path: '/quick-add',
+        name: 'quick-add',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NaturalLanguageInputScreen(),
       ),
       GoRoute(
         path: '/settings',
