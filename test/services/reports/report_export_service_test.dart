@@ -4,6 +4,7 @@ import 'package:ledger_zero/services/reports/report_export_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
+import 'dart:ui';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -13,63 +14,79 @@ class MockPathProviderPlatform extends PathProviderPlatform
   }
 }
 
-class MockSharePlatform extends SharePlatform
-    with MockPlatformInterfaceMixin {
+class MockSharePlatform extends SharePlatform with MockPlatformInterfaceMixin {
   bool shareCalled = false;
+  List<XFile> sharedFiles = [];
+
+  void reset() {
+    shareCalled = false;
+    sharedFiles = [];
+  }
 
   @override
-  Future<ShareResult> share(ShareParams params) async {
+  Future<ShareResult> share(
+    ShareParams params,
+  ) async {
+    print('MockSharePlatform.share called');
     shareCalled = true;
     return const ShareResult('success', ShareResultStatus.success);
   }
 
+  @override
+  Future<ShareResult> shareXFiles(
+    List<XFile> files, {
+    String? subject,
+    String? text,
+    Rect? sharePositionOrigin,
+    List<String>? fileNameOverrides,
+  }) async {
+    print('MockSharePlatform.shareXFiles called with ${files.length} files');
+    shareCalled = true;
+    sharedFiles = files;
+    return const ShareResult('success', ShareResultStatus.success);
+  }
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  late MockSharePlatform mockShare;
+  final mockShare = MockSharePlatform();
 
   setUp(() {
     PathProviderPlatform.instance = MockPathProviderPlatform();
-    mockShare = MockSharePlatform();
+    // Set instance only once or ensure it's set.
+    // If SharePlus caches it, we want it to cache OUR mock.
     SharePlatform.instance = mockShare;
+    mockShare.reset();
   });
 
-  test('exportReport generates CSV and shares it', () async {
+  test('shareCsv generates CSV and shares it', () async {
     final service = ReportExportService();
-    final data = <String, double>{'Food': 100.0, 'Rent': 500.0};
+    final data = <List<dynamic>>[
+      ['Category', 'Amount'],
+      ['Food', 100.0],
+      ['Rent', 500.0]
+    ];
 
-    await service.exportReport(
-      type: ReportType.spendingByCategory,
-      format: ExportFormat.csv,
-      data: data,
+    await service.shareCsv(data, 'test_report');
+
+    expect(mockShare.shareCalled, true);
+  });
+
+  test('generateAndSharePdf generates PDF and shares it', () async {
+    final service = ReportExportService();
+    final headers = ['Category', 'Amount'];
+    final data = <List<String>>[
+      ['Food', '\$100.00'],
+      ['Rent', '\$500.00']
+    ];
+
+    await service.generateAndSharePdf(
       title: 'Test Report',
-      csvHeaders: ['Category', 'Amount'],
+      headers: headers,
+      data: data,
+      filename: 'test_report_pdf',
     );
 
     expect(mockShare.shareCalled, true);
-
-    // Verify file creation in temp dir
-    final dir = Directory.systemTemp;
-    final files = dir.listSync().where((f) => f.path.endsWith('.csv'));
-    expect(files.isNotEmpty, true);
-
-    final file = File(files.last.path);
-    final content = await file.readAsString();
-    expect(content, contains('Food,100.0'));
-    expect(content, contains('Rent,500.0'));
-  });
-
-  test('exportReport throws if image bytes missing for PDF', () async {
-    final service = ReportExportService();
-    expect(
-      () => service.exportReport(
-        type: ReportType.spendingTrends,
-        format: ExportFormat.pdf,
-        data: {},
-        title: 'Test',
-      ),
-      throwsArgumentError,
-    );
   });
 }

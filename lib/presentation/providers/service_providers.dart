@@ -8,8 +8,20 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/services/encryption/security_manager.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
+import 'package:ledger_zero/services/backup/data_portability_service.dart';
 import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 import 'package:uuid/uuid.dart';
+
+final dataPortabilityServiceProvider = Provider<DataPortabilityService>((ref) {
+  return DataPortabilityService(
+    ref.watch(accountRepositoryProvider),
+    ref.watch(transactionRepositoryProvider),
+    ref.watch(categoryRepositoryProvider),
+    ref.watch(payeeRepositoryProvider),
+    ref.watch(budgetRepositoryProvider),
+    ref.watch(scheduledTransactionRepositoryProvider),
+  );
+});
 
 final securityManagerProvider = Provider<SecurityManager>((ref) {
   return SecurityManager();
