@@ -869,6 +869,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get secure => 'Secure';
 
   @override
+  String get securitySettings => 'Security Settings';
+
+  @override
+  String get securityAndData => 'Security & Data';
+
+  @override
   String get syncSettings => 'Sync Settings';
 
   @override
@@ -920,6 +926,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get syncOnlyOnWifi => 'Sync only on Wi-Fi';
+
+  @override
+  String get syncFrequency => 'Sync Frequency';
+
+  @override
+  String get frequencyManual => 'Manual';
+
+  @override
+  String get frequencyRealtime => 'Real-time';
+
+  @override
+  String get frequency15Min => 'Every 15 Minutes';
+
+  @override
+  String get frequency1Hour => 'Every Hour';
+
+  @override
+  String get frequency4Hours => 'Every 4 Hours';
 
   @override
   String get quickAdd => 'Schnell hinzufügen';
