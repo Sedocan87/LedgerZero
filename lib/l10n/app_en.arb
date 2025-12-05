@@ -422,8 +422,7 @@
   "occurrences": "Occurrences",
   "recoveryKey": "Recovery Key",
   "backupRecoveryKey": "Backup Recovery Key",
-  "revealRecoveryKey": "Reveal Recovery Key"
-,
+  "revealRecoveryKey": "Reveal Recovery Key",
   "autoLock": "Auto-lock Timer",
   "autoLockImmediate": "Immediate",
   "autoLockMinutes": "{count, plural, =1{1 Minute} other{{count} Minutes}}",
@@ -434,8 +433,7 @@
       }
     }
   },
-  "autoLockNever": "Never"
-,
+  "autoLockNever": "Never",
   "changePassword": "Change Password",
   "currentPassword": "Current Password",
   "newPassword": "New Password",
@@ -443,8 +441,7 @@
   "passwordChangedSuccess": "Password changed successfully",
   "incorrectPassword": "Incorrect Password",
   "passwordsDoNotMatch": "Passwords do not match",
-  "passwordTooShort": "Password must be at least 8 characters"
-,
+  "passwordTooShort": "Password must be at least 8 characters",
   "biometrics": "Biometric Authentication",
   "useBiometricsDescription": "Use Face ID / Fingerprint to unlock",
   "biometricsSetupFailed": "Biometric setup failed",
@@ -514,5 +511,26 @@
       }
     }
   },
-  "importCancelled": "Import Cancelled"
+  "importCancelled": "Import Cancelled",
+  "generalSettings": "General Settings",
+  "currency": "Currency",
+  "firstDayOfWeek": "First Day of Week",
+  "theme": "Theme",
+  "language": "Language",
+  "defaultCategory": "Default Category",
+  "systemTheme": "System",
+  "lightTheme": "Light",
+  "darkTheme": "Dark",
+  "monday": "Monday",
+  "tuesday": "Tuesday",
+  "wednesday": "Wednesday",
+  "thursday": "Thursday",
+  "friday": "Friday",
+  "saturday": "Saturday",
+  "sunday": "Sunday",
+  "numberFormat": "Number Format",
+  "syncAndBackup": "Sync & Backup",
+  "importFromMint": "Import from Mint",
+  "loadingAccounts": "Loading accounts...",
+  "backupAndRestore": "Backup & Restore"
 }
