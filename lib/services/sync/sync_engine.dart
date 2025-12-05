@@ -141,6 +141,33 @@ class SyncEngine {
     Logger.info('Background sync stopped.');
   }
 
+  void updateSyncFrequency(SyncFrequency frequency) {
+    stopBackgroundSync();
+    if (frequency == SyncFrequency.manual) {
+      return;
+    }
+
+    Duration interval;
+    switch (frequency) {
+      case SyncFrequency.realtime:
+        interval = const Duration(minutes: 5); // Polling every 5 min
+        break;
+      case SyncFrequency.every15Min:
+        interval = const Duration(minutes: 15);
+        break;
+      case SyncFrequency.everyHour:
+        interval = const Duration(hours: 1);
+        break;
+      case SyncFrequency.every4Hours:
+        interval = const Duration(hours: 4);
+        break;
+      case SyncFrequency.manual:
+        return;
+    }
+
+    startBackgroundSync(interval);
+  }
+
   Future<void> sync(
       {bool background = false, bool forceFullSync = false}) async {
     if (_isPaused) {

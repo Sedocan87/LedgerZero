@@ -14,6 +14,7 @@ class SyncController extends StateNotifier<SyncState> {
   static const String _lastSyncKey = 'sync_last_sync_time';
   static const String _syncProviderKey = 'sync_provider';
   static const String _syncWifiOnlyKey = 'sync_on_wifi_only';
+  static const String _syncFrequencyKey = 'sync_frequency';
 
   SyncController(
     this._authService,
@@ -56,6 +57,15 @@ class SyncController extends StateNotifier<SyncState> {
     // Load Wi-Fi only setting
     final wifiOnly = _prefs.getBool(_syncWifiOnlyKey) ?? false;
     state = state.copyWith(wifiOnly: wifiOnly);
+
+    // Load Sync Frequency
+    final freqStr = _prefs.getString(_syncFrequencyKey);
+    final frequency = SyncFrequency.values.firstWhere(
+      (e) => e.name == freqStr,
+      orElse: () => SyncFrequency.manual,
+    );
+    state = state.copyWith(syncFrequency: frequency);
+    _syncEngine.updateSyncFrequency(frequency);
 
     // Listen to auth changes
     _authService.onCurrentUserChanged.listen((account) {
@@ -124,6 +134,12 @@ class SyncController extends StateNotifier<SyncState> {
   Future<void> setWifiOnly(bool enabled) async {
     await _prefs.setBool(_syncWifiOnlyKey, enabled);
     state = state.copyWith(wifiOnly: enabled);
+  }
+
+  Future<void> setSyncFrequency(SyncFrequency frequency) async {
+    await _prefs.setString(_syncFrequencyKey, frequency.name);
+    state = state.copyWith(syncFrequency: frequency);
+    _syncEngine.updateSyncFrequency(frequency);
   }
 
   Future<void> connect() async {

@@ -38,6 +38,30 @@ class SyncSettingsScreen extends ConsumerWidget {
       );
     }
 
+    // Sync Frequencies
+    final frequencies = [
+      DropdownMenuItem(
+        value: SyncFrequency.manual,
+        child: Text(l10n.frequencyManual),
+      ),
+      DropdownMenuItem(
+        value: SyncFrequency.realtime,
+        child: Text(l10n.frequencyRealtime),
+      ),
+      DropdownMenuItem(
+        value: SyncFrequency.every15Min,
+        child: Text(l10n.frequency15Min),
+      ),
+      DropdownMenuItem(
+        value: SyncFrequency.everyHour,
+        child: Text(l10n.frequency1Hour),
+      ),
+      DropdownMenuItem(
+        value: SyncFrequency.every4Hours,
+        child: Text(l10n.frequency4Hours),
+      ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.syncSettings),
@@ -74,6 +98,22 @@ class SyncSettingsScreen extends ConsumerWidget {
             title: Text(l10n.syncOnlyOnWifi),
             value: state.wifiOnly,
             onChanged: (value) => controller.setWifiOnly(value),
+          ),
+          const SizedBox(height: 16),
+
+          DropdownButtonFormField<SyncFrequency>(
+            key: ValueKey(state.syncFrequency),
+            decoration: InputDecoration(
+              labelText: l10n.syncFrequency,
+              border: const OutlineInputBorder(),
+            ),
+            initialValue: state.syncFrequency,
+            items: frequencies,
+            onChanged: (value) {
+              if (value != null) {
+                controller.setSyncFrequency(value);
+              }
+            },
           ),
           const SizedBox(height: 24),
 

@@ -14,6 +14,14 @@ enum SyncProviderType {
   iCloud,
 }
 
+enum SyncFrequency {
+  manual,
+  realtime, // treated as ~5 min or immediate on change if implemented
+  every15Min,
+  everyHour,
+  every4Hours,
+}
+
 class SyncState extends Equatable {
   final SyncStatus status;
   final SyncProviderType selectedProvider;
@@ -23,6 +31,7 @@ class SyncState extends Equatable {
   final String? message;
   final double? progress;
   final bool wifiOnly;
+  final SyncFrequency syncFrequency;
 
   const SyncState({
     this.status = SyncStatus.disconnected,
@@ -33,6 +42,7 @@ class SyncState extends Equatable {
     this.message,
     this.progress,
     this.wifiOnly = false,
+    this.syncFrequency = SyncFrequency.manual,
   });
 
   SyncState copyWith({
@@ -44,6 +54,7 @@ class SyncState extends Equatable {
     String? message,
     double? progress,
     bool? wifiOnly,
+    SyncFrequency? syncFrequency,
   }) {
     return SyncState(
       status: status ?? this.status,
@@ -54,6 +65,7 @@ class SyncState extends Equatable {
       message: message ?? this.message,
       progress: progress ?? this.progress,
       wifiOnly: wifiOnly ?? this.wifiOnly,
+      syncFrequency: syncFrequency ?? this.syncFrequency,
     );
   }
 
@@ -67,5 +79,6 @@ class SyncState extends Equatable {
         message,
         progress,
         wifiOnly,
+        syncFrequency,
       ];
 }

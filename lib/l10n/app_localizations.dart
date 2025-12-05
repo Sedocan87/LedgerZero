@@ -1658,6 +1658,18 @@ abstract class AppLocalizations {
   /// **'Secure'**
   String get secure;
 
+  /// No description provided for @securitySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Security Settings'**
+  String get securitySettings;
+
+  /// No description provided for @securityAndData.
+  ///
+  /// In en, this message translates to:
+  /// **'Security & Data'**
+  String get securityAndData;
+
   /// No description provided for @syncSettings.
   ///
   /// In en, this message translates to:
@@ -1759,6 +1771,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sync only on Wi-Fi'**
   String get syncOnlyOnWifi;
+
+  /// No description provided for @syncFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Frequency'**
+  String get syncFrequency;
+
+  /// No description provided for @frequencyManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get frequencyManual;
+
+  /// No description provided for @frequencyRealtime.
+  ///
+  /// In en, this message translates to:
+  /// **'Real-time'**
+  String get frequencyRealtime;
+
+  /// No description provided for @frequency15Min.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 15 Minutes'**
+  String get frequency15Min;
+
+  /// No description provided for @frequency1Hour.
+  ///
+  /// In en, this message translates to:
+  /// **'Every Hour'**
+  String get frequency1Hour;
+
+  /// No description provided for @frequency4Hours.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 4 Hours'**
+  String get frequency4Hours;
 
   /// No description provided for @quickAdd.
   ///

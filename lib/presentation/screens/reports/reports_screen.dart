@@ -16,6 +16,22 @@ import 'package:ledger_zero/presentation/widgets/charts/simple_bar_chart.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/services/reports/report_export_service.dart';
 
+enum ReportType {
+  spendingTrends,
+  spendingByCategory,
+  categoryBreakdown,
+  incomeVsExpense,
+  netWorth,
+  topPayees,
+  budgetVsActual,
+}
+
+enum ExportFormat {
+  csv,
+  pdf,
+  image,
+}
+
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
@@ -145,12 +161,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           rows = data
               .map((e) => [e.key, currencyFormat.format(e.value)])
               .toList();
-        } else if (type == ReportType.budgetVsActual && data is List<BudgetVsActualData>) { // Assuming data type
+        } else if (type == ReportType.budgetVsActual && data is List<BudgetVsActualItem>) {
            headers = [l10n.category, l10n.budgeted, l10n.activity];
-           rows = (data as List<BudgetVsActualData>).map((e) => [
+           rows = data.map((e) => [
              e.categoryName,
              currencyFormat.format(e.budgeted),
-             currencyFormat.format(e.activity),
+             currencyFormat.format(e.actual),
            ]).toList();
         } else {
              // Fallback for types not explicitly handled or complex types

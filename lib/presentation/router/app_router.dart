@@ -28,6 +28,7 @@ import 'package:ledger_zero/presentation/screens/settings/import/mint_import_scr
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_debug_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/security_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
@@ -139,14 +140,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MintImportScreen(),
           ),
           GoRoute(
-            path: 'recovery-key',
-            name: 'recovery-key',
-            builder: (context, state) => const RecoveryKeyScreen(),
-          ),
-          GoRoute(
-            path: 'change-password',
-            name: 'change-password',
-            builder: (context, state) => const ChangePasswordScreen(),
+            path: 'security',
+            name: 'security-settings',
+            builder: (context, state) => const SecuritySettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'recovery-key',
+                name: 'recovery-key',
+                builder: (context, state) => const RecoveryKeyScreen(),
+              ),
+              GoRoute(
+                path: 'change-password',
+                name: 'change-password',
+                builder: (context, state) => const ChangePasswordScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: 'backup',

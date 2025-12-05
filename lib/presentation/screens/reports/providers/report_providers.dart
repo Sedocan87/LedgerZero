@@ -7,6 +7,18 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
 import 'package:ledger_zero/app/theme.dart';
 
+class BudgetVsActualItem {
+  final String categoryName;
+  final double budgeted;
+  final double actual;
+
+  BudgetVsActualItem({
+    required this.categoryName,
+    required this.budgeted,
+    required this.actual,
+  });
+}
+
 /// Provider for the selected date range in reports.
 /// Defaults to the current year.
 final reportDateRangeProvider = StateProvider<DateTimeRange>((ref) {
