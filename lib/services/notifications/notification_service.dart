@@ -137,4 +137,27 @@ class NotificationService {
       details,
     );
   }
+
+  Future<void> showBackupReminderNotification() async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'backup_reminders',
+      'Backup Reminders',
+      channelDescription: 'Reminders to backup your data',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await _notificationsPlugin.show(
+      1000, // Fixed ID for backup reminder
+      'Backup Reminder',
+      'It has been a while since your last backup. Tap to secure your data.',
+      details,
+      payload: '/settings/backup',
+    );
+  }
 }

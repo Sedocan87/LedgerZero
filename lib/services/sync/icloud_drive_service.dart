@@ -74,6 +74,32 @@ class ICloudDriveService {
     }
   }
 
+  /// Uploads a backup file to iCloud Drive.
+  Future<void> uploadBackup(File localFile, String filename) async {
+    _updateStatus(SyncStatus.syncing, message: 'Uploading backup $filename', progress: 0);
+    try {
+      final storage = await _getStorage();
+      await storage.startUpload(
+        filePath: localFile.path,
+        destinationRelativePath: 'Backups/$filename',
+        onProgress: (stream) {
+          stream.listen(
+            (progress) {
+              _updateStatus(SyncStatus.syncing, message: 'Uploading backup $filename', progress: progress);
+            },
+            onError: (e) {},
+            cancelOnError: true,
+          );
+        },
+      );
+      Logger.info('Uploaded backup to iCloud: $filename');
+      _updateStatus(SyncStatus.idle);
+    } catch (e) {
+      _updateStatus(SyncStatus.error, message: 'Backup upload failed');
+      throw _handleError(e, 'Failed to upload backup to iCloud');
+    }
+  }
+
   /// Downloads a delta file from iCloud Drive.
   Future<File> downloadDelta(String filename, String savePath) async {
     _updateStatus(SyncStatus.syncing, message: 'Downloading $filename', progress: 0);

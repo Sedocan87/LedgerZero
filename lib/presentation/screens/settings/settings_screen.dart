@@ -100,6 +100,12 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/change-password'),
           ),
+          ListTile(
+            leading: const Icon(Icons.backup),
+            title: const Text('Backup & Restore'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/backup'),
+          ),
           biometricsState.when(
             data: (state) => SwitchListTile(
               secondary: const Icon(Icons.fingerprint),
