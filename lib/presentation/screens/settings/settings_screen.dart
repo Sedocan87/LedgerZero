@@ -135,6 +135,12 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => context.push('/settings/import-csv'),
           ),
           ListTile(
+            leading: const Icon(Icons.import_export),
+            title: const Text('Import from Mint'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/import-mint'),
+          ),
+          ListTile(
             leading: const Icon(Icons.people),
             title: Text(l10n.payees),
             trailing: const Icon(Icons.chevron_right),
