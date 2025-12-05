@@ -12,10 +12,12 @@ import '../../mocks/repository_mocks.mocks.dart';
 void main() {
   late RuleMatchingService service;
   late MockPayeeRepository mockPayeeRepository;
+  late MockTransactionRepository mockTransactionRepository;
 
   setUp(() {
     mockPayeeRepository = MockPayeeRepository();
-    service = RuleMatchingService(mockPayeeRepository);
+    mockTransactionRepository = MockTransactionRepository();
+    service = RuleMatchingService(mockPayeeRepository, mockTransactionRepository);
   });
 
   final testTransaction = Transaction(
@@ -59,7 +61,7 @@ void main() {
           ),
         ],
         actions: [
-          RuleAction(type: RuleActionType.setMemo, value: 'Matched'),
+          const RuleAction(type: RuleActionType.setMemo, value: 'Matched'),
         ],
       );
 
@@ -82,7 +84,7 @@ void main() {
           ),
         ],
         actions: [
-          RuleAction(type: RuleActionType.setMemo, value: 'Big Expense'),
+          const RuleAction(type: RuleActionType.setMemo, value: 'Big Expense'),
         ],
       );
 
@@ -105,7 +107,7 @@ void main() {
           ),
         ],
         actions: [
-          RuleAction(type: RuleActionType.setMemo, value: 'Store Found'),
+          const RuleAction(type: RuleActionType.setMemo, value: 'Store Found'),
         ],
       );
 
@@ -127,8 +129,8 @@ void main() {
               value: '-50.0')
         ],
         actions: [
-          RuleAction(type: RuleActionType.setCategory, value: 'cat1'),
-          RuleAction(type: RuleActionType.markApproved, value: 'true'),
+          const RuleAction(type: RuleActionType.setCategory, value: 'cat1'),
+          const RuleAction(type: RuleActionType.markApproved, value: 'true'),
         ],
       );
 
@@ -145,7 +147,7 @@ void main() {
             isActive: true,
             matchLogic: RuleMatchLogic.and,
             conditions: [RuleCondition(type: RuleConditionType.amount, operator: RuleConditionOperator.equals, value: '-50.0')],
-            actions: [RuleAction(type: RuleActionType.setMemo, value: 'Rule1')],
+            actions: [const RuleAction(type: RuleActionType.setMemo, value: 'Rule1')],
         );
 
         final rule2 = Rule(
@@ -155,7 +157,7 @@ void main() {
             isActive: true,
             matchLogic: RuleMatchLogic.and,
             conditions: [RuleCondition(type: RuleConditionType.amount, operator: RuleConditionOperator.equals, value: '-50.0')],
-            actions: [RuleAction(type: RuleActionType.setMemo, value: 'Rule2')],
+            actions: [const RuleAction(type: RuleActionType.setMemo, value: 'Rule2')],
         );
 
         // Rule 1 runs first, sets memo to Rule1.
