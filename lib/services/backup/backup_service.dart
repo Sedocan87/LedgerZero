@@ -10,6 +10,8 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pointycastle/export.dart';
+import 'package:archive/archive.dart';
+import 'package:ledger_zero/core/errors/exceptions.dart';
 
 class BackupService {
   final AppDatabase _db;
@@ -121,8 +123,16 @@ class BackupService {
     // 5. Read input file
     final inputBytes = await inputFile.readAsBytes();
 
+    // 5a. Compress (GZIP)
+    // Compression before encryption is crucial for size reduction
+    final compressedBytes = GZipEncoder().encode(inputBytes);
+
+    if (compressedBytes == null) {
+      throw DatabaseException('Failed to compress backup');
+    }
+
     // 6. Encrypt
-    final encryptedBytes = cipher.process(inputBytes);
+    final encryptedBytes = cipher.process(Uint8List.fromList(compressedBytes));
 
     // 7. Write Output: [Salt (32)] [IV (12)] [Encrypted Data]
     final outputFile = File(outputPath);

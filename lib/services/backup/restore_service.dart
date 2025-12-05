@@ -10,6 +10,7 @@ import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pointycastle/export.dart';
+import 'package:archive/archive.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 class RestoreService {
@@ -78,12 +79,8 @@ class RestoreService {
       try {
         // 3. Query Transactions in range
         // Note: Drift stores dates as text if configured, or int. Project uses Text.
-        // Assuming 'YYYY-MM-DD' format.
-        final startStr = start.toIso8601String().split('T')[0];
-        final endStr = end.toIso8601String().split('T')[0];
-
         final transactionsToImport = await (tempDb.select(tempDb.transactions)
-              ..where((t) => t.date.isBetweenValues(startStr, endStr)))
+              ..where((t) => t.date.isBetweenValues(start, end)))
             .get();
 
         Logger.info('Found ${transactionsToImport.length} transactions to merge');
@@ -192,10 +189,14 @@ class RestoreService {
       );
 
     try {
-      final plaintext = cipher.process(ciphertext);
+      final compressedPlaintext = cipher.process(ciphertext);
+
+      // Decompress (GZIP)
+      final plaintext = GZipDecoder().decodeBytes(compressedPlaintext);
+
       await outputFile.writeAsBytes(plaintext);
     } catch (e) {
-      throw const BackupException('Decryption failed. Incorrect password?');
+      throw const BackupException('Decryption or decompression failed. Incorrect password?');
     }
   }
 

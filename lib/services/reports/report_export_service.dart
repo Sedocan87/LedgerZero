@@ -1,137 +1,78 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
-import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:share_plus/share_plus.dart';
-import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
-
-enum ReportType {
-  spendingTrends,
-  spendingByCategory,
-  categoryBreakdown,
-  incomeVsExpense,
-  netWorth,
-  topPayees,
-  budgetVsActual,
-}
-
-enum ExportFormat {
-  csv,
-  pdf,
-  image,
-}
+import 'package:intl/intl.dart';
 
 class ReportExportService {
-  Future<void> exportReport({
-    required ReportType type,
-    required ExportFormat format,
-    required dynamic data, // Map, List, etc.
-    Uint8List? imageBytes, // For PDF/Image
-    List<String>? csvHeaders,
-    required String title,
-  }) async {
-    final filename = '${type.name}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}';
-
-    File? file;
-
-    switch (format) {
-      case ExportFormat.csv:
-        if (csvHeaders == null) {
-          throw ArgumentError('csvHeaders required for CSV export');
-        }
-        file = await _generateCsv(type, data, filename, csvHeaders);
-        break;
-      case ExportFormat.pdf:
-        if (imageBytes == null) {
-          throw ArgumentError('Image bytes required for PDF export');
-        }
-        file = await _generatePdf(title, imageBytes, filename);
-        break;
-      case ExportFormat.image:
-        if (imageBytes == null) {
-          throw ArgumentError('Image bytes required for Image export');
-        }
-        file = await _generateImage(imageBytes, filename);
-        break;
-    }
-
-    // ignore: deprecated_member_use
-    await Share.shareXFiles([XFile(file.path)], text: 'Exported Report: $title');
-  }
-
-  Future<File> _generateCsv(ReportType type, dynamic data, String filename, List<String> headers) async {
-    final rows = <List<dynamic>>[];
-
-    // Add Header
-    rows.add(headers);
-
-    switch (type) {
-      case ReportType.spendingTrends:
-        final map = data as Map<DateTime, double>;
-        final sortedKeys = map.keys.toList()..sort();
-        for (var key in sortedKeys) {
-          rows.add([DateFormat('yyyy-MM-dd').format(key), map[key]]);
-        }
-        break;
-      case ReportType.spendingByCategory:
-      case ReportType.categoryBreakdown: // Both use Map<String, double>
-        final map = data as Map<String, double>;
-        final sortedKeys = map.keys.toList()..sort((a, b) => map[b]!.compareTo(map[a]!));
-        for (var key in sortedKeys) {
-          rows.add([key, map[key]]);
-        }
-        break;
-      case ReportType.incomeVsExpense:
-      case ReportType.netWorth:
-         // List<ChartSeries>
-         final list = data as List<ChartSeries>;
-         for (var series in list) {
-           for (var point in series.points) {
-             rows.add([series.name, DateFormat('yyyy-MM-dd').format(point.date), point.value]);
-           }
-         }
-         break;
-      case ReportType.topPayees:
-         final list = data as List<MapEntry<String, double>>;
-         for (var entry in list) {
-           rows.add([entry.key, entry.value]);
-         }
-         break;
-      case ReportType.budgetVsActual:
-        final list = data as List<BudgetVsActualItem>;
-        for (var item in list) {
-          rows.add([item.categoryName, item.budgeted, item.actual]);
-        }
-        break;
-    }
-
+  Future<void> shareCsv(List<List<dynamic>> rows, String filename) async {
     final csv = const ListToCsvConverter().convert(rows);
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/$filename.csv');
     await file.writeAsString(csv);
-    return file;
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Exported Report');
   }
 
-  Future<File> _generatePdf(String title, Uint8List imageBytes, String filename) async {
+  /// Generates a PDF report with a title, date, and a table of data.
+  /// [title]: The title of the report.
+  /// [headers]: The column headers for the table.
+  /// [data]: The rows of data for the table.
+  /// [filename]: The output filename (without extension).
+  Future<void> generateAndSharePdf({
+    required String title,
+    required List<String> headers,
+    required List<List<String>> data,
+    required String filename,
+  }) async {
     final pdf = pw.Document();
-    final image = pw.MemoryImage(imageBytes);
 
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Center(
-            child: pw.Column(
+        header: (pw.Context context) {
+          return pw.Header(
+            level: 0,
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(title, style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 20),
-                pw.Image(image),
+                pw.Text(title,
+                    style: pw.TextStyle(
+                        fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                pw.Text(DateFormat.yMMMd().format(DateTime.now())),
               ],
             ),
           );
+        },
+        footer: (pw.Context context) {
+          return pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('Generated by LedgerZero'),
+              pw.Text('Page ${context.pageNumber} of ${context.pagesCount}'),
+            ],
+          );
+        },
+        build: (pw.Context context) {
+          return [
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              headers: headers,
+              data: data,
+              border: null,
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
+              cellHeight: 30,
+              cellAlignments: {
+                for (var i = 0; i < headers.length; i++)
+                  i: pw.Alignment.centerLeft
+              },
+            ),
+          ];
         },
       ),
     );
@@ -139,13 +80,15 @@ class ReportExportService {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/$filename.pdf');
     await file.writeAsBytes(await pdf.save());
-    return file;
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Exported Report PDF');
   }
 
-  Future<File> _generateImage(Uint8List imageBytes, String filename) async {
+  Future<void> shareImage(Uint8List imageBytes, String filename) async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/$filename.png');
     await file.writeAsBytes(imageBytes);
-    return file;
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Exported Chart Image');
   }
 }

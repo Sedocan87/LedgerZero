@@ -10,7 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/presentation/widgets/charts/balance_trend_chart.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ledger_zero/services/csv/account_export_service.dart';
+import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
 final accountDetailProvider = StreamProvider.family.autoDispose<Account?, String>((ref, id) {
@@ -92,22 +92,23 @@ class AccountDetailScreen extends ConsumerWidget {
                       .read(transactionRepositoryProvider)
                       .getTransactionsByAccount(accountId);
 
-                  final payees = await ref.read(payeeRepositoryProvider).getAllPayees();
+                  final payees =
+                      await ref.read(payeeRepositoryProvider).getAllPayees();
                   final payeeMap = {for (var p in payees) p.id: p.name};
 
-                  final categories = await ref.read(categoryRepositoryProvider).getAllCategories();
+                  final categories = await ref
+                      .read(categoryRepositoryProvider)
+                      .getAllCategories();
                   final categoryMap = {for (var c in categories) c.id: c.name};
 
-                  final path = await AccountExportService().exportTransactionsToCsv(
+                  await TransactionExportService().exportTransactionsToCsv(
                     transactions: transactions,
-                    accountName: account.name,
                     payeeNames: payeeMap,
                     categoryNames: categoryMap,
+                    accountNames: {account.id: account.name},
+                    filenamePrefix:
+                        'export_${account.name.replaceAll(' ', '_')}',
                   );
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.exportedTo(path))));
-                  }
                 }
               }
             },

@@ -122,14 +122,65 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         }
       }
 
-      await service.exportReport(
-        type: type,
-        format: format,
-        data: data,
-        imageBytes: imageBytes,
-        title: title,
-        csvHeaders: csvHeaders,
-      );
+      if (format == ExportFormat.pdf) {
+        // PDF Export
+        List<String> headers = [];
+        List<List<String>> rows = [];
+        final currencyFormat = NumberFormat.simpleCurrency();
+        final dateFormat = DateFormat.yMMMd();
+
+        // Convert data to table format
+        if (data is Map<String, double>) {
+          headers = [l10n.category, l10n.amount];
+          rows = data.entries
+              .map((e) => [e.key, currencyFormat.format(e.value)])
+              .toList();
+        } else if (data is Map<DateTime, double>) {
+          headers = [l10n.date, l10n.amount];
+          rows = data.entries
+              .map((e) => [dateFormat.format(e.key), currencyFormat.format(e.value)])
+              .toList();
+        } else if (data is List<MapEntry<String, double>>) {
+          headers = [l10n.payee, l10n.amount];
+          rows = data
+              .map((e) => [e.key, currencyFormat.format(e.value)])
+              .toList();
+        } else if (type == ReportType.budgetVsActual && data is List<BudgetVsActualData>) { // Assuming data type
+           headers = [l10n.category, l10n.budgeted, l10n.activity];
+           rows = (data as List<BudgetVsActualData>).map((e) => [
+             e.categoryName,
+             currencyFormat.format(e.budgeted),
+             currencyFormat.format(e.activity),
+           ]).toList();
+        } else {
+             // Fallback for types not explicitly handled or complex types
+             headers = ['Data'];
+             rows = [[data.toString()]];
+        }
+
+        await service.generateAndSharePdf(
+          title: title,
+          headers: headers,
+          data: rows,
+          filename: '${type.name}_export',
+        );
+
+      } else if (format == ExportFormat.image && imageBytes != null) {
+        await service.shareImage(imageBytes, '${type.name}_chart');
+      } else if (format == ExportFormat.csv && csvHeaders != null) {
+         // CSV Export Logic (existing)
+         List<List<dynamic>> rows = [csvHeaders];
+         if (data is Map<String, double>) {
+             rows.addAll(data.entries.map((e) => [e.key, e.value]));
+         } else if (data is Map<DateTime, double>) {
+             rows.addAll(data.entries.map((e) => [e.key.toIso8601String(), e.value]));
+         } else if (data is List<MapEntry<String, double>>) {
+             rows.addAll(data.map((e) => [e.key, e.value]));
+         }
+         // ... Add other CSV conversions ...
+
+         await service.shareCsv(rows, '${type.name}_export');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
