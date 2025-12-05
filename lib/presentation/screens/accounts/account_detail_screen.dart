@@ -91,8 +91,19 @@ class AccountDetailScreen extends ConsumerWidget {
                   final transactions = await ref
                       .read(transactionRepositoryProvider)
                       .getTransactionsByAccount(accountId);
-                  final path = await AccountExportService()
-                      .exportTransactionsToCsv(transactions, account.name);
+
+                  final payees = await ref.read(payeeRepositoryProvider).getAllPayees();
+                  final payeeMap = {for (var p in payees) p.id: p.name};
+
+                  final categories = await ref.read(categoryRepositoryProvider).getAllCategories();
+                  final categoryMap = {for (var c in categories) c.id: c.name};
+
+                  final path = await AccountExportService().exportTransactionsToCsv(
+                    transactions: transactions,
+                    accountName: account.name,
+                    payeeNames: payeeMap,
+                    categoryNames: categoryMap,
+                  );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l10n.exportedTo(path))));

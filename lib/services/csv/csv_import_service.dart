@@ -44,9 +44,20 @@ class CsvImportService {
     String content;
     try {
       if (file.bytes != null) {
-        content = utf8.decode(file.bytes!);
+        try {
+          content = utf8.decode(file.bytes!);
+        } catch (e) {
+          // Fallback to Latin-1
+          content = latin1.decode(file.bytes!);
+        }
       } else if (file.path != null) {
-        content = await File(file.path!).readAsString();
+        try {
+          content = await File(file.path!).readAsString();
+        } catch (e) {
+          // Fallback to Latin-1
+          final bytes = await File(file.path!).readAsBytes();
+          content = latin1.decode(bytes);
+        }
       } else {
         throw ImportException('File content not available');
       }
@@ -74,13 +85,15 @@ class CsvImportService {
     }
 
     // Simple heuristic: if more semicolons than commas in the first line, use semicolon
-    final firstLine = content.split(RegExp(r'\r\n|\r|\n')).firstOrNull ?? '';
+    final idx = content.indexOf(RegExp(r'\r\n|\r|\n'));
+    final firstLine = idx == -1 ? content : content.substring(0, idx);
+
     if (firstLine.split(';').length > firstLine.split(',').length) {
       delimiter = ';';
     }
 
     // Convert CSV
-    List<List<dynamic>> rawRows;
+    final List<List<dynamic>> rawRows;
     try {
       rawRows = const CsvToListConverter().convert(
         content,
@@ -93,25 +106,26 @@ class CsvImportService {
     }
 
     if (rawRows.isEmpty) {
-       throw ImportException('No data found in the CSV file.');
+      throw ImportException('No data found in the CSV file.');
     }
 
     // Assume first row is header
     if (rawRows.length < 2) {
-       // Could be just headers?
-       if (rawRows.length == 1) {
-         // Valid CSV but no data
-         return CsvImportData(
-           headers: rawRows.first.map((e) => e.toString()).toList(),
-           rows: [],
-           delimiter: delimiter,
-         );
-       }
-       // Should not reach here if not empty
+      // Could be just headers?
+      if (rawRows.length == 1) {
+        // Valid CSV but no data
+        return CsvImportData(
+          headers: rawRows.first.map((e) => e.toString()).toList(),
+          rows: [],
+          delimiter: delimiter,
+        );
+      }
+      // Should not reach here if not empty
     }
 
-    List<String> headers = rawRows.first.map((e) => e.toString()).toList();
-    List<List<dynamic>> rows = rawRows.skip(1).toList();
+    final List<String> headers =
+        rawRows.first.map((e) => e.toString()).toList();
+    final List<List<dynamic>> rows = rawRows.skip(1).toList();
 
     return CsvImportData(
       headers: headers,
@@ -140,15 +154,17 @@ class CsvImportService {
     }
 
     if (errors.isNotEmpty) {
-      return CsvValidationResult(isValid: false, errors: errors, warnings: warnings);
+      return CsvValidationResult(
+          isValid: false, errors: errors, warnings: warnings);
     }
 
     final dateIndex = data.headers.indexOf(dateCol!);
     final amountIndex = data.headers.indexOf(amountCol!);
 
     if (dateIndex == -1 || amountIndex == -1) {
-       errors.add('Mapped columns not found in CSV headers.');
-       return CsvValidationResult(isValid: false, errors: errors, warnings: warnings);
+      errors.add('Mapped columns not found in CSV headers.');
+      return CsvValidationResult(
+          isValid: false, errors: errors, warnings: warnings);
     }
 
     int invalidDateCount = 0;
