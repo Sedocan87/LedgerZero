@@ -10,7 +10,9 @@ class GoogleDriveService {
   final GoogleAuthService _authService;
   final SharedPreferences _prefs;
   String? _syncFolderId;
+  String? _backupsFolderId;
   static const String _folderIdKey = 'drive_sync_folder_id';
+  static const String _backupsFolderIdKey = 'drive_backups_folder_id';
 
   GoogleDriveService(this._authService, this._prefs);
 
@@ -26,28 +28,49 @@ class GoogleDriveService {
     if (_syncFolderId != null) {
       return _syncFolderId!;
     }
-
     // Check persistent cache
     final cachedId = _prefs.getString(_folderIdKey);
     if (cachedId != null) {
       _syncFolderId = cachedId;
       return cachedId;
     }
-
     final api = await _getDriveApi();
+    final rootFolderId = await _ensureRootFolderExists(api);
 
-    // 1. Find or create LedgerZero root folder
-    String? rootFolderId = await _findFolder(api, 'LedgerZero');
-    rootFolderId ??= await _createFolder(api, 'LedgerZero');
-
-    // 2. Find or create Sync folder inside LedgerZero
-    String? syncFolderId =
-        await _findFolder(api, 'Sync', parentId: rootFolderId);
+    String? syncFolderId = await _findFolder(api, 'Sync', parentId: rootFolderId);
     syncFolderId ??= await _createFolder(api, 'Sync', parentId: rootFolderId);
 
     _syncFolderId = syncFolderId;
     await _prefs.setString(_folderIdKey, syncFolderId);
     return syncFolderId;
+  }
+
+  Future<String> ensureBackupsFolderExists() async {
+    if (_backupsFolderId != null) {
+      return _backupsFolderId!;
+    }
+    // Check persistent cache
+    final cachedId = _prefs.getString(_backupsFolderIdKey);
+    if (cachedId != null) {
+      _backupsFolderId = cachedId;
+      return cachedId;
+    }
+
+    final api = await _getDriveApi();
+    final rootFolderId = await _ensureRootFolderExists(api);
+
+    String? backupsFolderId = await _findFolder(api, 'Backups', parentId: rootFolderId);
+    backupsFolderId ??= await _createFolder(api, 'Backups', parentId: rootFolderId);
+
+    _backupsFolderId = backupsFolderId;
+    await _prefs.setString(_backupsFolderIdKey, backupsFolderId);
+    return backupsFolderId;
+  }
+
+  Future<String> _ensureRootFolderExists(drive.DriveApi api) async {
+    String? rootFolderId = await _findFolder(api, 'LedgerZero');
+    rootFolderId ??= await _createFolder(api, 'LedgerZero');
+    return rootFolderId;
   }
 
   Future<String?> _findFolder(drive.DriveApi api, String name,
@@ -94,6 +117,27 @@ class GoogleDriveService {
       Logger.info('Uploaded delta: $filename (ID: ${result.id})');
       return result.id;
     }, 'Failed to upload delta');
+  }
+
+  Future<String?> uploadBackup(File localFile, String filename) async {
+    return _retry(() async {
+      final folderId = await ensureBackupsFolderExists();
+      final api = await _getDriveApi();
+
+      final driveFile = drive.File()
+        ..name = filename
+        ..parents = [folderId];
+
+      final media = drive.Media(localFile.openRead(), localFile.lengthSync());
+
+      final result = await api.files.create(
+        driveFile,
+        uploadMedia: media,
+      );
+
+      Logger.info('Uploaded backup: $filename (ID: ${result.id})');
+      return result.id;
+    }, 'Failed to upload backup');
   }
 
   Future<File> downloadDelta(String fileId, String savePath) async {

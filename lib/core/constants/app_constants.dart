@@ -3,5 +3,7 @@ class AppConstants {
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;
 
+  static const String databaseFilename = 'db.sqlite';
+
   // Add other constants here
 }

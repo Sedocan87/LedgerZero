@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
@@ -14,11 +15,25 @@ final hasAccountsProvider = FutureProvider.autoDispose<bool>((ref) async {
   return accounts.isNotEmpty;
 });
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Check backup status on home screen init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(backupSchedulerProvider).checkBackupDue();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hasAccountsAsync = ref.watch(hasAccountsProvider);
 
     return Scaffold(

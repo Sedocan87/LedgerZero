@@ -60,5 +60,5 @@ final scheduledTransactionServiceProvider = Provider<ScheduledTransactionService
 });
 
 final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
-  return RuleMatchingService(ref.watch(payeeRepositoryProvider));
+  return RuleMatchingService(ref.watch(payeeRepositoryProvider), ref.watch(transactionRepositoryProvider));
 });
