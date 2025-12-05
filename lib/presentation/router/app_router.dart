@@ -34,6 +34,9 @@ import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_
 import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
+import 'package:ledger_zero/presentation/screens/onboarding/account_setup_screen.dart';
+import 'package:ledger_zero/presentation/screens/onboarding/budget_setup_screen.dart';
+import 'package:ledger_zero/presentation/screens/onboarding/completion_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/natural_language_input_screen.dart';
@@ -51,7 +54,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isOnboarded = authState.isOnboarded;
       final isAuthenticated = authState.isAuthenticated;
-      final isGoingToOnboarding = state.matchedLocation == '/onboarding';
+      final isGoingToOnboarding = state.matchedLocation.startsWith('/onboarding');
       final isGoingToLogin = state.matchedLocation == '/login';
 
       if (!isOnboarded) {
@@ -78,6 +81,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'security',
             name: 'security-setup',
             builder: (context, state) => const SecuritySetupScreen(),
+          ),
+          GoRoute(
+            path: 'account-setup',
+            name: 'account-setup',
+            builder: (context, state) => const AccountSetupScreen(),
+          ),
+          GoRoute(
+            path: 'budget-setup',
+            name: 'budget-setup',
+            builder: (context, state) => const BudgetSetupScreen(),
+          ),
+          GoRoute(
+            path: 'completion',
+            name: 'completion',
+            builder: (context, state) => const CompletionScreen(),
           ),
         ],
       ),
