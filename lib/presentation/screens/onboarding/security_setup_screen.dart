@@ -92,11 +92,12 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
       // Set session key for immediate DB access
       SecurityManager.setSessionKey(key);
 
-      // 5. Complete Onboarding
+      // 5. Proceed to next step
       if (mounted) {
-        ref.read(authProvider.notifier).setOnboarded(true);
+        // Authenticate the user for the session so they can create data
         ref.read(authProvider.notifier).setAuthenticated(true);
-        context.go('/');
+        // Do NOT set onboarded to true yet, as there are more steps
+        context.goNamed('account-setup');
       }
     } catch (e) {
       if (mounted) {
