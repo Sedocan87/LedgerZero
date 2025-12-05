@@ -1003,4 +1003,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importCancelled => 'Import Cancelled';
+
+  @override
+  String get generalSettings => 'General Settings';
+
+  @override
+  String get currency => 'Currency';
+
+  @override
+  String get firstDayOfWeek => 'First Day of Week';
+
+  @override
+  String get theme => 'Theme';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get defaultCategory => 'Default Category';
+
+  @override
+  String get systemTheme => 'System';
+
+  @override
+  String get lightTheme => 'Light';
+
+  @override
+  String get darkTheme => 'Dark';
+
+  @override
+  String get monday => 'Monday';
+
+  @override
+  String get tuesday => 'Tuesday';
+
+  @override
+  String get wednesday => 'Wednesday';
+
+  @override
+  String get thursday => 'Thursday';
+
+  @override
+  String get friday => 'Friday';
+
+  @override
+  String get saturday => 'Saturday';
+
+  @override
+  String get sunday => 'Sunday';
+
+  @override
+  String get numberFormat => 'Number Format';
+
+  @override
+  String get syncAndBackup => 'Sync & Backup';
+
+  @override
+  String get importFromMint => 'Import from Mint';
+
+  @override
+  String get loadingAccounts => 'Loading accounts...';
+
+  @override
+  String get backupAndRestore => 'Backup & Restore';
 }

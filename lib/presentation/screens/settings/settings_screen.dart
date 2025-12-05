@@ -4,8 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/theme_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/biometrics_controller.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -15,6 +21,8 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final currentDuration = ref.watch(autoLockDurationProvider);
     final biometricsState = ref.watch(biometricsProvider);
+    final settings = ref.watch(settingsProvider);
+    final themeMode = ref.watch(themeProvider);
 
     String getDurationLabel(int duration) {
       if (duration == 0) {
@@ -26,7 +34,7 @@ class SettingsScreen extends ConsumerWidget {
       return l10n.autoLockMinutes(duration);
     }
 
-    Widget buildOption(BuildContext context, String label, int value) {
+    Widget buildOption<T>(BuildContext context, String label, T value) {
       return SimpleDialogOption(
         onPressed: () => Navigator.pop(context, value),
         child: Padding(
@@ -42,124 +50,366 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
-          FutureBuilder<bool>(
-            future: ref.watch(databaseProvider).isEncrypted,
-            builder: (context, snapshot) {
-              final isEncrypted = snapshot.data ?? false;
-              return ListTile(
-                leading: Icon(
-                  isEncrypted ? Icons.lock : Icons.lock_open,
-                  color: isEncrypted ? Colors.green : Colors.red,
-                ),
-                title: Text(l10n.encryptionStatus),
-                subtitle:
-                    Text(isEncrypted ? l10n.encrypted : l10n.notEncrypted),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.sync),
-            title: Text(l10n.syncSettings),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/sync'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.security),
-            title: Text(l10n.recoveryKey),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/recovery-key'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.timer),
-            title: Text(l10n.autoLock),
-            subtitle: Text(getDurationLabel(currentDuration)),
-            onTap: () async {
-              final selected = await showDialog<int>(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: Text(l10n.autoLock),
-                  children: [
-                    buildOption(context, l10n.autoLockImmediate, 0),
-                    buildOption(context, l10n.autoLockMinutes(1), 1),
-                    buildOption(context, l10n.autoLockMinutes(5), 5),
-                    buildOption(context, l10n.autoLockMinutes(15), 15),
-                    buildOption(context, l10n.autoLockMinutes(30), 30),
-                    buildOption(context, l10n.autoLockNever, -1),
-                  ],
-                ),
-              );
+          // General Settings
+          SettingsSection(
+            title: l10n.generalSettings,
+            children: [
+              // Currency
+              ListTile(
+                leading: const Icon(Icons.attach_money),
+                title: Text(l10n.currency),
+                subtitle: Text(settings.currency),
+                onTap: () async {
+                  final selected = await showDialog<String>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text(l10n.currency),
+                      children: ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD']
+                          .map((c) => buildOption(context, c, c))
+                          .toList(),
+                    ),
+                  );
+                  if (selected != null) {
+                    ref.read(settingsProvider.notifier).setCurrency(selected);
+                  }
+                },
+              ),
+              // Date Format
+              ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: Text(l10n.dateFormat),
+                subtitle: Text(settings.dateFormat.pattern),
+                onTap: () async {
+                  final selected = await showDialog<AppDateFormat>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text(l10n.dateFormat),
+                      children: AppDateFormat.values
+                          .map((f) => buildOption(context, f.pattern, f))
+                          .toList(),
+                    ),
+                  );
+                  if (selected != null) {
+                    ref.read(settingsProvider.notifier).setDateFormat(selected);
+                  }
+                },
+              ),
+              // Number Format
+              ListTile(
+                leading: const Icon(Icons.numbers),
+                title: Text(l10n.numberFormat),
+                subtitle: Text(settings.numberFormat == AppNumberFormat.dot ? l10n.dot : l10n.comma),
+                onTap: () async {
+                  final selected = await showDialog<AppNumberFormat>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text(l10n.numberFormat),
+                      children: [
+                        buildOption(context, l10n.dot, AppNumberFormat.dot),
+                        buildOption(context, l10n.comma, AppNumberFormat.comma),
+                      ],
+                    ),
+                  );
+                  if (selected != null) {
+                    ref.read(settingsProvider.notifier).setNumberFormat(selected);
+                  }
+                },
+              ),
+              // First Day of Week
+              ListTile(
+                leading: const Icon(Icons.today),
+                title: Text(l10n.firstDayOfWeek),
+                subtitle: Text(switch (settings.firstDayOfWeek) {
+                  AppFirstDayOfWeek.sunday => l10n.sunday,
+                  AppFirstDayOfWeek.monday => l10n.monday,
+                  AppFirstDayOfWeek.saturday => l10n.saturday,
+                  _ => l10n.sunday,
+                }),
+                onTap: () async {
+                  final selected = await showDialog<AppFirstDayOfWeek>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text(l10n.firstDayOfWeek),
+                      children: [
+                        buildOption(context, l10n.sunday, AppFirstDayOfWeek.sunday),
+                        buildOption(context, l10n.monday, AppFirstDayOfWeek.monday),
+                        buildOption(context, l10n.saturday, AppFirstDayOfWeek.saturday),
+                      ],
+                    ),
+                  );
+                  if (selected != null) {
+                    ref.read(settingsProvider.notifier).setFirstDayOfWeek(selected);
+                  }
+                },
+              ),
+              // Theme
+              ListTile(
+                leading: const Icon(Icons.brightness_6),
+                title: Text(l10n.theme),
+                subtitle: Text(switch (themeMode) {
+                  ThemeMode.system => l10n.systemTheme,
+                  ThemeMode.light => l10n.lightTheme,
+                  ThemeMode.dark => l10n.darkTheme,
+                }),
+                onTap: () async {
+                  final selected = await showDialog<ThemeMode>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text(l10n.theme),
+                      children: [
+                        buildOption(context, l10n.systemTheme, ThemeMode.system),
+                        buildOption(context, l10n.lightTheme, ThemeMode.light),
+                        buildOption(context, l10n.darkTheme, ThemeMode.dark),
+                      ],
+                    ),
+                  );
+                  if (selected != null) {
+                    ref.read(themeProvider.notifier).setTheme(selected);
+                  }
+                },
+              ),
+              // Language
+              ListTile(
+                leading: const Icon(Icons.language),
+                title: Text(l10n.language),
+                subtitle: Text(settings.language?.languageCode == 'de' ? 'Deutsch' : 'English'),
+                onTap: () async {
+                  final selected = await showDialog<Locale>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text(l10n.language),
+                      children: [
+                        buildOption(context, 'English', const Locale('en')),
+                        buildOption(context, 'Deutsch', const Locale('de')),
+                      ],
+                    ),
+                  );
+                  if (selected != null) {
+                    ref.read(settingsProvider.notifier).setLanguage(selected);
+                  }
+                },
+              ),
+              // Default Account
+              Consumer(builder: (context, ref, _) {
+                final accountsAsync = ref.watch(accountsProvider);
+                return accountsAsync.when(
+                  data: (accounts) => ListTile(
+                    leading: const Icon(Icons.account_balance_wallet),
+                    title: Text(l10n.defaultAccount),
+                    subtitle: Text(
+                      accounts.where((a) => a.id == settings.defaultAccountId).firstOrNull?.name ?? l10n.none,
+                    ),
+                    onTap: () async {
+                      // Using a wrapper object to distinguish null (None) from null (Dismissed)
+                      final selectedWrapper = await showDialog<_SelectionWrapper>(
+                        context: context,
+                        builder: (context) => SimpleDialog(
+                          title: Text(l10n.defaultAccount),
+                          children: [
+                            SimpleDialogOption(
+                                onPressed: () => Navigator.pop(context, const _SelectionWrapper(null)),
+                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(l10n.none)),
+                            ),
+                            ...accounts.map((a) => SimpleDialogOption(
+                                onPressed: () => Navigator.pop(context, _SelectionWrapper(a.id)),
+                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(a.name)),
+                            )),
+                          ],
+                        ),
+                      );
 
-              if (selected != null) {
-                await ref.read(autoLockDurationProvider.notifier).setDuration(selected);
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.password),
-            title: Text(l10n.changePassword),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/change-password'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.backup),
-            title: const Text('Backup & Restore'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/backup'),
-          ),
-          biometricsState.when(
-            data: (state) => SwitchListTile(
-              secondary: const Icon(Icons.fingerprint),
-              title: Text(l10n.biometrics),
-              subtitle: Text(l10n.useBiometricsDescription),
-              value: state.isEnabled,
-              onChanged: state.isAvailable
-                  ? (value) async {
-                      final success = await ref
-                          .read(biometricsProvider.notifier)
-                          .toggleBiometrics(value);
-                      if (!success && value) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.biometricsSetupFailed)),
-                          );
-                        }
+                      if (selectedWrapper != null) {
+                         ref.read(settingsProvider.notifier).setDefaultAccountId(selectedWrapper.value);
                       }
-                    }
-                  : null,
-            ),
-            loading: () => const ListTile(
-              leading: Icon(Icons.fingerprint),
-              title: Text('Loading...'),
-            ),
-            error: (_, __) => const SizedBox.shrink(),
+                    },
+                  ),
+                  loading: () => ListTile(title: Text(l10n.loadingAccounts)),
+                  error: (_, __) => const SizedBox.shrink(),
+                );
+              }),
+              // Default Category
+              Consumer(builder: (context, ref, _) {
+                final categoriesAsync = ref.watch(categoriesProvider);
+                return categoriesAsync.when(
+                  data: (categories) => ListTile(
+                    leading: const Icon(Icons.category),
+                    title: Text(l10n.defaultCategory),
+                    subtitle: Text(
+                      categories.where((c) => c.id == settings.defaultCategoryId).firstOrNull?.name ?? l10n.none,
+                    ),
+                    onTap: () async {
+                       final selectedWrapper = await showDialog<_SelectionWrapper>(
+                        context: context,
+                        builder: (context) => SimpleDialog(
+                          title: Text(l10n.defaultCategory),
+                          children: [
+                             SimpleDialogOption(
+                                onPressed: () => Navigator.pop(context, const _SelectionWrapper(null)),
+                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(l10n.none)),
+                            ),
+                            ...categories.map((c) => SimpleDialogOption(
+                                onPressed: () => Navigator.pop(context, _SelectionWrapper(c.id)),
+                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(c.name)),
+                            )),
+                          ],
+                        ),
+                      );
+                      if (selectedWrapper != null) {
+                         ref.read(settingsProvider.notifier).setDefaultCategoryId(selectedWrapper.value);
+                      }
+                    },
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                );
+              }),
+            ],
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.upload_file),
-            title: Text(l10n.importCsv),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/import-csv'),
+
+          // Security Settings
+          SettingsSection(
+            title: l10n.secure, // "Secure" or "Security"
+            children: [
+              FutureBuilder<bool>(
+                future: ref.watch(databaseProvider).isEncrypted,
+                builder: (context, snapshot) {
+                  final isEncrypted = snapshot.data ?? false;
+                  return ListTile(
+                    leading: Icon(
+                      isEncrypted ? Icons.lock : Icons.lock_open,
+                      color: isEncrypted ? Colors.green : Colors.red,
+                    ),
+                    title: Text(l10n.encryptionStatus),
+                    subtitle:
+                        Text(isEncrypted ? l10n.encrypted : l10n.notEncrypted),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.security),
+                title: Text(l10n.recoveryKey),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/recovery-key'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer),
+                title: Text(l10n.autoLock),
+                subtitle: Text(getDurationLabel(currentDuration)),
+                onTap: () async {
+                  final selected = await showDialog<int>(
+                    context: context,
+                    builder: (context) => SimpleDialog(
+                      title: Text(l10n.autoLock),
+                      children: [
+                        buildOption(context, l10n.autoLockImmediate, 0),
+                        buildOption(context, l10n.autoLockMinutes(1), 1),
+                        buildOption(context, l10n.autoLockMinutes(5), 5),
+                        buildOption(context, l10n.autoLockMinutes(15), 15),
+                        buildOption(context, l10n.autoLockMinutes(30), 30),
+                        buildOption(context, l10n.autoLockNever, -1),
+                      ],
+                    ),
+                  );
+
+                  if (selected != null) {
+                    await ref.read(autoLockDurationProvider.notifier).setDuration(selected);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.password),
+                title: Text(l10n.changePassword),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/change-password'),
+              ),
+              biometricsState.when(
+                data: (state) => SwitchListTile(
+                  secondary: const Icon(Icons.fingerprint),
+                  title: Text(l10n.biometrics),
+                  subtitle: Text(l10n.useBiometricsDescription),
+                  value: state.isEnabled,
+                  onChanged: state.isAvailable
+                      ? (value) async {
+                          final success = await ref
+                              .read(biometricsProvider.notifier)
+                              .toggleBiometrics(value);
+                          if (!success && value) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(l10n.biometricsSetupFailed)),
+                              );
+                            }
+                          }
+                        }
+                      : null,
+                ),
+                loading: () => ListTile(
+                  leading: const Icon(Icons.fingerprint),
+                  title: Text(l10n.loading),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.import_export),
-            title: const Text('Import from Mint'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/import-mint'),
+
+          // Sync & Backup
+          SettingsSection(
+            title: l10n.syncAndBackup,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.sync),
+                title: Text(l10n.syncSettings),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/sync'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.backup),
+                title: Text(l10n.backupAndRestore),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/backup'),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.people),
-            title: Text(l10n.payees),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/payees'),
+
+          // Management
+          SettingsSection(
+            title: l10n.manageCategories, // Using manageCategories as a section title for data management
+            children: [
+               ListTile(
+                leading: const Icon(Icons.upload_file),
+                title: Text(l10n.importCsv),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/import-csv'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.import_export),
+                title: Text(l10n.importFromMint),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/import-mint'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.people),
+                title: Text(l10n.payees),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/payees'),
+              ),
+              ListTile(
+                leading: const Icon(AppIcons.calendar),
+                title: Text(l10n.scheduledTransactions),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/scheduled-transactions'),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(AppIcons.calendar),
-            title: Text(l10n.scheduledTransactions),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/scheduled-transactions'),
-          ),
+
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
+}
+
+class _SelectionWrapper {
+  final String? value;
+  const _SelectionWrapper(this.value);
 }

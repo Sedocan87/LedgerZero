@@ -1909,6 +1909,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import Cancelled'**
   String get importCancelled;
+
+  /// No description provided for @generalSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'General Settings'**
+  String get generalSettings;
+
+  /// No description provided for @currency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get currency;
+
+  /// No description provided for @firstDayOfWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'First Day of Week'**
+  String get firstDayOfWeek;
+
+  /// No description provided for @theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get theme;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @defaultCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Category'**
+  String get defaultCategory;
+
+  /// No description provided for @systemTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get systemTheme;
+
+  /// No description provided for @lightTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get lightTheme;
+
+  /// No description provided for @darkTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get darkTheme;
+
+  /// No description provided for @monday.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get monday;
+
+  /// No description provided for @tuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get tuesday;
+
+  /// No description provided for @wednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get wednesday;
+
+  /// No description provided for @thursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get thursday;
+
+  /// No description provided for @friday.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get friday;
+
+  /// No description provided for @saturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get saturday;
+
+  /// No description provided for @sunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get sunday;
+
+  /// No description provided for @numberFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Number Format'**
+  String get numberFormat;
+
+  /// No description provided for @syncAndBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync & Backup'**
+  String get syncAndBackup;
+
+  /// No description provided for @importFromMint.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from Mint'**
+  String get importFromMint;
+
+  /// No description provided for @loadingAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading accounts...'**
+  String get loadingAccounts;
+
+  /// No description provided for @backupAndRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get backupAndRestore;
 }
 
 class _AppLocalizationsDelegate
