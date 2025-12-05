@@ -1,6 +1,7 @@
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
+import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/services/import/models/mint_import_data.dart';
@@ -11,7 +12,7 @@ class MintDataMapper {
   final Uuid _uuid = const Uuid();
 
   /// Converts [MintImportData] into lists of domain entities.
-  MintMappedData mapData(MintImportData data) {
+  MintMappedData mapData(MintImportData data, {List<Category>? existingCategories}) {
     final accounts = <Account>[];
     final categoryGroups = <CategoryGroup>[];
     final categories = <Category>[];
@@ -40,31 +41,46 @@ class MintDataMapper {
     }
 
     // 2. Map Categories
-    // Mint categories are flat strings in CSV (e.g. "Groceries", "Shopping", "Food & Dining").
-    // We will put them all in a "Mint Import" group or try to group them.
-    // For simplicity, we'll create one group "Mint Import" and put all there,
-    // or if the user wants to map them later.
-    // Better: Check if standard categories match? No, that's complex.
-    // Strategy: Create "Mint Import" group.
+    // Strategy:
+    // a. Check if category matches an existing one (case-insensitive).
+    // b. If not, create new category in "Mint Import" group.
 
-    final groupId = _uuid.v4();
-    categoryGroups.add(CategoryGroup(
-      id: groupId,
-      name: 'Mint Import',
-      sortOrder: 0,
-    ));
+    final existingCategoryMap = <String, Category>{};
+    if (existingCategories != null) {
+      for (final cat in existingCategories) {
+        existingCategoryMap[cat.name.toLowerCase()] = cat;
+      }
+    }
 
+    String? mintImportGroupId;
     final categoryNameIdMap = <String, String>{};
+
     for (final catName in data.categories) {
-       final id = _uuid.v4();
-       categoryNameIdMap[catName] = id;
-       categories.add(Category(
-         id: id,
-         name: catName,
-         categoryGroupId: groupId,
-         goalType: GoalType.targetBalance, // Default
-         targetAmount: 0,
-       ));
+      final lowerName = catName.toLowerCase();
+      if (existingCategoryMap.containsKey(lowerName)) {
+        // Map to existing category
+        categoryNameIdMap[catName] = existingCategoryMap[lowerName]!.id;
+      } else {
+        // Create new category in "Mint Import" group
+        if (mintImportGroupId == null) {
+          mintImportGroupId = _uuid.v4();
+          categoryGroups.add(CategoryGroup(
+            id: mintImportGroupId,
+            name: 'Mint Import',
+            sortOrder: 0,
+          ));
+        }
+
+        final id = _uuid.v4();
+        categoryNameIdMap[catName] = id;
+        categories.add(Category(
+          id: id,
+          name: catName,
+          categoryGroupId: mintImportGroupId,
+          goalType: GoalType.targetBalance,
+          targetAmount: 0,
+        ));
+      }
     }
 
     // 3. Map Payees and Transactions
