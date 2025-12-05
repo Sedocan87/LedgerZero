@@ -540,5 +540,22 @@
   "syncAndBackup": "Sync & Backup",
   "importFromMint": "Import from Mint",
   "loadingAccounts": "Loading accounts...",
-  "backupAndRestore": "Backup & Restore"
+  "backupAndRestore": "Backup & Restore",
+  "notificationSettings": "Notification Settings",
+  "scheduledTransactionNotifications": "Scheduled Transactions",
+  "budgetAlertNotifications": "Budget Alerts",
+  "syncStatusNotifications": "Sync Status",
+  "advancedSettings": "Advanced Settings",
+  "developerMode": "Developer Mode",
+  "databaseStatistics": "Database Statistics",
+  "clearCache": "Clear Cache",
+  "cacheCleared": "Cache cleared successfully",
+  "factoryReset": "Factory Reset",
+  "factoryResetConfirmation": "Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone.",
+  "factoryResetTitle": "Factory Reset?",
+  "factoryResetSuccess": "Factory reset complete. Please restart the app.",
+  "databaseSize": "Database Size",
+  "tableRowCounts": "Table Row Counts",
+  "walSize": "WAL Size",
+  "totalRows": "Total Rows"
 }

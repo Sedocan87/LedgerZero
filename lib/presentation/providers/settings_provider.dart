@@ -45,6 +45,14 @@ class SettingsState {
   final String? defaultAccountId;
   final String? defaultCategoryId;
 
+  // Notification Settings
+  final bool scheduledTransactionNotifications;
+  final bool budgetAlertNotifications;
+  final bool syncStatusNotifications;
+
+  // Advanced Settings
+  final bool developerMode;
+
   const SettingsState({
     this.currency = 'USD',
     this.dateFormat = AppDateFormat.iso8601,
@@ -53,6 +61,10 @@ class SettingsState {
     this.language,
     this.defaultAccountId,
     this.defaultCategoryId,
+    this.scheduledTransactionNotifications = true,
+    this.budgetAlertNotifications = true,
+    this.syncStatusNotifications = true,
+    this.developerMode = false,
   });
 
   SettingsState copyWith({
@@ -63,6 +75,10 @@ class SettingsState {
     Wrapped<Locale?>? language,
     Wrapped<String?>? defaultAccountId,
     Wrapped<String?>? defaultCategoryId,
+    bool? scheduledTransactionNotifications,
+    bool? budgetAlertNotifications,
+    bool? syncStatusNotifications,
+    bool? developerMode,
   }) {
     return SettingsState(
       currency: currency ?? this.currency,
@@ -72,6 +88,10 @@ class SettingsState {
       language: language != null ? language.value : this.language,
       defaultAccountId: defaultAccountId != null ? defaultAccountId.value : this.defaultAccountId,
       defaultCategoryId: defaultCategoryId != null ? defaultCategoryId.value : this.defaultCategoryId,
+      scheduledTransactionNotifications: scheduledTransactionNotifications ?? this.scheduledTransactionNotifications,
+      budgetAlertNotifications: budgetAlertNotifications ?? this.budgetAlertNotifications,
+      syncStatusNotifications: syncStatusNotifications ?? this.syncStatusNotifications,
+      developerMode: developerMode ?? this.developerMode,
     );
   }
 }
@@ -84,6 +104,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
   static const String _keyLanguage = 'settings_language';
   static const String _keyDefaultAccount = 'settings_default_account';
   static const String _keyDefaultCategory = 'settings_default_category';
+
+  static const String _keyScheduledTxNotifications = 'settings_notif_scheduled_tx';
+  static const String _keyBudgetAlertNotifications = 'settings_notif_budget_alert';
+  static const String _keySyncStatusNotifications = 'settings_notif_sync_status';
+  static const String _keyDeveloperMode = 'settings_developer_mode';
 
   late SharedPreferences _prefs;
 
@@ -109,6 +134,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
     final language = languageCode != null ? Locale(languageCode) : null;
 
+    final scheduledTransactionNotifications = _prefs.getBool(_keyScheduledTxNotifications) ?? true;
+    final budgetAlertNotifications = _prefs.getBool(_keyBudgetAlertNotifications) ?? true;
+    final syncStatusNotifications = _prefs.getBool(_keySyncStatusNotifications) ?? true;
+    final developerMode = _prefs.getBool(_keyDeveloperMode) ?? false;
+
     return SettingsState(
       currency: currency,
       dateFormat: dateFormat,
@@ -117,6 +147,10 @@ class SettingsNotifier extends Notifier<SettingsState> {
       language: language,
       defaultAccountId: defaultAccountId,
       defaultCategoryId: defaultCategoryId,
+      scheduledTransactionNotifications: scheduledTransactionNotifications,
+      budgetAlertNotifications: budgetAlertNotifications,
+      syncStatusNotifications: syncStatusNotifications,
+      developerMode: developerMode,
     );
   }
 
@@ -165,6 +199,26 @@ class SettingsNotifier extends Notifier<SettingsState> {
     } else {
       await _prefs.remove(_keyDefaultCategory);
     }
+  }
+
+  Future<void> setScheduledTransactionNotifications(bool value) async {
+    state = state.copyWith(scheduledTransactionNotifications: value);
+    await _prefs.setBool(_keyScheduledTxNotifications, value);
+  }
+
+  Future<void> setBudgetAlertNotifications(bool value) async {
+    state = state.copyWith(budgetAlertNotifications: value);
+    await _prefs.setBool(_keyBudgetAlertNotifications, value);
+  }
+
+  Future<void> setSyncStatusNotifications(bool value) async {
+    state = state.copyWith(syncStatusNotifications: value);
+    await _prefs.setBool(_keySyncStatusNotifications, value);
+  }
+
+  Future<void> setDeveloperMode(bool value) async {
+    state = state.copyWith(developerMode: value);
+    await _prefs.setBool(_keyDeveloperMode, value);
   }
 }
 

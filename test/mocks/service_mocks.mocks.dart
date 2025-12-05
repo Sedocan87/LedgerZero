@@ -382,6 +382,15 @@ class MockNotificationService extends _i1.Mock
           as _i5.Future<void>);
 
   @override
+  _i5.Future<void> showBackupReminderNotification() =>
+      (super.noSuchMethod(
+            Invocation.method(#showBackupReminderNotification, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Future<void> showSyncFailureNotification({
     required String? title,
     required String? body,
@@ -478,9 +487,30 @@ class MockGoogleDriveService extends _i1.Mock
           as _i5.Future<String>);
 
   @override
+  _i5.Future<String> ensureBackupsFolderExists() =>
+      (super.noSuchMethod(
+            Invocation.method(#ensureBackupsFolderExists, []),
+            returnValue: _i5.Future<String>.value(
+              _i13.dummyValue<String>(
+                this,
+                Invocation.method(#ensureBackupsFolderExists, []),
+              ),
+            ),
+          )
+          as _i5.Future<String>);
+
+  @override
   _i5.Future<String?> uploadDelta(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadDelta, [localFile, filename]),
+            returnValue: _i5.Future<String?>.value(),
+          )
+          as _i5.Future<String?>);
+
+  @override
+  _i5.Future<String?> uploadBackup(_i2.File? localFile, String? filename) =>
+      (super.noSuchMethod(
+            Invocation.method(#uploadBackup, [localFile, filename]),
             returnValue: _i5.Future<String?>.value(),
           )
           as _i5.Future<String?>);
@@ -563,6 +593,15 @@ class MockICloudDriveService extends _i1.Mock
   _i5.Future<void> uploadDelta(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadDelta, [localFile, filename]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> uploadBackup(_i2.File? localFile, String? filename) =>
+      (super.noSuchMethod(
+            Invocation.method(#uploadBackup, [localFile, filename]),
             returnValue: _i5.Future<void>.value(),
             returnValueForMissingStub: _i5.Future<void>.value(),
           )

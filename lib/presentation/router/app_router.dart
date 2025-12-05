@@ -26,6 +26,7 @@ import 'package:ledger_zero/presentation/screens/import/import_confirmation_scre
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/mint_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/database_stats_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_debug_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security_settings_screen.dart';
@@ -115,6 +116,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
         routes: [
+          GoRoute(
+            path: 'database-stats',
+            name: 'database-stats',
+            builder: (context, state) => const DatabaseStatsScreen(),
+          ),
           GoRoute(
             path: 'sync',
             name: 'sync-settings',
