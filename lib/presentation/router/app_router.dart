@@ -22,6 +22,7 @@ import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/import/csv_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/import/import_confirmation_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/import/mint_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_debug_screen.dart';
@@ -127,6 +128,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'import-ynab',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => const YnabImportScreen(),
+          ),
+          GoRoute(
+            path: 'import-mint',
+            name: 'import-mint',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => const MintImportScreen(),
           ),
           GoRoute(
             path: 'recovery-key',
