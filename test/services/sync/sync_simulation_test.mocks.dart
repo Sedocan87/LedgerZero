@@ -61,9 +61,30 @@ class MockGoogleDriveService extends _i1.Mock
           as _i4.Future<String>);
 
   @override
+  _i4.Future<String> ensureBackupsFolderExists() =>
+      (super.noSuchMethod(
+            Invocation.method(#ensureBackupsFolderExists, []),
+            returnValue: _i4.Future<String>.value(
+              _i5.dummyValue<String>(
+                this,
+                Invocation.method(#ensureBackupsFolderExists, []),
+              ),
+            ),
+          )
+          as _i4.Future<String>);
+
+  @override
   _i4.Future<String?> uploadDelta(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadDelta, [localFile, filename]),
+            returnValue: _i4.Future<String?>.value(),
+          )
+          as _i4.Future<String?>);
+
+  @override
+  _i4.Future<String?> uploadBackup(_i2.File? localFile, String? filename) =>
+      (super.noSuchMethod(
+            Invocation.method(#uploadBackup, [localFile, filename]),
             returnValue: _i4.Future<String?>.value(),
           )
           as _i4.Future<String?>);
@@ -146,6 +167,15 @@ class MockICloudDriveService extends _i1.Mock
   _i4.Future<void> uploadDelta(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadDelta, [localFile, filename]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> uploadBackup(_i2.File? localFile, String? filename) =>
+      (super.noSuchMethod(
+            Invocation.method(#uploadBackup, [localFile, filename]),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
@@ -390,6 +420,15 @@ class MockNotificationService extends _i1.Mock
   _i4.Future<void> cancelNotification(int? id) =>
       (super.noSuchMethod(
             Invocation.method(#cancelNotification, [id]),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> showBackupReminderNotification() =>
+      (super.noSuchMethod(
+            Invocation.method(#showBackupReminderNotification, []),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )
