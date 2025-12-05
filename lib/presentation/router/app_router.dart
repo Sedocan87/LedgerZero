@@ -16,6 +16,8 @@ import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
 import 'package:ledger_zero/presentation/screens/payees/payee_detail_screen.dart';
 import 'package:ledger_zero/presentation/screens/payees/payees_screen.dart';
+import 'package:ledger_zero/presentation/screens/rules/add_edit_rule_screen.dart';
+import 'package:ledger_zero/presentation/screens/rules/rules_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/scheduled_transactions_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit_scheduled_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
@@ -193,6 +195,26 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) {
                   final id = state.pathParameters['id'];
                   return AddEditScheduledTransactionScreen(transactionId: id);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'rules',
+            name: 'rules',
+            builder: (context, state) => const RulesScreen(),
+            routes: [
+              GoRoute(
+                path: 'add',
+                name: 'add-rule',
+                builder: (context, state) => const AddEditRuleScreen(),
+              ),
+              GoRoute(
+                path: 'edit/:id',
+                name: 'edit-rule',
+                builder: (context, state) {
+                   final id = state.pathParameters['id'];
+                   return AddEditRuleScreen(ruleId: id);
                 },
               ),
             ],

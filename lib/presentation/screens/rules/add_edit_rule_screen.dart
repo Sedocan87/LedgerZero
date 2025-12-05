@@ -1,0 +1,330 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/domain/entities/rule.dart';
+import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
+import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:uuid/uuid.dart';
+
+class AddEditRuleScreen extends ConsumerStatefulWidget {
+  final String? ruleId;
+
+  const AddEditRuleScreen({super.key, this.ruleId});
+
+  @override
+  ConsumerState<AddEditRuleScreen> createState() => _AddEditRuleScreenState();
+}
+
+class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late RuleMatchLogic _matchLogic;
+  List<RuleCondition> _conditions = [];
+  List<RuleAction> _actions = [];
+  bool _isActive = true;
+  int _priority = 0; // Default, will be set on load or save
+
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _matchLogic = RuleMatchLogic.and;
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (widget.ruleId != null) {
+      final rule = await ref.read(ruleRepositoryProvider).getRule(widget.ruleId!);
+      if (rule != null) {
+        _nameController.text = rule.name;
+        _matchLogic = rule.matchLogic;
+        _conditions = List.from(rule.conditions);
+        _actions = List.from(rule.actions);
+        _isActive = rule.isActive;
+        _priority = rule.priority;
+      }
+    } else {
+        // For new rule, set priority to lowest (highest number)
+        final rules = await ref.read(ruleRepositoryProvider).getRules();
+        if (rules.isNotEmpty) {
+            _priority = rules.length;
+        }
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_conditions.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one condition')));
+        return;
+    }
+    if (_actions.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one action')));
+        return;
+    }
+
+    final rule = Rule(
+      id: widget.ruleId ?? const Uuid().v4(),
+      name: _nameController.text,
+      priority: _priority,
+      isActive: _isActive,
+      matchLogic: _matchLogic,
+      conditions: _conditions,
+      actions: _actions,
+    );
+
+    try {
+      if (widget.ruleId != null) {
+        await ref.read(ruleRepositoryProvider).updateRule(rule);
+      } else {
+        await ref.read(ruleRepositoryProvider).createRule(rule);
+      }
+      if (mounted) {
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving rule: $e')));
+      }
+    }
+  }
+
+  Future<void> _delete() async {
+      if (widget.ruleId == null) return;
+
+      final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+              title: const Text('Delete Rule'),
+              content: const Text('Are you sure you want to delete this rule?'),
+              actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+              ],
+          ),
+      );
+
+      if (confirm == true) {
+          await ref.read(ruleRepositoryProvider).deleteRule(widget.ruleId!);
+          if (mounted) context.pop();
+      }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.ruleId != null ? 'Edit Rule' : 'New Rule'),
+        actions: [
+            if (widget.ruleId != null)
+                IconButton(icon: const Icon(Icons.delete), onPressed: _delete),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            AppTextField(
+              controller: _nameController,
+              label: 'Rule Name',
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+                title: const Text('Active'),
+                value: _isActive,
+                onChanged: (v) => setState(() => _isActive = v),
+            ),
+            const SizedBox(height: 16),
+            const Text('Conditions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Row(
+                children: [
+                    const Text('Match: '),
+                    DropdownButton<RuleMatchLogic>(
+                        value: _matchLogic,
+                        onChanged: (v) => setState(() => _matchLogic = v!),
+                        items: RuleMatchLogic.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name.toUpperCase()))).toList(),
+                    ),
+                    const Text(' of the following conditions:'),
+                ],
+            ),
+            ..._conditions.asMap().entries.map((entry) {
+                final index = entry.key;
+                final condition = entry.value;
+                return Card(
+                    child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                            children: [
+                                Expanded(
+                                    child: Wrap(
+                                        spacing: 8,
+                                        children: [
+                                            Text(condition.type.name),
+                                            Text(condition.operator.name),
+                                            Text(condition.value),
+                                        ],
+                                    ),
+                                ),
+                                IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => setState(() => _conditions.removeAt(index)),
+                                )
+                            ],
+                        ),
+                    ),
+                );
+            }),
+            AppButton(
+                label: 'Add Condition',
+                variant: AppButtonVariant.secondary,
+                onPressed: _showAddConditionDialog,
+            ),
+            const SizedBox(height: 24),
+            const Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            ..._actions.asMap().entries.map((entry) {
+                final index = entry.key;
+                final action = entry.value;
+                return Card(
+                    child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                            children: [
+                                Expanded(
+                                    child: Text('Set ${action.type.name.replaceAll('set', '')} to ${action.value}'),
+                                ),
+                                IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => setState(() => _actions.removeAt(index)),
+                                )
+                            ],
+                        ),
+                    ),
+                );
+            }),
+            AppButton(
+                label: 'Add Action',
+                variant: AppButtonVariant.secondary,
+                onPressed: _showAddActionDialog,
+            ),
+            const SizedBox(height: 32),
+            AppButton(
+                label: 'Save Rule',
+                onPressed: _save,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddConditionDialog() {
+      RuleConditionType type = RuleConditionType.description;
+      RuleConditionOperator op = RuleConditionOperator.contains;
+      final valueController = TextEditingController();
+
+      showDialog(
+          context: context,
+          builder: (ctx) => StatefulBuilder(
+              builder: (ctx, setDialogState) => AlertDialog(
+                  title: const Text('Add Condition'),
+                  content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                          DropdownButtonFormField<RuleConditionType>(
+                              value: type,
+                              decoration: const InputDecoration(labelText: 'Field'),
+                              items: RuleConditionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
+                              onChanged: (v) => setDialogState(() => type = v!),
+                          ),
+                          DropdownButtonFormField<RuleConditionOperator>(
+                              value: op,
+                              decoration: const InputDecoration(labelText: 'Operator'),
+                              items: RuleConditionOperator.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
+                              onChanged: (v) => setDialogState(() => op = v!),
+                          ),
+                          TextField(
+                              controller: valueController,
+                              decoration: const InputDecoration(labelText: 'Value'),
+                          ),
+                      ],
+                  ),
+                  actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                      TextButton(onPressed: () {
+                          if (valueController.text.isNotEmpty) {
+                              setState(() {
+                                  _conditions.add(RuleCondition(type: type, operator: op, value: valueController.text));
+                              });
+                              Navigator.pop(ctx);
+                          }
+                      }, child: const Text('Add')),
+                  ],
+              ),
+          ),
+      );
+  }
+
+  void _showAddActionDialog() {
+      RuleActionType type = RuleActionType.setCategory;
+      final valueController = TextEditingController();
+
+      showDialog(
+          context: context,
+          builder: (ctx) => StatefulBuilder(
+              builder: (ctx, setDialogState) => AlertDialog(
+                  title: const Text('Add Action'),
+                  content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                          DropdownButtonFormField<RuleActionType>(
+                              value: type,
+                              decoration: const InputDecoration(labelText: 'Action'),
+                              items: RuleActionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
+                              onChanged: (v) => setDialogState(() => type = v!),
+                          ),
+                          // Ideally this is dynamic based on type (Category picker, etc.)
+                          // For MVP we just use text field for ID or value
+                          TextField(
+                              controller: valueController,
+                              decoration: const InputDecoration(labelText: 'Value (ID or text)'),
+                          ),
+                      ],
+                  ),
+                  actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                      TextButton(onPressed: () {
+                          if (valueController.text.isNotEmpty) {
+                              setState(() {
+                                  _actions.add(RuleAction(type: type, value: valueController.text));
+                              });
+                              Navigator.pop(ctx);
+                          }
+                      }, child: const Text('Add')),
+                  ],
+              ),
+          ),
+      );
+  }
+}
