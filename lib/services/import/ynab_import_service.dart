@@ -56,10 +56,15 @@ class YnabImportService {
        final inflowIdx = headers.indexOf('Inflow');
        final clearedIdx = headers.indexOf('Cleared');
 
-       if (accIdx == -1 || dateIdx == -1 || payeeIdx == -1 || outflowIdx == -1 || inflowIdx == -1) {
-         // Should we throw? Or just return partial?
-         // If essential columns are missing, we can't do much.
-         throw Exception('Invalid YNAB Register CSV format: Missing required columns');
+       final missingColumns = <String>[];
+       if (accIdx == -1) missingColumns.add('Account');
+       if (dateIdx == -1) missingColumns.add('Date');
+       if (payeeIdx == -1) missingColumns.add('Payee');
+       if (outflowIdx == -1) missingColumns.add('Outflow');
+       if (inflowIdx == -1) missingColumns.add('Inflow');
+
+       if (missingColumns.isNotEmpty) {
+         throw Exception('Invalid YNAB Register CSV format: Missing required columns: ${missingColumns.join(', ')}');
        }
 
        // Track unique entities to avoid duplicates in list
