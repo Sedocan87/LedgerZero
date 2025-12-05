@@ -8,6 +8,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/services/encryption/security_manager.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
+import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 import 'package:uuid/uuid.dart';
 
 final securityManagerProvider = Provider<SecurityManager>((ref) {
@@ -56,4 +57,8 @@ final scheduledTransactionServiceProvider = Provider<ScheduledTransactionService
     ref.watch(notificationServiceProvider),
     const Uuid(),
   );
+});
+
+final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
+  return RuleMatchingService(ref.watch(payeeRepositoryProvider));
 });

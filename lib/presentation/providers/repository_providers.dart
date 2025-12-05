@@ -8,6 +8,7 @@ import 'package:ledger_zero/data/repositories/payee_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/parsing_history_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/parsing_rules_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/report_note_repository_impl.dart';
+import 'package:ledger_zero/data/repositories/rule_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/scheduled_transaction_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/transaction_repository_impl.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
@@ -19,6 +20,7 @@ import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart'
 import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/report_note_repository.dart';
+import 'package:ledger_zero/domain/repositories/rule_repository.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
@@ -51,6 +53,11 @@ final payeeRepositoryProvider = Provider<PayeeRepository>((ref) {
 /// Provides the [ReportNoteRepository].
 final reportNoteRepositoryProvider = Provider<ReportNoteRepository>((ref) {
   return ReportNoteRepositoryImpl(ref.watch(reportNotesDaoProvider));
+});
+
+/// Provides the [RuleRepository].
+final ruleRepositoryProvider = Provider<RuleRepository>((ref) {
+  return RuleRepositoryImpl(ref.watch(rulesDaoProvider));
 });
 
 /// Provides the [ScheduledTransactionRepository].

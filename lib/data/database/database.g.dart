@@ -7350,6 +7350,629 @@ class ImportProfilesCompanion extends UpdateCompanion<ImportProfile> {
   }
 }
 
+class $RulesTable extends Rules with TableInfo<$RulesTable, Rule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<RuleMatchLogic, String>
+  matchLogic = GeneratedColumn<String>(
+    'match_logic',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<RuleMatchLogic>($RulesTable.$convertermatchLogic);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<RuleCondition>, String>
+  conditions = GeneratedColumn<String>(
+    'conditions',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<List<RuleCondition>>($RulesTable.$converterconditions);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<RuleAction>, String>
+  actions = GeneratedColumn<String>(
+    'actions',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<List<RuleAction>>($RulesTable.$converteractions);
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    description,
+    priority,
+    isActive,
+    matchLogic,
+    conditions,
+    actions,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Rule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_priorityMeta);
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Rule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Rule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      matchLogic: $RulesTable.$convertermatchLogic.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}match_logic'],
+        )!,
+      ),
+      conditions: $RulesTable.$converterconditions.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}conditions'],
+        )!,
+      ),
+      actions: $RulesTable.$converteractions.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}actions'],
+        )!,
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RulesTable createAlias(String alias) {
+    return $RulesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<RuleMatchLogic, String, String>
+  $convertermatchLogic = const EnumNameConverter<RuleMatchLogic>(
+    RuleMatchLogic.values,
+  );
+  static TypeConverter<List<RuleCondition>, String> $converterconditions =
+      const RuleConditionListConverter();
+  static TypeConverter<List<RuleAction>, String> $converteractions =
+      const RuleActionListConverter();
+}
+
+class Rule extends DataClass implements Insertable<Rule> {
+  final String id;
+  final String name;
+  final String? description;
+  final int priority;
+  final bool isActive;
+  final RuleMatchLogic matchLogic;
+  final List<RuleCondition> conditions;
+  final List<RuleAction> actions;
+  final String createdAt;
+  final String updatedAt;
+  const Rule({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.priority,
+    required this.isActive,
+    required this.matchLogic,
+    required this.conditions,
+    required this.actions,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['priority'] = Variable<int>(priority);
+    map['is_active'] = Variable<bool>(isActive);
+    {
+      map['match_logic'] = Variable<String>(
+        $RulesTable.$convertermatchLogic.toSql(matchLogic),
+      );
+    }
+    {
+      map['conditions'] = Variable<String>(
+        $RulesTable.$converterconditions.toSql(conditions),
+      );
+    }
+    {
+      map['actions'] = Variable<String>(
+        $RulesTable.$converteractions.toSql(actions),
+      );
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  RulesCompanion toCompanion(bool nullToAbsent) {
+    return RulesCompanion(
+      id: Value(id),
+      name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      priority: Value(priority),
+      isActive: Value(isActive),
+      matchLogic: Value(matchLogic),
+      conditions: Value(conditions),
+      actions: Value(actions),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory Rule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Rule(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+      priority: serializer.fromJson<int>(json['priority']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      matchLogic: $RulesTable.$convertermatchLogic.fromJson(
+        serializer.fromJson<String>(json['matchLogic']),
+      ),
+      conditions: serializer.fromJson<List<RuleCondition>>(json['conditions']),
+      actions: serializer.fromJson<List<RuleAction>>(json['actions']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
+      'priority': serializer.toJson<int>(priority),
+      'isActive': serializer.toJson<bool>(isActive),
+      'matchLogic': serializer.toJson<String>(
+        $RulesTable.$convertermatchLogic.toJson(matchLogic),
+      ),
+      'conditions': serializer.toJson<List<RuleCondition>>(conditions),
+      'actions': serializer.toJson<List<RuleAction>>(actions),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  Rule copyWith({
+    String? id,
+    String? name,
+    Value<String?> description = const Value.absent(),
+    int? priority,
+    bool? isActive,
+    RuleMatchLogic? matchLogic,
+    List<RuleCondition>? conditions,
+    List<RuleAction>? actions,
+    String? createdAt,
+    String? updatedAt,
+  }) => Rule(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description: description.present ? description.value : this.description,
+    priority: priority ?? this.priority,
+    isActive: isActive ?? this.isActive,
+    matchLogic: matchLogic ?? this.matchLogic,
+    conditions: conditions ?? this.conditions,
+    actions: actions ?? this.actions,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  Rule copyWithCompanion(RulesCompanion data) {
+    return Rule(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      matchLogic: data.matchLogic.present
+          ? data.matchLogic.value
+          : this.matchLogic,
+      conditions: data.conditions.present
+          ? data.conditions.value
+          : this.conditions,
+      actions: data.actions.present ? data.actions.value : this.actions,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Rule(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('priority: $priority, ')
+          ..write('isActive: $isActive, ')
+          ..write('matchLogic: $matchLogic, ')
+          ..write('conditions: $conditions, ')
+          ..write('actions: $actions, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    description,
+    priority,
+    isActive,
+    matchLogic,
+    conditions,
+    actions,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Rule &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.priority == this.priority &&
+          other.isActive == this.isActive &&
+          other.matchLogic == this.matchLogic &&
+          other.conditions == this.conditions &&
+          other.actions == this.actions &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class RulesCompanion extends UpdateCompanion<Rule> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> description;
+  final Value<int> priority;
+  final Value<bool> isActive;
+  final Value<RuleMatchLogic> matchLogic;
+  final Value<List<RuleCondition>> conditions;
+  final Value<List<RuleAction>> actions;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  final Value<int> rowid;
+  const RulesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.matchLogic = const Value.absent(),
+    this.conditions = const Value.absent(),
+    this.actions = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RulesCompanion.insert({
+    required String id,
+    required String name,
+    this.description = const Value.absent(),
+    required int priority,
+    this.isActive = const Value.absent(),
+    required RuleMatchLogic matchLogic,
+    required List<RuleCondition> conditions,
+    required List<RuleAction> actions,
+    required String createdAt,
+    required String updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       priority = Value(priority),
+       matchLogic = Value(matchLogic),
+       conditions = Value(conditions),
+       actions = Value(actions),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<Rule> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<int>? priority,
+    Expression<bool>? isActive,
+    Expression<String>? matchLogic,
+    Expression<String>? conditions,
+    Expression<String>? actions,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (priority != null) 'priority': priority,
+      if (isActive != null) 'is_active': isActive,
+      if (matchLogic != null) 'match_logic': matchLogic,
+      if (conditions != null) 'conditions': conditions,
+      if (actions != null) 'actions': actions,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RulesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String?>? description,
+    Value<int>? priority,
+    Value<bool>? isActive,
+    Value<RuleMatchLogic>? matchLogic,
+    Value<List<RuleCondition>>? conditions,
+    Value<List<RuleAction>>? actions,
+    Value<String>? createdAt,
+    Value<String>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return RulesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      priority: priority ?? this.priority,
+      isActive: isActive ?? this.isActive,
+      matchLogic: matchLogic ?? this.matchLogic,
+      conditions: conditions ?? this.conditions,
+      actions: actions ?? this.actions,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (matchLogic.present) {
+      map['match_logic'] = Variable<String>(
+        $RulesTable.$convertermatchLogic.toSql(matchLogic.value),
+      );
+    }
+    if (conditions.present) {
+      map['conditions'] = Variable<String>(
+        $RulesTable.$converterconditions.toSql(conditions.value),
+      );
+    }
+    if (actions.present) {
+      map['actions'] = Variable<String>(
+        $RulesTable.$converteractions.toSql(actions.value),
+      );
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RulesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('priority: $priority, ')
+          ..write('isActive: $isActive, ')
+          ..write('matchLogic: $matchLogic, ')
+          ..write('conditions: $conditions, ')
+          ..write('actions: $actions, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7371,6 +7994,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ParsingHistoryTable parsingHistory = $ParsingHistoryTable(this);
   late final $ParsingRulesTable parsingRules = $ParsingRulesTable(this);
   late final $ImportProfilesTable importProfiles = $ImportProfilesTable(this);
+  late final $RulesTable rules = $RulesTable(this);
   late final Index idxBudgetsMonth = Index(
     'idx_budgets_month',
     'CREATE INDEX idx_budgets_month ON budgets (month)',
@@ -7430,6 +8054,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ImportProfilesDao importProfilesDao = ImportProfilesDao(
     this as AppDatabase,
   );
+  late final RulesDao rulesDao = RulesDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7449,6 +8074,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     parsingHistory,
     parsingRules,
     importProfiles,
+    rules,
     idxBudgetsMonth,
     idxTransactionsAccount,
     idxTransactionsDate,
@@ -13551,6 +14177,309 @@ typedef $$ImportProfilesTableProcessedTableManager =
       ImportProfile,
       PrefetchHooks Function()
     >;
+typedef $$RulesTableCreateCompanionBuilder =
+    RulesCompanion Function({
+      required String id,
+      required String name,
+      Value<String?> description,
+      required int priority,
+      Value<bool> isActive,
+      required RuleMatchLogic matchLogic,
+      required List<RuleCondition> conditions,
+      required List<RuleAction> actions,
+      required String createdAt,
+      required String updatedAt,
+      Value<int> rowid,
+    });
+typedef $$RulesTableUpdateCompanionBuilder =
+    RulesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String?> description,
+      Value<int> priority,
+      Value<bool> isActive,
+      Value<RuleMatchLogic> matchLogic,
+      Value<List<RuleCondition>> conditions,
+      Value<List<RuleAction>> actions,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$RulesTableFilterComposer extends Composer<_$AppDatabase, $RulesTable> {
+  $$RulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<RuleMatchLogic, RuleMatchLogic, String>
+  get matchLogic => $composableBuilder(
+    column: $table.matchLogic,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<
+    List<RuleCondition>,
+    List<RuleCondition>,
+    String
+  >
+  get conditions => $composableBuilder(
+    column: $table.conditions,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<RuleAction>, List<RuleAction>, String>
+  get actions => $composableBuilder(
+    column: $table.actions,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $RulesTable> {
+  $$RulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get matchLogic => $composableBuilder(
+    column: $table.matchLogic,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get conditions => $composableBuilder(
+    column: $table.conditions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get actions => $composableBuilder(
+    column: $table.actions,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RulesTable> {
+  $$RulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<RuleMatchLogic, String> get matchLogic =>
+      $composableBuilder(
+        column: $table.matchLogic,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<List<RuleCondition>, String>
+  get conditions => $composableBuilder(
+    column: $table.conditions,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<List<RuleAction>, String> get actions =>
+      $composableBuilder(column: $table.actions, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$RulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RulesTable,
+          Rule,
+          $$RulesTableFilterComposer,
+          $$RulesTableOrderingComposer,
+          $$RulesTableAnnotationComposer,
+          $$RulesTableCreateCompanionBuilder,
+          $$RulesTableUpdateCompanionBuilder,
+          (Rule, BaseReferences<_$AppDatabase, $RulesTable, Rule>),
+          Rule,
+          PrefetchHooks Function()
+        > {
+  $$RulesTableTableManager(_$AppDatabase db, $RulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<RuleMatchLogic> matchLogic = const Value.absent(),
+                Value<List<RuleCondition>> conditions = const Value.absent(),
+                Value<List<RuleAction>> actions = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RulesCompanion(
+                id: id,
+                name: name,
+                description: description,
+                priority: priority,
+                isActive: isActive,
+                matchLogic: matchLogic,
+                conditions: conditions,
+                actions: actions,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<String?> description = const Value.absent(),
+                required int priority,
+                Value<bool> isActive = const Value.absent(),
+                required RuleMatchLogic matchLogic,
+                required List<RuleCondition> conditions,
+                required List<RuleAction> actions,
+                required String createdAt,
+                required String updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RulesCompanion.insert(
+                id: id,
+                name: name,
+                description: description,
+                priority: priority,
+                isActive: isActive,
+                matchLogic: matchLogic,
+                conditions: conditions,
+                actions: actions,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RulesTable,
+      Rule,
+      $$RulesTableFilterComposer,
+      $$RulesTableOrderingComposer,
+      $$RulesTableAnnotationComposer,
+      $$RulesTableCreateCompanionBuilder,
+      $$RulesTableUpdateCompanionBuilder,
+      (Rule, BaseReferences<_$AppDatabase, $RulesTable, Rule>),
+      Rule,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13583,4 +14512,6 @@ class $AppDatabaseManager {
       $$ParsingRulesTableTableManager(_db, _db.parsingRules);
   $$ImportProfilesTableTableManager get importProfiles =>
       $$ImportProfilesTableTableManager(_db, _db.importProfiles);
+  $$RulesTableTableManager get rules =>
+      $$RulesTableTableManager(_db, _db.rules);
 }

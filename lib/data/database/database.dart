@@ -11,6 +11,7 @@ import 'package:ledger_zero/data/database/tables/parsing_rules.dart';
 import 'package:ledger_zero/data/database/tables/payees.dart';
 import 'package:ledger_zero/data/database/tables/pending_sync_changes.dart';
 import 'package:ledger_zero/data/database/tables/report_notes.dart';
+import 'package:ledger_zero/data/database/tables/rules.dart';
 import 'package:ledger_zero/data/database/tables/scheduled_transactions.dart';
 import 'package:ledger_zero/data/database/tables/sync_log.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
@@ -24,6 +25,7 @@ import 'package:ledger_zero/data/database/daos/parsing_history_dao.dart';
 import 'package:ledger_zero/data/database/daos/parsing_rules_dao.dart';
 import 'package:ledger_zero/data/database/daos/payees_dao.dart';
 import 'package:ledger_zero/data/database/daos/report_notes_dao.dart';
+import 'package:ledger_zero/data/database/daos/rules_dao.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_log_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
@@ -48,6 +50,7 @@ part 'database.g.dart';
     ParsingHistory,
     ParsingRules,
     ImportProfiles,
+    Rules,
   ],
   daos: [
     AccountsDao,
@@ -63,6 +66,7 @@ part 'database.g.dart';
     ParsingHistoryDao,
     ParsingRulesDao,
     ImportProfilesDao,
+    RulesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -78,7 +82,7 @@ class AppDatabase extends _$AppDatabase {
   static AppDatabase get instance => _instance;
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration {
@@ -89,6 +93,10 @@ class AppDatabase extends _$AppDatabase {
         await _createSyncTriggers();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 14) {
+          await m.createTable(rules);
+          await _createSyncTriggersForTable('rules');
+        }
         if (from < 13) {
            await m.createTable(importProfiles);
         }
@@ -154,21 +162,7 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<void> _createSyncTriggers() async {
-    final tables = [
-      'accounts',
-      'categories',
-      'category_groups',
-      'transactions',
-      'payees',
-      'budgets',
-      'scheduled_transactions',
-      'budget_templates',
-      'report_notes',
-      'import_profiles',
-    ];
-
-    for (final table in tables) {
+  Future<void> _createSyncTriggersForTable(String table) async {
       // INSERT
       await customStatement('''
         CREATE TRIGGER IF NOT EXISTS ${table}_insert_trigger
@@ -198,6 +192,25 @@ class AppDatabase extends _$AppDatabase {
           VALUES ('$table', OLD.id, 'DELETE');
         END;
       ''');
+  }
+
+  Future<void> _createSyncTriggers() async {
+    final tables = [
+      'accounts',
+      'categories',
+      'category_groups',
+      'transactions',
+      'payees',
+      'budgets',
+      'scheduled_transactions',
+      'budget_templates',
+      'report_notes',
+      'import_profiles',
+      'rules',
+    ];
+
+    for (final table in tables) {
+      await _createSyncTriggersForTable(table);
     }
   }
 
