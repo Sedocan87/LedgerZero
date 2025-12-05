@@ -1,17 +1,40 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
+import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+
+final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
+  return RuleMatchingService(
+    ref.watch(payeeRepositoryProvider),
+    ref.watch(transactionRepositoryProvider),
+  );
+});
+
+class RulePerformanceStats {
+    final int processedCount;
+    final int modifiedCount;
+    final int durationMs;
+
+    RulePerformanceStats({
+        required this.processedCount,
+        required this.modifiedCount,
+        required this.durationMs,
+    });
+}
 
 class RuleMatchingService {
   final PayeeRepository _payeeRepository;
+  final TransactionRepository _transactionRepository;
 
-  RuleMatchingService(this._payeeRepository);
+  RuleMatchingService(this._payeeRepository, this._transactionRepository);
 
   /// Applies rules to a list of transactions.
-  /// Returns a list of transactions that have been modified by the rules.
+  /// Returns a list of transactions corresponding to the input list, but with rules applied.
   /// Note: The original list is not modified.
   Future<List<Transaction>> applyRules(List<Transaction> transactions, List<Rule> rules) async {
     // Sort rules by priority (ascending: 0 is highest priority)
@@ -28,6 +51,51 @@ class RuleMatchingService {
         result.add(current);
     }
     return result;
+  }
+
+  /// Bulk applies rules to all existing transactions in the database.
+  /// Returns performance statistics.
+  Future<RulePerformanceStats> applyRulesToAllTransactions(List<Rule> rules) async {
+    final stopwatch = Stopwatch()..start();
+    try {
+        final allTransactions = await _transactionRepository.getAllTransactions();
+        if (allTransactions.isEmpty) {
+            return RulePerformanceStats(processedCount: 0, modifiedCount: 0, durationMs: stopwatch.elapsedMilliseconds);
+        }
+
+        final modifiedTransactions = <Transaction>[];
+
+        // Process in batches if necessary, but for now simple list logic
+        final processed = await applyRules(allTransactions, rules);
+
+        for (int i = 0; i < allTransactions.length; i++) {
+            final original = allTransactions[i];
+            final updated = processed[i];
+
+            // Check if anything changed
+            if (original != updated) {
+                // To be safe, ensure we update timestamp
+                modifiedTransactions.add(updated.copyWith(updatedAt: DateTime.now()));
+            }
+        }
+
+        if (modifiedTransactions.isNotEmpty) {
+            await _transactionRepository.batchUpdateTransactions(modifiedTransactions);
+        }
+
+        stopwatch.stop();
+        final duration = stopwatch.elapsedMilliseconds;
+        Logger.info('Applied rules to ${allTransactions.length} transactions. Modified ${modifiedTransactions.length}. Duration: ${duration}ms');
+
+        return RulePerformanceStats(
+            processedCount: allTransactions.length,
+            modifiedCount: modifiedTransactions.length,
+            durationMs: duration
+        );
+    } catch (e) {
+        Logger.error('Error applying rules to all transactions', e);
+        rethrow;
+    }
   }
 
   Future<bool> _matches(Transaction transaction, Rule rule) async {

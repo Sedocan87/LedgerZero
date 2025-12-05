@@ -32,6 +32,11 @@ import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/pending_sync_changes_dao.dart';
 import 'package:uuid/uuid.dart';
 
+// Explicit imports for types used in generated code
+import 'package:ledger_zero/domain/entities/rule.dart';
+import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
+import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
+
 part 'database.g.dart';
 
 @DriftDatabase(
