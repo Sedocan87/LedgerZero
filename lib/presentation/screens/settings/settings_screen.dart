@@ -349,6 +349,12 @@ class SettingsScreen extends ConsumerWidget {
             title: l10n.securityAndData,
             children: [
               ListTile(
+                leading: const Icon(Icons.help),
+                title: const Text('Help & Support'), // TODO: l10n
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.pushNamed('help'),
+              ),
+              ListTile(
                 leading: const Icon(Icons.lock),
                 title: Text(l10n.securitySettings),
                 trailing: const Icon(Icons.chevron_right),

@@ -1090,4 +1090,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupAndRestore => 'Backup & Restore';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get scheduledTransactionNotifications => 'Scheduled Transactions';
+
+  @override
+  String get budgetAlertNotifications => 'Budget Alerts';
+
+  @override
+  String get syncStatusNotifications => 'Sync Status';
+
+  @override
+  String get advancedSettings => 'Advanced Settings';
+
+  @override
+  String get developerMode => 'Developer Mode';
+
+  @override
+  String get databaseStatistics => 'Database Statistics';
+
+  @override
+  String get clearCache => 'Clear Cache';
+
+  @override
+  String get cacheCleared => 'Cache cleared successfully';
+
+  @override
+  String get factoryReset => 'Factory Reset';
+
+  @override
+  String get factoryResetConfirmation =>
+      'Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone.';
+
+  @override
+  String get factoryResetTitle => 'Factory Reset?';
+
+  @override
+  String get factoryResetSuccess =>
+      'Factory reset complete. Please restart the app.';
+
+  @override
+  String get databaseSize => 'Database Size';
+
+  @override
+  String get tableRowCounts => 'Table Row Counts';
+
+  @override
+  String get walSize => 'WAL Size';
+
+  @override
+  String get totalRows => 'Total Rows';
 }

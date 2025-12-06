@@ -231,5 +231,14 @@
   "syncAndBackup": "Sync & Backup",
   "importFromMint": "Import aus Mint",
   "loadingAccounts": "Konten werden geladen...",
-  "backupAndRestore": "Backup & Wiederherstellung"
+  "backupAndRestore": "Backup & Wiederherstellung",
+  "helpAndSupport": "Hilfe & Support",
+  "faq": "FAQ",
+  "faqSubtitle": "Häufig gestellte Fragen",
+  "userGuide": "Benutzerhandbuch",
+  "userGuideSubtitle": "Umfassende Dokumentation",
+  "videoTutorials": "Video-Tutorials",
+  "videoTutorialsSubtitle": "Lernen Sie durch Zuschauen auf YouTube",
+  "contactSupport": "Support kontaktieren",
+  "contactSupportSubtitle": "support@ledgerzero.app"
 }
