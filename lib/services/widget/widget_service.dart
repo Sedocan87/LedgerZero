@@ -3,7 +3,6 @@ import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
-import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
@@ -14,12 +13,14 @@ class WidgetCategorySummary {
   final String id;
   final String name;
   final double available;
+  final String formattedAvailable; // New
   final double percentFunded;
 
   WidgetCategorySummary({
     required this.id,
     required this.name,
     required this.available,
+    required this.formattedAvailable,
     required this.percentFunded,
   });
 
@@ -27,6 +28,7 @@ class WidgetCategorySummary {
         'id': id,
         'name': name,
         'available': available,
+        'formattedAvailable': formattedAvailable,
         'percentFunded': percentFunded,
       };
 }
@@ -80,7 +82,11 @@ class WidgetService {
       final currentMonth = DateTime.now();
       final tbb = await _budgetingService.calculateTBB(currentMonth);
 
+      // Use NumberFormat for consistent formatting
+      final currencyFormat = NumberFormat.simpleCurrency(decimalDigits: 2); // Or locale aware
+
       await HomeWidget.saveWidgetData<double>('tbb_amount', tbb);
+      await HomeWidget.saveWidgetData<String>('tbb_amount_str', currencyFormat.format(tbb));
 
       // 2. Categories
       // Fetch some "top" or active categories.
@@ -96,12 +102,15 @@ class WidgetService {
         final funded = await _budgetingService.calculateFundedPercentage(category, currentMonth);
 
         // Exclude hidden categories if any (Category entity has isHidden)
-        if (category.isHidden) continue;
+        if (category.isHidden) {
+          continue;
+        }
 
         categoriesList.add(WidgetCategorySummary(
           id: category.id,
           name: category.name,
           available: available,
+          formattedAvailable: currencyFormat.format(available),
           percentFunded: funded,
         ));
       }
@@ -141,7 +150,6 @@ class WidgetService {
 
       // Collect IDs to fetch
       final payeeIds = transactions.map((t) => t.payeeId).whereType<String>().toSet();
-      final categoryIds = transactions.map((t) => t.categoryId).whereType<String>().toSet();
 
       // Batch fetch Payees (if we don't have a getByIds method, we can fallback to fetching all payees if the list is small,
       // but ideally we should iterate the list we already have or add a batch fetch.
@@ -171,10 +179,10 @@ class WidgetService {
       final widgetTransactions = <WidgetTransactionSummary>[];
 
       for (final t in transactions) {
-        String payeeName = "Unknown Payee";
+        String payeeName = 'Unknown Payee';
         if (t.payeeId != null) {
           final payee = payeeMap[t.payeeId!];
-          payeeName = payee?.name ?? "Unknown Payee";
+          payeeName = payee?.name ?? 'Unknown Payee';
         }
 
         String? categoryName;
