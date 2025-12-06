@@ -81,6 +81,72 @@ struct Provider: TimelineProvider {
     }
 }
 
+// MARK: - Lock Screen Widgets
+
+struct AccessoryRectangularView: View {
+    var entry: Provider.Entry
+
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading) {
+                Text("TBB")
+                    .font(.caption2)
+                    .bold()
+                Text(formatCurrency(entry.tbbAmount))
+                    .font(.headline)
+                    .minimumScaleFactor(0.5)
+            }
+            Spacer()
+            // Show top category if available
+            if let topCat = entry.categories.first {
+                VStack(alignment: .trailing) {
+                    Text(topCat.name)
+                        .font(.caption2)
+                        .lineLimit(1)
+                    Text(formatCurrency(topCat.available))
+                        .font(.subheadline)
+                        .minimumScaleFactor(0.5)
+                }
+            }
+        }
+        .padding(4)
+        .widgetURL(URL(string: "ledgerzero://budget"))
+    }
+}
+
+struct AccessoryCircularView: View {
+    var entry: Provider.Entry
+
+    var body: some View {
+        // TBB Gauge-like view or just TBB if no gauge logic
+        // Since TBB isn't a percentage, let's just show an icon or short text
+        ZStack {
+            if let topCat = entry.categories.first {
+                // Show percent funded of top category if available
+                Gauge(value: topCat.percentFunded, in: 0...1) {
+                    Text(topCat.name.prefix(1))
+                }
+                .gaugeStyle(.accessoryCircular)
+            } else {
+                 Text("LZ")
+                    .font(.caption)
+                    .bold()
+            }
+        }
+        .widgetURL(URL(string: "ledgerzero://budget"))
+    }
+}
+
+struct AccessoryInlineView: View {
+    var entry: Provider.Entry
+
+    var body: some View {
+        Text("TBB: \(formatCurrency(entry.tbbAmount))")
+    }
+}
+
+// MARK: - Home Screen Widgets
+
 struct SmallWidgetView: View {
     var entry: Provider.Entry
 
@@ -267,6 +333,12 @@ struct LedgerZeroWidgetEntryView : View {
             MediumWidgetView(entry: entry)
         case .systemLarge:
             LargeWidgetView(entry: entry)
+        case .accessoryRectangular:
+            AccessoryRectangularView(entry: entry)
+        case .accessoryCircular:
+            AccessoryCircularView(entry: entry)
+        case .accessoryInline:
+            AccessoryInlineView(entry: entry)
         @unknown default:
             SmallWidgetView(entry: entry)
         }
@@ -282,7 +354,14 @@ struct LedgerZeroWidget: Widget {
         }
         .configurationDisplayName("Budget Overview")
         .description("Your budget at a glance.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .supportedFamilies([
+            .systemSmall,
+            .systemMedium,
+            .systemLarge,
+            .accessoryRectangular,
+            .accessoryCircular,
+            .accessoryInline
+        ])
     }
 }
 
@@ -300,12 +379,11 @@ struct LedgerZeroWidget_Previews: PreviewProvider {
             ], recentTransactions: []))
             .previewContext(WidgetPreviewContext(family: .systemMedium))
 
-            LedgerZeroWidgetEntryView(entry: SimpleEntry(date: Date(), tbbAmount: 1250.50, categories: [], recentTransactions: [
-                TransactionSummary(id: "t1", payeeName: "Supermarket", amount: -45.50, date: "Today", categoryName: "Groceries"),
-                TransactionSummary(id: "t2", payeeName: "Gas Station", amount: -30.00, date: "Yesterday", categoryName: "Transport"),
-                TransactionSummary(id: "t3", payeeName: "Salary", amount: 2500.00, date: "Fri", categoryName: "Inflow")
-            ]))
-            .previewContext(WidgetPreviewContext(family: .systemLarge))
+            LedgerZeroWidgetEntryView(entry: SimpleEntry(date: Date(), tbbAmount: 1234.56, categories: [CategorySummary(id: "1", name: "Groceries", available: 100.0, percentFunded: 0.8)], recentTransactions: []))
+                .previewContext(WidgetPreviewContext(family: .accessoryRectangular))
+
+            LedgerZeroWidgetEntryView(entry: SimpleEntry(date: Date(), tbbAmount: 1234.56, categories: [CategorySummary(id: "1", name: "Groceries", available: 100.0, percentFunded: 0.8)], recentTransactions: []))
+                .previewContext(WidgetPreviewContext(family: .accessoryCircular))
         }
     }
 }

@@ -36,6 +36,7 @@ import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/help_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/faq_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/user_guide_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/widget_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/account_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/budget_setup_screen.dart';
@@ -45,6 +46,7 @@ import 'package:ledger_zero/presentation/screens/transactions/add_edit_transacti
 import 'package:ledger_zero/presentation/screens/transactions/natural_language_input_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
 import 'package:ledger_zero/presentation/widgets/scaffold_with_navbar.dart';
+import 'package:ledger_zero/presentation/screens/tutorial/widget_tutorial_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -143,6 +145,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const DatabaseStatsScreen(),
           ),
           GoRoute(
+            path: 'widgets',
+            name: 'widget-settings',
+            builder: (context, state) => const WidgetSettingsScreen(),
+          ),
+          GoRoute(
             path: 'sync',
             name: 'sync-settings',
             builder: (context, state) => const SyncSettingsScreen(),
@@ -181,6 +188,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: 'user-guide',
                   name: 'user-guide',
                   builder: (context, state) => const UserGuideScreen(),
+               ),
+               GoRoute(
+                  path: 'widget-tutorial',
+                  name: 'widget-tutorial',
+                  builder: (context, state) => const WidgetTutorialScreen(),
                ),
             ],
           ),
