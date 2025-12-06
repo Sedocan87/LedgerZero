@@ -10,6 +10,7 @@ import 'package:ledger_zero/services/encryption/security_manager.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:ledger_zero/services/backup/data_portability_service.dart';
 import 'package:ledger_zero/services/rules/rule_matching_service.dart';
+import 'package:ledger_zero/services/widget/widget_service.dart';
 import 'package:uuid/uuid.dart';
 
 final dataPortabilityServiceProvider = Provider<DataPortabilityService>((ref) {
@@ -73,4 +74,13 @@ final scheduledTransactionServiceProvider = Provider<ScheduledTransactionService
 
 final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
   return RuleMatchingService(ref.watch(payeeRepositoryProvider), ref.watch(transactionRepositoryProvider));
+});
+
+final widgetServiceProvider = Provider<WidgetService>((ref) {
+  return WidgetService(
+    ref.watch(budgetingServiceProvider),
+    ref.watch(transactionRepositoryProvider),
+    ref.watch(categoryRepositoryProvider),
+    ref.watch(payeeRepositoryProvider),
+  );
 });

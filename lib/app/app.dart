@@ -7,6 +7,7 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/widgets/widget_sync_listener.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
 
 class MyApp extends ConsumerStatefulWidget {
@@ -39,12 +40,16 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       autoLockService.onAppPaused();
     } else if (state == AppLifecycleState.resumed) {
       autoLockService.onAppResumed();
+      // Optionally trigger widget update on resume to ensure freshness
+      ref.read(widgetServiceProvider).updateWidgetData();
     }
   }
 
   Future<void> _initializeServices() async {
     await ref.read(notificationServiceProvider).initialize();
     await ref.read(scheduledTransactionServiceProvider).processDueTransactions();
+    // Update widgets on startup/auth
+    await ref.read(widgetServiceProvider).updateWidgetData();
   }
 
   @override
@@ -58,14 +63,16 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       }
     });
 
-    return MaterialApp.router(
-      title: AppConfig.instance.appTitle,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
-      routerConfig: router,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    return WidgetSyncListener(
+      child: MaterialApp.router(
+        title: AppConfig.instance.appTitle,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: themeMode,
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
     );
   }
 }

@@ -1143,4 +1143,31 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get totalRows => 'Total Rows';
+
+  @override
+  String get helpAndSupport => 'Hilfe & Support';
+
+  @override
+  String get faq => 'FAQ';
+
+  @override
+  String get faqSubtitle => 'Häufig gestellte Fragen';
+
+  @override
+  String get userGuide => 'Benutzerhandbuch';
+
+  @override
+  String get userGuideSubtitle => 'Umfassende Dokumentation';
+
+  @override
+  String get videoTutorials => 'Video-Tutorials';
+
+  @override
+  String get videoTutorialsSubtitle => 'Lernen Sie durch Zuschauen auf YouTube';
+
+  @override
+  String get contactSupport => 'Support kontaktieren';
+
+  @override
+  String get contactSupportSubtitle => 'support@ledgerzero.app';
 }
