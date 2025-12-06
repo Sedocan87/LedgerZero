@@ -2083,6 +2083,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Backup & Restore'**
   String get backupAndRestore;
+
+  /// No description provided for @notificationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Settings'**
+  String get notificationSettings;
+
+  /// No description provided for @scheduledTransactionNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Transactions'**
+  String get scheduledTransactionNotifications;
+
+  /// No description provided for @budgetAlertNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget Alerts'**
+  String get budgetAlertNotifications;
+
+  /// No description provided for @syncStatusNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync Status'**
+  String get syncStatusNotifications;
+
+  /// No description provided for @advancedSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced Settings'**
+  String get advancedSettings;
+
+  /// No description provided for @developerMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer Mode'**
+  String get developerMode;
+
+  /// No description provided for @databaseStatistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Database Statistics'**
+  String get databaseStatistics;
+
+  /// No description provided for @clearCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Cache'**
+  String get clearCache;
+
+  /// No description provided for @cacheCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache cleared successfully'**
+  String get cacheCleared;
+
+  /// No description provided for @factoryReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Factory Reset'**
+  String get factoryReset;
+
+  /// No description provided for @factoryResetConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone.'**
+  String get factoryResetConfirmation;
+
+  /// No description provided for @factoryResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Factory Reset?'**
+  String get factoryResetTitle;
+
+  /// No description provided for @factoryResetSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Factory reset complete. Please restart the app.'**
+  String get factoryResetSuccess;
+
+  /// No description provided for @databaseSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Database Size'**
+  String get databaseSize;
+
+  /// No description provided for @tableRowCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Table Row Counts'**
+  String get tableRowCounts;
+
+  /// No description provided for @walSize.
+  ///
+  /// In en, this message translates to:
+  /// **'WAL Size'**
+  String get walSize;
+
+  /// No description provided for @totalRows.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Rows'**
+  String get totalRows;
 }
 
 class _AppLocalizationsDelegate

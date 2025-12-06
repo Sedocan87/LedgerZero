@@ -18,6 +18,7 @@ import 'package:ledger_zero/presentation/providers/payee_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
+import 'package:ledger_zero/presentation/screens/transactions/transaction_tutorial_manager.dart';
 import 'package:uuid/uuid.dart';
 
 final accountsProvider = StreamProvider.autoDispose<List<Account>>((ref) {
@@ -135,6 +136,11 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
         _restoreDraft();
       });
     }
+
+    // Trigger tutorial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      TransactionTutorialManager.showTutorial(context, ref);
+    });
   }
 
   @override
@@ -895,6 +901,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
             ),
             actions: [
               IconButton(
+                key: saveKey,
                 icon: const Icon(Icons.check),
                 onPressed: () {
                    if (_formKey.currentState!.validate()) {
@@ -946,6 +953,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
 
                   // Amount Field
                   AppTextField(
+                    key: amountKey,
                     controller: _amountController,
                     label: l10n.amount,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1033,6 +1041,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                                 fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
                                   _payeeController = textEditingController;
                                   return AppTextField(
+                                    key: payeeKey,
                                     controller: textEditingController,
                                     focusNode: focusNode,
                                     label: l10n.payee,
@@ -1089,6 +1098,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                       // Category / Split
                       if (!_isSplit) ...[
                           AppTextField(
+                            key: categoryKey,
                             controller: _categoryController,
                             label: l10n.category,
                             readOnly: true,

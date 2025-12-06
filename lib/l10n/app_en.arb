@@ -557,5 +557,14 @@
   "databaseSize": "Database Size",
   "tableRowCounts": "Table Row Counts",
   "walSize": "WAL Size",
-  "totalRows": "Total Rows"
+  "totalRows": "Total Rows",
+  "helpAndSupport": "Help & Support",
+  "faq": "FAQ",
+  "faqSubtitle": "Frequently asked questions",
+  "userGuide": "User Guide",
+  "userGuideSubtitle": "Comprehensive documentation",
+  "videoTutorials": "Video Tutorials",
+  "videoTutorialsSubtitle": "Learn by watching on YouTube",
+  "contactSupport": "Contact Support",
+  "contactSupportSubtitle": "support@ledgerzero.app"
 }

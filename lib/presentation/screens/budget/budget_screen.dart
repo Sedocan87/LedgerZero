@@ -11,6 +11,7 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/budget_template_
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_tutorial_banner.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
+import 'package:ledger_zero/presentation/screens/budget/budget_tutorial_manager.dart';
 
 class BudgetScreen extends ConsumerStatefulWidget {
   const BudgetScreen({super.key});
@@ -27,6 +28,11 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+
+    // Trigger tutorial after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BudgetTutorialManager.showTutorial(context, ref);
+    });
   }
 
   @override
@@ -187,14 +193,14 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               SliverToBoxAdapter(
                 child: Column(
                   children: [
-                    SizedBox(height: 8),
-                    MonthSelector(),
-                    ToBeBudgetedBanner(),
-                    BudgetTutorialBanner(),
+                    const SizedBox(height: 8),
+                    MonthSelector(key: monthSelectorKey),
+                    ToBeBudgetedBanner(key: tbbKey),
+                    const BudgetTutorialBanner(),
                   ],
                 ),
               ),
-              BudgetCategoryList(),
+              BudgetCategoryList(key: categoryListKey),
             ],
           ),
         ),

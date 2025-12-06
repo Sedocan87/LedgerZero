@@ -33,6 +33,9 @@ import 'package:ledger_zero/presentation/screens/settings/security_settings_scre
 import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/help_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/faq_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/user_guide_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/account_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/budget_setup_screen.dart';
@@ -162,6 +165,24 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'import-mint',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => const MintImportScreen(),
+          ),
+          GoRoute(
+            path: 'help',
+            name: 'help',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => const HelpScreen(),
+            routes: [
+               GoRoute(
+                  path: 'faq',
+                  name: 'faq',
+                  builder: (context, state) => const FaqScreen(),
+               ),
+               GoRoute(
+                  path: 'user-guide',
+                  name: 'user-guide',
+                  builder: (context, state) => const UserGuideScreen(),
+               ),
+            ],
           ),
           GoRoute(
             path: 'security',

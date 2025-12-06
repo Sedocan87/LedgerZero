@@ -7,12 +7,28 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/sync/sync_status_indicator.dart';
+import 'package:ledger_zero/presentation/screens/settings/sync_tutorial_manager.dart';
 
-class SyncSettingsScreen extends ConsumerWidget {
+class SyncSettingsScreen extends ConsumerStatefulWidget {
   const SyncSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SyncSettingsScreen> createState() => _SyncSettingsScreenState();
+}
+
+class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger tutorial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SyncTutorialManager.showTutorial(context, ref);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final state = ref.watch(syncControllerProvider);
     final controller = ref.read(syncControllerProvider.notifier);
@@ -79,7 +95,7 @@ class SyncSettingsScreen extends ConsumerWidget {
         children: [
           // Provider Selection
           DropdownButtonFormField<SyncProviderType>(
-            key: ValueKey(state.selectedProvider),
+            key: providerKey,
             decoration: InputDecoration(
               labelText: l10n.syncProvider,
               border: const OutlineInputBorder(),
@@ -133,6 +149,7 @@ class SyncSettingsScreen extends ConsumerWidget {
             if (state.status == SyncStatus.disconnected ||
                 state.status == SyncStatus.error)
               FilledButton.icon(
+                key: connectKey,
                 onPressed: () => controller.connect(),
                 icon: const Icon(Icons.login),
                 label: Text(
