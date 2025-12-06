@@ -23,7 +23,6 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // We don't call _initializeServices here anymore; relying on ref.listen below.
   }
 
   @override
@@ -37,10 +36,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final autoLockService = ref.read(autoLockServiceProvider);
 
     if (state == AppLifecycleState.paused) {
+      // Trigger widget update BEFORE auto-lock or app pause to ensure fresh data
+      // is written to shared storage while we still have database access.
+      ref.read(widgetServiceProvider).updateWidgetData();
+
       autoLockService.onAppPaused();
     } else if (state == AppLifecycleState.resumed) {
       autoLockService.onAppResumed();
-      // Optionally trigger widget update on resume to ensure freshness
+      // Optionally trigger widget update on resume as well
       ref.read(widgetServiceProvider).updateWidgetData();
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/domain/services/analytics_service.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/domain/services/scheduled_transaction_service.dart';
@@ -82,5 +83,6 @@ final widgetServiceProvider = Provider<WidgetService>((ref) {
     ref.watch(transactionRepositoryProvider),
     ref.watch(categoryRepositoryProvider),
     ref.watch(payeeRepositoryProvider),
+    ref.watch(sharedPreferencesProvider),
   );
 });
