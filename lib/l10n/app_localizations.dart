@@ -2185,6 +2185,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total Rows'**
   String get totalRows;
+
+  /// No description provided for @helpAndSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Support'**
+  String get helpAndSupport;
+
+  /// No description provided for @faq.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get faq;
+
+  /// No description provided for @faqSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequently asked questions'**
+  String get faqSubtitle;
+
+  /// No description provided for @userGuide.
+  ///
+  /// In en, this message translates to:
+  /// **'User Guide'**
+  String get userGuide;
+
+  /// No description provided for @userGuideSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Comprehensive documentation'**
+  String get userGuideSubtitle;
+
+  /// No description provided for @videoTutorials.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Tutorials'**
+  String get videoTutorials;
+
+  /// No description provided for @videoTutorialsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn by watching on YouTube'**
+  String get videoTutorialsSubtitle;
+
+  /// No description provided for @contactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get contactSupport;
+
+  /// No description provided for @contactSupportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'support@ledgerzero.app'**
+  String get contactSupportSubtitle;
 }
 
 class _AppLocalizationsDelegate
