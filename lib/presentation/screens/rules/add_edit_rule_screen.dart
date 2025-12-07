@@ -5,6 +5,9 @@ import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 import 'package:ledger_zero/domain/services/rule_template_service.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/payee.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
@@ -240,9 +243,8 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                     ),
                 );
             }),
-            AppButton(
+            AppButton.secondary(
                 label: 'Add Condition',
-                variant: AppButtonVariant.secondary,
                 onPressed: _showAddConditionDialog,
             ),
             const SizedBox(height: 24),
@@ -268,13 +270,12 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                     ),
                 );
             }),
-            AppButton(
+            AppButton.secondary(
                 label: 'Add Action',
-                variant: AppButtonVariant.secondary,
                 onPressed: _showAddActionDialog,
             ),
             const SizedBox(height: 32),
-            AppButton(
+            AppButton.primary(
                 label: 'Save Rule',
                 onPressed: _save,
             ),
@@ -517,7 +518,7 @@ class _ActionDisplay extends ConsumerWidget {
             case RuleActionType.setCategory:
                 final categoriesAsync = ref.watch(categoriesProvider);
                 final name = categoriesAsync.maybeWhen(
-                    data: (list) => list.firstWhere((c) => c.id == action.value, orElse: () => Category(id: '', name: 'Unknown', color: 0, icon: 0, createdAt: DateTime.now())).name,
+                    data: (list) => list.firstWhere((c) => c.id == action.value, orElse: () => Category(id: '', name: 'Unknown', color: 0, icon: '0', createdAt: DateTime.now())).name,
                     orElse: () => 'Loading...',
                 );
                 description = 'Set Category to "$name"';

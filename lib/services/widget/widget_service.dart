@@ -75,6 +75,34 @@ class WidgetService {
     this._prefs,
   );
 
+  Future<void> updateWidgetConfiguration({
+    bool? showGraph,
+    String? accountId,
+    String? categoryId,
+  }) async {
+    if (showGraph != null) {
+      await _prefs.setBool('widget_show_graph', showGraph);
+      await HomeWidget.saveWidgetData<bool>('show_graph', showGraph);
+    }
+    if (accountId != null) {
+      await _prefs.setString('widget_account_id', accountId);
+      await HomeWidget.saveWidgetData<String>('account_id', accountId);
+    } else {
+        await _prefs.remove('widget_account_id');
+        await HomeWidget.saveWidgetData<String>('account_id', null);
+    }
+
+    if (categoryId != null) {
+      await _prefs.setString('widget_category_id', categoryId);
+      await HomeWidget.saveWidgetData<String>('category_id', categoryId);
+    } else {
+        await _prefs.remove('widget_category_id');
+        await HomeWidget.saveWidgetData<String>('category_id', null);
+    }
+
+    await updateWidgetData();
+  }
+
   Future<void> updateWidgetData() async {
     final stopwatch = Stopwatch()..start();
     try {

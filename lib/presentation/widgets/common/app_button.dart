@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/widgets/common/loading_indicator.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
 
 class AppButton extends StatelessWidget {
   final String label;
@@ -52,7 +52,7 @@ class AppButton extends StatelessWidget {
             const SizedBox(
               width: 16,
               height: 16,
-              child: LoadingIndicator(),
+              child: AppLoadingIndicator(),
             ),
             const SizedBox(width: 8),
           ] else if (icon != null) ...[

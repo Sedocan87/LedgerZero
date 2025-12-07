@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/widgets/common/loading_indicator.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
 import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
@@ -112,7 +112,7 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
             ),
           );
         },
-        loading: () => const LoadingIndicator(),
+        loading: () => const AppLoadingIndicator(),
         error: (e, s) => ErrorView(title: l10n.error, message: e.toString()),
       ),
     );

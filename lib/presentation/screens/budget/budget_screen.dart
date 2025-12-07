@@ -188,7 +188,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: const CustomScrollView(
+          child: CustomScrollView( // Removed const
             slivers: [
               SliverToBoxAdapter(
                 child: Column(

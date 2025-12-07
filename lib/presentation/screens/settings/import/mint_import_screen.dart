@@ -43,7 +43,7 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
         });
       }
     } catch (e) {
-      Logger.error('Error picking file', error: e);
+      Logger.error('Error picking file', e);
       setState(() {
         _error = e.toString();
       });
@@ -72,7 +72,7 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
         _showSuccessDialog(result);
       }
     } catch (e) {
-      Logger.error('Error executing Mint import', error: e);
+      Logger.error('Error executing Mint import', e);
       setState(() {
         _error = e.toString();
       });
@@ -133,8 +133,8 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
             ),
             const SizedBox(height: 16),
             if (_fileName == null)
-              AppButton(
-                text: 'Select File',
+              AppButton.primary(
+                label: 'Select File',
                 onPressed: _isLoading ? null : _pickFile,
               )
             else
@@ -163,12 +163,12 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
             ],
 
             if (_error != null)
-              Expanded(child: ErrorView(message: _error!, onRetry: _pickFile)),
+              Expanded(child: ErrorView(title: 'Import Error', message: _error!, onRetry: _pickFile)),
 
             if (_selectedFile != null && !_isLoading) ...[
               const Spacer(),
-              AppButton(
-                text: 'Start Import',
+              AppButton.primary(
+                label: 'Start Import',
                 onPressed: _importData,
               ),
             ],

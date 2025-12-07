@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_list_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
-import 'package:ledger_zero/presentation/widgets/common/loading_indicator.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/account_card.dart';
 import 'package:go_router/go_router.dart';
@@ -170,7 +170,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             ),
           );
         },
-        loading: () => const LoadingIndicator(),
+        loading: () => const AppLoadingIndicator(),
         error: (error, stack) => ErrorView(
           title: 'Error',
           message: error.toString(),

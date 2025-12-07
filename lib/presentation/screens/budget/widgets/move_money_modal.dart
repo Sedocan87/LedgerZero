@@ -4,7 +4,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/categories_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 
 class MoveMoneyModal extends ConsumerStatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
-import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 
 class ErrorView extends StatelessWidget {
   final String title;
