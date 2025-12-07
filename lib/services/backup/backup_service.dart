@@ -125,7 +125,7 @@ class BackupService {
 
     // 5a. Compress (GZIP)
     // Compression before encryption is crucial for size reduction
-    final compressedBytes = GZipEncoder().encode(inputBytes);
+    final compressedBytes = const GZipEncoder().encode(inputBytes);
 
     if (compressedBytes == null) {
       throw DatabaseException('Failed to compress backup');

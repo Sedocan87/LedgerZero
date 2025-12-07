@@ -534,7 +534,7 @@ class _ActionDisplay extends ConsumerWidget {
             case RuleActionType.setAccount:
                  final accountsAsync = ref.watch(accountsProvider);
                  final name = accountsAsync.maybeWhen(
-                     data: (list) => list.firstWhere((a) => a.id == action.value, orElse: () => Account(id: '', name: 'Unknown', type: AccountType.checking)).name,
+                     data: (list) => list.firstWhere((a) => a.id == action.value, orElse: () => const Account(id: '', name: 'Unknown', type: AccountType.checking)).name,
                      orElse: () => 'Loading...',
                  );
                  description = 'Set Account to "$name"';

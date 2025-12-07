@@ -141,7 +141,7 @@ void main() {
        final csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
 "6/09/2020","Safeway","Safeway Store","45.50","debit","Groceries","Chase Checking","",""''';
 
-       final existingCategory = Category(
+       const existingCategory = Category(
          id: 'cat_groceries',
          name: 'Groceries',
          categoryGroupId: 'group1',

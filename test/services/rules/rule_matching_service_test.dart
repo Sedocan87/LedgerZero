@@ -47,7 +47,7 @@ void main() {
       when(mockPayeeRepository.getPayeeById('payee1'))
           .thenAnswer((_) async => testPayee);
 
-      final rule = Rule(
+      const rule = Rule(
         id: 'r1',
         name: 'Payee Rule',
         priority: 1,
@@ -70,7 +70,7 @@ void main() {
     });
 
     test('matches amount correctly (less than)', () async {
-      final rule = Rule(
+      const rule = Rule(
         id: 'r2',
         name: 'Amount Rule',
         priority: 1,
@@ -93,7 +93,7 @@ void main() {
     });
 
     test('matches description correctly (contains)', () async {
-      final rule = Rule(
+      const rule = Rule(
         id: 'r3',
         name: 'Desc Rule',
         priority: 1,
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('applies actions correctly', () async {
-      final rule = Rule(
+      const rule = Rule(
         id: 'r4',
         name: 'Action Rule',
         priority: 1,
@@ -140,7 +140,7 @@ void main() {
     });
 
     test('respects priority', () async {
-        final rule1 = Rule(
+        const rule1 = Rule(
             id: 'r1',
             name: 'Rule 1',
             priority: 1,
@@ -150,7 +150,7 @@ void main() {
             actions: [const RuleAction(type: RuleActionType.setMemo, value: 'Rule1')],
         );
 
-        final rule2 = Rule(
+        const rule2 = Rule(
             id: 'r2',
             name: 'Rule 2',
             priority: 2,

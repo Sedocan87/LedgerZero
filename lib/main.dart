@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/app/app.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
+import 'package:ledger_zero/core/performance/performance_monitor.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/error_tracker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +20,10 @@ Future<void> main() async {
   );
 
   ErrorTracker.init();
+
+  if (kDebugMode || kProfileMode) {
+    PerformanceMonitor.instance.startMonitoring();
+  }
 
   runApp(
     ProviderScope(

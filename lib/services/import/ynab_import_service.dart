@@ -35,7 +35,7 @@ class YnabImportService {
 
     // 1. Parse Register CSV
     final regEol = detectEol(registerCsvContent);
-    final registerRows = CsvToListConverter().convert(
+    final registerRows = const CsvToListConverter().convert(
         registerCsvContent,
         shouldParseNumbers: false,
         eol: regEol,
@@ -170,7 +170,7 @@ class YnabImportService {
 
     // 2. Parse Budget CSV
     final budgetEol = detectEol(budgetCsvContent);
-    final budgetRows = CsvToListConverter().convert(
+    final budgetRows = const CsvToListConverter().convert(
         budgetCsvContent,
         shouldParseNumbers: false,
         eol: budgetEol,
