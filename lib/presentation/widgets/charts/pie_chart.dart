@@ -82,12 +82,14 @@ class PieChart extends StatelessWidget {
             // Chart
             Expanded(
               flex: 3,
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: PieChartPainter(
-                  data: processedData,
-                  total: total,
-                  colors: colors,
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: PieChartPainter(
+                    data: processedData,
+                    total: total,
+                    colors: colors,
+                  ),
                 ),
               ),
             ),

@@ -192,7 +192,7 @@ class RestoreService {
       final compressedPlaintext = cipher.process(ciphertext);
 
       // Decompress (GZIP)
-      final plaintext = GZipDecoder().decodeBytes(compressedPlaintext);
+      final plaintext = const GZipDecoder().decodeBytes(compressedPlaintext);
 
       await outputFile.writeAsBytes(plaintext);
     } catch (e) {

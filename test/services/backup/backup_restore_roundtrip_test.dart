@@ -52,7 +52,7 @@ void main() {
          accountId: 'acc_1',
          date: DateTime.now(),
          amount: 100.0,
-         memo: Value('Original Transaction')
+         memo: const Value('Original Transaction')
        )
     );
 

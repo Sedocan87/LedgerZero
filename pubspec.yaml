@@ -65,6 +65,7 @@ dependencies:
   archive: ^4.0.7
   url_launcher: ^6.3.2
   home_widget: ^0.8.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -78,7 +79,14 @@ dev_dependencies:
   plugin_platform_interface: ^2.1.8
   path_provider_platform_interface: ^2.1.2
   sqlite3: ^2.9.4
+  leak_tracker: ^11.0.2
+  leak_tracker_flutter_testing: ^3.0.10
+  leak_tracker_testing: ^3.0.2
 
+  local_auth_android: any
+  local_auth_darwin: any
+  local_auth_windows: any
+  connectivity_plus_platform_interface: any
 flutter:
   uses-material-design: true
   generate: true

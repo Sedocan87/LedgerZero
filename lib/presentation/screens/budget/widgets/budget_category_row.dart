@@ -274,8 +274,8 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       textColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
     }
 
-    final editingCategoryId = ref.watch(editingCategoryProvider);
-    final isEditing = editingCategoryId == widget.viewModel.category.id;
+    // Optimize rebuilds: only rebuild if THIS category's editing state changes
+    final isEditing = ref.watch(editingCategoryProvider.select((value) => value == widget.viewModel.category.id));
     final viewMode = ref.watch(budgetViewModeProvider);
 
     final semanticLabel = '${widget.viewModel.category.name}. '

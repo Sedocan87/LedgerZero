@@ -59,11 +59,13 @@ class MultiLineChart extends StatelessWidget {
           child: SizedBox(
             height: height,
             width: double.infinity,
-            child: CustomPaint(
-              painter: MultiLineChartPainter(
-                seriesList: seriesList,
-                gridColor: gridColor,
-                labelColor: labelColor,
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: MultiLineChartPainter(
+                  seriesList: seriesList,
+                  gridColor: gridColor,
+                  labelColor: labelColor,
+                ),
               ),
             ),
           ),

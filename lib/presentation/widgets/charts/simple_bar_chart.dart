@@ -57,11 +57,13 @@ class SimpleBarChart extends StatelessWidget {
           child: SizedBox(
             height: height,
             width: constraints.maxWidth,
-            child: CustomPaint(
-              painter: BarChartPainter(
-                data: entries,
-                barColor: barColor,
-                labelColor: labelColor,
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: BarChartPainter(
+                  data: entries,
+                  barColor: barColor,
+                  labelColor: labelColor,
+                ),
               ),
             ),
           ),

@@ -22,7 +22,7 @@ class MintImportService {
     }
 
     final eol = detectEol(csvContent);
-    final rows = CsvToListConverter().convert(
+    final rows = const CsvToListConverter().convert(
       csvContent,
       shouldParseNumbers: false,
       eol: eol,
