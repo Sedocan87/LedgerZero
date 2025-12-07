@@ -48,16 +48,21 @@ class SimpleBarChart extends StatelessWidget {
       }
     }
 
+    final semanticDescription = entries.map((e) => '${e.key}: ${e.value.toStringAsFixed(2)}').join(', ');
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SizedBox(
-          height: height,
-          width: constraints.maxWidth,
-          child: CustomPaint(
-            painter: BarChartPainter(
-              data: entries,
-              barColor: barColor,
-              labelColor: labelColor,
+        return Semantics(
+          label: 'Bar Chart showing: $semanticDescription',
+          child: SizedBox(
+            height: height,
+            width: constraints.maxWidth,
+            child: CustomPaint(
+              painter: BarChartPainter(
+                data: entries,
+                barColor: barColor,
+                labelColor: labelColor,
+              ),
             ),
           ),
         );

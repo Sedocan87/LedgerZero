@@ -31,6 +31,14 @@ class HelpScreen extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.keyboard),
+            title: const Text('Keyboard Shortcuts'),
+            subtitle: const Text('List of available shortcuts'),
+            onTap: () {
+              context.pushNamed('keyboard-shortcuts');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.video_library),
             title: const Text('Video Tutorials'),
             subtitle: const Text('Learn by watching on YouTube'),

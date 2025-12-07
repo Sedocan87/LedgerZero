@@ -2,23 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 
-class ThemeNotifier extends Notifier<ThemeMode> {
+class ThemeState {
+  final ThemeMode mode;
+  final bool isHighContrast;
+
+  const ThemeState({
+    required this.mode,
+    required this.isHighContrast,
+  });
+
+  ThemeState copyWith({ThemeMode? mode, bool? isHighContrast}) {
+    return ThemeState(
+      mode: mode ?? this.mode,
+      isHighContrast: isHighContrast ?? this.isHighContrast,
+    );
+  }
+}
+
+class ThemeNotifier extends Notifier<ThemeState> {
   static const String _themeKey = 'theme_mode';
+  static const String _highContrastKey = 'high_contrast_mode';
 
   @override
-  ThemeMode build() {
-    // We access sharedPreferencesProvider to load the initial state.
-    // Since this is synchronous, and SharedPreferences is async,
-    // we rely on the provider being overridden with an initialized instance.
+  ThemeState build() {
     final prefs = ref.watch(sharedPreferencesProvider);
     final savedTheme = prefs.getString(_themeKey);
-    return _getThemeModeFromString(savedTheme);
+    final isHighContrast = prefs.getBool(_highContrastKey) ?? false;
+
+    return ThemeState(
+      mode: _getThemeModeFromString(savedTheme),
+      isHighContrast: isHighContrast,
+    );
   }
 
   void setTheme(ThemeMode mode) {
-    state = mode;
+    state = state.copyWith(mode: mode);
     final prefs = ref.read(sharedPreferencesProvider);
     prefs.setString(_themeKey, mode.toString());
+  }
+
+  void toggleHighContrast(bool value) {
+    state = state.copyWith(isHighContrast: value);
+    final prefs = ref.read(sharedPreferencesProvider);
+    prefs.setBool(_highContrastKey, value);
   }
 
   ThemeMode _getThemeModeFromString(String? themeString) {
@@ -34,4 +60,4 @@ class ThemeNotifier extends Notifier<ThemeMode> {
   }
 }
 
-final themeProvider = NotifierProvider<ThemeNotifier, ThemeMode>(ThemeNotifier.new);
+final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(ThemeNotifier.new);

@@ -67,61 +67,69 @@ class PieChart extends StatelessWidget {
       );
     }
 
-    return SizedBox(
-      height: height,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Chart
-          Expanded(
-            flex: 3,
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: PieChartPainter(
-                data: processedData,
-                total: total,
-                colors: colors,
+    final semanticDescription = processedData.map((e) {
+      final percentage = (e.value / total * 100).toStringAsFixed(1);
+      return '${e.key}: $percentage%';
+    }).join(', ');
+
+    return Semantics(
+      label: 'Pie Chart showing distribution. $semanticDescription',
+      child: SizedBox(
+        height: height,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Chart
+            Expanded(
+              flex: 3,
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: PieChartPainter(
+                  data: processedData,
+                  total: total,
+                  colors: colors,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          // Legend
-          Expanded(
-            flex: 2,
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics: const ClampingScrollPhysics(),
-              itemCount: processedData.length,
-              itemBuilder: (context, index) {
-                 final entry = processedData[index];
-                 final percentage = (entry.value / total * 100).toStringAsFixed(1);
-                 return Padding(
-                   padding: const EdgeInsets.symmetric(vertical: 2.0),
-                   child: Row(
-                     children: [
-                       Container(
-                         width: 12, height: 12,
-                         decoration: BoxDecoration(
-                           color: colors[index % colors.length],
-                           shape: BoxShape.circle,
+            const SizedBox(width: 16),
+            // Legend
+            Expanded(
+              flex: 2,
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
+                itemCount: processedData.length,
+                itemBuilder: (context, index) {
+                   final entry = processedData[index];
+                   final percentage = (entry.value / total * 100).toStringAsFixed(1);
+                   return Padding(
+                     padding: const EdgeInsets.symmetric(vertical: 2.0),
+                     child: Row(
+                       children: [
+                         Container(
+                           width: 12, height: 12,
+                           decoration: BoxDecoration(
+                             color: colors[index % colors.length],
+                             shape: BoxShape.circle,
+                           ),
                          ),
-                       ),
-                       const SizedBox(width: 8),
-                       Expanded(
-                         child: Text(
-                           '${entry.key}\n$percentage%',
-                           style: TextStyle(color: labelColor, fontSize: 11),
-                           overflow: TextOverflow.ellipsis,
-                           maxLines: 2,
+                         const SizedBox(width: 8),
+                         Expanded(
+                           child: Text(
+                             '${entry.key}\n$percentage%',
+                             style: TextStyle(color: labelColor, fontSize: 11),
+                             overflow: TextOverflow.ellipsis,
+                             maxLines: 2,
+                           ),
                          ),
-                       ),
-                     ],
-                   ),
-                 );
-              },
+                       ],
+                     ),
+                   );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
