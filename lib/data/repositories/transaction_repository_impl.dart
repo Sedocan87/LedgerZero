@@ -3,6 +3,7 @@ import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
+import 'package:ledger_zero/data/database/database_error_handler.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
@@ -14,21 +15,18 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<List<Transaction>> getAllTransactions() async {
-    try {
+    return DatabaseErrorHandler.execute(() async {
       Logger.debug('Fetching all transactions');
       final transactions = await _transactionsDao.getAllTransactions();
       Logger.debug('Fetched ${transactions.length} transactions');
       return transactions.map(_mapToDomain).toList();
-    } catch (e, stackTrace) {
-      Logger.error('Failed to fetch transactions', e, stackTrace);
-      throw DatabaseException('Failed to fetch transactions', e);
-    }
+    }, context: 'getAllTransactions');
   }
 
   @override
   Future<void> updateTransferTransaction(
       Transaction source, Transaction destination) async {
-    try {
+    return DatabaseErrorHandler.execute(() async {
       Logger.debug(
           'Updating transfer between ${source.accountId} and ${destination.accountId}');
       await _transactionsDao.db.transaction(() async {
@@ -36,35 +34,26 @@ class TransactionRepositoryImpl implements TransactionRepository {
         await _transactionsDao.updateTransaction(_mapToCompanion(destination));
       });
       Logger.info('Transfer updated successfully');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to update transfer', e, stackTrace);
-      throw DatabaseException('Failed to update transfer', e);
-    }
+    }, context: 'updateTransferTransaction');
   }
 
   @override
   Future<Transaction?> getTransactionById(String id) async {
-    try {
+    return DatabaseErrorHandler.execute(() async {
       Logger.debug('Fetching transaction with id: $id');
       final transaction = await _transactionsDao.getTransactionById(id);
       Logger.debug('Transaction found: ${transaction != null}');
       return transaction == null ? null : _mapToDomain(transaction);
-    } catch (e, stackTrace) {
-      Logger.error('Failed to fetch transaction $id', e, stackTrace);
-      throw DatabaseException('Failed to fetch transaction $id', e);
-    }
+    }, context: 'getTransactionById');
   }
 
   @override
   Future<void> createTransaction(Transaction transaction) async {
-    try {
+    return DatabaseErrorHandler.execute(() async {
       Logger.debug('Creating transaction: ${transaction.id}');
       await _transactionsDao.insertTransaction(_mapToCompanion(transaction));
       Logger.info('Transaction created successfully: ${transaction.id}');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to create transaction ${transaction.id}', e, stackTrace);
-      throw DatabaseException('Failed to create transaction ${transaction.id}', e);
-    }
+    }, context: 'createTransaction');
   }
 
   @override

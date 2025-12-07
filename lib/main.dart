@@ -9,28 +9,39 @@ import 'package:ledger_zero/core/utils/error_tracker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  final sharedPreferences = await SharedPreferences.getInstance();
+    final sharedPreferences = await SharedPreferences.getInstance();
 
-  AppConfig(
-    environment: AppEnvironment.production,
-    appTitle: 'LedgerZero',
-    enableLogging: false,
-  );
+    AppConfig(
+      environment: AppEnvironment.production,
+      appTitle: 'LedgerZero',
+      enableLogging: false,
+    );
 
-  ErrorTracker.init();
+    ErrorTracker.init();
 
-  if (kDebugMode || kProfileMode) {
-    PerformanceMonitor.instance.startMonitoring();
+    if (kDebugMode || kProfileMode) {
+      PerformanceMonitor.instance.startMonitoring();
+    }
+
+    runApp(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  } catch (e, stack) {
+    // If initialization fails, print to console/log.
+    // We can't use ErrorTracker fully if it failed to init, but we can try.
+    if (kDebugMode) {
+      print('CRITICAL: App initialization failed: $e');
+      print(stack);
+    }
+    // Attempt to log using standard print or a fallback since native logging might be broken
+    // if dependencies failed.
   }
-
-  runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
-      child: const MyApp(),
-    ),
-  );
 }

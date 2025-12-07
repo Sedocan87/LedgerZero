@@ -11,7 +11,7 @@ class CacheException implements Exception {
 class DatabaseException implements Exception {
   final String message;
   final Object? originalError;
-  DatabaseException(this.message, [this.originalError]);
+  const DatabaseException(this.message, [this.originalError]);
 
   @override
   String toString() => 'DatabaseException: $message ${originalError != null ? "($originalError)" : ""}';
@@ -20,9 +20,12 @@ class DatabaseException implements Exception {
 class SyncException implements Exception {
   final String message;
   final Object? originalError;
-  final bool isRetryable;
+  final bool retryable;
 
-  SyncException(this.message, {this.originalError, this.isRetryable = false});
+  const SyncException(this.message, {this.originalError, this.retryable = false});
+
+  // Alias for backward compatibility if needed, but better to use `retryable` consistently
+  bool get isRetryable => retryable;
 
   @override
   String toString() => 'SyncException: $message ${originalError != null ? "($originalError)" : ""}';
