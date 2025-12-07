@@ -62,14 +62,16 @@ class BudgetCategoryList extends ConsumerWidget {
 
               // Groups (index 1 to groups.length)
               final groupVM = groups[index - 1];
-              return ExpansionTile(
-                key: PageStorageKey('group_${groupVM.group.id}'),
-                title: BudgetGroupRow(group: groupVM.group),
-                initiallyExpanded: true,
-                shape: const Border(), // Remove borders
-                children: groupVM.categories.map((catVM) {
-                  return BudgetCategoryRow(viewModel: catVM);
-                }).toList(),
+              return FocusTraversalGroup(
+                child: ExpansionTile(
+                  key: PageStorageKey('group_${groupVM.group.id}'),
+                  title: BudgetGroupRow(group: groupVM.group),
+                  initiallyExpanded: true,
+                  shape: const Border(), // Remove borders
+                  children: groupVM.categories.map((catVM) {
+                    return BudgetCategoryRow(viewModel: catVM);
+                  }).toList(),
+                ),
               );
             },
             childCount: groups.length + 2, // Header + Groups + Footer

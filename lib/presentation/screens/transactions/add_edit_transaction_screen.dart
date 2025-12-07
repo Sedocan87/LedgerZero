@@ -93,6 +93,15 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
   final _memoController = TextEditingController();
   final _transferAccountController = TextEditingController();
 
+  // Focus Nodes
+  final _amountFocus = FocusNode();
+  final _accountFocus = FocusNode();
+  final _dateFocus = FocusNode();
+  final _payeeFocus = FocusNode(); // Will be managed by Autocomplete
+  final _categoryFocus = FocusNode();
+  final _memoFocus = FocusNode();
+  final _transferAccountFocus = FocusNode();
+
   // Form State
   TransactionFormType _formType = TransactionFormType.expense;
   bool _isSplit = false;
@@ -160,6 +169,15 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
     _accountController.dispose();
     _memoController.dispose();
     _transferAccountController.dispose();
+
+    _amountFocus.dispose();
+    _accountFocus.dispose();
+    _dateFocus.dispose();
+    _payeeFocus.dispose();
+    _categoryFocus.dispose();
+    _memoFocus.dispose();
+    _transferAccountFocus.dispose();
+
     for (var split in _splits) {
       split.dispose();
     }
@@ -955,8 +973,11 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                   AppTextField(
                     key: amountKey,
                     controller: _amountController,
+                    focusNode: _amountFocus,
                     label: l10n.amount,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) => _accountFocus.requestFocus(),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return l10n.invalidAmount;
@@ -973,6 +994,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                   // Account Field (From)
                   AppTextField(
                     controller: _accountController,
+                    focusNode: _accountFocus,
                     label: _formType == TransactionFormType.transfer ? 'From Account' : l10n.account,
                     readOnly: true,
                     suffixIcon: const Icon(Icons.arrow_drop_down),
@@ -986,6 +1008,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                   if (_formType == TransactionFormType.transfer) ...[
                       AppTextField(
                         controller: _transferAccountController,
+                        focusNode: _transferAccountFocus,
                         label: l10n.toAccount,
                         readOnly: true,
                         suffixIcon: const Icon(Icons.arrow_drop_down),
@@ -999,6 +1022,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                   // Date Field
                   AppTextField(
                     controller: _dateController,
+                    focusNode: _dateFocus,
                     label: l10n.date,
                     readOnly: true,
                     prefixIcon: const Icon(Icons.calendar_today),
@@ -1045,8 +1069,15 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                                     controller: textEditingController,
                                     focusNode: focusNode,
                                     label: l10n.payee,
+                                    textInputAction: TextInputAction.next,
                                     onFieldSubmitted: (value) {
                                         onFieldSubmitted();
+                                        // Move to next field after selection/submission
+                                        if (!_isSplit) {
+                                            _categoryFocus.requestFocus();
+                                        } else {
+                                            _memoFocus.requestFocus();
+                                        }
                                     },
                                     onChanged: (_) => _triggerAutosave(),
                                   );
@@ -1084,6 +1115,11 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                                      }
 
                                      _triggerAutosave();
+                                     if (!_isSplit) {
+                                          _categoryFocus.requestFocus();
+                                     } else {
+                                          _memoFocus.requestFocus();
+                                     }
                                    });
                                 },
                               );
@@ -1100,6 +1136,7 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                           AppTextField(
                             key: categoryKey,
                             controller: _categoryController,
+                            focusNode: _categoryFocus,
                             label: l10n.category,
                             readOnly: true,
                             suffixIcon: const Icon(Icons.arrow_drop_down),
@@ -1215,8 +1252,19 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                   // Memo Field
                   AppTextField(
                     controller: _memoController,
+                    focusNode: _memoFocus,
                     label: l10n.memo,
                     maxLines: 2,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) {
+                       if (_formKey.currentState!.validate()) {
+                         if (_selectedAccount == null) {
+                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.selectAccount)));
+                             return;
+                         }
+                         _saveTransaction();
+                       }
+                    },
                     onChanged: (_) => _triggerAutosave(),
                   ),
                   const SizedBox(height: 16),

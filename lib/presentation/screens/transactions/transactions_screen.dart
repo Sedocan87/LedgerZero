@@ -44,52 +44,56 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       // Task 215: Pull-to-refresh
       body: RefreshIndicator(
         onRefresh: () => ref.read(transactionsProvider.notifier).refresh(),
-        child: state.transactions.when(
-          data: (transactions) {
-            if (transactions.isEmpty) {
-              return _buildEmptyState(context); // Task 209
-            }
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: state.transactions.when(
+            data: (transactions) {
+              if (transactions.isEmpty) {
+                return _buildEmptyState(context); // Task 209
+              }
 
-            final grouped = _groupTransactions(transactions);
-            final flattened = _buildFlattenedList(grouped);
+              final grouped = _groupTransactions(transactions);
+              final flattened = _buildFlattenedList(grouped);
 
-            // Task 219: ListView.builder for performance (Flattened)
-            return ListView.builder(
-              itemCount: flattened.length + 1, // +1 for load more button
-              itemBuilder: (context, index) {
-                if (index == flattened.length) {
-                  // Only show load more if we might have more transactions
-                  if (transactions.length >= state.limit) {
-                    return _buildLoadMoreButton(ref); // Task 208
-                  } else {
-                    return const SizedBox.shrink();
+              // Task 219: ListView.builder for performance (Flattened)
+              return ListView.builder(
+                itemCount: flattened.length + 1, // +1 for load more button
+                itemBuilder: (context, index) {
+                  if (index == flattened.length) {
+                    // Only show load more if we might have more transactions
+                    if (transactions.length >= state.limit) {
+                      return _buildLoadMoreButton(ref); // Task 208
+                    } else {
+                      return const SizedBox.shrink();
+                    }
                   }
-                }
 
-                final item = flattened[index];
-                if (item is DateTime) {
-                  return _buildDateHeader(context, item);
-                } else if (item is Transaction) {
-                  return _buildTransactionItem(
-                    context,
-                    item,
-                    payees,
-                    categories,
-                    accounts,
-                    state,
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => Center(child: Text('Error: $e')),
+                  final item = flattened[index];
+                  if (item is DateTime) {
+                    return _buildDateHeader(context, item);
+                  } else if (item is Transaction) {
+                    return _buildTransactionItem(
+                      context,
+                      item,
+                      payees,
+                      categories,
+                      accounts,
+                      state,
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(child: Text('Error: $e')),
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Add Transaction',
         onPressed: () {
-          // Navigate to add transaction
+          context.pushNamed('add-transaction');
         },
         child: const Icon(Icons.add),
       ),
@@ -172,25 +176,27 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           );
         }
       },
-      child: TransactionListItem(
-        transaction: tx,
-        payeeName: payees[tx.payeeId],
-        categoryName: categories[tx.categoryId],
-        accountName: accounts[tx.accountId],
-        isSelectionMode: false,
-        isSelected: false,
-        onTap: () {
-          context.pushNamed('edit-transaction', pathParameters: {'id': tx.id});
-        },
-        onLongPress: () {
-          ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-          ref.read(transactionsProvider.notifier).toggleSelection(tx.id);
-        },
-        onClearStatusChanged: (status) {
-          final updated = tx.copyWith(cleared: status);
-          // ignore: unawaited_futures
-          ref.read(transactionRepositoryProvider).updateTransaction(updated);
-        },
+      child: Focus(
+        child: TransactionListItem(
+          transaction: tx,
+          payeeName: payees[tx.payeeId],
+          categoryName: categories[tx.categoryId],
+          accountName: accounts[tx.accountId],
+          isSelectionMode: false,
+          isSelected: false,
+          onTap: () {
+            context.pushNamed('edit-transaction', pathParameters: {'id': tx.id});
+          },
+          onLongPress: () {
+            ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
+            ref.read(transactionsProvider.notifier).toggleSelection(tx.id);
+          },
+          onClearStatusChanged: (status) {
+            final updated = tx.copyWith(cleared: status);
+            // ignore: unawaited_futures
+            ref.read(transactionRepositoryProvider).updateTransaction(updated);
+          },
+        ),
       ),
     );
   }
@@ -221,6 +227,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     if (state.isMultiSelectMode) {
       return IconButton(
           icon: const Icon(Icons.close),
+          tooltip: 'Close selection',
           onPressed: () {
             ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
           });
@@ -228,6 +235,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     if (_isSearchMode) {
       return IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
           onPressed: () {
             setState(() {
               _isSearchMode = false;
@@ -245,6 +253,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       return [
         IconButton(
             icon: const Icon(Icons.delete),
+            tooltip: 'Delete selected',
             onPressed: () {
               // Task 218: Bulk delete
               final ids = state.selectedTransactionIds.toList();
@@ -260,6 +269,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             }),
         IconButton(
             icon: const Icon(Icons.check),
+            tooltip: 'Approve selected',
             onPressed: () {
               // Task 218: Bulk approve
               final ids = state.selectedTransactionIds;
@@ -282,12 +292,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             }),
         IconButton(
             icon: const Icon(Icons.folder),
+            tooltip: 'Categorize selected',
             onPressed: () {
               // Task 218: Bulk categorize
               _showBulkCategorizeDialog(context, state);
             }),
         IconButton(
             icon: const Icon(Icons.select_all),
+            tooltip: 'Select all',
             onPressed: () {
               if (allTransactions != null) {
                 ref
@@ -301,6 +313,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       return [
         IconButton(
             icon: const Icon(Icons.clear),
+            tooltip: 'Clear search',
             onPressed: () {
               _searchController.clear();
               ref.read(transactionsProvider.notifier).updateSearchQuery('');
@@ -310,6 +323,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return [
       IconButton(
           icon: const Icon(Icons.search),
+          tooltip: 'Search',
           onPressed: () {
             setState(() {
               _isSearchMode = true;
@@ -326,12 +340,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       // Task 211: Filtering
       IconButton(
           icon: const Icon(Icons.filter_list),
+          tooltip: 'Filter',
           onPressed: () {
             _showFilterDialog(context, state);
           }),
       // Task 214: Sorting
       PopupMenuButton<TransactionSortField>(
         icon: const Icon(Icons.sort),
+        tooltip: 'Sort',
         onSelected: (field) {
           final currentSort = state.sort;
           final newAscending =

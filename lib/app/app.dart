@@ -57,7 +57,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeProvider);
+    final themeState = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
 
     ref.listen<AuthState>(authProvider, (previous, next) {
@@ -66,12 +66,15 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       }
     });
 
+    final lightTheme = themeState.isHighContrast ? AppTheme.highContrastLightTheme : AppTheme.lightTheme;
+    final darkTheme = themeState.isHighContrast ? AppTheme.highContrastDarkTheme : AppTheme.darkTheme;
+
     return WidgetSyncListener(
       child: MaterialApp.router(
         title: AppConfig.instance.appTitle,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: themeMode,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: themeState.mode,
         routerConfig: router,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

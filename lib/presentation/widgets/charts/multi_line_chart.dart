@@ -32,6 +32,11 @@ class MultiLineChart extends StatelessWidget {
       );
     }
 
+    final seriesDescriptions = seriesList.map((s) {
+      final pointsDesc = s.points.take(3).map((p) => '${DateFormat.MMMd().format(p.date)}: ${p.value.toStringAsFixed(2)}').join(', ');
+      return '${s.name}: $pointsDesc...';
+    }).join('; ');
+
     return Column(
       children: [
         // Legend
@@ -49,14 +54,17 @@ class MultiLineChart extends StatelessWidget {
           }).toList(),
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: height,
-          width: double.infinity,
-          child: CustomPaint(
-            painter: MultiLineChartPainter(
-              seriesList: seriesList,
-              gridColor: gridColor,
-              labelColor: labelColor,
+        Semantics(
+          label: 'Line Chart showing trend. $seriesDescriptions',
+          child: SizedBox(
+            height: height,
+            width: double.infinity,
+            child: CustomPaint(
+              painter: MultiLineChartPainter(
+                seriesList: seriesList,
+                gridColor: gridColor,
+                labelColor: labelColor,
+              ),
             ),
           ),
         ),

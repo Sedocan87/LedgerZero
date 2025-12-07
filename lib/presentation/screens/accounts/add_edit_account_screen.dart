@@ -25,6 +25,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
 
+  final _nameFocus = FocusNode();
+  final _balanceFocus = FocusNode();
+
   AccountType _selectedType = AccountType.checking;
   String _selectedCurrency = 'USD';
   int _selectedColor = 0xFF4CAF50; // Default Green
@@ -258,6 +261,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   void dispose() {
     _nameController.dispose();
     _balanceController.dispose();
+    _nameFocus.dispose();
+    _balanceFocus.dispose();
     super.dispose();
   }
 
@@ -300,6 +305,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                           hint: 'e.g. Chase Checking',
                           helperText: 'Enter a descriptive name for this account',
                           controller: _nameController,
+                          focusNode: _nameFocus,
                           textInputAction: TextInputAction.next,
                           onChanged: (_) => _onFieldChange(),
                           validator: (value) {
@@ -343,9 +349,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                                 hint: '0.00',
                                 helperText: 'Current balance of the account',
                                 controller: _balanceController,
+                                focusNode: _balanceFocus,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                                 textInputAction: TextInputAction.done,
                                 onChanged: (_) => _onFieldChange(),
+                                onFieldSubmitted: (_) => _saveAccount(),
                                 validator: (value) {
                                   if (value != null && value.isNotEmpty) {
                                     if (double.tryParse(value) == null) {

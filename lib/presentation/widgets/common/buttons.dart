@@ -38,23 +38,28 @@ class AppButton extends StatelessWidget {
     // Or alongside? For now, let's disable and show loader if loading
     // But keeping it simple for this task.
 
-    final Widget child = Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (isLoading) ...[
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: LoadingIndicator(),
-          ),
-          const SizedBox(width: 8),
-        ] else if (icon != null) ...[
-          Icon(icon, size: 18),
-          const SizedBox(width: 8),
+    final Widget child = Semantics(
+      label: label,
+      button: true,
+      enabled: !isLoading && onPressed != null,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (isLoading) ...[
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: LoadingIndicator(),
+            ),
+            const SizedBox(width: 8),
+          ] else if (icon != null) ...[
+            Icon(icon, size: 18),
+            const SizedBox(width: 8),
+          ],
+          Text(label),
         ],
-        Text(label),
-      ],
+      ),
     );
 
     switch (type) {

@@ -7,7 +7,7 @@ import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
-import 'package:ledger_zero/presentation/screens/settings/database_stats_screen.dart'; // Will create this
+import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
@@ -20,7 +20,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsProvider);
-    final themeMode = ref.watch(themeProvider);
+    final themeState = ref.watch(themeProvider);
 
     Widget buildOption<T>(BuildContext context, String label, T value) {
       return SimpleDialogOption(
@@ -199,7 +199,7 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.brightness_6),
                 title: Text(l10n.theme),
-                subtitle: Text(switch (themeMode) {
+                subtitle: Text(switch (themeState.mode) {
                   ThemeMode.system => l10n.systemTheme,
                   ThemeMode.light => l10n.lightTheme,
                   ThemeMode.dark => l10n.darkTheme,
@@ -219,6 +219,17 @@ class SettingsScreen extends ConsumerWidget {
                   if (selected != null) {
                     ref.read(themeProvider.notifier).setTheme(selected);
                   }
+                },
+              ),
+              // Accessibility
+              ListTile(
+                leading: const Icon(Icons.accessibility),
+                title: const Text('Accessibility'), // TODO: l10n
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AccessibilitySettingsScreen()),
+                  );
                 },
               ),
               // Language
