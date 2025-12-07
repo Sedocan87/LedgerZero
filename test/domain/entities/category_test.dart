@@ -3,74 +3,113 @@ import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
 
 void main() {
-  const tCategory = Category(
-    id: '1',
-    name: 'Test Category',
-    categoryGroupId: 'group1',
-    isHidden: false,
-    sortOrder: 1,
-    goalType: GoalType.targetBalance,
-    targetAmount: 100.0,
-    color: 0xFF000000,
-    icon: 'home',
-  );
+  group('Category', () {
+    final testDate = DateTime(2023, 1, 1);
 
-  test('should support value equality', () {
-    expect(tCategory, equals(tCategory.copyWith()));
-  });
+    final category = Category(
+      id: 'cat_1',
+      name: 'Groceries',
+      categoryGroupId: 'group_1',
+      isHidden: false,
+      sortOrder: 1,
+      goalType: GoalType.monthlyFunding,
+      targetAmount: 500.0,
+      targetDate: testDate,
+      color: 0xFF00FF00,
+      icon: 'cart',
+      createdAt: testDate,
+    );
 
-  test('copyWith should update fields correctly', () {
-    final updated = tCategory.copyWith(name: 'New Name', color: 0xFFFFFFFF);
-    expect(updated.name, 'New Name');
-    expect(updated.color, 0xFFFFFFFF);
-    expect(updated.icon, tCategory.icon);
-    expect(updated.goalType, tCategory.goalType);
-  });
+    test('supports value equality', () {
+      final c1 = Category(
+        id: 'cat_1',
+        name: 'Groceries',
+        categoryGroupId: 'group_1',
+        isHidden: false,
+        sortOrder: 1,
+        goalType: GoalType.monthlyFunding,
+        targetAmount: 500.0,
+        targetDate: testDate,
+        color: 0xFF00FF00,
+        icon: 'cart',
+        createdAt: testDate,
+      );
+      final c2 = Category(
+        id: 'cat_1',
+        name: 'Groceries',
+        categoryGroupId: 'group_1',
+        isHidden: false,
+        sortOrder: 1,
+        goalType: GoalType.monthlyFunding,
+        targetAmount: 500.0,
+        targetDate: testDate,
+        color: 0xFF00FF00,
+        icon: 'cart',
+        createdAt: testDate,
+      );
 
-  test('should store color and icon correctly', () {
-    expect(tCategory.color, 0xFF000000);
-    expect(tCategory.icon, 'home');
-  });
+      expect(c1, equals(c2));
+      expect(c1.hashCode, equals(c2.hashCode));
+    });
 
-  test('fromJson should return a valid model', () {
-    final Map<String, dynamic> jsonMap = {
-      'id': '1',
-      'name': 'Test Category',
-      'category_group_id': 'group1',
-      'is_hidden': false,
-      'sort_order': 1,
-      'goal_type': 'targetBalance',
-      'target_amount': 100.0,
-      'target_date': null,
-      'color': 0xFF000000,
-      'icon': 'home',
-      'created_at': null,
-    };
-    final result = Category.fromJson(jsonMap);
-    expect(result, tCategory);
-  });
+    test('copyWith returns new instance with updated fields', () {
+      final updated = category.copyWith(
+        name: 'Food',
+        targetAmount: 600.0,
+      );
 
-  test('toJson should return a JSON map containing the proper data', () {
-    final result = tCategory.toJson();
-    final expectedMap = {
-      'id': '1',
-      'name': 'Test Category',
-      'category_group_id': 'group1',
-      'is_hidden': false,
-      'sort_order': 1,
-      'goal_type': 'targetBalance',
-      'target_amount': 100.0,
-      'target_date': null,
-      'color': 0xFF000000,
-      'icon': 'home',
-      'created_at': null,
-    };
-    expect(result, expectedMap);
-  });
+      expect(updated.name, equals('Food'));
+      expect(updated.targetAmount, equals(600.0));
+      expect(updated.id, equals(category.id));
+      expect(updated.goalType, equals(category.goalType));
+    });
 
-  test('validate should return error when name is empty', () {
-    final invalidCategory = tCategory.copyWith(name: '');
-    final result = invalidCategory.validate();
-    expect(result, contains('Category name cannot be empty'));
+    test('fromJson creates correct instance', () {
+      final json = {
+        'id': 'cat_1',
+        'name': 'Groceries',
+        'category_group_id': 'group_1',
+        'is_hidden': false,
+        'sort_order': 1,
+        'goal_type': 'monthlyFunding', // Assuming string representation
+        'target_amount': 500.0,
+        'target_date': testDate.toIso8601String(),
+        'color': 0xFF00FF00,
+        'icon': 'cart',
+        'created_at': testDate.toIso8601String(),
+      };
+
+      final c = Category.fromJson(json);
+      expect(c, equals(category));
+    });
+
+    test('toJson returns correct map', () {
+      final json = category.toJson();
+      expect(json, {
+        'id': 'cat_1',
+        'name': 'Groceries',
+        'category_group_id': 'group_1',
+        'is_hidden': false,
+        'sort_order': 1,
+        'goal_type': 'monthlyFunding',
+        'target_amount': 500.0,
+        'target_date': testDate.toIso8601String(),
+        'color': 0xFF00FF00,
+        'icon': 'cart',
+        'created_at': testDate.toIso8601String(),
+      });
+    });
+
+    test('validate returns error for empty name', () {
+      final invalidCat = category.copyWith(name: '');
+      final errors = invalidCat.validate();
+      expect(errors, contains('Category name cannot be empty'));
+    });
+
+    test('defaults are set correctly', () {
+       const defaultCat = Category(id: '1', name: 'Test');
+       expect(defaultCat.isHidden, false);
+       expect(defaultCat.goalType, null);
+    });
   });
 }

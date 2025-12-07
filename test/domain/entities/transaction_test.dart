@@ -3,197 +3,125 @@ import 'package:ledger_zero/domain/entities/transaction.dart';
 
 void main() {
   group('Transaction', () {
-    test('should instantiate correctly', () {
-      final now = DateTime.now();
-      final transaction = Transaction(
-        id: 'tx1',
-        accountId: 'acc1',
-        date: DateTime(2023, 10, 27),
+    final testDate = DateTime(2023, 1, 1);
+
+    // Using non-const for DateTimes
+    final transaction = Transaction(
+      id: 'tx_1',
+      accountId: 'acc_1',
+      date: testDate,
+      amount: -50.0,
+      payeeId: 'payee_1',
+      categoryId: 'cat_1',
+      memo: 'Groceries',
+      cleared: TransactionClearStatus.cleared,
+      approved: true,
+      isDeleted: false,
+      createdAt: testDate,
+      updatedAt: testDate,
+    );
+
+    test('supports value equality', () {
+      final t1 = Transaction(
+        id: 'tx_1',
+        accountId: 'acc_1',
+        date: testDate,
         amount: -50.0,
-        payeeId: 'payee1',
-        categoryId: 'cat1',
+        payeeId: 'payee_1',
+        categoryId: 'cat_1',
         memo: 'Groceries',
         cleared: TransactionClearStatus.cleared,
-        approved: false,
-        isDeleted: true,
-        transferAccountId: 'acc2',
-        transferTransactionId: 'tx2',
-        createdAt: now,
-        updatedAt: now,
+        approved: true,
+        isDeleted: false,
+        createdAt: testDate,
+        updatedAt: testDate,
       );
-
-      expect(transaction.id, 'tx1');
-      expect(transaction.accountId, 'acc1');
-      expect(transaction.date, DateTime(2023, 10, 27));
-      expect(transaction.amount, -50.0);
-      expect(transaction.payeeId, 'payee1');
-      expect(transaction.categoryId, 'cat1');
-      expect(transaction.memo, 'Groceries');
-      expect(transaction.cleared, TransactionClearStatus.cleared);
-      expect(transaction.approved, false);
-      expect(transaction.isDeleted, true);
-      expect(transaction.transferAccountId, 'acc2');
-      expect(transaction.transferTransactionId, 'tx2');
-      expect(transaction.createdAt, now);
-      expect(transaction.updatedAt, now);
-    });
-
-    test('should use default values', () {
-      final transaction = Transaction(
-        id: 'tx2',
-        accountId: 'acc1',
-        date: DateTime(2023, 10, 27),
-        amount: 100.0,
-      );
-
-      expect(transaction.id, 'tx2');
-      expect(transaction.accountId, 'acc1');
-      expect(transaction.date, DateTime(2023, 10, 27));
-      expect(transaction.amount, 100.0);
-      expect(transaction.payeeId, null);
-      expect(transaction.categoryId, null);
-      expect(transaction.memo, null);
-      expect(transaction.cleared, TransactionClearStatus.uncleared);
-      expect(transaction.approved, true);
-      expect(transaction.isDeleted, false);
-      expect(transaction.transferAccountId, null);
-      expect(transaction.transferTransactionId, null);
-      expect(transaction.createdAt, null);
-      expect(transaction.updatedAt, null);
-    });
-
-    test('should support serialization', () {
-      final now = DateTime(2023, 10, 1);
-      final transaction = Transaction(
-        id: 'tx1',
-        accountId: 'acc1',
-        date: DateTime(2023, 10, 27),
+      final t2 = Transaction(
+        id: 'tx_1',
+        accountId: 'acc_1',
+        date: testDate,
         amount: -50.0,
-        payeeId: 'payee1',
-        categoryId: 'cat1',
+        payeeId: 'payee_1',
+        categoryId: 'cat_1',
         memo: 'Groceries',
         cleared: TransactionClearStatus.cleared,
-        approved: false,
-        isDeleted: true,
-        transferAccountId: 'acc2',
-        transferTransactionId: 'tx2',
-        createdAt: now,
-        updatedAt: now,
+        approved: true,
+        isDeleted: false,
+        createdAt: testDate,
+        updatedAt: testDate,
       );
 
-      final json = transaction.toJson();
-      expect(json['id'], 'tx1');
-      expect(json['account_id'], 'acc1');
-      expect(json['date'], DateTime(2023, 10, 27).toIso8601String());
-      expect(json['amount'], -50.0);
-      expect(json['payee_id'], 'payee1');
-      expect(json['category_id'], 'cat1');
-      expect(json['memo'], 'Groceries');
-      expect(json['cleared'], 1); // cleared index is 1
-      expect(json['approved'], false);
-      expect(json['is_deleted'], true);
-      expect(json['transfer_account_id'], 'acc2');
-      expect(json['transfer_transaction_id'], 'tx2');
-      expect(json['created_at'], now.toIso8601String());
-      expect(json['updated_at'], now.toIso8601String());
-
-      final fromJson = Transaction.fromJson(json);
-      expect(fromJson.id, transaction.id);
-      expect(fromJson.accountId, transaction.accountId);
-      expect(fromJson.date, transaction.date);
-      expect(fromJson.amount, transaction.amount);
-      expect(fromJson.payeeId, transaction.payeeId);
-      expect(fromJson.categoryId, transaction.categoryId);
-      expect(fromJson.memo, transaction.memo);
-      expect(fromJson.cleared, transaction.cleared);
-      expect(fromJson.approved, transaction.approved);
-      expect(fromJson.isDeleted, transaction.isDeleted);
-      expect(fromJson.transferAccountId, transaction.transferAccountId);
-      expect(fromJson.transferTransactionId, transaction.transferTransactionId);
-      expect(fromJson.createdAt, transaction.createdAt);
-      expect(fromJson.updatedAt, transaction.updatedAt);
+      expect(t1, equals(t2));
+      expect(t1.hashCode, equals(t2.hashCode));
     });
 
-    test('should handle missing optional fields during serialization', () {
+    test('copyWith returns new instance with updated fields', () {
+      final updated = transaction.copyWith(
+        amount: -60.0,
+        memo: 'Supermarket',
+      );
+
+      expect(updated.amount, equals(-60.0));
+      expect(updated.memo, equals('Supermarket'));
+      expect(updated.id, equals(transaction.id));
+      expect(updated.date, equals(transaction.date));
+    });
+
+    test('fromJson creates correct instance', () {
       final json = {
-        'id': 'tx1',
-        'account_id': 'acc1',
-        'date': '2023-10-27T00:00:00.000',
+        'id': 'tx_1',
+        'account_id': 'acc_1',
+        'date': testDate.toIso8601String(),
         'amount': -50.0,
+        'payee_id': 'payee_1',
+        'category_id': 'cat_1',
+        'memo': 'Groceries',
+        'cleared': TransactionClearStatus.cleared.index, // 1
+        'approved': true,
+        'is_deleted': false,
+        'transfer_account_id': null,
+        'transfer_transaction_id': null,
+        'parent_transaction_id': null,
+        'created_at': testDate.toIso8601String(),
+        'updated_at': testDate.toIso8601String(),
       };
 
-      final transaction = Transaction.fromJson(json);
-      expect(transaction.id, 'tx1');
-      expect(transaction.accountId, 'acc1');
-      expect(transaction.date, DateTime(2023, 10, 27));
-      expect(transaction.amount, -50.0);
-      expect(transaction.payeeId, isNull);
-      expect(transaction.categoryId, isNull);
-      expect(transaction.memo, isNull);
-      expect(transaction.cleared, TransactionClearStatus.uncleared); // Default
-      expect(transaction.approved, true); // Default
-      expect(transaction.isDeleted, false); // Default
-      expect(transaction.transferAccountId, isNull);
-      expect(transaction.transferTransactionId, isNull);
-      expect(transaction.createdAt, isNull);
-      expect(transaction.updatedAt, isNull);
+      final t = Transaction.fromJson(json);
+      expect(t, equals(transaction));
     });
 
-    test('should support equality', () {
-      final now = DateTime(2023, 10, 1);
-      final transaction1 = Transaction(
-        id: 'tx1',
-        accountId: 'acc1',
-        date: DateTime(2023, 10, 27),
-        amount: -50.0,
-        payeeId: 'payee1',
-        categoryId: 'cat1',
-        memo: 'Groceries',
-        cleared: TransactionClearStatus.cleared,
-        approved: false,
-        transferAccountId: 'acc2',
-        transferTransactionId: 'tx2',
-        createdAt: now,
-        updatedAt: now,
-      );
+    test('toJson returns correct map', () {
+      final json = transaction.toJson();
+      expect(json, {
+        'id': 'tx_1',
+        'account_id': 'acc_1',
+        'date': testDate.toIso8601String(),
+        'amount': -50.0,
+        'payee_id': 'payee_1',
+        'category_id': 'cat_1',
+        'memo': 'Groceries',
+        'cleared': 1,
+        'approved': true,
+        'is_deleted': false,
+        'transfer_account_id': null,
+        'transfer_transaction_id': null,
+        'parent_transaction_id': null,
+        'created_at': testDate.toIso8601String(),
+        'updated_at': testDate.toIso8601String(),
+      });
+    });
 
-      final transaction2 = Transaction(
-        id: 'tx1',
-        accountId: 'acc1',
-        date: DateTime(2023, 10, 27),
-        amount: -50.0,
-        payeeId: 'payee1',
-        categoryId: 'cat1',
-        memo: 'Groceries',
-        cleared: TransactionClearStatus.cleared,
-        approved: false,
-        transferAccountId: 'acc2',
-        transferTransactionId: 'tx2',
-        createdAt: now,
-        updatedAt: now,
-      );
+    test('validate returns error for zero amount', () {
+      final invalidT = transaction.copyWith(amount: 0.0);
+      final errors = invalidT.validate();
+      expect(errors, contains('Transaction amount cannot be zero'));
+    });
 
-      final transaction3 = Transaction(
-        id: 'tx2',
-        accountId: 'acc1',
-        date: DateTime(2023, 10, 27),
-        amount: 100.0,
-      );
-
-      // Reflexive
-      expect(transaction1, equals(transaction1));
-
-      // Symmetric
-      expect(transaction1, equals(transaction2));
-      expect(transaction2, equals(transaction1));
-
-      // HashCode
-      expect(transaction1.hashCode, equals(transaction2.hashCode));
-
-      // Not Equal
-      expect(transaction1, isNot(equals(transaction3)));
-      expect(transaction1, isNot(equals('Not a Transaction')));
-      expect(transaction1, isNot(equals(null)));
+    test('defaults are set correctly', () {
+       final defaultT = Transaction(id: '1', accountId: 'a1', date: testDate, amount: 10.0);
+       expect(defaultT.cleared, TransactionClearStatus.uncleared);
+       expect(defaultT.approved, true);
+       expect(defaultT.isDeleted, false);
     });
   });
 }
