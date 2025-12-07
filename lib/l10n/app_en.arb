@@ -566,5 +566,30 @@
   "videoTutorials": "Video Tutorials",
   "videoTutorialsSubtitle": "Learn by watching on YouTube",
   "contactSupport": "Contact Support",
-  "contactSupportSubtitle": "support@ledgerzero.app"
+  "contactSupportSubtitle": "support@ledgerzero.app",
+  "errorOccurred": "An error occurred",
+  "serverError": "Server communication failed",
+  "cacheError": "Failed to load cached data",
+  "databaseError": "Database operation failed",
+  "syncError": "Synchronization failed",
+  "unknownError": "An unknown error occurred",
+  "retry": "Retry",
+  "ok": "OK",
+  "dismiss": "Dismiss",
+  "errorLogs": "Error Logs",
+  "noLogs": "No logs found",
+  "exportLogs": "Export Logs",
+  "logsExported": "Logs exported successfully",
+  "logsExportFailed": "Failed to export logs: {error}",
+  "@logsExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logLevelDebug": "DEBUG",
+  "logLevelInfo": "INFO",
+  "logLevelWarning": "WARNING",
+  "logLevelError": "ERROR"
 }
