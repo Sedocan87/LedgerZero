@@ -19,7 +19,7 @@ class GoogleDriveService {
   Future<drive.DriveApi> _getDriveApi() async {
     final client = await _authService.getAuthenticatedClient();
     if (client == null) {
-      throw SyncException('User not signed in');
+      throw const SyncException('User not signed in', retryable: false);
     }
     return drive.DriveApi(client);
   }
@@ -217,13 +217,13 @@ class GoogleDriveService {
       return SyncException(
         message,
         originalError: error,
-        isRetryable: isRetryable,
+        retryable: isRetryable,
       );
     } else if (error is SocketException) {
       return SyncException(
         'Network error. Please check your connection.',
         originalError: error,
-        isRetryable: true,
+        retryable: true,
       );
     }
     return SyncException(defaultMessage, originalError: error);

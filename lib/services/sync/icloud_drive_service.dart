@@ -161,15 +161,18 @@ class ICloudDriveService {
   SyncException _handleError(Object error, String defaultMessage) {
     if (error is PlatformException) {
       if (error.code == 'cloud_disabled') {
-        return SyncException('iCloud is disabled', originalError: error);
+        return SyncException('iCloud is disabled', originalError: error, retryable: false);
       }
       // Check for quota/storage issues
       if (error.message?.toLowerCase().contains('quota') == true ||
           error.message?.toLowerCase().contains('full') == true) {
-        return SyncException('iCloud storage is full', originalError: error);
+        return SyncException('iCloud storage is full', originalError: error, retryable: false);
       }
-      return SyncException(error.message ?? defaultMessage, originalError: error);
+      // Network issues on iCloud are often handled by OS but if we see timeouts
+      // we can mark them retryable.
+      // Default to retryable for unknown platform exceptions as they might be transient.
+      return SyncException(error.message ?? defaultMessage, originalError: error, retryable: true);
     }
-    return SyncException(defaultMessage, originalError: error);
+    return SyncException(defaultMessage, originalError: error, retryable: false);
   }
 }
