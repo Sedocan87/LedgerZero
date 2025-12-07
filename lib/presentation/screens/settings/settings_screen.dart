@@ -232,6 +232,13 @@ class SettingsScreen extends ConsumerWidget {
                   );
                 },
               ),
+              SwitchListTile(
+                secondary: const Icon(Icons.animation),
+                title: const Text('Reduced Motion'), // TODO: l10n
+                value: themeState.reducedMotion,
+                onChanged: (value) =>
+                    ref.read(themeProvider.notifier).toggleReducedMotion(value),
+              ),
               // Language
               ListTile(
                 leading: const Icon(Icons.language),
