@@ -36,10 +36,13 @@ class ErrorView extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.lg),

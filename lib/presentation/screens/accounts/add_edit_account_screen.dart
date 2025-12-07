@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
@@ -170,6 +171,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
 
   Future<void> _saveAccount() async {
     if (!_formKey.currentState!.validate()) {
+      FormUtils.focusFirstError(context);
       return;
     }
 

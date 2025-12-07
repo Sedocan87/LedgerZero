@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/widgets/common/loading_indicator.dart';
 
 class AppButton extends StatelessWidget {
@@ -39,9 +41,9 @@ class AppButton extends StatelessWidget {
     // But keeping it simple for this task.
 
     final Widget child = Semantics(
-      label: label,
-      button: true,
-      enabled: !isLoading && onPressed != null,
+      label: isLoading
+          ? '$label, ${AppLocalizations.of(context)?.loading ?? "Loading"}'
+          : null,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -62,20 +64,27 @@ class AppButton extends StatelessWidget {
       ),
     );
 
+    final VoidCallback? hapticOnPressed = onPressed != null
+        ? () {
+            HapticFeedback.lightImpact();
+            onPressed!();
+          }
+        : null;
+
     switch (type) {
       case ButtonType.primary:
         return ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: isLoading ? null : hapticOnPressed,
           child: child,
         );
       case ButtonType.secondary:
         return OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: isLoading ? null : hapticOnPressed,
           child: child,
         );
       case ButtonType.text:
         return TextButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: isLoading ? null : hapticOnPressed,
           child: child,
         );
     }

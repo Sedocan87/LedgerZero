@@ -219,6 +219,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: onPrimary,
+          minimumSize: const Size(48, 48), // Accessibility Minimum Touch Target
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
@@ -232,6 +233,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
           side: BorderSide(color: primary, width: isHighContrast ? 2 : 1),
+          minimumSize: const Size(48, 48), // Accessibility Minimum Touch Target
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
@@ -244,6 +246,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primary,
+          minimumSize: const Size(48, 48), // Accessibility Minimum Touch Target
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),

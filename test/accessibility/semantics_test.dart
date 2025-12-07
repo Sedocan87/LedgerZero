@@ -22,7 +22,8 @@ void main() {
 
       // Verify Semantics
       final handle = tester.ensureSemantics();
-      expect(tester.getSemantics(find.byType(SimpleBarChart)), matchesSemantics(
+      // Find the semantics node that contains the label
+      expect(tester.getSemantics(find.bySemanticsLabel(RegExp(r'Bar Chart showing.*'))), matchesSemantics(
         label: 'Bar Chart showing: Rent: 500.00, Food: 100.00',
       ));
       handle.dispose();
@@ -46,6 +47,9 @@ void main() {
         isButton: true,
         isEnabled: true,
         hasTapAction: true,
+        hasFocusAction: true,
+        isFocusable: true,
+        hasEnabledState: true,
       ));
       handle.dispose();
     });
@@ -67,6 +71,7 @@ void main() {
         label: 'Save',
         isButton: true,
         isEnabled: false,
+        hasEnabledState: true,
       ));
       handle.dispose();
     });

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 
-class AnimatedCountText extends StatelessWidget {
+class AnimatedCountText extends ConsumerWidget {
   final double value;
   final TextStyle? style;
   final Duration duration;
@@ -20,11 +22,15 @@ class AnimatedCountText extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Check for test environment safely without dart:io
     final isTest = WidgetsBinding.instance.runtimeType.toString() ==
         'TestWidgetsFlutterBinding';
-    final effectiveDuration = isTest ? Duration.zero : duration;
+
+    // Check reduced motion
+    final shouldAnimate = ThemeNotifier.shouldAnimate(context, ref);
+
+    final effectiveDuration = (isTest || !shouldAnimate) ? Duration.zero : duration;
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: value, end: value),

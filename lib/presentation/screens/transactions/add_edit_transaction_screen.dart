@@ -17,6 +17,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/payee_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transaction_tutorial_manager.dart';
 import 'package:uuid/uuid.dart';
@@ -904,6 +905,8 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                      return;
                  }
                  _saveTransaction();
+             } else {
+               FormUtils.focusFirstError(context);
              }
         },
         const SingleActivator(LogicalKeyboardKey.escape): () => context.pop(),
@@ -928,6 +931,8 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                          return;
                      }
                      _saveTransaction();
+                   } else {
+                     FormUtils.focusFirstError(context);
                    }
                 },
               ),
@@ -1263,6 +1268,8 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                              return;
                          }
                          _saveTransaction();
+                       } else {
+                         FormUtils.focusFirstError(context);
                        }
                     },
                     onChanged: (_) => _triggerAutosave(),
@@ -1336,6 +1343,8 @@ class _AddEditTransactionScreenState extends ConsumerState<AddEditTransactionScr
                                  return;
                              }
                              _saveTransaction(popAfterSave: false);
+                         } else {
+                           FormUtils.focusFirstError(context);
                          }
                       },
                       icon: Icons.playlist_add,
