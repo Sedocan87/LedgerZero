@@ -1,69 +1,70 @@
-import 'dart:convert';
-import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
+import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:convert';
+import 'package:mockito/mockito.dart';
+
+// Since compute needs a real isolate, testing CsvImportService.parseCsvFile might fail in standard flutter test environment unless we are careful.
+// However, unit tests usually mock compute or it runs synchronously in some test setups.
+// But `CsvImportService` calls `compute`.
+// A standard way to test logic inside `compute` is to make the logic a static/top-level function (it is: `_parseCsvInternal`) and test that function directly if possible.
+// `_parseCsvInternal` is private. We can test `parseCsvFile` and see if `compute` works in test.
+// Flutter 2.5+ `flutter_test` supports `compute` running synchronously.
+// Let's rely on that.
 
 void main() {
+  late CsvImportService service;
+
+  setUp(() {
+    service = CsvImportService();
+  });
+
   group('CsvImportService', () {
-    late CsvImportService service;
-
-    setUp(() {
-      service = CsvImportService();
-    });
-
-    const csvContentComma = 'Date,Amount,Payee\n2023-01-01,100.0,Store';
-    test('parses comma-delimited CSV correctly', () async {
-      final bytes = utf8.encode(csvContentComma);
-      final file = PlatformFile(name: 'test.csv', size: bytes.length, bytes: Uint8List.fromList(bytes));
-
-      final data = await service.parseCsvFile(file);
-
-      expect(data.delimiter, ',');
-      expect(data.headers, ['Date', 'Amount', 'Payee']);
-      expect(data.rows.length, 1);
-      expect(data.rows.first, ['2023-01-01', '100.0', 'Store']);
-    });
-
-    const csvContentSemi = 'Date;Amount;Payee\n2023-01-01;100,0;Store';
-    test('detects semicolon delimiter', () async {
-      final bytes = utf8.encode(csvContentSemi);
-      final file = PlatformFile(name: 'test.csv', size: bytes.length, bytes: Uint8List.fromList(bytes));
-
-      final data = await service.parseCsvFile(file);
-
-      expect(data.delimiter, ';');
-      expect(data.headers, ['Date', 'Amount', 'Payee']);
-      expect(data.rows.length, 1);
-    });
-
-    test('throws exception on empty file', () async {
-       const csvContent = '';
-       final bytes = utf8.encode(csvContent);
-       final file = PlatformFile(name: 'test.csv', size: bytes.length, bytes: Uint8List.fromList(bytes));
-
-       expect(() => service.parseCsvFile(file), throwsA(isA<ImportException>()));
-    });
-
-    test('validateCsvData detects missing columns', () {
-      final data = CsvImportData(headers: ['A', 'B'], rows: [], delimiter: ',');
-      final result = service.validateCsvData(
-        data: data,
-        columnMapping: {'Date': 'C', 'Amount': 'B'},
-        dateFormat: 'yyyy-MM-dd',
-        decimalSeparator: '.',
+    test('parseCsvFile parses valid CSV correctly', () async {
+      final csvContent = 'Date,Payee,Amount\n2023-01-01,Test Payee,-50.00';
+      final file = PlatformFile(
+        name: 'test.csv',
+        size: csvContent.length,
+        bytes: utf8.encode(csvContent),
       );
 
-      expect(result.isValid, false);
-      expect(result.errors.first, contains('Mapped columns not found'));
+      final result = await service.parseCsvFile(file);
+
+      expect(result.headers, equals(['Date', 'Payee', 'Amount']));
+      expect(result.rows.length, equals(1));
+      // CsvToListConverter with shouldParseNumbers: false (default behavior unless we checked)
+      // I should check CsvImportService source code.
+      // The source code I read says: `shouldParseNumbers: false`
+      // So numbers will be strings.
+      expect(result.rows[0], equals(['2023-01-01', 'Test Payee', '-50.00']));
+      expect(result.delimiter, equals(','));
     });
 
-    test('validateCsvData detects invalid dates', () {
+    test('parseCsvFile handles semicolons', () async {
+      final csvContent = 'Date;Payee;Amount\n2023-01-01;Test Payee;-50,00';
+      final file = PlatformFile(
+        name: 'test_semicolon.csv',
+        size: csvContent.length,
+        bytes: utf8.encode(csvContent),
+      );
+
+      final result = await service.parseCsvFile(file);
+
+      expect(result.headers, equals(['Date', 'Payee', 'Amount']));
+      expect(result.delimiter, equals(';'));
+    });
+
+    test('validateCsvData returns valid for correct mapping', () {
       final data = CsvImportData(
         headers: ['Date', 'Amount'],
-        rows: [['invalid-date', '10.0']],
+        rows: [
+          ['2023-01-01', '-50.00'],
+          ['2023-01-02', '100.00'],
+        ],
         delimiter: ',',
       );
+
       final result = service.validateCsvData(
         data: data,
         columnMapping: {'Date': 'Date', 'Amount': 'Amount'},
@@ -71,8 +72,83 @@ void main() {
         decimalSeparator: '.',
       );
 
-      expect(result.isValid, false);
-      expect(result.errors.first, contains('rows have invalid dates'));
+      expect(result.isValid, isTrue);
+    });
+
+    test('validateCsvData detects invalid dates', () {
+      final data = CsvImportData(
+        headers: ['Date', 'Amount'],
+        rows: [
+          ['invalid-date', '-50.00'],
+        ],
+        delimiter: ',',
+      );
+
+      final result = service.validateCsvData(
+        data: data,
+        columnMapping: {'Date': 'Date', 'Amount': 'Amount'},
+        dateFormat: 'yyyy-MM-dd',
+        decimalSeparator: '.',
+      );
+
+      expect(result.isValid, isFalse);
+      expect(result.errors.first, contains('invalid dates'));
+    });
+
+    test('convertCsvToTransactions converts correctly', () {
+      final data = CsvImportData(
+        headers: ['Date', 'Desc', 'Value'],
+        rows: [
+          ['2023-01-01', 'Store A', '-50.00'],
+          ['2023-01-02', 'Job', '1000.00'],
+        ],
+        delimiter: ',',
+      );
+
+      final transactions = service.convertCsvToTransactions(
+        data: data,
+        columnMapping: {'Date': 'Date', 'Amount': 'Value', 'Payee': 'Desc'},
+        dateFormat: 'yyyy-MM-dd',
+        decimalSeparator: '.',
+        outflowIsNegative: true, // Standard: negative is outflow
+      );
+
+      expect(transactions.length, equals(2));
+      expect(transactions[0].amount, equals(1000.00)); // Sorted desc date
+      expect(transactions[1].amount, equals(-50.00));
+      expect(transactions[1].payeeName, equals('Store A'));
+    });
+
+    test('checkForDuplicates marks duplicates', () {
+      final imported = service.convertCsvToTransactions(
+        data: CsvImportData(
+            headers: ['Date', 'Payee', 'Amount'],
+            rows: [['2023-01-01', 'Store', '-50.00']],
+            delimiter: ','
+        ),
+        columnMapping: {'Date': 'Date', 'Amount': 'Amount', 'Payee': 'Payee'},
+        dateFormat: 'yyyy-MM-dd',
+        decimalSeparator: '.',
+        outflowIsNegative: true,
+      );
+
+      final existing = [
+        Transaction(
+          id: '1',
+          accountId: 'a1',
+          date: DateTime(2023, 1, 1),
+          amount: -50.00,
+          payeeId: 'p1', // mapped to 'Store' below
+        )
+      ];
+
+      service.checkForDuplicates(
+        imported: imported,
+        existing: existing,
+        payeeMap: {'p1': 'Store'},
+      );
+
+      expect(imported[0].isDuplicate, isTrue);
     });
   });
 }

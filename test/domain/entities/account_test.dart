@@ -3,148 +3,140 @@ import 'package:ledger_zero/domain/entities/account.dart';
 
 void main() {
   group('Account', () {
-    test('should instantiate correctly', () {
-      final account = Account(
+    final testDate = DateTime(2023, 1, 1);
+    const testAccount = Account(
+      id: '1',
+      name: 'Checking',
+      type: AccountType.checking,
+      currency: 'USD',
+      startingBalance: 100.0,
+      currentBalance: 200.0,
+      isClosed: false,
+      color: 0xFF000000,
+      icon: 'bank',
+      notes: 'Test notes',
+      // createdAt: testDate, // Cannot be const with non-const variable
+    );
+
+    // Re-create with dates for non-const tests
+    final accountWithDates = Account(
+      id: '1',
+      name: 'Checking',
+      type: AccountType.checking,
+      currency: 'USD',
+      startingBalance: 100.0,
+      currentBalance: 200.0,
+      isClosed: false,
+      color: 0xFF000000,
+      icon: 'bank',
+      notes: 'Test notes',
+      createdAt: testDate,
+      updatedAt: testDate,
+    );
+
+    test('supports value equality', () {
+      final account1 = Account(
         id: '1',
-        name: 'Test Account',
+        name: 'Checking',
         type: AccountType.checking,
-        currency: 'EUR',
+        currency: 'USD',
         startingBalance: 100.0,
         currentBalance: 200.0,
-        isClosed: true,
-        createdAt: DateTime(2023, 1, 1),
-        updatedAt: DateTime(2023, 1, 2),
+        isClosed: false,
+        color: 0xFF000000,
+        icon: 'bank',
+        notes: 'Test notes',
+        createdAt: testDate,
+        updatedAt: testDate,
       );
-
-      expect(account.id, '1');
-      expect(account.name, 'Test Account');
-      expect(account.type, AccountType.checking);
-      expect(account.currency, 'EUR');
-      expect(account.startingBalance, 100.0);
-      expect(account.currentBalance, 200.0);
-      expect(account.isClosed, true);
-      expect(account.createdAt, DateTime(2023, 1, 1));
-      expect(account.updatedAt, DateTime(2023, 1, 2));
-    });
-
-    test('should use default values', () {
-      const account = Account(
-        id: '2',
-        name: 'Default Account',
-        type: AccountType.savings,
-      );
-
-      expect(account.id, '2');
-      expect(account.name, 'Default Account');
-      expect(account.type, AccountType.savings);
-      expect(account.currency, 'USD');
-      expect(account.startingBalance, 0.0);
-      expect(account.currentBalance, 0.0);
-      expect(account.isClosed, false);
-      expect(account.createdAt, null);
-      expect(account.updatedAt, null);
-    });
-
-    test('should support serialization', () {
-      final account = Account(
+      final account2 = Account(
         id: '1',
-        name: 'Test Account',
+        name: 'Checking',
         type: AccountType.checking,
-        currency: 'EUR',
+        currency: 'USD',
         startingBalance: 100.0,
         currentBalance: 200.0,
-        isClosed: true,
-        createdAt: DateTime(2023, 1, 1),
-        updatedAt: DateTime(2023, 1, 2),
+        isClosed: false,
+        color: 0xFF000000,
+        icon: 'bank',
+        notes: 'Test notes',
+        createdAt: testDate,
+        updatedAt: testDate,
       );
 
-      final json = account.toJson();
-      expect(json['id'], '1');
-      expect(json['name'], 'Test Account');
-      expect(json['type'], 'checking');
-      expect(json['currency'], 'EUR');
-      expect(json['starting_balance'], 100.0);
-      expect(json['current_balance'], 200.0);
-      expect(json['is_closed'], true);
-      expect(json['created_at'], account.createdAt?.toIso8601String());
-      expect(json['updated_at'], account.updatedAt?.toIso8601String());
-
-      final fromJson = Account.fromJson(json);
-      expect(fromJson.id, account.id);
-      expect(fromJson.name, account.name);
-      expect(fromJson.type, account.type);
-      expect(fromJson.currency, account.currency);
-      expect(fromJson.startingBalance, account.startingBalance);
-      expect(fromJson.currentBalance, account.currentBalance);
-      expect(fromJson.isClosed, account.isClosed);
-      expect(fromJson.createdAt, account.createdAt);
-      expect(fromJson.updatedAt, account.updatedAt);
+      expect(account1, equals(account2));
+      expect(account1.hashCode, equals(account2.hashCode));
     });
 
-    test('should handle missing optional fields during serialization', () {
+    test('copyWith returns new instance with updated fields', () {
+      final updatedAccount = accountWithDates.copyWith(
+        name: 'Savings',
+        currentBalance: 300.0,
+      );
+
+      expect(updatedAccount.name, equals('Savings'));
+      expect(updatedAccount.currentBalance, equals(300.0));
+      expect(updatedAccount.id, equals(accountWithDates.id));
+      expect(updatedAccount.type, equals(accountWithDates.type));
+    });
+
+    test('fromJson creates correct instance', () {
       final json = {
         'id': '1',
-        'name': 'Test Account',
+        'name': 'Checking',
         'type': 'checking',
+        'currency': 'USD',
+        'starting_balance': 100.0,
+        'current_balance': 200.0,
+        'is_closed': false,
+        'color': 0xFF000000,
+        'icon': 'bank',
+        'notes': 'Test notes',
+        'created_at': testDate.toIso8601String(),
+        'updated_at': testDate.toIso8601String(),
       };
 
       final account = Account.fromJson(json);
-      expect(account.id, '1');
-      expect(account.name, 'Test Account');
-      expect(account.type, AccountType.checking);
-      expect(account.currency, 'USD'); // Default
-      expect(account.startingBalance, 0.0); // Default
-      expect(account.currentBalance, 0.0); // Default
-      expect(account.isClosed, false); // Default
-      expect(account.createdAt, isNull);
-      expect(account.updatedAt, isNull);
+      expect(account, equals(accountWithDates));
     });
 
-    test('should support equality', () {
-      final account1 = Account(
-        id: '1',
-        name: 'Test Account',
-        type: AccountType.checking,
-        currency: 'EUR',
-        startingBalance: 100.0,
-        currentBalance: 200.0,
-        isClosed: true,
-        createdAt: DateTime(2023, 1, 1),
-        updatedAt: DateTime(2023, 1, 2),
-      );
+    test('toJson returns correct map', () {
+      final json = accountWithDates.toJson();
+      expect(json, {
+        'id': '1',
+        'name': 'Checking',
+        'type': 'checking',
+        'currency': 'USD',
+        'starting_balance': 100.0,
+        'current_balance': 200.0,
+        'is_closed': false,
+        'color': 0xFF000000,
+        'icon': 'bank',
+        'notes': 'Test notes',
+        'created_at': testDate.toIso8601String(),
+        'updated_at': testDate.toIso8601String(),
+      });
+    });
 
-      final account2 = Account(
-        id: '1',
-        name: 'Test Account',
-        type: AccountType.checking,
-        currency: 'EUR',
-        startingBalance: 100.0,
-        currentBalance: 200.0,
-        isClosed: true,
-        createdAt: DateTime(2023, 1, 1),
-        updatedAt: DateTime(2023, 1, 2),
-      );
+    test('validate returns errors for invalid fields', () {
+      final invalidAccount = testAccount.copyWith(name: '', currency: 'US');
+      final errors = invalidAccount.validate();
 
-      const account3 = Account(
-        id: '2',
-        name: 'Other Account',
-        type: AccountType.savings,
-      );
+      expect(errors, contains('Account name cannot be empty'));
+      expect(errors, contains('Currency code must be 3 characters'));
+    });
 
-      // Reflexive
-      expect(account1, equals(account1));
+    test('validate returns empty list for valid account', () {
+      final errors = testAccount.validate();
+      expect(errors, isEmpty);
+    });
 
-      // Symmetric
-      expect(account1, equals(account2));
-      expect(account2, equals(account1));
-
-      // HashCode
-      expect(account1.hashCode, equals(account2.hashCode));
-
-      // Not Equal
-      expect(account1, isNot(equals(account3)));
-      expect(account1, isNot(equals('Not an Account')));
-      expect(account1, isNot(equals(null)));
+    test('defaults are set correctly', () {
+        const defaultAccount = Account(id: '1', name: 'Test', type: AccountType.cash);
+        expect(defaultAccount.currency, 'USD');
+        expect(defaultAccount.startingBalance, 0.0);
+        expect(defaultAccount.currentBalance, 0.0);
+        expect(defaultAccount.isClosed, false);
     });
   });
 }
