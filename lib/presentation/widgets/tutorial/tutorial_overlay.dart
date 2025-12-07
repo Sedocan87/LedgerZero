@@ -160,7 +160,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
 }
 
 class _HolePainter extends CustomPainter {
-  final Rect targetRect;
+  final Rect? targetRect;
 
   _HolePainter({required this.targetRect});
 
@@ -171,11 +171,13 @@ class _HolePainter extends CustomPainter {
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final holePath = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        targetRect.inflate(4), // Add padding
+    final holePath = Path();
+    if (targetRect != null) {
+      holePath.addRRect(RRect.fromRectAndRadius(
+        targetRect!.inflate(4), // Add padding
         const Radius.circular(8)
       ));
+    }
 
     final finalPath = Path.combine(
       PathOperation.difference,

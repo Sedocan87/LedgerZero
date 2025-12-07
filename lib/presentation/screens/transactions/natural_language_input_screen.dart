@@ -12,7 +12,7 @@ import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
 import 'package:ledger_zero/services/nlp/transaction_parser.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';

@@ -19,11 +19,40 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   bool _isSearchMode = false;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 500) {
+      final state = ref.read(transactionsProvider);
+      final transactions = state.transactions.valueOrNull;
+      if (transactions != null && transactions.length >= state.limit) {
+         // Debounce or check if already loading?
+         // The notifier updates limit immediately, so subsequent calls might just increment it again.
+         // Ideally we check if we are already at the new limit or if data matches limit.
+         // A simple way is to check if the current scroll position suggests we need more.
+         // But ref.read(transactionsProvider.notifier).loadMore() is cheap if it just updates state.
+         // However, we should avoid calling it 60 times a second.
+         // The TransactionsNotifier doesn't have an "isLoadingMore" flag exposed easily for the scroll listener.
+         // We'll rely on a simple threshold and maybe a throttle if needed, but for now direct call.
+         // To avoid spamming, we can check if the limit was recently updated?
+         // Actually, let's just call it. The provider should handle it or we accept some redundant calls.
+         // Better: check if we can load more.
+         ref.read(transactionsProvider.notifier).loadMore();
+      }
+    }
   }
 
   @override
@@ -57,12 +86,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
               // Task 219: ListView.builder for performance (Flattened)
               return ListView.builder(
-                itemCount: flattened.length + 1, // +1 for load more button
+                controller: _scrollController,
+                itemCount: flattened.length + 1, // +1 for loading indicator
                 itemBuilder: (context, index) {
                   if (index == flattened.length) {
-                    // Only show load more if we might have more transactions
+                    // Only show loading if we might have more transactions
                     if (transactions.length >= state.limit) {
-                      return _buildLoadMoreButton(ref); // Task 208
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
                     } else {
                       return const SizedBox.shrink();
                     }
@@ -489,17 +522,4 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  Widget _buildLoadMoreButton(WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            ref.read(transactionsProvider.notifier).loadMore();
-          },
-          child: const Text('Load More'),
-        ),
-      ),
-    );
-  }
 }

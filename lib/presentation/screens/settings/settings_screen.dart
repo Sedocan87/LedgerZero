@@ -11,6 +11,7 @@ import 'package:ledger_zero/presentation/screens/settings/accessibility_settings
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/data/database/database.dart';
 
 class SettingsScreen extends ConsumerWidget {

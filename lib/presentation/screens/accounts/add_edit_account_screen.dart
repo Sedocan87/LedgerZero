@@ -9,7 +9,7 @@ import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
-import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:uuid/uuid.dart';
 
 class AddEditAccountScreen extends ConsumerStatefulWidget {

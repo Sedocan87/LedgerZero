@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class LedgerAppBar extends StatelessWidget implements PreferredSizeWidget {
+class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
   final Widget? leading;
   final bool centerTitle;
 
-  const LedgerAppBar({
+  const AppAppBar({
     super.key,
     required this.title,
     this.actions,

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/widgets/common/loading_indicator.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:intl/intl.dart';
 
@@ -77,7 +77,7 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
             StreamBuilder(
               stream: accountsAsync,
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const LoadingIndicator();
+                if (!snapshot.hasData) return const AppLoadingIndicator();
                 final accounts = snapshot.data!;
                 return Wrap(
                   spacing: 8,
@@ -107,7 +107,7 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
             StreamBuilder(
               stream: categoriesAsync,
               builder: (context, snapshot) {
-                 if (!snapshot.hasData) return const LoadingIndicator();
+                 if (!snapshot.hasData) return const AppLoadingIndicator();
                  final categories = snapshot.data!;
                  // Just show a count or simplified selector if too many
                  if (categories.length > 10) {

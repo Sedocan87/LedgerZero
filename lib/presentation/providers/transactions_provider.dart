@@ -196,26 +196,26 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
 }
 
 final transactionsProvider =
-    StateNotifierProvider<TransactionsNotifier, TransactionsState>((ref) {
+    StateNotifierProvider.autoDispose<TransactionsNotifier, TransactionsState>((ref) {
   return TransactionsNotifier(ref);
 });
 
 // Helper providers for name lookups
-final categoryMapProvider = StreamProvider<Map<String, String>>((ref) {
+final categoryMapProvider = StreamProvider.autoDispose<Map<String, String>>((ref) {
   return ref
       .watch(categoryRepositoryProvider)
       .watchAllCategories()
       .map((list) => {for (var item in list) item.id: item.name});
 });
 
-final payeeMapProvider = StreamProvider<Map<String, String>>((ref) {
+final payeeMapProvider = StreamProvider.autoDispose<Map<String, String>>((ref) {
   return ref
       .watch(payeeRepositoryProvider)
       .watchAllPayees()
       .map((list) => {for (var item in list) item.id: item.name});
 });
 
-final accountMapProvider = StreamProvider<Map<String, String>>((ref) {
+final accountMapProvider = StreamProvider.autoDispose<Map<String, String>>((ref) {
   return ref
       .watch(accountRepositoryProvider)
       .watchAllAccounts()

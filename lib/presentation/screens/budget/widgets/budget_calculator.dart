@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/utils/math_evaluator.dart';
-import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 
 class BudgetCalculator extends StatefulWidget {
   final String initialValue;

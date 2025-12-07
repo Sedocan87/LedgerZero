@@ -284,10 +284,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    AppButton(
+                    AppButton.primary(
                       label: _isLoading ? 'Creating Backup...' : 'Export Backup',
                       onPressed: _isLoading ? null : _createBackup,
-                      isPrimary: true,
                     ),
                   ],
                 ),
@@ -308,15 +307,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    AppButton(
+                    AppButton.secondary(
                       label: 'Restore from File',
                       onPressed: _isLoading ? null : _restoreBackup,
                     ),
                     const SizedBox(height: 16),
-                    AppButton(
+                    AppButton.secondary(
                       label: 'Selective Restore (Date Range)',
                       onPressed: _isLoading ? null : _selectiveRestore,
-                      isPrimary: false,
                     ),
                   ],
                 ),

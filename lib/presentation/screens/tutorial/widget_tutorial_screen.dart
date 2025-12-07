@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ledger_zero/presentation/widgets/common/app_app_bar.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_bar.dart';
 
 class WidgetTutorialScreen extends StatelessWidget {
   const WidgetTutorialScreen({super.key});
@@ -8,113 +8,60 @@ class WidgetTutorialScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AppAppBar(title: 'Widget Setup Guide'),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildStep(
-                context,
-                step: 1,
-                title: 'Go to Home Screen',
-                description: 'Exit LedgerZero and go to your device\'s home screen.',
-                icon: Icons.home,
-              ),
-              _buildStep(
-                context,
-                step: 2,
-                title: 'Enter Jiggle Mode',
-                description: 'Long press on any empty space on your home screen until the apps start shaking.',
-                icon: Icons.touch_app,
-              ),
-              _buildStep(
-                context,
-                step: 3,
-                title: 'Add Widget',
-                description: 'Tap the "+" button in the top left corner.',
-                icon: Icons.add,
-              ),
-              _buildStep(
-                context,
-                step: 4,
-                title: 'Find LedgerZero',
-                description: 'Scroll down or search for "LedgerZero" in the widget gallery.',
-                icon: Icons.search,
-              ),
-              _buildStep(
-                context,
-                step: 5,
-                title: 'Choose Size',
-                description: 'Swipe to choose between Small, Medium, or Large widgets, then tap "Add Widget".',
-                icon: Icons.widgets,
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 24),
-              Text(
-                'Lock Screen Widgets',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'You can also add LedgerZero widgets to your Lock Screen on iOS 16+ for quick access to your "To Be Budgeted" amount.',
-                style: TextStyle(height: 1.5),
-              ),
-            ],
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: const [
+          StepCard(
+            number: 1,
+            title: 'Go to Home Screen',
+            description: 'Exit the app and go to your device home screen.',
           ),
-        ),
+          StepCard(
+            number: 2,
+            title: 'Enter Edit Mode',
+            description: 'Long press on an empty area until icons start jiggling.',
+          ),
+          StepCard(
+            number: 3,
+            title: 'Add Widget',
+            description: 'Tap the + button (usually top left) to open the widget gallery.',
+          ),
+          StepCard(
+            number: 4,
+            title: 'Find LedgerZero',
+            description: 'Search for "LedgerZero" in the list.',
+          ),
+          StepCard(
+            number: 5,
+            title: 'Select Widget',
+            description: 'Swipe to choose a widget size and tap "Add Widget".',
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildStep(BuildContext context, {required int step, required String title, required String description, required IconData icon}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 32.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$step',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
-                ),
-              ],
-            ),
-          ),
-        ],
+class StepCard extends StatelessWidget {
+  final int number;
+  final String title;
+  final String description;
+
+  const StepCard({
+    super.key,
+    required this.number,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ListTile(
+        leading: CircleAvatar(child: Text('$number')),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(description),
       ),
     );
   }

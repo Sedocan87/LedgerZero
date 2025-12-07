@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart' deferred as pdf_lib;
+import 'package:pdf/widgets.dart' deferred as pw;
 import 'package:intl/intl.dart';
 
 class ReportExportService {
@@ -28,12 +28,15 @@ class ReportExportService {
     required List<List<String>> data,
     required String filename,
   }) async {
+    await pdf_lib.loadLibrary();
+    await pw.loadLibrary();
+
     final pdf = pw.Document();
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        header: (pw.Context context) {
+        pageFormat: pdf_lib.PdfPageFormat.a4,
+        header: (context) {
           return pw.Header(
             level: 0,
             child: pw.Row(
@@ -47,7 +50,7 @@ class ReportExportService {
             ),
           );
         },
-        footer: (pw.Context context) {
+        footer: (context) {
           return pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
@@ -56,7 +59,7 @@ class ReportExportService {
             ],
           );
         },
-        build: (pw.Context context) {
+        build: (context) {
           return [
             pw.SizedBox(height: 20),
             pw.Table.fromTextArray(
@@ -65,7 +68,7 @@ class ReportExportService {
               border: null,
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey300),
+                  pw.BoxDecoration(color: pdf_lib.PdfColors.grey300),
               cellHeight: 30,
               cellAlignments: {
                 for (var i = 0; i < headers.length; i++)

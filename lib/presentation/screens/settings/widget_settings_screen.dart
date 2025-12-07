@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/presentation/widgets/common/app_app_bar.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_bar.dart';
 import 'package:ledger_zero/presentation/widgets/widget_preview.dart';
 
 class WidgetSettingsScreen extends ConsumerStatefulWidget {
@@ -15,154 +15,115 @@ class WidgetSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
-  static const String _kPinnedCategoriesKey = 'widget_pinned_categories';
-  List<String> _selectedCategoryIds = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPreferences();
-  }
-
-  Future<void> _loadPreferences() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    setState(() {
-      _selectedCategoryIds = prefs.getStringList(_kPinnedCategoriesKey) ?? [];
-    });
-  }
-
-  Future<void> _savePreferences(List<String> ids) async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs.setStringList(_kPinnedCategoriesKey, ids);
-    setState(() {
-      _selectedCategoryIds = ids;
-    });
-    // Trigger update immediately so widget reflects changes
-    ref.read(widgetServiceProvider).updateWidgetData();
-  }
+  // Mock settings for preview
+  bool _showGraph = true;
+  String? _selectedAccountId;
+  String? _selectedCategoryId;
 
   @override
   Widget build(BuildContext context) {
-    final categoriesAsync = ref.watch(allCategoriesProvider);
-    final widgetDataAsync = ref.watch(widgetPreviewDataProvider);
+    // Watch actual data for selection
+    final accounts = ref.watch(accountRepositoryProvider).watchAllAccounts();
+    final categories = ref.watch(categoryRepositoryProvider).watchAllCategories();
 
     return Scaffold(
       appBar: const AppAppBar(title: 'Widget Settings'),
-      body: categoriesAsync.when(
-        data: (categories) {
-          // Filter out hidden categories
-          final activeCategories = categories.where((c) => !c.isHidden).toList();
-          // Sort by name
-          activeCategories.sort((a, b) => a.name.compareTo(b.name));
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('Configure how your home screen widgets appear.'),
+          const SizedBox(height: 20),
 
-          return ListView(
-            children: [
-              // Preview Section
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: widgetDataAsync.when(
-                  data: (data) {
-                    final tbb = data.tbb;
-                    final performance = data.performance;
+          // Preview Section
+          const Text('Preview', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Center(
+            child: Consumer(
+              builder: (context, ref, child) {
+                // Mock data for preview
+                final mockCategories = [
+                  const Category(id: '1', name: 'Groceries', color: 0, icon: '0', createdAt: null),
+                  const Category(id: '2', name: 'Rent', color: 0, icon: '0', createdAt: null),
+                ];
+                final mockPerformance = {
+                  '1': {'available': 150.0},
+                  '2': {'available': 0.0},
+                };
 
-                    // Determine which categories to show in preview
-                    List<Category> previewCategories;
-                    if (_selectedCategoryIds.isNotEmpty) {
-                       previewCategories = activeCategories.where((c) => _selectedCategoryIds.contains(c.id)).toList();
-                       // Sort by selection order
-                       previewCategories.sort((a, b) {
-                         return _selectedCategoryIds.indexOf(a.id).compareTo(_selectedCategoryIds.indexOf(b.id));
-                       });
-                    } else {
-                       // Default top 4 by available amount
-                       final sorted = List<Category>.from(activeCategories);
-                       sorted.sort((a, b) {
-                         final availA = performance[a.id]?['available'] ?? 0.0;
-                         final availB = performance[b.id]?['available'] ?? 0.0;
-                         return availB.compareTo(availA);
-                       });
-                       previewCategories = sorted.take(4).toList();
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                         const Text(
-                          "Preview",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                         ),
-                         const SizedBox(height: 8),
-                         WidgetPreview(
-                           tbbAmount: tbb,
-                           categories: previewCategories,
-                           categoryPerformance: performance,
-                         ),
-                      ],
-                    );
-                  },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, s) => Text("Preview error: $e"),
-                ),
-              ),
-
-              const Divider(),
-
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Select up to 4 categories to pin to your widget. If none are selected, the widget will show your top active categories.',
-                  style: TextStyle(fontSize: 14),
-                ),
-              ),
-              ...activeCategories.map((category) {
-                final isSelected = _selectedCategoryIds.contains(category.id);
-                return CheckboxListTile(
-                  title: Text(category.name),
-                  value: isSelected,
-                  onChanged: (bool? checked) {
-                    final newSelection = List<String>.from(_selectedCategoryIds);
-                    if (checked == true) {
-                      if (newSelection.length >= 4) {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text('You can only pin up to 4 categories')),
-                         );
-                         return;
-                      }
-                      newSelection.add(category.id);
-                    } else {
-                      newSelection.remove(category.id);
-                    }
-                    _savePreferences(newSelection);
-                  },
+                return WidgetPreview(
+                  tbbAmount: 1250.50,
+                  categories: mockCategories,
+                  categoryPerformance: mockPerformance,
                 );
-              }),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+              }
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Configuration
+          SwitchListTile(
+            title: const Text('Show Graph'),
+            value: _showGraph,
+            onChanged: (val) => setState(() => _showGraph = val),
+          ),
+
+          // Account Selection
+          StreamBuilder<List<Account>>(
+            stream: accounts,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final list = snapshot.data!;
+                return DropdownButtonFormField<String>(
+                  value: _selectedAccountId,
+                  decoration: const InputDecoration(labelText: 'Default Account'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('All Accounts')),
+                    ...list.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
+                  ],
+                  onChanged: (val) => setState(() => _selectedAccountId = val),
+                );
+              }
+              return const CircularProgressIndicator();
+            }
+          ),
+
+           const SizedBox(height: 10),
+
+           // Category Selection
+           StreamBuilder<List<Category>>(
+            stream: categories,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final list = snapshot.data!;
+                return DropdownButtonFormField<String>(
+                  value: _selectedCategoryId,
+                  decoration: const InputDecoration(labelText: 'Focus Category'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('None')),
+                    ...list.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                  ],
+                  onChanged: (val) => setState(() => _selectedCategoryId = val),
+                );
+              }
+              return const CircularProgressIndicator();
+            }
+          ),
+
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              // Save to widget service/shared prefs
+              ref.read(widgetServiceProvider).updateWidgetConfiguration(
+                showGraph: _showGraph,
+                accountId: _selectedAccountId,
+                categoryId: _selectedCategoryId
+              );
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Widget settings saved')));
+            },
+            child: const Text('Save Settings'),
+          ),
+        ],
       ),
     );
   }
 }
-
-final allCategoriesProvider = FutureProvider<List<Category>>((ref) async {
-  final repo = ref.watch(categoryRepositoryProvider);
-  return repo.getAllCategories();
-});
-
-class WidgetPreviewData {
-  final double tbb;
-  final Map<String, Map<String, double>> performance;
-  WidgetPreviewData(this.tbb, this.performance);
-}
-
-final widgetPreviewDataProvider = FutureProvider<WidgetPreviewData>((ref) async {
-  final budgetingService = ref.watch(budgetingServiceProvider);
-  final currentMonth = DateTime.now();
-
-  final tbb = await budgetingService.calculateTBB(currentMonth);
-  final performance = await budgetingService.calculateBatchCategoryPerformance(currentMonth);
-
-  return WidgetPreviewData(tbb, performance);
-});

@@ -183,7 +183,7 @@ class RulesScreen extends ConsumerWidget {
                       children: [
                         const Text('No rules found'),
                         const SizedBox(height: 16),
-                        AppButton(
+                        AppButton.primary(
                           label: 'Create Rule',
                           onPressed: () => context.push('/settings/rules/add'),
                         ),
@@ -237,8 +237,8 @@ class RulesScreen extends ConsumerWidget {
                   },
                 );
               },
-              loading: () => const Center(child: AppLoadingIndicator()),
-              error: (err, stack) => ErrorView(message: err.toString()),
+                loading: () => const Center(child: AppLoadingIndicator()),
+                error: (err, stack) => ErrorView(title: 'Error', message: err.toString(), onRetry: () => ref.refresh(rulesListProvider)),
             ),
           ),
         ],

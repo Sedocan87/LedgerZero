@@ -2,8 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/presentation/widgets/common/platform_widget.dart';
 
-class LoadingIndicator extends PlatformWidget {
-  const LoadingIndicator({super.key});
+class AppLoadingIndicator extends PlatformWidget {
+  const AppLoadingIndicator({super.key});
 
   @override
   Widget buildCupertinoWidget(BuildContext context) {
