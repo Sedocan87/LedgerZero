@@ -36,7 +36,7 @@ void main() {
     });
 
     test('should return SyncException as is', () {
-      final exception = SyncException('Auth failed', retryable: false);
+      const exception = SyncException('Auth failed', retryable: false);
       final result = NetworkErrorHandler.handle(exception);
 
       expect(result, equals(exception));
