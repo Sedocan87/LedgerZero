@@ -2,13 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
+import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
-import 'package:ledger_zero/domain/entities/budget_template.dart';
-import 'package:ledger_zero/domain/repositories/budget_repository.dart';
-import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
-import 'package:ledger_zero/domain/repositories/category_repository.dart';
-import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 
 // Import the generated mocks
 import '../../mocks/repository_mocks.mocks.dart';
@@ -55,7 +51,7 @@ void main() {
   group('calculateCategoryAvailable', () {
     test('calculates available amount correctly', () async {
       final month = DateTime(2023, 1);
-      final categoryId = 'cat1';
+      const categoryId = 'cat1';
 
       // Total Budgeted (all time)
       when(mockBudgetRepo.getTotalBudgetedByCategoryAndMonthRange(categoryId, '2023-01'))
@@ -69,13 +65,30 @@ void main() {
 
       expect(available, 300.0);
     });
+
+    test('calculates negative available amount (overspending)', () async {
+      final month = DateTime(2023, 1);
+      const categoryId = 'cat1';
+
+      // Total Budgeted (all time)
+      when(mockBudgetRepo.getTotalBudgetedByCategoryAndMonthRange(categoryId, '2023-01'))
+          .thenAnswer((_) async => 500.0);
+
+      // Total Activity (all time, usually negative) - Overspent by 100
+      when(mockTransactionRepo.getExpenseSumByCategoryAndDateRange(categoryId, any, any))
+          .thenAnswer((_) async => -600.0);
+
+      final available = await service.calculateCategoryAvailable(categoryId, month);
+
+      expect(available, -100.0);
+    });
   });
 
   group('setCategoryBudgetedAmount', () {
     test('updates existing budget', () async {
       final month = DateTime(2023, 1);
-      final categoryId = 'cat1';
-      final existingBudget = Budget(
+      const categoryId = 'cat1';
+      const existingBudget = Budget(
         id: '1',
         categoryId: categoryId,
         month: '2023-01',
@@ -95,7 +108,7 @@ void main() {
 
     test('creates new budget if not exists', () async {
       final month = DateTime(2023, 1);
-      final categoryId = 'cat1';
+      const categoryId = 'cat1';
 
       when(mockBudgetRepo.getBudgetByCategoryAndMonth(categoryId, '2023-01'))
           .thenAnswer((_) async => null);
@@ -112,7 +125,7 @@ void main() {
   group('autoAssign', () {
       test('assigns underfunded goal correctly', () async {
           final month = DateTime(2023, 1);
-          final categoryId = 'cat1';
+          const categoryId = 'cat1';
           final category = Category(
               id: categoryId,
               name: 'Test',
@@ -144,11 +157,11 @@ void main() {
   group('moveMoney', () {
       test('moves money between categories', () async {
           final month = DateTime(2023, 1);
-          final fromCat = 'cat1';
-          final toCat = 'cat2';
+          const fromCat = 'cat1';
+          const toCat = 'cat2';
 
-          final fromBudget = Budget(id: '1', categoryId: fromCat, month: '2023-01', budgeted: 500.0);
-          final toBudget = Budget(id: '2', categoryId: toCat, month: '2023-01', budgeted: 100.0);
+          const fromBudget = Budget(id: '1', categoryId: fromCat, month: '2023-01', budgeted: 500.0);
+          const toBudget = Budget(id: '2', categoryId: toCat, month: '2023-01', budgeted: 100.0);
 
           when(mockBudgetRepo.getBudgetByCategoryAndMonth(fromCat, '2023-01'))
               .thenAnswer((_) async => fromBudget);
@@ -168,5 +181,82 @@ void main() {
               predicate<Budget>((b) => b.categoryId == toCat && b.budgeted == 150.0)
           ))).called(1);
       });
+  });
+
+  group('calculateTotalIncomeForMonth', () {
+    test('calculates total income for specific month', () async {
+      final month = DateTime(2023, 3);
+      when(mockTransactionRepo.getIncomeSumByDateRange(any, any))
+          .thenAnswer((_) async => 2500.0);
+
+      final income = await service.calculateTotalIncomeForMonth(month);
+
+      expect(income, 2500.0);
+      verify(mockTransactionRepo.getIncomeSumByDateRange(
+        DateTime(2023, 3, 1),
+        argThat(predicate<DateTime>((d) => d.year == 2023 && d.month == 3 && d.day == 31)),
+      )).called(1);
+    });
+  });
+
+  group('calculateTotalSpendingForMonth', () {
+    test('calculates total spending (negative transactions) for specific month', () async {
+      final month = DateTime(2023, 3);
+      final transactions = [
+        Transaction(id: '1', accountId: 'a', date: DateTime(2023, 3, 1), amount: -50.0),
+        Transaction(id: '2', accountId: 'a', date: DateTime(2023, 3, 2), amount: -25.0),
+        Transaction(id: '3', accountId: 'a', date: DateTime(2023, 3, 3), amount: 100.0), // Income, should be ignored
+      ];
+
+      when(mockTransactionRepo.getTransactionsByDateRange(any, any))
+          .thenAnswer((_) async => transactions);
+
+      final spending = await service.calculateTotalSpendingForMonth(month);
+
+      expect(spending, -75.0);
+    });
+  });
+
+  group('calculateCategoryActivity', () {
+    test('calculates category activity correctly', () async {
+      final month = DateTime(2023, 4);
+      const categoryId = 'cat_groceries';
+
+      when(mockTransactionRepo.getExpenseSumByCategoryAndDateRange(categoryId, any, any))
+          .thenAnswer((_) async => -450.0);
+
+      final activity = await service.calculateCategoryActivity(categoryId, month);
+
+      expect(activity, -450.0);
+    });
+  });
+
+  group('createBudgetSnapshot', () {
+    test('snapshots budget state for all categories', () async {
+      final month = DateTime(2023, 5);
+      final categories = [
+        Category(id: 'c1', name: 'Cat 1', createdAt: DateTime.now()),
+        Category(id: 'c2', name: 'Cat 2', createdAt: DateTime.now()),
+      ];
+
+      when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => categories);
+
+      // Mocks for calculations
+      when(mockTransactionRepo.getExpenseSumByCategoryAndDateRange(any, any, any))
+          .thenAnswer((_) async => -100.0); // Activity
+      when(mockBudgetRepo.getTotalBudgetedByCategoryAndMonthRange(any, any))
+          .thenAnswer((_) async => 200.0); // Budgeted so available = 100.0
+
+      when(mockBudgetRepo.getBudgetByCategoryAndMonth(any, any))
+          .thenAnswer((_) async => null); // No existing budget
+      when(mockBudgetRepo.createBudget(any)).thenAnswer((_) async {});
+
+      await service.createBudgetSnapshot(month);
+
+      // Verify two budgets created with correct snapshots
+      verify(mockBudgetRepo.createBudget(argThat(
+        predicate<Budget>((b) => b.activity == -100.0 && b.available == 100.0)
+      ))).called(2);
+    });
   });
 }
