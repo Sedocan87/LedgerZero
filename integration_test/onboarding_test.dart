@@ -12,7 +12,7 @@ void main() {
     // Clear SharedPreferences to simulate fresh install
     SharedPreferences.setMockInitialValues({});
 
-    app.main();
+    await app.main();
     await tester.pumpAndSettle();
 
     // 1. Verify Onboarding Screen
