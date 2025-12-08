@@ -7,22 +7,19 @@ import 'dart:async' as _i3;
 
 import 'package:ledger_zero/domain/entities/account.dart' as _i4;
 import 'package:ledger_zero/domain/entities/budget.dart' as _i6;
-import 'package:ledger_zero/domain/entities/budget_template.dart' as _i16;
 import 'package:ledger_zero/domain/entities/category.dart' as _i8;
 import 'package:ledger_zero/domain/entities/category_group.dart' as _i9;
 import 'package:ledger_zero/domain/entities/payee.dart' as _i11;
-import 'package:ledger_zero/domain/entities/scheduled_transaction.dart' as _i18;
+import 'package:ledger_zero/domain/entities/scheduled_transaction.dart' as _i16;
 import 'package:ledger_zero/domain/entities/transaction.dart' as _i13;
 import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i14;
 import 'package:ledger_zero/domain/repositories/account_repository.dart' as _i2;
 import 'package:ledger_zero/domain/repositories/budget_repository.dart' as _i5;
-import 'package:ledger_zero/domain/repositories/budget_template_repository.dart'
-    as _i15;
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
     as _i7;
 import 'package:ledger_zero/domain/repositories/payee_repository.dart' as _i10;
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart'
-    as _i17;
+    as _i15;
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart'
     as _i12;
 import 'package:mockito/mockito.dart' as _i1;
@@ -681,96 +678,50 @@ class MockTransactionRepository extends _i1.Mock
           as _i3.Stream<List<_i13.Transaction>>);
 }
 
-/// A class which mocks [BudgetTemplateRepository].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockBudgetTemplateRepository extends _i1.Mock
-    implements _i15.BudgetTemplateRepository {
-  MockBudgetTemplateRepository() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  _i3.Future<List<_i16.BudgetTemplate>> getAllTemplates() =>
-      (super.noSuchMethod(
-            Invocation.method(#getAllTemplates, []),
-            returnValue: _i3.Future<List<_i16.BudgetTemplate>>.value(
-              <_i16.BudgetTemplate>[],
-            ),
-          )
-          as _i3.Future<List<_i16.BudgetTemplate>>);
-
-  @override
-  _i3.Future<_i16.BudgetTemplate?> getTemplateById(String? id) =>
-      (super.noSuchMethod(
-            Invocation.method(#getTemplateById, [id]),
-            returnValue: _i3.Future<_i16.BudgetTemplate?>.value(),
-          )
-          as _i3.Future<_i16.BudgetTemplate?>);
-
-  @override
-  _i3.Future<void> createTemplate(_i16.BudgetTemplate? template) =>
-      (super.noSuchMethod(
-            Invocation.method(#createTemplate, [template]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
-          )
-          as _i3.Future<void>);
-
-  @override
-  _i3.Future<void> deleteTemplate(String? id) =>
-      (super.noSuchMethod(
-            Invocation.method(#deleteTemplate, [id]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
-          )
-          as _i3.Future<void>);
-}
-
 /// A class which mocks [ScheduledTransactionRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockScheduledTransactionRepository extends _i1.Mock
-    implements _i17.ScheduledTransactionRepository {
+    implements _i15.ScheduledTransactionRepository {
   MockScheduledTransactionRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i3.Future<List<_i18.ScheduledTransaction>> getAllScheduledTransactions() =>
+  _i3.Future<List<_i16.ScheduledTransaction>> getAllScheduledTransactions() =>
       (super.noSuchMethod(
             Invocation.method(#getAllScheduledTransactions, []),
-            returnValue: _i3.Future<List<_i18.ScheduledTransaction>>.value(
-              <_i18.ScheduledTransaction>[],
+            returnValue: _i3.Future<List<_i16.ScheduledTransaction>>.value(
+              <_i16.ScheduledTransaction>[],
             ),
           )
-          as _i3.Future<List<_i18.ScheduledTransaction>>);
+          as _i3.Future<List<_i16.ScheduledTransaction>>);
 
   @override
-  _i3.Future<List<_i18.ScheduledTransaction>> getDueScheduledTransactions(
+  _i3.Future<List<_i16.ScheduledTransaction>> getDueScheduledTransactions(
     DateTime? date,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#getDueScheduledTransactions, [date]),
-            returnValue: _i3.Future<List<_i18.ScheduledTransaction>>.value(
-              <_i18.ScheduledTransaction>[],
+            returnValue: _i3.Future<List<_i16.ScheduledTransaction>>.value(
+              <_i16.ScheduledTransaction>[],
             ),
           )
-          as _i3.Future<List<_i18.ScheduledTransaction>>);
+          as _i3.Future<List<_i16.ScheduledTransaction>>);
 
   @override
-  _i3.Future<_i18.ScheduledTransaction?> getScheduledTransactionById(
+  _i3.Future<_i16.ScheduledTransaction?> getScheduledTransactionById(
     String? id,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#getScheduledTransactionById, [id]),
-            returnValue: _i3.Future<_i18.ScheduledTransaction?>.value(),
+            returnValue: _i3.Future<_i16.ScheduledTransaction?>.value(),
           )
-          as _i3.Future<_i18.ScheduledTransaction?>);
+          as _i3.Future<_i16.ScheduledTransaction?>);
 
   @override
   _i3.Future<void> createScheduledTransaction(
-    _i18.ScheduledTransaction? transaction,
+    _i16.ScheduledTransaction? transaction,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#createScheduledTransaction, [transaction]),
@@ -781,7 +732,7 @@ class MockScheduledTransactionRepository extends _i1.Mock
 
   @override
   _i3.Future<void> updateScheduledTransaction(
-    _i18.ScheduledTransaction? transaction,
+    _i16.ScheduledTransaction? transaction,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#updateScheduledTransaction, [transaction]),
@@ -809,10 +760,10 @@ class MockScheduledTransactionRepository extends _i1.Mock
           as _i3.Future<void>);
 
   @override
-  _i3.Stream<List<_i18.ScheduledTransaction>> watchAllScheduledTransactions() =>
+  _i3.Stream<List<_i16.ScheduledTransaction>> watchAllScheduledTransactions() =>
       (super.noSuchMethod(
             Invocation.method(#watchAllScheduledTransactions, []),
-            returnValue: _i3.Stream<List<_i18.ScheduledTransaction>>.empty(),
+            returnValue: _i3.Stream<List<_i16.ScheduledTransaction>>.empty(),
           )
-          as _i3.Stream<List<_i18.ScheduledTransaction>>);
+          as _i3.Stream<List<_i16.ScheduledTransaction>>);
 }
