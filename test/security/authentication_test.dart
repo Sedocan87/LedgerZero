@@ -6,7 +6,6 @@ import 'package:mockito/annotations.dart';
 import 'package:ledger_zero/presentation/screens/login_screen.dart';
 import 'package:ledger_zero/services/encryption/security_manager.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';

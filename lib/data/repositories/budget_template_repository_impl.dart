@@ -19,7 +19,7 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
       return rows.map(_mapToEntity).toList();
     } catch (e, stack) {
       Logger.error('Failed to get budget templates', e, stack);
-      throw DatabaseException('Failed to get budget templates');
+      throw const DatabaseException('Failed to get budget templates');
     }
   }
 
@@ -30,7 +30,7 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
       return row != null ? _mapToEntity(row) : null;
     } catch (e, stack) {
       Logger.error('Failed to get budget template by id: $id', e, stack);
-      throw DatabaseException('Failed to get budget template');
+      throw const DatabaseException('Failed to get budget template');
     }
   }
 
@@ -45,7 +45,7 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
       ));
     } catch (e, stack) {
       Logger.error('Failed to create budget template', e, stack);
-      throw DatabaseException('Failed to create budget template');
+      throw const DatabaseException('Failed to create budget template');
     }
   }
 
@@ -55,7 +55,7 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
       await _dao.deleteBudgetTemplate(id);
     } catch (e, stack) {
       Logger.error('Failed to delete budget template: $id', e, stack);
-      throw DatabaseException('Failed to delete budget template');
+      throw const DatabaseException('Failed to delete budget template');
     }
   }
 

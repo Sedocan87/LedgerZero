@@ -7,6 +7,7 @@ import 'dart:async' as _i3;
 
 import 'package:ledger_zero/domain/entities/account.dart' as _i4;
 import 'package:ledger_zero/domain/entities/budget.dart' as _i6;
+import 'package:ledger_zero/domain/entities/budget_template.dart' as _i18;
 import 'package:ledger_zero/domain/entities/category.dart' as _i8;
 import 'package:ledger_zero/domain/entities/category_group.dart' as _i9;
 import 'package:ledger_zero/domain/entities/payee.dart' as _i11;
@@ -15,6 +16,8 @@ import 'package:ledger_zero/domain/entities/transaction.dart' as _i13;
 import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i14;
 import 'package:ledger_zero/domain/repositories/account_repository.dart' as _i2;
 import 'package:ledger_zero/domain/repositories/budget_repository.dart' as _i5;
+import 'package:ledger_zero/domain/repositories/budget_template_repository.dart'
+    as _i17;
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
     as _i7;
 import 'package:ledger_zero/domain/repositories/payee_repository.dart' as _i10;
@@ -766,4 +769,50 @@ class MockScheduledTransactionRepository extends _i1.Mock
             returnValue: _i3.Stream<List<_i16.ScheduledTransaction>>.empty(),
           )
           as _i3.Stream<List<_i16.ScheduledTransaction>>);
+}
+
+/// A class which mocks [BudgetTemplateRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockBudgetTemplateRepository extends _i1.Mock
+    implements _i17.BudgetTemplateRepository {
+  MockBudgetTemplateRepository() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i3.Future<List<_i18.BudgetTemplate>> getAllTemplates() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllTemplates, []),
+            returnValue: _i3.Future<List<_i18.BudgetTemplate>>.value(
+              <_i18.BudgetTemplate>[],
+            ),
+          )
+          as _i3.Future<List<_i18.BudgetTemplate>>);
+
+  @override
+  _i3.Future<_i18.BudgetTemplate?> getTemplateById(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTemplateById, [id]),
+            returnValue: _i3.Future<_i18.BudgetTemplate?>.value(),
+          )
+          as _i3.Future<_i18.BudgetTemplate?>);
+
+  @override
+  _i3.Future<void> createTemplate(_i18.BudgetTemplate? template) =>
+      (super.noSuchMethod(
+            Invocation.method(#createTemplate, [template]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<void> deleteTemplate(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteTemplate, [id]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
 }

@@ -185,7 +185,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         await service.shareImage(imageBytes, '${type.name}_chart');
       } else if (format == ExportFormat.csv && csvHeaders != null) {
          // CSV Export Logic (existing)
-         List<List<dynamic>> rows = [csvHeaders];
+         final List<List<dynamic>> rows = [csvHeaders];
          if (data is Map<String, double>) {
              rows.addAll(data.entries.map((e) => [e.key, e.value]));
          } else if (data is Map<DateTime, double>) {

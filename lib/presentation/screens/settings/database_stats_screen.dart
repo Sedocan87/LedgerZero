@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
@@ -55,8 +54,8 @@ final databaseStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
 });
 
 String _formatBytes(int bytes) {
-  if (bytes <= 0) return "0 B";
-  const suffixes = ["B", "KB", "MB", "GB", "TB"];
+  if (bytes <= 0) return '0 B';
+  const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
   var i = 0;
   double d = bytes.toDouble();
   while (d >= 1024 && i < suffixes.length - 1) {

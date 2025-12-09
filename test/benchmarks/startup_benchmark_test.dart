@@ -34,7 +34,7 @@ void main() {
     await tester.pumpAndSettle();
 
     stopwatch.stop();
-    print('Startup time (simulated): ${stopwatch.elapsedMilliseconds}ms');
+    // print('Startup time (simulated): ${stopwatch.elapsedMilliseconds}ms');
 
     // 4. Basic assertion to ensure it actually loaded something
     // Check if we are either at Onboarding or Login or Home.

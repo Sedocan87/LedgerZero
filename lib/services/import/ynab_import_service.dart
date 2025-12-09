@@ -142,7 +142,7 @@ class YnabImportService {
              final key = '$group|$category';
              if (categoryKeys.add(key)) {
                 // Determine if group exists
-                var grp = categoryGroups.firstWhere((g) => g.name == group, orElse: () => YnabCategoryGroup(id: group, name: group));
+                final grp = categoryGroups.firstWhere((g) => g.name == group, orElse: () => YnabCategoryGroup(id: group, name: group));
                 if (!categoryGroups.contains(grp)) categoryGroups.add(grp);
 
                 categories.add(YnabCategory(
@@ -400,7 +400,7 @@ class YnabImportService {
       final splitItems = splitsByParent[tx['entityId']] ?? [];
       final payeeName = payeeMap[tx['payeeId']];
 
-      String? transferAccountId = tx['targetAccountId'];
+      final String? transferAccountId = tx['targetAccountId'];
 
       transactions.add(YnabTransaction(
         id: tx['entityId'],
@@ -429,8 +429,9 @@ class YnabImportService {
       RecurrenceFrequency frequency = RecurrenceFrequency.monthly; // Default
       final freqStr = sch['frequency'];
       // Mapping: Daily, Weekly, EveryOtherWeek, TwiceAMonth, Every4Weeks, Monthly, EveryOtherMonth, Every3Months, Every4Months, TwiceAYear, Yearly, EveryOtherYear
-      if (freqStr == 'Daily') frequency = RecurrenceFrequency.daily;
-      else if (freqStr == 'Weekly') frequency = RecurrenceFrequency.weekly;
+      if (freqStr == 'Daily') {
+        frequency = RecurrenceFrequency.daily;
+      } else if (freqStr == 'Weekly') frequency = RecurrenceFrequency.weekly;
       else if (freqStr == 'Monthly') frequency = RecurrenceFrequency.monthly;
       else if (freqStr == 'Yearly') frequency = RecurrenceFrequency.yearly;
       // Others map to nearest or monthly? LedgerZero supports daily, weekly, monthly, yearly.

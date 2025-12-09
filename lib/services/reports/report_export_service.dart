@@ -62,7 +62,7 @@ class ReportExportService {
         build: (context) {
           return [
             pw.SizedBox(height: 20),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: headers,
               data: data,
               border: null,

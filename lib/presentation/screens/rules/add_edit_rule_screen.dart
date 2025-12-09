@@ -299,13 +299,13 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                           DropdownButtonFormField<RuleConditionType>(
-                              value: type,
+                              initialValue: type,
                               decoration: const InputDecoration(labelText: 'Field'),
                               items: RuleConditionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
                               onChanged: (v) => setDialogState(() => type = v!),
                           ),
                           DropdownButtonFormField<RuleConditionOperator>(
-                              value: op,
+                              initialValue: op,
                               decoration: const InputDecoration(labelText: 'Operator'),
                               items: RuleConditionOperator.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
                               onChanged: (v) => setDialogState(() => op = v!),
@@ -363,7 +363,7 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                               DropdownButtonFormField<RuleActionType>(
-                                  value: type,
+                                  initialValue: type,
                                   decoration: const InputDecoration(labelText: 'Action'),
                                   items: RuleActionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
                                   onChanged: (v) {
@@ -465,7 +465,7 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
           );
       } else if (type == RuleActionType.markCleared || type == RuleActionType.markApproved) {
            return DropdownButtonFormField<String>(
-               value: controller.text.isEmpty ? 'true' : controller.text,
+               initialValue: controller.text.isEmpty ? 'true' : controller.text,
                items: const [
                    DropdownMenuItem(value: 'true', child: Text('Yes')),
                    DropdownMenuItem(value: 'false', child: Text('No')),

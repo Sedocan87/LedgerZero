@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/utils/log_level.dart';
 import 'package:ledger_zero/data/models/log_entry.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/services.dart';
 
@@ -13,10 +12,12 @@ void main() {
   late Directory tempDir;
 
   setUpAll(() async {
-    const channel = MethodChannel('plugins.flutter.io/path_provider');
-    channel.setMockMethodCallHandler((MethodCall methodCall) async {
-      return tempDir.path;
-    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (MethodCall methodCall) async {
+        return tempDir.path;
+      },
+    );
   });
 
   setUp(() async {

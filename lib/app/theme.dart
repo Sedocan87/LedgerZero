@@ -173,7 +173,6 @@ class AppTheme {
     final effectiveOnSecondary = onSecondary ?? onPrimary;
 
     return base.copyWith(
-      useMaterial3: true,
       colorScheme: ColorScheme(
         brightness: brightness,
         primary: primary,

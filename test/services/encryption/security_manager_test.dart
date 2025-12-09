@@ -3,7 +3,6 @@ import 'package:ledger_zero/services/encryption/security_manager.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:local_auth_platform_interface/local_auth_platform_interface.dart'; // Import this for AuthMessages
 
 // Create a new mock for this test
@@ -64,15 +63,15 @@ void main() {
     });
 
     test('deriveKeyFromPassword returns consistent key', () {
-      final pass = 'password123';
-      final salt = 'salt123';
+      const pass = 'password123';
+      const salt = 'salt123';
       final key1 = manager.deriveKeyFromPassword(pass, salt, iterations: 100);
       final key2 = manager.deriveKeyFromPassword(pass, salt, iterations: 100);
       expect(key1, equals(key2));
     });
 
     test('storeKey and getKey work', () async {
-      final key = 'my-secret-key';
+      const key = 'my-secret-key';
       await manager.storeKey(key);
       expect(await manager.getKey(), equals(key));
     });
@@ -90,7 +89,7 @@ void main() {
     });
 
     test('verifier logic works', () async {
-      final key = 'test-key';
+      const key = 'test-key';
       await manager.storeVerifier(key);
 
       expect(await manager.verifyKey(key), isTrue);

@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:ledger_zero/core/constants/app_constants.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
-import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pointycastle/export.dart';
@@ -25,7 +23,7 @@ class RestoreService {
   Future<void> restoreBackup(File backupFile, {String? password}) async {
     final tempDir = await getTemporaryDirectory();
     final tempDbPath = p.join(tempDir.path, 'restored_temp_${DateTime.now().millisecondsSinceEpoch}.sqlite');
-    File tempDbFile = File(tempDbPath);
+    final File tempDbFile = File(tempDbPath);
 
     try {
       if (backupFile.path.endsWith('.lzbk')) {
@@ -60,7 +58,7 @@ class RestoreService {
   Future<void> selectiveRestore(File backupFile, DateTime start, DateTime end, {String? password}) async {
     final tempDir = await getTemporaryDirectory();
     final tempDbPath = p.join(tempDir.path, 'selective_temp_${DateTime.now().millisecondsSinceEpoch}.sqlite');
-    File tempDbFile = File(tempDbPath);
+    final File tempDbFile = File(tempDbPath);
 
     try {
       // 1. Decrypt/Copy to temp
@@ -126,13 +124,12 @@ class RestoreService {
 
   Future<void> _ensureDependenciesExist(AppDatabase tempDb, Transaction tx) async {
     // 1. Account
-    if (tx.accountId != null) { // accountId is usually not null
-       final accountExists = await (_db.select(_db.accounts)..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
-       if (accountExists == null) {
-          final account = await (tempDb.select(tempDb.accounts)..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
-          if (account != null) await _db.into(_db.accounts).insert(account);
-       }
-    }
+ // accountId is usually not null
+     final accountExists = await (_db.select(_db.accounts)..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
+     if (accountExists == null) {
+        final account = await (tempDb.select(tempDb.accounts)..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
+        if (account != null) await _db.into(_db.accounts).insert(account);
+     }
 
     // 2. Category
     if (tx.categoryId != null) {

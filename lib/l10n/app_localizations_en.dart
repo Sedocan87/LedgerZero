@@ -1170,4 +1170,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactSupportSubtitle => 'support@ledgerzero.app';
+
+  @override
+  String get errorOccurred => 'An error occurred';
+
+  @override
+  String get serverError => 'Server communication failed';
+
+  @override
+  String get cacheError => 'Failed to load cached data';
+
+  @override
+  String get databaseError => 'Database operation failed';
+
+  @override
+  String get syncError => 'Synchronization failed';
+
+  @override
+  String get unknownError => 'An unknown error occurred';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String get errorLogs => 'Error Logs';
+
+  @override
+  String get noLogs => 'No logs found';
+
+  @override
+  String get exportLogs => 'Export Logs';
+
+  @override
+  String get logsExported => 'Logs exported successfully';
+
+  @override
+  String logsExportFailed(String error) {
+    return 'Failed to export logs: $error';
+  }
+
+  @override
+  String get logLevelDebug => 'DEBUG';
+
+  @override
+  String get logLevelInfo => 'INFO';
+
+  @override
+  String get logLevelWarning => 'WARNING';
+
+  @override
+  String get logLevelError => 'ERROR';
 }

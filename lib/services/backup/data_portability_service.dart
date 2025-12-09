@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';

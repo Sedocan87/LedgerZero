@@ -31,7 +31,7 @@ void main() {
         accountId: 'acc_conflict',
         date: DateTime.now(),
         amount: 100.0,
-        memo: Value('Original'),
+        memo: const Value('Original'),
       )
     );
 
@@ -52,7 +52,7 @@ void main() {
         accountId: 'acc_conflict',
         date: DateTime.now(),
         amount: 200.0,
-        memo: Value('Newer Update'),
+        memo: const Value('Newer Update'),
       ),
       mode: InsertMode.replace, // Simulate applying a newer delta
     );

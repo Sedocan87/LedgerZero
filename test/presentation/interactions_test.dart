@@ -64,10 +64,10 @@ void main() {
             payeeMapProvider.overrideWith((ref) => Stream.value({'payee1': 'Walmart'})),
             accountMapProvider.overrideWith((ref) => Stream.value({'acc1': 'Checking'})),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const TransactionsScreen(),
+            home: TransactionsScreen(),
           ),
         ),
       );
@@ -75,7 +75,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find the Dismissible widget
-      final dismissibleFinder = find.byType(Dismissible);
+      // final dismissibleFinder = find.byType(Dismissible);
       // expect(dismissibleFinder, findsOneWidget);
 
       // Verify Delete Swipe (Start to End)
@@ -87,7 +87,7 @@ void main() {
 
       // Verify SnackBar appears
       // expect(find.text('Transaction deleted'), findsOneWidget);
-    }, skip: 'Fix test setup - Empty state rendered instead of list');
+    }, skip: true); // Fix test setup - Empty state rendered instead of list
 
     testWidgets('Transaction item long press toggles selection mode', (tester) async {
       final transaction = Transaction(
@@ -117,17 +117,17 @@ void main() {
             payeeMapProvider.overrideWith((ref) => Stream.value({'payee1': 'Walmart'})),
             accountMapProvider.overrideWith((ref) => Stream.value({'acc1': 'Checking'})),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const TransactionsScreen(),
+            home: TransactionsScreen(),
           ),
         ),
       );
 
       await tester.pumpAndSettle();
 
-      final dismissibleFinder = find.byType(Dismissible);
+      // final dismissibleFinder = find.byType(Dismissible);
       // expect(dismissibleFinder, findsOneWidget);
 
       // Long press
@@ -136,6 +136,6 @@ void main() {
 
       // Verify selection mode title in AppBar
       // expect(find.text('1 Selected'), findsOneWidget);
-    }, skip: 'Fix test setup - Empty state rendered instead of list');
+    }, skip: true); // Fix test setup - Empty state rendered instead of list
   });
 }

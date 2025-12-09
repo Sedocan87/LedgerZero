@@ -4,7 +4,6 @@ import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/repositories/account_repository_impl.dart';
 import 'package:ledger_zero/domain/entities/account.dart' as domain;
 import 'package:drift/native.dart';
-import 'package:mockito/mockito.dart';
 
 // Since we are testing Repository Logic wrapping DAO, we can use a real DAO with in-memory DB
 // OR mock the DAO.

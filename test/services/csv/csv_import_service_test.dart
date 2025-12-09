@@ -3,7 +3,6 @@ import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
-import 'package:mockito/mockito.dart';
 
 // Since compute needs a real isolate, testing CsvImportService.parseCsvFile might fail in standard flutter test environment unless we are careful.
 // However, unit tests usually mock compute or it runs synchronously in some test setups.
@@ -22,7 +21,7 @@ void main() {
 
   group('CsvImportService', () {
     test('parseCsvFile parses valid CSV correctly', () async {
-      final csvContent = 'Date,Payee,Amount\n2023-01-01,Test Payee,-50.00';
+      const csvContent = 'Date,Payee,Amount\n2023-01-01,Test Payee,-50.00';
       final file = PlatformFile(
         name: 'test.csv',
         size: csvContent.length,
@@ -42,7 +41,7 @@ void main() {
     });
 
     test('parseCsvFile handles semicolons', () async {
-      final csvContent = 'Date;Payee;Amount\n2023-01-01;Test Payee;-50,00';
+      const csvContent = 'Date;Payee;Amount\n2023-01-01;Test Payee;-50,00';
       final file = PlatformFile(
         name: 'test_semicolon.csv',
         size: csvContent.length,

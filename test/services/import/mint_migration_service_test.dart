@@ -61,7 +61,7 @@ void main() {
     });
 
     test('should import valid Mint CSV', () async {
-      final csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
+      const csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
 "6/09/2020","Safeway","Safeway Store","45.50","debit","Groceries","Chase Checking","",""''';
 
       when(categoryRepo.getAllCategories()).thenAnswer((_) async => []);
@@ -78,7 +78,7 @@ void main() {
     });
 
     test('should detect duplicates when payee matches', () async {
-       final csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
+       const csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
 "6/09/2020","Safeway","Safeway Store","45.50","debit","Groceries","Chase Checking","",""''';
 
        // Existing Payee
@@ -108,7 +108,7 @@ void main() {
     });
 
     test('should NOT deduplicate if payee differs', () async {
-       final csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
+       const csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
 "6/09/2020","Safeway","Safeway Store","45.50","debit","Groceries","Chase Checking","",""''';
 
        // Existing Payee
@@ -138,7 +138,7 @@ void main() {
     });
 
     test('should map to existing categories', () async {
-       final csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
+       const csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
 "6/09/2020","Safeway","Safeway Store","45.50","debit","Groceries","Chase Checking","",""''';
 
        const existingCategory = Category(

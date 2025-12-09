@@ -7,10 +7,10 @@ void main() {
   group('SimpleBarChart', () {
     testWidgets('Renders empty state when data is empty', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(
+          home: Scaffold(
             body: SimpleBarChart(
               data: {},
               barColor: Colors.blue,

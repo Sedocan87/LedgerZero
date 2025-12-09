@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/presentation/widgets/charts/simple_bar_chart.dart';
-import 'package:ledger_zero/presentation/widgets/common/buttons.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 
 void main() {
   group('Accessibility Semantics Tests', () {

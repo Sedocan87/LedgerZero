@@ -3,19 +3,11 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i9;
+import 'dart:async' as _i3;
 
-import 'package:flutter/widgets.dart' as _i4;
-import 'package:go_router/src/configuration.dart' as _i3;
-import 'package:go_router/src/delegate.dart' as _i5;
-import 'package:go_router/src/information_provider.dart' as _i6;
-import 'package:go_router/src/match.dart' as _i12;
-import 'package:go_router/src/parser.dart' as _i7;
-import 'package:go_router/src/router.dart' as _i11;
-import 'package:go_router/src/state.dart' as _i2;
-import 'package:ledger_zero/services/encryption/security_manager.dart' as _i8;
+import 'package:ledger_zero/services/encryption/security_manager.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i10;
+import 'package:mockito/src/dummies.dart' as _i4;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -32,62 +24,27 @@ import 'package:mockito/src/dummies.dart' as _i10;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
-class _FakeGoRouterState_0 extends _i1.SmartFake implements _i2.GoRouterState {
-  _FakeGoRouterState_0(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeRouteConfiguration_1 extends _i1.SmartFake
-    implements _i3.RouteConfiguration {
-  _FakeRouteConfiguration_1(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeBackButtonDispatcher_2 extends _i1.SmartFake
-    implements _i4.BackButtonDispatcher {
-  _FakeBackButtonDispatcher_2(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeGoRouterDelegate_3 extends _i1.SmartFake
-    implements _i5.GoRouterDelegate {
-  _FakeGoRouterDelegate_3(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeGoRouteInformationProvider_4 extends _i1.SmartFake
-    implements _i6.GoRouteInformationProvider {
-  _FakeGoRouteInformationProvider_4(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeGoRouteInformationParser_5 extends _i1.SmartFake
-    implements _i7.GoRouteInformationParser {
-  _FakeGoRouteInformationParser_5(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
 /// A class which mocks [SecurityManager].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSecurityManager extends _i1.Mock implements _i8.SecurityManager {
+class MockSecurityManager extends _i1.Mock implements _i2.SecurityManager {
   MockSecurityManager() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i9.Future<bool> get isBiometricsAvailable =>
+  _i3.Future<bool> get isBiometricsAvailable =>
       (super.noSuchMethod(
             Invocation.getter(#isBiometricsAvailable),
-            returnValue: _i9.Future<bool>.value(false),
+            returnValue: _i3.Future<bool>.value(false),
           )
-          as _i9.Future<bool>);
+          as _i3.Future<bool>);
 
   @override
   String generateSecureKey() =>
       (super.noSuchMethod(
             Invocation.method(#generateSecureKey, []),
-            returnValue: _i10.dummyValue<String>(
+            returnValue: _i4.dummyValue<String>(
               this,
               Invocation.method(#generateSecureKey, []),
             ),
@@ -106,7 +63,7 @@ class MockSecurityManager extends _i1.Mock implements _i8.SecurityManager {
               [password, salt],
               {#iterations: iterations},
             ),
-            returnValue: _i10.dummyValue<String>(
+            returnValue: _i4.dummyValue<String>(
               this,
               Invocation.method(
                 #deriveKeyFromPassword,
@@ -118,371 +75,87 @@ class MockSecurityManager extends _i1.Mock implements _i8.SecurityManager {
           as String);
 
   @override
-  _i9.Future<void> storeKey(String? key) =>
+  _i3.Future<void> storeKey(String? key) =>
       (super.noSuchMethod(
             Invocation.method(#storeKey, [key]),
-            returnValue: _i9.Future<void>.value(),
-            returnValueForMissingStub: _i9.Future<void>.value(),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
           )
-          as _i9.Future<void>);
+          as _i3.Future<void>);
 
   @override
-  _i9.Future<String?> getKey() =>
+  _i3.Future<String?> getKey() =>
       (super.noSuchMethod(
             Invocation.method(#getKey, []),
-            returnValue: _i9.Future<String?>.value(),
+            returnValue: _i3.Future<String?>.value(),
           )
-          as _i9.Future<String?>);
+          as _i3.Future<String?>);
 
   @override
-  _i9.Future<bool> hasKey() =>
+  _i3.Future<bool> hasKey() =>
       (super.noSuchMethod(
             Invocation.method(#hasKey, []),
-            returnValue: _i9.Future<bool>.value(false),
+            returnValue: _i3.Future<bool>.value(false),
           )
-          as _i9.Future<bool>);
+          as _i3.Future<bool>);
 
   @override
-  _i9.Future<void> clearKey() =>
+  _i3.Future<void> clearKey() =>
       (super.noSuchMethod(
             Invocation.method(#clearKey, []),
-            returnValue: _i9.Future<void>.value(),
-            returnValueForMissingStub: _i9.Future<void>.value(),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
           )
-          as _i9.Future<void>);
+          as _i3.Future<void>);
 
   @override
-  _i9.Future<void> storeSalt(String? salt) =>
+  _i3.Future<void> storeSalt(String? salt) =>
       (super.noSuchMethod(
             Invocation.method(#storeSalt, [salt]),
-            returnValue: _i9.Future<void>.value(),
-            returnValueForMissingStub: _i9.Future<void>.value(),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
           )
-          as _i9.Future<void>);
+          as _i3.Future<void>);
 
   @override
-  _i9.Future<String?> getSalt() =>
+  _i3.Future<String?> getSalt() =>
       (super.noSuchMethod(
             Invocation.method(#getSalt, []),
-            returnValue: _i9.Future<String?>.value(),
+            returnValue: _i3.Future<String?>.value(),
           )
-          as _i9.Future<String?>);
+          as _i3.Future<String?>);
 
   @override
-  _i9.Future<void> storeVerifier(String? key) =>
+  _i3.Future<void> storeVerifier(String? key) =>
       (super.noSuchMethod(
             Invocation.method(#storeVerifier, [key]),
-            returnValue: _i9.Future<void>.value(),
-            returnValueForMissingStub: _i9.Future<void>.value(),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
           )
-          as _i9.Future<void>);
+          as _i3.Future<void>);
 
   @override
-  _i9.Future<bool> verifyKey(String? key) =>
+  _i3.Future<bool> verifyKey(String? key) =>
       (super.noSuchMethod(
             Invocation.method(#verifyKey, [key]),
-            returnValue: _i9.Future<bool>.value(false),
+            returnValue: _i3.Future<bool>.value(false),
           )
-          as _i9.Future<bool>);
+          as _i3.Future<bool>);
 
   @override
-  _i9.Future<void> clearAll() =>
+  _i3.Future<void> clearAll() =>
       (super.noSuchMethod(
             Invocation.method(#clearAll, []),
-            returnValue: _i9.Future<void>.value(),
-            returnValueForMissingStub: _i9.Future<void>.value(),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
           )
-          as _i9.Future<void>);
+          as _i3.Future<void>);
 
   @override
-  _i9.Future<bool> authenticateWithBiometrics() =>
+  _i3.Future<bool> authenticateWithBiometrics() =>
       (super.noSuchMethod(
             Invocation.method(#authenticateWithBiometrics, []),
-            returnValue: _i9.Future<bool>.value(false),
+            returnValue: _i3.Future<bool>.value(false),
           )
-          as _i9.Future<bool>);
-}
-
-/// A class which mocks [GoRouter].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockGoRouter extends _i1.Mock implements _i11.GoRouter {
-  MockGoRouter() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  _i2.GoRouterState get state =>
-      (super.noSuchMethod(
-            Invocation.getter(#state),
-            returnValue: _FakeGoRouterState_0(this, Invocation.getter(#state)),
-          )
-          as _i2.GoRouterState);
-
-  @override
-  _i3.RouteConfiguration get configuration =>
-      (super.noSuchMethod(
-            Invocation.getter(#configuration),
-            returnValue: _FakeRouteConfiguration_1(
-              this,
-              Invocation.getter(#configuration),
-            ),
-          )
-          as _i3.RouteConfiguration);
-
-  @override
-  _i4.BackButtonDispatcher get backButtonDispatcher =>
-      (super.noSuchMethod(
-            Invocation.getter(#backButtonDispatcher),
-            returnValue: _FakeBackButtonDispatcher_2(
-              this,
-              Invocation.getter(#backButtonDispatcher),
-            ),
-          )
-          as _i4.BackButtonDispatcher);
-
-  @override
-  _i5.GoRouterDelegate get routerDelegate =>
-      (super.noSuchMethod(
-            Invocation.getter(#routerDelegate),
-            returnValue: _FakeGoRouterDelegate_3(
-              this,
-              Invocation.getter(#routerDelegate),
-            ),
-          )
-          as _i5.GoRouterDelegate);
-
-  @override
-  _i6.GoRouteInformationProvider get routeInformationProvider =>
-      (super.noSuchMethod(
-            Invocation.getter(#routeInformationProvider),
-            returnValue: _FakeGoRouteInformationProvider_4(
-              this,
-              Invocation.getter(#routeInformationProvider),
-            ),
-          )
-          as _i6.GoRouteInformationProvider);
-
-  @override
-  _i7.GoRouteInformationParser get routeInformationParser =>
-      (super.noSuchMethod(
-            Invocation.getter(#routeInformationParser),
-            returnValue: _FakeGoRouteInformationParser_5(
-              this,
-              Invocation.getter(#routeInformationParser),
-            ),
-          )
-          as _i7.GoRouteInformationParser);
-
-  @override
-  bool get overridePlatformDefaultLocation =>
-      (super.noSuchMethod(
-            Invocation.getter(#overridePlatformDefaultLocation),
-            returnValue: false,
-          )
-          as bool);
-
-  @override
-  set configuration(_i3.RouteConfiguration? value) => super.noSuchMethod(
-    Invocation.setter(#configuration, value),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  set routerDelegate(_i5.GoRouterDelegate? value) => super.noSuchMethod(
-    Invocation.setter(#routerDelegate, value),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  set routeInformationProvider(_i6.GoRouteInformationProvider? value) =>
-      super.noSuchMethod(
-        Invocation.setter(#routeInformationProvider, value),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  set routeInformationParser(_i7.GoRouteInformationParser? value) =>
-      super.noSuchMethod(
-        Invocation.setter(#routeInformationParser, value),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  bool canPop() =>
-      (super.noSuchMethod(Invocation.method(#canPop, []), returnValue: false)
-          as bool);
-
-  @override
-  String namedLocation(
-    String? name, {
-    Map<String, String>? pathParameters = const {},
-    Map<String, dynamic>? queryParameters = const {},
-    String? fragment,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #namedLocation,
-              [name],
-              {
-                #pathParameters: pathParameters,
-                #queryParameters: queryParameters,
-                #fragment: fragment,
-              },
-            ),
-            returnValue: _i10.dummyValue<String>(
-              this,
-              Invocation.method(
-                #namedLocation,
-                [name],
-                {
-                  #pathParameters: pathParameters,
-                  #queryParameters: queryParameters,
-                  #fragment: fragment,
-                },
-              ),
-            ),
-          )
-          as String);
-
-  @override
-  void go(String? location, {Object? extra}) => super.noSuchMethod(
-    Invocation.method(#go, [location], {#extra: extra}),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void restore(_i12.RouteMatchList? matchList) => super.noSuchMethod(
-    Invocation.method(#restore, [matchList]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void goNamed(
-    String? name, {
-    Map<String, String>? pathParameters = const {},
-    Map<String, dynamic>? queryParameters = const {},
-    Object? extra,
-    String? fragment,
-  }) => super.noSuchMethod(
-    Invocation.method(
-      #goNamed,
-      [name],
-      {
-        #pathParameters: pathParameters,
-        #queryParameters: queryParameters,
-        #extra: extra,
-        #fragment: fragment,
-      },
-    ),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  _i9.Future<T?> push<T extends Object?>(String? location, {Object? extra}) =>
-      (super.noSuchMethod(
-            Invocation.method(#push, [location], {#extra: extra}),
-            returnValue: _i9.Future<T?>.value(),
-          )
-          as _i9.Future<T?>);
-
-  @override
-  _i9.Future<T?> pushNamed<T extends Object?>(
-    String? name, {
-    Map<String, String>? pathParameters = const {},
-    Map<String, dynamic>? queryParameters = const {},
-    Object? extra,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #pushNamed,
-              [name],
-              {
-                #pathParameters: pathParameters,
-                #queryParameters: queryParameters,
-                #extra: extra,
-              },
-            ),
-            returnValue: _i9.Future<T?>.value(),
-          )
-          as _i9.Future<T?>);
-
-  @override
-  _i9.Future<T?> pushReplacement<T extends Object?>(
-    String? location, {
-    Object? extra,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#pushReplacement, [location], {#extra: extra}),
-            returnValue: _i9.Future<T?>.value(),
-          )
-          as _i9.Future<T?>);
-
-  @override
-  _i9.Future<T?> pushReplacementNamed<T extends Object?>(
-    String? name, {
-    Map<String, String>? pathParameters = const {},
-    Map<String, dynamic>? queryParameters = const {},
-    Object? extra,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #pushReplacementNamed,
-              [name],
-              {
-                #pathParameters: pathParameters,
-                #queryParameters: queryParameters,
-                #extra: extra,
-              },
-            ),
-            returnValue: _i9.Future<T?>.value(),
-          )
-          as _i9.Future<T?>);
-
-  @override
-  _i9.Future<T?> replace<T>(String? location, {Object? extra}) =>
-      (super.noSuchMethod(
-            Invocation.method(#replace, [location], {#extra: extra}),
-            returnValue: _i9.Future<T?>.value(),
-          )
-          as _i9.Future<T?>);
-
-  @override
-  _i9.Future<T?> replaceNamed<T>(
-    String? name, {
-    Map<String, String>? pathParameters = const {},
-    Map<String, dynamic>? queryParameters = const {},
-    Object? extra,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #replaceNamed,
-              [name],
-              {
-                #pathParameters: pathParameters,
-                #queryParameters: queryParameters,
-                #extra: extra,
-              },
-            ),
-            returnValue: _i9.Future<T?>.value(),
-          )
-          as _i9.Future<T?>);
-
-  @override
-  void pop<T extends Object?>([T? result]) => super.noSuchMethod(
-    Invocation.method(#pop, [result]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void refresh() => super.noSuchMethod(
-    Invocation.method(#refresh, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
+          as _i3.Future<bool>);
 }

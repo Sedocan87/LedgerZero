@@ -56,6 +56,6 @@ void main() {
     await budgetsDao.getTotalBudgetedByMonthRange('2023-11');
 
     stopwatch.stop();
-    print('Budget aggregation (sum 1200 rows) took ${stopwatch.elapsedMilliseconds}ms');
+    // print('Budget aggregation (sum 1200 rows) took ${stopwatch.elapsedMilliseconds}ms');
   });
 }

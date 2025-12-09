@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
-import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 
 // Re-export payeesProvider from payee_provider.dart

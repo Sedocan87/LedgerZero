@@ -2239,6 +2239,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'support@ledgerzero.app'**
   String get contactSupportSubtitle;
+
+  /// No description provided for @errorOccurred.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred'**
+  String get errorOccurred;
+
+  /// No description provided for @serverError.
+  ///
+  /// In en, this message translates to:
+  /// **'Server communication failed'**
+  String get serverError;
+
+  /// No description provided for @cacheError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load cached data'**
+  String get cacheError;
+
+  /// No description provided for @databaseError.
+  ///
+  /// In en, this message translates to:
+  /// **'Database operation failed'**
+  String get databaseError;
+
+  /// No description provided for @syncError.
+  ///
+  /// In en, this message translates to:
+  /// **'Synchronization failed'**
+  String get syncError;
+
+  /// No description provided for @unknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'An unknown error occurred'**
+  String get unknownError;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// No description provided for @errorLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Error Logs'**
+  String get errorLogs;
+
+  /// No description provided for @noLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'No logs found'**
+  String get noLogs;
+
+  /// No description provided for @exportLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Logs'**
+  String get exportLogs;
+
+  /// No description provided for @logsExported.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs exported successfully'**
+  String get logsExported;
+
+  /// No description provided for @logsExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export logs: {error}'**
+  String logsExportFailed(String error);
+
+  /// No description provided for @logLevelDebug.
+  ///
+  /// In en, this message translates to:
+  /// **'DEBUG'**
+  String get logLevelDebug;
+
+  /// No description provided for @logLevelInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'INFO'**
+  String get logLevelInfo;
+
+  /// No description provided for @logLevelWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'WARNING'**
+  String get logLevelWarning;
+
+  /// No description provided for @logLevelError.
+  ///
+  /// In en, this message translates to:
+  /// **'ERROR'**
+  String get logLevelError;
 }
 
 class _AppLocalizationsDelegate

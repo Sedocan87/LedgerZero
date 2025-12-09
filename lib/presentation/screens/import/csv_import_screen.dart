@@ -52,7 +52,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   Future<void> _pickFile() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv', 'txt'],
       );
@@ -399,7 +399,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     decoration: InputDecoration(labelText: l10n.dateFormat),
-                    value: _dateFormat,
+                    initialValue: _dateFormat,
                     items: _dateFormats.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
                     onChanged: (v) => setState(() => _dateFormat = v!),
                   ),
@@ -408,7 +408,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     decoration: InputDecoration(labelText: l10n.decimalSeparator),
-                    value: _decimalSeparator,
+                    initialValue: _decimalSeparator,
                     items: [
                       DropdownMenuItem(value: '.', child: Text(l10n.dot)),
                       DropdownMenuItem(value: ',', child: Text(l10n.comma)),

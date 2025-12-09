@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:ledger_zero/data/database/database.dart';
-import 'package:drift/drift.dart';
 
 import 'test_utils.dart';
 

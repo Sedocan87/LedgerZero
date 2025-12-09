@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
-import 'package:ledger_zero/app/theme.dart';
 import 'package:share_plus/share_plus.dart';
 
 class BackupScreen extends ConsumerStatefulWidget {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
@@ -32,7 +31,7 @@ void main() {
                   isHidden: false,
                   sortOrder: 0,
                   createdAt: DateTime.now(),
-                  color: Colors.blue.value,
+                  color: Colors.blue.toARGB32(),
                   icon: 'icon_code',
                 ),
               ]));
