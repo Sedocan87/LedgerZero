@@ -33,10 +33,10 @@ void main() {
              syncControllerProvider.overrideWith((ref) => MockSyncController()),
              recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const HomeScreen(),
+            home: HomeScreen(),
           ),
         ),
       );

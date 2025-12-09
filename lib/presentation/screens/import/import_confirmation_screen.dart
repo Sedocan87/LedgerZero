@@ -205,7 +205,7 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
             return AlertDialog(
               title: Text(l10n.selectAccount),
               content: DropdownButtonFormField<String>(
-                value: selectedAccountId,
+                initialValue: selectedAccountId,
                 items: accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
                 onChanged: (v) => setState(() => selectedAccountId = v),
                 decoration: InputDecoration(labelText: l10n.account),

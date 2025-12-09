@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,9 +6,6 @@ import 'package:ledger_zero/services/backup/backup_service.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/data/database/database.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-import 'package:pointycastle/export.dart';
 
 // Generate mocks
 @GenerateMocks([AppDatabase])
@@ -67,7 +63,7 @@ void main() {
     });
 
     // Act
-    final password = 'strong_password';
+    const password = 'strong_password';
     final file = await backupService.createBackup(password: password);
 
     // Assert

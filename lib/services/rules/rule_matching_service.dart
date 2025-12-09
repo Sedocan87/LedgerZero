@@ -185,8 +185,10 @@ class RuleMatchingService {
                   Logger.error('Invalid regex in rule', e);
                   return false;
               }
-          default:
-              return false;
+          case RuleConditionOperator.greaterThan:
+          case RuleConditionOperator.lessThan:
+            // These operators are not applicable for strings, or handle differently if needed
+            return false;
       }
   }
 

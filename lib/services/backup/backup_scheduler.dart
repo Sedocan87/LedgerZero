@@ -1,6 +1,3 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

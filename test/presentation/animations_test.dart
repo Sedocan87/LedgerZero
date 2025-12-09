@@ -16,11 +16,11 @@ void main() {
           overrides: [
              sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: AnimatedCountText(
                 value: 100.0,
-                duration: const Duration(seconds: 1),
+                duration: Duration(seconds: 1),
               ),
             ),
           ),
@@ -40,7 +40,7 @@ void main() {
           overrides: [
              sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: AnimatedCountText(
                 value: 100.0,
@@ -57,7 +57,7 @@ void main() {
           overrides: [
              sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: AnimatedCountText(
                 value: 200.0,

@@ -3,17 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
-import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
-import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
-import 'package:ledger_zero/presentation/providers/backup_providers.dart';
-import 'package:ledger_zero/domain/entities/transaction.dart';
 
 // Mocks would be here if we needed complex repository mocks,
 // but for loading states we can often just override the provider to return AsyncValue.loading()
@@ -42,10 +37,10 @@ void main() {
              syncControllerProvider.overrideWith((ref) => MockSyncController()),
              recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const HomeScreen(),
+            home: HomeScreen(),
           ),
         ),
       );

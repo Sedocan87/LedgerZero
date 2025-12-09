@@ -61,7 +61,7 @@ void main() {
     await transactionsDao.batchCreateTransactions(transactions);
 
     stopwatch.stop();
-    print('Batch insert of $count transactions took ${stopwatch.elapsedMilliseconds}ms');
+    // print('Batch insert of $count transactions took ${stopwatch.elapsedMilliseconds}ms');
   });
 
   test('Batch update throughput', () async {
@@ -92,6 +92,6 @@ void main() {
     await transactionsDao.batchUpdateTransactions(updates);
 
     stopwatch.stop();
-    print('Batch update of $count transactions took ${stopwatch.elapsedMilliseconds}ms');
+    // print('Batch update of $count transactions took ${stopwatch.elapsedMilliseconds}ms');
   });
 }

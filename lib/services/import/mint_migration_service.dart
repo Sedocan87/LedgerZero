@@ -157,7 +157,7 @@ class MintMigrationService {
   }
 
   List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
-    List<List<T>> result = [];
+    final List<List<T>> result = [];
     for (var i = 0; i < list.length; i += chunkSize) {
       result.add(list.sublist(i, i + chunkSize > list.length ? list.length : i + chunkSize));
     }

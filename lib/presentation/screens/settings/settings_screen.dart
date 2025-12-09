@@ -10,7 +10,6 @@ import 'package:ledger_zero/presentation/screens/settings/widgets/settings_secti
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/data/database/database.dart';
 

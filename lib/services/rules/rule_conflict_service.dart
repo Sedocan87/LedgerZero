@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
-import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 
 class RuleConflict {
   final Rule ruleA;

@@ -84,17 +84,17 @@ void main() {
 
       // Avoid print in production code but useful here
       // ignore: avoid_print
-      print('$label - Insert (1000): ${insertTime}ms, Read (1000): ${readTime}ms');
+      // print('$label - Insert (1000): ${insertTime}ms, Read (1000): ${readTime}ms');
       await db.close();
     }
 
     test('Benchmark Plain vs Encrypted', () async {
       // ignore: avoid_print
-      print('--- Benchmark Results ---');
+      // print('--- Benchmark Results ---');
       await runBenchmark('Plain    ', plainFile, null);
       await runBenchmark('Encrypted', encryptedFile, key);
       // ignore: avoid_print
-      print('-------------------------');
+      // print('-------------------------');
     });
   });
 }

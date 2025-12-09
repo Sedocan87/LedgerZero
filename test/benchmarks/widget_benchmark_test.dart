@@ -96,7 +96,7 @@ void main() {
     await widgetService.updateWidgetData();
     stopwatch.stop();
 
-    print('Widget generation time: ${stopwatch.elapsedMilliseconds}ms');
-    expect(stopwatch.elapsedMilliseconds, lessThan(100), reason: "Widget generation took too long");
+    // print('Widget generation time: ${stopwatch.elapsedMilliseconds}ms');
+    expect(stopwatch.elapsedMilliseconds, lessThan(100), reason: 'Widget generation took too long');
   });
 }

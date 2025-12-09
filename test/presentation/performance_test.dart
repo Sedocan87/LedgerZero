@@ -42,10 +42,10 @@ void main() {
             payeeMapProvider.overrideWith((ref) => Stream.value({'payee1': 'Walmart'})),
             accountMapProvider.overrideWith((ref) => Stream.value({'acc1': 'Checking'})),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const TransactionsScreen(),
+            home: TransactionsScreen(),
           ),
         ),
       );

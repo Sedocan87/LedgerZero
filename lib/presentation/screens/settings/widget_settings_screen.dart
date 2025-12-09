@@ -74,7 +74,7 @@ class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
               if (snapshot.hasData) {
                 final list = snapshot.data!;
                 return DropdownButtonFormField<String>(
-                  value: _selectedAccountId,
+                  initialValue: _selectedAccountId,
                   decoration: const InputDecoration(labelText: 'Default Account'),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All Accounts')),
@@ -96,7 +96,7 @@ class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
               if (snapshot.hasData) {
                 final list = snapshot.data!;
                 return DropdownButtonFormField<String>(
-                  value: _selectedCategoryId,
+                  initialValue: _selectedCategoryId,
                   decoration: const InputDecoration(labelText: 'Focus Category'),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('None')),

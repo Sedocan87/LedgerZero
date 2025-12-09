@@ -116,38 +116,38 @@ void main() {
     const transactionCount = 10000;
     const categoryCount = 50;
 
-    print('Generating $transactionCount transactions...');
+    // print('Generating $transactionCount transactions...');
     final stopwatchGen = Stopwatch()..start();
     await generateData(transactionCount: transactionCount, categoryCount: categoryCount);
     stopwatchGen.stop();
-    print('Data generation took: ${stopwatchGen.elapsedMilliseconds}ms');
+    // print('Data generation took: ${stopwatchGen.elapsedMilliseconds}ms');
 
     final targetMonth = DateTime.now();
 
     // Measure calculateTBB
-    print('Running calculateTBB...');
+    // print('Running calculateTBB...');
     final stopwatchTBB = Stopwatch()..start();
     final tbb = await budgetingService.calculateTBB(targetMonth);
     stopwatchTBB.stop();
-    print('calculateTBB took: ${stopwatchTBB.elapsedMilliseconds}ms');
-    print('TBB Result: $tbb');
+    // print('calculateTBB took: ${stopwatchTBB.elapsedMilliseconds}ms');
+    // print('TBB Result: $tbb');
 
     // Measure calculateCategoryAvailable
     const testCategoryId = 'cat_0';
-    print('Running calculateCategoryAvailable for $testCategoryId...');
+    // print('Running calculateCategoryAvailable for $testCategoryId...');
     final stopwatchCat = Stopwatch()..start();
     final available = await budgetingService.calculateCategoryAvailable(testCategoryId, targetMonth);
     stopwatchCat.stop();
-    print('calculateCategoryAvailable took: ${stopwatchCat.elapsedMilliseconds}ms');
-    print('Available Result: $available');
+    // print('calculateCategoryAvailable took: ${stopwatchCat.elapsedMilliseconds}ms');
+    // print('Available Result: $available');
 
     // Measure calculateBatchCategoryPerformance
-    print('Running calculateBatchCategoryPerformance...');
+    // print('Running calculateBatchCategoryPerformance...');
     final stopwatchBatch = Stopwatch()..start();
     final batchResult = await budgetingService.calculateBatchCategoryPerformance(targetMonth);
     stopwatchBatch.stop();
-    print('calculateBatchCategoryPerformance took: ${stopwatchBatch.elapsedMilliseconds}ms');
-    print('Batch Result Size: ${batchResult.length}');
+    // print('calculateBatchCategoryPerformance took: ${stopwatchBatch.elapsedMilliseconds}ms');
+    // print('Batch Result Size: ${batchResult.length}');
 
     // Expectations
     expect(tbb, isNotNull);

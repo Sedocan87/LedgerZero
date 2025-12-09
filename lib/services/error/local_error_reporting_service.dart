@@ -191,7 +191,7 @@ class LocalErrorReportingService {
 
   Future<List<LogEntry>> getLogs() async {
     return await _lock.synchronized(() async {
-      List<LogEntry> logs = [];
+      final List<LogEntry> logs = [];
       try {
         final directory = await _directory;
         if (!await directory.exists()) return [];
@@ -238,11 +238,11 @@ class LocalErrorReportingService {
 
   File _createNewLogFile(Directory directory) {
     var timestamp = DateTime.now().millisecondsSinceEpoch;
-    var file = File(path.join(directory.path, '${_logFileNamePrefix}${timestamp}$_logFileExtension'));
+    var file = File(path.join(directory.path, '$_logFileNamePrefix$timestamp$_logFileExtension'));
 
     while (file.existsSync()) {
       timestamp++;
-      file = File(path.join(directory.path, '${_logFileNamePrefix}${timestamp}$_logFileExtension'));
+      file = File(path.join(directory.path, '$_logFileNamePrefix$timestamp$_logFileExtension'));
     }
     return file;
   }

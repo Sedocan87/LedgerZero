@@ -74,7 +74,7 @@ void main() {
     await service.processPendingChanges();
     stopwatch.stop();
 
-    print('Processed $count INSERTs in ${stopwatch.elapsedMilliseconds}ms');
+    // print('Processed $count INSERTs in ${stopwatch.elapsedMilliseconds}ms');
 
     // Verify
     verify(mockQueue.enqueue(any)).called(count);

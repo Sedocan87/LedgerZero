@@ -29,7 +29,7 @@ class MintDataMapper {
       accountNameIdMap[rawAcc.name] = id;
 
       // Infer account type from name
-      AccountType type = _inferAccountType(rawAcc.name);
+      final AccountType type = _inferAccountType(rawAcc.name);
 
       accounts.add(Account(
         id: id,

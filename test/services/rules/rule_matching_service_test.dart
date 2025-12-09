@@ -61,7 +61,7 @@ void main() {
           ),
         ],
         actions: [
-          const RuleAction(type: RuleActionType.setMemo, value: 'Matched'),
+          RuleAction(type: RuleActionType.setMemo, value: 'Matched'),
         ],
       );
 
@@ -84,7 +84,7 @@ void main() {
           ),
         ],
         actions: [
-          const RuleAction(type: RuleActionType.setMemo, value: 'Big Expense'),
+          RuleAction(type: RuleActionType.setMemo, value: 'Big Expense'),
         ],
       );
 
@@ -107,7 +107,7 @@ void main() {
           ),
         ],
         actions: [
-          const RuleAction(type: RuleActionType.setMemo, value: 'Store Found'),
+          RuleAction(type: RuleActionType.setMemo, value: 'Store Found'),
         ],
       );
 
@@ -129,8 +129,8 @@ void main() {
               value: '-50.0')
         ],
         actions: [
-          const RuleAction(type: RuleActionType.setCategory, value: 'cat1'),
-          const RuleAction(type: RuleActionType.markApproved, value: 'true'),
+          RuleAction(type: RuleActionType.setCategory, value: 'cat1'),
+          RuleAction(type: RuleActionType.markApproved, value: 'true'),
         ],
       );
 
@@ -147,7 +147,7 @@ void main() {
             isActive: true,
             matchLogic: RuleMatchLogic.and,
             conditions: [RuleCondition(type: RuleConditionType.amount, operator: RuleConditionOperator.equals, value: '-50.0')],
-            actions: [const RuleAction(type: RuleActionType.setMemo, value: 'Rule1')],
+            actions: [RuleAction(type: RuleActionType.setMemo, value: 'Rule1')],
         );
 
         const rule2 = Rule(
@@ -157,7 +157,7 @@ void main() {
             isActive: true,
             matchLogic: RuleMatchLogic.and,
             conditions: [RuleCondition(type: RuleConditionType.amount, operator: RuleConditionOperator.equals, value: '-50.0')],
-            actions: [const RuleAction(type: RuleActionType.setMemo, value: 'Rule2')],
+            actions: [RuleAction(type: RuleActionType.setMemo, value: 'Rule2')],
         );
 
         // Rule 1 runs first, sets memo to Rule1.

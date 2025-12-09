@@ -58,7 +58,7 @@ void main() {
 
     // 3. Create Backup
     final backupService = BackupService(db);
-    final password = 'integration_test_password';
+    const password = 'integration_test_password';
     final backupFile = await backupService.createBackup(password: password);
 
     expect(backupFile.existsSync(), true, reason: 'Backup file should exist');

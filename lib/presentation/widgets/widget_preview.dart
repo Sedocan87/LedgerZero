@@ -43,7 +43,7 @@ class WidgetPreview extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "To Be Budgeted",
+                    'To Be Budgeted',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.secondary,
@@ -77,7 +77,7 @@ class WidgetPreview extends StatelessWidget {
           // Categories
           if (categories.isEmpty)
              Text(
-               "No categories selected",
+               'No categories selected',
                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.secondary),
              )
           else

@@ -18,7 +18,7 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
       return dtos.map(_mapToDomain).toList();
     } catch (e, stack) {
       Logger.error('Failed to get all report notes', e, stack);
-      throw DatabaseException('Failed to get all report notes');
+      throw const DatabaseException('Failed to get all report notes');
     }
   }
 
@@ -29,7 +29,7 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
       return dto != null ? _mapToDomain(dto) : null;
     } catch (e, stack) {
       Logger.error('Failed to get report note by date: $date', e, stack);
-      throw DatabaseException('Failed to get report note');
+      throw const DatabaseException('Failed to get report note');
     }
   }
 
@@ -67,7 +67,7 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
 
     } catch (e, stack) {
       Logger.error('Failed to save report note', e, stack);
-      throw DatabaseException('Failed to save report note');
+      throw const DatabaseException('Failed to save report note');
     }
   }
 
@@ -77,7 +77,7 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
       await _dao.deleteNote(id);
     } catch (e, stack) {
       Logger.error('Failed to delete report note: $id', e, stack);
-      throw DatabaseException('Failed to delete report note');
+      throw const DatabaseException('Failed to delete report note');
     }
   }
 

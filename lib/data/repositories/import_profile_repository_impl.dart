@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/domain/entities/import_profile.dart' as domain;
 import 'package:ledger_zero/domain/repositories/import_profile_repository.dart';

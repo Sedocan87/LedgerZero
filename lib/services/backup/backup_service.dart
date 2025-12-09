@@ -11,7 +11,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pointycastle/export.dart';
 import 'package:archive/archive.dart';
-import 'package:ledger_zero/core/errors/exceptions.dart';
 
 class BackupService {
   final AppDatabase _db;
@@ -77,7 +76,7 @@ class BackupService {
       // But typically we should check if enabled.
       // For now, we attempt if the service is non-null, catching errors.
       try {
-        await _googleDriveService!.uploadBackup(backupFile, filename);
+        await _googleDriveService.uploadBackup(backupFile, filename);
       } catch (e) {
         // Log or rethrow depending on if we want partial success
         // Assuming we want to try both if possible, or just one.
@@ -88,7 +87,7 @@ class BackupService {
     // Try iCloud
     if (_iCloudDriveService != null) {
       try {
-        await _iCloudDriveService!.uploadBackup(backupFile, filename);
+        await _iCloudDriveService.uploadBackup(backupFile, filename);
       } catch (e) {
          // handle error
       }
@@ -126,10 +125,6 @@ class BackupService {
     // 5a. Compress (GZIP)
     // Compression before encryption is crucial for size reduction
     final compressedBytes = const GZipEncoder().encode(inputBytes);
-
-    if (compressedBytes == null) {
-      throw DatabaseException('Failed to compress backup');
-    }
 
     // 6. Encrypt
     final encryptedBytes = cipher.process(Uint8List.fromList(compressedBytes));

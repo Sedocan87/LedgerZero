@@ -34,7 +34,7 @@ void main() {
     test('parses Wells Fargo format (Date,Amount,*,*,Description)', () async {
       const csv = '01/05/2023,-45.00,*,,"GAS STATION"\n'; // Headerless or with headers
       // Adding headers for generic parser compatibility (parser expects headers)
-      final csvWithHeaders = 'Date,Amount,X,Y,Description\n$csv';
+      const csvWithHeaders = 'Date,Amount,X,Y,Description\n$csv';
 
       final file = PlatformFile(name: 'wf.csv', size: csvWithHeaders.length, bytes: Uint8List.fromList(utf8.encode(csvWithHeaders)));
 

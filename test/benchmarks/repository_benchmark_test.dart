@@ -37,7 +37,7 @@ void main() {
 
     stopwatch.stop();
     // ignore: avoid_print
-    print('Benchmark - Insert 1000 Accounts: ${stopwatch.elapsedMilliseconds}ms');
+    // print('Benchmark - Insert 1000 Accounts: ${stopwatch.elapsedMilliseconds}ms');
 
     // Expect reasonable performance (avg < 2ms per insert including overhead)
     // 1000 items in < 2000ms
@@ -59,7 +59,7 @@ void main() {
     stopwatch.stop();
 
     // ignore: avoid_print
-    print('Benchmark - Read 1000 Accounts: ${stopwatch.elapsedMilliseconds}ms');
+    // print('Benchmark - Read 1000 Accounts: ${stopwatch.elapsedMilliseconds}ms');
 
     expect(accounts.length, 1000);
     // Read should be fast
@@ -89,7 +89,7 @@ void main() {
 
     stopwatch.stop();
     // ignore: avoid_print
-    print('Benchmark - Update 1000 Accounts: ${stopwatch.elapsedMilliseconds}ms');
+    // print('Benchmark - Update 1000 Accounts: ${stopwatch.elapsedMilliseconds}ms');
 
     expect(stopwatch.elapsedMilliseconds, lessThan(3000)); // Updates can be slightly slower
   });

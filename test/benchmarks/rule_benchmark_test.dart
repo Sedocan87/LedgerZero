@@ -6,7 +6,6 @@ import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/services/rules/rule_matching_service.dart';
-import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 
@@ -62,19 +61,19 @@ void main() {
        );
     });
 
-    print('Starting benchmark with 50,000 transactions and 50 rules...');
+    // print('Starting benchmark with 50,000 transactions and 50 rules...');
     final stopwatch = Stopwatch()..start();
 
     final result = await service.applyRules(transactions, rules);
 
     stopwatch.stop();
-    print('Benchmark complete in ${stopwatch.elapsedMilliseconds}ms');
+    // print('Benchmark complete in ${stopwatch.elapsedMilliseconds}ms');
 
     // Simple assertion to ensure it actually ran
     expect(result.length, 50000);
     // Verify some matched
     final matchedCount = result.where((t) => t.memo == 'Matched').length;
-    print('Matched transactions: $matchedCount');
+    // print('Matched transactions: $matchedCount');
     expect(matchedCount, greaterThan(0));
   });
 }
