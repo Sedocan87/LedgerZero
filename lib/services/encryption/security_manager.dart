@@ -20,7 +20,15 @@ class SecurityManager {
   SecurityManager({
     FlutterSecureStorage? storage,
     LocalAuthentication? localAuth,
-  })  : _storage = storage ?? const FlutterSecureStorage(),
+  })  : _storage = storage ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(
+                encryptedSharedPreferences: true,
+              ),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock,
+              ),
+            ),
         _localAuth = localAuth ?? LocalAuthentication();
 
   static const _keyStorageKey = 'db_encryption_key';
