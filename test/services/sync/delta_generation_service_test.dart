@@ -8,7 +8,6 @@ import 'package:drift/native.dart';
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:uuid/uuid.dart';
 import 'dart:io';
 
 // Mock dependencies
@@ -57,7 +56,7 @@ void main() {
   group('DeltaGenerationService', () {
     test('INSERT action generates correct delta', () async {
       // 1. Simulate an INSERT change
-      final id = 'test-id-1';
+      const id = 'test-id-1';
       await database.accounts.insertOne(AccountsCompanion.insert(
         id: id,
         name: 'Test Account',
@@ -85,7 +84,7 @@ void main() {
     });
 
     test('UPDATE action generates correct delta', () async {
-      final id = 'test-id-2';
+      const id = 'test-id-2';
       await database.accounts.insertOne(AccountsCompanion.insert(
         id: id,
         name: 'Original Name',
@@ -97,7 +96,7 @@ void main() {
 
       // Update
       await database.accounts.update().replace(
-        AccountsCompanion(
+        const AccountsCompanion(
            id: Value(id),
            name: Value('Updated Name'),
            type: Value('checking'),
@@ -120,7 +119,7 @@ void main() {
     });
 
     test('DELETE action generates correct delta', () async {
-      final id = 'test-id-3';
+      const id = 'test-id-3';
       await database.accounts.insertOne(AccountsCompanion.insert(
         id: id,
         name: 'To Delete',
@@ -143,7 +142,7 @@ void main() {
     });
 
     test('Squashes INSERT + UPDATE into INSERT', () async {
-       final id = 'test-id-4';
+       const id = 'test-id-4';
 
        // Insert
        await database.accounts.insertOne(AccountsCompanion.insert(
@@ -154,7 +153,7 @@ void main() {
 
        // Update immediately
        await database.accounts.update().replace(
-         AccountsCompanion(
+         const AccountsCompanion(
            id: Value(id),
            name: Value('Updated'),
            type: Value('checking'),
@@ -177,7 +176,7 @@ void main() {
     });
 
     test('Squashes INSERT + DELETE into Nothing', () async {
-       final id = 'test-id-5';
+       const id = 'test-id-5';
 
        // Insert
        await database.accounts.insertOne(AccountsCompanion.insert(
