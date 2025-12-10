@@ -239,7 +239,9 @@ class CsvImportService {
 
     for (final row in data.rows) {
       try {
-        if (row.length <= dateIndex || row.length <= amountIndex) continue;
+        if (row.length <= dateIndex || row.length <= amountIndex) {
+          continue;
+        }
 
         final dateStr = row[dateIndex].toString();
         final amountStr = row[amountIndex].toString();

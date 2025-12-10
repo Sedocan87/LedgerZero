@@ -10,7 +10,9 @@ class NetworkErrorHandler {
   }
 
   static SyncException handle(dynamic error) {
-    if (error is SyncException) return error;
+    if (error is SyncException) {
+      return error;
+    }
 
     // Handle specific exceptions if needed (e.g., from Dio or HTTP)
     // For now, wrap generic errors

@@ -17,7 +17,9 @@ class TutorialNotifier extends StateNotifier<Set<String>> {
   }
 
   Future<void> completeTutorial(String tutorialId) async {
-    if (state.contains(tutorialId)) return;
+    if (state.contains(tutorialId)) {
+      return;
+    }
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('$_prefix$tutorialId', true);

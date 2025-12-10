@@ -75,8 +75,8 @@ void main() {
 
     final size = await backupFile.length();
 
-    print('Backup of 10k transactions took ${stopwatch.elapsedMilliseconds}ms');
-    print('Backup file size: ${size / 1024} KB');
+    // print('Backup of 10k transactions took ${stopwatch.elapsedMilliseconds}ms');
+    // print('Backup file size: ${size / 1024} KB');
 
     expect(backupFile.existsSync(), true);
     expect(size, greaterThan(0));

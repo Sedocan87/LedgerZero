@@ -16,7 +16,9 @@ class TutorialController {
   }) {
     // Check if tutorial is already completed
     final completed = ref.read(tutorialProvider).contains(tutorialId);
-    if (completed) return;
+    if (completed) {
+      return;
+    }
 
     OverlayEntry? entry;
 

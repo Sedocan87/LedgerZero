@@ -37,7 +37,9 @@ class LocalErrorReportingService {
   }
 
   Future<Directory> get _directory async {
-    if (_documentsDirectory != null) return _documentsDirectory!;
+    if (_documentsDirectory != null) {
+      return _documentsDirectory!;
+    }
     final appDocDir = await getApplicationDocumentsDirectory();
     _documentsDirectory = Directory(path.join(appDocDir.path, _logDirName));
     return _documentsDirectory!;
@@ -144,7 +146,7 @@ class LocalErrorReportingService {
         await file.writeAsString(buffer.toString());
 
         // Also log to standard log
-        log(LogEntry(
+        await log(LogEntry(
           timestamp: DateTime.now(),
           level: LogLevel.error,
           message: 'Crash Report Generated: ${file.path}',
@@ -194,7 +196,9 @@ class LocalErrorReportingService {
       final List<LogEntry> logs = [];
       try {
         final directory = await _directory;
-        if (!await directory.exists()) return [];
+        if (!await directory.exists()) {
+          return [];
+        }
 
         final files = await _getLogFiles(directory);
 
@@ -249,7 +253,9 @@ class LocalErrorReportingService {
 
   Future<List<File>> _getLogFiles(Directory directory) async {
     try {
-      if (!await directory.exists()) return [];
+      if (!await directory.exists()) {
+        return [];
+      }
 
       final entities = await directory.list().toList();
       final files = entities.whereType<File>().where((file) {

@@ -51,7 +51,9 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
   }
 
   Future<void> _importData() async {
-    if (_selectedFile == null) return;
+    if (_selectedFile == null) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;

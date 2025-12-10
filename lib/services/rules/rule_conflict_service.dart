@@ -16,7 +16,9 @@ class RuleConflict {
 class RuleConflictService {
   List<RuleConflict> detectConflicts(List<Rule> rules) {
     final conflicts = <RuleConflict>[];
-    if (rules.length < 2) return conflicts;
+    if (rules.length < 2) {
+      return conflicts;
+    }
 
     for (int i = 0; i < rules.length; i++) {
       for (int j = i + 1; j < rules.length; j++) {
@@ -36,8 +38,12 @@ class RuleConflictService {
   }
 
   bool _areConditionsIdentical(Rule ruleA, Rule ruleB) {
-    if (ruleA.matchLogic != ruleB.matchLogic) return false;
-    if (ruleA.conditions.length != ruleB.conditions.length) return false;
+    if (ruleA.matchLogic != ruleB.matchLogic) {
+      return false;
+    }
+    if (ruleA.conditions.length != ruleB.conditions.length) {
+      return false;
+    }
 
     // Naive check: does every condition in A exist in B?
     // This assumes strict equality of conditions.
@@ -46,7 +52,9 @@ class RuleConflictService {
           condB.type == condA.type &&
           condB.operator == condA.operator &&
           condB.value == condA.value);
-      if (!hasMatch) return false;
+      if (!hasMatch) {
+        return false;
+      }
     }
     return true;
   }

@@ -73,12 +73,12 @@ void main() {
           );
         }
       });
-      final insertTime = stopwatch.elapsedMilliseconds;
+      // final insertTime = stopwatch.elapsedMilliseconds;
       stopwatch.reset();
 
       // Read
       final accounts = await db.select(db.accounts).get();
-      final readTime = stopwatch.elapsedMilliseconds;
+      // final readTime = stopwatch.elapsedMilliseconds;
 
       expect(accounts.length, count);
 

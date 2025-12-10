@@ -1,12 +1,16 @@
 class StackTraceFormatter {
   static String format(StackTrace? stackTrace) {
-    if (stackTrace == null) return '';
+    if (stackTrace == null) {
+      return '';
+    }
 
     final lines = stackTrace.toString().split('\n');
     final formattedLines = <String>[];
 
     for (var line in lines) {
-      if (line.trim().isEmpty) continue;
+      if (line.trim().isEmpty) {
+        continue;
+      }
 
       // Filter out noise if needed, or just format
       // For now, let's keep it simple but extensible.

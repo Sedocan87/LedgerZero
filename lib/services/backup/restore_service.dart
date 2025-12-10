@@ -125,38 +125,60 @@ class RestoreService {
   Future<void> _ensureDependenciesExist(AppDatabase tempDb, Transaction tx) async {
     // 1. Account
  // accountId is usually not null
-     final accountExists = await (_db.select(_db.accounts)..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
-     if (accountExists == null) {
-        final account = await (tempDb.select(tempDb.accounts)..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
-        if (account != null) await _db.into(_db.accounts).insert(account);
-     }
+    final accountExists = await (_db.select(_db.accounts)
+          ..where((a) => a.id.equals(tx.accountId)))
+        .getSingleOrNull();
+    if (accountExists == null) {
+      final account = await (tempDb.select(tempDb.accounts)
+            ..where((a) => a.id.equals(tx.accountId)))
+          .getSingleOrNull();
+      if (account != null) {
+        await _db.into(_db.accounts).insert(account);
+      }
+    }
 
     // 2. Category
     if (tx.categoryId != null) {
-       final catExists = await (_db.select(_db.categories)..where((c) => c.id.equals(tx.categoryId!))).getSingleOrNull();
-       if (catExists == null) {
-          final cat = await (tempDb.select(tempDb.categories)..where((c) => c.id.equals(tx.categoryId!))).getSingleOrNull();
-          if (cat != null) {
-            // Also need CategoryGroup!
-            if (cat.categoryGroupId != null) {
-                final groupExists = await (_db.select(_db.categoryGroups)..where((g) => g.id.equals(cat.categoryGroupId!))).getSingleOrNull();
-                if (groupExists == null) {
-                   final group = await (tempDb.select(tempDb.categoryGroups)..where((g) => g.id.equals(cat.categoryGroupId!))).getSingleOrNull();
-                   if (group != null) await _db.into(_db.categoryGroups).insert(group);
-                }
+      final catExists = await (_db.select(_db.categories)
+            ..where((c) => c.id.equals(tx.categoryId!)))
+          .getSingleOrNull();
+      if (catExists == null) {
+        final cat = await (tempDb.select(tempDb.categories)
+              ..where((c) => c.id.equals(tx.categoryId!)))
+            .getSingleOrNull();
+        if (cat != null) {
+          // Also need CategoryGroup!
+          if (cat.categoryGroupId != null) {
+            final groupExists = await (_db.select(_db.categoryGroups)
+                  ..where((g) => g.id.equals(cat.categoryGroupId!)))
+                .getSingleOrNull();
+            if (groupExists == null) {
+              final group = await (tempDb.select(tempDb.categoryGroups)
+                    ..where((g) => g.id.equals(cat.categoryGroupId!)))
+                  .getSingleOrNull();
+              if (group != null) {
+                await _db.into(_db.categoryGroups).insert(group);
+              }
             }
-            await _db.into(_db.categories).insert(cat);
           }
-       }
+          await _db.into(_db.categories).insert(cat);
+        }
+      }
     }
 
     // 3. Payee
     if (tx.payeeId != null) {
-       final payeeExists = await (_db.select(_db.payees)..where((p) => p.id.equals(tx.payeeId!))).getSingleOrNull();
-       if (payeeExists == null) {
-          final payee = await (tempDb.select(tempDb.payees)..where((p) => p.id.equals(tx.payeeId!))).getSingleOrNull();
-          if (payee != null) await _db.into(_db.payees).insert(payee);
-       }
+      final payeeExists = await (_db.select(_db.payees)
+            ..where((p) => p.id.equals(tx.payeeId!)))
+          .getSingleOrNull();
+      if (payeeExists == null) {
+        final payee = await (tempDb.select(tempDb.payees)
+              ..where((p) => p.id.equals(tx.payeeId!)))
+            .getSingleOrNull();
+        if (payee != null) {
+          await _db.into(_db.payees).insert(payee);
+        }
+      }
     }
   }
 
@@ -243,8 +265,12 @@ class RestoreService {
 
     final walFile = File('$dbPath-wal');
     final shmFile = File('$dbPath-shm');
-    if (await walFile.exists()) await walFile.delete();
-    if (await shmFile.exists()) await shmFile.delete();
+    if (await walFile.exists()) {
+      await walFile.delete();
+    }
+    if (await shmFile.exists()) {
+      await shmFile.delete();
+    }
   }
 }
 

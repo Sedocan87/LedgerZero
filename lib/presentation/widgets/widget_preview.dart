@@ -23,12 +23,12 @@ class WidgetPreview extends StatelessWidget {
         borderRadius: BorderRadius.circular(24), // iOS-like rounded corners
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       width: double.infinity,
       child: Column(

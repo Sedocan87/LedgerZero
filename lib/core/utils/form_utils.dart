@@ -15,7 +15,9 @@ class FormUtils {
       Element? firstErrorElement;
 
       void visit(Element element) {
-        if (firstErrorElement != null) return; // Found one, stop
+        if (firstErrorElement != null) {
+      return;
+    } // Found one, stop
 
         if (element.widget is FormField) {
           final FormFieldState state = (element as StatefulElement).state as FormFieldState;

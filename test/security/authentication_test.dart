@@ -41,7 +41,9 @@ void main() {
     return FutureBuilder<SharedPreferences>(
       future: SharedPreferences.getInstance(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
+        if (!snapshot.hasData) {
+          return const SizedBox();
+        }
 
         return ProviderScope(
           overrides: [
@@ -71,12 +73,15 @@ void main() {
     // Debug SnackBar if present
     final snackBarFinder = find.byType(SnackBar);
     if (snackBarFinder.evaluate().isNotEmpty) {
-       // Try to find text inside snackbar
-       final textFinder = find.descendant(of: snackBarFinder, matching: find.byType(Text));
-       if (textFinder.evaluate().isNotEmpty) {
-         final text = tester.widget<Text>(textFinder.first);
-         print('DEBUG: SnackBar detected with text: "${text.data}"');
-       }
+      // Try to find text inside snackbar
+      final textFinder = find.descendant(
+        of: snackBarFinder,
+        matching: find.byType(Text),
+      );
+      if (textFinder.evaluate().isNotEmpty) {
+        // final text = tester.widget<Text>(textFinder.first);
+        // print('DEBUG: SnackBar detected with text: "${text.data}"');
+      }
     }
 
     // Verify logic

@@ -35,26 +35,35 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final password = _passwordController.text;
     if (_isEncrypting) {
       if (password.isEmpty) {
+        if (!mounted) {
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please enter a password for encryption.')),
         );
         return;
       }
       if (password.length < 8) {
-         ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Password must be at least 8 characters long.')),
         );
         return;
       }
       if (password != _confirmPasswordController.text) {
+        if (!mounted) {
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Passwords do not match.')),
         );
         return;
       }
     } else {
-       // Warn about unencrypted backup
-       final confirm = await showDialog<bool>(
+      // Warn about unencrypted backup
+      final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Unencrypted Backup Warning'),
@@ -71,7 +80,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ],
         ),
       );
-      if (confirm != true) return;
+      if (confirm != true) {
+        return;
+      }
     }
 
     setState(() {
@@ -95,7 +106,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           }
         } catch (e) {
           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Cloud upload failed: $e')),
             );
           }
@@ -104,9 +115,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
       if (mounted) {
         // Use share_plus to export the file
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          subject: 'LedgerZero Backup',
+        await SharePlus.instance.share(
+          ShareParams(
+            subject: 'LedgerZero Backup',
+            files: [XFile(file.path)],
+          ),
         );
       }
     } catch (e) {
@@ -127,15 +140,22 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   Future<void> _restoreBackup() async {
     // 1. Pick File
     final result = await FilePicker.platform.pickFiles();
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
 
     final path = result.files.single.path;
-    if (path == null) return;
+    if (path == null) {
+      return;
+    }
     final file = File(path);
 
     // 2. Ask for password if needed (check extension or just ask)
     String? password;
     if (path.endsWith('.lzbk')) {
+      if (!mounted) {
+        return;
+      }
       password = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
@@ -157,9 +177,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ],
         ),
       );
-      if (password == null) return; // User cancelled
+      if (password == null) {
+        return; // User cancelled
+      }
     } else {
       // Confirm unencrypted restore
+      if (!mounted) {
+        return;
+      }
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -177,7 +202,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ],
         ),
       );
-      if (confirm != true) return;
+      if (confirm != true) {
+        return;
+      }
     }
 
     setState(() {
@@ -189,7 +216,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       await restoreService.restoreBackup(file, password: password);
 
       if (mounted) {
-        showDialog(
+        await showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
@@ -277,9 +304,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       subtitle: const Text('Save copy to configured cloud storage (Drive/iCloud)'),
                       value: _uploadToCloud,
                       onChanged: (value) {
-                         setState(() {
-                           _uploadToCloud = value;
-                         });
+                        setState(() {
+                          _uploadToCloud = value;
+                        });
                       },
                     ),
                     const SizedBox(height: 24),
@@ -301,7 +328,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               'Restore your database from a backup file. This will replace all current data.',
             ),
             const SizedBox(height: 16),
-             Card(
+            Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -328,15 +355,22 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   Future<void> _selectiveRestore() async {
     // 1. Pick File
     final result = await FilePicker.platform.pickFiles();
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
 
     final path = result.files.single.path;
-    if (path == null) return;
+    if (path == null) {
+      return;
+    }
     final file = File(path);
 
     // 2. Ask for password if needed
     String? password;
     if (path.endsWith('.lzbk')) {
+      if (!mounted) {
+        return;
+      }
       password = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
@@ -358,16 +392,23 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ],
         ),
       );
-      if (password == null) return;
+      if (password == null) {
+        return;
+      }
     }
 
     // 3. Pick Date Range
+    if (!mounted) {
+      return;
+    }
     final dateRange = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (dateRange == null) return;
+    if (dateRange == null) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -378,7 +419,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       await restoreService.selectiveRestore(file, dateRange.start, dateRange.end, password: password);
 
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transactions merged successfully.')),
         );
       }

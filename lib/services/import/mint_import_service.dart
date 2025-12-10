@@ -15,9 +15,15 @@ class MintImportService {
     final categoriesSet = <String>{};
 
     String? detectEol(String content) {
-      if (content.contains('\r\n')) return '\r\n';
-      if (content.contains('\n')) return '\n';
-      if (content.contains('\r')) return '\r';
+      if (content.contains('\r\n')) {
+        return '\r\n';
+      }
+      if (content.contains('\n')) {
+        return '\n';
+      }
+      if (content.contains('\r')) {
+        return '\r';
+      }
       return null;
     }
 
@@ -52,12 +58,24 @@ class MintImportService {
     final notesIdx = headers.indexOf('Notes');
 
     final missingColumns = <String>[];
-    if (dateIdx == -1) missingColumns.add('Date');
-    if (descIdx == -1) missingColumns.add('Description');
-    if (amountIdx == -1) missingColumns.add('Amount');
-    if (typeIdx == -1) missingColumns.add('Transaction Type');
-    if (catIdx == -1) missingColumns.add('Category');
-    if (accIdx == -1) missingColumns.add('Account Name');
+    if (dateIdx == -1) {
+      missingColumns.add('Date');
+    }
+    if (descIdx == -1) {
+      missingColumns.add('Description');
+    }
+    if (amountIdx == -1) {
+      missingColumns.add('Amount');
+    }
+    if (typeIdx == -1) {
+      missingColumns.add('Transaction Type');
+    }
+    if (catIdx == -1) {
+      missingColumns.add('Category');
+    }
+    if (accIdx == -1) {
+      missingColumns.add('Account Name');
+    }
 
     if (missingColumns.isNotEmpty) {
       throw Exception(
@@ -65,7 +83,9 @@ class MintImportService {
     }
 
     for (final row in dataRows) {
-      if (row.length < headers.length) continue;
+      if (row.length < headers.length) {
+        continue;
+      }
 
       try {
         // 1. Date

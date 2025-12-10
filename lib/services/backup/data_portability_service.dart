@@ -60,9 +60,11 @@ class DataPortabilityService {
 
     await file.writeAsString(jsonString);
 
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      text: 'LedgerZero Data Export (JSON)',
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'LedgerZero Data Export (JSON)',
+        files: [XFile(file.path)],
+      ),
     );
   }
 }

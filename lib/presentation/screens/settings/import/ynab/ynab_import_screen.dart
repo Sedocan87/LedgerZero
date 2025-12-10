@@ -210,9 +210,13 @@ class YnabImportScreen extends ConsumerWidget {
                         itemCount: data.categoryGroups.length,
                         itemBuilder: (context, index) {
                           final group = data.categoryGroups[index];
-                          final cats = data.categories.where((c) => c.groupId == group.id).toList();
+                          final cats = data.categories
+                              .where((c) => c.groupId == group.id)
+                              .toList();
 
-                          if (cats.isEmpty) return const SizedBox.shrink();
+                          if (cats.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
 
                           return ExpansionTile(
                             title: Text(group.name),
@@ -318,10 +322,11 @@ class YnabImportScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.check_circle, color: Colors.green, size: 80),
+            child:
+                const Icon(Icons.check_circle, color: Colors.green, size: 80),
           ),
           const SizedBox(height: 24),
           const Text(

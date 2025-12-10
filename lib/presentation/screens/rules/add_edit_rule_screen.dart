@@ -49,19 +49,19 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     if (widget.ruleId != null) {
       final rule = await ref.read(ruleRepositoryProvider).getRule(widget.ruleId!);
       if (rule != null) {
-        _nameController.text = rule.name;
+      _nameController.text = rule.name;
         _matchLogic = rule.matchLogic;
         _conditions = List.from(rule.conditions);
         _actions = List.from(rule.actions);
         _isActive = rule.isActive;
         _priority = rule.priority;
-      }
+    }
     } else {
         // For new rule, set priority to lowest (highest number)
         final rules = await ref.read(ruleRepositoryProvider).getRules();
         if (rules.isNotEmpty) {
-            _priority = rules.length;
-        }
+      _priority = rules.length;
+    }
     }
     setState(() {
       _isLoading = false;
@@ -116,13 +116,15 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
     if (_conditions.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one condition')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one condition')));
         return;
     }
     if (_actions.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one action')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one action')));
         return;
     }
 
@@ -138,22 +140,24 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
 
     try {
       if (widget.ruleId != null) {
-        await ref.read(ruleRepositoryProvider).updateRule(rule);
-      } else {
+      await ref.read(ruleRepositoryProvider).updateRule(rule);
+    } else {
         await ref.read(ruleRepositoryProvider).createRule(rule);
       }
       if (mounted) {
-        context.pop();
-      }
+      context.pop();
+    }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving rule: $e')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving rule: $e')));
+    }
     }
   }
 
   Future<void> _delete() async {
-      if (widget.ruleId == null) return;
+      if (widget.ruleId == null) {
+      return;
+    }
 
       final confirm = await showDialog<bool>(
           context: context,
@@ -169,7 +173,9 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
 
       if (confirm == true) {
           await ref.read(ruleRepositoryProvider).deleteRule(widget.ruleId!);
-          if (mounted) context.pop();
+          if (mounted) {
+      context.pop();
+    }
       }
   }
 

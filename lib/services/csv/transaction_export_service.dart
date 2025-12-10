@@ -65,10 +65,12 @@ class TransactionExportService {
     await file.writeAsString(csv);
 
     // Share the file
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      text: 'Exported Transactions',
-      subject: 'Transaction Export',
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Exported Transactions',
+        subject: 'Transaction Export',
+        files: [XFile(file.path)],
+      ),
     );
 
     return file.path;

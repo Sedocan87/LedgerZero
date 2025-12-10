@@ -14,7 +14,12 @@ class ReportExportService {
     final file = File('${dir.path}/$filename.csv');
     await file.writeAsString(csv);
 
-    await Share.shareXFiles([XFile(file.path)], text: 'Exported Report');
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Exported Report',
+        files: [XFile(file.path)],
+      ),
+    );
   }
 
   /// Generates a PDF report with a title, date, and a table of data.
@@ -84,7 +89,12 @@ class ReportExportService {
     final file = File('${dir.path}/$filename.pdf');
     await file.writeAsBytes(await pdf.save());
 
-    await Share.shareXFiles([XFile(file.path)], text: 'Exported Report PDF');
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Exported Report PDF',
+        files: [XFile(file.path)],
+      ),
+    );
   }
 
   Future<void> shareImage(Uint8List imageBytes, String filename) async {
@@ -92,6 +102,11 @@ class ReportExportService {
     final file = File('${dir.path}/$filename.png');
     await file.writeAsBytes(imageBytes);
 
-    await Share.shareXFiles([XFile(file.path)], text: 'Exported Chart Image');
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Exported Chart Image',
+        files: [XFile(file.path)],
+      ),
+    );
   }
 }

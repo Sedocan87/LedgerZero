@@ -66,8 +66,12 @@ class YnabDataMapper {
 
     // 1. Groups
     for (final yGroup in data.categoryGroups) {
-      if (yGroup.name == 'Internal Master Category') continue;
-      if (yGroup.isHidden) continue;
+      if (yGroup.name == 'Internal Master Category') {
+        continue;
+      }
+      if (yGroup.isHidden) {
+        continue;
+      }
 
       if (!groupNameMap.containsKey(yGroup.name)) {
         final groupId = const Uuid().v4();
@@ -99,15 +103,24 @@ class YnabDataMapper {
     }
 
     for (final yCat in data.categories) {
-       final sourceGroup = data.categoryGroups.firstWhere((g) => g.id == yCat.groupId, orElse: () => YnabCategoryGroup(id: '', name: ''));
-       if (sourceGroup.name.isEmpty) continue;
+      final sourceGroup = data.categoryGroups.firstWhere(
+        (g) => g.id == yCat.groupId,
+        orElse: () => YnabCategoryGroup(id: '', name: ''),
+      );
+      if (sourceGroup.name.isEmpty) {
+        continue;
+      }
 
-       if (yCat.name == 'Uncategorized' || yCat.name.startsWith('Inflow:')) continue;
+      if (yCat.name == 'Uncategorized' || yCat.name.startsWith('Inflow:')) {
+        continue;
+      }
 
-       final targetGroupId = groupNameMap[sourceGroup.name];
-       if (targetGroupId == null) continue;
+      final targetGroupId = groupNameMap[sourceGroup.name];
+      if (targetGroupId == null) {
+        continue;
+      }
 
-       final key = '${sourceGroup.name}:${yCat.name}';
+      final key = '${sourceGroup.name}:${yCat.name}';
 
        if (!catNameMap.containsKey(key)) {
          final catId = const Uuid().v4();
@@ -137,7 +150,9 @@ class YnabDataMapper {
     final accNameMap = {for (var a in existingAccounts) a.name: a.id};
 
     for (final yAcc in data.accounts) {
-      if (yAcc.isClosed && yAcc.balance == 0) continue;
+      if (yAcc.isClosed && yAcc.balance == 0) {
+        continue;
+      }
 
       String accId;
       if (accNameMap.containsKey(yAcc.name)) {
@@ -171,11 +186,15 @@ class YnabDataMapper {
     final payeeNameMap = {for (var p in existingPayees) p.name.toLowerCase(): p.id};
 
     Future<String?> getPayeeId(String? name) async {
-       if (name == null || name.isEmpty) return null;
-       final lower = name.toLowerCase();
-       if (payeeNameMap.containsKey(lower)) return payeeNameMap[lower]!;
+      if (name == null || name.isEmpty) {
+        return null;
+      }
+      final lower = name.toLowerCase();
+      if (payeeNameMap.containsKey(lower)) {
+        return payeeNameMap[lower]!;
+      }
 
-       final id = const Uuid().v4();
+      final id = const Uuid().v4();
        await _payeeRepo.createPayee(Payee(id: id, name: name, createdAt: DateTime.now()));
        payeeNameMap[lower] = id;
        return id;
@@ -184,10 +203,12 @@ class YnabDataMapper {
     final transactionsToInsert = <Transaction>[];
 
     for (final tx in data.transactions) {
-       final accId = accountMap[tx.accountId];
-       if (accId == null) continue;
+      final accId = accountMap[tx.accountId];
+      if (accId == null) {
+        continue;
+      }
 
-       final payeeId = await getPayeeId(tx.payeeName);
+      final payeeId = await getPayeeId(tx.payeeName);
 
        String? catId;
        if (tx.categoryGroupName != null && tx.categoryName != null) {
@@ -275,20 +296,28 @@ class YnabDataMapper {
       final payeeNameMap = {for (var p in existingPayees) p.name.toLowerCase(): p.id};
 
       Future<String?> getPayeeId(String? name) async {
-         if (name == null || name.isEmpty) return null;
-         final lower = name.toLowerCase();
-         if (payeeNameMap.containsKey(lower)) return payeeNameMap[lower]!;
-         final id = const Uuid().v4();
-         await _payeeRepo.createPayee(Payee(id: id, name: name, createdAt: DateTime.now()));
+        if (name == null || name.isEmpty) {
+          return null;
+        }
+        final lower = name.toLowerCase();
+        if (payeeNameMap.containsKey(lower)) {
+          return payeeNameMap[lower]!;
+        }
+        final id = const Uuid().v4();
+        await _payeeRepo.createPayee(
+          Payee(id: id, name: name, createdAt: DateTime.now()),
+        );
          payeeNameMap[lower] = id;
          return id;
       }
 
       for (final sch in data.scheduledTransactions) {
-         final accId = accountMap[sch.accountId];
-         if (accId == null) continue;
+        final accId = accountMap[sch.accountId];
+        if (accId == null) {
+          continue;
+        }
 
-         final payeeId = await getPayeeId(sch.payeeName);
+        final payeeId = await getPayeeId(sch.payeeName);
 
          String? catId;
          if (sch.categoryGroupName != null && sch.categoryName != null) {
@@ -316,12 +345,14 @@ class YnabDataMapper {
   }
 
   Future<void> _importBudgets(YnabImportData data, Map<String, String> categoryNameMap) async {
-     for (final entry in data.budgetEntries) {
-        final key = '${entry.categoryGroupName}:${entry.categoryName}';
-        final catId = categoryNameMap[key];
-        if (catId == null) continue;
+    for (final entry in data.budgetEntries) {
+      final key = '${entry.categoryGroupName}:${entry.categoryName}';
+      final catId = categoryNameMap[key];
+      if (catId == null) {
+        continue;
+      }
 
-        // Use DateFormat for string key
+      // Use DateFormat for string key
         final monthStr = DateFormat('yyyy-MM').format(entry.month);
 
         // Check if budget exists

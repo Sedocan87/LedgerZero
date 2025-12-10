@@ -119,7 +119,7 @@ void main() {
     // Verify delta file exists
     final pending = await localDeltaQueue.getPendingDeltas();
     expect(pending.length, equals(1));
-    print('Pending delta created: ${pending.first.path}');
+    // print('Pending delta created: ${pending.first.path}');
 
     // 4. Simulate App Crash/Restart
     // Dispose engine

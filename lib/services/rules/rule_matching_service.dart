@@ -38,17 +38,18 @@ class RuleMatchingService {
   /// Note: The original list is not modified.
   Future<List<Transaction>> applyRules(List<Transaction> transactions, List<Rule> rules) async {
     // Sort rules by priority (ascending: 0 is highest priority)
-    final sortedRules = List<Rule>.from(rules)..sort((a, b) => a.priority.compareTo(b.priority));
+    final sortedRules = List<Rule>.from(rules)
+      ..sort((a, b) => a.priority.compareTo(b.priority));
 
     final result = <Transaction>[];
     for (var transaction in transactions) {
-        var current = transaction;
-        for (final rule in sortedRules) {
-             if (rule.isActive && await _matches(current, rule)) {
-                 current = await _applyActions(current, rule.actions);
-             }
+      var current = transaction;
+      for (final rule in sortedRules) {
+        if (rule.isActive && await _matches(current, rule)) {
+          current = await _applyActions(current, rule.actions);
         }
-        result.add(current);
+      }
+      result.add(current);
     }
     return result;
   }
@@ -60,7 +61,11 @@ class RuleMatchingService {
     try {
         final allTransactions = await _transactionRepository.getAllTransactions();
         if (allTransactions.isEmpty) {
-            return RulePerformanceStats(processedCount: 0, modifiedCount: 0, durationMs: stopwatch.elapsedMilliseconds);
+          return RulePerformanceStats(
+            processedCount: 0,
+            modifiedCount: 0,
+            durationMs: stopwatch.elapsedMilliseconds,
+          );
         }
 
         final modifiedTransactions = <Transaction>[];
@@ -99,7 +104,9 @@ class RuleMatchingService {
   }
 
   Future<bool> _matches(Transaction transaction, Rule rule) async {
-    if (rule.conditions.isEmpty) return false;
+    if (rule.conditions.isEmpty) {
+      return false;
+    }
 
     if (rule.matchLogic == RuleMatchLogic.and) {
       for (final condition in rule.conditions) {
@@ -108,7 +115,8 @@ class RuleMatchingService {
         }
       }
       return true;
-    } else { // OR
+    } else {
+      // OR
       for (final condition in rule.conditions) {
         if (await _checkCondition(transaction, condition)) {
           return true;
@@ -118,7 +126,10 @@ class RuleMatchingService {
     }
   }
 
-  Future<bool> _checkCondition(Transaction transaction, RuleCondition condition) async {
+  Future<bool> _checkCondition(
+    Transaction transaction,
+    RuleCondition condition,
+  ) async {
     switch (condition.type) {
       case RuleConditionType.payee:
         return _checkPayeeCondition(transaction, condition);
@@ -126,70 +137,75 @@ class RuleMatchingService {
         return _checkAmountCondition(transaction, condition);
       case RuleConditionType.description:
         return _checkDescriptionCondition(transaction, condition);
+    }
+  }
+
+  Future<bool> _checkPayeeCondition(
+    Transaction transaction,
+    RuleCondition condition,
+  ) async {
+    // If the transaction already has a payee assigned, check the payee name.
+    if (transaction.payeeId != null) {
+      final payee = await _payeeRepository.getPayeeById(transaction.payeeId!);
+      if (payee != null) {
+        return _compareString(payee.name, condition.operator, condition.value);
+      }
+    }
+    return false;
+  }
+
+  bool _checkAmountCondition(Transaction transaction, RuleCondition condition) {
+    final amount = transaction.amount;
+    final conditionValue = double.tryParse(condition.value);
+    if (conditionValue == null) {
+      return false;
+    }
+
+    switch (condition.operator) {
+      case RuleConditionOperator.equals:
+        return amount == conditionValue;
+      case RuleConditionOperator.greaterThan:
+        return amount > conditionValue;
+      case RuleConditionOperator.lessThan:
+        return amount < conditionValue;
       default:
-        Logger.warning('Unknown rule condition type: ${condition.type}');
         return false;
     }
   }
 
-  Future<bool> _checkPayeeCondition(Transaction transaction, RuleCondition condition) async {
-      // If the transaction already has a payee assigned, check the payee name.
-      if (transaction.payeeId != null) {
-          final payee = await _payeeRepository.getPayeeById(transaction.payeeId!);
-          if (payee != null) {
-              return _compareString(payee.name, condition.operator, condition.value);
-          }
-      }
-      return false;
-  }
-
-  bool _checkAmountCondition(Transaction transaction, RuleCondition condition) {
-      final amount = transaction.amount;
-      final conditionValue = double.tryParse(condition.value);
-      if (conditionValue == null) return false;
-
-      switch (condition.operator) {
-          case RuleConditionOperator.equals:
-              return amount == conditionValue;
-          case RuleConditionOperator.greaterThan:
-              return amount > conditionValue;
-          case RuleConditionOperator.lessThan:
-              return amount < conditionValue;
-          default:
-              return false;
-      }
-  }
-
-  bool _checkDescriptionCondition(Transaction transaction, RuleCondition condition) {
-      final memo = transaction.memo ?? '';
-      return _compareString(memo, condition.operator, condition.value);
+  bool _checkDescriptionCondition(
+    Transaction transaction,
+    RuleCondition condition,
+  ) {
+    final memo = transaction.memo ?? '';
+    return _compareString(memo, condition.operator, condition.value);
   }
 
   bool _compareString(String input, RuleConditionOperator op, String value) {
-      final normalizedInput = input.toLowerCase();
-      final normalizedValue = value.toLowerCase();
+    final normalizedInput = input.toLowerCase();
+    final normalizedValue = value.toLowerCase();
 
-      switch (op) {
-          case RuleConditionOperator.equals:
-              return normalizedInput == normalizedValue;
-          case RuleConditionOperator.contains:
-              return normalizedInput.contains(normalizedValue);
-          case RuleConditionOperator.startsWith:
-              return normalizedInput.startsWith(normalizedValue);
-          case RuleConditionOperator.endsWith:
-              return normalizedInput.endsWith(normalizedValue);
-          case RuleConditionOperator.regex:
-              try {
-                  return RegExp(value, caseSensitive: false).hasMatch(input);
-              } catch (e) {
-                  Logger.error('Invalid regex in rule', e);
-                  return false;
-              }
-          case RuleConditionOperator.greaterThan:
-          case RuleConditionOperator.lessThan:
-            // These operators are not applicable for strings, or handle differently if needed
-            return false;
-      }
+    switch (op) {
+      case RuleConditionOperator.equals:
+        return normalizedInput == normalizedValue;
+      case RuleConditionOperator.contains:
+        return normalizedInput.contains(normalizedValue);
+      case RuleConditionOperator.startsWith:
+        return normalizedInput.startsWith(normalizedValue);
+      case RuleConditionOperator.endsWith:
+        return normalizedInput.endsWith(normalizedValue);
+      case RuleConditionOperator.regex:
+        try {
+          return RegExp(value, caseSensitive: false).hasMatch(input);
+        } catch (e) {
+          Logger.error('Invalid regex in rule', e);
+          return false;
+        }
+      case RuleConditionOperator.greaterThan:
+      case RuleConditionOperator.lessThan:
+        // These operators are not applicable for strings, or handle differently if needed
+        return false;
+    }
   }
 
   Future<Transaction> _applyActions(Transaction transaction, List<RuleAction> actions) async {
