@@ -99,14 +99,21 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     for (var header in headers) {
       final h = header.toLowerCase();
       if (_columnMapping['Date'] == null && (h.contains('date') || h == 'dt')) {
-        _columnMapping['Date'] = header;
-      } else if (_columnMapping['Amount'] == null && (h.contains('amount') || h.contains('value') || h == 'amt')) {
+      _columnMapping['Date'] = header;
+    } else if (_columnMapping['Amount'] == null &&
+          (h.contains('amount') || h.contains('value') || h == 'amt')) {
         _columnMapping['Amount'] = header;
-      } else if (_columnMapping['Payee'] == null && (h.contains('payee') || h.contains('description') || h.contains('merchant') || h.contains('desc'))) {
+      } else if (_columnMapping['Payee'] == null &&
+          (h.contains('payee') ||
+              h.contains('description') ||
+              h.contains('merchant') ||
+              h.contains('desc'))) {
         _columnMapping['Payee'] = header;
-      } else if (_columnMapping['Memo'] == null && (h.contains('memo') || h.contains('note') || h.contains('remark'))) {
+      } else if (_columnMapping['Memo'] == null &&
+          (h.contains('memo') || h.contains('note') || h.contains('remark'))) {
         _columnMapping['Memo'] = header;
-      } else if (_columnMapping['Category'] == null && (h.contains('category') || h.contains('cat'))) {
+      } else if (_columnMapping['Category'] == null &&
+          (h.contains('category') || h.contains('cat'))) {
         _columnMapping['Category'] = header;
       }
     }
@@ -114,23 +121,31 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   }
 
   void _autoDetectDateFormat() {
-    if (_csvData == null || _columnMapping['Date'] == null) return;
+    if (_csvData == null || _columnMapping['Date'] == null) {
+      return;
+    }
 
     final dateHeader = _columnMapping['Date']!;
     final dateIndex = _csvData!.headers.indexOf(dateHeader);
-    if (dateIndex == -1) return;
+    if (dateIndex == -1) {
+      return;
+    }
 
     // Check first few non-empty rows
     for (var row in _csvData!.rows.take(5)) {
-        if (row.length <= dateIndex) continue;
-        final val = row[dateIndex].toString();
-        // Try formats
-        for (var fmt in _dateFormats) {
-            try {
-                DateFormat(fmt).parse(val);
-                setState(() => _dateFormat = fmt);
-                return;
-            } catch (e) {}
+      if (row.length <= dateIndex) {
+      continue;
+    }
+      final val = row[dateIndex].toString();
+      // Try formats
+      for (var fmt in _dateFormats) {
+          try {
+            DateFormat(fmt).parse(val);
+            setState(() => _dateFormat = fmt);
+            return;
+          } catch (e) {
+            // Ignore
+          }
         }
     }
   }
@@ -194,20 +209,20 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       // Apply mappings if headers exist in current CSV
       if (_csvData != null) {
         if (profile.dateColumn != null && _csvData!.headers.contains(profile.dateColumn)) {
-          _columnMapping['Date'] = profile.dateColumn;
-        }
+      _columnMapping['Date'] = profile.dateColumn;
+    }
         if (profile.amountColumn != null && _csvData!.headers.contains(profile.amountColumn)) {
-          _columnMapping['Amount'] = profile.amountColumn;
-        }
+      _columnMapping['Amount'] = profile.amountColumn;
+    }
         if (profile.payeeColumn != null && _csvData!.headers.contains(profile.payeeColumn)) {
-          _columnMapping['Payee'] = profile.payeeColumn;
-        }
+      _columnMapping['Payee'] = profile.payeeColumn;
+    }
         if (profile.memoColumn != null && _csvData!.headers.contains(profile.memoColumn)) {
-          _columnMapping['Memo'] = profile.memoColumn;
-        }
+      _columnMapping['Memo'] = profile.memoColumn;
+    }
         if (profile.categoryColumn != null && _csvData!.headers.contains(profile.categoryColumn)) {
-          _columnMapping['Category'] = profile.categoryColumn;
-        }
+      _columnMapping['Category'] = profile.categoryColumn;
+    }
       }
     });
   }
@@ -227,8 +242,8 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 return profilesAsync.when(
                   data: (profiles) {
                     if (profiles.isEmpty) {
-                      return Center(child: Text(l10n.noTemplates));
-                    }
+      return Center(child: Text(l10n.noTemplates));
+    }
                     return ListView.builder(
                       shrinkWrap: true,
                       itemCount: profiles.length,
@@ -262,8 +277,8 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                                 ),
                               );
                               if (confirm == true) {
-                                await ref.read(importProfileRepositoryProvider).deleteProfile(profile.id);
-                              }
+      await ref.read(importProfileRepositoryProvider).deleteProfile(profile.id);
+    }
                             },
                           ),
                         );
@@ -444,11 +459,21 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             ..._columnMapping.keys.map((field) {
               // Localize field names
               String localizedField = field;
-              if (field == 'Date') localizedField = l10n.date;
-              if (field == 'Amount') localizedField = l10n.amount;
-              if (field == 'Payee') localizedField = l10n.payee;
-              if (field == 'Memo') localizedField = l10n.memo;
-              if (field == 'Category') localizedField = l10n.category;
+              if (field == 'Date') {
+      localizedField = l10n.date;
+    }
+              if (field == 'Amount') {
+      localizedField = l10n.amount;
+    }
+              if (field == 'Payee') {
+      localizedField = l10n.payee;
+    }
+              if (field == 'Memo') {
+      localizedField = l10n.memo;
+    }
+              if (field == 'Category') {
+      localizedField = l10n.category;
+    }
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
@@ -476,7 +501,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                         ],
                         onChanged: (v) => setState(() {
                             _columnMapping[field] = v;
-                            if (field == 'Date') _autoDetectDateFormat();
+                            if (field == 'Date') {
+      _autoDetectDateFormat();
+    }
                           }),
                       ),
                     ),
@@ -491,7 +518,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   }
 
   Widget _buildPreviewCard(ThemeData theme, AppLocalizations l10n) {
-    if (_csvData == null) return const SizedBox();
+    if (_csvData == null) {
+      return const SizedBox();
+    }
 
     final previewRows = _csvData!.rows.take(10).toList();
 
@@ -634,10 +663,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         }
       } catch (e) {
         if (mounted) {
-          _showError(l10n.failedToParseCsv(e.toString()));
-        }
+      _showError(l10n.failedToParseCsv(e.toString()));
+    }
       } finally {
-        if (mounted) setState(() => _isLoading = false);
+        if (mounted) {
+      setState(() => _isLoading = false);
+    }
       }
   }
 }

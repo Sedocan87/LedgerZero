@@ -84,6 +84,7 @@ class RulesScreen extends ConsumerWidget {
                   if (confirm == true && context.mounted) {
                       try {
                           // Show loading indicator
+                          // ignore: unawaited_futures
                           showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -107,6 +108,7 @@ class RulesScreen extends ConsumerWidget {
                       }
                   }
               } else if (value == 'suggest') {
+                  // ignore: unawaited_futures
                   showDialog(
                       context: context,
                       builder: (context) => const Center(child: CircularProgressIndicator()),
@@ -206,9 +208,15 @@ class RulesScreen extends ConsumerWidget {
                         updatedRules.add(rules[i].copyWith(priority: i));
                     }
 
-                    ref.read(ruleRepositoryProvider).reorderRules(updatedRules).catchError((e) {
-                       Logger.error('Failed to reorder rules', e);
-                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to reorder rules')));
+                    ref
+                        .read(ruleRepositoryProvider)
+                        .reorderRules(updatedRules)
+                        .catchError((e) {
+                      Logger.error('Failed to reorder rules', e);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to reorder rules')));
+                      }
                     });
                   },
                   itemBuilder: (context, index) {

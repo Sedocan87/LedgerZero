@@ -54,7 +54,9 @@ final databaseStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
 });
 
 String _formatBytes(int bytes) {
-  if (bytes <= 0) return '0 B';
+  if (bytes <= 0) {
+      return '0 B';
+    }
   const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
   var i = 0;
   double d = bytes.toDouble();

@@ -92,7 +92,7 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
                     return CheckboxListTile(
                       value: tx.isSelected,
                       onChanged: _isImporting ? null : (v) => _toggleSelection(index),
-                      tileColor: tx.isDuplicate ? Theme.of(context).colorScheme.errorContainer.withOpacity(0.3) : null,
+                      tileColor: tx.isDuplicate ? Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3) : null,
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -195,7 +195,9 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
 
     String? selectedAccountId = accounts.first.id;
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -227,7 +229,7 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
     );
 
     if (confirmed == true && selectedAccountId != null) {
-       _performImport(selectedTransactions, selectedAccountId!);
+       await _performImport(selectedTransactions, selectedAccountId!);
     }
   }
 

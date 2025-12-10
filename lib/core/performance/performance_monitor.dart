@@ -11,7 +11,9 @@ class PerformanceMonitor {
   PerformanceMonitor._internal();
 
   void startMonitoring() {
-    if (_isMonitoring) return;
+    if (_isMonitoring) {
+      return;
+    }
 
     // ignore: avoid_print
     print('Starting Performance Monitor...');
@@ -20,7 +22,9 @@ class PerformanceMonitor {
   }
 
   void stopMonitoring() {
-    if (!_isMonitoring) return;
+    if (!_isMonitoring) {
+      return;
+    }
 
     SchedulerBinding.instance.removeTimingsCallback(_onTimings);
     _isMonitoring = false;
@@ -32,7 +36,7 @@ class PerformanceMonitor {
       if (duration > 16) {
         // Log dropped frame (or slow frame)
         // We use a simplified log format to avoid spamming
-        Logger.w('Slow frame detected: ${duration}ms');
+        Logger.warning('Slow frame detected: ${duration}ms');
       }
     }
   }

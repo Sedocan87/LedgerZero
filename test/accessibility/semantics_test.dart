@@ -56,7 +56,7 @@ void main() {
 
     testWidgets('AppButton disabled semantics', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: AppButton.primary(
               label: 'Save',

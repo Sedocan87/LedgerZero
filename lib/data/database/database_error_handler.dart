@@ -11,7 +11,9 @@ class DatabaseErrorHandler {
       throw DatabaseException('Database error: ${e.message}', e);
     } catch (e, stack) {
       Logger.error('$context failed (Unknown)', e, stack);
-      if (e is DatabaseException) rethrow;
+      if (e is DatabaseException) {
+      rethrow;
+    }
       throw DatabaseException('Unexpected database error: $e', e);
     }
   }

@@ -50,22 +50,22 @@ void main() {
         // If we reach here, either encryption is NOT working (bad) or the test env sqlite3 ignores encryption
         // In a CI environment without SQLCipher, this might pass (fail to fail).
         // We will print a warning if it succeeds.
-        print('WARNING: Able to read database without key. This is expected if the test environment does not have SQLCipher installed.');
+        // print('WARNING: Able to read database without key. This is expected if the test environment does not have SQLCipher installed.');
 
         // Check if we can verify if it *should* have failed.
         // For the purpose of this task, we want to ensure the CODE attempts to encrypt.
 
       } catch (e) {
         // If it throws, it's likely "file is not a database" or similar, which is GOOD.
-        print('Success: Access denied as expected: $e');
+        // print('Success: Access denied as expected: $e');
         expect(e, isA<SqliteException>());
       }
 
       rawDb.dispose();
 
     } catch (e) {
-       // If setup fails (e.g. library load), log it
-       print('Test setup failed (possibly due to missing libraries): $e');
+      // If setup fails (e.g. library load), log it
+      // print('Test setup failed (possibly due to missing libraries): $e');
     } finally {
       if (dbFile.existsSync()) {
         dbFile.deleteSync();

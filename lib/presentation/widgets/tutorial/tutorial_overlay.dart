@@ -22,7 +22,9 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.steps.isEmpty) return const SizedBox.shrink();
+    if (widget.steps.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     final step = widget.steps[_currentStepIndex];
     final targetContext = step.targetKey?.currentContext;
@@ -103,7 +105,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )
@@ -166,7 +168,7 @@ class _HolePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.black.withOpacity(0.7);
+    final paint = Paint()..color = Colors.black.withValues(alpha: 0.7);
 
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));

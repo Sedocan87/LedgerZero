@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/screens/settings/widgets/settings_secti
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/data/database/database.dart';
 
@@ -123,7 +124,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    ref.read(settingsProvider.notifier).setCurrency(selected);
+                    unawaited(ref.read(settingsProvider.notifier).setCurrency(selected));
                   }
                 },
               ),
@@ -143,7 +144,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    ref.read(settingsProvider.notifier).setDateFormat(selected);
+                    unawaited(ref.read(settingsProvider.notifier).setDateFormat(selected));
                   }
                 },
               ),
@@ -164,7 +165,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    ref.read(settingsProvider.notifier).setNumberFormat(selected);
+                    unawaited(ref.read(settingsProvider.notifier).setNumberFormat(selected));
                   }
                 },
               ),
@@ -176,7 +177,6 @@ class SettingsScreen extends ConsumerWidget {
                   AppFirstDayOfWeek.sunday => l10n.sunday,
                   AppFirstDayOfWeek.monday => l10n.monday,
                   AppFirstDayOfWeek.saturday => l10n.saturday,
-                  _ => l10n.sunday,
                 }),
                 onTap: () async {
                   final selected = await showDialog<AppFirstDayOfWeek>(
@@ -191,7 +191,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    ref.read(settingsProvider.notifier).setFirstDayOfWeek(selected);
+                    unawaited(ref.read(settingsProvider.notifier).setFirstDayOfWeek(selected));
                   }
                 },
               ),
@@ -236,8 +236,9 @@ class SettingsScreen extends ConsumerWidget {
                 secondary: const Icon(Icons.animation),
                 title: const Text('Reduced Motion'), // TODO: l10n
                 value: themeState.reducedMotion,
-                onChanged: (value) =>
-                    ref.read(themeProvider.notifier).toggleReducedMotion(value),
+                onChanged: (value) {
+                  ref.read(themeProvider.notifier).toggleReducedMotion(value);
+                },
               ),
               // Language
               ListTile(
@@ -256,7 +257,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    ref.read(settingsProvider.notifier).setLanguage(selected);
+                    unawaited(ref.read(settingsProvider.notifier).setLanguage(selected));
                   }
                 },
               ),
@@ -290,7 +291,7 @@ class SettingsScreen extends ConsumerWidget {
                       );
 
                       if (selectedWrapper != null) {
-                         ref.read(settingsProvider.notifier).setDefaultAccountId(selectedWrapper.value);
+                         unawaited(ref.read(settingsProvider.notifier).setDefaultAccountId(selectedWrapper.value));
                       }
                     },
                   ),
@@ -326,7 +327,7 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                       );
                       if (selectedWrapper != null) {
-                         ref.read(settingsProvider.notifier).setDefaultCategoryId(selectedWrapper.value);
+                         unawaited(ref.read(settingsProvider.notifier).setDefaultCategoryId(selectedWrapper.value));
                       }
                     },
                   ),
@@ -345,19 +346,19 @@ class SettingsScreen extends ConsumerWidget {
                 secondary: const Icon(Icons.event_note),
                 title: Text(l10n.scheduledTransactionNotifications),
                 value: settings.scheduledTransactionNotifications,
-                onChanged: (value) => ref.read(settingsProvider.notifier).setScheduledTransactionNotifications(value),
+                onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setScheduledTransactionNotifications(value)),
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.warning_amber),
                 title: Text(l10n.budgetAlertNotifications),
                 value: settings.budgetAlertNotifications,
-                onChanged: (value) => ref.read(settingsProvider.notifier).setBudgetAlertNotifications(value),
+                onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setBudgetAlertNotifications(value)),
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.sync),
                 title: Text(l10n.syncStatusNotifications),
                 value: settings.syncStatusNotifications,
-                onChanged: (value) => ref.read(settingsProvider.notifier).setSyncStatusNotifications(value),
+                onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setSyncStatusNotifications(value)),
               ),
             ],
           ),

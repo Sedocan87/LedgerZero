@@ -140,13 +140,17 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
   }
 
   Future<void> startImport() async {
-    if (state.parsedData == null) return;
+    if (state.parsedData == null) {
+      return;
+    }
 
-    state = state.copyWith(currentStep: YnabImportStep.importing, isImporting: true, error: null);
+    state = state.copyWith(
+        currentStep: YnabImportStep.importing, isImporting: true, error: null);
 
     try {
       await _dataMapper.importData(state.parsedData!);
-      state = state.copyWith(currentStep: YnabImportStep.success, isImporting: false);
+      state = state.copyWith(
+          currentStep: YnabImportStep.success, isImporting: false);
     } catch (e) {
       state = state.copyWith(
         currentStep: YnabImportStep.preview, // Go back to preview on error

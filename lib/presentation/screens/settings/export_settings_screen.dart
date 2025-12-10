@@ -6,6 +6,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/presentation/widgets/filtered_export_dialog.dart';
+import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 
 class ExportSettingsScreen extends ConsumerStatefulWidget {
   const ExportSettingsScreen({super.key});
@@ -18,17 +19,17 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final backupScheduler = ref.watch(backupSchedulerProvider);
+    // final backupScheduler = ref.watch(backupSchedulerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.backupAndExport)),
+      appBar: AppBar(title: Text(l10n.backupAndRestore)),
       body: ListView(
         children: [
-          _buildSectionHeader(context, l10n.exportData),
+          _buildSectionHeader(context, l10n.export),
           ListTile(
             leading: const Icon(Icons.table_chart),
-            title: Text(l10n.exportTransactionsCsv),
-            subtitle: Text(l10n.exportTransactionsCsvSubtitle),
+            title: Text(l10n.exportToCsv),
+            subtitle: const Text('Export transactions to CSV'),
             onTap: () async {
               try {
                 final transactions = await ref.read(transactionRepositoryProvider).getAllTransactions();
@@ -51,8 +52,8 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.filter_list),
-            title: Text(l10n.exportFilteredTransactions),
-            subtitle: Text(l10n.exportFilteredTransactionsSubtitle),
+            title: const Text('Export Filtered Transactions'),
+            subtitle: const Text('Export specific transactions'),
             onTap: () {
               showDialog(
                 context: context,
@@ -62,8 +63,8 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.data_object),
-            title: Text(l10n.exportAllDataJson),
-            subtitle: Text(l10n.exportAllDataJsonSubtitle),
+            title: const Text('Export All Data (JSON)'),
+            subtitle: const Text('Full backup in JSON format'),
             onTap: () async {
               try {
                 await ref.read(dataPortabilityServiceProvider).exportAllDataToJson();
@@ -76,11 +77,11 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
           ),
 
           const Divider(),
-          _buildSectionHeader(context, l10n.backup),
+          _buildSectionHeader(context, 'Backup'),
           ListTile(
             leading: const Icon(Icons.save),
-            title: Text(l10n.createFullBackup),
-            subtitle: Text(l10n.createFullBackupSubtitle),
+            title: const Text('Create Full Backup'),
+            subtitle: const Text('Create a full database backup'),
             onTap: () async {
                try {
                  final path = await ref.read(backupServiceProvider).createBackup();
@@ -96,8 +97,8 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.restore),
-            title: Text(l10n.restoreBackup),
-            subtitle: Text(l10n.restoreBackupSubtitle),
+            title: const Text('Restore Backup'),
+            subtitle: const Text('Restore from a backup file'),
             onTap: () {
                // Restore logic involves picking a file, which RestoreService handles usually
                // For now just show a message or implement file picker if RestoreService requires path
@@ -114,14 +115,15 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
           // For now, let's assume we can implement a simple dialog.
           ListTile(
             leading: const Icon(Icons.schedule),
-            title: Text(l10n.backupFrequency),
-             subtitle: FutureBuilder<String?>(
-               future: ref.read(sharedPreferencesProvider).then((p) => p.getString('backup_frequency') ?? 'weekly'),
-               builder: (context, snapshot) {
-                 return Text(snapshot.data?.toUpperCase() ?? l10n.loading);
-               },
-             ),
-             onTap: () => _showFrequencyDialog(context, ref),
+            title: const Text('Backup Frequency'),
+            subtitle: Text(
+              ref
+                      .watch(sharedPreferencesProvider)
+                      .getString('backup_frequency')
+                      ?.toUpperCase() ??
+                  'WEEKLY',
+            ),
+            onTap: () => _showFrequencyDialog(context, ref),
           ),
         ],
       ),
@@ -142,20 +144,31 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
   }
 
   Future<void> _showFrequencyDialog(BuildContext context, WidgetRef ref) async {
-    final prefs = await ref.read(sharedPreferencesProvider);
-    final current = prefs.getString('backup_frequency') ?? 'weekly';
-
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
 
     final result = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
         title: const Text('Backup Frequency'),
         children: [
-          SimpleDialogOption(child: const Text('Daily'), onPressed: () => Navigator.pop(context, 'daily')),
-          SimpleDialogOption(child: const Text('Weekly'), onPressed: () => Navigator.pop(context, 'weekly')),
-          SimpleDialogOption(child: const Text('Monthly'), onPressed: () => Navigator.pop(context, 'monthly')),
-          SimpleDialogOption(child: const Text('Never'), onPressed: () => Navigator.pop(context, 'never')),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'daily'),
+            child: const Text('Daily'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'weekly'),
+            child: const Text('Weekly'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'monthly'),
+            child: const Text('Monthly'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'never'),
+            child: const Text('Never'),
+          ),
         ],
       ),
     );

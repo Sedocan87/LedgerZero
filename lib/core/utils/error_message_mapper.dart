@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class ErrorMessageMapper {
   static String map(BuildContext context, Object error) {

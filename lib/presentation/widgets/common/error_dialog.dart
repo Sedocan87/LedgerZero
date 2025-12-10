@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/core/utils/error_message_mapper.dart';
 import 'package:ledger_zero/presentation/widgets/common/platform_widget.dart';
 

@@ -13,7 +13,9 @@ class BackupScheduler {
 
   Future<void> checkBackupDue() async {
     final frequency = _prefs.getString(_backupFrequencyKey) ?? 'weekly'; // Default to weekly
-    if (frequency == 'never') return;
+    if (frequency == 'never') {
+      return;
+    }
 
     final lastBackupMs = _prefs.getInt(_lastBackupKey) ?? 0;
     // If no backup ever, treat as epoch 0 (1970), so it's definitely due.

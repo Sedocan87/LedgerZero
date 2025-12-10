@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/utils/log_level.dart';
 import 'package:ledger_zero/data/models/log_entry.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
@@ -51,15 +51,25 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
 
       final buffer = StringBuffer();
       for (var log in logs) {
-        buffer.writeln('[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()}: ${log.message}');
-        if (log.error != null) buffer.writeln('Error: ${log.error}');
-        if (log.stackTrace != null) buffer.writeln('Stack: ${log.stackTrace}');
+        buffer.writeln(
+            '[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()}: ${log.message}');
+        if (log.error != null) {
+          buffer.writeln('Error: ${log.error}');
+        }
+        if (log.stackTrace != null) {
+          buffer.writeln('Stack: ${log.stackTrace}');
+        }
         buffer.writeln('---');
       }
 
       await file.writeAsString(buffer.toString());
 
-      await Share.shareXFiles([XFile(file.path)], text: 'LedgerZero Logs');
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'LedgerZero Logs',
+          files: [XFile(file.path)],
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -40,7 +40,7 @@ void main() {
       }
 
       final enqueueTime = stopwatch.elapsedMilliseconds;
-      print('Enqueued $operationCount items in ${enqueueTime}ms');
+      // print('Enqueued $operationCount items in ${enqueueTime}ms');
 
       expect(enqueueTime, lessThan(10000), reason: 'Enqueueing should be reasonably fast');
 
@@ -48,7 +48,7 @@ void main() {
       stopwatch.reset();
       final pendingFiles = await queue.getPendingDeltas();
       final listTime = stopwatch.elapsedMilliseconds;
-      print('Listed $operationCount items in ${listTime}ms');
+      // print('Listed $operationCount items in ${listTime}ms');
 
       expect(pendingFiles.length, equals(operationCount));
       expect(listTime, lessThan(2000), reason: 'Listing should be fast');
@@ -61,7 +61,7 @@ void main() {
         await queue.markAsUploaded(file);
       }
       final processTime = stopwatch.elapsedMilliseconds;
-      print('Processed $operationCount items in ${processTime}ms');
+      // print('Processed $operationCount items in ${processTime}ms');
 
       expect(processTime, lessThan(15000), reason: 'Processing should be reasonably fast');
 

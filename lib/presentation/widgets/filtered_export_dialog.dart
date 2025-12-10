@@ -28,7 +28,7 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
     final categoriesAsync = ref.watch(categoryRepositoryProvider).watchAllCategories();
 
     return AlertDialog(
-      title: Text(l10n.exportFilteredTransactions),
+      title: const Text('Export Filtered Transactions'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -48,9 +48,15 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2100),
                       );
-                      if (picked != null) setState(() => _startDate = picked);
+                      if (picked != null) {
+                        setState(() => _startDate = picked);
+                      }
                     },
-                    child: Text(_startDate != null ? DateFormat.yMd().format(_startDate!) : l10n.startDate),
+                    child: Text(
+                      _startDate != null
+                          ? DateFormat.yMd().format(_startDate!)
+                          : 'Start Date',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -63,9 +69,15 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2100),
                       );
-                      if (picked != null) setState(() => _endDate = picked);
+                      if (picked != null) {
+                        setState(() => _endDate = picked);
+                      }
                     },
-                    child: Text(_endDate != null ? DateFormat.yMd().format(_endDate!) : l10n.endDate),
+                    child: Text(
+                      _endDate != null
+                          ? DateFormat.yMd().format(_endDate!)
+                          : l10n.endDate,
+                    ),
                   ),
                 ),
               ],
@@ -77,7 +89,9 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
             StreamBuilder(
               stream: accountsAsync,
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const AppLoadingIndicator();
+                if (!snapshot.hasData) {
+                  return const AppLoadingIndicator();
+                }
                 final accounts = snapshot.data!;
                 return Wrap(
                   spacing: 8,
@@ -107,9 +121,11 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
             StreamBuilder(
               stream: categoriesAsync,
               builder: (context, snapshot) {
-                 if (!snapshot.hasData) return const AppLoadingIndicator();
-                 final categories = snapshot.data!;
-                 // Just show a count or simplified selector if too many
+                if (!snapshot.hasData) {
+                  return const AppLoadingIndicator();
+                }
+                final categories = snapshot.data!;
+                // Just show a count or simplified selector if too many
                  if (categories.length > 10) {
                    return OutlinedButton(
                      onPressed: () {
@@ -191,10 +207,13 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 }

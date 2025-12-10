@@ -34,7 +34,9 @@ class RuleLearningService {
       final payeeId = entry.key;
       final categoryIds = entry.value;
 
-      if (categoryIds.length < 3) continue; // Need at least 3 transactions to form a pattern
+      if (categoryIds.length < 3) {
+        continue; // Need at least 3 transactions to form a pattern
+      }
 
       final total = categoryIds.length;
       final frequency = <String, int>{};

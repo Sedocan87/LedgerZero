@@ -123,7 +123,9 @@ class MintDataMapper {
        // Labels to Memo
        String memo = rawTx.notes;
        if (rawTx.labels.isNotEmpty) {
-         if (memo.isNotEmpty) memo += ' ';
+         if (memo.isNotEmpty) {
+           memo += ' ';
+         }
          memo += '[Tags: ${rawTx.labels}]';
        }
 

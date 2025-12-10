@@ -29,7 +29,12 @@ class RuleImportExportService {
       final file = File('${directory.path}/rules_export_${DateTime.now().millisecondsSinceEpoch}.json');
       await file.writeAsString(jsonString);
 
-      await Share.shareXFiles([XFile(file.path)], text: 'LedgerZero Rules Export');
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'LedgerZero Rules Export',
+          files: [XFile(file.path)],
+        ),
+      );
     } catch (e) {
       Logger.error('Error exporting rules', e);
       rethrow;

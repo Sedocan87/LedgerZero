@@ -27,9 +27,15 @@ class YnabImportService {
     final budgetEntries = <YnabBudgetEntry>[];
 
     String? detectEol(String content) {
-      if (content.contains('\r\n')) return '\r\n';
-      if (content.contains('\n')) return '\n';
-      if (content.contains('\r')) return '\r';
+      if (content.contains('\r\n')) {
+        return '\r\n';
+      }
+      if (content.contains('\n')) {
+        return '\n';
+      }
+      if (content.contains('\r')) {
+        return '\r';
+      }
       return null;
     }
 
@@ -57,11 +63,21 @@ class YnabImportService {
        final clearedIdx = headers.indexOf('Cleared');
 
        final missingColumns = <String>[];
-       if (accIdx == -1) missingColumns.add('Account');
-       if (dateIdx == -1) missingColumns.add('Date');
-       if (payeeIdx == -1) missingColumns.add('Payee');
-       if (outflowIdx == -1) missingColumns.add('Outflow');
-       if (inflowIdx == -1) missingColumns.add('Inflow');
+       if (accIdx == -1) {
+         missingColumns.add('Account');
+       }
+       if (dateIdx == -1) {
+         missingColumns.add('Date');
+       }
+       if (payeeIdx == -1) {
+         missingColumns.add('Payee');
+       }
+       if (outflowIdx == -1) {
+         missingColumns.add('Outflow');
+       }
+       if (inflowIdx == -1) {
+         missingColumns.add('Inflow');
+       }
 
        if (missingColumns.isNotEmpty) {
          throw Exception('Invalid YNAB Register CSV format: Missing required columns: ${missingColumns.join(', ')}');
@@ -72,7 +88,9 @@ class YnabImportService {
        final categoryKeys = <String>{}; // "Group|Category"
 
        for (final row in rows) {
-          if (row.length < headers.length) continue;
+          if (row.length < headers.length) {
+            continue;
+          }
 
           final accName = row[accIdx].toString();
           if (accountNames.add(accName)) {
@@ -142,8 +160,13 @@ class YnabImportService {
              final key = '$group|$category';
              if (categoryKeys.add(key)) {
                 // Determine if group exists
-                final grp = categoryGroups.firstWhere((g) => g.name == group, orElse: () => YnabCategoryGroup(id: group, name: group));
-                if (!categoryGroups.contains(grp)) categoryGroups.add(grp);
+                final grp = categoryGroups.firstWhere(
+                  (g) => g.name == group,
+                  orElse: () => YnabCategoryGroup(id: group, name: group),
+                );
+                if (!categoryGroups.contains(grp)) {
+                  categoryGroups.add(grp);
+                }
 
                 categories.add(YnabCategory(
                   id: key,
@@ -187,7 +210,9 @@ class YnabImportService {
 
        if (monthIdx != -1 && groupIdx != -1 && catIdx != -1 && budgetedIdx != -1) {
           for (final row in rows) {
-             if (row.length < headers.length) continue;
+             if (row.length < headers.length) {
+               continue;
+             }
 
              final monthStr = row[monthIdx].toString();
              DateTime month;
@@ -267,14 +292,15 @@ class YnabImportService {
     // 2. Find the data folder (usually data1-{GUID})
     String? dataFolderPath;
     await for (final entity in dir.list()) {
-      if (entity is Directory && path.basename(entity.path).startsWith('data')) {
+      if (entity is Directory &&
+          path.basename(entity.path).startsWith('data')) {
         dataFolderPath = entity.path;
         break;
       }
     }
 
     if (dataFolderPath == null) {
-       throw Exception('Could not find data folder in YNAB4 bundle');
+      throw Exception('Could not find data folder in YNAB4 bundle');
     }
 
     // 3. Find the full budget file (Budget.yfull) inside the device folder
@@ -283,11 +309,11 @@ class YnabImportService {
 
     await for (final entity in dataDir.list()) {
       if (entity is Directory) {
-         final potentialFile = File(path.join(entity.path, 'Budget.yfull'));
-         if (await potentialFile.exists()) {
-           yfullFile = potentialFile;
-           break;
-         }
+        final potentialFile = File(path.join(entity.path, 'Budget.yfull'));
+        if (await potentialFile.exists()) {
+          yfullFile = potentialFile;
+          break;
+        }
       }
     }
 
@@ -324,7 +350,9 @@ class YnabImportService {
 
     // 1. Accounts
     for (final acc in (json['accounts'] as List? ?? [])) {
-       if (acc['isTombstone'] == true) continue;
+       if (acc['isTombstone'] == true) {
+         continue;
+       }
 
        accounts.add(YnabAccount(
          id: acc['entityId'],
@@ -338,7 +366,9 @@ class YnabImportService {
     // 2. Payees (Need to map Payee ID -> Name)
     final payeeMap = <String, String>{}; // id -> name
     for (final payee in (json['payees'] as List? ?? [])) {
-      if (payee['isTombstone'] == true) continue;
+      if (payee['isTombstone'] == true) {
+        continue;
+      }
       payeeMap[payee['entityId']] = payee['name'];
     }
 
@@ -346,7 +376,9 @@ class YnabImportService {
     final groupMap = <String, String>{}; // id -> name
 
     for (final master in (json['masterCategories'] as List? ?? [])) {
-      if (master['isTombstone'] == true) continue;
+      if (master['isTombstone'] == true) {
+        continue;
+      }
 
       final group = YnabCategoryGroup(
         id: master['entityId'],
@@ -360,7 +392,9 @@ class YnabImportService {
     final categoryMap = <String, YnabCategory>{}; // id -> Category
 
     for (final sub in (json['subCategories'] as List? ?? [])) {
-      if (sub['isTombstone'] == true) continue;
+      if (sub['isTombstone'] == true) {
+        continue;
+      }
 
       final category = YnabCategory(
         id: sub['entityId'],
@@ -376,7 +410,9 @@ class YnabImportService {
     // First, index splits by parentId
     final splitsByParent = <String, List<YnabSplitItem>>{};
     for (final split in (json['subTransactions'] as List? ?? [])) {
-       if (split['isTombstone'] == true) continue;
+       if (split['isTombstone'] == true) {
+         continue;
+       }
        final parentId = split['entitiesTransactionId'];
        final catId = split['categoryId'];
        final cat = categoryMap[catId];
@@ -393,7 +429,9 @@ class YnabImportService {
     }
 
     for (final tx in (json['transactions'] as List? ?? [])) {
-      if (tx['isTombstone'] == true) continue;
+      if (tx['isTombstone'] == true) {
+        continue;
+      }
 
       final catId = tx['categoryId'];
       final cat = categoryMap[catId];
@@ -420,7 +458,9 @@ class YnabImportService {
 
     // 5. Scheduled Transactions
     for (final sch in (json['scheduledTransactions'] as List? ?? [])) {
-      if (sch['isTombstone'] == true) continue;
+      if (sch['isTombstone'] == true) {
+        continue;
+      }
 
       final catId = sch['categoryId'];
       final cat = categoryMap[catId];
@@ -431,9 +471,13 @@ class YnabImportService {
       // Mapping: Daily, Weekly, EveryOtherWeek, TwiceAMonth, Every4Weeks, Monthly, EveryOtherMonth, Every3Months, Every4Months, TwiceAYear, Yearly, EveryOtherYear
       if (freqStr == 'Daily') {
         frequency = RecurrenceFrequency.daily;
-      } else if (freqStr == 'Weekly') frequency = RecurrenceFrequency.weekly;
-      else if (freqStr == 'Monthly') frequency = RecurrenceFrequency.monthly;
-      else if (freqStr == 'Yearly') frequency = RecurrenceFrequency.yearly;
+      } else if (freqStr == 'Weekly') {
+        frequency = RecurrenceFrequency.weekly;
+      } else if (freqStr == 'Monthly') {
+        frequency = RecurrenceFrequency.monthly;
+      } else if (freqStr == 'Yearly') {
+        frequency = RecurrenceFrequency.yearly;
+      }
       // Others map to nearest or monthly? LedgerZero supports daily, weekly, monthly, yearly.
 
       scheduledTransactions.add(YnabScheduledTransaction(
@@ -453,19 +497,26 @@ class YnabImportService {
     // 6. Budget entries (monthlyBudgets)
     // Structure: { month: "2023-01-01", monthlySubCategoryBudgets: [...] }
     for (final mb in (json['monthlyBudgets'] as List? ?? [])) {
-      if (mb['isTombstone'] == true) continue;
+      if (mb['isTombstone'] == true) {
+        continue;
+      }
 
       final monthStr = mb['month']; // "2023-01-01"
       final month = DateTime.parse(monthStr);
 
-      for (final subBudget in (mb['monthlySubCategoryBudgets'] as List? ?? [])) {
-         if (subBudget['isTombstone'] == true) continue;
+      for (final subBudget
+          in (mb['monthlySubCategoryBudgets'] as List? ?? [])) {
+        if (subBudget['isTombstone'] == true) {
+          continue;
+        }
 
-         final catId = subBudget['categoryId'];
-         final cat = categoryMap[catId];
-         if (cat == null) continue;
+        final catId = subBudget['categoryId'];
+        final cat = categoryMap[catId];
+        if (cat == null) {
+          continue;
+        }
 
-         final budgeted = (subBudget['budgeted'] as num).toDouble();
+        final budgeted = (subBudget['budgeted'] as num).toDouble();
 
          budgetEntries.add(YnabBudgetEntry(
            categoryName: cat.name,
@@ -509,12 +560,22 @@ class YnabImportService {
 
   /// Helper to map YNAB account types to LedgerZero AccountType
   static AccountType mapAccountType(String ynabType) {
-      final normalized = ynabType.toLowerCase().trim();
-      if (normalized.contains('checking')) return AccountType.checking;
-      if (normalized.contains('saving')) return AccountType.savings;
-      if (normalized.contains('credit')) return AccountType.credit;
-      if (normalized.contains('card')) return AccountType.credit;
-      if (normalized.contains('cash')) return AccountType.cash;
-      return AccountType.checking; // Default
+    final normalized = ynabType.toLowerCase().trim();
+    if (normalized.contains('checking')) {
+      return AccountType.checking;
+    }
+    if (normalized.contains('saving')) {
+      return AccountType.savings;
+    }
+    if (normalized.contains('credit')) {
+      return AccountType.credit;
+    }
+    if (normalized.contains('card')) {
+      return AccountType.credit;
+    }
+    if (normalized.contains('cash')) {
+      return AccountType.cash;
+    }
+    return AccountType.checking; // Default
   }
 }
