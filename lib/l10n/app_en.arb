@@ -591,5 +591,10 @@
   "logLevelDebug": "DEBUG",
   "logLevelInfo": "INFO",
   "logLevelWarning": "WARNING",
-  "logLevelError": "ERROR"
+  "logLevelError": "ERROR",
+  "incomeAndSalaries": "Income & Salaries",
+  "accessibility": "Accessibility",
+  "reducedMotion": "Reduced Motion",
+  "exportCsv": "Export CSV",
+  "addSplit": "Add Split"
 }

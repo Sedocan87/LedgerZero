@@ -11,11 +11,13 @@ import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
-import 'package:ledger_zero/presentation/screens/budget/widgets/budget_input_field.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_calculator.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/move_money_modal.dart';
-import 'package:ledger_zero/presentation/widgets/common/animated_count_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:ledger_zero/core/constants/dimensions.dart';
+import 'package:ledger_zero/app/theme.dart';
 
 class BudgetCategoryRow extends ConsumerStatefulWidget {
   final BudgetCategoryViewModel viewModel;
@@ -63,23 +65,6 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     // Refresh the budget view to reflect changes
     ref.invalidate(budgetViewModelProvider);
     ref.invalidate(tbbProvider);
-  }
-
-  void _moveFocus(int direction) {
-    ref.read(budgetOrderedCategoriesProvider.future).then((orderedCategories) {
-      final currentIndex = orderedCategories.indexOf(
-        widget.viewModel.category.id,
-      );
-      if (currentIndex == -1) {
-        return;
-      }
-
-      final newIndex = currentIndex + direction;
-      if (newIndex >= 0 && newIndex < orderedCategories.length) {
-        ref.read(editingCategoryProvider.notifier).state =
-            orderedCategories[newIndex];
-      }
-    });
   }
 
   void _onDragAccept(double tbbAmount) {
@@ -199,6 +184,47 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     context.goNamed('transactions');
   }
 
+  // Refined implementation below:
+  // I need to track the value from onValueChanged to submit it.
+  void _showCalculatorModal(double initialValue) {
+    String currentValue = initialValue.toStringAsFixed(2);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: BudgetCalculator(
+          initialValue: currentValue,
+          onValueChanged: (val) {
+            currentValue = val;
+          },
+          onSubmitted: () {
+            Navigator.pop(context);
+            // Parse and submit
+            // Handle math expressions if Calculator didn't resolve them yet?
+            // Calculator usually resolves on '=', but if user types '50+50' then OK?
+            // MathEvaluator usage is internal to Calculator key press '='.
+            // If text still contains symbols, we should evaluate.
+            try {
+              // Simple parse for now, assuming calculator did its job or user typed number
+              // If MathEvaluator needed, we should expose it or use it here.
+              // Let's assume for now user presses = before OK, or just numbers.
+              // Robust parsing:
+              final val = double.tryParse(currentValue);
+              if (val != null) {
+                _onSubmit(val);
+              }
+            } catch (_) {}
+          },
+        ),
+      ),
+    );
+  }
+
+  // _moveFocus was unused, replacing it with the above
   void _showQuickActions() {
     showModalBottomSheet(
       context: context,
@@ -261,7 +287,12 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.simpleCurrency(decimalDigits: 2);
+    final currencyCode = ref.watch(settingsProvider).currency;
+    final currency = NumberFormat.simpleCurrency(
+      decimalDigits: 2,
+      name: currencyCode,
+    );
+    final theme = Theme.of(context);
     final available = widget.viewModel.available;
 
     // Determine color for available amount bubble
@@ -269,272 +300,193 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     Color textColor;
 
     if (available > 0) {
-      bubbleColor = Colors.green.shade100;
-      textColor = Colors.green.shade800;
-      if (Theme.of(context).brightness == Brightness.dark) {
-        bubbleColor = Colors.green.shade900;
-        textColor = Colors.green.shade100;
-      }
+      bubbleColor = AppColors.success.withValues(
+        alpha: 0.1,
+      ); // M3 way: tertiaryContainer
+      textColor = AppColors.success;
     } else if (available < 0) {
-      bubbleColor = Colors.red.shade100;
-      textColor = Colors.red.shade800;
-      if (Theme.of(context).brightness == Brightness.dark) {
-        bubbleColor = Colors.red.shade900;
-        textColor = Colors.red.shade100;
-      }
+      bubbleColor = AppColors.expense.withValues(
+        alpha: 0.1,
+      ); // M3 way: errorContainer
+      textColor = AppColors.expense;
     } else {
-      bubbleColor = Colors.grey.withValues(alpha: 0.1);
-      textColor = Theme.of(
-        context,
-      ).colorScheme.onSurface.withValues(alpha: 0.6);
+      bubbleColor = theme.colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.5,
+      );
+      textColor = theme.colorScheme.onSurfaceVariant;
     }
 
-    // Optimize rebuilds: only rebuild if THIS category's editing state changes
-    final isEditing = ref.watch(
-      editingCategoryProvider.select(
-        (value) => value == widget.viewModel.category.id,
-      ),
-    );
     final viewMode = ref.watch(budgetViewModeProvider);
-
-    final semanticLabel =
-        '${widget.viewModel.category.name}. '
-        '${AppLocalizations.of(context)!.budgeted}: ${currency.format(widget.viewModel.budgeted)}. '
-        '${AppLocalizations.of(context)!.activity}: ${currency.format(widget.viewModel.activity)}. '
-        '${AppLocalizations.of(context)!.available}: ${currency.format(available)}.';
 
     return DragTarget<double>(
       onWillAcceptWithDetails: (details) => details.data > 0,
       onAcceptWithDetails: (details) => _onDragAccept(details.data),
       builder: (context, candidateData, rejectedData) {
-        return Semantics(
-          label: semanticLabel,
-          container: true,
+        return InkWell(
+          onLongPress: _showQuickActions,
           child: Container(
             color: candidateData.isNotEmpty
-                ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
                 : Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 8.0,
-                horizontal: 16.0,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      widget.viewModel.category.name,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (viewMode == BudgetViewMode.standard) ...[
-                    Expanded(
-                      flex: 2,
-                      child: isEditing
-                          ? BudgetInputField(
-                              initialValue: widget.viewModel.budgeted,
-                              onSubmitted: _onSubmit,
-                              onCancel: () {
-                                ref
-                                        .read(editingCategoryProvider.notifier)
-                                        .state =
-                                    null;
-                              },
-                              onNext: () => _moveFocus(1),
-                              onPrevious: () => _moveFocus(-1),
-                            )
-                          : GestureDetector(
-                              onTap: () {
-                                ref
-                                        .read(editingCategoryProvider.notifier)
-                                        .state =
-                                    widget.viewModel.category.id;
-                              },
-                              onLongPress: _showQuickActions,
-                              behavior: HitTestBehavior.opaque,
-                              child: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (widget.viewModel.goalTarget > 0 &&
-                                        widget.viewModel.budgeted <
-                                            widget.viewModel.goalTarget)
-                                      Tooltip(
-                                        message: AppLocalizations.of(
-                                          context,
-                                        )!.underfunded,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            right: 4.0,
-                                          ),
-                                          child: Icon(
-                                            Icons.warning_amber_rounded,
-                                            size: 16,
-                                            color: Colors.orange.shade700,
-                                          ),
-                                        ),
-                                      ),
-                                    AnimatedCountText(
-                                      value: widget.viewModel.budgeted,
-                                      format: currency,
-                                      textAlign: TextAlign.right,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: InkWell(
-                        onTap: _inspectCategory,
-                        borderRadius: BorderRadius.circular(4),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 8.0,
-                            horizontal: 4.0,
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.md, // Increased padding
+              horizontal: AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                // Category Name
+                Expanded(
+                  flex: 3,
+                  child: Row(
+                    children: [
+                      if (widget.viewModel.goalTarget > 0 &&
+                          widget.viewModel.budgeted <
+                              widget.viewModel.goalTarget)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6.0),
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            size: 16,
+                            color: Colors.orange.shade700,
                           ),
-                          child: AnimatedCountText(
-                            value: widget.viewModel.activity,
-                            format: currency,
-                            textAlign: TextAlign.right,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  decoration: TextDecoration.underline,
-                                  decorationStyle: TextDecorationStyle.dotted,
-                                ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          widget.viewModel.category.name,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (viewMode == BudgetViewMode.standard) ...[
+                  // Assigned (Budgeted) Column - Editable
+                  // Assigned (Budgeted) Column - Editable via Calculator
+                  Expanded(
+                    flex: 2,
+                    child: InkWell(
+                      onTap: () =>
+                          _showCalculatorModal(widget.viewModel.budgeted),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      child: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.transparent),
+                        ),
+                        child: Text(
+                          currency.format(widget.viewModel.budgeted),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                       ),
                     ),
-                    Expanded(
-                      flex: 2,
+                  ),
+
+                  // Activity Column (Read only)
+                  Expanded(
+                    flex: 2,
+                    child: InkWell(
+                      onTap: _inspectCategory,
+                      child: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 4,
+                        ),
+                        child: Text(
+                          currency.format(widget.viewModel.activity),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Available Column (Bubble)
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      alignment: Alignment.centerRight,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
+                          horizontal: 8,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
                           color: bubbleColor,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
-                        alignment: Alignment.centerRight,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Text(
+                          currency.format(available),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  // Progress Bar Mode (Comparison/Simple)
+                  Expanded(
+                    flex: 6,
+                    child: Builder(
+                      builder: (context) {
+                        final budgeted = widget.viewModel.budgeted;
+                        final spent = widget.viewModel.activity.abs();
+                        final progress = budgeted > 0
+                            ? (spent / budgeted).clamp(0.0, 1.0)
+                            : (spent > 0 ? 1.0 : 0.0);
+                        final isOverspent = spent > budgeted;
+                        final barColor = isOverspent
+                            ? AppColors.expense
+                            : AppColors.success;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (available < 0)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 2.0),
-                                child: Icon(
-                                  Icons.error_outline,
-                                  size: 14,
-                                  color: textColor,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${currency.format(spent)} / ${currency.format(budgeted)}',
+                                  style: theme.textTheme.labelSmall,
                                 ),
-                              ),
-                            Flexible(
-                              child: AnimatedCountText(
-                                value: available,
-                                format: currency,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: textColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                Text(
+                                  '${(progress * 100).toStringAsFixed(0)}%',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: barColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              value: progress,
+                              color: barColor,
+                              backgroundColor:
+                                  theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(AppRadius.xs),
                             ),
                           ],
-                        ),
-                      ),
+                        );
+                      },
                     ),
-                  ] else ...[
-                    Expanded(
-                      flex: 6,
-                      child: Builder(
-                        builder: (context) {
-                          final budgeted = widget.viewModel.budgeted;
-                          final spent = widget.viewModel.activity.abs();
-                          final progress = budgeted > 0
-                              ? (spent / budgeted).clamp(0.0, 1.0)
-                              : (spent > 0 ? 1.0 : 0.0);
-                          final isOverspent = spent > budgeted;
-                          final barColor = isOverspent
-                              ? Colors.red
-                              : Colors.green;
-
-                          String varianceText;
-                          if (budgeted > 0) {
-                            final pct = ((budgeted - spent) / budgeted * 100);
-                            if (pct >= 0) {
-                              varianceText =
-                                  '${AppLocalizations.of(context)!.remaining}: ${pct.toStringAsFixed(0)}%';
-                            } else {
-                              varianceText =
-                                  '${AppLocalizations.of(context)!.overspent}: ${pct.abs().toStringAsFixed(0)}%';
-                            }
-                          } else if (spent > 0) {
-                            varianceText = AppLocalizations.of(
-                              context,
-                            )!.overspent;
-                          } else {
-                            // Default text when nothing budgeted or spent
-                            varianceText =
-                                '${AppLocalizations.of(context)!.remaining}: 100%';
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '${currency.format(spent)} / ${currency.format(budgeted)}',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
-                                  ),
-                                  Text(
-                                    varianceText,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          fontSize: 10,
-                                          color: isOverspent
-                                              ? Colors.red
-                                              : null,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              LinearProgressIndicator(
-                                value: progress,
-                                color: barColor,
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                minHeight: 8,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         );

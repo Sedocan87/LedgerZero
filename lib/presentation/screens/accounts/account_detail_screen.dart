@@ -12,6 +12,7 @@ import 'package:ledger_zero/presentation/widgets/charts/balance_trend_chart.dart
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 
 final accountDetailProvider = StreamProvider.family
     .autoDispose<Account?, String>((ref, id) {
@@ -225,8 +226,10 @@ class TransactionList extends ConsumerWidget {
                     ?.name ??
                 l10n.unknownPayee;
 
+            final settingsCurrency = ref.watch(settingsProvider).currency;
+            // Use settings currency instead of passed account currency to ensuring global override
             final currencyFormatter = NumberFormat.simpleCurrency(
-              name: currency,
+              name: settingsCurrency,
             );
 
             return ListTile(

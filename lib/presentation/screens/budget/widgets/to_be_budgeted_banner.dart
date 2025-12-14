@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 
 class ToBeBudgetedBanner extends ConsumerWidget {
   const ToBeBudgetedBanner({super.key});
@@ -10,6 +11,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tbbAsync = ref.watch(tbbProvider);
+    final currency = ref.watch(settingsProvider).currency;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -45,7 +47,10 @@ class ToBeBudgetedBanner extends ConsumerWidget {
             tbbAsync.when(
               data: (tbb) {
                 final textWidget = Text(
-                  NumberFormat.simpleCurrency(decimalDigits: 2).format(tbb),
+                  NumberFormat.simpleCurrency(
+                    decimalDigits: 2,
+                    name: currency,
+                  ).format(tbb),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: tbb >= 0
                         ? Colors.green.shade700
@@ -78,6 +83,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                       child: Text(
                         NumberFormat.simpleCurrency(
                           decimalDigits: 2,
+                          name: currency,
                         ).format(tbb),
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),

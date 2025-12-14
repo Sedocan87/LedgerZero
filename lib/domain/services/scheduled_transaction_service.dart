@@ -74,7 +74,7 @@ class ScheduledTransactionService {
             amount: currentScheduled.amount ?? 0.0,
             payeeId: currentScheduled.payeeId,
             categoryId: currentScheduled.categoryId,
-            memo: 'Scheduled Transaction', // TODO: Localize?
+            memo: 'Scheduled Transaction',
             cleared: TransactionClearStatus.uncleared,
             approved: currentScheduled.autoApprove,
             createdAt: DateTime.now(),

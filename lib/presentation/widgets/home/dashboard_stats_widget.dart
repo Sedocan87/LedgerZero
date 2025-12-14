@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_card.dart';
 
 final monthlyStatsProvider = FutureProvider.autoDispose
@@ -23,6 +24,7 @@ class DashboardStatsWidget extends ConsumerWidget {
     final currentMonth = DateTime(now.year, now.month);
     final statsAsync = ref.watch(monthlyStatsProvider(currentMonth));
     final l10n = AppLocalizations.of(context)!;
+    final currency = ref.watch(settingsProvider).currency;
 
     return statsAsync.when(
       data: (stats) {
@@ -34,6 +36,7 @@ class DashboardStatsWidget extends ConsumerWidget {
               icon: Icons.arrow_downward,
               iconColor: Colors.green,
               amountColor: Colors.green,
+              currencyCode: currency,
             ),
             const SizedBox(width: 16),
             DashboardStatsCard(
@@ -42,6 +45,7 @@ class DashboardStatsWidget extends ConsumerWidget {
               icon: Icons.arrow_upward,
               iconColor: Colors.red,
               amountColor: Colors.red,
+              currencyCode: currency,
             ),
           ],
         );

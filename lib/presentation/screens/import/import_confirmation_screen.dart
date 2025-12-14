@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:uuid/uuid.dart';
@@ -21,7 +22,6 @@ class ImportConfirmationScreen extends ConsumerStatefulWidget {
 class _ImportConfirmationScreenState
     extends ConsumerState<ImportConfirmationScreen> {
   late List<ImportTransaction> _transactions;
-  final currencyFormat = NumberFormat.simpleCurrency();
   final dateFormat = DateFormat.yMMMd();
   bool _isImporting = false;
 
@@ -40,6 +40,8 @@ class _ImportConfirmationScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final currency = ref.watch(settingsProvider).currency;
+    final currencyFormat = NumberFormat.simpleCurrency(name: currency);
     final selectedCount = _transactions.where((t) => t.isSelected).length;
     final duplicateCount = _transactions.where((t) => t.isDuplicate).length;
 

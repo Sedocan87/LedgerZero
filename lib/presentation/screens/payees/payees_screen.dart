@@ -21,7 +21,7 @@ class PayeesScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.download),
-            tooltip: 'Export CSV', // TODO: Localize
+            tooltip: l10n.exportCsv,
             onPressed: () {
               payeesAsync.whenData((payees) {
                 if (payees.isNotEmpty) {

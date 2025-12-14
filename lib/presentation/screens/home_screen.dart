@@ -9,6 +9,7 @@ import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dar
 import 'package:ledger_zero/presentation/widgets/home/home_empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
 import 'package:ledger_zero/presentation/widgets/home/to_be_budgeted_widget.dart';
+import 'package:ledger_zero/core/constants/dimensions.dart';
 
 final hasAccountsProvider = FutureProvider.autoDispose<bool>((ref) async {
   final accounts = await ref.watch(accountRepositoryProvider).getAllAccounts();
@@ -32,65 +33,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  Future<void> _refreshHome() async {
+    final now = DateTime.now();
+    final currentMonth = DateTime(now.year, now.month);
+
+    // Trigger sync alongside data refresh
+    await Future.wait([
+      ref.refresh(tbbProvider(currentMonth).future),
+      ref.refresh(monthlyStatsProvider(currentMonth).future),
+      ref.refresh(recentTransactionsProvider.future),
+      ref.read(syncControllerProvider.notifier).syncNow(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasAccountsAsync = ref.watch(hasAccountsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.home),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => context.push('/settings'),
-            tooltip: AppLocalizations.of(context)!.settings,
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: hasAccountsAsync.when(
-          data: (hasAccounts) {
-            if (!hasAccounts) {
-              return const HomeEmptyState();
-            }
-            return RefreshIndicator(
-              onRefresh: () async {
-                final now = DateTime.now();
-                final currentMonth = DateTime(now.year, now.month);
-
-                // Trigger sync alongside data refresh
-                await Future.wait([
-                  ref.refresh(tbbProvider(currentMonth).future),
-                  ref.refresh(monthlyStatsProvider(currentMonth).future),
-                  ref.refresh(recentTransactionsProvider.future),
-                  ref.read(syncControllerProvider.notifier).syncNow(),
-                ]);
-              },
-              child: const SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ToBeBudgetedWidget(),
-                    SizedBox(height: 16),
-                    DashboardStatsWidget(),
-                    SizedBox(height: 16),
-                    RecentTransactionsWidget(),
+      body: hasAccountsAsync.when(
+        data: (hasAccounts) {
+          if (!hasAccounts) {
+            return const HomeEmptyState();
+          }
+          return RefreshIndicator(
+            onRefresh: _refreshHome,
+            child: CustomScrollView(
+              slivers: [
+                SliverAppBar.large(
+                  title: Text(l10n.home),
+                  centerTitle: false, // M3 aligns start usually
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.settings),
+                      onPressed: () => context.push('/settings'),
+                      tooltip: l10n.settings,
+                    ),
                   ],
                 ),
-              ),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
-        ),
+                SliverPadding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      const ToBeBudgetedWidget(),
+                      const SizedBox(height: AppSpacing.md),
+                      const DashboardStatsWidget(),
+                      const SizedBox(height: AppSpacing.md),
+                      const RecentTransactionsWidget(),
+                      // Add extra padding at bottom for FAB
+                      const SizedBox(height: 80),
+                    ]),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/add-transaction'),
-        tooltip: AppLocalizations.of(context)!.addTransaction,
-        child: const Icon(Icons.add),
+        tooltip: l10n.addTransaction,
+        icon: const Icon(Icons.add),
+        label: Text(l10n.addTransaction),
       ),
     );
   }

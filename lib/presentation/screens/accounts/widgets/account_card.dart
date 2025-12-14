@@ -3,17 +3,31 @@ import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
 
-class AccountCard extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+
+class AccountCard extends ConsumerWidget {
   final Account account;
   final VoidCallback? onTap;
 
   const AccountCard({super.key, required this.account, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.simpleCurrency(
-      name: account.currency,
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    // If account has currency, use it. Otherwise use system setting?
+    // User request implies system setting wins or isn't being used.
+    // If account.currency matches system setting (or is default), we want to use the formatted defined by system?
+    // Actually, account.currency probably IS the code (e.g. 'USD').
+    // If user changes setting to 'EUR', but account is 'USD'.
+    // AccountCard currently uses `account.currency`.
+    // Valid behavior for Account Card is to show the account's actual currency style.
+    // BUT if the user's issue is "I chose Euro and app still shows Dollar", maybe they expect EVERYTHING to change?
+    // If they have only one account, created with default USD, and they change settings to EUR, they expect the account to show EUR?
+    // To be safe and solve the user's problem, I will prioritize the settings currency overriding the account currency display
+    // OR, I should check if I should update the account currency itself? No, that's a data change.
+    // I will use settings.currency for display.
+    final currency = ref.watch(settingsProvider).currency;
+    final currencyFormatter = NumberFormat.simpleCurrency(name: currency);
     final theme = Theme.of(context);
 
     // Determine icon based on account type

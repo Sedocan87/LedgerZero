@@ -3,7 +3,10 @@ import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
-class ScheduledTransactionListItem extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+
+class ScheduledTransactionListItem extends ConsumerWidget {
   final ScheduledTransaction transaction;
   final String? payeeName;
   final String? categoryName;
@@ -24,7 +27,8 @@ class ScheduledTransactionListItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(settingsProvider).currency;
     final theme = Theme.of(context);
     final isIncome = (transaction.amount ?? 0) >= 0;
     final amountColor = isIncome
@@ -74,7 +78,9 @@ class ScheduledTransactionListItem extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            NumberFormat.simpleCurrency().format(transaction.amount ?? 0),
+            NumberFormat.simpleCurrency(
+              name: currency,
+            ).format(transaction.amount ?? 0),
             style: theme.textTheme.bodyLarge?.copyWith(
               color: amountColor,
               fontWeight: FontWeight.bold,

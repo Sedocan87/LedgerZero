@@ -2,292 +2,308 @@ import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 
 class AppColors {
-  // Light Mode Colors
-  static const Color primaryLight = Color(0xFF00796B); // Teal 700
+  // We use a modern Teal seed color for a financial/safe yet vibrant look.
+  static const Color seedColor = Color(0xFF009688); // Vibrant Teal
+
+  // Semantic Colors
+  static const Color income = Color(0xFF2E7D32); // Green 800
+  static const Color expense = Color(0xFFC62828); // Red 800
+  static const Color success = Color(0xFF2E7D32); // Same as income/success
+  static const Color warning = Color(0xFFF57C00); // Orange 700
+  static const Color info = Color(0xFF0288D1); // Light Blue 700
+  static const Color error = Color(0xFFBA1A1A); // M3 Error
+
+  // Legacy/Static Light Colors (Mapped to M3 Teal Seed approx)
+  static const Color primaryLight = Color(0xFF006A60);
   static const Color onPrimaryLight = Colors.white;
-  static const Color primaryContainerLight = Color(
-    0xFFB2DFDB,
-  ); // Teal 100 for containers
-  static const Color onPrimaryContainerLight = Color(0xFF004D40); // Teal 900
+  static const Color primaryContainerLight = Color(0xFF74F8E5);
+  static const Color onPrimaryContainerLight = Color(0xFF00201C);
 
-  static const Color secondaryLight = Color(0xFF455A64); // Blue Grey 700
+  static const Color secondaryLight = Color(0xFF4A635F);
   static const Color onSecondaryLight = Colors.white;
-  static const Color secondaryContainerLight = Color(0xFFCFD8DC);
-  static const Color onSecondaryContainerLight = Color(0xFF263238);
+  static const Color secondaryContainerLight = Color(0xFFCCE8E2);
+  static const Color onSecondaryContainerLight = Color(0xFF05201C);
 
-  static const Color tertiaryLight = Color(0xFFFFA000); // Amber 700
-  static const Color onTertiaryLight = Colors.black;
+  static const Color tertiaryLight = Color(0xFF456179);
+  static const Color onTertiaryLight = Colors.white;
 
-  static const Color errorLight = Color(0xFFB00020);
+  static const Color errorLight = Color(0xFFBA1A1A);
   static const Color onErrorLight = Colors.white;
 
-  static const Color backgroundLight = Color(0xFFF5F5F5); // Grey 100
-  static const Color surfaceLight = Colors.white;
-  static const Color onSurfaceLight = Colors.black;
+  static const Color backgroundLight = Color(0xFFFBFDFA);
+  static const Color surfaceLight = Color(0xFFFBFDFA);
+  static const Color onSurfaceLight = Color(0xFF191C1B);
 
-  // Dark Mode Colors
-  static const Color primaryDark = Color(0xFF80CBC4); // Teal 200
-  static const Color onPrimaryDark = Color(0xFF004D40); // Teal 900
-  static const Color primaryContainerDark = Color(0xFF00695C); // Teal 800
-  static const Color onPrimaryContainerDark = Color(0xFFB2DFDB); // Teal 100
+  // Legacy/Static Dark Colors
+  static const Color primaryDark = Color(0xFF53DBC9);
+  static const Color onPrimaryDark = Color(0xFF003732);
+  static const Color primaryContainerDark = Color(0xFF005048);
+  static const Color onPrimaryContainerDark = Color(0xFF74F8E5);
 
-  static const Color secondaryDark = Color(0xFFB0BEC5); // Blue Grey 200
-  static const Color onSecondaryDark = Color(0xFF263238); // Blue Grey 900
-  static const Color secondaryContainerDark = Color(
-    0xFF37474F,
-  ); // Blue Grey 800
-  static const Color onSecondaryContainerDark = Color(
-    0xFFCFD8DC,
-  ); // Blue Grey 100
+  static const Color secondaryDark = Color(0xFFB1CCC6);
+  static const Color onSecondaryDark = Color(0xFF1C3531);
+  static const Color secondaryContainerDark = Color(0xFF334B47);
+  static const Color onSecondaryContainerDark = Color(0xFFCCE8E2);
 
-  static const Color tertiaryDark = Color(0xFFFFE082); // Amber 200
-  static const Color onTertiaryDark = Colors.black;
+  static const Color tertiaryDark = Color(0xFFACC9E5);
+  static const Color onTertiaryDark = Color(0xFF133248);
 
-  static const Color errorDark = Color(0xFFCF6679);
-  static const Color onErrorDark = Colors.black;
+  static const Color errorDark = Color(0xFFFFB4AB);
+  static const Color onErrorDark = Color(0xFF690005);
 
-  static const Color backgroundDark = Color(0xFF121212);
-  static const Color surfaceDark = Color(0xFF1E1E1E);
-  static const Color onSurfaceDark = Color(0xFFE0E0E0);
-
-  // High Contrast Light
-  static const Color highContrastPrimaryLight = Color(0xFF004D40); // Teal 900
-  static const Color highContrastOnPrimaryLight = Colors.white;
-  static const Color highContrastBackgroundLight = Colors.white;
-  static const Color highContrastSurfaceLight = Colors.white;
-  static const Color highContrastOnSurfaceLight = Colors.black;
-
-  // High Contrast Dark
-  static const Color highContrastPrimaryDark = Color(0xFF80CBC4); // Teal 200
-  static const Color highContrastOnPrimaryDark = Colors.black;
-  static const Color highContrastBackgroundDark = Colors.black;
-  static const Color highContrastSurfaceDark = Colors.black;
-  static const Color highContrastOnSurfaceDark = Colors.white;
-
-  // Semantic Colors (Shared)
-  static const Color income = Color(0xFF4CAF50); // Green 500
-  static const Color expense = Color(0xFFB00020); // Red 700
-  static const Color success = Color(0xFF4CAF50); // Green 500
-  static const Color warning = Color(0xFFFFC107); // Amber 500
-  static const Color error = Color(0xFFB00020); // Red 700
+  static const Color backgroundDark = Color(0xFF191C1B);
+  static const Color surfaceDark = Color(0xFF191C1B);
+  static const Color onSurfaceDark = Color(0xFFE1E3DF);
 }
 
 class AppTextStyles {
-  static const TextStyle heading1 = TextStyle(
-    fontSize: 32,
-    fontWeight: FontWeight.bold,
-    letterSpacing: -0.5,
+  // Material 3 Typography Scale Mapping
+  static const TextStyle displayLarge = TextStyle(
+    fontSize: 57,
+    fontWeight: FontWeight.w400,
+    letterSpacing: -0.25,
+    height: 1.12,
   );
 
-  static const TextStyle heading2 = TextStyle(
-    fontSize: 24,
+  static const TextStyle displayMedium = TextStyle(
+    fontSize: 45,
+    fontWeight: FontWeight.w400,
+    letterSpacing: 0,
+    height: 1.16,
+  );
+
+  static const TextStyle headlineLarge = TextStyle(
+    fontSize: 32,
+    fontWeight: FontWeight.w600, // Slightly bolder for headlines
+    letterSpacing: 0,
+    height: 1.25,
+  );
+
+  static const TextStyle headlineMedium = TextStyle(
+    fontSize: 28,
     fontWeight: FontWeight.w600,
     letterSpacing: 0,
+    height: 1.29,
   );
 
-  static const TextStyle body = TextStyle(
+  static const TextStyle titleLarge = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w500, // Medium weight for titles
+    letterSpacing: 0,
+    height: 1.27,
+  );
+
+  static const TextStyle bodyLarge = TextStyle(
     fontSize: 16,
-    fontWeight: FontWeight.normal,
+    fontWeight: FontWeight.w400,
     letterSpacing: 0.5,
+    height: 1.5,
   );
 
-  static const TextStyle caption = TextStyle(
-    fontSize: 12,
+  static const TextStyle bodyMedium = TextStyle(
+    fontSize: 14,
     fontWeight: FontWeight.w400,
-    letterSpacing: 0.4,
+    letterSpacing: 0.25,
+    height: 1.43,
+  );
+
+  static const TextStyle labelSmall = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.5,
+    height: 1.45,
   );
 }
 
 class AppTheme {
-  static final ThemeData lightTheme = _buildTheme(
-    brightness: Brightness.light,
-    primary: AppColors.primaryLight,
-    onPrimary: AppColors.onPrimaryLight,
-    primaryContainer: AppColors.primaryContainerLight,
-    onPrimaryContainer: AppColors.onPrimaryContainerLight,
-    secondary: AppColors.secondaryLight,
-    onSecondary: AppColors.onSecondaryLight,
-    secondaryContainer: AppColors.secondaryContainerLight,
-    onSecondaryContainer: AppColors.onSecondaryContainerLight,
-    tertiary: AppColors.tertiaryLight,
-    onTertiary: AppColors.onTertiaryLight,
-    background: AppColors.backgroundLight,
-    surface: AppColors.surfaceLight,
-    onSurface: AppColors.onSurfaceLight,
-  );
-
-  static final ThemeData darkTheme = _buildTheme(
-    brightness: Brightness.dark,
-    primary: AppColors.primaryDark,
-    onPrimary: AppColors.onPrimaryDark,
-    primaryContainer: AppColors.primaryContainerDark,
-    onPrimaryContainer: AppColors.onPrimaryContainerDark,
-    secondary: AppColors.secondaryDark,
-    onSecondary: AppColors.onSecondaryDark,
-    secondaryContainer: AppColors.secondaryContainerDark,
-    onSecondaryContainer: AppColors.onSecondaryContainerDark,
-    tertiary: AppColors.tertiaryDark,
-    onTertiary: AppColors.onTertiaryDark,
-    background: AppColors.backgroundDark,
-    surface: AppColors.surfaceDark,
-    onSurface: AppColors.onSurfaceDark,
-  );
+  static final ThemeData lightTheme = _buildTheme(Brightness.light);
+  static final ThemeData darkTheme = _buildTheme(Brightness.dark);
 
   static final ThemeData highContrastLightTheme = _buildTheme(
-    brightness: Brightness.light,
-    primary: AppColors.highContrastPrimaryLight,
-    onPrimary: AppColors.highContrastOnPrimaryLight,
-    background: AppColors.highContrastBackgroundLight,
-    surface: AppColors.highContrastSurfaceLight,
-    onSurface: AppColors.highContrastOnSurfaceLight,
+    Brightness.light,
     isHighContrast: true,
   );
-
   static final ThemeData highContrastDarkTheme = _buildTheme(
-    brightness: Brightness.dark,
-    primary: AppColors.highContrastPrimaryDark,
-    onPrimary: AppColors.highContrastOnPrimaryDark,
-    background: AppColors.highContrastBackgroundDark,
-    surface: AppColors.highContrastSurfaceDark,
-    onSurface: AppColors.highContrastOnSurfaceDark,
+    Brightness.dark,
     isHighContrast: true,
   );
 
-  static ThemeData _buildTheme({
-    required Brightness brightness,
-    required Color primary,
-    required Color onPrimary,
-    required Color background,
-    required Color surface,
-    required Color onSurface,
-    // Optional params for restoring standard theme colors
-    Color? primaryContainer,
-    Color? onPrimaryContainer,
-    Color? secondary,
-    Color? onSecondary,
-    Color? secondaryContainer,
-    Color? onSecondaryContainer,
-    Color? tertiary,
-    Color? onTertiary,
+  static ThemeData _buildTheme(
+    Brightness brightness, {
     bool isHighContrast = false,
   }) {
-    final base = brightness == Brightness.light
-        ? ThemeData.light()
-        : ThemeData.dark();
+    // Generate harmonious color scheme from seed
+    ColorScheme colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.seedColor,
+      brightness: brightness,
+      dynamicSchemeVariant:
+          DynamicSchemeVariant.fidelity, // Vibrant but faithful
+    );
 
-    // Default fallback logic if not provided (similar to high contrast simplifications)
-    final effectiveSecondary = secondary ?? primary;
-    final effectiveOnSecondary = onSecondary ?? onPrimary;
+    if (isHighContrast) {
+      // Very basic high contrast overwrite if needed, or rely on system
+      colorScheme = colorScheme.copyWith(
+        primary: brightness == Brightness.light ? Colors.black : Colors.white,
+        onPrimary: brightness == Brightness.light ? Colors.white : Colors.black,
+        surface: brightness == Brightness.light ? Colors.white : Colors.black,
+        onSurface: brightness == Brightness.light ? Colors.black : Colors.white,
+      );
+    }
 
-    return base.copyWith(
-      colorScheme: ColorScheme(
-        brightness: brightness,
-        primary: primary,
-        onPrimary: onPrimary,
-        primaryContainer: primaryContainer,
-        onPrimaryContainer: onPrimaryContainer,
-        secondary: effectiveSecondary,
-        onSecondary: effectiveOnSecondary,
-        secondaryContainer: secondaryContainer,
-        onSecondaryContainer: onSecondaryContainer,
-        tertiary: tertiary,
-        onTertiary: onTertiary,
-        error: brightness == Brightness.light
-            ? AppColors.errorLight
-            : AppColors.errorDark,
-        onError: brightness == Brightness.light
-            ? AppColors.onErrorLight
-            : AppColors.onErrorDark,
-        surface: surface,
-        onSurface: onSurface,
-      ),
-      scaffoldBackgroundColor: background,
-      textTheme: const TextTheme(
-        displayLarge: AppTextStyles.heading1,
-        headlineMedium: AppTextStyles.heading2,
-        bodyLarge: AppTextStyles.body,
-        labelSmall: AppTextStyles.caption,
-      ).apply(bodyColor: onSurface, displayColor: onSurface),
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: colorScheme,
+
+      // Global Font Family (if we had Google Fonts, we'd apply it here)
+      // fontFamily: 'Inter',
+      textTheme:
+          const TextTheme(
+            displayLarge: AppTextStyles.displayLarge,
+            displayMedium: AppTextStyles.displayMedium,
+            headlineLarge: AppTextStyles.headlineLarge,
+            headlineMedium: AppTextStyles.headlineMedium,
+            titleLarge: AppTextStyles.titleLarge,
+            bodyLarge: AppTextStyles.bodyLarge,
+            bodyMedium: AppTextStyles.bodyMedium,
+            labelSmall: AppTextStyles.labelSmall,
+          ).apply(
+            bodyColor: colorScheme.onSurface,
+            displayColor: colorScheme.onSurface,
+          ),
+
+      scaffoldBackgroundColor: colorScheme.surface,
+
       appBarTheme: AppBarTheme(
-        backgroundColor: isHighContrast ? background : primary,
-        foregroundColor: isHighContrast ? onSurface : onPrimary,
-        centerTitle: true,
-        elevation: isHighContrast ? 4 : 0, // More distinction in HC
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        centerTitle:
+            false, // M3 default is often left-aligned, but we can keep centered if preferred. M3 is usually left.
+        elevation: 0,
+        scrolledUnderElevation: 2,
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
+
       cardTheme: CardThemeData(
-        color: surface,
-        elevation: AppElevation.sm,
+        color: colorScheme
+            .surfaceContainerLow, // Slightly varied surface for cards
+        elevation: 0, // M3 uses filled cards mostly, or outlined
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          side: isHighContrast
-              ? BorderSide(color: onSurface, width: 2)
-              : BorderSide.none,
+          borderRadius: BorderRadius.circular(AppRadius.lg), // 16.0
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
       ),
+
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: onPrimary,
-          minimumSize: const Size(48, 48), // Accessibility Minimum Touch Target
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          elevation: 2,
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              AppRadius.full,
+            ), // Capsule shape is standard M3
+          ),
+          textStyle: AppTextStyles.labelSmall.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.1,
           ),
         ),
       ),
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
-          side: BorderSide(color: primary, width: isHighContrast ? 2 : 1),
-          minimumSize: const Size(48, 48), // Accessibility Minimum Touch Target
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
+          foregroundColor: colorScheme.primary,
+          side: BorderSide(color: colorScheme.outline),
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.full),
           ),
         ),
       ),
+
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primary,
-          minimumSize: const Size(48, 48), // Accessibility Minimum Touch Target
+          foregroundColor: colorScheme.primary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
+            borderRadius: BorderRadius.circular(AppRadius.full),
           ),
         ),
       ),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isHighContrast
-            ? background
-            : (brightness == Brightness.light
-                  ? const Color(0xFFEEEEEE)
-                  : const Color(0xFF212121)),
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          borderSide: isHighContrast
-              ? BorderSide(color: onSurface)
-              : BorderSide.none,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: colorScheme.outlineVariant, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          borderSide: BorderSide(color: primary, width: 2),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
-        enabledBorder: isHighContrast
-            ? OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                borderSide: BorderSide(color: onSurface, width: 1),
-              )
-            : null,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: colorScheme.error, width: 1),
         ),
+        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        floatingLabelStyle: TextStyle(color: colorScheme.primary),
+      ),
+
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            AppRadius.lg,
+          ), // M3 square-ish FAB
+        ),
+      ),
+
+      iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant, size: 24),
+
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
+        thickness: 1,
+        space: 1,
+      ),
+
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        iconColor: colorScheme.onSurfaceVariant,
+        textColor: colorScheme.onSurface,
       ),
     );
   }

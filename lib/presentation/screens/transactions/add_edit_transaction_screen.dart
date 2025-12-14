@@ -1421,7 +1421,7 @@ class _AddEditTransactionScreenState
                         },
                       ),
                       AppButton.text(
-                        label: 'Add Split', // TODO l10n
+                        label: l10n.addSplit,
                         onPressed: () {
                           setState(() {
                             _splits.add(SplitItem());

@@ -18,6 +18,9 @@ class AppTextField extends StatelessWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final FocusNode? focusNode;
   final String? helperText;
+  final bool autofocus;
+  final TextAlign textAlign;
+  final InputDecoration? decoration;
 
   const AppTextField({
     super.key,
@@ -38,6 +41,9 @@ class AppTextField extends StatelessWidget {
     this.onFieldSubmitted,
     this.focusNode,
     this.helperText,
+    this.autofocus = false,
+    this.textAlign = TextAlign.start,
+    this.decoration,
   });
 
   @override
@@ -54,14 +60,18 @@ class AppTextField extends StatelessWidget {
       textInputAction: textInputAction,
       onFieldSubmitted: onFieldSubmitted,
       focusNode: focusNode,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        helperText: helperText,
-        errorText: errorText,
-        prefixIcon: prefixIcon,
-        suffixIcon: suffixIcon,
-      ),
+      autofocus: autofocus,
+      textAlign: textAlign,
+      decoration:
+          decoration ??
+          InputDecoration(
+            labelText: label,
+            hintText: hint,
+            helperText: helperText,
+            errorText: errorText,
+            prefixIcon: prefixIcon,
+            suffixIcon: suffixIcon,
+          ),
     );
   }
 }

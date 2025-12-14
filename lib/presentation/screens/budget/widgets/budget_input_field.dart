@@ -4,6 +4,7 @@ import 'package:ledger_zero/core/utils/math_evaluator.dart';
 import 'package:flutter/services.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_calculator.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:ledger_zero/core/constants/dimensions.dart';
 
 class BudgetInputField extends StatefulWidget {
   final double initialValue;
@@ -26,28 +27,24 @@ class BudgetInputField extends StatefulWidget {
 }
 
 class _BudgetInputFieldState extends State<BudgetInputField> {
-  TextEditingController? _controller;
+  late TextEditingController _controller;
   late FocusNode _focusNode;
-  bool _isNavigating = false;
+  bool _isDisposed = false;
+  bool _controllerInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    // Handle loose focus -> cancel
     _focusNode.addListener(_onFocusChange);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _focusNode.requestFocus();
-      }
-    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_controller == null) {
+    if (!_controllerInitialized) {
       final locale = Localizations.localeOf(context).toString();
-      // Use currency format without symbol to respect locale decimal/grouping separators
       final format = NumberFormat.currency(
         locale: locale,
         symbol: '',
@@ -55,85 +52,66 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
       );
       final text = format.format(widget.initialValue).trim();
       _controller = TextEditingController(text: text);
+
+      // Select all text on init for easy overwriting
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+      _controllerInitialized = true;
     }
   }
 
   void _onFocusChange() {
-    if (!_focusNode.hasFocus && !_isNavigating) {
-      // Check if we are showing the calculator modal, if so don't cancel yet?
-      // Actually losing focus to modal is tricky.
-      // But typically modals don't steal focus in a way that triggers this immediately if we use showModalBottomSheet.
-      // However, if the user taps outside, we want to submit/cancel.
-      // For now, let's keep it simple.
+    if (_isDisposed) {
+      return;
+    }
+    if (!_focusNode.hasFocus) {
+      // Only cancel if we lost focus completely and aren't submitting
+      // For safety, delay check slightly or just rely on onSubmitted?
+      // Often better to submit on blur for budget apps, or cancel.
+      // Sticking to cancel as per previous logic, but being careful.
       widget.onCancel?.call();
     }
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _isDisposed = true;
+    _controller.dispose();
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
 
   double _parseText(String text) {
-    if (text.contains(RegExp(r'[+\-*/]'))) {
-      final locale = Localizations.localeOf(context).toString();
-      final format = NumberFormat.currency(
-        locale: locale,
-        symbol: '',
-        decimalDigits: 2,
-      );
+    if (text.isEmpty) {
+      return 0.0;
+    }
 
-      if (format.symbols.GROUP_SEP.isNotEmpty) {
-        text = text.replaceAll(format.symbols.GROUP_SEP, '');
-      }
-      if (format.symbols.DECIMAL_SEP.isNotEmpty &&
-          format.symbols.DECIMAL_SEP != '.') {
-        text = text.replaceAll(format.symbols.DECIMAL_SEP, '.');
-      }
-
-      return MathEvaluator.evaluate(text);
-    } else {
-      try {
+    // Simple cleanup of currency symbols if any slipped in (though we use symbol: '')
+    // Logic from previous implementation regarding MathEvaluator
+    try {
+      if (text.contains(RegExp(r'[+\-*/]'))) {
+        // Math eval logic... simplified for redundancy here since we didn't change it much
         final locale = Localizations.localeOf(context).toString();
         final format = NumberFormat.currency(
           locale: locale,
           symbol: '',
           decimalDigits: 2,
         );
-        return format.parse(text).toDouble();
-      } catch (e) {
-        try {
-          return double.parse(text.replaceAll(',', ''));
-        } catch (_) {
-          return widget.initialValue;
+
+        // Replace separators locally if needed, similar to before
+        String cleanCheck = text;
+        if (format.symbols.GROUP_SEP.isNotEmpty) {
+          cleanCheck = cleanCheck.replaceAll(format.symbols.GROUP_SEP, '');
         }
+        if (format.symbols.DECIMAL_SEP.isNotEmpty &&
+            format.symbols.DECIMAL_SEP != '.') {
+          cleanCheck = cleanCheck.replaceAll(format.symbols.DECIMAL_SEP, '.');
+        }
+        return MathEvaluator.evaluate(cleanCheck);
       }
-    }
-  }
-
-  void _submit() {
-    if (_controller == null) {
-      return;
-    }
-    double value;
-    try {
-      value = _parseText(_controller!.text);
-    } catch (e) {
-      value = widget.initialValue;
-    }
-    widget.onSubmitted(value);
-  }
-
-  void _adjustValue(double delta) {
-    if (_controller == null) {
-      return;
-    }
-    try {
-      final double currentValue = _parseText(_controller!.text);
-      final double newValue = currentValue + delta;
 
       final locale = Localizations.localeOf(context).toString();
       final format = NumberFormat.currency(
@@ -141,36 +119,47 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
         symbol: '',
         decimalDigits: 2,
       );
-      _controller!.text = format.format(newValue).trim();
+      return format.parse(text).toDouble();
     } catch (e) {
-      // ignore
+      // Fallback
+      return double.tryParse(text.replaceAll(',', '')) ?? widget.initialValue;
     }
   }
 
-  void _showCalculator() {
-    // We need to prevent onCancel from firing when losing focus to the modal
-    _focusNode.removeListener(_onFocusChange);
+  void _submit() {
+    if (_isDisposed) {
+      return;
+    }
+    final value = _parseText(_controller.text);
+    widget.onSubmitted(value);
+  }
 
+  void _showCalculator() {
+    _focusNode.unfocus(); // Explicitly unfocus to avoid fighting
     showModalBottomSheet(
       context: context,
-      builder: (context) => BudgetCalculator(
-        initialValue: _controller!.text,
-        onValueChanged: (val) {
-          _controller!.text = val;
-        },
-        onSubmitted: () {
-          Navigator.pop(context);
-          _submit();
-        },
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: BudgetCalculator(
+          initialValue: _controller.text,
+          onValueChanged: (val) {
+            // Calculator updates text
+            _controller.text = val;
+          },
+          onSubmitted: () {
+            Navigator.pop(context);
+            _submit();
+          },
+        ),
       ),
     ).then((_) {
-      // Re-attach listener when modal closes (if we didn't submit)
-      // If we submitted, this widget might be disposed or state changed.
-      if (mounted) {
-        _focusNode.addListener(_onFocusChange);
-        // If we didn't submit (e.g. user tapped outside modal), we might want to refocus or cancel.
-        // For now, let's just focus back.
-        FocusScope.of(context).requestFocus(_focusNode);
+      // If cancelled calculator, maybe re-focus? Or just cancel edit?
+      // Let's cancel edit if they dismissed calculator without submitting
+      if (mounted && !_isDisposed && !FocusScope.of(context).hasFocus) {
+        widget.onCancel?.call();
       }
     });
   }
@@ -178,72 +167,60 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        _isNavigating = true;
         _submit();
         widget.onNext?.call();
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        _isNavigating = true;
         _submit();
         widget.onPrevious?.call();
+      } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+        widget.onCancel?.call();
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_controller == null) {
+    if (!_controllerInitialized) {
       return const SizedBox();
     }
 
     return KeyboardListener(
-      focusNode:
-          FocusNode(), // Needed for listener, but we use _focusNode for text field
+      focusNode: FocusNode(), // Dummy node for key events
       onKeyEvent: _handleKeyEvent,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 32,
-            child: IconButton(
-              icon: const Icon(Icons.remove, size: 16),
-              onPressed: () => _adjustValue(-1.0),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
+      child: AppTextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        autofocus: true, // Critical for immediate keyboard
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textInputAction: TextInputAction.done,
+        onFieldSubmitted: (_) => _submit(),
+        textAlign: TextAlign.end,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: 8,
+          ),
+          isDense: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          Expanded(
-            child: AppTextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _submit(),
-              onTap: () {
-                _controller!.selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: _controller!.text.length,
-                );
-              },
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.calculate, size: 18),
-                onPressed: _showCalculator,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            borderSide: BorderSide(
+              color: Theme.of(context).colorScheme.primary,
+              width: 2,
             ),
           ),
-          SizedBox(
-            width: 32,
-            child: IconButton(
-              icon: const Icon(Icons.add, size: 16),
-              onPressed: () => _adjustValue(1.0),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.calculate, size: 18),
+            onPressed: _showCalculator,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
-        ],
+        ),
       ),
     );
   }

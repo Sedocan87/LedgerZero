@@ -2347,6 +2347,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ERROR'**
   String get logLevelError;
+
+  /// No description provided for @incomeAndSalaries.
+  ///
+  /// In en, this message translates to:
+  /// **'Income & Salaries'**
+  String get incomeAndSalaries;
+
+  /// No description provided for @accessibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility'**
+  String get accessibility;
+
+  /// No description provided for @reducedMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduced Motion'**
+  String get reducedMotion;
+
+  /// No description provided for @exportCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Export CSV'**
+  String get exportCsv;
+
+  /// No description provided for @addSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Split'**
+  String get addSplit;
 }
 
 class _AppLocalizationsDelegate

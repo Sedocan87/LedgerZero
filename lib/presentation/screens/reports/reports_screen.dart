@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/budget_vs_actual_chart.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/report_category_filter.dart';
@@ -145,7 +146,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         // PDF Export
         List<String> headers = [];
         List<List<String>> rows = [];
-        final currencyFormat = NumberFormat.simpleCurrency();
+        final currency = ref.read(settingsProvider).currency;
+        final currencyFormat = NumberFormat.simpleCurrency(name: currency);
         final dateFormat = DateFormat.yMMMd();
 
         // Convert data to table format
@@ -629,7 +631,11 @@ class _TopPayeesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final payeesAsync = ref.watch(topPayeesProvider);
-    final currencyFormat = NumberFormat.simpleCurrency(decimalDigits: 0);
+    final currency = ref.watch(settingsProvider).currency;
+    final currencyFormat = NumberFormat.simpleCurrency(
+      decimalDigits: 0,
+      name: currency,
+    );
 
     return payeesAsync.when(
       data: (data) {

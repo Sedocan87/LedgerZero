@@ -262,7 +262,7 @@ class SettingsScreen extends ConsumerWidget {
               // Accessibility
               ListTile(
                 leading: const Icon(Icons.accessibility),
-                title: const Text('Accessibility'), // TODO: l10n
+                title: Text(l10n.accessibility),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.of(context).push(
@@ -274,7 +274,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.animation),
-                title: const Text('Reduced Motion'), // TODO: l10n
+                title: Text(l10n.reducedMotion),
                 value: themeState.reducedMotion,
                 onChanged: (value) {
                   ref.read(themeProvider.notifier).toggleReducedMotion(value);
@@ -487,7 +487,7 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.help),
-                title: const Text('Help & Support'), // TODO: l10n
+                title: Text(l10n.helpAndSupport),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.pushNamed('help'),
               ),
@@ -533,6 +533,12 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text(l10n.payees),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/payees'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.attach_money),
+                title: Text(l10n.incomeAndSalaries),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/income'),
               ),
               ListTile(
                 leading: const Icon(AppIcons.calendar),

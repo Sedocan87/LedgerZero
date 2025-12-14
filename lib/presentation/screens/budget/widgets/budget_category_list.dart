@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_row.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_group_row.dart';
 import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
@@ -16,6 +17,7 @@ class BudgetCategoryList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetViewModelAsync = ref.watch(budgetViewModelProvider);
+    final currency = ref.watch(settingsProvider).currency;
 
     return budgetViewModelAsync.when(
       data: (groups) {
@@ -61,6 +63,7 @@ class BudgetCategoryList extends ConsumerWidget {
                   totalBudgeted: totalBudgeted,
                   totalActivity: totalActivity,
                   totalAvailable: totalAvailable,
+                  currencyCode: currency,
                 );
               }
 
@@ -159,17 +162,22 @@ class BudgetSummaryFooter extends StatelessWidget {
   final double totalBudgeted;
   final double totalActivity;
   final double totalAvailable;
+  final String currencyCode;
 
   const BudgetSummaryFooter({
     super.key,
     required this.totalBudgeted,
     required this.totalActivity,
     required this.totalAvailable,
+    required this.currencyCode,
   });
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.simpleCurrency(decimalDigits: 2);
+    final currency = NumberFormat.simpleCurrency(
+      decimalDigits: 2,
+      name: currencyCode,
+    );
 
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,

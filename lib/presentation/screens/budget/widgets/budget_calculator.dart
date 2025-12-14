@@ -26,6 +26,7 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
     _controller.addListener(() {
+      setState(() {});
       widget.onValueChanged(_controller.text);
     });
   }
@@ -59,7 +60,43 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
         // ignore error or show feedback
       }
     } else {
-      _controller.text += key;
+      // If text is "0" or "0.00" and input is a number (not operator or dot handling which might differ),
+      // we usually want to replace it.
+      // Ops are handled above or passed as key?
+      // Keys passed here: '0'-'9', '.', '+', '-', '*', '/'.
+      // Oh wait, _buildKey calls this with label.
+      // Labels: '7', '8', '9', '/', '4', '5', '6', '*', '1', '2', '3', '-', '.', '0', 'DEL'.
+      // So operators ARE passed here.
+
+      // Check if key is operator
+      if (['+', '-', '*', '/'].contains(key)) {
+        _controller.text += key;
+        return;
+      }
+
+      // Check for decimal
+      if (key == '.') {
+        if (_controller.text.isEmpty) {
+          _controller.text = '0.';
+        } else if (!_controller.text.contains('.')) {
+          // Allow dot if no dot yet?
+          // Logic: if we have "0.00", typing "." might be weird.
+          // If we treat "0.00" as initial value to be wiped, then typing "." should probably make it "0."?
+          if (_controller.text == '0.00' || _controller.text == '0') {
+            _controller.text = '0.';
+          } else {
+            _controller.text += key;
+          }
+        }
+        return;
+      }
+
+      // Digits 0-9
+      if (_controller.text == '0' || _controller.text == '0.00') {
+        _controller.text = key;
+      } else {
+        _controller.text += key;
+      }
     }
   }
 
@@ -111,11 +148,21 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
       color: Theme.of(context).colorScheme.surface,
       child: Column(
         children: [
-          // Display is handled by the input field in the parent,
-          // but we might want to show it here if used as a standalone overlay.
-          // However, based on the task, this is likely an overlay FOR budget entry.
-          // We assume the parent input field is visible or this widget updates it.
-          // For now, let's just show the keypad.
+          // Value Display
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            alignment: Alignment.centerRight,
+            child: Text(
+              _controller.text.isEmpty ? '0' : _controller.text,
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Divider(),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,

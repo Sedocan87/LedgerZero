@@ -1226,4 +1226,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logLevelError => 'ERROR';
+
+  @override
+  String get incomeAndSalaries => 'Income & Salaries';
+
+  @override
+  String get accessibility => 'Accessibility';
+
+  @override
+  String get reducedMotion => 'Reduced Motion';
+
+  @override
+  String get exportCsv => 'Export CSV';
+
+  @override
+  String get addSplit => 'Add Split';
 }

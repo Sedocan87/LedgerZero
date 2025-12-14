@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 
 class BudgetVsActualChart extends ConsumerWidget {
   const BudgetVsActualChart({super.key});
@@ -11,7 +12,11 @@ class BudgetVsActualChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dataAsync = ref.watch(budgetVsActualProvider);
-    final currencyFormat = NumberFormat.simpleCurrency(decimalDigits: 0);
+    final currency = ref.watch(settingsProvider).currency;
+    final currencyFormat = NumberFormat.simpleCurrency(
+      decimalDigits: 0,
+      name: currency,
+    );
     final l10n = AppLocalizations.of(context)!;
 
     return dataAsync.when(

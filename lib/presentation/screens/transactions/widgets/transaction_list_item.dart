@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 
-class TransactionListItem extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+
+class TransactionListItem extends ConsumerWidget {
   final Transaction transaction;
   final String? payeeName;
   final String? categoryName;
@@ -27,7 +30,8 @@ class TransactionListItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(settingsProvider).currency;
     final theme = Theme.of(context);
     // Task 203: Color coding
     final isIncome = transaction.amount >= 0;
@@ -69,7 +73,9 @@ class TransactionListItem extends StatelessWidget {
           ],
           Text(
             // Task 203: Amount
-            NumberFormat.simpleCurrency().format(transaction.amount),
+            NumberFormat.simpleCurrency(
+              name: currency,
+            ).format(transaction.amount),
             style: theme.textTheme.bodyLarge?.copyWith(
               color: amountColor,
               fontWeight: FontWeight.bold,

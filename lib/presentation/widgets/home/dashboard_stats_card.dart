@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/constants/dimensions.dart';
 
 class DashboardStatsCard extends StatelessWidget {
   final String title;
@@ -7,6 +8,7 @@ class DashboardStatsCard extends StatelessWidget {
   final Color? amountColor;
   final IconData icon;
   final Color iconColor;
+  final String currencyCode;
 
   const DashboardStatsCard({
     super.key,
@@ -15,39 +17,51 @@ class DashboardStatsCard extends StatelessWidget {
     this.amountColor,
     required this.icon,
     required this.iconColor,
+    required this.currencyCode,
   });
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.simpleCurrency();
+    final currencyFormat = NumberFormat.simpleCurrency(name: currencyCode);
+    final theme = Theme.of(context);
 
     return Expanded(
       child: Card(
-        elevation: 2,
+        // Theme handles shape/color
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(icon, color: iconColor, size: 20),
-                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: iconColor, size: 20),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       title,
-                      style: Theme.of(context).textTheme.labelMedium,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 currencyFormat.format(amount),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: amountColor,
-                  fontWeight: FontWeight.bold,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  // M3 Style
+                  color: amountColor ?? theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
