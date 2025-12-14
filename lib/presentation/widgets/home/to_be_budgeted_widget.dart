@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
-import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
 
@@ -11,6 +12,18 @@ final tbbProvider = FutureProvider.autoDispose.family<double, DateTime>((
   ref,
   month,
 ) {
+  // Watch for transaction changes (income affects TBB)
+  ref.watch(transactionUpdateTriggerProvider);
+
+  // Watch for budget changes (budgeting affects TBB)
+  final budgetRepo = ref.watch(budgetRepositoryProvider);
+  final monthStr = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+  ref.watch(
+    StreamProvider.autoDispose(
+      (ref) => budgetRepo.watchBudgetsForMonth(monthStr),
+    ),
+  );
+
   final budgetingService = ref.watch(budgetingServiceProvider);
   return budgetingService.calculateTBB(month);
 });

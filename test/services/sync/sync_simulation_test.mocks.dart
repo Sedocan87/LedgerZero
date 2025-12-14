@@ -3,20 +3,19 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i4;
+import 'dart:async' as _i5;
 import 'dart:io' as _i2;
 
-import 'package:googleapis/drive/v3.dart' as _i6;
-import 'package:icloud_storage/icloud_storage.dart' as _i9;
 import 'package:ledger_zero/services/notifications/notification_service.dart'
-    as _i12;
-import 'package:ledger_zero/services/sync/connectivity_service.dart' as _i11;
+    as _i11;
+import 'package:ledger_zero/services/sync/connectivity_service.dart' as _i10;
 import 'package:ledger_zero/services/sync/google_drive_sync.dart' as _i3;
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart' as _i7;
 import 'package:ledger_zero/services/sync/sync_status.dart' as _i8;
+import 'package:ledger_zero/services/sync/transport/sync_transport.dart' as _i6;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i5;
-import 'package:shared_preferences/shared_preferences.dart' as _i10;
+import 'package:mockito/src/dummies.dart' as _i4;
+import 'package:shared_preferences/shared_preferences.dart' as _i9;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -48,76 +47,118 @@ class MockGoogleDriveService extends _i1.Mock
   }
 
   @override
-  _i4.Future<String> ensureSyncFolderExists() =>
+  String get name =>
+      (super.noSuchMethod(
+            Invocation.getter(#name),
+            returnValue: _i4.dummyValue<String>(this, Invocation.getter(#name)),
+          )
+          as String);
+
+  @override
+  String get displayName =>
+      (super.noSuchMethod(
+            Invocation.getter(#displayName),
+            returnValue: _i4.dummyValue<String>(
+              this,
+              Invocation.getter(#displayName),
+            ),
+          )
+          as String);
+
+  @override
+  _i5.Future<void> initialize() =>
+      (super.noSuchMethod(
+            Invocation.method(#initialize, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> dispose() =>
+      (super.noSuchMethod(
+            Invocation.method(#dispose, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<String> ensureSyncFolderExists() =>
       (super.noSuchMethod(
             Invocation.method(#ensureSyncFolderExists, []),
-            returnValue: _i4.Future<String>.value(
-              _i5.dummyValue<String>(
+            returnValue: _i5.Future<String>.value(
+              _i4.dummyValue<String>(
                 this,
                 Invocation.method(#ensureSyncFolderExists, []),
               ),
             ),
           )
-          as _i4.Future<String>);
+          as _i5.Future<String>);
 
   @override
-  _i4.Future<String> ensureBackupsFolderExists() =>
+  _i5.Future<String> ensureBackupsFolderExists() =>
       (super.noSuchMethod(
             Invocation.method(#ensureBackupsFolderExists, []),
-            returnValue: _i4.Future<String>.value(
-              _i5.dummyValue<String>(
+            returnValue: _i5.Future<String>.value(
+              _i4.dummyValue<String>(
                 this,
                 Invocation.method(#ensureBackupsFolderExists, []),
               ),
             ),
           )
-          as _i4.Future<String>);
+          as _i5.Future<String>);
 
   @override
-  _i4.Future<String?> uploadDelta(_i2.File? localFile, String? filename) =>
+  _i5.Future<String?> uploadDelta(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadDelta, [localFile, filename]),
-            returnValue: _i4.Future<String?>.value(),
+            returnValue: _i5.Future<String?>.value(),
           )
-          as _i4.Future<String?>);
+          as _i5.Future<String?>);
 
   @override
-  _i4.Future<String?> uploadBackup(_i2.File? localFile, String? filename) =>
+  _i5.Future<String?> uploadBackup(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadBackup, [localFile, filename]),
-            returnValue: _i4.Future<String?>.value(),
+            returnValue: _i5.Future<String?>.value(),
           )
-          as _i4.Future<String?>);
+          as _i5.Future<String?>);
 
   @override
-  _i4.Future<_i2.File> downloadDelta(String? fileId, String? savePath) =>
+  _i5.Future<_i2.File> downloadDelta(
+    _i6.RemoteFile? remoteFile,
+    String? savePath,
+  ) =>
       (super.noSuchMethod(
-            Invocation.method(#downloadDelta, [fileId, savePath]),
-            returnValue: _i4.Future<_i2.File>.value(
+            Invocation.method(#downloadDelta, [remoteFile, savePath]),
+            returnValue: _i5.Future<_i2.File>.value(
               _FakeFile_0(
                 this,
-                Invocation.method(#downloadDelta, [fileId, savePath]),
+                Invocation.method(#downloadDelta, [remoteFile, savePath]),
               ),
             ),
           )
-          as _i4.Future<_i2.File>);
+          as _i5.Future<_i2.File>);
 
   @override
-  _i4.Future<List<_i6.File>> listDeltas() =>
+  _i5.Future<List<_i6.RemoteFile>> listDeltas() =>
       (super.noSuchMethod(
             Invocation.method(#listDeltas, []),
-            returnValue: _i4.Future<List<_i6.File>>.value(<_i6.File>[]),
+            returnValue: _i5.Future<List<_i6.RemoteFile>>.value(
+              <_i6.RemoteFile>[],
+            ),
           )
-          as _i4.Future<List<_i6.File>>);
+          as _i5.Future<List<_i6.RemoteFile>>);
 
   @override
-  _i4.Future<void> deleteFile(String? fileId) =>
+  _i5.Future<void> deleteFile(String? fileId) =>
       (super.noSuchMethod(
             Invocation.method(#deleteFile, [fileId]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 }
 
 /// A class which mocks [ICloudDriveService].
@@ -133,7 +174,7 @@ class MockICloudDriveService extends _i1.Mock
   String get containerId =>
       (super.noSuchMethod(
             Invocation.getter(#containerId),
-            returnValue: _i5.dummyValue<String>(
+            returnValue: _i4.dummyValue<String>(
               this,
               Invocation.getter(#containerId),
             ),
@@ -141,82 +182,124 @@ class MockICloudDriveService extends _i1.Mock
           as String);
 
   @override
-  _i4.Stream<_i8.SyncState> get status =>
+  String get name =>
+      (super.noSuchMethod(
+            Invocation.getter(#name),
+            returnValue: _i4.dummyValue<String>(this, Invocation.getter(#name)),
+          )
+          as String);
+
+  @override
+  String get displayName =>
+      (super.noSuchMethod(
+            Invocation.getter(#displayName),
+            returnValue: _i4.dummyValue<String>(
+              this,
+              Invocation.getter(#displayName),
+            ),
+          )
+          as String);
+
+  @override
+  _i5.Stream<_i8.SyncState> get status =>
       (super.noSuchMethod(
             Invocation.getter(#status),
-            returnValue: _i4.Stream<_i8.SyncState>.empty(),
+            returnValue: _i5.Stream<_i8.SyncState>.empty(),
           )
-          as _i4.Stream<_i8.SyncState>);
+          as _i5.Stream<_i8.SyncState>);
 
   @override
-  void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
+  _i5.Future<void> initialize() =>
+      (super.noSuchMethod(
+            Invocation.method(#initialize, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<void> verifyContainerAccess() =>
+  _i5.Future<void> dispose() =>
+      (super.noSuchMethod(
+            Invocation.method(#dispose, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> verifyContainerAccess() =>
       (super.noSuchMethod(
             Invocation.method(#verifyContainerAccess, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<void> uploadDelta(_i2.File? localFile, String? filename) =>
+  _i5.Future<String?> uploadDelta(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadDelta, [localFile, filename]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<String?>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<String?>);
 
   @override
-  _i4.Future<void> uploadBackup(_i2.File? localFile, String? filename) =>
+  _i5.Future<void> uploadBackup(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadBackup, [localFile, filename]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<_i2.File> downloadDelta(String? filename, String? savePath) =>
+  _i5.Future<_i2.File> downloadDelta(
+    _i6.RemoteFile? remoteFile,
+    String? savePath,
+  ) =>
       (super.noSuchMethod(
-            Invocation.method(#downloadDelta, [filename, savePath]),
-            returnValue: _i4.Future<_i2.File>.value(
+            Invocation.method(#downloadDelta, [remoteFile, savePath]),
+            returnValue: _i5.Future<_i2.File>.value(
               _FakeFile_0(
                 this,
-                Invocation.method(#downloadDelta, [filename, savePath]),
+                Invocation.method(#downloadDelta, [remoteFile, savePath]),
               ),
             ),
           )
-          as _i4.Future<_i2.File>);
+          as _i5.Future<_i2.File>);
 
   @override
-  _i4.Future<List<_i9.ICloudFile>> listDeltas() =>
+  _i5.Future<List<_i6.RemoteFile>> listDeltas() =>
       (super.noSuchMethod(
             Invocation.method(#listDeltas, []),
-            returnValue: _i4.Future<List<_i9.ICloudFile>>.value(
-              <_i9.ICloudFile>[],
+            returnValue: _i5.Future<List<_i6.RemoteFile>>.value(
+              <_i6.RemoteFile>[],
             ),
           )
-          as _i4.Future<List<_i9.ICloudFile>>);
+          as _i5.Future<List<_i6.RemoteFile>>);
 
   @override
-  _i4.Stream<List<String>> watchDeltas() =>
+  _i5.Stream<List<String>> watchDeltas() =>
       (super.noSuchMethod(
             Invocation.method(#watchDeltas, []),
-            returnValue: _i4.Stream<List<String>>.empty(),
+            returnValue: _i5.Stream<List<String>>.empty(),
           )
-          as _i4.Stream<List<String>>);
+          as _i5.Stream<List<String>>);
+
+  @override
+  _i5.Future<void> deleteFile(String? fileId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteFile, [fileId]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 }
 
 /// A class which mocks [SharedPreferences].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSharedPreferences extends _i1.Mock implements _i10.SharedPreferences {
+class MockSharedPreferences extends _i1.Mock implements _i9.SharedPreferences {
   MockSharedPreferences() {
     _i1.throwOnMissingStub(this);
   }
@@ -263,142 +346,142 @@ class MockSharedPreferences extends _i1.Mock implements _i10.SharedPreferences {
           as List<String>?);
 
   @override
-  _i4.Future<bool> setBool(String? key, bool? value) =>
+  _i5.Future<bool> setBool(String? key, bool? value) =>
       (super.noSuchMethod(
             Invocation.method(#setBool, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> setInt(String? key, int? value) =>
+  _i5.Future<bool> setInt(String? key, int? value) =>
       (super.noSuchMethod(
             Invocation.method(#setInt, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> setDouble(String? key, double? value) =>
+  _i5.Future<bool> setDouble(String? key, double? value) =>
       (super.noSuchMethod(
             Invocation.method(#setDouble, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> setString(String? key, String? value) =>
+  _i5.Future<bool> setString(String? key, String? value) =>
       (super.noSuchMethod(
             Invocation.method(#setString, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> setStringList(String? key, List<String>? value) =>
+  _i5.Future<bool> setStringList(String? key, List<String>? value) =>
       (super.noSuchMethod(
             Invocation.method(#setStringList, [key, value]),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> remove(String? key) =>
+  _i5.Future<bool> remove(String? key) =>
       (super.noSuchMethod(
             Invocation.method(#remove, [key]),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> commit() =>
+  _i5.Future<bool> commit() =>
       (super.noSuchMethod(
             Invocation.method(#commit, []),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> clear() =>
+  _i5.Future<bool> clear() =>
       (super.noSuchMethod(
             Invocation.method(#clear, []),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<void> reload() =>
+  _i5.Future<void> reload() =>
       (super.noSuchMethod(
             Invocation.method(#reload, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 }
 
 /// A class which mocks [ConnectivityService].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockConnectivityService extends _i1.Mock
-    implements _i11.ConnectivityService {
+    implements _i10.ConnectivityService {
   MockConnectivityService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Stream<_i11.ConnectionStatus> get connectionStatusStream =>
+  _i5.Stream<_i10.ConnectionStatus> get connectionStatusStream =>
       (super.noSuchMethod(
             Invocation.getter(#connectionStatusStream),
-            returnValue: _i4.Stream<_i11.ConnectionStatus>.empty(),
+            returnValue: _i5.Stream<_i10.ConnectionStatus>.empty(),
           )
-          as _i4.Stream<_i11.ConnectionStatus>);
+          as _i5.Stream<_i10.ConnectionStatus>);
 
   @override
-  _i4.Future<bool> get isConnected =>
+  _i5.Future<bool> get isConnected =>
       (super.noSuchMethod(
             Invocation.getter(#isConnected),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 
   @override
-  _i4.Future<bool> get isWifi =>
+  _i5.Future<bool> get isWifi =>
       (super.noSuchMethod(
             Invocation.getter(#isWifi),
-            returnValue: _i4.Future<bool>.value(false),
+            returnValue: _i5.Future<bool>.value(false),
           )
-          as _i4.Future<bool>);
+          as _i5.Future<bool>);
 }
 
 /// A class which mocks [NotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockNotificationService extends _i1.Mock
-    implements _i12.NotificationService {
+    implements _i11.NotificationService {
   MockNotificationService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.Future<void> initialize() =>
+  _i5.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<void> requestPermissions() =>
+  _i5.Future<void> requestPermissions() =>
       (super.noSuchMethod(
             Invocation.method(#requestPermissions, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<void> scheduleNotification({
+  _i5.Future<void> scheduleNotification({
     required int? id,
     required String? title,
     required String? body,
@@ -411,31 +494,31 @@ class MockNotificationService extends _i1.Mock
               #body: body,
               #scheduledDate: scheduledDate,
             }),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<void> cancelNotification(int? id) =>
+  _i5.Future<void> cancelNotification(int? id) =>
       (super.noSuchMethod(
             Invocation.method(#cancelNotification, [id]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<void> showBackupReminderNotification() =>
+  _i5.Future<void> showBackupReminderNotification() =>
       (super.noSuchMethod(
             Invocation.method(#showBackupReminderNotification, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 
   @override
-  _i4.Future<void> showSyncFailureNotification({
+  _i5.Future<void> showSyncFailureNotification({
     required String? title,
     required String? body,
   }) =>
@@ -444,8 +527,8 @@ class MockNotificationService extends _i1.Mock
               #title: title,
               #body: body,
             }),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
           )
-          as _i4.Future<void>);
+          as _i5.Future<void>);
 }

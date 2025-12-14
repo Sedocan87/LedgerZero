@@ -43,4 +43,29 @@ class DeviceUtils {
     await prefs.setString(_deviceUuidKey, uuid);
     return uuid;
   }
+
+  static Future<String> getDeviceName() async {
+    final deviceInfo = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.model;
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.name;
+      } else if (Platform.isWindows) {
+        final windowsInfo = await deviceInfo.windowsInfo;
+        return windowsInfo.computerName;
+      } else if (Platform.isMacOS) {
+        final macOsInfo = await deviceInfo.macOsInfo;
+        return macOsInfo.computerName;
+      } else if (Platform.isLinux) {
+        final linuxInfo = await deviceInfo.linuxInfo;
+        return linuxInfo.prettyName;
+      }
+      return 'Unknown Device';
+    } catch (e) {
+      return 'Unknown Device';
+    }
+  }
 }

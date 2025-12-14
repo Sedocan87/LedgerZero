@@ -4,9 +4,10 @@ import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
+import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class GoogleDriveService {
+class GoogleDriveService implements SyncTransport {
   final GoogleAuthService _authService;
   final SharedPreferences _prefs;
   String? _syncFolderId;
@@ -14,7 +15,31 @@ class GoogleDriveService {
   static const String _folderIdKey = 'drive_sync_folder_id';
   static const String _backupsFolderIdKey = 'drive_backups_folder_id';
 
+  @override
+  String get name => 'google_drive';
+
+  @override
+  String get displayName => 'Google Drive';
+
   GoogleDriveService(this._authService, this._prefs);
+
+  @override
+  Future<void> initialize() async {
+    // Check if we have credentials?
+    // GoogleDriveService relies on on-demand auth via methods.
+    // We can check if signed in silently.
+    final client = await _authService.getAuthenticatedClient();
+    if (client == null) {
+      // Maybe try sign in silently?
+      // For now, strict:
+      // throw const SyncException('User not signed in', retryable: false);
+    }
+  }
+
+  @override
+  Future<void> dispose() async {
+    // No-op
+  }
 
   Future<drive.DriveApi> _getDriveApi() async {
     final client = await _authService.getAuthenticatedClient();
@@ -116,6 +141,7 @@ class GoogleDriveService {
     return file.id!;
   }
 
+  @override
   Future<String?> uploadDelta(File localFile, String filename) async {
     return _retry(() async {
       final folderId = await ensureSyncFolderExists();
@@ -152,12 +178,13 @@ class GoogleDriveService {
     }, 'Failed to upload backup');
   }
 
-  Future<File> downloadDelta(String fileId, String savePath) async {
+  @override
+  Future<File> downloadDelta(RemoteFile remoteFile, String savePath) async {
     return _retry(() async {
       final api = await _getDriveApi();
       final media =
           await api.files.get(
-                fileId,
+                remoteFile.id,
                 downloadOptions: drive.DownloadOptions.fullMedia,
               )
               as drive.Media;
@@ -170,12 +197,13 @@ class GoogleDriveService {
       final sink = file.openWrite();
       await media.stream.pipe(sink);
 
-      Logger.info('Downloaded delta: $fileId to $savePath');
+      Logger.info('Downloaded delta: ${remoteFile.name} to $savePath');
       return file;
     }, 'Failed to download delta');
   }
 
-  Future<List<drive.File>> listDeltas() async {
+  @override
+  Future<List<RemoteFile>> listDeltas() async {
     return _retry(() async {
       final folderId = await ensureSyncFolderExists();
       final api = await _getDriveApi();
@@ -188,7 +216,9 @@ class GoogleDriveService {
             'files(id, name, createdTime, modifiedTime, size, md5Checksum)',
       );
 
-      return fileList.files ?? [];
+      return (fileList.files ?? [])
+          .map((f) => RemoteFile(f.name!, f.id!))
+          .toList();
     }, 'Failed to list deltas');
   }
 
@@ -246,6 +276,7 @@ class GoogleDriveService {
     return SyncException(defaultMessage, originalError: error);
   }
 
+  @override
   Future<void> deleteFile(String fileId) async {
     try {
       final api = await _getDriveApi();

@@ -6,6 +6,7 @@ import 'package:icloud_storage/icloud_storage.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/sync_status.dart';
+import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
@@ -95,7 +96,8 @@ void main() {
         ),
       ).thenAnswer((_) async {});
 
-      await service.downloadDelta('test.json.gz', 'path/to/save');
+      final remoteFile = RemoteFile('test.json.gz', 'test.json.gz');
+      await service.downloadDelta(remoteFile, 'path/to/save');
 
       verify(
         mockStorage.startDownload(
@@ -123,7 +125,7 @@ void main() {
 
       verify(mockStorage.gatherFiles()).called(1);
       expect(results.length, 1);
-      expect(results.first.relativePath, 'test1.json.gz');
+      expect(results.first.name, 'test1.json.gz');
     });
   });
 

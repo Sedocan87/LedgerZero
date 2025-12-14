@@ -13,6 +13,9 @@ import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
 import 'package:ledger_zero/services/sync/delta_replay_service.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
+import 'package:ledger_zero/services/sync/p2p/local_discovery_service.dart';
+import 'package:ledger_zero/services/sync/p2p/sync_server.dart';
+import 'package:ledger_zero/services/sync/transport/local_sync_transport.dart';
 
 final deltaFilenameGeneratorProvider = Provider<DeltaFilenameGenerator>((ref) {
   return DeltaFilenameGenerator();
@@ -50,12 +53,31 @@ final deltaReplayServiceProvider = Provider<DeltaReplayService>((ref) {
   return DeltaReplayService(db, queue);
 });
 
+final localDiscoveryServiceProvider = Provider<LocalDiscoveryService>((ref) {
+  final service = LocalDiscoveryService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final syncServerProvider = Provider<SyncServer>((ref) {
+  final queue = ref.watch(localDeltaQueueProvider);
+  return SyncServer(queue);
+});
+
+final localSyncTransportProvider = Provider<LocalSyncTransport>((ref) {
+  final discovery = ref.watch(localDiscoveryServiceProvider);
+  final server = ref.watch(syncServerProvider);
+  // Remove deltaQueue injection as it was removed from LocalSyncTransport
+  return LocalSyncTransport(discovery, server);
+});
+
 final syncEngineProvider = Provider<SyncEngine>((ref) {
   final genService = ref.watch(deltaGenerationServiceProvider);
   final queue = ref.watch(localDeltaQueueProvider);
   final replayService = ref.watch(deltaReplayServiceProvider);
   final driveService = ref.watch(googleDriveServiceProvider);
   final iCloudService = ref.watch(iCloudDriveServiceProvider);
+  final localTransport = ref.watch(localSyncTransportProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
   final connectivity = ref.watch(connectivityServiceProvider);
   final notificationService = ref.watch(notificationServiceProvider);
@@ -64,8 +86,11 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     genService,
     queue,
     replayService,
-    driveService,
-    iCloudService,
+    {
+      'google_drive': driveService,
+      'icloud': iCloudService,
+      'local_p2p': localTransport,
+    },
     prefs,
     connectivity,
     notificationService,

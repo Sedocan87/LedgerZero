@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_card.dart';
 
 final monthlyStatsProvider = FutureProvider.autoDispose
     .family<Map<String, double>, DateTime>((ref, month) async {
+      // Re-fetch when transactions change
+      ref.watch(transactionUpdateTriggerProvider);
+
       final budgetingService = ref.watch(budgetingServiceProvider);
       final income = await budgetingService.calculateTotalIncomeForMonth(month);
       final spending = await budgetingService.calculateTotalSpendingForMonth(

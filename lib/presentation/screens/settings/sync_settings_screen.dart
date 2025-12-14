@@ -8,6 +8,7 @@ import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/sync/sync_status_indicator.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_tutorial_manager.dart';
+import 'package:ledger_zero/presentation/screens/settings/p2p_sync_screen.dart';
 
 class SyncSettingsScreen extends ConsumerStatefulWidget {
   const SyncSettingsScreen({super.key});
@@ -41,6 +42,10 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
       DropdownMenuItem(
         value: SyncProviderType.googleDrive,
         child: Text(l10n.providerGoogleDrive),
+      ),
+      const DropdownMenuItem(
+        value: SyncProviderType.localP2P,
+        child: Text('Local P2P (Wi-Fi)'),
       ),
     ];
 
@@ -137,16 +142,34 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
             Text(
               state.selectedProvider == SyncProviderType.googleDrive
                   ? l10n.googleDriveSync
-                  : l10n.iCloudDriveSync,
+                  : (state.selectedProvider == SyncProviderType.iCloud
+                        ? l10n.iCloudDriveSync
+                        : 'Local P2P Sync'),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
+
+            // P2P Specific UI
+            if (state.selectedProvider == SyncProviderType.localP2P) ...[
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const P2PSyncScreen()),
+                  );
+                },
+                icon: const Icon(Icons.devices),
+                label: const Text('Manage Peers'),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             const SyncStatusIndicator(),
             const SizedBox(height: 24),
 
-            // Connect Button
-            if (state.status == SyncStatus.disconnected ||
-                state.status == SyncStatus.error)
+            // Connect Button (for cloud providers)
+            if (state.selectedProvider != SyncProviderType.localP2P &&
+                (state.status == SyncStatus.disconnected ||
+                    state.status == SyncStatus.error))
               FilledButton.icon(
                 key: connectKey,
                 onPressed: () => controller.connect(),
@@ -171,14 +194,15 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                 label: Text(l10n.syncNow),
               ),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: state.status == SyncStatus.syncing
-                    ? null
-                    : () => controller.disconnect(),
-                icon: const Icon(Icons.logout),
-                label: Text(l10n.disconnect),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-              ),
+              if (state.selectedProvider != SyncProviderType.localP2P)
+                OutlinedButton.icon(
+                  onPressed: state.status == SyncStatus.syncing
+                      ? null
+                      : () => controller.disconnect(),
+                  icon: const Icon(Icons.logout),
+                  label: Text(l10n.disconnect),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                ),
             ],
 
             // Error Message

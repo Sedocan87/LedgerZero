@@ -9,13 +9,13 @@ import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
+import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/native.dart';
 import 'package:uuid/uuid.dart';
-import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:flutter/services.dart';
 
@@ -80,7 +80,7 @@ void main() {
     // Mock Drive listDeltas
     when(mockDrive.listDeltas()).thenAnswer((_) async {
       return cloudFilenames.entries
-          .map((e) => drive.File(id: e.key, name: e.value))
+          .map((e) => RemoteFile(e.value, e.key))
           .toList();
     });
 
@@ -147,8 +147,7 @@ void main() {
       deltaGen,
       queue,
       deltaReplay,
-      mockDrive,
-      mockICloud,
+      {'google_drive': mockDrive, 'icloud': mockICloud},
       devicePrefs,
       mockConnectivity,
       mockNotification,

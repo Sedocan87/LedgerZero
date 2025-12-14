@@ -5,12 +5,19 @@ import 'package:icloud_storage/icloud_storage.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/sync/sync_status.dart';
+import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 
-class ICloudDriveService {
+class ICloudDriveService implements SyncTransport {
   final String containerId;
   ICloudStorage? _iCloudStorage;
   final StreamController<SyncState> _statusController =
       StreamController<SyncState>.broadcast();
+
+  @override
+  String get name => 'icloud';
+
+  @override
+  String get displayName => 'iCloud Drive';
 
   ICloudDriveService({
     this.containerId = 'iCloud.com.ledgerzero.app',
@@ -19,8 +26,14 @@ class ICloudDriveService {
 
   Stream<SyncState> get status => _statusController.stream;
 
-  void dispose() {
-    _statusController.close();
+  @override
+  Future<void> initialize() async {
+    await _getStorage();
+  }
+
+  @override
+  Future<void> dispose() async {
+    await _statusController.close();
   }
 
   /// Initializes and returns the [ICloudStorage] instance.
@@ -47,8 +60,8 @@ class ICloudDriveService {
     }
   }
 
-  /// Uploads a delta file to iCloud Drive.
-  Future<void> uploadDelta(File localFile, String filename) async {
+  @override
+  Future<String?> uploadDelta(File localFile, String filename) async {
     _updateStatus(
       SyncStatus.syncing,
       message: 'Uploading $filename',
@@ -77,6 +90,7 @@ class ICloudDriveService {
       );
       Logger.info('Uploaded delta to iCloud: $filename');
       _updateStatus(SyncStatus.idle);
+      return filename; // iCloud doesn't give back an ID like Google Drive
     } catch (e) {
       _updateStatus(SyncStatus.error, message: 'Upload failed');
       throw _handleError(e, 'Failed to upload delta to iCloud');
@@ -117,24 +131,24 @@ class ICloudDriveService {
     }
   }
 
-  /// Downloads a delta file from iCloud Drive.
-  Future<File> downloadDelta(String filename, String savePath) async {
+  @override
+  Future<File> downloadDelta(RemoteFile remoteFile, String savePath) async {
     _updateStatus(
       SyncStatus.syncing,
-      message: 'Downloading $filename',
+      message: 'Downloading ${remoteFile.name}',
       progress: 0,
     );
     try {
       final storage = await _getStorage();
       await storage.startDownload(
-        relativePath: filename,
+        relativePath: remoteFile.name, // Use name as relative path
         destinationFilePath: savePath,
         onProgress: (stream) {
           stream.listen(
             (progress) {
               _updateStatus(
                 SyncStatus.syncing,
-                message: 'Downloading $filename',
+                message: 'Downloading ${remoteFile.name}',
                 progress: progress,
               );
             },
@@ -151,12 +165,15 @@ class ICloudDriveService {
     }
   }
 
-  /// Lists all delta files in the iCloud container.
-  Future<List<ICloudFile>> listDeltas() async {
+  @override
+  Future<List<RemoteFile>> listDeltas() async {
     try {
       final storage = await _getStorage();
       final files = await storage.gatherFiles();
-      return files.where((f) => f.relativePath.endsWith('.json.gz')).toList();
+      return files
+          .where((f) => f.relativePath.endsWith('.json.gz'))
+          .map((f) => RemoteFile(f.relativePath, f.relativePath))
+          .toList();
     } catch (e) {
       throw _handleError(e, 'Failed to list deltas from iCloud');
     }
@@ -217,5 +234,17 @@ class ICloudDriveService {
       originalError: error,
       retryable: false,
     );
+  }
+
+  @override
+  Future<void> deleteFile(String fileId) async {
+    try {
+      final storage = await _getStorage();
+      await storage.delete(fileId);
+      Logger.info('Deleted file from iCloud: $fileId');
+    } catch (e) {
+      Logger.error('Failed to delete file $fileId: $e');
+      rethrow;
+    }
   }
 }

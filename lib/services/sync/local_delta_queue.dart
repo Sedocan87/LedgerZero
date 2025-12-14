@@ -350,6 +350,65 @@ class LocalDeltaQueue {
 
   // --- Task 473: Queue Export ---
 
+  // --- P2P Sync Helpers ---
+
+  Future<File?> getFile(String filename) async {
+    // Check pending
+    final pendingDir = await _deltasDir;
+    final pendingFile = File('${pendingDir.path}/$filename');
+    if (await pendingFile.exists()) {
+      return pendingFile;
+    }
+
+    // Check uploaded
+    final uploadedDir = await _uploadedDir;
+    final uploadedFile = File('${uploadedDir.path}/$filename');
+    if (await uploadedFile.exists()) {
+      return uploadedFile;
+    }
+
+    // Check applied
+    final appliedDir = await _appliedDir;
+    final appliedFile = File('${appliedDir.path}/$filename');
+    if (await appliedFile.exists()) {
+      return appliedFile;
+    }
+
+    // Check incoming
+    final incomingDir = await _incomingDir;
+    final incomingFile = File('${incomingDir.path}/$filename');
+    if (await incomingFile.exists()) {
+      return incomingFile;
+    }
+
+    return null;
+  }
+
+  Future<List<File>> getAllDeltaFiles() async {
+    final allFiles = <File>[];
+
+    // Pending
+    allFiles.addAll(await getPendingDeltas());
+
+    // Uploaded
+    final uploadedDir = await _uploadedDir;
+    allFiles.addAll(
+      (await uploadedDir.list().toList()).whereType<File>().where(
+        (f) => f.path.endsWith('.json.gz'),
+      ),
+    );
+
+    // Applied
+    final appliedDir = await _appliedDir;
+    allFiles.addAll(
+      (await appliedDir.list().toList()).whereType<File>().where(
+        (f) => f.path.endsWith('.json.gz'),
+      ),
+    );
+
+    return allFiles;
+  }
+
   Future<void> exportQueue(File outputFile) async {
     final pendingFiles = await getPendingDeltas();
     final List<Map<String, dynamic>> exportList = [];

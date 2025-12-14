@@ -108,129 +108,114 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverAppBar.large(
-              title: _isSearching
-                  ? TextField(
-                      controller: _searchController,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        hintText: l10n.search,
-                        border: InputBorder.none,
-                        hintStyle: TextStyle(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      style: TextStyle(color: theme.colorScheme.onSurface),
-                      onChanged: (value) {
-                        ref.read(budgetSearchQueryProvider.notifier).state =
-                            value;
-                      },
-                    )
-                  : Text(l10n.budget),
-              centerTitle: false,
-              actions: [
-                if (!_isSearching) ...[
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    tooltip: l10n.search,
-                    onPressed: _toggleSearch,
-                  ),
-                  IconButton(
-                    icon: Consumer(
-                      builder: (context, ref, child) {
-                        final mode = ref.watch(budgetViewModeProvider);
-                        return Icon(
-                          mode == BudgetViewMode.standard
-                              ? Icons.bar_chart
-                              : Icons.list,
-                        );
-                      },
-                    ),
-                    tooltip: l10n.viewMode,
-                    onPressed: () {
-                      final current = ref.read(budgetViewModeProvider);
-                      ref
-                          .read(budgetViewModeProvider.notifier)
-                          .state = current == BudgetViewMode.standard
-                          ? BudgetViewMode.comparison
-                          : BudgetViewMode.standard;
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.category_outlined),
-                    tooltip: l10n.manageCategories,
-                    onPressed: () => context.pushNamed('categories'),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) async {
-                      if (value == 'save_template') {
-                        await showSaveTemplateDialog(context, ref);
-                      } else if (value == 'apply_template') {
-                        await showApplyTemplateDialog(context, ref);
-                      } else if (value == 'copy_previous') {
-                        await _copyPreviousMonth();
-                      } else if (value == 'reset') {
-                        await _resetBudget();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'save_template',
-                        child: Text(l10n.saveAsTemplate),
-                      ),
-                      PopupMenuItem(
-                        value: 'apply_template',
-                        child: Text(l10n.applyTemplate),
-                      ),
-                      const PopupMenuDivider(),
-                      PopupMenuItem(
-                        value: 'copy_previous',
-                        child: Text(l10n.copyFromPreviousMonth),
-                      ),
-                      PopupMenuItem(
-                        value: 'reset',
-                        child: Text(l10n.resetBudget),
-                      ),
-                    ],
-                  ),
-                ] else
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _toggleSearch,
-                  ),
-              ],
-            ),
-            // Persistent / Top content managed as SliverToBoxAdapter or sticky header
-            // Keeping it simple as scrolling content for now
-          ];
-        },
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: CustomScrollView(
-              slivers: [
-                const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: MonthSelector(key: monthSelectorKey),
+      appBar: AppBar(
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: l10n.search,
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ToBeBudgetedBanner(key: tbbKey),
-                  ),
+                style: TextStyle(color: theme.colorScheme.onSurface),
+                onChanged: (value) {
+                  ref.read(budgetSearchQueryProvider.notifier).state = value;
+                },
+              )
+            : Text(l10n.budget),
+        centerTitle: false,
+        actions: [
+          if (!_isSearching) ...[
+            IconButton(
+              icon: const Icon(Icons.search),
+              tooltip: l10n.search,
+              onPressed: _toggleSearch,
+            ),
+            IconButton(
+              icon: Consumer(
+                builder: (context, ref, child) {
+                  final mode = ref.watch(budgetViewModeProvider);
+                  return Icon(
+                    mode == BudgetViewMode.standard
+                        ? Icons.bar_chart
+                        : Icons.list,
+                  );
+                },
+              ),
+              tooltip: l10n.viewMode,
+              onPressed: () {
+                final current = ref.read(budgetViewModeProvider);
+                ref
+                    .read(budgetViewModeProvider.notifier)
+                    .state = current == BudgetViewMode.standard
+                    ? BudgetViewMode.comparison
+                    : BudgetViewMode.standard;
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.category_outlined),
+              tooltip: l10n.manageCategories,
+              onPressed: () => context.pushNamed('categories'),
+            ),
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'save_template') {
+                  await showSaveTemplateDialog(context, ref);
+                } else if (value == 'apply_template') {
+                  await showApplyTemplateDialog(context, ref);
+                } else if (value == 'copy_previous') {
+                  await _copyPreviousMonth();
+                } else if (value == 'reset') {
+                  await _resetBudget();
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'save_template',
+                  child: Text(l10n.saveAsTemplate),
                 ),
-                const SliverToBoxAdapter(child: BudgetTutorialBanner()),
-                BudgetCategoryList(headerKey: categoryListKey),
-                // Bottom padding
-                const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                PopupMenuItem(
+                  value: 'apply_template',
+                  child: Text(l10n.applyTemplate),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'copy_previous',
+                  child: Text(l10n.copyFromPreviousMonth),
+                ),
+                PopupMenuItem(value: 'reset', child: Text(l10n.resetBudget)),
               ],
             ),
+          ] else
+            IconButton(icon: const Icon(Icons.close), onPressed: _toggleSearch),
+        ],
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: CustomScrollView(
+            slivers: [
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: MonthSelector(key: monthSelectorKey),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ToBeBudgetedBanner(key: tbbKey),
+                ),
+              ),
+              const SliverToBoxAdapter(child: BudgetTutorialBanner()),
+              BudgetCategoryList(headerKey: categoryListKey),
+              // Bottom padding
+              const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            ],
           ),
         ),
       ),

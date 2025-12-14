@@ -7,9 +7,7 @@ import 'dart:async' as _i5;
 import 'dart:io' as _i2;
 
 import 'package:google_sign_in/google_sign_in.dart' as _i10;
-import 'package:googleapis/drive/v3.dart' as _i14;
 import 'package:googleapis_auth/googleapis_auth.dart' as _i11;
-import 'package:icloud_storage/icloud_storage.dart' as _i17;
 import 'package:ledger_zero/data/models/sync_delta.dart' as _i3;
 import 'package:ledger_zero/domain/entities/budget_template.dart' as _i7;
 import 'package:ledger_zero/domain/entities/category.dart' as _i6;
@@ -25,6 +23,8 @@ import 'package:ledger_zero/services/sync/google_drive_sync.dart' as _i12;
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart' as _i15;
 import 'package:ledger_zero/services/sync/local_delta_queue.dart' as _i19;
 import 'package:ledger_zero/services/sync/sync_status.dart' as _i16;
+import 'package:ledger_zero/services/sync/transport/sync_transport.dart'
+    as _i23;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i13;
 import 'package:shared_preferences/shared_preferences.dart' as _i20;
@@ -516,25 +516,30 @@ class MockGoogleDriveService extends _i1.Mock
           as _i5.Future<String?>);
 
   @override
-  _i5.Future<_i2.File> downloadDelta(String? fileId, String? savePath) =>
+  _i5.Future<_i2.File> downloadDelta(
+    _i23.RemoteFile? remoteFile,
+    String? savePath,
+  ) =>
       (super.noSuchMethod(
-            Invocation.method(#downloadDelta, [fileId, savePath]),
+            Invocation.method(#downloadDelta, [remoteFile, savePath]),
             returnValue: _i5.Future<_i2.File>.value(
               _FakeFile_0(
                 this,
-                Invocation.method(#downloadDelta, [fileId, savePath]),
+                Invocation.method(#downloadDelta, [remoteFile, savePath]),
               ),
             ),
           )
           as _i5.Future<_i2.File>);
 
   @override
-  _i5.Future<List<_i14.File>> listDeltas() =>
+  _i5.Future<List<_i23.RemoteFile>> listDeltas() =>
       (super.noSuchMethod(
             Invocation.method(#listDeltas, []),
-            returnValue: _i5.Future<List<_i14.File>>.value(<_i14.File>[]),
+            returnValue: _i5.Future<List<_i23.RemoteFile>>.value(
+              <_i23.RemoteFile>[],
+            ),
           )
-          as _i5.Future<List<_i14.File>>);
+          as _i5.Future<List<_i23.RemoteFile>>);
 
   @override
   _i5.Future<void> deleteFile(String? fileId) =>
@@ -575,10 +580,13 @@ class MockICloudDriveService extends _i1.Mock
           as _i5.Stream<_i16.SyncState>);
 
   @override
-  void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
+  _i5.Future<void> dispose() =>
+      (super.noSuchMethod(
+            Invocation.method(#dispose, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 
   @override
   _i5.Future<void> verifyContainerAccess() =>
@@ -590,13 +598,12 @@ class MockICloudDriveService extends _i1.Mock
           as _i5.Future<void>);
 
   @override
-  _i5.Future<void> uploadDelta(_i2.File? localFile, String? filename) =>
+  _i5.Future<String?> uploadDelta(_i2.File? localFile, String? filename) =>
       (super.noSuchMethod(
             Invocation.method(#uploadDelta, [localFile, filename]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i5.Future<String?>.value(),
           )
-          as _i5.Future<void>);
+          as _i5.Future<String?>);
 
   @override
   _i5.Future<void> uploadBackup(_i2.File? localFile, String? filename) =>
@@ -608,27 +615,30 @@ class MockICloudDriveService extends _i1.Mock
           as _i5.Future<void>);
 
   @override
-  _i5.Future<_i2.File> downloadDelta(String? filename, String? savePath) =>
+  _i5.Future<_i2.File> downloadDelta(
+    _i23.RemoteFile? remoteFile,
+    String? savePath,
+  ) =>
       (super.noSuchMethod(
-            Invocation.method(#downloadDelta, [filename, savePath]),
+            Invocation.method(#downloadDelta, [remoteFile, savePath]),
             returnValue: _i5.Future<_i2.File>.value(
               _FakeFile_0(
                 this,
-                Invocation.method(#downloadDelta, [filename, savePath]),
+                Invocation.method(#downloadDelta, [remoteFile, savePath]),
               ),
             ),
           )
           as _i5.Future<_i2.File>);
 
   @override
-  _i5.Future<List<_i17.ICloudFile>> listDeltas() =>
+  _i5.Future<List<_i23.RemoteFile>> listDeltas() =>
       (super.noSuchMethod(
             Invocation.method(#listDeltas, []),
-            returnValue: _i5.Future<List<_i17.ICloudFile>>.value(
-              <_i17.ICloudFile>[],
+            returnValue: _i5.Future<List<_i23.RemoteFile>>.value(
+              <_i23.RemoteFile>[],
             ),
           )
-          as _i5.Future<List<_i17.ICloudFile>>);
+          as _i5.Future<List<_i23.RemoteFile>>);
 
   @override
   _i5.Stream<List<String>> watchDeltas() =>

@@ -87,9 +87,13 @@ final parsingRulesRepositoryProvider = Provider<ParsingRulesRepository>((ref) {
   return ParsingRulesRepositoryImpl(ref.watch(parsingRulesDaoProvider));
 });
 
-/// Provides the [ImportProfileRepository].
 final importProfileRepositoryProvider = Provider<ImportProfileRepository>((
   ref,
 ) {
   return ImportProfileRepositoryImpl(ref.read(databaseProvider));
+});
+
+/// Watches for any changes in the transactions table.
+final transactionUpdateTriggerProvider = StreamProvider<void>((ref) {
+  return ref.watch(transactionRepositoryProvider).watchAllTransactions();
 });

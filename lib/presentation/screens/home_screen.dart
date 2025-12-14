@@ -52,6 +52,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.home),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
+            tooltip: l10n.settings,
+          ),
+        ],
+      ),
       body: hasAccountsAsync.when(
         data: (hasAccounts) {
           if (!hasAccounts) {
@@ -61,17 +72,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onRefresh: _refreshHome,
             child: CustomScrollView(
               slivers: [
-                SliverAppBar.large(
-                  title: Text(l10n.home),
-                  centerTitle: false, // M3 aligns start usually
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () => context.push('/settings'),
-                      tooltip: l10n.settings,
-                    ),
-                  ],
-                ),
                 SliverPadding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   sliver: SliverList(

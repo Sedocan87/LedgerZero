@@ -4,24 +4,22 @@ import 'dart:io';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/delta_generation_service.dart';
-import 'package:ledger_zero/data/models/sync_delta.dart';
 import 'package:ledger_zero/services/sync/delta_replay_service.dart';
-import 'package:ledger_zero/services/sync/google_drive_sync.dart';
-import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
+import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 import 'package:ledger_zero/services/sync/local_delta_queue.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:synchronized/synchronized.dart';
+import 'package:ledger_zero/data/models/sync_delta.dart';
 
 // Task 441: Sync Engine Orchestrator
 class SyncEngine {
   final DeltaGenerationService _deltaGenerationService;
   final LocalDeltaQueue _deltaQueue;
   final DeltaReplayService _deltaReplayService;
-  final GoogleDriveService _googleDriveService;
-  final ICloudDriveService _iCloudService;
+  final Map<String, SyncTransport> _transports;
   final SharedPreferences _prefs;
   final ConnectivityService _connectivityService;
   final NotificationService _notificationService;
@@ -42,8 +40,7 @@ class SyncEngine {
     this._deltaGenerationService,
     this._deltaQueue,
     this._deltaReplayService,
-    this._googleDriveService,
-    this._iCloudService,
+    this._transports,
     this._prefs,
     this._connectivityService,
     this._notificationService,
@@ -208,7 +205,26 @@ class SyncEngine {
             ),
           );
         }
-        Logger.info('Sync started (${provider.name})...');
+
+        // Resolve transport
+        final transportName = provider.name == 'googleDrive'
+            ? 'google_drive'
+            : (provider.name == 'iCloud'
+                  ? 'icloud'
+                  : (provider.name == 'localP2P'
+                        ? 'local_p2p'
+                        : provider.name));
+        final transport = _transports[transportName];
+
+        if (transport == null) {
+          Logger.error('Sync transport not found: $transportName');
+          return;
+        }
+
+        Logger.info('Sync started (${transport.displayName})...');
+
+        // Initialize if needed (idempotent usually)
+        await transport.initialize();
 
         // 1. Generate local deltas
         if (_isCancelled) {
@@ -267,11 +283,7 @@ class SyncEngine {
             );
 
             final filename = file.uri.pathSegments.last;
-            if (provider == SyncProviderType.googleDrive) {
-              await _googleDriveService.uploadDelta(file, filename);
-            } else {
-              await _iCloudService.uploadDelta(file, filename);
-            }
+            await transport.uploadDelta(file, filename);
             await _deltaQueue.markAsUploaded(file);
             uploadedCount++;
           }
@@ -302,16 +314,7 @@ class SyncEngine {
             : await _getProcessedRemoteFiles();
         final tempDir = await getTemporaryDirectory();
 
-        List<RemoteFile> remoteFiles = [];
-        if (provider == SyncProviderType.googleDrive) {
-          final files = await _googleDriveService.listDeltas();
-          remoteFiles = files.map((f) => RemoteFile(f.name!, f.id!)).toList();
-        } else {
-          final files = await _iCloudService.listDeltas();
-          remoteFiles = files
-              .map((f) => RemoteFile(f.relativePath, f.relativePath))
-              .toList();
-        }
+        final List<RemoteFile> remoteFiles = await transport.listDeltas();
 
         remoteFiles.sort(
           (a, b) => a.name.compareTo(b.name),
@@ -349,30 +352,6 @@ class SyncEngine {
             final downloadedDeltas = <SyncDelta>[];
             final queuedFiles = <File>[];
 
-            // Download batch in parallel?
-            // Using Future.wait might be faster but riskier on rate limits.
-            // Let's do parallel for small batch.
-            /*
-                 await Future.wait(batch.map((remoteFile) async {
-                     final savePath = '${tempDir.path}/${remoteFile.name}';
-                     File downloadedFile;
-                     if (provider == SyncProviderType.googleDrive) {
-                         downloadedFile = await _googleDriveService.downloadDelta(remoteFile.id, savePath);
-                     } else {
-                         downloadedFile = await _iCloudService.downloadDelta(remoteFile.name, savePath);
-                     }
-
-                     final queuedFile = await _deltaQueue.enqueueIncoming(downloadedFile, remoteFile.name);
-                     // We need to synchronize access to queuedFiles list if running in parallel?
-                     // Future.wait runs concurrently. List is not thread safe?
-                     // Dart is single threaded event loop, so adding to list is safe after await.
-                     queuedFiles.add(queuedFile);
-
-                     final delta = await _deltaQueue.readDelta(queuedFile);
-                     downloadedDeltas.add(delta);
-                 }));
-                 */
-
             // Sort downloaded deltas by sequence/timestamp to ensure correct replay order within batch
             // Filenames are already sorted, so if we process in order of `batch`, it should be fine.
             // But Future.wait might complete out of order.
@@ -389,18 +368,10 @@ class SyncEngine {
                 break;
               }
               final savePath = '${tempDir.path}/${remoteFile.name}';
-              File downloadedFile;
-              if (provider == SyncProviderType.googleDrive) {
-                downloadedFile = await _googleDriveService.downloadDelta(
-                  remoteFile.id,
-                  savePath,
-                );
-              } else {
-                downloadedFile = await _iCloudService.downloadDelta(
-                  remoteFile.name,
-                  savePath,
-                );
-              }
+              final downloadedFile = await transport.downloadDelta(
+                remoteFile,
+                savePath,
+              );
               final queuedFile = await _deltaQueue.enqueueIncoming(
                 downloadedFile,
                 remoteFile.name,
@@ -525,10 +496,4 @@ class SyncEngine {
           _prefs.getInt('sync_stats_consecutive_failures') ?? 0,
     };
   }
-}
-
-class RemoteFile {
-  final String name;
-  final String id;
-  RemoteFile(this.name, this.id);
 }

@@ -55,7 +55,7 @@ class MockSecurityManager extends _i1.Mock implements _i2.SecurityManager {
   _i3.Future<String> deriveKeyFromPassword(
     String? password,
     String? salt, {
-    int? iterations = 10000,
+    int? iterations = 100000,
   }) =>
       (super.noSuchMethod(
             Invocation.method(

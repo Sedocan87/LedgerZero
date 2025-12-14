@@ -64,8 +64,10 @@ void main() {
       mockDeltaGenService,
       mockLocalDeltaQueue,
       mockDeltaReplayService,
-      mockGoogleDriveService,
-      mockICloudDriveService,
+      {
+        'google_drive': mockGoogleDriveService,
+        'icloud': mockICloudDriveService,
+      },
       mockPrefs,
       mockConnectivityService,
       mockNotificationService,

@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 
 enum SyncStatus { idle, disconnected, connected, syncing, error }
 
-enum SyncProviderType { none, googleDrive, iCloud }
+enum SyncProviderType { none, googleDrive, iCloud, localP2P }
 
 enum SyncFrequency {
   manual,

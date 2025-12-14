@@ -145,6 +145,22 @@ class MockLocalDeltaQueue extends _i1.Mock implements _i4.LocalDeltaQueue {
           as _i5.Future<int>);
 
   @override
+  _i5.Future<_i2.File?> getFile(String? filename) =>
+      (super.noSuchMethod(
+            Invocation.method(#getFile, [filename]),
+            returnValue: _i5.Future<_i2.File?>.value(),
+          )
+          as _i5.Future<_i2.File?>);
+
+  @override
+  _i5.Future<List<_i2.File>> getAllDeltaFiles() =>
+      (super.noSuchMethod(
+            Invocation.method(#getAllDeltaFiles, []),
+            returnValue: _i5.Future<List<_i2.File>>.value(<_i2.File>[]),
+          )
+          as _i5.Future<List<_i2.File>>);
+
+  @override
   _i5.Future<void> exportQueue(_i2.File? outputFile) =>
       (super.noSuchMethod(
             Invocation.method(#exportQueue, [outputFile]),
