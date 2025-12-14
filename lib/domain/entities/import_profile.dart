@@ -57,16 +57,16 @@ class ImportProfile extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        dateFormat,
-        decimalSeparator,
-        outflowIsNegative,
-        dateColumn,
-        amountColumn,
-        payeeColumn,
-        memoColumn,
-        categoryColumn,
-        createdAt,
-      ];
+    id,
+    name,
+    dateFormat,
+    decimalSeparator,
+    outflowIsNegative,
+    dateColumn,
+    amountColumn,
+    payeeColumn,
+    memoColumn,
+    categoryColumn,
+    createdAt,
+  ];
 }

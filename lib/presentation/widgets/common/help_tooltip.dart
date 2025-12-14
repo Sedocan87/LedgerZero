@@ -29,11 +29,13 @@ class HelpTooltip extends StatelessWidget {
       textStyle: TextStyle(
         color: Theme.of(context).colorScheme.onInverseSurface,
       ),
-      child: child ?? Icon(
-        Icons.help_outline,
-        size: size,
-        color: color ?? Theme.of(context).colorScheme.outline,
-      ),
+      child:
+          child ??
+          Icon(
+            Icons.help_outline,
+            size: size,
+            color: color ?? Theme.of(context).colorScheme.outline,
+          ),
     );
   }
 }

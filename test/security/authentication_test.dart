@@ -23,17 +23,28 @@ void main() {
 
     // Default mocks
     when(mockSecurityManager.getSalt()).thenAnswer((_) async => 'salt');
-    when(mockSecurityManager.deriveKeyFromPassword(any, any)).thenReturn('derived_key');
+    when(
+      mockSecurityManager.deriveKeyFromPassword(any, any),
+    ).thenAnswer((_) async => 'derived_key');
     when(mockSecurityManager.verifyKey(any)).thenAnswer((_) async => true);
-    when(mockSecurityManager.isBiometricsAvailable).thenAnswer((_) async => false);
+    when(
+      mockSecurityManager.isBiometricsAvailable,
+    ).thenAnswer((_) async => false);
     when(mockSecurityManager.hasKey()).thenAnswer((_) async => false);
   });
 
   Widget createLoginScreen() {
     final router = GoRouter(
       routes: [
-        GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-        GoRoute(path: '/', builder: (context, state) => const Scaffold(body: Text('Home Screen'))),
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: '/',
+          builder: (context, state) =>
+              const Scaffold(body: Text('Home Screen')),
+        ),
       ],
       initialLocation: '/login',
     );
@@ -50,15 +61,15 @@ void main() {
             securityManagerProvider.overrideWithValue(mockSecurityManager),
             sharedPreferencesProvider.overrideWithValue(snapshot.data!),
           ],
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
+          child: MaterialApp.router(routerConfig: router),
         );
-      }
+      },
     );
   }
 
-  testWidgets('Login with correct password sets session key and navigates', (tester) async {
+  testWidgets('Login with correct password sets session key and navigates', (
+    tester,
+  ) async {
     await tester.pumpWidget(createLoginScreen());
     await tester.pumpAndSettle(); // Wait for FutureBuilder
 
@@ -86,7 +97,9 @@ void main() {
 
     // Verify logic
     verify(mockSecurityManager.getSalt()).called(1);
-    verify(mockSecurityManager.deriveKeyFromPassword('password123', 'salt')).called(1);
+    verify(
+      mockSecurityManager.deriveKeyFromPassword('password123', 'salt'),
+    ).called(1);
     verify(mockSecurityManager.verifyKey('derived_key')).called(1);
 
     // Verify navigation success (SnackBar should NOT be present)

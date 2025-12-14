@@ -109,7 +109,9 @@ class ScheduledTransaction {
       categoryId: json['category_id'] as String?,
       amount: (json['amount'] as num?)?.toDouble(),
       frequency: json['frequency'] != null
-          ? RecurrenceFrequency.values.firstWhere((e) => e.name == json['frequency'])
+          ? RecurrenceFrequency.values.firstWhere(
+              (e) => e.name == json['frequency'],
+            )
           : null,
       interval: json['interval'] as int?,
       occurrenceCount: json['occurrence_count'] as int?,

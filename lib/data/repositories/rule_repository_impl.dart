@@ -23,7 +23,9 @@ class RuleRepositoryImpl implements RuleRepository {
 
   @override
   Stream<List<domain.Rule>> watchRules() {
-    return _rulesDao.watchAllRules().map((list) => list.map(_mapToDomain).toList());
+    return _rulesDao.watchAllRules().map(
+      (list) => list.map(_mapToDomain).toList(),
+    );
   }
 
   @override
@@ -108,23 +110,25 @@ class RuleRepositoryImpl implements RuleRepository {
       matchLogic: Value(rule.matchLogic),
       conditions: Value(rule.conditions),
       actions: Value(rule.actions),
-      createdAt: Value(DateTime.now().toIso8601String()), // Should preserve if exists? usually handled by service/usecase
+      createdAt: Value(
+        DateTime.now().toIso8601String(),
+      ), // Should preserve if exists? usually handled by service/usecase
       updatedAt: Value(DateTime.now().toIso8601String()),
     );
   }
 
   Rule _mapToRow(domain.Rule rule) {
-      return Rule(
-          id: rule.id,
-          name: rule.name,
-          description: rule.description,
-          priority: rule.priority,
-          isActive: rule.isActive,
-          matchLogic: rule.matchLogic,
-          conditions: rule.conditions,
-          actions: rule.actions,
-          createdAt: DateTime.now().toIso8601String(), // placeholder
-          updatedAt: DateTime.now().toIso8601String(), // placeholder
-      );
+    return Rule(
+      id: rule.id,
+      name: rule.name,
+      description: rule.description,
+      priority: rule.priority,
+      isActive: rule.isActive,
+      matchLogic: rule.matchLogic,
+      conditions: rule.conditions,
+      actions: rule.actions,
+      createdAt: DateTime.now().toIso8601String(), // placeholder
+      updatedAt: DateTime.now().toIso8601String(), // placeholder
+    );
   }
 }

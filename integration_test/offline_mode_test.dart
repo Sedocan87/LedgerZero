@@ -15,8 +15,8 @@ class MockConnectivityService extends Mock implements ConnectivityService {
 
   @override
   Stream<ConnectionStatus> get connectionStatusStream => Stream.value(
-        _isOffline ? ConnectionStatus.offline : ConnectionStatus.online,
-      );
+    _isOffline ? ConnectionStatus.offline : ConnectionStatus.online,
+  );
 
   @override
   Future<bool> get isConnected async => !_isOffline;

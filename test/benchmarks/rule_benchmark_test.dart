@@ -19,8 +19,8 @@ class MockPayeeRepository extends Mock implements PayeeRepository {
 
 // Minimal mock using Mockito mixin and implementing the interface correctly
 class MockTransactionRepository extends Mock implements TransactionRepository {
-    // We don't need to implement methods for this test as we don't call them
-    // unless applyRules calls them (which it doesn't, only applyRulesToAllTransactions does)
+  // We don't need to implement methods for this test as we don't call them
+  // unless applyRules calls them (which it doesn't, only applyRulesToAllTransactions does)
 }
 
 void main() {
@@ -32,33 +32,39 @@ void main() {
 
     // 1. Generate Rules (50 rules)
     final rules = List.generate(50, (index) {
-       return Rule(
-         id: 'rule_$index',
-         name: 'Rule $index',
-         priority: index,
-         isActive: true,
-         matchLogic: RuleMatchLogic.and,
-         conditions: [
-           RuleCondition(type: RuleConditionType.description, operator: RuleConditionOperator.contains, value: 'keyword_$index'),
-         ],
-         actions: [
-           const RuleAction(type: RuleActionType.setMemo, value: 'Matched'),
-         ],
-       );
+      return Rule(
+        id: 'rule_$index',
+        name: 'Rule $index',
+        priority: index,
+        isActive: true,
+        matchLogic: RuleMatchLogic.and,
+        conditions: [
+          RuleCondition(
+            type: RuleConditionType.description,
+            operator: RuleConditionOperator.contains,
+            value: 'keyword_$index',
+          ),
+        ],
+        actions: [
+          const RuleAction(type: RuleActionType.setMemo, value: 'Matched'),
+        ],
+      );
     });
 
     // 2. Generate Transactions (50,000)
     final transactions = List.generate(50000, (index) {
-       return Transaction(
-         id: 'tx_$index',
-         accountId: 'acc_1',
-         date: DateTime.now(),
-         amount: 10.0,
-         // Every 100th transaction matches a rule
-         memo: index % 100 == 0 ? 'Transaction with keyword_${index % 50}' : 'Generic transaction',
-         createdAt: DateTime.now(),
-         updatedAt: DateTime.now(),
-       );
+      return Transaction(
+        id: 'tx_$index',
+        accountId: 'acc_1',
+        date: DateTime.now(),
+        amount: 10.0,
+        // Every 100th transaction matches a rule
+        memo: index % 100 == 0
+            ? 'Transaction with keyword_${index % 50}'
+            : 'Generic transaction',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
     });
 
     // print('Starting benchmark with 50,000 transactions and 50 rules...');

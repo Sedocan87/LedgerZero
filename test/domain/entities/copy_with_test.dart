@@ -20,10 +20,7 @@ void main() {
         isClosed: false,
       );
 
-      final updated = account.copyWith(
-        name: 'Savings',
-        currentBalance: 200.0,
-      );
+      final updated = account.copyWith(name: 'Savings', currentBalance: 200.0);
 
       expect(updated.id, account.id);
       expect(updated.name, 'Savings');
@@ -43,10 +40,7 @@ void main() {
         available: 50.0,
       );
 
-      final updated = budget.copyWith(
-        budgeted: 200.0,
-        available: 150.0,
-      );
+      final updated = budget.copyWith(budgeted: 200.0, available: 150.0);
 
       expect(updated.id, budget.id);
       expect(updated.month, budget.month);
@@ -56,16 +50,9 @@ void main() {
     });
 
     test('Category.copyWith should update fields correctly', () {
-      const category = Category(
-        id: '1',
-        name: 'Groceries',
-        isHidden: false,
-      );
+      const category = Category(id: '1', name: 'Groceries', isHidden: false);
 
-      final updated = category.copyWith(
-        name: 'Food',
-        isHidden: true,
-      );
+      final updated = category.copyWith(name: 'Food', isHidden: true);
 
       expect(updated.id, category.id);
       expect(updated.name, 'Food');
@@ -73,16 +60,9 @@ void main() {
     });
 
     test('CategoryGroup.copyWith should update fields correctly', () {
-      const group = CategoryGroup(
-        id: '1',
-        name: 'Essential',
-        sortOrder: 1,
-      );
+      const group = CategoryGroup(id: '1', name: 'Essential', sortOrder: 1);
 
-      final updated = group.copyWith(
-        name: 'Needs',
-        sortOrder: 2,
-      );
+      final updated = group.copyWith(name: 'Needs', sortOrder: 2);
 
       expect(updated.id, group.id);
       expect(updated.name, 'Needs');
@@ -90,14 +70,9 @@ void main() {
     });
 
     test('Payee.copyWith should update fields correctly', () {
-      const payee = Payee(
-        id: '1',
-        name: 'Store',
-      );
+      const payee = Payee(id: '1', name: 'Store');
 
-      final updated = payee.copyWith(
-        name: 'Supermarket',
-      );
+      final updated = payee.copyWith(name: 'Supermarket');
 
       expect(updated.id, payee.id);
       expect(updated.name, 'Supermarket');

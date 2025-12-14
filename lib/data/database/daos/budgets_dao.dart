@@ -22,10 +22,14 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
   Future<int> deleteBudget(String id) =>
       (delete(budgets)..where((tbl) => tbl.id.equals(id))).go();
 
-  Future<Budget?> getBudgetByCategoryAndMonth(String categoryId, String month) =>
-      (select(budgets)
-            ..where(
-                (tbl) => tbl.categoryId.equals(categoryId) & tbl.month.equals(month)))
+  Future<Budget?> getBudgetByCategoryAndMonth(
+    String categoryId,
+    String month,
+  ) =>
+      (select(budgets)..where(
+            (tbl) =>
+                tbl.categoryId.equals(categoryId) & tbl.month.equals(month),
+          ))
           .getSingleOrNull();
 
   Future<List<Budget>> getBudgetsForMonth(String month) =>
@@ -44,17 +48,23 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
   }
 
   Future<double> getTotalBudgetedByCategoryAndMonthRange(
-      String categoryId, String endMonth) {
+    String categoryId,
+    String endMonth,
+  ) {
     final budgeted = budgets.budgeted.sum();
     final query = selectOnly(budgets)
-      ..where(budgets.categoryId.equals(categoryId) &
-          budgets.month.isSmallerOrEqualValue(endMonth))
+      ..where(
+        budgets.categoryId.equals(categoryId) &
+            budgets.month.isSmallerOrEqualValue(endMonth),
+      )
       ..addColumns([budgeted]);
 
     return query.map((row) => row.read(budgeted) ?? 0.0).getSingle();
   }
 
-  Future<Map<String, double>> getBudgetedSumsByMonthRange(String endMonth) async {
+  Future<Map<String, double>> getBudgetedSumsByMonthRange(
+    String endMonth,
+  ) async {
     final budgeted = budgets.budgeted.sum();
     final query = selectOnly(budgets)
       ..where(budgets.month.isSmallerOrEqualValue(endMonth))
@@ -65,7 +75,7 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
     return {
       for (final row in rows)
         if (row.read(budgets.categoryId) != null)
-          row.read(budgets.categoryId)!: row.read(budgeted) ?? 0.0
+          row.read(budgets.categoryId)!: row.read(budgeted) ?? 0.0,
     };
   }
 }

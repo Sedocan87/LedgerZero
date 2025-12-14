@@ -43,22 +43,22 @@ void main() {
     // Simplification: Assume tapping opens a modal with a text field.
     final inputFinder = find.byType(TextField).first; // Or specific key
     if (inputFinder.evaluate().isNotEmpty) {
-        await tester.enterText(inputFinder, '200');
-        await tester.testTextInput.receiveAction(TextInputAction.done);
-        await tester.pumpAndSettle();
+      await tester.enterText(inputFinder, '200');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
     } else {
-        // Maybe calculator widget?
-        // Fallback: Check implementation details if tests fail.
-        // For now, assuming standard text input flow.
+      // Maybe calculator widget?
+      // Fallback: Check implementation details if tests fail.
+      // For now, assuming standard text input flow.
 
-        // If the implementation uses a custom calculator, we need to tap buttons.
-        // Let's assume text input for simplicity of this E2E skeleton.
+      // If the implementation uses a custom calculator, we need to tap buttons.
+      // Let's assume text input for simplicity of this E2E skeleton.
     }
 
     // Close dialog if needed (e.g. "Save", "OK")
     if (find.text('Save').evaluate().isNotEmpty) {
-        await tester.tap(find.text('Save'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
     }
 
     // 4. Verify Updates

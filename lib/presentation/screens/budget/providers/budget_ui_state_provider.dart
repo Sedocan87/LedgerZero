@@ -6,5 +6,6 @@ final editingCategoryProvider = StateProvider<String?>((ref) => null);
 
 enum BudgetViewMode { standard, comparison }
 
-final budgetViewModeProvider =
-    StateProvider<BudgetViewMode>((ref) => BudgetViewMode.standard);
+final budgetViewModeProvider = StateProvider<BudgetViewMode>(
+  (ref) => BudgetViewMode.standard,
+);

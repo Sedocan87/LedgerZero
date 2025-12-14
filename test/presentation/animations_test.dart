@@ -7,15 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('Animations', () {
-    testWidgets('AnimatedCountText shows final value immediately in tests', (tester) async {
+    testWidgets('AnimatedCountText shows final value immediately in tests', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-             sharedPreferencesProvider.overrideWithValue(prefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
           child: const MaterialApp(
             home: Scaffold(
               body: AnimatedCountText(
@@ -32,20 +32,14 @@ void main() {
     });
 
     testWidgets('AnimatedCountText updates when value changes', (tester) async {
-       SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-             sharedPreferencesProvider.overrideWithValue(prefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
           child: const MaterialApp(
-            home: Scaffold(
-              body: AnimatedCountText(
-                value: 100.0,
-              ),
-            ),
+            home: Scaffold(body: AnimatedCountText(value: 100.0)),
           ),
         ),
       );
@@ -54,15 +48,9 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-             sharedPreferencesProvider.overrideWithValue(prefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
           child: const MaterialApp(
-            home: Scaffold(
-              body: AnimatedCountText(
-                value: 200.0,
-              ),
-            ),
+            home: Scaffold(body: AnimatedCountText(value: 200.0)),
           ),
         ),
       );

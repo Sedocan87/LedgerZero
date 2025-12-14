@@ -20,7 +20,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Backup and Restore Integration Test (File-based)', (WidgetTester tester) async {
+  testWidgets('Backup and Restore Integration Test (File-based)', (
+    WidgetTester tester,
+  ) async {
     // 1. Setup file-based DB
     final tempDir = await Directory.systemTemp.createTemp('lz_backup_test');
     final dbFile = File(p.join(tempDir.path, 'db.sqlite'));
@@ -48,13 +50,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // 2. Insert Data
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(
-        id: 'acc_backup_test',
-        name: 'Backup Test Account',
-        type: 'checking',
-      ),
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: 'acc_backup_test',
+            name: 'Backup Test Account',
+            type: 'checking',
+          ),
+        );
 
     // 3. Create Backup
     final backupService = BackupService(db);
@@ -62,7 +66,11 @@ void main() {
     final backupFile = await backupService.createBackup(password: password);
 
     expect(backupFile.existsSync(), true, reason: 'Backup file should exist');
-    expect(backupFile.lengthSync() > 0, true, reason: 'Backup file should not be empty');
+    expect(
+      backupFile.lengthSync() > 0,
+      true,
+      reason: 'Backup file should not be empty',
+    );
 
     // 4. Clear Data (Simulate loss)
     await db.close();

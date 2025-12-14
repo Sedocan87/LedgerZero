@@ -20,14 +20,16 @@ void main() {
         ),
       );
 
-      expect(find.text('No transactions found'), findsOneWidget); // Assuming default localizations or fallback
+      expect(
+        find.text('No transactions found'),
+        findsOneWidget,
+      ); // Assuming default localizations or fallback
     });
 
-    testWidgets('Renders bars and labels when data is provided', (tester) async {
-      final data = {
-        'Food': 500.0,
-        'Rent': 1200.0,
-      };
+    testWidgets('Renders bars and labels when data is provided', (
+      tester,
+    ) async {
+      final data = {'Food': 500.0, 'Rent': 1200.0};
 
       await tester.pumpWidget(
         MaterialApp(
@@ -44,14 +46,20 @@ void main() {
       );
 
       // Verify semantics exist using finder. If found, the label matches the regex.
-      final semanticsFinder = find.bySemanticsLabel(RegExp(r'Bar Chart showing:.*Rent: 1200.00.*'));
+      final semanticsFinder = find.bySemanticsLabel(
+        RegExp(r'Bar Chart showing:.*Rent: 1200.00.*'),
+      );
       expect(semanticsFinder, findsOneWidget);
 
-      final semanticsFinder2 = find.bySemanticsLabel(RegExp(r'Bar Chart showing:.*Food: 500.00.*'));
+      final semanticsFinder2 = find.bySemanticsLabel(
+        RegExp(r'Bar Chart showing:.*Food: 500.00.*'),
+      );
       expect(semanticsFinder2, findsOneWidget);
     });
 
-    testWidgets('Should repaint returns false for identical data', (tester) async {
+    testWidgets('Should repaint returns false for identical data', (
+      tester,
+    ) async {
       // Unit test for Painter
       final painter = BarChartPainter(
         data: const [MapEntry('A', 10.0)],
@@ -68,7 +76,9 @@ void main() {
       expect(painter.shouldRepaint(otherPainter), isFalse);
     });
 
-    testWidgets('Should repaint returns true for different data', (tester) async {
+    testWidgets('Should repaint returns true for different data', (
+      tester,
+    ) async {
       final painter = BarChartPainter(
         data: const [MapEntry('A', 10.0)],
         barColor: Colors.blue,

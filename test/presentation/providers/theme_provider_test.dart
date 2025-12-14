@@ -13,15 +13,18 @@ void main() {
     sharedPreferences = await SharedPreferences.getInstance();
   });
 
-  test('ThemeNotifier initializes with system theme when no preference saved', () {
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
-    );
+  test(
+    'ThemeNotifier initializes with system theme when no preference saved',
+    () {
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        ],
+      );
 
-    expect(container.read(themeProvider), ThemeMode.system);
-  });
+      expect(container.read(themeProvider), ThemeMode.system);
+    },
+  );
 
   test('ThemeNotifier initializes with saved theme', () async {
     await sharedPreferences.setString('theme_mode', 'ThemeMode.dark');

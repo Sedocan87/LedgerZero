@@ -11,7 +11,6 @@ import 'package:intl/intl.dart';
 /// Service responsible for parsing YNAB export files (CSV and YNAB4)
 /// and converting them into intermediate data structures.
 class YnabImportService {
-
   /// Parses nYNAB CSV export files.
   ///
   /// [registerCsvContent]: Content of the 'Register.csv' file.
@@ -42,141 +41,144 @@ class YnabImportService {
     // 1. Parse Register CSV
     final regEol = detectEol(registerCsvContent);
     final registerRows = const CsvToListConverter().convert(
-        registerCsvContent,
-        shouldParseNumbers: false,
-        eol: regEol,
+      registerCsvContent,
+      shouldParseNumbers: false,
+      eol: regEol,
     );
 
     if (registerRows.isNotEmpty) {
-       final headers = registerRows.first.map((e) => e.toString()).toList();
-       final rows = registerRows.skip(1).toList();
+      final headers = registerRows.first.map((e) => e.toString()).toList();
+      final rows = registerRows.skip(1).toList();
 
-       // Index headers
-       final accIdx = headers.indexOf('Account');
-       final dateIdx = headers.indexOf('Date');
-       final payeeIdx = headers.indexOf('Payee');
-       final groupIdx = headers.indexOf('Category Group');
-       final catIdx = headers.indexOf('Category');
-       final memoIdx = headers.indexOf('Memo');
-       final outflowIdx = headers.indexOf('Outflow');
-       final inflowIdx = headers.indexOf('Inflow');
-       final clearedIdx = headers.indexOf('Cleared');
+      // Index headers
+      final accIdx = headers.indexOf('Account');
+      final dateIdx = headers.indexOf('Date');
+      final payeeIdx = headers.indexOf('Payee');
+      final groupIdx = headers.indexOf('Category Group');
+      final catIdx = headers.indexOf('Category');
+      final memoIdx = headers.indexOf('Memo');
+      final outflowIdx = headers.indexOf('Outflow');
+      final inflowIdx = headers.indexOf('Inflow');
+      final clearedIdx = headers.indexOf('Cleared');
 
-       final missingColumns = <String>[];
-       if (accIdx == -1) {
-         missingColumns.add('Account');
-       }
-       if (dateIdx == -1) {
-         missingColumns.add('Date');
-       }
-       if (payeeIdx == -1) {
-         missingColumns.add('Payee');
-       }
-       if (outflowIdx == -1) {
-         missingColumns.add('Outflow');
-       }
-       if (inflowIdx == -1) {
-         missingColumns.add('Inflow');
-       }
+      final missingColumns = <String>[];
+      if (accIdx == -1) {
+        missingColumns.add('Account');
+      }
+      if (dateIdx == -1) {
+        missingColumns.add('Date');
+      }
+      if (payeeIdx == -1) {
+        missingColumns.add('Payee');
+      }
+      if (outflowIdx == -1) {
+        missingColumns.add('Outflow');
+      }
+      if (inflowIdx == -1) {
+        missingColumns.add('Inflow');
+      }
 
-       if (missingColumns.isNotEmpty) {
-         throw Exception('Invalid YNAB Register CSV format: Missing required columns: ${missingColumns.join(', ')}');
-       }
+      if (missingColumns.isNotEmpty) {
+        throw Exception(
+          'Invalid YNAB Register CSV format: Missing required columns: ${missingColumns.join(', ')}',
+        );
+      }
 
-       // Track unique entities to avoid duplicates in list
-       final accountNames = <String>{};
-       final categoryKeys = <String>{}; // "Group|Category"
+      // Track unique entities to avoid duplicates in list
+      final accountNames = <String>{};
+      final categoryKeys = <String>{}; // "Group|Category"
 
-       for (final row in rows) {
-          if (row.length < headers.length) {
-            continue;
-          }
+      for (final row in rows) {
+        if (row.length < headers.length) {
+          continue;
+        }
 
-          final accName = row[accIdx].toString();
-          if (accountNames.add(accName)) {
-            accounts.add(YnabAccount(
+        final accName = row[accIdx].toString();
+        if (accountNames.add(accName)) {
+          accounts.add(
+            YnabAccount(
               id: accName, // Use name as ID for CSV import
               name: accName,
               type: mapAccountType(accName), // Heuristic based on name
-            ));
-          }
+            ),
+          );
+        }
 
-          final dateStr = row[dateIdx].toString();
-          DateTime date;
-          try {
-             // Try standard formats
-             if (dateStr.contains('/')) {
-                // MM/DD/YYYY or DD/MM/YYYY?
-                // YNAB export usually follows locale or MM/DD/YYYY.
-                // We'll try common ones.
-                try {
-                  date = DateFormat('MM/dd/yyyy').parse(dateStr);
-                } catch (_) {
-                  date = DateFormat('dd/MM/yyyy').parse(dateStr);
-                }
-             } else {
-               date = DateTime.parse(dateStr);
-             }
-          } catch (e) {
-             Logger.warning('Failed to parse date: $dateStr');
-             continue;
-          }
-
-          final payee = row[payeeIdx].toString();
-          final group = groupIdx != -1 ? row[groupIdx].toString() : '';
-          final category = catIdx != -1 ? row[catIdx].toString() : '';
-          final memo = memoIdx != -1 ? row[memoIdx].toString() : '';
-
-          // Parse amounts (currency string handling)
-          double parseAmount(dynamic val) {
-            String s = val.toString();
-            // Remove currency symbols
-            s = s.replaceAll(RegExp(r'[^\d.,-]'), '');
-
-            if (s.contains('.') && s.contains(',')) {
-               if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
-                  // 1,000.50 -> Remove commas
-                  s = s.replaceAll(',', '');
-               } else {
-                  // 1.000,50 -> Remove dots, replace comma with dot
-                  s = s.replaceAll('.', '').replaceAll(',', '.');
-               }
-            } else if (s.contains(',')) {
-               s = s.replaceAll(',', '.'); // 12,34 -> 12.34
+        final dateStr = row[dateIdx].toString();
+        DateTime date;
+        try {
+          // Try standard formats
+          if (dateStr.contains('/')) {
+            // MM/DD/YYYY or DD/MM/YYYY?
+            // YNAB export usually follows locale or MM/DD/YYYY.
+            // We'll try common ones.
+            try {
+              date = DateFormat('MM/dd/yyyy').parse(dateStr);
+            } catch (_) {
+              date = DateFormat('dd/MM/yyyy').parse(dateStr);
             }
-            return double.tryParse(s) ?? 0.0;
+          } else {
+            date = DateTime.parse(dateStr);
           }
+        } catch (e) {
+          Logger.warning('Failed to parse date: $dateStr');
+          continue;
+        }
 
-          final outflow = parseAmount(row[outflowIdx]);
-          final inflow = parseAmount(row[inflowIdx]);
-          final amount = inflow - outflow;
+        final payee = row[payeeIdx].toString();
+        final group = groupIdx != -1 ? row[groupIdx].toString() : '';
+        final category = catIdx != -1 ? row[catIdx].toString() : '';
+        final memo = memoIdx != -1 ? row[memoIdx].toString() : '';
 
-          final clearedStr = clearedIdx != -1 ? row[clearedIdx].toString() : 'U';
-          final cleared = clearedStr == 'C' || clearedStr == 'R';
-          final reconciled = clearedStr == 'R';
+        // Parse amounts (currency string handling)
+        double parseAmount(dynamic val) {
+          String s = val.toString();
+          // Remove currency symbols
+          s = s.replaceAll(RegExp(r'[^\d.,-]'), '');
 
-          // Handle categories
-          if (group.isNotEmpty && category.isNotEmpty) {
-             final key = '$group|$category';
-             if (categoryKeys.add(key)) {
-                // Determine if group exists
-                final grp = categoryGroups.firstWhere(
-                  (g) => g.name == group,
-                  orElse: () => YnabCategoryGroup(id: group, name: group),
-                );
-                if (!categoryGroups.contains(grp)) {
-                  categoryGroups.add(grp);
-                }
-
-                categories.add(YnabCategory(
-                  id: key,
-                  groupId: group,
-                  name: category,
-                ));
-             }
+          if (s.contains('.') && s.contains(',')) {
+            if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
+              // 1,000.50 -> Remove commas
+              s = s.replaceAll(',', '');
+            } else {
+              // 1.000,50 -> Remove dots, replace comma with dot
+              s = s.replaceAll('.', '').replaceAll(',', '.');
+            }
+          } else if (s.contains(',')) {
+            s = s.replaceAll(',', '.'); // 12,34 -> 12.34
           }
+          return double.tryParse(s) ?? 0.0;
+        }
 
-          transactions.add(YnabTransaction(
+        final outflow = parseAmount(row[outflowIdx]);
+        final inflow = parseAmount(row[inflowIdx]);
+        final amount = inflow - outflow;
+
+        final clearedStr = clearedIdx != -1 ? row[clearedIdx].toString() : 'U';
+        final cleared = clearedStr == 'C' || clearedStr == 'R';
+        final reconciled = clearedStr == 'R';
+
+        // Handle categories
+        if (group.isNotEmpty && category.isNotEmpty) {
+          final key = '$group|$category';
+          if (categoryKeys.add(key)) {
+            // Determine if group exists
+            final grp = categoryGroups.firstWhere(
+              (g) => g.name == group,
+              orElse: () => YnabCategoryGroup(id: group, name: group),
+            );
+            if (!categoryGroups.contains(grp)) {
+              categoryGroups.add(grp);
+            }
+
+            categories.add(
+              YnabCategory(id: key, groupId: group, name: category),
+            );
+          }
+        }
+
+        transactions.add(
+          YnabTransaction(
             id: 'TX_${transactions.length}', // Generate generic ID
             accountId: accName,
             date: date,
@@ -187,80 +189,88 @@ class YnabImportService {
             amount: amount,
             cleared: cleared,
             reconciled: reconciled,
-          ));
-       }
+          ),
+        );
+      }
     }
 
     // 2. Parse Budget CSV
     final budgetEol = detectEol(budgetCsvContent);
     final budgetRows = const CsvToListConverter().convert(
-        budgetCsvContent,
-        shouldParseNumbers: false,
-        eol: budgetEol,
+      budgetCsvContent,
+      shouldParseNumbers: false,
+      eol: budgetEol,
     );
 
     if (budgetRows.isNotEmpty) {
-       final headers = budgetRows.first.map((e) => e.toString()).toList();
-       final rows = budgetRows.skip(1).toList();
+      final headers = budgetRows.first.map((e) => e.toString()).toList();
+      final rows = budgetRows.skip(1).toList();
 
-       final monthIdx = headers.indexOf('Month');
-       final groupIdx = headers.indexOf('Category Group');
-       final catIdx = headers.indexOf('Category');
-       final budgetedIdx = headers.indexOf('Budgeted');
+      final monthIdx = headers.indexOf('Month');
+      final groupIdx = headers.indexOf('Category Group');
+      final catIdx = headers.indexOf('Category');
+      final budgetedIdx = headers.indexOf('Budgeted');
 
-       if (monthIdx != -1 && groupIdx != -1 && catIdx != -1 && budgetedIdx != -1) {
-          for (final row in rows) {
-             if (row.length < headers.length) {
-               continue;
-             }
-
-             final monthStr = row[monthIdx].toString();
-             DateTime month;
-             try {
-                // "Jan 2023" or "01/01/2023"
-                if (monthStr.contains('/')) {
-                   month = DateFormat('MM/dd/yyyy').parse(monthStr); // Assume 1st of month?
-                } else {
-                   // Try "MMM yyyy"
-                   try {
-                     month = DateFormat('MMM yyyy').parse(monthStr);
-                   } catch (_) {
-                     // Try "MMM-yy" ?
-                     month = DateTime.parse(monthStr); // ISO fallback
-                   }
-                }
-             } catch (_) {
-               continue;
-             }
-
-             final group = row[groupIdx].toString();
-             final category = row[catIdx].toString();
-
-             // Parse budgeted amount similar to transaction amount
-             // Re-implement parse logic for budgeted (duplicated)
-             String s = row[budgetedIdx].toString();
-             s = s.replaceAll(RegExp(r'[^\d.,-]'), '');
-             if (s.contains('.') && s.contains(',')) {
-                if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
-                  s = s.replaceAll(',', '');
-                } else {
-                  s = s.replaceAll('.', '').replaceAll(',', '.');
-                }
-             } else if (s.contains(',')) {
-                s = s.replaceAll(',', '.');
-             }
-             final budgeted = double.tryParse(s) ?? 0.0;
-
-             if (budgeted != 0) {
-               budgetEntries.add(YnabBudgetEntry(
-                 categoryName: category,
-                 categoryGroupName: group,
-                 month: month,
-                 budgeted: budgeted,
-               ));
-             }
+      if (monthIdx != -1 &&
+          groupIdx != -1 &&
+          catIdx != -1 &&
+          budgetedIdx != -1) {
+        for (final row in rows) {
+          if (row.length < headers.length) {
+            continue;
           }
-       }
+
+          final monthStr = row[monthIdx].toString();
+          DateTime month;
+          try {
+            // "Jan 2023" or "01/01/2023"
+            if (monthStr.contains('/')) {
+              month = DateFormat(
+                'MM/dd/yyyy',
+              ).parse(monthStr); // Assume 1st of month?
+            } else {
+              // Try "MMM yyyy"
+              try {
+                month = DateFormat('MMM yyyy').parse(monthStr);
+              } catch (_) {
+                // Try "MMM-yy" ?
+                month = DateTime.parse(monthStr); // ISO fallback
+              }
+            }
+          } catch (_) {
+            continue;
+          }
+
+          final group = row[groupIdx].toString();
+          final category = row[catIdx].toString();
+
+          // Parse budgeted amount similar to transaction amount
+          // Re-implement parse logic for budgeted (duplicated)
+          String s = row[budgetedIdx].toString();
+          s = s.replaceAll(RegExp(r'[^\d.,-]'), '');
+          if (s.contains('.') && s.contains(',')) {
+            if (s.lastIndexOf('.') > s.lastIndexOf(',')) {
+              s = s.replaceAll(',', '');
+            } else {
+              s = s.replaceAll('.', '').replaceAll(',', '.');
+            }
+          } else if (s.contains(',')) {
+            s = s.replaceAll(',', '.');
+          }
+          final budgeted = double.tryParse(s) ?? 0.0;
+
+          if (budgeted != 0) {
+            budgetEntries.add(
+              YnabBudgetEntry(
+                categoryName: category,
+                categoryGroupName: group,
+                month: month,
+                budgeted: budgeted,
+              ),
+            );
+          }
+        }
+      }
     }
 
     return YnabImportData(
@@ -350,17 +360,19 @@ class YnabImportService {
 
     // 1. Accounts
     for (final acc in (json['accounts'] as List? ?? [])) {
-       if (acc['isTombstone'] == true) {
-         continue;
-       }
+      if (acc['isTombstone'] == true) {
+        continue;
+      }
 
-       accounts.add(YnabAccount(
-         id: acc['entityId'],
-         name: acc['accountName'],
-         type: _mapYnab4AccountType(acc['accountType']),
-         onBudget: acc['onBudget'] ?? true,
-         isClosed: acc['hidden'] ?? false,
-       ));
+      accounts.add(
+        YnabAccount(
+          id: acc['entityId'],
+          name: acc['accountName'],
+          type: _mapYnab4AccountType(acc['accountType']),
+          onBudget: acc['onBudget'] ?? true,
+          isClosed: acc['hidden'] ?? false,
+        ),
+      );
     }
 
     // 2. Payees (Need to map Payee ID -> Name)
@@ -410,22 +422,22 @@ class YnabImportService {
     // First, index splits by parentId
     final splitsByParent = <String, List<YnabSplitItem>>{};
     for (final split in (json['subTransactions'] as List? ?? [])) {
-       if (split['isTombstone'] == true) {
-         continue;
-       }
-       final parentId = split['entitiesTransactionId'];
-       final catId = split['categoryId'];
-       final cat = categoryMap[catId];
+      if (split['isTombstone'] == true) {
+        continue;
+      }
+      final parentId = split['entitiesTransactionId'];
+      final catId = split['categoryId'];
+      final cat = categoryMap[catId];
 
-       final item = YnabSplitItem(
-         categoryGroupName: cat != null ? groupMap[cat.groupId] : null,
-         categoryName: cat?.name,
-         amount: (split['amount'] as num).toDouble(),
-         memo: split['memo'],
-         payeeName: null, // YNAB4 splits don't have separate payees usually
-       );
+      final item = YnabSplitItem(
+        categoryGroupName: cat != null ? groupMap[cat.groupId] : null,
+        categoryName: cat?.name,
+        amount: (split['amount'] as num).toDouble(),
+        memo: split['memo'],
+        payeeName: null, // YNAB4 splits don't have separate payees usually
+      );
 
-       splitsByParent.putIfAbsent(parentId, () => []).add(item);
+      splitsByParent.putIfAbsent(parentId, () => []).add(item);
     }
 
     for (final tx in (json['transactions'] as List? ?? [])) {
@@ -440,20 +452,22 @@ class YnabImportService {
 
       final String? transferAccountId = tx['targetAccountId'];
 
-      transactions.add(YnabTransaction(
-        id: tx['entityId'],
-        accountId: tx['accountId'],
-        date: DateTime.parse(tx['date']),
-        payeeName: payeeName,
-        categoryGroupName: cat != null ? groupMap[cat.groupId] : null,
-        categoryName: cat?.name,
-        amount: (tx['amount'] as num).toDouble(),
-        memo: tx['memo'],
-        cleared: tx['cleared'] == 'Cleared' || tx['cleared'] == 'Reconciled',
-        reconciled: tx['cleared'] == 'Reconciled',
-        transferAccountId: transferAccountId,
-        splits: splitItems,
-      ));
+      transactions.add(
+        YnabTransaction(
+          id: tx['entityId'],
+          accountId: tx['accountId'],
+          date: DateTime.parse(tx['date']),
+          payeeName: payeeName,
+          categoryGroupName: cat != null ? groupMap[cat.groupId] : null,
+          categoryName: cat?.name,
+          amount: (tx['amount'] as num).toDouble(),
+          memo: tx['memo'],
+          cleared: tx['cleared'] == 'Cleared' || tx['cleared'] == 'Reconciled',
+          reconciled: tx['cleared'] == 'Reconciled',
+          transferAccountId: transferAccountId,
+          splits: splitItems,
+        ),
+      );
     }
 
     // 5. Scheduled Transactions
@@ -480,18 +494,20 @@ class YnabImportService {
       }
       // Others map to nearest or monthly? LedgerZero supports daily, weekly, monthly, yearly.
 
-      scheduledTransactions.add(YnabScheduledTransaction(
-        id: sch['entityId'],
-        accountId: sch['accountId'],
-        payeeName: payeeName,
-        categoryGroupName: cat != null ? groupMap[cat.groupId] : null,
-        categoryName: cat?.name,
-        memo: sch['memo'],
-        amount: (sch['amount'] as num).toDouble(),
-        frequency: frequency,
-        nextDate: DateTime.parse(sch['date']), // The next occurrence
-        transferAccountId: sch['targetAccountId'],
-      ));
+      scheduledTransactions.add(
+        YnabScheduledTransaction(
+          id: sch['entityId'],
+          accountId: sch['accountId'],
+          payeeName: payeeName,
+          categoryGroupName: cat != null ? groupMap[cat.groupId] : null,
+          categoryName: cat?.name,
+          memo: sch['memo'],
+          amount: (sch['amount'] as num).toDouble(),
+          frequency: frequency,
+          nextDate: DateTime.parse(sch['date']), // The next occurrence
+          transferAccountId: sch['targetAccountId'],
+        ),
+      );
     }
 
     // 6. Budget entries (monthlyBudgets)
@@ -518,12 +534,14 @@ class YnabImportService {
 
         final budgeted = (subBudget['budgeted'] as num).toDouble();
 
-         budgetEntries.add(YnabBudgetEntry(
-           categoryName: cat.name,
-           categoryGroupName: groupMap[cat.groupId] ?? 'Unknown',
-           month: month,
-           budgeted: budgeted,
-         ));
+        budgetEntries.add(
+          YnabBudgetEntry(
+            categoryName: cat.name,
+            categoryGroupName: groupMap[cat.groupId] ?? 'Unknown',
+            month: month,
+            budgeted: budgeted,
+          ),
+        );
       }
     }
 

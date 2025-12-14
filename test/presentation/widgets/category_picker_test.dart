@@ -17,34 +17,34 @@ void main() {
       mockCategoryRepository = MockCategoryRepository();
 
       // Mock category groups and categories
-      when(mockCategoryRepository.watchAllCategoryGroups())
-          .thenAnswer((_) => Stream.value([
-                const CategoryGroup(id: 'g1', name: 'Group 1', sortOrder: 0),
-              ]));
+      when(mockCategoryRepository.watchAllCategoryGroups()).thenAnswer(
+        (_) => Stream.value([
+          const CategoryGroup(id: 'g1', name: 'Group 1', sortOrder: 0),
+        ]),
+      );
 
-      when(mockCategoryRepository.watchAllCategories())
-          .thenAnswer((_) => Stream.value([
-                Category(
-                  id: 'c1',
-                  name: 'Test Category',
-                  categoryGroupId: 'g1',
-                  isHidden: false,
-                  sortOrder: 0,
-                  createdAt: DateTime.now(),
-                  color: Colors.blue.toARGB32(),
-                  icon: 'icon_code',
-                ),
-              ]));
+      when(mockCategoryRepository.watchAllCategories()).thenAnswer(
+        (_) => Stream.value([
+          Category(
+            id: 'c1',
+            name: 'Test Category',
+            categoryGroupId: 'g1',
+            isHidden: false,
+            sortOrder: 0,
+            createdAt: DateTime.now(),
+            color: Colors.blue.toARGB32(),
+            icon: 'icon_code',
+          ),
+        ]),
+      );
     });
 
-    testWidgets('CategorySelector displays hint text (or content)', (tester) async {
+    testWidgets('CategorySelector displays hint text (or content)', (
+      tester,
+    ) async {
       await pumpTestWidget(
         tester,
-        child: Scaffold(
-          body: CategorySelector(
-            onSelected: (category) {},
-          ),
-        ),
+        child: Scaffold(body: CategorySelector(onSelected: (category) {})),
         overrides: [
           categoryRepositoryProvider.overrideWithValue(mockCategoryRepository),
         ],

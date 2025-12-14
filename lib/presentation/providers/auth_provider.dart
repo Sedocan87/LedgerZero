@@ -21,10 +21,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   static const _onboardedKey = 'user_onboarded';
 
   AuthNotifier(this._prefs)
-      : super(AuthState(
+    : super(
+        AuthState(
           isOnboarded: _prefs.getBool(_onboardedKey) ?? false,
           isAuthenticated: false,
-        ));
+        ),
+      );
 
   void setOnboarded(bool value) {
     _prefs.setBool(_onboardedKey, value);

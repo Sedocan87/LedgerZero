@@ -72,8 +72,9 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
       if (sortFieldIdx >= 0 &&
           sortFieldIdx < TransactionSortField.values.length) {
         loadedSort = TransactionSort(
-            field: TransactionSortField.values[sortFieldIdx],
-            ascending: sortAsc);
+          field: TransactionSortField.values[sortFieldIdx],
+          ascending: sortAsc,
+        );
       }
     }
 
@@ -90,11 +91,11 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
     }
 
     if (loadedSort != null || loadedFilter != null) {
-       state = state.copyWith(
-         sort: loadedSort ?? state.sort,
-         filter: loadedFilter ?? state.filter,
-       );
-       _initStream();
+      state = state.copyWith(
+        sort: loadedSort ?? state.sort,
+        filter: loadedFilter ?? state.filter,
+      );
+      _initStream();
     }
   }
 
@@ -111,7 +112,9 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
       currentFilter = currentFilter.copyWith(memoSearch: state.searchQuery);
     }
 
-    final stream = ref.read(transactionRepositoryProvider).watchTransactions(
+    final stream = ref
+        .read(transactionRepositoryProvider)
+        .watchTransactions(
           filter: currentFilter,
           sort: state.sort,
           limit: state.limit,
@@ -196,12 +199,16 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
 }
 
 final transactionsProvider =
-    StateNotifierProvider.autoDispose<TransactionsNotifier, TransactionsState>((ref) {
-  return TransactionsNotifier(ref);
-});
+    StateNotifierProvider.autoDispose<TransactionsNotifier, TransactionsState>((
+      ref,
+    ) {
+      return TransactionsNotifier(ref);
+    });
 
 // Helper providers for name lookups
-final categoryMapProvider = StreamProvider.autoDispose<Map<String, String>>((ref) {
+final categoryMapProvider = StreamProvider.autoDispose<Map<String, String>>((
+  ref,
+) {
   return ref
       .watch(categoryRepositoryProvider)
       .watchAllCategories()
@@ -215,7 +222,9 @@ final payeeMapProvider = StreamProvider.autoDispose<Map<String, String>>((ref) {
       .map((list) => {for (var item in list) item.id: item.name});
 });
 
-final accountMapProvider = StreamProvider.autoDispose<Map<String, String>>((ref) {
+final accountMapProvider = StreamProvider.autoDispose<Map<String, String>>((
+  ref,
+) {
   return ref
       .watch(accountRepositoryProvider)
       .watchAllAccounts()

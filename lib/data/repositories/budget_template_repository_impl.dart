@@ -37,12 +37,14 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
   @override
   Future<void> createTemplate(BudgetTemplate template) async {
     try {
-      await _dao.createBudgetTemplate(drift.BudgetTemplatesCompanion(
-        id: Value(template.id),
-        name: Value(template.name),
-        data: Value(jsonEncode(template.data)),
-        createdAt: Value(template.createdAt?.toIso8601String()),
-      ));
+      await _dao.createBudgetTemplate(
+        drift.BudgetTemplatesCompanion(
+          id: Value(template.id),
+          name: Value(template.name),
+          data: Value(jsonEncode(template.data)),
+          createdAt: Value(template.createdAt?.toIso8601String()),
+        ),
+      );
     } catch (e, stack) {
       Logger.error('Failed to create budget template', e, stack);
       throw const DatabaseException('Failed to create budget template');

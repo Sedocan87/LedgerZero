@@ -16,5 +16,7 @@ class Budgets extends Table {
   Set<Column> get primaryKey => {id};
 
   @override
-  List<Set<Column>> get uniqueKeys => [{categoryId, month}];
+  List<Set<Column>> get uniqueKeys => [
+    {categoryId, month},
+  ];
 }

@@ -20,38 +20,40 @@ class PayeeSelector extends ConsumerWidget {
       maxChildSize: 0.9,
       builder: (context, scrollController) => payeesAsync.when(
         data: (payees) {
-             // Sort payees alphabetically
-             final sorted = List<Payee>.from(payees)
-               ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+          // Sort payees alphabetically
+          final sorted = List<Payee>.from(payees)
+            ..sort(
+              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+            );
 
-             return Column(
-               children: [
-                 Padding(
-                   padding: const EdgeInsets.all(16.0),
-                   child: Text(
-                     'Select Payee',
-                     style: Theme.of(context).textTheme.titleLarge,
-                   ),
-                 ),
-                 Expanded(
-                   child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: sorted.length,
-                    itemBuilder: (context, index) {
-                      final payee = sorted[index];
-                      return ListTile(
-                        title: Text(payee.name),
-                        leading: const Icon(Icons.store),
-                        onTap: () {
-                          onSelected(payee);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                   ),
-                 ),
-               ],
-             );
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Select Payee',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: sorted.length,
+                  itemBuilder: (context, index) {
+                    final payee = sorted[index];
+                    return ListTile(
+                      title: Text(payee.name),
+                      leading: const Icon(Icons.store),
+                      onTap: () {
+                        onSelected(payee);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),

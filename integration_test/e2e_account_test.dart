@@ -26,7 +26,9 @@ void main() {
     // 4. Fill Form
     // Name
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Account Name'), 'Savings Account');
+      find.widgetWithText(TextFormField, 'Account Name'),
+      'Savings Account',
+    );
 
     // Type (Defaults to Checking, change to Savings)
     // Note: Dropdown finding might vary based on implementation.
@@ -38,7 +40,9 @@ void main() {
 
     // Balance
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Starting Balance'), '5000.00');
+      find.widgetWithText(TextFormField, 'Starting Balance'),
+      '5000.00',
+    );
 
     // 5. Save
     await tester.tap(find.text('Save'));

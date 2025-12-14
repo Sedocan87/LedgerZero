@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/services.dart';
@@ -26,10 +25,11 @@ void main() {
     // Mock Path Provider
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-            const MethodChannel('plugins.flutter.io/path_provider'),
-            (MethodCall methodCall) async {
-      return '.';
-    });
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (MethodCall methodCall) async {
+            return '.';
+          },
+        );
 
     mockDeltaGenService = MockDeltaGenerationService();
     mockLocalDeltaQueue = MockLocalDeltaQueue();
@@ -41,8 +41,9 @@ void main() {
     mockNotificationService = MockNotificationService();
 
     // Default mock behaviors
-    when(mockConnectivityService.connectionStatusStream)
-        .thenAnswer((_) => const Stream.empty());
+    when(
+      mockConnectivityService.connectionStatusStream,
+    ).thenAnswer((_) => const Stream.empty());
 
     // Default provider to Google Drive so it doesn't exit early on "none"
     when(mockPrefs.getString('sync_provider')).thenReturn('googleDrive');
@@ -52,7 +53,9 @@ void main() {
     when(mockPrefs.setInt(any, any)).thenAnswer((_) async => true);
 
     // Mock getAppliedDeltaFilenames
-    when(mockDeltaGenService.getAppliedDeltaFilenames()).thenAnswer((_) async => {});
+    when(
+      mockDeltaGenService.getAppliedDeltaFilenames(),
+    ).thenAnswer((_) async => {});
 
     // Mock listDeltas
     when(mockGoogleDriveService.listDeltas()).thenAnswer((_) async => []);
@@ -70,82 +73,110 @@ void main() {
   });
 
   group('SyncEngine Wi-Fi Only Tests', () {
-    test('Background sync proceeds if Wi-Fi only is FALSE and on Cellular', () async {
-      // Setup: Wifi Only = False
-      when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(false);
+    test(
+      'Background sync proceeds if Wi-Fi only is FALSE and on Cellular',
+      () async {
+        // Setup: Wifi Only = False
+        when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(false);
 
-      // Setup: Connected, but NOT Wifi (Cellular)
-      when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
-      when(mockConnectivityService.isWifi).thenAnswer((_) async => false);
+        // Setup: Connected, but NOT Wifi (Cellular)
+        when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
+        when(mockConnectivityService.isWifi).thenAnswer((_) async => false);
 
-      // Setup: processPendingChanges returns
-      when(mockDeltaGenService.processPendingChanges()).thenAnswer((_) async {});
-      when(mockLocalDeltaQueue.getPendingDeltas()).thenAnswer((_) async => []);
+        // Setup: processPendingChanges returns
+        when(
+          mockDeltaGenService.processPendingChanges(),
+        ).thenAnswer((_) async {});
+        when(
+          mockLocalDeltaQueue.getPendingDeltas(),
+        ).thenAnswer((_) async => []);
 
-      // Act
-      await syncEngine.sync(background: true);
+        // Act
+        await syncEngine.sync(background: true);
 
-      // Assert
-      // Should have called processPendingChanges
-      verify(mockDeltaGenService.processPendingChanges()).called(1);
-    });
+        // Assert
+        // Should have called processPendingChanges
+        verify(mockDeltaGenService.processPendingChanges()).called(1);
+      },
+    );
 
-    test('Background sync ABORTS if Wi-Fi only is TRUE and on Cellular', () async {
-      // Setup: Wifi Only = True
-      when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(true);
+    test(
+      'Background sync ABORTS if Wi-Fi only is TRUE and on Cellular',
+      () async {
+        // Setup: Wifi Only = True
+        when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(true);
 
-      // Setup: Connected, but NOT Wifi (Cellular)
-      when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
-      when(mockConnectivityService.isWifi).thenAnswer((_) async => false);
+        // Setup: Connected, but NOT Wifi (Cellular)
+        when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
+        when(mockConnectivityService.isWifi).thenAnswer((_) async => false);
 
-      // Act
-      await syncEngine.sync(background: true);
+        // Act
+        await syncEngine.sync(background: true);
 
-      // Assert
-      // processPendingChanges is called first (step 1)
-      verify(mockDeltaGenService.processPendingChanges()).called(1);
-      // But upload logic (getPendingDeltas) is NOT called
-      verifyNever(mockLocalDeltaQueue.getPendingDeltas());
-    });
+        // Assert
+        // processPendingChanges is called first (step 1)
+        verify(mockDeltaGenService.processPendingChanges()).called(1);
+        // But upload logic (getPendingDeltas) is NOT called
+        verifyNever(mockLocalDeltaQueue.getPendingDeltas());
+      },
+    );
 
-    test('Background sync PROCEEDS if Wi-Fi only is TRUE and on Wi-Fi', () async {
-      // Setup: Wifi Only = True
-      when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(true);
+    test(
+      'Background sync PROCEEDS if Wi-Fi only is TRUE and on Wi-Fi',
+      () async {
+        // Setup: Wifi Only = True
+        when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(true);
 
-      // Setup: Connected AND Wifi
-      when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
-      when(mockConnectivityService.isWifi).thenAnswer((_) async => true);
+        // Setup: Connected AND Wifi
+        when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
+        when(mockConnectivityService.isWifi).thenAnswer((_) async => true);
 
-      // Setup: processPendingChanges returns
-      when(mockDeltaGenService.processPendingChanges()).thenAnswer((_) async {});
-      when(mockLocalDeltaQueue.getPendingDeltas()).thenAnswer((_) async => []); // No pending uploads
+        // Setup: processPendingChanges returns
+        when(
+          mockDeltaGenService.processPendingChanges(),
+        ).thenAnswer((_) async {});
+        when(
+          mockLocalDeltaQueue.getPendingDeltas(),
+        ).thenAnswer((_) async => []); // No pending uploads
 
-      // Act
-      await syncEngine.sync(background: true);
+        // Act
+        await syncEngine.sync(background: true);
 
-      // Assert
-      verify(mockDeltaGenService.processPendingChanges()).called(1);
-      verify(mockLocalDeltaQueue.getPendingDeltas()).called(1); // Proceeded to upload check
-    });
+        // Assert
+        verify(mockDeltaGenService.processPendingChanges()).called(1);
+        verify(
+          mockLocalDeltaQueue.getPendingDeltas(),
+        ).called(1); // Proceeded to upload check
+      },
+    );
 
-    test('Manual sync PROCEEDS even if Wi-Fi only is TRUE and on Cellular', () async {
-      // Setup: Wifi Only = True
-      when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(true);
+    test(
+      'Manual sync PROCEEDS even if Wi-Fi only is TRUE and on Cellular',
+      () async {
+        // Setup: Wifi Only = True
+        when(mockPrefs.getBool('sync_on_wifi_only')).thenReturn(true);
 
-      // Setup: Connected, but NOT Wifi
-      when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
-      when(mockConnectivityService.isWifi).thenAnswer((_) async => false);
+        // Setup: Connected, but NOT Wifi
+        when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
+        when(mockConnectivityService.isWifi).thenAnswer((_) async => false);
 
-      // Setup: processPendingChanges returns
-      when(mockDeltaGenService.processPendingChanges()).thenAnswer((_) async {});
-      when(mockLocalDeltaQueue.getPendingDeltas()).thenAnswer((_) async => []);
+        // Setup: processPendingChanges returns
+        when(
+          mockDeltaGenService.processPendingChanges(),
+        ).thenAnswer((_) async {});
+        when(
+          mockLocalDeltaQueue.getPendingDeltas(),
+        ).thenAnswer((_) async => []);
 
-      // Act: background = false (manual)
-      await syncEngine.sync(background: false);
+        // Act: background = false (manual)
+        await syncEngine.sync(background: false);
 
-      // Assert
-      verify(mockDeltaGenService.processPendingChanges()).called(1);
-      verify(mockLocalDeltaQueue.getPendingDeltas()).called(1); // Should proceed because manual overrides
-    });
+        // Assert
+        verify(mockDeltaGenService.processPendingChanges()).called(1);
+        verify(
+          mockLocalDeltaQueue.getPendingDeltas(),
+        ).called(1); // Should proceed because manual overrides
+      },
+    );
   });
 }

@@ -107,10 +107,10 @@ class TransactionParser {
 
         Payee? payee;
         if (payeeId != null) {
-           final payees = await _payeeRepository.getAllPayees();
-           try {
-             payee = payees.firstWhere((p) => p.id == payeeId);
-           } catch (_) {}
+          final payees = await _payeeRepository.getAllPayees();
+          try {
+            payee = payees.firstWhere((p) => p.id == payeeId);
+          } catch (_) {}
         }
 
         Category? category;
@@ -119,7 +119,7 @@ class TransactionParser {
         }
 
         if (payee != null || category != null) {
-           return ParsedTransaction(
+          return ParsedTransaction(
             amount: amount,
             currency: currency,
             date: date,
@@ -138,7 +138,12 @@ class TransactionParser {
     final categoryMatch = await extractCategory(input, payeeMatch);
     final isIncome = detectIncome(input);
 
-    final confidence = calculateConfidence(amount, date, payeeMatch, categoryMatch);
+    final confidence = calculateConfidence(
+      amount,
+      date,
+      payeeMatch,
+      categoryMatch,
+    );
 
     return ParsedTransaction(
       amount: amount,
@@ -226,12 +231,7 @@ class TransactionParser {
 
     // 3. Fuzzy matching for Payees
     final payeeNames = payees.map((p) => p.name).toList();
-    final fuse = Fuzzy(
-      payeeNames,
-      options: FuzzyOptions(
-        threshold: 0.3,
-      ),
-    );
+    final fuse = Fuzzy(payeeNames, options: FuzzyOptions(threshold: 0.3));
 
     final result = fuse.search(input);
     if (result.isNotEmpty) {
@@ -245,7 +245,9 @@ class TransactionParser {
   Future<Category?> extractCategory(String input, Payee? matchedPayee) async {
     // 1. If payee has a default category (auto-assign), use it.
     if (matchedPayee?.autoCategoryId != null) {
-      final category = await _categoryRepository.getCategoryById(matchedPayee!.autoCategoryId!);
+      final category = await _categoryRepository.getCategoryById(
+        matchedPayee!.autoCategoryId!,
+      );
       if (category != null) {
         return category;
       }
@@ -315,7 +317,8 @@ class TransactionParser {
     final fuse = Fuzzy(
       categoryNames,
       options: FuzzyOptions(
-        threshold: 0.3, // Lower threshold means stricter matching (0.0 is perfect match)
+        threshold:
+            0.3, // Lower threshold means stricter matching (0.0 is perfect match)
       ),
     );
 
@@ -359,7 +362,9 @@ class TransactionParser {
     // Group 1: Comma separated numbers (e.g. 1,000.50)
     // Group 2: Plain numbers (e.g. 50.50 or 2023)
     // Group 3: Decimal only (e.g. .99)
-    final regex = RegExp(r'(?:[\$€£])?\s*((?:\d{1,3}(?:,\d{3})+)(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)\s*(?:[\$€£])?');
+    final regex = RegExp(
+      r'(?:[\$€£])?\s*((?:\d{1,3}(?:,\d{3})+)(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)\s*(?:[\$€£])?',
+    );
 
     final matches = regex.allMatches(input);
     for (final match in matches) {

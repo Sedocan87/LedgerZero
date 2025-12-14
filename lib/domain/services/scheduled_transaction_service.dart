@@ -32,9 +32,8 @@ class ScheduledTransactionService {
           .subtract(const Duration(microseconds: 1));
 
       // Optimization: Fetch only due transactions
-      final dueScheduled =
-          await _scheduledTransactionRepository.getDueScheduledTransactions(
-              endOfToday);
+      final dueScheduled = await _scheduledTransactionRepository
+          .getDueScheduledTransactions(endOfToday);
 
       int processedCount = 0;
 
@@ -50,7 +49,10 @@ class ScheduledTransactionService {
         while (currentScheduled.nextDate != null) {
           final currentNextDate = currentScheduled.nextDate!;
           final currentNextDateDateOnly = DateTime(
-              currentNextDate.year, currentNextDate.month, currentNextDate.day);
+            currentNextDate.year,
+            currentNextDate.month,
+            currentNextDate.day,
+          );
 
           if (currentNextDateDateOnly.isAfter(today)) {
             break;
@@ -59,7 +61,8 @@ class ScheduledTransactionService {
           // Validate required fields
           if (currentScheduled.accountId == null) {
             Logger.warning(
-                'Skipping scheduled transaction ${currentScheduled.id} with missing accountId');
+              'Skipping scheduled transaction ${currentScheduled.id} with missing accountId',
+            );
             break; // Cannot process this one further
           }
 
@@ -121,19 +124,22 @@ class ScheduledTransactionService {
         if (transactionsToCreate.isNotEmpty) {
           // Batch Create Transactions
           await _transactionRepository.batchCreateTransactions(
-              transactionsToCreate);
+            transactionsToCreate,
+          );
           processedCount += transactionsToCreate.length;
 
           // Update Scheduled Transaction once
           await _scheduledTransactionRepository.updateScheduledTransaction(
-              currentScheduled);
+            currentScheduled,
+          );
         }
 
         if (currentScheduled.nextDate != null) {
           await scheduleNotification(currentScheduled);
         } else {
           await _notificationService.cancelNotification(
-              currentScheduled.id.hashCode);
+            currentScheduled.id.hashCode,
+          );
         }
       }
       if (processedCount > 0) {
@@ -151,9 +157,14 @@ class ScheduledTransactionService {
 
     // Notify 1 day before at 9 AM
     final nextDate = transaction.nextDate!;
-    final notificationDate =
-        DateTime(nextDate.year, nextDate.month, nextDate.day, 9, 0, 0)
-            .subtract(const Duration(days: 1));
+    final notificationDate = DateTime(
+      nextDate.year,
+      nextDate.month,
+      nextDate.day,
+      9,
+      0,
+      0,
+    ).subtract(const Duration(days: 1));
 
     if (notificationDate.isBefore(DateTime.now())) {
       return;

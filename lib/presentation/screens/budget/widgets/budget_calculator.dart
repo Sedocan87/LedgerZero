@@ -41,7 +41,10 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
       _controller.clear();
     } else if (key == 'DEL') {
       if (_controller.text.isNotEmpty) {
-        _controller.text = _controller.text.substring(0, _controller.text.length - 1);
+        _controller.text = _controller.text.substring(
+          0,
+          _controller.text.length - 1,
+        );
       }
     } else if (key == '=') {
       try {
@@ -60,7 +63,12 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
     }
   }
 
-  Widget _buildKey(String label, {Color? color, Color? textColor, int flex = 1}) {
+  Widget _buildKey(
+    String label, {
+    Color? color,
+    Color? textColor,
+    int flex = 1,
+  }) {
     return Expanded(
       flex: flex,
       child: Padding(
@@ -76,7 +84,9 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
           borderRadius: BorderRadius.circular(8),
           child: Container(
             decoration: BoxDecoration(
-              color: color ?? Theme.of(context).colorScheme.surfaceContainerHighest,
+              color:
+                  color ??
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,
@@ -150,7 +160,15 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
                           children: [
                             _buildKey('.'),
                             _buildKey('0'),
-                            _buildKey('DEL', color: Theme.of(context).colorScheme.errorContainer, textColor: Theme.of(context).colorScheme.onErrorContainer),
+                            _buildKey(
+                              'DEL',
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.errorContainer,
+                              textColor: Theme.of(
+                                context,
+                              ).colorScheme.onErrorContainer,
+                            ),
                           ],
                         ),
                       ),
@@ -161,11 +179,86 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
                   flex: 1,
                   child: Column(
                     children: [
-                      Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [_buildKey('/', color: Theme.of(context).colorScheme.primaryContainer, textColor: Theme.of(context).colorScheme.onPrimaryContainer)])),
-                      Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [_buildKey('*', color: Theme.of(context).colorScheme.primaryContainer, textColor: Theme.of(context).colorScheme.onPrimaryContainer)])),
-                      Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [_buildKey('-', color: Theme.of(context).colorScheme.primaryContainer, textColor: Theme.of(context).colorScheme.onPrimaryContainer)])),
-                      Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [_buildKey('+', color: Theme.of(context).colorScheme.primaryContainer, textColor: Theme.of(context).colorScheme.onPrimaryContainer)])),
-                      Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [_buildKey('=', color: Theme.of(context).colorScheme.secondaryContainer, textColor: Theme.of(context).colorScheme.onSecondaryContainer)])),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildKey(
+                              '/',
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
+                              textColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildKey(
+                              '*',
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
+                              textColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildKey(
+                              '-',
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
+                              textColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildKey(
+                              '+',
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
+                              textColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildKey(
+                              '=',
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.secondaryContainer,
+                              textColor: Theme.of(
+                                context,
+                              ).colorScheme.onSecondaryContainer,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

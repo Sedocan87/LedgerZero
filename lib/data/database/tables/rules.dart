@@ -20,7 +20,8 @@ class Rules extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-class RuleConditionListConverter extends TypeConverter<List<RuleCondition>, String> {
+class RuleConditionListConverter
+    extends TypeConverter<List<RuleCondition>, String> {
   const RuleConditionListConverter();
 
   @override

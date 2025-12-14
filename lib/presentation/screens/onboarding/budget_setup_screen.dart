@@ -34,9 +34,8 @@ class BudgetSetupScreen extends StatelessWidget {
                       const SizedBox(height: 32),
                       Text(
                         'Give Every Dollar a Job',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
@@ -58,13 +57,15 @@ class BudgetSetupScreen extends StatelessWidget {
                       _buildTip(
                         context,
                         title: 'Zero-Based',
-                        description: 'Assign money until your "To Be Budgeted" is zero.',
+                        description:
+                            'Assign money until your "To Be Budgeted" is zero.',
                       ),
                       const SizedBox(height: 16),
                       _buildTip(
                         context,
                         title: 'Roll with the Punches',
-                        description: 'Overspent? No problem. Just move money from another category.',
+                        description:
+                            'Overspent? No problem. Just move money from another category.',
                       ),
                     ],
                   ),
@@ -76,7 +77,10 @@ class BudgetSetupScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('I\'m Ready!', style: TextStyle(fontSize: 18)),
+                child: const Text(
+                  'I\'m Ready!',
+                  style: TextStyle(fontSize: 18),
+                ),
               ),
             ],
           ),
@@ -85,7 +89,11 @@ class BudgetSetupScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTip(BuildContext context, {required String title, required String description}) {
+  Widget _buildTip(
+    BuildContext context, {
+    required String title,
+    required String description,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

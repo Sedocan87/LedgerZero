@@ -21,11 +21,14 @@ class RuleLearningService {
     final suggestions = <Rule>[];
 
     // Group transactions by Payee
-    final transactionsByPayee = <String, List<String>>{}; // PayeeID -> List of CategoryIDs
+    final transactionsByPayee =
+        <String, List<String>>{}; // PayeeID -> List of CategoryIDs
 
     for (final tx in transactions) {
       if (tx.payeeId != null && tx.categoryId != null) {
-        transactionsByPayee.putIfAbsent(tx.payeeId!, () => []).add(tx.categoryId!);
+        transactionsByPayee
+            .putIfAbsent(tx.payeeId!, () => [])
+            .add(tx.categoryId!);
       }
     }
 
@@ -51,31 +54,32 @@ class RuleLearningService {
         final percentage = count / total;
 
         if (percentage >= 0.8) {
-           final payeeName = payeeMap[payeeId]?.name ?? 'Unknown Payee';
+          final payeeName = payeeMap[payeeId]?.name ?? 'Unknown Payee';
 
-           // Check if rule already exists? (Service doesn't know existing rules easily without repo, but UI can filter)
+          // Check if rule already exists? (Service doesn't know existing rules easily without repo, but UI can filter)
 
-           suggestions.add(Rule(
-             id: const Uuid().v4(),
-             name: 'Auto-categorize $payeeName',
-             description: 'Based on your history, $payeeName is usually categorized consistently.',
-             priority: 0,
-             isActive: true,
-             matchLogic: RuleMatchLogic.and,
-             conditions: [
-               RuleCondition(
-                 type: RuleConditionType.payee,
-                 operator: RuleConditionOperator.equals,
-                 value: payeeName, // Using Name for readability/portability, could use ID if operator supports it
-               ),
-             ],
-             actions: [
-               RuleAction(
-                 type: RuleActionType.setCategory,
-                 value: catId,
-               ),
-             ],
-           ));
+          suggestions.add(
+            Rule(
+              id: const Uuid().v4(),
+              name: 'Auto-categorize $payeeName',
+              description:
+                  'Based on your history, $payeeName is usually categorized consistently.',
+              priority: 0,
+              isActive: true,
+              matchLogic: RuleMatchLogic.and,
+              conditions: [
+                RuleCondition(
+                  type: RuleConditionType.payee,
+                  operator: RuleConditionOperator.equals,
+                  value:
+                      payeeName, // Using Name for readability/portability, could use ID if operator supports it
+                ),
+              ],
+              actions: [
+                RuleAction(type: RuleActionType.setCategory, value: catId),
+              ],
+            ),
+          );
         }
       }
     }

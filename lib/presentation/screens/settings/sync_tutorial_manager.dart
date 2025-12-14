@@ -14,13 +14,15 @@ class SyncTutorialManager {
       steps: [
         TutorialStep(
           title: 'Choose Provider',
-          description: 'Select Google Drive or iCloud to sync your data securely.',
+          description:
+              'Select Google Drive or iCloud to sync your data securely.',
           targetKey: providerKey,
           position: TutorialPosition.bottom,
         ),
         TutorialStep(
           title: 'Connect',
-          description: 'Authenticate with your provider to enable synchronization.',
+          description:
+              'Authenticate with your provider to enable synchronization.',
           targetKey: connectKey,
           position: TutorialPosition.top,
         ),

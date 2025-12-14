@@ -21,9 +21,9 @@ class SyncLogDao extends DatabaseAccessor<AppDatabase> with _$SyncLogDaoMixin {
   }
 
   Future<List<SyncLogData>> getLogs() {
-    return (select(syncLog)
-          ..orderBy(
-              [(t) => OrderingTerm(expression: t.appliedAt, mode: OrderingMode.desc)]))
+    return (select(syncLog)..orderBy([
+          (t) => OrderingTerm(expression: t.appliedAt, mode: OrderingMode.desc),
+        ]))
         .get();
   }
 }

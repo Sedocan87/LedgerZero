@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
@@ -20,16 +21,15 @@ class SecurityManager {
   SecurityManager({
     FlutterSecureStorage? storage,
     LocalAuthentication? localAuth,
-  })  : _storage = storage ??
-            const FlutterSecureStorage(
-              aOptions: AndroidOptions(
-                encryptedSharedPreferences: true,
-              ),
-              iOptions: IOSOptions(
-                accessibility: KeychainAccessibility.first_unlock,
-              ),
-            ),
-        _localAuth = localAuth ?? LocalAuthentication();
+  }) : _storage =
+           storage ??
+           const FlutterSecureStorage(
+             aOptions: AndroidOptions(encryptedSharedPreferences: true),
+             iOptions: IOSOptions(
+               accessibility: KeychainAccessibility.first_unlock,
+             ),
+           ),
+       _localAuth = localAuth ?? LocalAuthentication();
 
   static const _keyStorageKey = 'db_encryption_key';
   static const _saltStorageKey = 'db_encryption_salt';
@@ -52,8 +52,23 @@ class SecurityManager {
   /// [iterations] Number of iterations (default 100,000).
   ///
   /// Returns a Base64 encoded string of the derived key.
-  String deriveKeyFromPassword(String password, String salt,
-      {int iterations = 100000}) {
+  Future<String> deriveKeyFromPassword(
+    String password,
+    String salt, {
+    int iterations = 100000,
+  }) async {
+    return compute(_deriveKeyTask, {
+      'password': password,
+      'salt': salt,
+      'iterations': iterations,
+    });
+  }
+
+  static String _deriveKeyTask(Map<String, dynamic> args) {
+    final password = args['password'] as String;
+    final salt = args['salt'] as String;
+    final iterations = args['iterations'] as int;
+
     final pkcs = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64));
     final saltBytes = Uint8List.fromList(utf8.encode(salt));
 

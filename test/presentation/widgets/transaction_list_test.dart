@@ -23,18 +23,23 @@ void main() {
       mockAccountRepository = MockAccountRepository();
 
       // Default stubs for empty responses
-      when(mockTransactionRepository.watchTransactions(
-        filter: anyNamed('filter'),
-        sort: anyNamed('sort'),
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) => Stream.value([]));
+      when(
+        mockTransactionRepository.watchTransactions(
+          filter: anyNamed('filter'),
+          sort: anyNamed('sort'),
+          limit: anyNamed('limit'),
+        ),
+      ).thenAnswer((_) => Stream.value([]));
 
-      when(mockCategoryRepository.watchAllCategories())
-          .thenAnswer((_) => Stream.value([]));
-      when(mockPayeeRepository.watchAllPayees())
-          .thenAnswer((_) => Stream.value([]));
-      when(mockAccountRepository.watchAllAccounts())
-          .thenAnswer((_) => Stream.value([]));
+      when(
+        mockCategoryRepository.watchAllCategories(),
+      ).thenAnswer((_) => Stream.value([]));
+      when(
+        mockPayeeRepository.watchAllPayees(),
+      ).thenAnswer((_) => Stream.value([]));
+      when(
+        mockAccountRepository.watchAllAccounts(),
+      ).thenAnswer((_) => Stream.value([]));
     });
 
     testWidgets('Shows empty state when no transactions', (tester) async {
@@ -45,8 +50,9 @@ void main() {
         child: const TransactionsScreen(),
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          transactionRepositoryProvider
-              .overrideWithValue(mockTransactionRepository),
+          transactionRepositoryProvider.overrideWithValue(
+            mockTransactionRepository,
+          ),
           categoryRepositoryProvider.overrideWithValue(mockCategoryRepository),
           payeeRepositoryProvider.overrideWithValue(mockPayeeRepository),
           accountRepositoryProvider.overrideWithValue(mockAccountRepository),

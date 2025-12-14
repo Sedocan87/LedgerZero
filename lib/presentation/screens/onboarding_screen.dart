@@ -59,8 +59,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   // Page Indicator placeholder (Task 649)
-                   Row(
+                  // Page Indicator placeholder (Task 649)
+                  Row(
                     children: List.generate(
                       _slides.length,
                       (index) => AnimatedContainer(
@@ -72,14 +72,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(4),
                           color: _currentPage == index
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.surfaceContainerHighest,
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                         ),
                       ),
                     ),
                   ),
                   ElevatedButton(
                     onPressed: _onNext,
-                    child: Text(_currentPage == _slides.length - 1 ? 'Get Started' : 'Next'),
+                    child: Text(
+                      _currentPage == _slides.length - 1
+                          ? 'Get Started'
+                          : 'Next',
+                    ),
                   ),
                 ],
               ),

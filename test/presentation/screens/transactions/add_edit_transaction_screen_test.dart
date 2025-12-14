@@ -10,9 +10,12 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 
 import '../../../mocks/repository_mocks.mocks.dart';
 
-class FakeScheduledTransactionRepository implements ScheduledTransactionRepository {
+class FakeScheduledTransactionRepository
+    implements ScheduledTransactionRepository {
   @override
-  Future<void> createScheduledTransaction(ScheduledTransaction transaction) async {}
+  Future<void> createScheduledTransaction(
+    ScheduledTransaction transaction,
+  ) async {}
 
   @override
   Future<void> deleteScheduledTransaction(String id) async {}
@@ -21,16 +24,22 @@ class FakeScheduledTransactionRepository implements ScheduledTransactionReposito
   Future<List<ScheduledTransaction>> getAllScheduledTransactions() async => [];
 
   @override
-  Future<ScheduledTransaction?> getScheduledTransactionById(String id) async => null;
+  Future<ScheduledTransaction?> getScheduledTransactionById(String id) async =>
+      null;
 
   @override
-  Future<void> updateScheduledTransaction(ScheduledTransaction transaction) async {}
+  Future<void> updateScheduledTransaction(
+    ScheduledTransaction transaction,
+  ) async {}
 
   @override
-  Stream<List<ScheduledTransaction>> watchAllScheduledTransactions() => Stream.value([]);
+  Stream<List<ScheduledTransaction>> watchAllScheduledTransactions() =>
+      Stream.value([]);
 
   @override
-  Future<List<ScheduledTransaction>> getDueScheduledTransactions(DateTime date) async => [];
+  Future<List<ScheduledTransaction>> getDueScheduledTransactions(
+    DateTime date,
+  ) async => [];
 
   @override
   Future<void> skipScheduledTransaction(String id) async {}
@@ -53,10 +62,16 @@ void main() {
 
   testWidgets('AddEditTransactionScreen renders correctly', (tester) async {
     // Stub streams
-    when(mockAccountRepo.watchAllAccounts()).thenAnswer((_) => Stream.value([]));
+    when(
+      mockAccountRepo.watchAllAccounts(),
+    ).thenAnswer((_) => Stream.value([]));
     when(mockPayeeRepo.watchAllPayees()).thenAnswer((_) => Stream.value([]));
-    when(mockCategoryRepo.watchAllCategories()).thenAnswer((_) => Stream.value([]));
-    when(mockCategoryRepo.watchAllCategoryGroups()).thenAnswer((_) => Stream.value([]));
+    when(
+      mockCategoryRepo.watchAllCategories(),
+    ).thenAnswer((_) => Stream.value([]));
+    when(
+      mockCategoryRepo.watchAllCategoryGroups(),
+    ).thenAnswer((_) => Stream.value([]));
 
     await tester.pumpWidget(
       ProviderScope(
@@ -65,7 +80,9 @@ void main() {
           accountRepositoryProvider.overrideWithValue(mockAccountRepo),
           payeeRepositoryProvider.overrideWithValue(mockPayeeRepo),
           categoryRepositoryProvider.overrideWithValue(mockCategoryRepo),
-          scheduledTransactionRepositoryProvider.overrideWithValue(fakeScheduledTransactionRepo),
+          scheduledTransactionRepositoryProvider.overrideWithValue(
+            fakeScheduledTransactionRepo,
+          ),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

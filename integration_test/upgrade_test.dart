@@ -17,7 +17,9 @@ import 'test_utils.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Upgrade Scenario: App Launch Check', (WidgetTester tester) async {
+  testWidgets('Upgrade Scenario: App Launch Check', (
+    WidgetTester tester,
+  ) async {
     // We simply verify the app launches successfully as if it was a fresh install or update.
     // Testing actual data migration from v1 to v2 requires preparing a v1 database file,
     // copying it to the test device path, and then launching the app.
@@ -30,7 +32,9 @@ void main() {
     // Drift doesn't easily expose the current schema version of the opened DB directly via public API
     // without querying `pragma user_version`.
 
-    final versionResult = await db.customSelect('PRAGMA user_version').getSingle();
+    final versionResult = await db
+        .customSelect('PRAGMA user_version')
+        .getSingle();
     final version = versionResult.data.values.first as int;
 
     // We expect the version to be the current one defined in AppDatabase

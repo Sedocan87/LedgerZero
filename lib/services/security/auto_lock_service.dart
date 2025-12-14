@@ -38,8 +38,8 @@ class AutoLockService {
 
     // If "Immediate" (0), we already locked on pause.
     if (duration == 0) {
-       _pausedTime = null;
-       return;
+      _pausedTime = null;
+      return;
     }
 
     // Check elapsed time since pause
@@ -75,7 +75,9 @@ class AutoLockDurationNotifier extends StateNotifier<int> {
   final SharedPreferences _prefs;
 
   AutoLockDurationNotifier(this._prefs)
-      : super(_prefs.getInt(kAutoLockDurationKey) ?? 0); // Default to Immediate (0)
+    : super(
+        _prefs.getInt(kAutoLockDurationKey) ?? 0,
+      ); // Default to Immediate (0)
 
   Future<void> setDuration(int minutes) async {
     await _prefs.setInt(kAutoLockDurationKey, minutes);
@@ -83,7 +85,8 @@ class AutoLockDurationNotifier extends StateNotifier<int> {
   }
 }
 
-final autoLockDurationProvider = StateNotifierProvider<AutoLockDurationNotifier, int>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
-  return AutoLockDurationNotifier(prefs);
-});
+final autoLockDurationProvider =
+    StateNotifierProvider<AutoLockDurationNotifier, int>((ref) {
+      final prefs = ref.watch(sharedPreferencesProvider);
+      return AutoLockDurationNotifier(prefs);
+    });

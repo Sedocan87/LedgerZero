@@ -17,12 +17,14 @@ void main() {
   test('should insert budget successfully', () async {
     // Need a category first
     const categoryId = 'cat_1';
-    await database.into(database.categories).insert(
-      const CategoriesCompanion(
-        id: Value(categoryId),
-        name: Value('Groceries'),
-      ),
-    );
+    await database
+        .into(database.categories)
+        .insert(
+          const CategoriesCompanion(
+            id: Value(categoryId),
+            name: Value('Groceries'),
+          ),
+        );
 
     const budget = BudgetsCompanion(
       id: Value('budget_1'),
@@ -40,30 +42,36 @@ void main() {
 
   test('should enforce unique constraint on categoryId and month', () async {
     const categoryId = 'cat_1';
-    await database.into(database.categories).insert(
-      const CategoriesCompanion(
-        id: Value(categoryId),
-        name: Value('Groceries'),
-      ),
-    );
+    await database
+        .into(database.categories)
+        .insert(
+          const CategoriesCompanion(
+            id: Value(categoryId),
+            name: Value('Groceries'),
+          ),
+        );
 
-    await database.into(database.budgets).insert(
-      const BudgetsCompanion(
-        id: Value('budget_1'),
-        categoryId: Value(categoryId),
-        month: Value('2023-10'),
-      ),
-    );
+    await database
+        .into(database.budgets)
+        .insert(
+          const BudgetsCompanion(
+            id: Value('budget_1'),
+            categoryId: Value(categoryId),
+            month: Value('2023-10'),
+          ),
+        );
 
     // Try inserting another budget for same category and month
     expect(
-      () => database.into(database.budgets).insert(
-        const BudgetsCompanion(
-          id: Value('budget_2'),
-          categoryId: Value(categoryId),
-          month: Value('2023-10'),
-        ),
-      ),
+      () => database
+          .into(database.budgets)
+          .insert(
+            const BudgetsCompanion(
+              id: Value('budget_2'),
+              categoryId: Value(categoryId),
+              month: Value('2023-10'),
+            ),
+          ),
       throwsA(isA<SqliteException>()),
     );
   });

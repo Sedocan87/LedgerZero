@@ -6,7 +6,11 @@ class ErrorTracker {
   static void init() {
     // Catch Flutter errors
     FlutterError.onError = (FlutterErrorDetails details) {
-      Logger.error(details.exceptionAsString(), details.exception, details.stack);
+      Logger.error(
+        details.exceptionAsString(),
+        details.exception,
+        details.stack,
+      );
       _reportCrash(details.exception, details.stack);
     };
 

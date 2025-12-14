@@ -79,14 +79,15 @@ class CategoryRepositoryImpl implements CategoryRepository {
 
   @override
   Stream<List<Category>> watchAllCategories() {
-    return _categoriesDao.watchAllCategories().map(
-      (categories) {
-        return categories.map(_mapCategoryToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchAllCategories stream', error, stackTrace);
-      throw DatabaseException('Error watching categories', error);
-    });
+    return _categoriesDao
+        .watchAllCategories()
+        .map((categories) {
+          return categories.map(_mapCategoryToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error('Error in watchAllCategories stream', error, stackTrace);
+          throw DatabaseException('Error watching categories', error);
+        });
   }
 
   // CategoryGroup methods
@@ -121,12 +122,20 @@ class CategoryRepositoryImpl implements CategoryRepository {
   Future<void> createCategoryGroup(CategoryGroup categoryGroup) async {
     try {
       Logger.debug('Creating category group: ${categoryGroup.name}');
-      await _categoriesDao
-          .insertCategoryGroup(_mapGroupToCompanion(categoryGroup));
+      await _categoriesDao.insertCategoryGroup(
+        _mapGroupToCompanion(categoryGroup),
+      );
       Logger.info('Category group created successfully: ${categoryGroup.id}');
     } catch (e, stackTrace) {
-      Logger.error('Failed to create category group ${categoryGroup.id}', e, stackTrace);
-      throw DatabaseException('Failed to create category group ${categoryGroup.id}', e);
+      Logger.error(
+        'Failed to create category group ${categoryGroup.id}',
+        e,
+        stackTrace,
+      );
+      throw DatabaseException(
+        'Failed to create category group ${categoryGroup.id}',
+        e,
+      );
     }
   }
 
@@ -134,12 +143,20 @@ class CategoryRepositoryImpl implements CategoryRepository {
   Future<void> updateCategoryGroup(CategoryGroup categoryGroup) async {
     try {
       Logger.debug('Updating category group: ${categoryGroup.id}');
-      await _categoriesDao
-          .updateCategoryGroup(_mapGroupToCompanion(categoryGroup));
+      await _categoriesDao.updateCategoryGroup(
+        _mapGroupToCompanion(categoryGroup),
+      );
       Logger.info('Category group updated successfully: ${categoryGroup.id}');
     } catch (e, stackTrace) {
-      Logger.error('Failed to update category group ${categoryGroup.id}', e, stackTrace);
-      throw DatabaseException('Failed to update category group ${categoryGroup.id}', e);
+      Logger.error(
+        'Failed to update category group ${categoryGroup.id}',
+        e,
+        stackTrace,
+      );
+      throw DatabaseException(
+        'Failed to update category group ${categoryGroup.id}',
+        e,
+      );
     }
   }
 
@@ -157,14 +174,19 @@ class CategoryRepositoryImpl implements CategoryRepository {
 
   @override
   Stream<List<CategoryGroup>> watchAllCategoryGroups() {
-    return _categoriesDao.watchAllCategoryGroups().map(
-      (groups) {
-        return groups.map(_mapGroupToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchAllCategoryGroups stream', error, stackTrace);
-      throw DatabaseException('Error watching category groups', error);
-    });
+    return _categoriesDao
+        .watchAllCategoryGroups()
+        .map((groups) {
+          return groups.map(_mapGroupToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error(
+            'Error in watchAllCategoryGroups stream',
+            error,
+            stackTrace,
+          );
+          throw DatabaseException('Error watching category groups', error);
+        });
   }
 
   // Mappers

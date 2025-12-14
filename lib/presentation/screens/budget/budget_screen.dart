@@ -65,21 +65,27 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
 
   Future<void> _resetBudget() async {
     final month = ref.read(selectedBudgetMonthProvider);
-    final dateFormat = intl.DateFormat.yMMMM(Localizations.localeOf(context).toString());
+    final dateFormat = intl.DateFormat.yMMMM(
+      Localizations.localeOf(context).toString(),
+    );
     final monthString = dateFormat.format(month);
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.resetBudget),
-        content: Text(AppLocalizations.of(context)!.resetBudgetConfirmation(monthString)),
+        content: Text(
+          AppLocalizations.of(context)!.resetBudgetConfirmation(monthString),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(AppLocalizations.of(context)!.cancel)),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLocalizations.of(context)!.cancel),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(AppLocalizations.of(context)!.reset)),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(AppLocalizations.of(context)!.reset),
+          ),
         ],
       ),
     );
@@ -107,9 +113,13 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.search,
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 onChanged: (value) {
                   ref.read(budgetSearchQueryProvider.notifier).state = value;
                 },
@@ -134,18 +144,21 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               icon: Consumer(
                 builder: (context, ref, child) {
                   final mode = ref.watch(budgetViewModeProvider);
-                  return Icon(mode == BudgetViewMode.standard
-                      ? Icons.bar_chart
-                      : Icons.list);
+                  return Icon(
+                    mode == BudgetViewMode.standard
+                        ? Icons.bar_chart
+                        : Icons.list,
+                  );
                 },
               ),
               tooltip: AppLocalizations.of(context)!.viewMode,
               onPressed: () {
                 final current = ref.read(budgetViewModeProvider);
-                ref.read(budgetViewModeProvider.notifier).state =
-                    current == BudgetViewMode.standard
-                        ? BudgetViewMode.comparison
-                        : BudgetViewMode.standard;
+                ref
+                    .read(budgetViewModeProvider.notifier)
+                    .state = current == BudgetViewMode.standard
+                    ? BudgetViewMode.comparison
+                    : BudgetViewMode.standard;
               },
             ),
           if (!_isSearching)
@@ -169,18 +182,24 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               },
               itemBuilder: (context) => [
                 PopupMenuItem(
-                    value: 'save_template',
-                    child: Text(AppLocalizations.of(context)!.saveAsTemplate)),
+                  value: 'save_template',
+                  child: Text(AppLocalizations.of(context)!.saveAsTemplate),
+                ),
                 PopupMenuItem(
-                    value: 'apply_template',
-                    child: Text(AppLocalizations.of(context)!.applyTemplate)),
+                  value: 'apply_template',
+                  child: Text(AppLocalizations.of(context)!.applyTemplate),
+                ),
                 const PopupMenuDivider(),
                 PopupMenuItem(
-                    value: 'copy_previous',
-                    child: Text(AppLocalizations.of(context)!.copyFromPreviousMonth)),
+                  value: 'copy_previous',
+                  child: Text(
+                    AppLocalizations.of(context)!.copyFromPreviousMonth,
+                  ),
+                ),
                 PopupMenuItem(
-                    value: 'reset',
-                    child: Text(AppLocalizations.of(context)!.resetBudget)),
+                  value: 'reset',
+                  child: Text(AppLocalizations.of(context)!.resetBudget),
+                ),
               ],
             ),
         ],
@@ -188,7 +207,8 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: CustomScrollView( // Removed const
+          child: CustomScrollView(
+            // Removed const
             slivers: [
               SliverToBoxAdapter(
                 child: Column(

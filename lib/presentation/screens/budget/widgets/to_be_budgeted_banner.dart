@@ -24,8 +24,8 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                 Text(
                   AppLocalizations.of(context)!.toBeBudgeted,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Tooltip(
@@ -34,7 +34,9 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                   child: Icon(
                     Icons.help_outline,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -45,11 +47,11 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                 final textWidget = Text(
                   NumberFormat.simpleCurrency(decimalDigits: 2).format(tbb),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: tbb >= 0
-                            ? Colors.green.shade700
-                            : Theme.of(context).colorScheme.error,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: tbb >= 0
+                        ? Colors.green.shade700
+                        : Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
                 );
 
                 if (tbb <= 0) {
@@ -63,17 +65,20 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: const [
-                            BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 4,
-                                offset: Offset(0, 2))
-                          ]),
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
                       child: Text(
-                        NumberFormat.simpleCurrency(decimalDigits: 2)
-                            .format(tbb),
+                        NumberFormat.simpleCurrency(
+                          decimalDigits: 2,
+                        ).format(tbb),
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                     ),
@@ -87,8 +92,10 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                 width: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              error: (err, stack) => Text('Error',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              error: (err, stack) => Text(
+                'Error',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
           ],
         ),

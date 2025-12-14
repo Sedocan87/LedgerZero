@@ -34,7 +34,8 @@ class DataPortabilityService {
     final categoryGroups = await _categoryRepository.getAllCategoryGroups();
     final payees = await _payeeRepository.getAllPayees();
     final budgets = await _budgetRepository.getAllBudgets();
-    final scheduledTransactions = await _scheduledTransactionRepository.getAllScheduledTransactions();
+    final scheduledTransactions = await _scheduledTransactionRepository
+        .getAllScheduledTransactions();
 
     final data = {
       'metadata': {
@@ -48,7 +49,9 @@ class DataPortabilityService {
       'category_groups': categoryGroups.map((e) => e.toJson()).toList(),
       'payees': payees.map((e) => e.toJson()).toList(),
       'budgets': budgets.map((e) => e.toJson()).toList(),
-      'scheduled_transactions': scheduledTransactions.map((e) => e.toJson()).toList(),
+      'scheduled_transactions': scheduledTransactions
+          .map((e) => e.toJson())
+          .toList(),
     };
 
     final jsonString = const JsonEncoder.withIndent('  ').convert(data);

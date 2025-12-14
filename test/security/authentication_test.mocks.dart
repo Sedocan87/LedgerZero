@@ -52,10 +52,10 @@ class MockSecurityManager extends _i1.Mock implements _i2.SecurityManager {
           as String);
 
   @override
-  String deriveKeyFromPassword(
+  _i3.Future<String> deriveKeyFromPassword(
     String? password,
     String? salt, {
-    int? iterations = 100000,
+    int? iterations = 10000,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -63,16 +63,18 @@ class MockSecurityManager extends _i1.Mock implements _i2.SecurityManager {
               [password, salt],
               {#iterations: iterations},
             ),
-            returnValue: _i4.dummyValue<String>(
-              this,
-              Invocation.method(
-                #deriveKeyFromPassword,
-                [password, salt],
-                {#iterations: iterations},
+            returnValue: _i3.Future<String>.value(
+              _i4.dummyValue<String>(
+                this,
+                Invocation.method(
+                  #deriveKeyFromPassword,
+                  [password, salt],
+                  {#iterations: iterations},
+                ),
               ),
             ),
           )
-          as String);
+          as _i3.Future<String>);
 
   @override
   _i3.Future<void> storeKey(String? key) =>

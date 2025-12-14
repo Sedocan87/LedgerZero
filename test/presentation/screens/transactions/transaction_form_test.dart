@@ -22,12 +22,15 @@ void main() {
       mockAccountRepository = MockAccountRepository();
       mockScheduledTransactionRepository = MockScheduledTransactionRepository();
 
-      when(mockAccountRepository.watchAllAccounts())
-          .thenAnswer((_) => Stream.value([]));
-      when(mockCategoryRepository.watchAllCategories())
-          .thenAnswer((_) => Stream.value([]));
-      when(mockPayeeRepository.watchAllPayees())
-          .thenAnswer((_) => Stream.value([]));
+      when(
+        mockAccountRepository.watchAllAccounts(),
+      ).thenAnswer((_) => Stream.value([]));
+      when(
+        mockCategoryRepository.watchAllCategories(),
+      ).thenAnswer((_) => Stream.value([]));
+      when(
+        mockPayeeRepository.watchAllPayees(),
+      ).thenAnswer((_) => Stream.value([]));
     });
 
     testWidgets('AddEditTransactionScreen renders form fields', (tester) async {
@@ -35,13 +38,15 @@ void main() {
         tester,
         child: const AddEditTransactionScreen(),
         overrides: [
-          transactionRepositoryProvider
-              .overrideWithValue(mockTransactionRepository),
+          transactionRepositoryProvider.overrideWithValue(
+            mockTransactionRepository,
+          ),
           categoryRepositoryProvider.overrideWithValue(mockCategoryRepository),
           payeeRepositoryProvider.overrideWithValue(mockPayeeRepository),
           accountRepositoryProvider.overrideWithValue(mockAccountRepository),
-          scheduledTransactionRepositoryProvider
-              .overrideWithValue(mockScheduledTransactionRepository),
+          scheduledTransactionRepositoryProvider.overrideWithValue(
+            mockScheduledTransactionRepository,
+          ),
         ],
       );
 

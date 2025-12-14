@@ -11,16 +11,15 @@ import 'package:uuid/uuid.dart';
 class ImportConfirmationScreen extends ConsumerStatefulWidget {
   final List<ImportTransaction> transactions;
 
-  const ImportConfirmationScreen({
-    super.key,
-    required this.transactions,
-  });
+  const ImportConfirmationScreen({super.key, required this.transactions});
 
   @override
-  ConsumerState<ImportConfirmationScreen> createState() => _ImportConfirmationScreenState();
+  ConsumerState<ImportConfirmationScreen> createState() =>
+      _ImportConfirmationScreenState();
 }
 
-class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScreen> {
+class _ImportConfirmationScreenState
+    extends ConsumerState<ImportConfirmationScreen> {
   late List<ImportTransaction> _transactions;
   final currencyFormat = NumberFormat.simpleCurrency();
   final dateFormat = DateFormat.yMMMd();
@@ -47,9 +46,7 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
     return Stack(
       children: [
         Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.confirmImport),
-          ),
+          appBar: AppBar(title: Text(l10n.confirmImport)),
           body: Column(
             children: [
               Padding(
@@ -71,11 +68,20 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.warning, color: Theme.of(context).colorScheme.onErrorContainer),
+                            Icon(
+                              Icons.warning,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onErrorContainer,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               l10n.deduplicationComplete(duplicateCount),
-                              style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onErrorContainer,
+                              ),
                             ),
                           ],
                         ),
@@ -91,8 +97,14 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
                     final tx = _transactions[index];
                     return CheckboxListTile(
                       value: tx.isSelected,
-                      onChanged: _isImporting ? null : (v) => _toggleSelection(index),
-                      tileColor: tx.isDuplicate ? Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3) : null,
+                      onChanged: _isImporting
+                          ? null
+                          : (v) => _toggleSelection(index),
+                      tileColor: tx.isDuplicate
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.errorContainer.withValues(alpha: 0.3)
+                          : null,
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -126,7 +138,9 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
                             ),
                         ],
                       ),
-                      secondary: tx.isDuplicate ? const Icon(Icons.warning, color: Colors.amber) : const Icon(Icons.receipt),
+                      secondary: tx.isDuplicate
+                          ? const Icon(Icons.warning, color: Colors.amber)
+                          : const Icon(Icons.receipt),
                     );
                   },
                 ),
@@ -149,13 +163,17 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
                     ),
                     const Spacer(),
                     OutlinedButton(
-                      onPressed: _isImporting ? null : () => Navigator.pop(context),
+                      onPressed: _isImporting
+                          ? null
+                          : () => Navigator.pop(context),
                       child: Text(l10n.cancel),
                     ),
                     const SizedBox(width: 16),
                     FilledButton(
                       onPressed: selectedCount > 0 && !_isImporting
-                          ? () => _showAccountSelectionDialog(_transactions.where((t) => t.isSelected).toList())
+                          ? () => _showAccountSelectionDialog(
+                              _transactions.where((t) => t.isSelected).toList(),
+                            )
                           : null,
                       child: Text(l10n.import),
                     ),
@@ -166,31 +184,27 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
           ),
         ),
         if (_isImporting)
-          const ModalBarrier(
-            dismissible: false,
-            color: Colors.black54,
-          ),
-        if (_isImporting)
-          const Center(
-            child: CircularProgressIndicator(),
-          ),
+          const ModalBarrier(dismissible: false, color: Colors.black54),
+        if (_isImporting) const Center(child: CircularProgressIndicator()),
       ],
     );
   }
 
-  Future<void> _showAccountSelectionDialog(List<ImportTransaction> selectedTransactions) async {
+  Future<void> _showAccountSelectionDialog(
+    List<ImportTransaction> selectedTransactions,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     // We need to pick an account to import these into.
     // Fetch accounts
     final accounts = await ref.read(accountRepositoryProvider).getAllAccounts();
 
     if (accounts.isEmpty) {
-        if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.createFirstAccountMessage)),
-            );
-        }
-        return;
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.createFirstAccountMessage)));
+      }
+      return;
     }
 
     String? selectedAccountId = accounts.first.id;
@@ -208,7 +222,11 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
               title: Text(l10n.selectAccount),
               content: DropdownButtonFormField<String>(
                 initialValue: selectedAccountId,
-                items: accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
+                items: accounts
+                    .map(
+                      (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    )
+                    .toList(),
                 onChanged: (v) => setState(() => selectedAccountId = v),
                 decoration: InputDecoration(labelText: l10n.account),
               ),
@@ -223,67 +241,76 @@ class _ImportConfirmationScreenState extends ConsumerState<ImportConfirmationScr
                 ),
               ],
             );
-          }
+          },
         );
       },
     );
 
     if (confirmed == true && selectedAccountId != null) {
-       await _performImport(selectedTransactions, selectedAccountId!);
+      await _performImport(selectedTransactions, selectedAccountId!);
     }
   }
 
-  Future<void> _performImport(List<ImportTransaction> transactions, String accountId) async {
-      final l10n = AppLocalizations.of(context)!;
-      final repo = ref.read(transactionRepositoryProvider);
+  Future<void> _performImport(
+    List<ImportTransaction> transactions,
+    String accountId,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final repo = ref.read(transactionRepositoryProvider);
 
-      setState(() => _isImporting = true);
+    setState(() => _isImporting = true);
 
-      try {
-        // Batch create
-        final entities = transactions.map((t) => Transaction(
-            id: const Uuid().v4(),
-            accountId: accountId,
-            date: t.date,
-            amount: t.amount,
-            payeeId: null,
-            memo: t.payeeName != null ? '${t.payeeName} - ${t.memo ?? ""}' : t.memo,
-            categoryId: null,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-        )).toList();
+    try {
+      // Batch create
+      final entities = transactions
+          .map(
+            (t) => Transaction(
+              id: const Uuid().v4(),
+              accountId: accountId,
+              date: t.date,
+              amount: t.amount,
+              payeeId: null,
+              memo: t.payeeName != null
+                  ? '${t.payeeName} - ${t.memo ?? ""}'
+                  : t.memo,
+              categoryId: null,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          )
+          .toList();
 
-        await repo.batchCreateTransactions(entities);
+      await repo.batchCreateTransactions(entities);
 
-        if (mounted) {
-            await showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => AlertDialog(
-                title: Text(l10n.importSuccess),
-                content: Text(l10n.importedTransactions(entities.length)),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      context.go('/transactions');
-                    },
-                    child: Text(l10n.transactions), // "Transactions"
-                  ),
-                ],
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Text(l10n.importSuccess),
+            content: Text(l10n.importedTransactions(entities.length)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  context.go('/transactions');
+                },
+                child: Text(l10n.transactions), // "Transactions"
               ),
-            );
-        }
-      } catch (e) {
-        if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-           );
-        }
-      } finally {
-        if (mounted) {
-           setState(() => _isImporting = false);
-        }
+            ],
+          ),
+        );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isImporting = false);
+      }
+    }
   }
 }

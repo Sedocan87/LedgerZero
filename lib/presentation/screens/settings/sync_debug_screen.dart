@@ -41,8 +41,7 @@ class SyncDebugScreen extends ConsumerWidget {
                   final log = logs[index];
                   final isConflict = log.action?.contains('IGNORED') == true;
                   final dateStr = log.appliedAt != null
-                      ? DateFormat('yyyy-MM-dd HH:mm:ss')
-                          .format(log.appliedAt!)
+                      ? DateFormat('yyyy-MM-dd HH:mm:ss').format(log.appliedAt!)
                       : 'Unknown';
 
                   return ListTile(
@@ -55,19 +54,22 @@ class SyncDebugScreen extends ConsumerWidget {
                     trailing: Text(log.deltaFilename ?? 'Local'),
                     onTap: () {
                       showDialog(
-                          context: context,
-                          builder: (c) => AlertDialog(
-                                title: const Text('Log Details'),
-                                content: SingleChildScrollView(
-                                  child: Text(
-                                      'ID: ${log.id}\nRecord: ${log.recordId}\nDevice: ${log.deviceUuid}'),
-                                ),
-                                actions: [
-                                  TextButton(
-                                      onPressed: () => Navigator.pop(c),
-                                      child: const Text('OK'))
-                                ],
-                              ));
+                        context: context,
+                        builder: (c) => AlertDialog(
+                          title: const Text('Log Details'),
+                          content: SingleChildScrollView(
+                            child: Text(
+                              'ID: ${log.id}\nRecord: ${log.recordId}\nDevice: ${log.deviceUuid}',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(c),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   );
                 },
@@ -91,8 +93,9 @@ class SyncDebugScreen extends ConsumerWidget {
                 content: Text(health.toString()),
                 actions: [
                   TextButton(
-                      onPressed: () => Navigator.pop(c),
-                      child: const Text('OK'))
+                    onPressed: () => Navigator.pop(c),
+                    child: const Text('OK'),
+                  ),
                 ],
               ),
             );

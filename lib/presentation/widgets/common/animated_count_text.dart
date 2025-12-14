@@ -24,20 +24,24 @@ class AnimatedCountText extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Check for test environment safely without dart:io
-    final isTest = WidgetsBinding.instance.runtimeType.toString() ==
+    final isTest =
+        WidgetsBinding.instance.runtimeType.toString() ==
         'TestWidgetsFlutterBinding';
 
     // Check reduced motion
     final shouldAnimate = ThemeNotifier.shouldAnimate(context, ref);
 
-    final effectiveDuration = (isTest || !shouldAnimate) ? Duration.zero : duration;
+    final effectiveDuration = (isTest || !shouldAnimate)
+        ? Duration.zero
+        : duration;
 
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: value, end: value),
       duration: effectiveDuration,
       builder: (context, val, child) {
-        final text =
-            format != null ? format!.format(val) : val.toStringAsFixed(2);
+        final text = format != null
+            ? format!.format(val)
+            : val.toStringAsFixed(2);
         return Text(
           text,
           style: style,

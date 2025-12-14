@@ -6,17 +6,34 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 // Provider to fetch database stats
-final databaseStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+final databaseStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
+  ref,
+) async {
   final db = AppDatabase.instance;
 
   // Row counts
-  final accountsCount = await db.select(db.accounts).get().then((l) => l.length);
-  final transactionsCount = await db.select(db.transactions).get().then((l) => l.length);
-  final categoriesCount = await db.select(db.categories).get().then((l) => l.length);
-  final categoryGroupsCount = await db.select(db.categoryGroups).get().then((l) => l.length);
+  final accountsCount = await db
+      .select(db.accounts)
+      .get()
+      .then((l) => l.length);
+  final transactionsCount = await db
+      .select(db.transactions)
+      .get()
+      .then((l) => l.length);
+  final categoriesCount = await db
+      .select(db.categories)
+      .get()
+      .then((l) => l.length);
+  final categoryGroupsCount = await db
+      .select(db.categoryGroups)
+      .get()
+      .then((l) => l.length);
   final payeesCount = await db.select(db.payees).get().then((l) => l.length);
   final budgetsCount = await db.select(db.budgets).get().then((l) => l.length);
-  final scheduledCount = await db.select(db.scheduledTransactions).get().then((l) => l.length);
+  final scheduledCount = await db
+      .select(db.scheduledTransactions)
+      .get()
+      .then((l) => l.length);
   final syncLogCount = await db.select(db.syncLog).get().then((l) => l.length);
 
   // File sizes
@@ -49,14 +66,22 @@ final databaseStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
       'Database (db.sqlite)': _formatBytes(dbSizeBytes),
       'WAL (db.sqlite-wal)': _formatBytes(walSizeBytes),
     },
-    'totalRows': accountsCount + transactionsCount + categoriesCount + categoryGroupsCount + payeesCount + budgetsCount + scheduledCount + syncLogCount,
+    'totalRows':
+        accountsCount +
+        transactionsCount +
+        categoriesCount +
+        categoryGroupsCount +
+        payeesCount +
+        budgetsCount +
+        scheduledCount +
+        syncLogCount,
   };
 });
 
 String _formatBytes(int bytes) {
   if (bytes <= 0) {
-      return '0 B';
-    }
+    return '0 B';
+  }
   const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
   var i = 0;
   double d = bytes.toDouble();
@@ -76,9 +101,7 @@ class DatabaseStatsScreen extends ConsumerWidget {
     final statsAsync = ref.watch(databaseStatsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.databaseStatistics),
-      ),
+      appBar: AppBar(title: Text(l10n.databaseStatistics)),
       body: statsAsync.when(
         data: (stats) {
           final rowCounts = stats['rowCounts'] as Map<String, int>;
@@ -88,24 +111,37 @@ class DatabaseStatsScreen extends ConsumerWidget {
           return ListView(
             children: [
               _buildSectionTitle(context, l10n.databaseSize),
-              ...fileSizes.entries.map((e) => ListTile(
-                title: Text(e.key),
-                trailing: Text(e.value, style: const TextStyle(fontWeight: FontWeight.bold)),
-              )),
+              ...fileSizes.entries.map(
+                (e) => ListTile(
+                  title: Text(e.key),
+                  trailing: Text(
+                    e.value,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
 
               const Divider(),
 
               _buildSectionTitle(context, l10n.tableRowCounts),
-              ...rowCounts.entries.map((e) => ListTile(
-                title: Text(e.key),
-                trailing: Text(e.value.toString()),
-              )),
+              ...rowCounts.entries.map(
+                (e) => ListTile(
+                  title: Text(e.key),
+                  trailing: Text(e.value.toString()),
+                ),
+              ),
 
               const Divider(),
 
               ListTile(
-                title: Text(l10n.totalRows, style: const TextStyle(fontWeight: FontWeight.bold)),
-                trailing: Text(totalRows.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  l10n.totalRows,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                trailing: Text(
+                  totalRows.toString(),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           );

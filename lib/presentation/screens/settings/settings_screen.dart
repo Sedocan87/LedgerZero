@@ -40,15 +40,15 @@ class SettingsScreen extends ConsumerWidget {
           cacheDir.deleteSync(recursive: true);
         }
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.cacheCleared)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.cacheCleared)));
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error clearing cache: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error clearing cache: $e')));
         }
       }
     }
@@ -89,9 +89,9 @@ class SettingsScreen extends ConsumerWidget {
         await prefs.clear();
 
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.factoryResetSuccess)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.factoryResetSuccess)));
           // Force app restart or navigate to onboarding would be ideal here
           // For now, we'll navigate to initial route if possible, or just let the user restart
         }
@@ -99,9 +99,7 @@ class SettingsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.settings),
-      ),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
         children: [
           // General Settings
@@ -118,13 +116,21 @@ class SettingsScreen extends ConsumerWidget {
                     context: context,
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.currency),
-                      children: ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD']
-                          .map((c) => buildOption(context, c, c))
-                          .toList(),
+                      children: [
+                        'USD',
+                        'EUR',
+                        'GBP',
+                        'JPY',
+                        'CHF',
+                        'CAD',
+                        'AUD',
+                      ].map((c) => buildOption(context, c, c)).toList(),
                     ),
                   );
                   if (selected != null) {
-                    unawaited(ref.read(settingsProvider.notifier).setCurrency(selected));
+                    unawaited(
+                      ref.read(settingsProvider.notifier).setCurrency(selected),
+                    );
                   }
                 },
               ),
@@ -144,7 +150,11 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    unawaited(ref.read(settingsProvider.notifier).setDateFormat(selected));
+                    unawaited(
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setDateFormat(selected),
+                    );
                   }
                 },
               ),
@@ -152,7 +162,11 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.numbers),
                 title: Text(l10n.numberFormat),
-                subtitle: Text(settings.numberFormat == AppNumberFormat.dot ? l10n.dot : l10n.comma),
+                subtitle: Text(
+                  settings.numberFormat == AppNumberFormat.dot
+                      ? l10n.dot
+                      : l10n.comma,
+                ),
                 onTap: () async {
                   final selected = await showDialog<AppNumberFormat>(
                     context: context,
@@ -165,7 +179,11 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    unawaited(ref.read(settingsProvider.notifier).setNumberFormat(selected));
+                    unawaited(
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setNumberFormat(selected),
+                    );
                   }
                 },
               ),
@@ -184,14 +202,30 @@ class SettingsScreen extends ConsumerWidget {
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.firstDayOfWeek),
                       children: [
-                        buildOption(context, l10n.sunday, AppFirstDayOfWeek.sunday),
-                        buildOption(context, l10n.monday, AppFirstDayOfWeek.monday),
-                        buildOption(context, l10n.saturday, AppFirstDayOfWeek.saturday),
+                        buildOption(
+                          context,
+                          l10n.sunday,
+                          AppFirstDayOfWeek.sunday,
+                        ),
+                        buildOption(
+                          context,
+                          l10n.monday,
+                          AppFirstDayOfWeek.monday,
+                        ),
+                        buildOption(
+                          context,
+                          l10n.saturday,
+                          AppFirstDayOfWeek.saturday,
+                        ),
                       ],
                     ),
                   );
                   if (selected != null) {
-                    unawaited(ref.read(settingsProvider.notifier).setFirstDayOfWeek(selected));
+                    unawaited(
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setFirstDayOfWeek(selected),
+                    );
                   }
                 },
               ),
@@ -210,7 +244,11 @@ class SettingsScreen extends ConsumerWidget {
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.theme),
                       children: [
-                        buildOption(context, l10n.systemTheme, ThemeMode.system),
+                        buildOption(
+                          context,
+                          l10n.systemTheme,
+                          ThemeMode.system,
+                        ),
                         buildOption(context, l10n.lightTheme, ThemeMode.light),
                         buildOption(context, l10n.darkTheme, ThemeMode.dark),
                       ],
@@ -228,7 +266,9 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AccessibilitySettingsScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const AccessibilitySettingsScreen(),
+                    ),
                   );
                 },
               ),
@@ -244,7 +284,11 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.language),
                 title: Text(l10n.language),
-                subtitle: Text(settings.language?.languageCode == 'de' ? 'Deutsch' : 'English'),
+                subtitle: Text(
+                  settings.language?.languageCode == 'de'
+                      ? 'Deutsch'
+                      : 'English',
+                ),
                 onTap: () async {
                   final selected = await showDialog<Locale>(
                     context: context,
@@ -257,84 +301,146 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                   if (selected != null) {
-                    unawaited(ref.read(settingsProvider.notifier).setLanguage(selected));
+                    unawaited(
+                      ref.read(settingsProvider.notifier).setLanguage(selected),
+                    );
                   }
                 },
               ),
               // Default Account
-              Consumer(builder: (context, ref, _) {
-                final accountsAsync = ref.watch(accountsProvider);
-                return accountsAsync.when(
-                  data: (accounts) => ListTile(
-                    leading: const Icon(Icons.account_balance_wallet),
-                    title: Text(l10n.defaultAccount),
-                    subtitle: Text(
-                      accounts.where((a) => a.id == settings.defaultAccountId).firstOrNull?.name ?? l10n.none,
-                    ),
-                    onTap: () async {
-                      // Using a wrapper object to distinguish null (None) from null (Dismissed)
-                      final selectedWrapper = await showDialog<_SelectionWrapper>(
-                        context: context,
-                        builder: (context) => SimpleDialog(
-                          title: Text(l10n.defaultAccount),
-                          children: [
-                            SimpleDialogOption(
-                                onPressed: () => Navigator.pop(context, const _SelectionWrapper(null)),
-                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(l10n.none)),
-                            ),
-                            ...accounts.map((a) => SimpleDialogOption(
-                                onPressed: () => Navigator.pop(context, _SelectionWrapper(a.id)),
-                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(a.name)),
-                            )),
-                          ],
-                        ),
-                      );
+              Consumer(
+                builder: (context, ref, _) {
+                  final accountsAsync = ref.watch(accountsProvider);
+                  return accountsAsync.when(
+                    data: (accounts) => ListTile(
+                      leading: const Icon(Icons.account_balance_wallet),
+                      title: Text(l10n.defaultAccount),
+                      subtitle: Text(
+                        accounts
+                                .where((a) => a.id == settings.defaultAccountId)
+                                .firstOrNull
+                                ?.name ??
+                            l10n.none,
+                      ),
+                      onTap: () async {
+                        // Using a wrapper object to distinguish null (None) from null (Dismissed)
+                        final selectedWrapper =
+                            await showDialog<_SelectionWrapper>(
+                              context: context,
+                              builder: (context) => SimpleDialog(
+                                title: Text(l10n.defaultAccount),
+                                children: [
+                                  SimpleDialogOption(
+                                    onPressed: () => Navigator.pop(
+                                      context,
+                                      const _SelectionWrapper(null),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8.0,
+                                      ),
+                                      child: Text(l10n.none),
+                                    ),
+                                  ),
+                                  ...accounts.map(
+                                    (a) => SimpleDialogOption(
+                                      onPressed: () => Navigator.pop(
+                                        context,
+                                        _SelectionWrapper(a.id),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
+                                        child: Text(a.name),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
 
-                      if (selectedWrapper != null) {
-                         unawaited(ref.read(settingsProvider.notifier).setDefaultAccountId(selectedWrapper.value));
-                      }
-                    },
-                  ),
-                  loading: () => ListTile(title: Text(l10n.loadingAccounts)),
-                  error: (_, __) => const SizedBox.shrink(),
-                );
-              }),
-              // Default Category
-              Consumer(builder: (context, ref, _) {
-                final categoriesAsync = ref.watch(categoriesProvider);
-                return categoriesAsync.when(
-                  data: (categories) => ListTile(
-                    leading: const Icon(Icons.category),
-                    title: Text(l10n.defaultCategory),
-                    subtitle: Text(
-                      categories.where((c) => c.id == settings.defaultCategoryId).firstOrNull?.name ?? l10n.none,
+                        if (selectedWrapper != null) {
+                          unawaited(
+                            ref
+                                .read(settingsProvider.notifier)
+                                .setDefaultAccountId(selectedWrapper.value),
+                          );
+                        }
+                      },
                     ),
-                    onTap: () async {
-                       final selectedWrapper = await showDialog<_SelectionWrapper>(
-                        context: context,
-                        builder: (context) => SimpleDialog(
-                          title: Text(l10n.defaultCategory),
-                          children: [
-                             SimpleDialogOption(
-                                onPressed: () => Navigator.pop(context, const _SelectionWrapper(null)),
-                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(l10n.none)),
-                            ),
-                            ...categories.map((c) => SimpleDialogOption(
-                                onPressed: () => Navigator.pop(context, _SelectionWrapper(c.id)),
-                                child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(c.name)),
-                            )),
-                          ],
-                        ),
-                      );
-                      if (selectedWrapper != null) {
-                         unawaited(ref.read(settingsProvider.notifier).setDefaultCategoryId(selectedWrapper.value));
-                      }
-                    },
-                  ),
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
-                );
-              }),
+                    loading: () => ListTile(title: Text(l10n.loadingAccounts)),
+                    error: (_, __) => const SizedBox.shrink(),
+                  );
+                },
+              ),
+              // Default Category
+              Consumer(
+                builder: (context, ref, _) {
+                  final categoriesAsync = ref.watch(categoriesProvider);
+                  return categoriesAsync.when(
+                    data: (categories) => ListTile(
+                      leading: const Icon(Icons.category),
+                      title: Text(l10n.defaultCategory),
+                      subtitle: Text(
+                        categories
+                                .where(
+                                  (c) => c.id == settings.defaultCategoryId,
+                                )
+                                .firstOrNull
+                                ?.name ??
+                            l10n.none,
+                      ),
+                      onTap: () async {
+                        final selectedWrapper =
+                            await showDialog<_SelectionWrapper>(
+                              context: context,
+                              builder: (context) => SimpleDialog(
+                                title: Text(l10n.defaultCategory),
+                                children: [
+                                  SimpleDialogOption(
+                                    onPressed: () => Navigator.pop(
+                                      context,
+                                      const _SelectionWrapper(null),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8.0,
+                                      ),
+                                      child: Text(l10n.none),
+                                    ),
+                                  ),
+                                  ...categories.map(
+                                    (c) => SimpleDialogOption(
+                                      onPressed: () => Navigator.pop(
+                                        context,
+                                        _SelectionWrapper(c.id),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
+                                        child: Text(c.name),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                        if (selectedWrapper != null) {
+                          unawaited(
+                            ref
+                                .read(settingsProvider.notifier)
+                                .setDefaultCategoryId(selectedWrapper.value),
+                          );
+                        }
+                      },
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  );
+                },
+              ),
             ],
           ),
 
@@ -346,19 +452,31 @@ class SettingsScreen extends ConsumerWidget {
                 secondary: const Icon(Icons.event_note),
                 title: Text(l10n.scheduledTransactionNotifications),
                 value: settings.scheduledTransactionNotifications,
-                onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setScheduledTransactionNotifications(value)),
+                onChanged: (value) => unawaited(
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setScheduledTransactionNotifications(value),
+                ),
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.warning_amber),
                 title: Text(l10n.budgetAlertNotifications),
                 value: settings.budgetAlertNotifications,
-                onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setBudgetAlertNotifications(value)),
+                onChanged: (value) => unawaited(
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setBudgetAlertNotifications(value),
+                ),
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.sync),
                 title: Text(l10n.syncStatusNotifications),
                 value: settings.syncStatusNotifications,
-                onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setSyncStatusNotifications(value)),
+                onChanged: (value) => unawaited(
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setSyncStatusNotifications(value),
+                ),
               ),
             ],
           ),
@@ -398,7 +516,7 @@ class SettingsScreen extends ConsumerWidget {
           SettingsSection(
             title: l10n.manageCategories,
             children: [
-               ListTile(
+              ListTile(
                 leading: const Icon(Icons.upload_file),
                 title: Text(l10n.importCsv),
                 trailing: const Icon(Icons.chevron_right),
@@ -433,7 +551,8 @@ class SettingsScreen extends ConsumerWidget {
                 secondary: const Icon(Icons.developer_mode),
                 title: Text(l10n.developerMode),
                 value: settings.developerMode,
-                onChanged: (value) => ref.read(settingsProvider.notifier).setDeveloperMode(value),
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).setDeveloperMode(value),
               ),
               if (settings.developerMode)
                 ListTile(
@@ -449,7 +568,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_forever, color: Colors.red),
-                title: Text(l10n.factoryReset, style: const TextStyle(color: Colors.red)),
+                title: Text(
+                  l10n.factoryReset,
+                  style: const TextStyle(color: Colors.red),
+                ),
                 onTap: () => factoryReset(context, ref),
               ),
             ],

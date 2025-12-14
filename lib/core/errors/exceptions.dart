@@ -14,7 +14,8 @@ class DatabaseException implements Exception {
   const DatabaseException(this.message, [this.originalError]);
 
   @override
-  String toString() => 'DatabaseException: $message ${originalError != null ? "($originalError)" : ""}';
+  String toString() =>
+      'DatabaseException: $message ${originalError != null ? "($originalError)" : ""}';
 }
 
 class SyncException implements Exception {
@@ -22,11 +23,16 @@ class SyncException implements Exception {
   final Object? originalError;
   final bool retryable;
 
-  const SyncException(this.message, {this.originalError, this.retryable = false});
+  const SyncException(
+    this.message, {
+    this.originalError,
+    this.retryable = false,
+  });
 
   // Alias for backward compatibility if needed, but better to use `retryable` consistently
   bool get isRetryable => retryable;
 
   @override
-  String toString() => 'SyncException: $message ${originalError != null ? "($originalError)" : ""}';
+  String toString() =>
+      'SyncException: $message ${originalError != null ? "($originalError)" : ""}';
 }

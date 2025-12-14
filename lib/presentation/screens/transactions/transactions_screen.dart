@@ -35,22 +35,23 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 500) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 500) {
       final state = ref.read(transactionsProvider);
       final transactions = state.transactions.valueOrNull;
       if (transactions != null && transactions.length >= state.limit) {
-         // Debounce or check if already loading?
-         // The notifier updates limit immediately, so subsequent calls might just increment it again.
-         // Ideally we check if we are already at the new limit or if data matches limit.
-         // A simple way is to check if the current scroll position suggests we need more.
-         // But ref.read(transactionsProvider.notifier).loadMore() is cheap if it just updates state.
-         // However, we should avoid calling it 60 times a second.
-         // The TransactionsNotifier doesn't have an "isLoadingMore" flag exposed easily for the scroll listener.
-         // We'll rely on a simple threshold and maybe a throttle if needed, but for now direct call.
-         // To avoid spamming, we can check if the limit was recently updated?
-         // Actually, let's just call it. The provider should handle it or we accept some redundant calls.
-         // Better: check if we can load more.
-         ref.read(transactionsProvider.notifier).loadMore();
+        // Debounce or check if already loading?
+        // The notifier updates limit immediately, so subsequent calls might just increment it again.
+        // Ideally we check if we are already at the new limit or if data matches limit.
+        // A simple way is to check if the current scroll position suggests we need more.
+        // But ref.read(transactionsProvider.notifier).loadMore() is cheap if it just updates state.
+        // However, we should avoid calling it 60 times a second.
+        // The TransactionsNotifier doesn't have an "isLoadingMore" flag exposed easily for the scroll listener.
+        // We'll rely on a simple threshold and maybe a throttle if needed, but for now direct call.
+        // To avoid spamming, we can check if the limit was recently updated?
+        // Actually, let's just call it. The provider should handle it or we accept some redundant calls.
+        // Better: check if we can load more.
+        ref.read(transactionsProvider.notifier).loadMore();
       }
     }
   }
@@ -180,13 +181,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           return true;
         } else {
           // Approve
-          // ignore: unawaited_futures
-          ref.read(transactionRepositoryProvider).updateTransaction(
-                tx.copyWith(approved: true),
-              );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Transaction approved')),
-          );
+          await ref
+              .read(transactionRepositoryProvider)
+              .updateTransaction(tx.copyWith(approved: true));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Transaction approved')),
+            );
+          }
           return false; // Don't remove from list
         }
       },
@@ -198,9 +200,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               content: const Text('Transaction deleted'),
               action: SnackBarAction(
                 label: 'Undo',
-                onPressed: () {
-                  // ignore: unawaited_futures
-                  ref
+                onPressed: () async {
+                  await ref
                       .read(transactionRepositoryProvider)
                       .updateTransaction(tx.copyWith(isDeleted: false));
                 },
@@ -218,16 +219,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           isSelectionMode: false,
           isSelected: false,
           onTap: () {
-            context.pushNamed('edit-transaction', pathParameters: {'id': tx.id});
+            context.pushNamed(
+              'edit-transaction',
+              pathParameters: {'id': tx.id},
+            );
           },
           onLongPress: () {
             ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
             ref.read(transactionsProvider.notifier).toggleSelection(tx.id);
           },
-          onClearStatusChanged: (status) {
+          onClearStatusChanged: (status) async {
             final updated = tx.copyWith(cleared: status);
-            // ignore: unawaited_futures
-            ref.read(transactionRepositoryProvider).updateTransaction(updated);
+            await ref
+                .read(transactionRepositoryProvider)
+                .updateTransaction(updated);
           },
         ),
       ),
@@ -259,109 +264,118 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Widget? _buildAppBarLeading(TransactionsState state) {
     if (state.isMultiSelectMode) {
       return IconButton(
-          icon: const Icon(Icons.close),
-          tooltip: 'Close selection',
-          onPressed: () {
-            ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-          });
+        icon: const Icon(Icons.close),
+        tooltip: 'Close selection',
+        onPressed: () {
+          ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
+        },
+      );
     }
     if (_isSearchMode) {
       return IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Back',
-          onPressed: () {
-            setState(() {
-              _isSearchMode = false;
-              _searchController.clear();
-              ref.read(transactionsProvider.notifier).updateSearchQuery('');
-            });
+        icon: const Icon(Icons.arrow_back),
+        tooltip: 'Back',
+        onPressed: () {
+          setState(() {
+            _isSearchMode = false;
+            _searchController.clear();
+            ref.read(transactionsProvider.notifier).updateSearchQuery('');
           });
+        },
+      );
     }
     return null;
   }
 
   List<Widget> _buildAppBarActions(
-      TransactionsState state, List<Transaction>? allTransactions) {
+    TransactionsState state,
+    List<Transaction>? allTransactions,
+  ) {
     if (state.isMultiSelectMode) {
       return [
         IconButton(
-            icon: const Icon(Icons.delete),
-            tooltip: 'Delete selected',
-            onPressed: () {
-              // Task 218: Bulk delete
-              final ids = state.selectedTransactionIds.toList();
-              if (ids.isNotEmpty) {
+          icon: const Icon(Icons.delete),
+          tooltip: 'Delete selected',
+          onPressed: () {
+            // Task 218: Bulk delete
+            final ids = state.selectedTransactionIds.toList();
+            if (ids.isNotEmpty) {
+              ref
+                  .read(transactionRepositoryProvider)
+                  .batchDeleteTransactions(ids);
+              ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${ids.length} transactions deleted')),
+              );
+            }
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.check),
+          tooltip: 'Approve selected',
+          onPressed: () {
+            // Task 218: Bulk approve
+            final ids = state.selectedTransactionIds;
+            if (ids.isNotEmpty && allTransactions != null) {
+              final txsToApprove = allTransactions
+                  .where((t) => ids.contains(t.id))
+                  .map((t) => t.copyWith(approved: true))
+                  .toList();
+              if (txsToApprove.isNotEmpty) {
                 ref
                     .read(transactionRepositoryProvider)
-                    .batchDeleteTransactions(ids);
-                ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${ids.length} transactions deleted')),
-                );
+                    .batchUpdateTransactions(txsToApprove);
               }
-            }),
+              ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${ids.length} transactions approved')),
+              );
+            }
+          },
+        ),
         IconButton(
-            icon: const Icon(Icons.check),
-            tooltip: 'Approve selected',
-            onPressed: () {
-              // Task 218: Bulk approve
-              final ids = state.selectedTransactionIds;
-              if (ids.isNotEmpty && allTransactions != null) {
-                final txsToApprove = allTransactions
-                    .where((t) => ids.contains(t.id))
-                    .map((t) => t.copyWith(approved: true))
-                    .toList();
-                if (txsToApprove.isNotEmpty) {
-                  ref
-                      .read(transactionRepositoryProvider)
-                      .batchUpdateTransactions(txsToApprove);
-                }
-                ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('${ids.length} transactions approved')),
-                );
-              }
-            }),
+          icon: const Icon(Icons.folder),
+          tooltip: 'Categorize selected',
+          onPressed: () {
+            // Task 218: Bulk categorize
+            _showBulkCategorizeDialog(context, state);
+          },
+        ),
         IconButton(
-            icon: const Icon(Icons.folder),
-            tooltip: 'Categorize selected',
-            onPressed: () {
-              // Task 218: Bulk categorize
-              _showBulkCategorizeDialog(context, state);
-            }),
-        IconButton(
-            icon: const Icon(Icons.select_all),
-            tooltip: 'Select all',
-            onPressed: () {
-              if (allTransactions != null) {
-                ref
-                    .read(transactionsProvider.notifier)
-                    .selectAll(allTransactions.map((t) => t.id).toList());
-              }
-            }),
+          icon: const Icon(Icons.select_all),
+          tooltip: 'Select all',
+          onPressed: () {
+            if (allTransactions != null) {
+              ref
+                  .read(transactionsProvider.notifier)
+                  .selectAll(allTransactions.map((t) => t.id).toList());
+            }
+          },
+        ),
       ];
     }
     if (_isSearchMode) {
       return [
         IconButton(
-            icon: const Icon(Icons.clear),
-            tooltip: 'Clear search',
-            onPressed: () {
-              _searchController.clear();
-              ref.read(transactionsProvider.notifier).updateSearchQuery('');
-            }),
+          icon: const Icon(Icons.clear),
+          tooltip: 'Clear search',
+          onPressed: () {
+            _searchController.clear();
+            ref.read(transactionsProvider.notifier).updateSearchQuery('');
+          },
+        ),
       ];
     }
     return [
       IconButton(
-          icon: const Icon(Icons.search),
-          tooltip: 'Search',
-          onPressed: () {
-            setState(() {
-              _isSearchMode = true;
-            });
-          }),
+        icon: const Icon(Icons.search),
+        tooltip: 'Search',
+        onPressed: () {
+          setState(() {
+            _isSearchMode = true;
+          });
+        },
+      ),
       // Task 491: Quick Add (Natural Language)
       IconButton(
         icon: const Icon(Icons.flash_on),
@@ -372,21 +386,26 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       ),
       // Task 211: Filtering
       IconButton(
-          icon: const Icon(Icons.filter_list),
-          tooltip: 'Filter',
-          onPressed: () {
-            _showFilterDialog(context, state);
-          }),
+        icon: const Icon(Icons.filter_list),
+        tooltip: 'Filter',
+        onPressed: () {
+          _showFilterDialog(context, state);
+        },
+      ),
       // Task 214: Sorting
       PopupMenuButton<TransactionSortField>(
         icon: const Icon(Icons.sort),
         tooltip: 'Sort',
         onSelected: (field) {
           final currentSort = state.sort;
-          final newAscending =
-              currentSort.field == field ? !currentSort.ascending : true;
-          ref.read(transactionsProvider.notifier).updateSort(
-              TransactionSort(field: field, ascending: newAscending));
+          final newAscending = currentSort.field == field
+              ? !currentSort.ascending
+              : true;
+          ref
+              .read(transactionsProvider.notifier)
+              .updateSort(
+                TransactionSort(field: field, ascending: newAscending),
+              );
         },
         itemBuilder: (context) => [
           const PopupMenuItem(
@@ -416,42 +435,44 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   void _showBulkCategorizeDialog(
-      BuildContext context, TransactionsState state) {
+    BuildContext context,
+    TransactionsState state,
+  ) {
     final categories = ref.read(categoryMapProvider).value ?? {};
     showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Categorize Selected'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: categories.isEmpty
-                  ? const Text('No categories found')
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: categories.length,
-                      itemBuilder: (context, index) {
-                        final catId = categories.keys.elementAt(index);
-                        final catName = categories[catId]!;
-                        return ListTile(
-                          title: Text(catName),
-                          onTap: () {
-                            _bulkCategorize(
-                                state.selectedTransactionIds, catId);
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Categorize Selected'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: categories.isEmpty
+                ? const Text('No categories found')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final catId = categories.keys.elementAt(index);
+                      final catName = categories[catId]!;
+                      return ListTile(
+                        title: Text(catName),
+                        onTap: () {
+                          _bulkCategorize(state.selectedTransactionIds, catId);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
-          );
-        });
+          ],
+        );
+      },
+    );
   }
 
   void _bulkCategorize(Set<String> ids, String categoryId) {
@@ -467,13 +488,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           .read(transactionRepositoryProvider)
           .batchUpdateTransactions(txsToUpdate);
       ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transactions categorized')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Transactions categorized')));
     }
   }
 
   Map<DateTime, List<Transaction>> _groupTransactions(
-      List<Transaction> transactions) {
+    List<Transaction> transactions,
+  ) {
     final groups = <DateTime, List<Transaction>>{};
     for (var tx in transactions) {
       final date = DateTime(tx.date.year, tx.date.month, tx.date.day);
@@ -512,14 +535,18 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long,
-              size: 64, color: Theme.of(context).disabledColor),
+          Icon(
+            Icons.receipt_long,
+            size: 64,
+            color: Theme.of(context).disabledColor,
+          ),
           const SizedBox(height: 16),
-          Text('No transactions found',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'No transactions found',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
         ],
       ),
     );
   }
-
 }

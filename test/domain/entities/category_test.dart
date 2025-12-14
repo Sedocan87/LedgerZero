@@ -53,10 +53,7 @@ void main() {
     });
 
     test('copyWith returns new instance with updated fields', () {
-      final updated = category.copyWith(
-        name: 'Food',
-        targetAmount: 600.0,
-      );
+      final updated = category.copyWith(name: 'Food', targetAmount: 600.0);
 
       expect(updated.name, equals('Food'));
       expect(updated.targetAmount, equals(600.0));
@@ -107,9 +104,9 @@ void main() {
     });
 
     test('defaults are set correctly', () {
-       const defaultCat = Category(id: '1', name: 'Test');
-       expect(defaultCat.isHidden, false);
-       expect(defaultCat.goalType, null);
+      const defaultCat = Category(id: '1', name: 'Test');
+      expect(defaultCat.isHidden, false);
+      expect(defaultCat.goalType, null);
     });
   });
 }

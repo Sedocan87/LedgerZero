@@ -17,14 +17,17 @@ class YnabImportScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('YNAB Migration'),
-          leading: state.currentStep != YnabImportStep.selectMethod && state.currentStep != YnabImportStep.success
+          leading:
+              state.currentStep != YnabImportStep.selectMethod &&
+                  state.currentStep != YnabImportStep.success
               ? IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: state.isImporting ? null : viewModel.goBack,
                 )
               : null,
           actions: [
-            if (!state.isImporting && state.currentStep != YnabImportStep.success)
+            if (!state.isImporting &&
+                state.currentStep != YnabImportStep.success)
               TextButton(
                 onPressed: () {
                   viewModel.cancel();
@@ -39,15 +42,15 @@ class YnabImportScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                Expanded(
-                  child: _buildStepContent(context, state, viewModel),
-                ),
+                Expanded(child: _buildStepContent(context, state, viewModel)),
                 if (state.error != null)
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
                       state.error!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -59,7 +62,11 @@ class YnabImportScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStepContent(BuildContext context, YnabImportState state, YnabImportViewModel viewModel) {
+  Widget _buildStepContent(
+    BuildContext context,
+    YnabImportState state,
+    YnabImportViewModel viewModel,
+  ) {
     switch (state.currentStep) {
       case YnabImportStep.selectMethod:
         return _buildMethodSelection(context, viewModel);
@@ -74,7 +81,10 @@ class YnabImportScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildMethodSelection(BuildContext context, YnabImportViewModel viewModel) {
+  Widget _buildMethodSelection(
+    BuildContext context,
+    YnabImportViewModel viewModel,
+  ) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -87,14 +97,18 @@ class YnabImportScreen extends ConsumerWidget {
           onPressed: () => viewModel.setMethod(YnabImportMethod.nynabCsv),
           icon: const Icon(Icons.table_chart),
           label: const Text('nYNAB (CSV Export)'),
-          style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
         ),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => viewModel.setMethod(YnabImportMethod.ynab4),
           icon: const Icon(Icons.folder),
           label: const Text('YNAB 4 (Classic)'),
-          style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
         ),
         const SizedBox(height: 32),
         const Text(
@@ -107,12 +121,19 @@ class YnabImportScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFileSelection(BuildContext context, YnabImportState state, YnabImportViewModel viewModel) {
+  Widget _buildFileSelection(
+    BuildContext context,
+    YnabImportState state,
+    YnabImportViewModel viewModel,
+  ) {
     if (state.method == YnabImportMethod.nynabCsv) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Upload CSV Files', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Upload CSV Files',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 24),
           ListTile(
             title: const Text('Register.csv'),
@@ -120,7 +141,10 @@ class YnabImportScreen extends ConsumerWidget {
             leading: const Icon(Icons.receipt_long),
             trailing: const Icon(Icons.upload_file),
             onTap: viewModel.pickRegisterFile,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.grey)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: Colors.grey),
+            ),
           ),
           const SizedBox(height: 16),
           ListTile(
@@ -129,14 +153,18 @@ class YnabImportScreen extends ConsumerWidget {
             leading: const Icon(Icons.pie_chart),
             trailing: const Icon(Icons.upload_file),
             onTap: viewModel.pickBudgetFile,
-             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.grey)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: Colors.grey),
+            ),
           ),
           const Spacer(),
           if (state.isLoading)
-             const Center(child: CircularProgressIndicator())
+            const Center(child: CircularProgressIndicator())
           else
             ElevatedButton(
-              onPressed: (state.registerFile != null && state.budgetFile != null)
+              onPressed:
+                  (state.registerFile != null && state.budgetFile != null)
                   ? viewModel.validateAndParse
                   : null,
               child: const Text('Next: Preview'),
@@ -147,7 +175,10 @@ class YnabImportScreen extends ConsumerWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Select YNAB4 Folder', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Select YNAB4 Folder',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 24),
           ListTile(
             title: const Text('Budget Folder'),
@@ -155,14 +186,19 @@ class YnabImportScreen extends ConsumerWidget {
             leading: const Icon(Icons.folder_open),
             trailing: const Icon(Icons.folder),
             onTap: viewModel.pickYnab4Folder,
-             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.grey)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: Colors.grey),
+            ),
           ),
           const Spacer(),
           if (state.isLoading)
-             const Center(child: CircularProgressIndicator())
+            const Center(child: CircularProgressIndicator())
           else
             ElevatedButton(
-              onPressed: state.ynab4FolderPath != null ? viewModel.validateAndParse : null,
+              onPressed: state.ynab4FolderPath != null
+                  ? viewModel.validateAndParse
+                  : null,
               child: const Text('Next: Preview'),
             ),
         ],
@@ -170,14 +206,24 @@ class YnabImportScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildPreview(BuildContext context, YnabImportState state, YnabImportViewModel viewModel) {
+  Widget _buildPreview(
+    BuildContext context,
+    YnabImportState state,
+    YnabImportViewModel viewModel,
+  ) {
     final data = state.parsedData!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Import Preview', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text(
+          'Import Preview',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
-        const Text('Review the data found in your import files.', style: TextStyle(color: Colors.grey)),
+        const Text(
+          'Review the data found in your import files.',
+          style: TextStyle(color: Colors.grey),
+        ),
         const SizedBox(height: 16),
         Expanded(
           child: DefaultTabController(
@@ -201,7 +247,9 @@ class YnabImportScreen extends ConsumerWidget {
                           return ListTile(
                             leading: const Icon(Icons.account_balance_wallet),
                             title: Text(acc.name),
-                            subtitle: Text('${acc.type.name.toUpperCase()} • ${acc.isClosed ? 'Closed' : 'Active'}'),
+                            subtitle: Text(
+                              '${acc.type.name.toUpperCase()} • ${acc.isClosed ? 'Closed' : 'Active'}',
+                            ),
                           );
                         },
                       ),
@@ -221,11 +269,18 @@ class YnabImportScreen extends ConsumerWidget {
                           return ExpansionTile(
                             title: Text(group.name),
                             subtitle: Text('${cats.length} categories'),
-                            children: cats.map((c) => ListTile(
-                              title: Text(c.name),
-                              dense: true,
-                              leading: const Icon(Icons.category, size: 16),
-                            )).toList(),
+                            children: cats
+                                .map(
+                                  (c) => ListTile(
+                                    title: Text(c.name),
+                                    dense: true,
+                                    leading: const Icon(
+                                      Icons.category,
+                                      size: 16,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           );
                         },
                       ),
@@ -245,10 +300,22 @@ class YnabImportScreen extends ConsumerWidget {
           ),
           child: Column(
             children: [
-              _buildStatRow(context, 'Total Transactions', data.transactions.length),
-              _buildStatRow(context, 'Budget Entries', data.budgetEntries.length),
+              _buildStatRow(
+                context,
+                'Total Transactions',
+                data.transactions.length,
+              ),
+              _buildStatRow(
+                context,
+                'Budget Entries',
+                data.budgetEntries.length,
+              ),
               if (data.scheduledTransactions.isNotEmpty)
-                _buildStatRow(context, 'Scheduled Txns', data.scheduledTransactions.length),
+                _buildStatRow(
+                  context,
+                  'Scheduled Txns',
+                  data.scheduledTransactions.length,
+                ),
             ],
           ),
         ),
@@ -294,7 +361,7 @@ class YnabImportScreen extends ConsumerWidget {
         SizedBox(height: 32),
         Text(
           'Migrating your budget...',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         SizedBox(height: 16),
         Text(
@@ -325,8 +392,11 @@ class YnabImportScreen extends ConsumerWidget {
               color: Colors.green.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child:
-                const Icon(Icons.check_circle, color: Colors.green, size: 80),
+            child: const Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 80,
+            ),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -349,11 +419,26 @@ class YnabImportScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                _buildSuccessStat(context, Icons.account_balance, '${data?.accounts.length ?? 0}', 'Accounts'),
+                _buildSuccessStat(
+                  context,
+                  Icons.account_balance,
+                  '${data?.accounts.length ?? 0}',
+                  'Accounts',
+                ),
                 const Divider(height: 24),
-                _buildSuccessStat(context, Icons.category, '${data?.categories.length ?? 0}', 'Categories'),
+                _buildSuccessStat(
+                  context,
+                  Icons.category,
+                  '${data?.categories.length ?? 0}',
+                  'Categories',
+                ),
                 const Divider(height: 24),
-                _buildSuccessStat(context, Icons.receipt_long, '${data?.transactions.length ?? 0}', 'Transactions'),
+                _buildSuccessStat(
+                  context,
+                  Icons.receipt_long,
+                  '${data?.transactions.length ?? 0}',
+                  'Transactions',
+                ),
               ],
             ),
           ),
@@ -375,7 +460,12 @@ class YnabImportScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSuccessStat(BuildContext context, IconData icon, String count, String label) {
+  Widget _buildSuccessStat(
+    BuildContext context,
+    IconData icon,
+    String count,
+    String label,
+  ) {
     return Row(
       children: [
         Container(
@@ -390,7 +480,10 @@ class YnabImportScreen extends ConsumerWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(count, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              count,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             Text(label, style: const TextStyle(color: Colors.grey)),
           ],
         ),

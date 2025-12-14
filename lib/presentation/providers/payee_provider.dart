@@ -43,13 +43,17 @@ final payeeProvider = FutureProvider.family<Payee?, String>((ref, id) {
   return repository.getPayeeById(id);
 });
 
-final payeeTransactionsProvider = FutureProvider.family<List<Transaction>, String>((ref, payeeId) async {
-  final repo = ref.watch(transactionRepositoryProvider);
-  return repo.getTransactions(
-    filter: TransactionFilter(payeeIds: [payeeId]),
-    sort: const TransactionSort(field: TransactionSortField.date, ascending: false),
-  );
-});
+final payeeTransactionsProvider =
+    FutureProvider.family<List<Transaction>, String>((ref, payeeId) async {
+      final repo = ref.watch(transactionRepositoryProvider);
+      return repo.getTransactions(
+        filter: TransactionFilter(payeeIds: [payeeId]),
+        sort: const TransactionSort(
+          field: TransactionSortField.date,
+          ascending: false,
+        ),
+      );
+    });
 
 class PayeeController {
   final Ref ref;
@@ -69,7 +73,9 @@ class PayeeController {
     final transactions = await transactionRepo.getTransactions(filter: filter);
 
     if (transactions.isNotEmpty) {
-      Logger.info('Clearing payee from ${transactions.length} transactions before deleting payee $id');
+      Logger.info(
+        'Clearing payee from ${transactions.length} transactions before deleting payee $id',
+      );
       final updatedTransactions = transactions.map((t) {
         return Transaction(
           id: t.id,
@@ -110,7 +116,9 @@ class PayeeController {
     final transactions = await transactionRepo.getTransactions(filter: filter);
 
     if (transactions.isNotEmpty) {
-      Logger.info('Merging ${transactions.length} transactions from $sourceId to $targetId');
+      Logger.info(
+        'Merging ${transactions.length} transactions from $sourceId to $targetId',
+      );
 
       // 2. Update transactions to target payee
       final updatedTransactions = transactions.map((t) {

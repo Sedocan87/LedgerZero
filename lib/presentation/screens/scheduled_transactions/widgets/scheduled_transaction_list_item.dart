@@ -27,7 +27,9 @@ class ScheduledTransactionListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isIncome = (transaction.amount ?? 0) >= 0;
-    final amountColor = isIncome ? Colors.green.shade700 : theme.colorScheme.error;
+    final amountColor = isIncome
+        ? Colors.green.shade700
+        : theme.colorScheme.error;
     final l10n = AppLocalizations.of(context)!;
 
     String frequencyText = '';
@@ -52,7 +54,11 @@ class ScheduledTransactionListItem extends StatelessWidget {
       onTap: onTap,
       leading: CircleAvatar(
         backgroundColor: theme.colorScheme.primaryContainer,
-        child: Icon(Icons.calendar_today, color: theme.colorScheme.onPrimaryContainer, size: 20),
+        child: Icon(
+          Icons.calendar_today,
+          color: theme.colorScheme.onPrimaryContainer,
+          size: 20,
+        ),
       ),
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -60,7 +66,9 @@ class ScheduledTransactionListItem extends StatelessWidget {
           Expanded(
             child: Text(
               payeeName ?? l10n.unknownPayee,
-              style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -95,20 +103,17 @@ class ScheduledTransactionListItem extends StatelessWidget {
             ],
           ),
           Row(
-             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-             children: [
-                if (accountName != null)
-                   Text(
-                     accountName!,
-                     style: theme.textTheme.bodySmall?.copyWith(
-                       fontStyle: FontStyle.italic,
-                     ),
-                   ),
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (accountName != null)
                 Text(
-                   frequencyText,
-                   style: theme.textTheme.bodySmall,
+                  accountName!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
-             ],
+              Text(frequencyText, style: theme.textTheme.bodySmall),
+            ],
           ),
         ],
       ),

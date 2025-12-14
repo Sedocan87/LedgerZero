@@ -156,7 +156,8 @@ class YearlyComparisonData {
     if (previousYear.netSavings == 0) {
       return 0.0;
     }
-    return (currentYear.netSavings - previousYear.netSavings) / previousYear.netSavings;
+    return (currentYear.netSavings - previousYear.netSavings) /
+        previousYear.netSavings;
   }
 
   @override

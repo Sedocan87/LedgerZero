@@ -10,9 +10,9 @@ enum SyncAction {
 
   String toJson() => name.toUpperCase();
   static SyncAction fromJson(String json) => SyncAction.values.firstWhere(
-        (e) => e.name.toUpperCase() == json.toUpperCase(),
-        orElse: () => throw FormatException('Unknown SyncAction: $json'),
-      );
+    (e) => e.name.toUpperCase() == json.toUpperCase(),
+    orElse: () => throw FormatException('Unknown SyncAction: $json'),
+  );
 }
 
 class SyncDelta extends Equatable {
@@ -110,37 +110,49 @@ class SyncDelta extends Equatable {
 
   @override
   List<Object?> get props => [
-        timestamp,
-        deviceUuid,
-        sequence,
-        action,
-        tableName,
-        data,
-        schemaVersion,
-        appVersion,
-        checksum,
-      ];
+    timestamp,
+    deviceUuid,
+    sequence,
+    action,
+    tableName,
+    data,
+    schemaVersion,
+    appVersion,
+    checksum,
+  ];
 
   void validate() {
     if (tableName.isEmpty) {
-      throw const FormatException('SyncDelta validation failed: tableName is empty');
+      throw const FormatException(
+        'SyncDelta validation failed: tableName is empty',
+      );
     }
     if (deviceUuid.isEmpty) {
-      throw const FormatException('SyncDelta validation failed: deviceUuid is empty');
+      throw const FormatException(
+        'SyncDelta validation failed: deviceUuid is empty',
+      );
     }
     // Allow for some clock skew (e.g. 5 minutes into the future), but generally future timestamps are bad.
-    if (timestamp.isAfter(DateTime.now().toUtc().add(const Duration(minutes: 5)))) {
-      throw FormatException('SyncDelta validation failed: timestamp is in the future (${timestamp.toIso8601String()})');
+    if (timestamp.isAfter(
+      DateTime.now().toUtc().add(const Duration(minutes: 5)),
+    )) {
+      throw FormatException(
+        'SyncDelta validation failed: timestamp is in the future (${timestamp.toIso8601String()})',
+      );
     }
 
     if (action == SyncAction.insert || action == SyncAction.update) {
       if (data == null || data!.isEmpty) {
-        throw const FormatException('SyncDelta validation failed: data is missing for INSERT/UPDATE');
+        throw const FormatException(
+          'SyncDelta validation failed: data is missing for INSERT/UPDATE',
+        );
       }
     } else if (action == SyncAction.delete) {
       // For delete, we expect at least the ID in the data
       if (data == null || !data!.containsKey('id')) {
-        throw const FormatException('SyncDelta validation failed: ID is missing in data for DELETE');
+        throw const FormatException(
+          'SyncDelta validation failed: ID is missing in data for DELETE',
+        );
       }
     }
   }

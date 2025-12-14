@@ -7,7 +7,8 @@ import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 
-class ScheduledTransactionRepositoryImpl implements ScheduledTransactionRepository {
+class ScheduledTransactionRepositoryImpl
+    implements ScheduledTransactionRepository {
   final ScheduledTransactionsDao _dao;
 
   ScheduledTransactionRepositoryImpl(this._dao);
@@ -25,7 +26,8 @@ class ScheduledTransactionRepositoryImpl implements ScheduledTransactionReposito
 
   @override
   Future<List<ScheduledTransaction>> getDueScheduledTransactions(
-      DateTime date) async {
+    DateTime date,
+  ) async {
     try {
       final rows = await _dao.getDueScheduledTransactions(date);
       return rows.map(_mapToDomain).toList();
@@ -41,28 +43,32 @@ class ScheduledTransactionRepositoryImpl implements ScheduledTransactionReposito
       final row = await _dao.getScheduledTransactionById(id);
       return row == null ? null : _mapToDomain(row);
     } catch (e, stack) {
-       Logger.error('Failed to get scheduled transaction $id', e, stack);
-       throw DatabaseException('Failed to get scheduled transaction $id', e);
+      Logger.error('Failed to get scheduled transaction $id', e, stack);
+      throw DatabaseException('Failed to get scheduled transaction $id', e);
     }
   }
 
   @override
-  Future<void> createScheduledTransaction(ScheduledTransaction transaction) async {
+  Future<void> createScheduledTransaction(
+    ScheduledTransaction transaction,
+  ) async {
     try {
       await _dao.insertScheduledTransaction(_mapToCompanion(transaction));
     } catch (e, stack) {
-       Logger.error('Failed to create scheduled transaction', e, stack);
-       throw DatabaseException('Failed to create scheduled transaction', e);
+      Logger.error('Failed to create scheduled transaction', e, stack);
+      throw DatabaseException('Failed to create scheduled transaction', e);
     }
   }
 
   @override
-  Future<void> updateScheduledTransaction(ScheduledTransaction transaction) async {
+  Future<void> updateScheduledTransaction(
+    ScheduledTransaction transaction,
+  ) async {
     try {
       await _dao.updateScheduledTransaction(_mapToCompanion(transaction));
     } catch (e, stack) {
-       Logger.error('Failed to update scheduled transaction', e, stack);
-       throw DatabaseException('Failed to update scheduled transaction', e);
+      Logger.error('Failed to update scheduled transaction', e, stack);
+      throw DatabaseException('Failed to update scheduled transaction', e);
     }
   }
 
@@ -71,8 +77,8 @@ class ScheduledTransactionRepositoryImpl implements ScheduledTransactionReposito
     try {
       await _dao.deleteScheduledTransaction(id);
     } catch (e, stack) {
-       Logger.error('Failed to delete scheduled transaction $id', e, stack);
-       throw DatabaseException('Failed to delete scheduled transaction $id', e);
+      Logger.error('Failed to delete scheduled transaction $id', e, stack);
+      throw DatabaseException('Failed to delete scheduled transaction $id', e);
     }
   }
 
@@ -123,7 +129,9 @@ class ScheduledTransactionRepositoryImpl implements ScheduledTransactionReposito
 
   @override
   Stream<List<ScheduledTransaction>> watchAllScheduledTransactions() {
-    return _dao.watchAllScheduledTransactions().map((rows) => rows.map(_mapToDomain).toList());
+    return _dao.watchAllScheduledTransactions().map(
+      (rows) => rows.map(_mapToDomain).toList(),
+    );
   }
 
   ScheduledTransaction _mapToDomain(db.ScheduledTransaction row) {
@@ -136,7 +144,8 @@ class ScheduledTransactionRepositoryImpl implements ScheduledTransactionReposito
       frequency: row.frequency != null
           ? RecurrenceFrequency.values.firstWhere(
               (e) => e.name == row.frequency,
-              orElse: () => RecurrenceFrequency.monthly)
+              orElse: () => RecurrenceFrequency.monthly,
+            )
           : null,
       interval: row.interval,
       occurrenceCount: row.occurrenceCount,

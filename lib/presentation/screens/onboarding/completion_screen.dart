@@ -10,7 +10,8 @@ class CompletionScreen extends ConsumerStatefulWidget {
   ConsumerState<CompletionScreen> createState() => _CompletionScreenState();
 }
 
-class _CompletionScreenState extends ConsumerState<CompletionScreen> with SingleTickerProviderStateMixin {
+class _CompletionScreenState extends ConsumerState<CompletionScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
@@ -23,12 +24,16 @@ class _CompletionScreenState extends ConsumerState<CompletionScreen> with Single
       duration: const Duration(seconds: 1),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.5, 1.0, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+      ),
     );
 
     _controller.forward();
@@ -77,9 +82,8 @@ class _CompletionScreenState extends ConsumerState<CompletionScreen> with Single
                   children: [
                     Text(
                       'You\'re All Set!',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -91,9 +95,15 @@ class _CompletionScreenState extends ConsumerState<CompletionScreen> with Single
                     ElevatedButton(
                       onPressed: _finishOnboarding,
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 48,
+                          vertical: 16,
+                        ),
                       ),
-                      child: const Text('Go to Dashboard', style: TextStyle(fontSize: 18)),
+                      child: const Text(
+                        'Go to Dashboard',
+                        style: TextStyle(fontSize: 18),
+                      ),
                     ),
                   ],
                 ),

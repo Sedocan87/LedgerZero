@@ -141,7 +141,9 @@ class LocalDeltaQueue {
   /// The file is expected to be a valid GZIP compressed JSON SyncDelta.
   /// Returns the file in its new location.
   Future<File> enqueueIncoming(
-      File downloadedFile, String originalFilename) async {
+    File downloadedFile,
+    String originalFilename,
+  ) async {
     final incomingDir = await _incomingDir;
     final destination = File('${incomingDir.path}/$originalFilename');
 
@@ -266,7 +268,8 @@ class LocalDeltaQueue {
 
       // Sort by sequence (files are already sorted by name which implies time/sequence, but let's be safe)
       group.sort(
-          (a, b) => deltasMap[a]!.sequence.compareTo(deltasMap[b]!.sequence));
+        (a, b) => deltasMap[a]!.sequence.compareTo(deltasMap[b]!.sequence),
+      );
 
       final firstFile = group.first;
       final lastFile = group.last;

@@ -20,7 +20,10 @@ class FakeSyncEngine extends Fake implements SyncEngine {
   Stream<SyncState> get statusStream => _controller.stream;
 
   @override
-  Future<void> sync({bool background = false, bool forceFullSync = false}) async {}
+  Future<void> sync({
+    bool background = false,
+    bool forceFullSync = false,
+  }) async {}
 }
 
 void main() {
@@ -38,8 +41,9 @@ void main() {
 
     // Stub common calls
     when(mockPrefs.getString(any)).thenReturn(null);
-    when(mockAuthService.onCurrentUserChanged)
-        .thenAnswer((_) => const Stream.empty());
+    when(
+      mockAuthService.onCurrentUserChanged,
+    ).thenAnswer((_) => const Stream.empty());
     when(mockAuthService.isSignedIn()).thenAnswer((_) async => false);
 
     controller = SyncController(
@@ -52,9 +56,7 @@ void main() {
 
   Widget createWidget() {
     return ProviderScope(
-      overrides: [
-        syncControllerProvider.overrideWith((ref) => controller),
-      ],
+      overrides: [syncControllerProvider.overrideWith((ref) => controller)],
       child: const MaterialApp(
         localizationsDelegates: [
           AppLocalizations.delegate,
@@ -62,9 +64,7 @@ void main() {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: [
-          Locale('en', 'US'),
-        ],
+        supportedLocales: [Locale('en', 'US')],
         home: SyncSettingsScreen(),
       ),
     );
@@ -78,7 +78,9 @@ void main() {
     expect(find.text('None'), findsOneWidget);
   });
 
-  testWidgets('Shows Google Drive UI when selected', (WidgetTester tester) async {
+  testWidgets('Shows Google Drive UI when selected', (
+    WidgetTester tester,
+  ) async {
     // Manually set state or simulate selection
     // Since we use real controller, we can simulate selection by setting prefs/init or calling setProvider
 

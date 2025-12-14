@@ -5,10 +5,7 @@ import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.d
 void main() {
   group('ScheduledTransactionExtensions', () {
     test('calculateNextOccurrenceDate returns null if nextDate is null', () {
-      const transaction = ScheduledTransaction(
-        id: '1',
-        nextDate: null,
-      );
+      const transaction = ScheduledTransaction(id: '1', nextDate: null);
       expect(transaction.calculateNextOccurrenceDate(), isNull);
     });
 
@@ -42,25 +39,37 @@ void main() {
       expect(transaction.calculateNextOccurrenceDate(), DateTime(2023, 2, 15));
     });
 
-    test('monthly recurrence handles month end overflow (Jan 31 -> Feb 28)', () {
-      final transaction = ScheduledTransaction(
-        id: '1',
-        nextDate: DateTime(2023, 1, 31),
-        frequency: RecurrenceFrequency.monthly,
-        interval: 1,
-      );
-      expect(transaction.calculateNextOccurrenceDate(), DateTime(2023, 2, 28));
-    });
+    test(
+      'monthly recurrence handles month end overflow (Jan 31 -> Feb 28)',
+      () {
+        final transaction = ScheduledTransaction(
+          id: '1',
+          nextDate: DateTime(2023, 1, 31),
+          frequency: RecurrenceFrequency.monthly,
+          interval: 1,
+        );
+        expect(
+          transaction.calculateNextOccurrenceDate(),
+          DateTime(2023, 2, 28),
+        );
+      },
+    );
 
-    test('monthly recurrence handles month end overflow (Jan 31 -> Feb 29 in leap year)', () {
-      final transaction = ScheduledTransaction(
-        id: '1',
-        nextDate: DateTime(2024, 1, 31), // 2024 is leap year
-        frequency: RecurrenceFrequency.monthly,
-        interval: 1,
-      );
-      expect(transaction.calculateNextOccurrenceDate(), DateTime(2024, 2, 29));
-    });
+    test(
+      'monthly recurrence handles month end overflow (Jan 31 -> Feb 29 in leap year)',
+      () {
+        final transaction = ScheduledTransaction(
+          id: '1',
+          nextDate: DateTime(2024, 1, 31), // 2024 is leap year
+          frequency: RecurrenceFrequency.monthly,
+          interval: 1,
+        );
+        expect(
+          transaction.calculateNextOccurrenceDate(),
+          DateTime(2024, 2, 29),
+        );
+      },
+    );
 
     test('yearly recurrence adds interval years', () {
       final transaction = ScheduledTransaction(
@@ -88,7 +97,11 @@ void main() {
         nextDate: DateTime(2023, 1, 1),
         frequency: RecurrenceFrequency.daily,
         interval: 1,
-        endDate: DateTime(2023, 1, 1), // Same as nextDate, so next (Jan 2) is after
+        endDate: DateTime(
+          2023,
+          1,
+          1,
+        ), // Same as nextDate, so next (Jan 2) is after
       );
       expect(transaction.calculateNextOccurrenceDate(), isNull);
     });

@@ -1,10 +1,7 @@
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 
-enum RuleMatchLogic {
-  and,
-  or,
-}
+enum RuleMatchLogic { and, or }
 
 class Rule {
   final String id;

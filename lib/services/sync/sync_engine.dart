@@ -48,13 +48,13 @@ class SyncEngine {
     this._connectivityService,
     this._notificationService,
   ) {
-    _connectivitySubscription =
-        _connectivityService.connectionStatusStream.listen((status) {
-      if (status == ConnectionStatus.online) {
-        Logger.info('Network restored. Triggering sync.');
-        sync(background: true);
-      }
-    });
+    _connectivitySubscription = _connectivityService.connectionStatusStream
+        .listen((status) {
+          if (status == ConnectionStatus.online) {
+            Logger.info('Network restored. Triggering sync.');
+            sync(background: true);
+          }
+        });
   }
 
   void dispose() {
@@ -70,14 +70,16 @@ class SyncEngine {
     _isPaused = true;
     Logger.info('SyncEngine paused.');
     _updateState(
-        _currentState.copyWith(status: SyncStatus.idle, message: 'Paused'));
+      _currentState.copyWith(status: SyncStatus.idle, message: 'Paused'),
+    );
   }
 
   void resume() {
     _isPaused = false;
     Logger.info('SyncEngine resumed.');
     _updateState(
-        _currentState.copyWith(status: SyncStatus.idle, message: null));
+      _currentState.copyWith(status: SyncStatus.idle, message: null),
+    );
     // Trigger sync immediately upon resume?
     sync();
   }
@@ -107,7 +109,8 @@ class SyncEngine {
   void _scheduleRetry() {
     if (_retryCount >= _maxRetries) {
       Logger.error(
-          'Max sync retries reached. Giving up until next scheduled sync.');
+        'Max sync retries reached. Giving up until next scheduled sync.',
+      );
       _notificationService.showSyncFailureNotification(
         title: 'Sync Failed',
         body: 'Max retries reached. Tap to retry manually.',
@@ -118,7 +121,8 @@ class SyncEngine {
 
     _retryCount++;
     final delay = Duration(
-        seconds: 2 * (1 << (_retryCount - 1))); // 2, 4, 8, 16, 32...
+      seconds: 2 * (1 << (_retryCount - 1)),
+    ); // 2, 4, 8, 16, 32...
     Logger.info('Scheduling sync retry #$_retryCount in $delay');
 
     // We don't block the timer, but we could schedule a one-off task.
@@ -168,8 +172,10 @@ class SyncEngine {
     startBackgroundSync(interval);
   }
 
-  Future<void> sync(
-      {bool background = false, bool forceFullSync = false}) async {
+  Future<void> sync({
+    bool background = false,
+    bool forceFullSync = false,
+  }) async {
     if (_isPaused) {
       Logger.info('Sync skipped (paused).');
       return;
@@ -194,10 +200,13 @@ class SyncEngine {
       _isCancelled = false; // Reset cancellation flag
       try {
         if (!background) {
-          _updateState(_currentState.copyWith(
+          _updateState(
+            _currentState.copyWith(
               status: SyncStatus.syncing,
               progress: 0.0,
-              message: 'Starting sync...'));
+              message: 'Starting sync...',
+            ),
+          );
         }
         Logger.info('Sync started (${provider.name})...');
 
@@ -206,15 +215,20 @@ class SyncEngine {
           return;
         }
         _updateState(
-            _currentState.copyWith(message: 'Processing local changes...'));
+          _currentState.copyWith(message: 'Processing local changes...'),
+        );
         await _deltaGenerationService.processPendingChanges();
 
         // Check connectivity
         if (!await _connectivityService.isConnected) {
           Logger.info('Sync deferred: Device is offline.');
           if (!background) {
-            _updateState(_currentState.copyWith(
-                status: SyncStatus.idle, message: 'Offline: Changes queued'));
+            _updateState(
+              _currentState.copyWith(
+                status: SyncStatus.idle,
+                message: 'Offline: Changes queued',
+              ),
+            );
           }
           return;
         }
@@ -241,14 +255,16 @@ class SyncEngine {
             if (_isCancelled) {
               break;
             }
-            _updateState(_currentState.copyWith(
+            _updateState(
+              _currentState.copyWith(
                 message:
                     'Uploading ${uploadedCount + 1}/${pendingUploads.length}',
-                progress: 0.1 +
+                progress:
+                    0.1 +
                     (0.2 *
-                        (uploadedCount /
-                            pendingUploads.length)) // 10% to 30%
-                ));
+                        (uploadedCount / pendingUploads.length)), // 10% to 30%
+              ),
+            );
 
             final filename = file.uri.pathSegments.last;
             if (provider == SyncProviderType.googleDrive) {
@@ -263,18 +279,27 @@ class SyncEngine {
 
         if (_isCancelled) {
           Logger.info('Sync cancelled during upload.');
-          _updateState(_currentState.copyWith(
-              status: SyncStatus.idle, message: 'Sync cancelled'));
+          _updateState(
+            _currentState.copyWith(
+              status: SyncStatus.idle,
+              message: 'Sync cancelled',
+            ),
+          );
           return;
         }
 
         // 3. Download & Replay Remote Deltas
-        _updateState(_currentState.copyWith(
-            message: 'Checking remote files...', progress: 0.3));
+        _updateState(
+          _currentState.copyWith(
+            message: 'Checking remote files...',
+            progress: 0.3,
+          ),
+        );
 
         // Task 452: Full Sync (ignore processed files)
-        final processedRemoteFiles =
-            forceFullSync ? <String>{} : await _getProcessedRemoteFiles();
+        final processedRemoteFiles = forceFullSync
+            ? <String>{}
+            : await _getProcessedRemoteFiles();
         final tempDir = await getTemporaryDirectory();
 
         List<RemoteFile> remoteFiles = [];
@@ -288,8 +313,9 @@ class SyncEngine {
               .toList();
         }
 
-        remoteFiles
-            .sort((a, b) => a.name.compareTo(b.name)); // Sort by name (timestamp)
+        remoteFiles.sort(
+          (a, b) => a.name.compareTo(b.name),
+        ); // Sort by name (timestamp)
 
         // Task 451: Incremental Sync (filter out processed)
         final pendingRemoteFiles = remoteFiles
@@ -312,10 +338,12 @@ class SyncEngine {
             final end = (i + batchSize < total) ? i + batchSize : total;
             final batch = pendingRemoteFiles.sublist(i, end);
 
-            _updateState(_currentState.copyWith(
+            _updateState(
+              _currentState.copyWith(
                 message: 'Downloading ${processedCount + 1}-$end/$total',
-                progress: 0.3 + (0.7 * (processedCount / total)) // 30% to 100%
-                ));
+                progress: 0.3 + (0.7 * (processedCount / total)), // 30% to 100%
+              ),
+            );
 
             // Actually we read delta objects
             final downloadedDeltas = <SyncDelta>[];
@@ -364,13 +392,19 @@ class SyncEngine {
               File downloadedFile;
               if (provider == SyncProviderType.googleDrive) {
                 downloadedFile = await _googleDriveService.downloadDelta(
-                    remoteFile.id, savePath);
+                  remoteFile.id,
+                  savePath,
+                );
               } else {
                 downloadedFile = await _iCloudService.downloadDelta(
-                    remoteFile.name, savePath);
+                  remoteFile.name,
+                  savePath,
+                );
               }
               final queuedFile = await _deltaQueue.enqueueIncoming(
-                  downloadedFile, remoteFile.name);
+                downloadedFile,
+                remoteFile.name,
+              );
               queuedFiles.add(queuedFile);
               final delta = await _deltaQueue.readDelta(queuedFile);
               downloadedDeltas.add(delta);
@@ -381,8 +415,10 @@ class SyncEngine {
             }
 
             // Replay Batch
-            await _deltaReplayService.replayBatch(downloadedDeltas,
-                filenames: batch.map((f) => f.name).toList());
+            await _deltaReplayService.replayBatch(
+              downloadedDeltas,
+              filenames: batch.map((f) => f.name).toList(),
+            );
 
             // Mark Applied
             for (final queuedFile in queuedFiles) {
@@ -394,14 +430,19 @@ class SyncEngine {
 
           if (processedCount > 0) {
             Logger.info(
-                'Downloaded and applied $processedCount remote deltas.');
+              'Downloaded and applied $processedCount remote deltas.',
+            );
           }
         }
 
         if (_isCancelled) {
           Logger.info('Sync cancelled during download.');
-          _updateState(_currentState.copyWith(
-              status: SyncStatus.idle, message: 'Sync cancelled'));
+          _updateState(
+            _currentState.copyWith(
+              status: SyncStatus.idle,
+              message: 'Sync cancelled',
+            ),
+          );
           return;
         }
 
@@ -410,11 +451,14 @@ class SyncEngine {
         await _recordSuccess();
 
         if (!background) {
-          _updateState(_currentState.copyWith(
+          _updateState(
+            _currentState.copyWith(
               status: SyncStatus.connected,
               lastSyncTime: now,
               progress: 1.0,
-              message: 'Sync completed'));
+              message: 'Sync completed',
+            ),
+          );
         }
         Logger.info('Sync completed.');
         _retryCount = 0; // Reset retry on success
@@ -422,8 +466,12 @@ class SyncEngine {
         Logger.error('Sync failed', e, stack);
         await _recordFailure();
         if (!background) {
-          _updateState(_currentState.copyWith(
-              status: SyncStatus.error, errorMessage: e.toString()));
+          _updateState(
+            _currentState.copyWith(
+              status: SyncStatus.error,
+              errorMessage: e.toString(),
+            ),
+          );
         }
         rethrow; // For background retry logic
       }
@@ -467,8 +515,7 @@ class SyncEngine {
   Future<Map<String, dynamic>> checkHealth() async {
     return {
       'pending_uploads': (await _deltaQueue.getPendingDeltas()).length,
-      'pending_incoming':
-          (await _deltaQueue.getPendingIncomingDeltas()).length,
+      'pending_incoming': (await _deltaQueue.getPendingIncomingDeltas()).length,
       'is_paused': _isPaused,
       'provider': _prefs.getString('sync_provider'),
       'last_sync': _prefs.getString('sync_last_sync_time'),

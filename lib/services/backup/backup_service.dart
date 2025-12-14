@@ -23,9 +23,9 @@ class BackupService {
     GoogleDriveService? googleDriveService,
     ICloudDriveService? iCloudDriveService,
     BackupScheduler? backupScheduler,
-  })  : _googleDriveService = googleDriveService,
-        _iCloudDriveService = iCloudDriveService,
-        _backupScheduler = backupScheduler;
+  }) : _googleDriveService = googleDriveService,
+       _iCloudDriveService = iCloudDriveService,
+       _backupScheduler = backupScheduler;
 
   /// Creates a backup of the current database.
   ///
@@ -89,12 +89,16 @@ class BackupService {
       try {
         await _iCloudDriveService.uploadBackup(backupFile, filename);
       } catch (e) {
-         // handle error
+        // handle error
       }
     }
   }
 
-  Future<File> _encryptBackup(File inputFile, String password, int timestamp) async {
+  Future<File> _encryptBackup(
+    File inputFile,
+    String password,
+    int timestamp,
+  ) async {
     final tempDir = await getTemporaryDirectory();
     final outputPath = p.join(tempDir.path, 'backup_$timestamp.lzbk');
 
@@ -152,7 +156,9 @@ class BackupService {
 
   Uint8List _deriveKey(String password, Uint8List salt) {
     final pkcs = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64));
-    pkcs.init(Pbkdf2Parameters(salt, 100000, 32)); // 100k iterations, 32 byte key
+    pkcs.init(
+      Pbkdf2Parameters(salt, 100000, 32),
+    ); // 100k iterations, 32 byte key
     return pkcs.process(Uint8List.fromList(utf8.encode(password)));
   }
 }

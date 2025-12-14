@@ -28,17 +28,17 @@ void main() {
   );
 
   // Mock ordered categories
-  final orderedCategoriesOverride = budgetOrderedCategoriesProvider.overrideWith(
-      (ref) => Future.value(['1', '2']));
+  final orderedCategoriesOverride = budgetOrderedCategoriesProvider
+      .overrideWith((ref) => Future.value(['1', '2']));
 
   testWidgets('Tap on amount enables editing', (tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(
-        home: Scaffold(
-          body: BudgetCategoryRow(viewModel: viewModel1),
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: BudgetCategoryRow(viewModel: viewModel1)),
         ),
       ),
-    ));
+    );
 
     // Initially not editing (Text widget)
     expect(find.byType(BudgetInputField), findsNothing);
@@ -55,29 +55,33 @@ void main() {
     expect(find.byType(BudgetInputField), findsOneWidget);
   });
 
-  testWidgets('Keyboard navigation (Down Arrow) switches to next category', (tester) async {
+  testWidgets('Keyboard navigation (Down Arrow) switches to next category', (
+    tester,
+  ) async {
     // We need a stateful container for the provider overrides to persist?
     // ProviderScope manages it.
 
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-         orderedCategoriesOverride,
-         // We can't override StateProvider with a specific initial state easily in overrides list
-         // without creating a custom provider, but here we can just set it?
-         // Actually we can override with a notifier that has initial state?
-         // Or simpler: just let the test tap to start editing.
-      ],
-      child: const MaterialApp(
-        home: Scaffold(
-          body: Column(
-            children: [
-               BudgetCategoryRow(viewModel: viewModel1),
-               BudgetCategoryRow(viewModel: viewModel2),
-            ],
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          orderedCategoriesOverride,
+          // We can't override StateProvider with a specific initial state easily in overrides list
+          // without creating a custom provider, but here we can just set it?
+          // Actually we can override with a notifier that has initial state?
+          // Or simpler: just let the test tap to start editing.
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                BudgetCategoryRow(viewModel: viewModel1),
+                BudgetCategoryRow(viewModel: viewModel2),
+              ],
+            ),
           ),
         ),
       ),
-    ));
+    );
 
     // Wait for future provider
     await tester.pumpAndSettle();
@@ -87,8 +91,20 @@ void main() {
     await tester.tap(find.text('\$100.00').first);
     await tester.pump();
 
-    expect(find.descendant(of: find.byType(BudgetCategoryRow).first, matching: find.byType(BudgetInputField)), findsOneWidget);
-    expect(find.descendant(of: find.byType(BudgetCategoryRow).last, matching: find.byType(BudgetInputField)), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(BudgetCategoryRow).first,
+        matching: find.byType(BudgetInputField),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(BudgetCategoryRow).last,
+        matching: find.byType(BudgetInputField),
+      ),
+      findsNothing,
+    );
 
     // Press Down Arrow
     // We need to focus? AppTextField requests focus.
@@ -96,7 +112,19 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify cat 2 is editing
-    expect(find.descendant(of: find.byType(BudgetCategoryRow).first, matching: find.byType(BudgetInputField)), findsNothing);
-    expect(find.descendant(of: find.byType(BudgetCategoryRow).last, matching: find.byType(BudgetInputField)), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(BudgetCategoryRow).first,
+        matching: find.byType(BudgetInputField),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(BudgetCategoryRow).last,
+        matching: find.byType(BudgetInputField),
+      ),
+      findsOneWidget,
+    );
   });
 }

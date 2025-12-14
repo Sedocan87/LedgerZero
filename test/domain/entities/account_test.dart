@@ -132,11 +132,15 @@ void main() {
     });
 
     test('defaults are set correctly', () {
-        const defaultAccount = Account(id: '1', name: 'Test', type: AccountType.cash);
-        expect(defaultAccount.currency, 'USD');
-        expect(defaultAccount.startingBalance, 0.0);
-        expect(defaultAccount.currentBalance, 0.0);
-        expect(defaultAccount.isClosed, false);
+      const defaultAccount = Account(
+        id: '1',
+        name: 'Test',
+        type: AccountType.cash,
+      );
+      expect(defaultAccount.currency, 'USD');
+      expect(defaultAccount.startingBalance, 0.0);
+      expect(defaultAccount.currentBalance, 0.0);
+      expect(defaultAccount.isClosed, false);
     });
   });
 }

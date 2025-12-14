@@ -8,7 +8,8 @@ class BudgetTutorialBanner extends ConsumerStatefulWidget {
   const BudgetTutorialBanner({super.key});
 
   @override
-  ConsumerState<BudgetTutorialBanner> createState() => _BudgetTutorialBannerState();
+  ConsumerState<BudgetTutorialBanner> createState() =>
+      _BudgetTutorialBannerState();
 }
 
 class _BudgetTutorialBannerState extends ConsumerState<BudgetTutorialBanner> {
@@ -48,7 +49,9 @@ class _BudgetTutorialBannerState extends ConsumerState<BudgetTutorialBanner> {
           children: [
             Text(
               AppLocalizations.of(context)!.budgetTutorialTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(AppLocalizations.of(context)!.budgetTutorialDescription),

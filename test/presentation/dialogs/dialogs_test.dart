@@ -11,11 +11,7 @@ void main() {
       await pumpTestWidget(
         tester,
         child: Scaffold(
-          body: ErrorView(
-            title: 'Error',
-            message: message,
-            onRetry: () {},
-          ),
+          body: ErrorView(title: 'Error', message: message, onRetry: () {}),
         ),
       );
 

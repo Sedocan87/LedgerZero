@@ -15,28 +15,29 @@ void main() {
     transactionsDao = TransactionsDao(database);
 
     // Seed foreign key dependencies
-    await database.into(database.accounts).insert(
-       AccountsCompanion.insert(
-         id: 'acc_1',
-         name: 'Test Account',
-         type: AccountType.checking.name,
-       )
-    );
+    await database
+        .into(database.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: 'acc_1',
+            name: 'Test Account',
+            type: AccountType.checking.name,
+          ),
+        );
 
-    await database.into(database.categories).insert(
-        CategoriesCompanion.insert(
+    await database
+        .into(database.categories)
+        .insert(
+          CategoriesCompanion.insert(
             id: 'cat_1',
             name: 'Test Category',
             createdAt: const Value(null),
-        )
-    );
+          ),
+        );
 
-    await database.into(database.payees).insert(
-        PayeesCompanion.insert(
-            id: 'payee_1',
-            name: 'Test Payee',
-        )
-    );
+    await database
+        .into(database.payees)
+        .insert(PayeesCompanion.insert(id: 'payee_1', name: 'Test Payee'));
   });
 
   tearDown(() async {

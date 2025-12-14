@@ -34,14 +34,19 @@ final reportCategoryFilterProvider = StateProvider<Set<String>>((ref) => {});
 
 /// Provider for Spending by Category data.
 /// Returns a Map of Category Name -> Amount.
-final spendingByCategoryProvider = FutureProvider<Map<String, double>>((ref) async {
+final spendingByCategoryProvider = FutureProvider<Map<String, double>>((
+  ref,
+) async {
   final range = ref.watch(reportDateRangeProvider);
   final categoryFilter = ref.watch(reportCategoryFilterProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
   final categoryRepo = ref.watch(categoryRepositoryProvider);
 
   // Get expenses by category ID
-  final expenseMap = await transactionRepo.getExpenseSumsByDateRange(range.start, range.end);
+  final expenseMap = await transactionRepo.getExpenseSumsByDateRange(
+    range.start,
+    range.end,
+  );
 
   // Get all categories to map IDs to Names
   final categories = await categoryRepo.getAllCategories();
@@ -60,7 +65,7 @@ final spendingByCategoryProvider = FutureProvider<Map<String, double>>((ref) asy
     final amount = entry.value.abs();
 
     if (amount > 0) {
-       result[name] = (result[name] ?? 0) + amount;
+      result[name] = (result[name] ?? 0) + amount;
     }
   }
 
@@ -69,11 +74,16 @@ final spendingByCategoryProvider = FutureProvider<Map<String, double>>((ref) asy
 
 /// Provider for Income vs Expense History.
 /// Returns a list of ChartSeries (Income, Expense).
-final incomeVsExpenseHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
+final incomeVsExpenseHistoryProvider = FutureProvider<List<ChartSeries>>((
+  ref,
+) async {
   final range = ref.watch(reportDateRangeProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
 
-  final transactions = await transactionRepo.getTransactionsByDateRange(range.start, range.end);
+  final transactions = await transactionRepo.getTransactionsByDateRange(
+    range.start,
+    range.end,
+  );
 
   // Group by Month
   final incomePoints = <DateTime, double>{};
@@ -109,7 +119,9 @@ final incomeVsExpenseHistoryProvider = FutureProvider<List<ChartSeries>>((ref) a
   for (var date in sortedDates) {
     incomeSeriesPoints.add(TimeSeriesPoint(date, incomePoints[date] ?? 0));
     final netExpense = -(expensePoints[date] ?? 0);
-    expenseSeriesPoints.add(TimeSeriesPoint(date, netExpense < 0 ? 0 : netExpense));
+    expenseSeriesPoints.add(
+      TimeSeriesPoint(date, netExpense < 0 ? 0 : netExpense),
+    );
   }
 
   return [
@@ -139,12 +151,17 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
   allTransactions.sort((a, b) => a.date.compareTo(b.date));
 
   // Calculate total starting balance
-  double currentBalance = accounts.fold(0.0, (sum, a) => sum + a.startingBalance);
+  double currentBalance = accounts.fold(
+    0.0,
+    (sum, a) => sum + a.startingBalance,
+  );
 
   final points = <TimeSeriesPoint>[];
 
   // Apply transactions before range start
-  final transactionsBefore = allTransactions.where((t) => t.date.isBefore(range.start));
+  final transactionsBefore = allTransactions.where(
+    (t) => t.date.isBefore(range.start),
+  );
   for (var t in transactionsBefore) {
     currentBalance += t.amount;
   }
@@ -152,9 +169,9 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
   // Initial point at start of range
   points.add(TimeSeriesPoint(range.start, currentBalance));
 
-  final transactionsInRange = allTransactions.where((t) =>
-    !t.date.isBefore(range.start) && !t.date.isAfter(range.end)
-  ).toList();
+  final transactionsInRange = allTransactions
+      .where((t) => !t.date.isBefore(range.start) && !t.date.isAfter(range.end))
+      .toList();
 
   DateTime? lastDate;
 
@@ -175,7 +192,7 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
   if (points.isNotEmpty && points.last.date.isBefore(range.end)) {
     points.add(TimeSeriesPoint(range.end, currentBalance));
   } else if (points.isEmpty) {
-     points.add(TimeSeriesPoint(range.end, currentBalance));
+    points.add(TimeSeriesPoint(range.end, currentBalance));
   }
 
   return [
@@ -189,45 +206,53 @@ final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
 
 /// Provider for Spending Trends (Monthly Spending Totals).
 /// Returns a Map of Month Start Date -> Total Expense Amount.
-final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((ref) async {
+final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((
+  ref,
+) async {
   final range = ref.watch(reportDateRangeProvider);
   final categoryFilter = ref.watch(reportCategoryFilterProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
 
-  final transactions = await transactionRepo.getTransactionsByDateRange(range.start, range.end);
+  final transactions = await transactionRepo.getTransactionsByDateRange(
+    range.start,
+    range.end,
+  );
   final trends = <DateTime, double>{};
 
   DateTime toMonthStart(DateTime date) => DateTime(date.year, date.month, 1);
 
   for (var t in transactions) {
-     if (t.isTransfer) {
-       continue;
-     }
+    if (t.isTransfer) {
+      continue;
+    }
 
-     if (categoryFilter.isNotEmpty && (t.categoryId == null || !categoryFilter.contains(t.categoryId))) {
-       continue;
-     }
+    if (categoryFilter.isNotEmpty &&
+        (t.categoryId == null || !categoryFilter.contains(t.categoryId))) {
+      continue;
+    }
 
-     final isIncome = t.amount > 0 && t.categoryId == null;
-     if (!isIncome) {
-        final monthDate = toMonthStart(t.date);
-        trends[monthDate] = (trends[monthDate] ?? 0) + t.amount;
-     }
+    final isIncome = t.amount > 0 && t.categoryId == null;
+    if (!isIncome) {
+      final monthDate = toMonthStart(t.date);
+      trends[monthDate] = (trends[monthDate] ?? 0) + t.amount;
+    }
   }
 
   final result = <DateTime, double>{};
   for (var entry in trends.entries) {
-     if (entry.value < 0) {
-        result[entry.key] = entry.value.abs();
-     } else {
-        result[entry.key] = 0.0;
-     }
+    if (entry.value < 0) {
+      result[entry.key] = entry.value.abs();
+    } else {
+      result[entry.key] = 0.0;
+    }
   }
   return result;
 });
 
 /// Provider for Budget vs Actual data.
-final budgetVsActualProvider = FutureProvider<List<BudgetVsActualItem>>((ref) async {
+final budgetVsActualProvider = FutureProvider<List<BudgetVsActualItem>>((
+  ref,
+) async {
   final range = ref.watch(reportDateRangeProvider);
   final categoryFilter = ref.watch(reportCategoryFilterProvider);
   final budgetRepo = ref.watch(budgetRepositoryProvider);
@@ -247,7 +272,8 @@ final budgetVsActualProvider = FutureProvider<List<BudgetVsActualItem>>((ref) as
 
     for (var b in budgets) {
       if (b.categoryId != null) {
-        budgetedMap[b.categoryId!] = (budgetedMap[b.categoryId!] ?? 0) + b.budgeted;
+        budgetedMap[b.categoryId!] =
+            (budgetedMap[b.categoryId!] ?? 0) + b.budgeted;
       }
     }
 
@@ -255,7 +281,10 @@ final budgetVsActualProvider = FutureProvider<List<BudgetVsActualItem>>((ref) as
   }
 
   // Actual spending (Expenses)
-  final expenseMap = await transactionRepo.getExpenseSumsByDateRange(range.start, range.end);
+  final expenseMap = await transactionRepo.getExpenseSumsByDateRange(
+    range.start,
+    range.end,
+  );
 
   final categories = await categoryRepo.getAllCategories();
   final categoryNameMap = {for (var c in categories) c.id: c.name};
@@ -272,11 +301,13 @@ final budgetVsActualProvider = FutureProvider<List<BudgetVsActualItem>>((ref) as
     final actual = (expenseMap[catId] ?? 0.0).abs(); // Spending is negative
 
     if (budgeted > 0 || actual > 0) {
-      items.add(BudgetVsActualItem(
-        categoryName: categoryNameMap[catId] ?? 'Unknown',
-        budgeted: budgeted,
-        actual: actual,
-      ));
+      items.add(
+        BudgetVsActualItem(
+          categoryName: categoryNameMap[catId] ?? 'Unknown',
+          budgeted: budgeted,
+          actual: actual,
+        ),
+      );
     }
   }
 
@@ -291,7 +322,8 @@ final reportNotesListProvider = FutureProvider<List<ReportNote>>((ref) async {
   final range = ref.watch(reportDateRangeProvider);
   final noteRepo = ref.watch(reportNoteRepositoryProvider);
 
-  final allNotes = await noteRepo.getAllNotes(); // Optimized query would be better but get all is fine for now
+  final allNotes = await noteRepo
+      .getAllNotes(); // Optimized query would be better but get all is fine for now
 
   final startMonth = DateTime(range.start.year, range.start.month);
   final endMonth = DateTime(range.end.year, range.end.month);
@@ -315,12 +347,17 @@ final reportNotesListProvider = FutureProvider<List<ReportNote>>((ref) async {
 
 /// Provider for Top Payees.
 /// Returns list of (Payee Name, Amount).
-final topPayeesProvider = FutureProvider<List<MapEntry<String, double>>>((ref) async {
+final topPayeesProvider = FutureProvider<List<MapEntry<String, double>>>((
+  ref,
+) async {
   final range = ref.watch(reportDateRangeProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
   final payeeRepo = ref.watch(payeeRepositoryProvider);
 
-  final transactions = await transactionRepo.getTransactionsByDateRange(range.start, range.end);
+  final transactions = await transactionRepo.getTransactionsByDateRange(
+    range.start,
+    range.end,
+  );
   final payees = await payeeRepo.getAllPayees();
   final payeeNameMap = {for (var p in payees) p.id: p.name};
 
@@ -333,7 +370,9 @@ final topPayeesProvider = FutureProvider<List<MapEntry<String, double>>>((ref) a
 
     // Only count outflows (spending)
     if (t.amount < 0) {
-      final payeeName = t.payeeId != null ? (payeeNameMap[t.payeeId!] ?? 'Unknown') : 'No Payee';
+      final payeeName = t.payeeId != null
+          ? (payeeNameMap[t.payeeId!] ?? 'Unknown')
+          : 'No Payee';
       payeeTotals[payeeName] = (payeeTotals[payeeName] ?? 0) + t.amount.abs();
     }
   }

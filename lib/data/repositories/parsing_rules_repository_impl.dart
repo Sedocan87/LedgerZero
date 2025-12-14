@@ -10,14 +10,20 @@ class ParsingRulesRepositoryImpl implements ParsingRulesRepository {
   ParsingRulesRepositoryImpl(this._dao);
 
   @override
-  Future<void> addRule(String keyword, String? payeeId, String? categoryId) async {
-    await _dao.addRule(ParsingRulesCompanion.insert(
-      id: const Uuid().v4(),
-      keyword: keyword,
-      payeeId: Value(payeeId),
-      categoryId: Value(categoryId),
-      createdAt: DateTime.now().toIso8601String(),
-    ));
+  Future<void> addRule(
+    String keyword,
+    String? payeeId,
+    String? categoryId,
+  ) async {
+    await _dao.addRule(
+      ParsingRulesCompanion.insert(
+        id: const Uuid().v4(),
+        keyword: keyword,
+        payeeId: Value(payeeId),
+        categoryId: Value(categoryId),
+        createdAt: DateTime.now().toIso8601String(),
+      ),
+    );
   }
 
   @override
@@ -28,11 +34,15 @@ class ParsingRulesRepositoryImpl implements ParsingRulesRepository {
   @override
   Future<List<Map<String, dynamic>>> getAllRules() async {
     final rules = await _dao.getAllRules();
-    return rules.map((e) => {
-      'id': e.id,
-      'keyword': e.keyword,
-      'payeeId': e.payeeId,
-      'categoryId': e.categoryId,
-    }).toList();
+    return rules
+        .map(
+          (e) => {
+            'id': e.id,
+            'keyword': e.keyword,
+            'payeeId': e.payeeId,
+            'categoryId': e.categoryId,
+          },
+        )
+        .toList();
   }
 }

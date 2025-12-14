@@ -12,9 +12,8 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     with _$TransactionsDaoMixin {
   TransactionsDao(super.db);
 
-  Future<List<Transaction>> getAllTransactions() => (select(transactions)
-        ..where((t) => t.isDeleted.equals(false)))
-      .get();
+  Future<List<Transaction>> getAllTransactions() =>
+      (select(transactions)..where((t) => t.isDeleted.equals(false))).get();
 
   Future<Transaction?> getTransactionById(String id) =>
       (select(transactions)..where((t) => t.id.equals(id))).getSingleOrNull();
@@ -35,8 +34,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       (delete(transactions)..where((t) => t.id.equals(id))).go();
 
   Future<void> softDeleteTransaction(String id) =>
-      (update(transactions)..where((t) => t.id.equals(id)))
-          .write(const TransactionsCompanion(isDeleted: Value(true)));
+      (update(transactions)..where((t) => t.id.equals(id))).write(
+        const TransactionsCompanion(isDeleted: Value(true)),
+      );
 
   Future<void> batchUpdateTransactions(List<TransactionsCompanion> list) async {
     await batch((batch) {
@@ -45,73 +45,88 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<void> batchSoftDeleteTransactions(List<String> ids) async {
-    await (update(transactions)..where((t) => t.id.isIn(ids)))
-        .write(const TransactionsCompanion(isDeleted: Value(true)));
+    await (update(transactions)..where((t) => t.id.isIn(ids))).write(
+      const TransactionsCompanion(isDeleted: Value(true)),
+    );
   }
 
   Stream<List<Transaction>> watchAllTransactions() =>
       (select(transactions)..where((t) => t.isDeleted.equals(false))).watch();
 
   Future<List<Transaction>> getTransactionsByAccount(String accountId) =>
-      (select(transactions)
-            ..where((t) =>
-                t.accountId.equals(accountId) & t.isDeleted.equals(false)))
+      (select(transactions)..where(
+            (t) => t.accountId.equals(accountId) & t.isDeleted.equals(false),
+          ))
           .get();
 
-  Stream<List<Transaction>> watchTransactionsByAccount(
-          String accountId) =>
-      (select(transactions)
-            ..where((t) =>
-                t.accountId.equals(accountId) & t.isDeleted.equals(false)))
+  Stream<List<Transaction>> watchTransactionsByAccount(String accountId) =>
+      (select(transactions)..where(
+            (t) => t.accountId.equals(accountId) & t.isDeleted.equals(false),
+          ))
           .watch();
 
   Future<List<Transaction>> getTransactionsByDateRange(
-          DateTime start, DateTime end) =>
-      (select(transactions)
-            ..where((t) =>
+    DateTime start,
+    DateTime end,
+  ) =>
+      (select(transactions)..where(
+            (t) =>
                 t.date.isBetween(Variable(start), Variable(end)) &
-                t.isDeleted.equals(false)))
+                t.isDeleted.equals(false),
+          ))
           .get();
 
   Future<double> getIncomeSumByDateRange(DateTime start, DateTime end) {
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
-      ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
-          transactions.amount.isBiggerThanValue(0) &
-          transactions.categoryId.isNull() &
-          transactions.parentTransactionId.isNull() &
-          transactions.isDeleted.equals(false))
+      ..where(
+        transactions.date.isBetween(Variable(start), Variable(end)) &
+            transactions.amount.isBiggerThanValue(0) &
+            transactions.categoryId.isNull() &
+            transactions.parentTransactionId.isNull() &
+            transactions.isDeleted.equals(false),
+      )
       ..addColumns([amount]);
 
     return query.map((row) => row.read(amount) ?? 0.0).getSingle();
   }
 
   Future<double> getExpenseSumByCategoryAndDateRange(
-      String categoryId, DateTime start, DateTime end) {
+    String categoryId,
+    DateTime start,
+    DateTime end,
+  ) {
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
-      ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
-          transactions.categoryId.equals(categoryId) &
-          transactions.isDeleted.equals(false))
+      ..where(
+        transactions.date.isBetween(Variable(start), Variable(end)) &
+            transactions.categoryId.equals(categoryId) &
+            transactions.isDeleted.equals(false),
+      )
       ..addColumns([amount]);
 
     return query.map((row) => row.read(amount) ?? 0.0).getSingle();
   }
 
   Future<List<Transaction>> getSplitTransactions(String parentId) =>
-      (select(transactions)
-            ..where((t) =>
+      (select(transactions)..where(
+            (t) =>
                 t.parentTransactionId.equals(parentId) &
-                t.isDeleted.equals(false)))
+                t.isDeleted.equals(false),
+          ))
           .get();
 
   Future<Map<String, double>> getExpenseSumsByDateRange(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
-      ..where(transactions.date.isBetween(Variable(start), Variable(end)) &
-          transactions.categoryId.isNotNull() &
-          transactions.isDeleted.equals(false))
+      ..where(
+        transactions.date.isBetween(Variable(start), Variable(end)) &
+            transactions.categoryId.isNotNull() &
+            transactions.isDeleted.equals(false),
+      )
       ..addColumns([transactions.categoryId, amount])
       ..groupBy([transactions.categoryId]);
 
@@ -119,7 +134,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     return {
       for (final row in rows)
         if (row.read(transactions.categoryId) != null)
-          row.read(transactions.categoryId)!: row.read(amount) ?? 0.0
+          row.read(transactions.categoryId)!: row.read(amount) ?? 0.0,
     };
   }
 
@@ -131,7 +146,8 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
         whereClause = whereClause & transactions.id.isIn(filter.ids!);
       }
       if (filter.accountIds != null && filter.accountIds!.isNotEmpty) {
-        whereClause = whereClause & transactions.accountId.isIn(filter.accountIds!);
+        whereClause =
+            whereClause & transactions.accountId.isIn(filter.accountIds!);
       }
       if (filter.categoryIds != null && filter.categoryIds!.isNotEmpty) {
         whereClause =
@@ -142,23 +158,27 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       }
       if (filter.startDate != null) {
         whereClause =
-            whereClause & transactions.date.isBiggerOrEqualValue(filter.startDate!);
+            whereClause &
+            transactions.date.isBiggerOrEqualValue(filter.startDate!);
       }
       if (filter.endDate != null) {
         whereClause =
-            whereClause & transactions.date.isSmallerOrEqualValue(filter.endDate!);
+            whereClause &
+            transactions.date.isSmallerOrEqualValue(filter.endDate!);
       }
       if (filter.minAmount != null) {
         whereClause =
-            whereClause & transactions.amount.isBiggerOrEqualValue(filter.minAmount!);
+            whereClause &
+            transactions.amount.isBiggerOrEqualValue(filter.minAmount!);
       }
       if (filter.maxAmount != null) {
         whereClause =
-            whereClause & transactions.amount.isSmallerOrEqualValue(filter.maxAmount!);
+            whereClause &
+            transactions.amount.isSmallerOrEqualValue(filter.maxAmount!);
       }
       if (filter.memoSearch != null && filter.memoSearch!.isNotEmpty) {
-        whereClause = whereClause &
-            transactions.memo.like('%${filter.memoSearch!}%');
+        whereClause =
+            whereClause & transactions.memo.like('%${filter.memoSearch!}%');
       }
       if (filter.clearedStatuses != null &&
           filter.clearedStatuses!.isNotEmpty) {
@@ -170,16 +190,20 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   JoinedSelectStatement<HasResultSet, dynamic> _applyJoin(
-      SimpleSelectStatement<HasResultSet, Transaction> query,
-      TransactionSort? sort) {
+    SimpleSelectStatement<HasResultSet, Transaction> query,
+    TransactionSort? sort,
+  ) {
     if (sort != null) {
       if (sort.field == TransactionSortField.payeeName) {
         return query.join([
-          leftOuterJoin(payees, payees.id.equalsExp(transactions.payeeId))
+          leftOuterJoin(payees, payees.id.equalsExp(transactions.payeeId)),
         ]);
       } else if (sort.field == TransactionSortField.categoryName) {
         return query.join([
-          leftOuterJoin(categories, categories.id.equalsExp(transactions.categoryId))
+          leftOuterJoin(
+            categories,
+            categories.id.equalsExp(transactions.categoryId),
+          ),
         ]);
       }
     }
@@ -188,7 +212,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 
   List<OrderingTerm> _buildOrderBy(TransactionSort? sort) {
     if (sort == null) {
-      return [OrderingTerm(expression: transactions.date, mode: OrderingMode.desc)];
+      return [
+        OrderingTerm(expression: transactions.date, mode: OrderingMode.desc),
+      ];
     }
 
     final mode = sort.ascending ? OrderingMode.asc : OrderingMode.desc;
@@ -205,53 +231,77 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
-  Future<List<Transaction>> getTransactions(
-      {TransactionFilter? filter, TransactionSort? sort, int? limit}) {
+  Future<List<Transaction>> getTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+    int? limit,
+  }) {
     final rootQuery = select(transactions);
 
     // Apply WHERE clause
     rootQuery.where((t) => _buildWhereClause(filter));
 
     // If we need to sort by joined tables
-    if (sort != null && (sort.field == TransactionSortField.payeeName || sort.field == TransactionSortField.categoryName)) {
-       final joinedQuery = _applyJoin(rootQuery, sort);
-       joinedQuery.orderBy(_buildOrderBy(sort));
-       if (limit != null) {
-         joinedQuery.limit(limit);
-       }
-       return joinedQuery.map((row) => row.readTable(transactions)).get();
+    if (sort != null &&
+        (sort.field == TransactionSortField.payeeName ||
+            sort.field == TransactionSortField.categoryName)) {
+      final joinedQuery = _applyJoin(rootQuery, sort);
+      joinedQuery.orderBy(_buildOrderBy(sort));
+      if (limit != null) {
+        joinedQuery.limit(limit);
+      }
+      return joinedQuery.map((row) => row.readTable(transactions)).get();
     } else {
-       final terms = _buildOrderBy(sort);
-       rootQuery.orderBy(terms.map((term) => (t) => term).toList());
-       if (limit != null) {
-         rootQuery.limit(limit);
-       }
-       return rootQuery.get();
+      final terms = _buildOrderBy(sort);
+      rootQuery.orderBy(
+        terms
+            .map(
+              (term) =>
+                  (t) => term,
+            )
+            .toList(),
+      );
+      if (limit != null) {
+        rootQuery.limit(limit);
+      }
+      return rootQuery.get();
     }
   }
 
-  Stream<List<Transaction>> watchTransactions(
-      {TransactionFilter? filter, TransactionSort? sort, int? limit}) {
+  Stream<List<Transaction>> watchTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+    int? limit,
+  }) {
     final rootQuery = select(transactions);
 
     // Apply WHERE clause
     rootQuery.where((t) => _buildWhereClause(filter));
 
     // If we need to sort by joined tables
-    if (sort != null && (sort.field == TransactionSortField.payeeName || sort.field == TransactionSortField.categoryName)) {
-       final joinedQuery = _applyJoin(rootQuery, sort);
-       joinedQuery.orderBy(_buildOrderBy(sort));
-       if (limit != null) {
-         joinedQuery.limit(limit);
-       }
-       return joinedQuery.map((row) => row.readTable(transactions)).watch();
+    if (sort != null &&
+        (sort.field == TransactionSortField.payeeName ||
+            sort.field == TransactionSortField.categoryName)) {
+      final joinedQuery = _applyJoin(rootQuery, sort);
+      joinedQuery.orderBy(_buildOrderBy(sort));
+      if (limit != null) {
+        joinedQuery.limit(limit);
+      }
+      return joinedQuery.map((row) => row.readTable(transactions)).watch();
     } else {
-       final terms = _buildOrderBy(sort);
-       rootQuery.orderBy(terms.map((term) => (t) => term).toList());
-       if (limit != null) {
-         rootQuery.limit(limit);
-       }
-       return rootQuery.watch();
+      final terms = _buildOrderBy(sort);
+      rootQuery.orderBy(
+        terms
+            .map(
+              (term) =>
+                  (t) => term,
+            )
+            .toList(),
+      );
+      if (limit != null) {
+        rootQuery.limit(limit);
+      }
+      return rootQuery.watch();
     }
   }
 }

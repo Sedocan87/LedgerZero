@@ -8,12 +8,15 @@ import 'package:ledger_zero/services/import/ynab_data_mapper.dart';
 import 'package:ledger_zero/services/import/ynab_import_service.dart';
 
 // Providers
-final ynabImportViewModelProvider = StateNotifierProvider.autoDispose<YnabImportViewModel, YnabImportState>((ref) {
-  return YnabImportViewModel(
-    importService: ref.watch(ynabImportServiceProvider),
-    dataMapper: ref.watch(ynabDataMapperProvider),
-  );
-});
+final ynabImportViewModelProvider =
+    StateNotifierProvider.autoDispose<YnabImportViewModel, YnabImportState>((
+      ref,
+    ) {
+      return YnabImportViewModel(
+        importService: ref.watch(ynabImportServiceProvider),
+        dataMapper: ref.watch(ynabDataMapperProvider),
+      );
+    });
 
 final ynabImportServiceProvider = Provider<YnabImportService>((ref) {
   return YnabImportService();
@@ -37,19 +40,30 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
   YnabImportViewModel({
     required YnabImportService importService,
     required YnabDataMapper dataMapper,
-  })  : _importService = importService,
-        _dataMapper = dataMapper,
-        super(const YnabImportState());
+  }) : _importService = importService,
+       _dataMapper = dataMapper,
+       super(const YnabImportState());
 
   void setMethod(YnabImportMethod method) {
-    state = state.copyWith(method: method, currentStep: YnabImportStep.selectFiles, error: null);
+    state = state.copyWith(
+      method: method,
+      currentStep: YnabImportStep.selectFiles,
+      error: null,
+    );
   }
 
   void goBack() {
     if (state.currentStep == YnabImportStep.selectFiles) {
-      state = state.copyWith(currentStep: YnabImportStep.selectMethod, error: null);
+      state = state.copyWith(
+        currentStep: YnabImportStep.selectMethod,
+        error: null,
+      );
     } else if (state.currentStep == YnabImportStep.preview) {
-      state = state.copyWith(currentStep: YnabImportStep.selectFiles, error: null, parsedData: null);
+      state = state.copyWith(
+        currentStep: YnabImportStep.selectFiles,
+        error: null,
+        parsedData: null,
+      );
     }
   }
 
@@ -102,7 +116,9 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     try {
       if (state.method == YnabImportMethod.nynabCsv) {
         if (state.registerFile == null || state.budgetFile == null) {
-          throw Exception('Please select both Register.csv and Budget.csv files.');
+          throw Exception(
+            'Please select both Register.csv and Budget.csv files.',
+          );
         }
 
         final registerContent = await _readFileContent(state.registerFile!);
@@ -113,14 +129,20 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
           budgetCsvContent: budgetContent,
         );
 
-        state = state.copyWith(parsedData: data, currentStep: YnabImportStep.preview);
+        state = state.copyWith(
+          parsedData: data,
+          currentStep: YnabImportStep.preview,
+        );
       } else {
         if (state.ynab4FolderPath == null) {
           throw Exception('Please select the YNAB4 data folder.');
         }
 
         final data = await _importService.parseYnab4(state.ynab4FolderPath!);
-        state = state.copyWith(parsedData: data, currentStep: YnabImportStep.preview);
+        state = state.copyWith(
+          parsedData: data,
+          currentStep: YnabImportStep.preview,
+        );
       }
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -145,17 +167,22 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     }
 
     state = state.copyWith(
-        currentStep: YnabImportStep.importing, isImporting: true, error: null);
+      currentStep: YnabImportStep.importing,
+      isImporting: true,
+      error: null,
+    );
 
     try {
       await _dataMapper.importData(state.parsedData!);
       state = state.copyWith(
-          currentStep: YnabImportStep.success, isImporting: false);
+        currentStep: YnabImportStep.success,
+        isImporting: false,
+      );
     } catch (e) {
       state = state.copyWith(
         currentStep: YnabImportStep.preview, // Go back to preview on error
         isImporting: false,
-        error: 'Import failed: $e'
+        error: 'Import failed: $e',
       );
     }
   }

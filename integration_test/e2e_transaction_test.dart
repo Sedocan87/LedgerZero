@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'test_utils.dart';
 
 void main() {
-  testWidgets('E2E Transaction Lifecycle: Create, Edit, Delete', (tester) async {
+  testWidgets('E2E Transaction Lifecycle: Create, Edit, Delete', (
+    tester,
+  ) async {
     // 1. Setup App & Onboarding (Creates a default 'Checking' account)
     await setupIntegrationTest(tester);
     await completeOnboarding(tester);
@@ -17,7 +19,10 @@ void main() {
     expect(find.text('Add Transaction'), findsOneWidget);
 
     // 3. Create Transaction
-    await tester.enterText(find.widgetWithText(TextFormField, '0.00'), '50.00'); // Amount
+    await tester.enterText(
+      find.widgetWithText(TextFormField, '0.00'),
+      '50.00',
+    ); // Amount
 
     // Payee
     final payeeField = find.widgetWithText(TextFormField, 'Payee');
@@ -40,7 +45,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Grocery Store'), findsOneWidget);
-    expect(find.text('-\$50.00'), findsOneWidget); // Expense is negative usually
+    expect(
+      find.text('-\$50.00'),
+      findsOneWidget,
+    ); // Expense is negative usually
 
     // 5. Edit Transaction
     await tester.tap(find.text('Grocery Store')); // Tap to edit
@@ -49,7 +57,10 @@ void main() {
     expect(find.text('Edit Transaction'), findsOneWidget);
 
     // Change Amount
-    await tester.enterText(find.widgetWithText(TextFormField, '50.00'), '60.00');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, '50.00'),
+      '60.00',
+    );
 
     // Save
     await tester.tap(find.text('Save'));
@@ -76,8 +87,8 @@ void main() {
 
     // Check for confirmation dialog
     if (find.text('Delete Transaction').evaluate().isNotEmpty) {
-       await tester.tap(find.text('Delete'));
-       await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
     }
 
     // Verify Gone

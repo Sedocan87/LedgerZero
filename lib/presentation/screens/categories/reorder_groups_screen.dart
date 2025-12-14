@@ -8,7 +8,8 @@ class ReorderGroupsScreen extends ConsumerStatefulWidget {
   const ReorderGroupsScreen({super.key});
 
   @override
-  ConsumerState<ReorderGroupsScreen> createState() => _ReorderGroupsScreenState();
+  ConsumerState<ReorderGroupsScreen> createState() =>
+      _ReorderGroupsScreenState();
 }
 
 class _ReorderGroupsScreenState extends ConsumerState<ReorderGroupsScreen> {
@@ -22,10 +23,13 @@ class _ReorderGroupsScreenState extends ConsumerState<ReorderGroupsScreen> {
   }
 
   Future<void> _loadGroups() async {
-    final groups = await ref.read(categoryRepositoryProvider).getAllCategoryGroups();
+    final groups = await ref
+        .read(categoryRepositoryProvider)
+        .getAllCategoryGroups();
     if (mounted) {
       setState(() {
-        _groups = groups..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
+        _groups = groups
+          ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
       });
     }
   }
@@ -48,8 +52,9 @@ class _ReorderGroupsScreenState extends ConsumerState<ReorderGroupsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -76,7 +81,7 @@ class _ReorderGroupsScreenState extends ConsumerState<ReorderGroupsScreen> {
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: _isSaving ? null : _save,
-          )
+          ),
         ],
       ),
       body: ReorderableListView(

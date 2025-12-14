@@ -21,30 +21,37 @@ void main() {
       const Payee(id: '3', name: 'Gamma', isFavorite: false),
     ];
 
-    test('returns all payees sorted by favorite then name when query is empty', () async {
-      when(mockPayeeRepository.watchAllPayees()).thenAnswer((_) => Stream.value(payees));
+    test(
+      'returns all payees sorted by favorite then name when query is empty',
+      () async {
+        when(
+          mockPayeeRepository.watchAllPayees(),
+        ).thenAnswer((_) => Stream.value(payees));
 
-      final container = ProviderContainer(
-        overrides: [
-          payeeRepositoryProvider.overrideWithValue(mockPayeeRepository),
-        ],
-      );
+        final container = ProviderContainer(
+          overrides: [
+            payeeRepositoryProvider.overrideWithValue(mockPayeeRepository),
+          ],
+        );
 
-      // Wait for the stream to emit
-      await container.read(payeesProvider.future);
+        // Wait for the stream to emit
+        await container.read(payeesProvider.future);
 
-      final result = container.read(filteredPayeesProvider);
+        final result = container.read(filteredPayeesProvider);
 
-      expect(result.value, isNotNull);
-      final list = result.value!;
-      expect(list.length, 3);
-      expect(list[0].name, 'Beta'); // Favorite first
-      expect(list[1].name, 'Alpha'); // Then Alphabetical
-      expect(list[2].name, 'Gamma');
-    });
+        expect(result.value, isNotNull);
+        final list = result.value!;
+        expect(list.length, 3);
+        expect(list[0].name, 'Beta'); // Favorite first
+        expect(list[1].name, 'Alpha'); // Then Alphabetical
+        expect(list[2].name, 'Gamma');
+      },
+    );
 
     test('returns filtered payees when query is provided', () async {
-      when(mockPayeeRepository.watchAllPayees()).thenAnswer((_) => Stream.value(payees));
+      when(
+        mockPayeeRepository.watchAllPayees(),
+      ).thenAnswer((_) => Stream.value(payees));
 
       final container = ProviderContainer(
         overrides: [
@@ -67,7 +74,9 @@ void main() {
     });
 
     test('is case insensitive', () async {
-      when(mockPayeeRepository.watchAllPayees()).thenAnswer((_) => Stream.value(payees));
+      when(
+        mockPayeeRepository.watchAllPayees(),
+      ).thenAnswer((_) => Stream.value(payees));
 
       final container = ProviderContainer(
         overrides: [

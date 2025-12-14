@@ -18,7 +18,6 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
-
   @override
   void initState() {
     super.initState();
@@ -50,7 +49,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   Future<void> _initializeServices() async {
     await ref.read(notificationServiceProvider).initialize();
-    await ref.read(scheduledTransactionServiceProvider).processDueTransactions();
+    await ref
+        .read(scheduledTransactionServiceProvider)
+        .processDueTransactions();
     // Update widgets on startup/auth
     await ref.read(widgetServiceProvider).updateWidgetData();
   }
@@ -61,13 +62,18 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final router = ref.watch(routerProvider);
 
     ref.listen<AuthState>(authProvider, (previous, next) {
-      if (next.isAuthenticated && (previous == null || !previous.isAuthenticated)) {
+      if (next.isAuthenticated &&
+          (previous == null || !previous.isAuthenticated)) {
         _initializeServices();
       }
     });
 
-    final lightTheme = themeState.isHighContrast ? AppTheme.highContrastLightTheme : AppTheme.lightTheme;
-    final darkTheme = themeState.isHighContrast ? AppTheme.highContrastDarkTheme : AppTheme.darkTheme;
+    final lightTheme = themeState.isHighContrast
+        ? AppTheme.highContrastLightTheme
+        : AppTheme.lightTheme;
+    final darkTheme = themeState.isHighContrast
+        ? AppTheme.highContrastDarkTheme
+        : AppTheme.darkTheme;
 
     return WidgetSyncListener(
       child: MaterialApp.router(

@@ -26,7 +26,7 @@ void main() {
 
     test('respects precedence (* / before + -)', () {
       expect(MathEvaluator.evaluate('10+5*2'), 20.0); // 10 + 10 = 20
-      expect(MathEvaluator.evaluate('10-6/2'), 7.0);  // 10 - 3 = 7
+      expect(MathEvaluator.evaluate('10-6/2'), 7.0); // 10 - 3 = 7
     });
 
     test('handles whitespace', () {

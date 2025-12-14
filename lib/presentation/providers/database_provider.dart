@@ -58,8 +58,9 @@ final rulesDaoProvider = Provider<RulesDao>((ref) {
 });
 
 /// Provides the [ScheduledTransactionsDao].
-final scheduledTransactionsDaoProvider =
-    Provider<ScheduledTransactionsDao>((ref) {
+final scheduledTransactionsDaoProvider = Provider<ScheduledTransactionsDao>((
+  ref,
+) {
   return ref.watch(databaseProvider).scheduledTransactionsDao;
 });
 

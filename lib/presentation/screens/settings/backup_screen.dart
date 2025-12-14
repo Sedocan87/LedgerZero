@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:ledger_zero/core/platform/io.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +39,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a password for encryption.')),
+          const SnackBar(
+            content: Text('Please enter a password for encryption.'),
+          ),
         );
         return;
       }
@@ -48,7 +50,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           return;
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password must be at least 8 characters long.')),
+          const SnackBar(
+            content: Text('Password must be at least 8 characters long.'),
+          ),
         );
         return;
       }
@@ -67,7 +71,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Unencrypted Backup Warning'),
-          content: const Text('You are creating an unencrypted backup. This file can be opened by anyone. Are you sure?'),
+          content: const Text(
+            'You are creating an unencrypted backup. This file can be opened by anyone. Are you sure?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -101,14 +107,16 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           await backupService.uploadBackupToCloud(file);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Backup uploaded to cloud successfully.')),
+              const SnackBar(
+                content: Text('Backup uploaded to cloud successfully.'),
+              ),
             );
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Cloud upload failed: $e')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Cloud upload failed: $e')));
           }
         }
       }
@@ -116,17 +124,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       if (mounted) {
         // Use share_plus to export the file
         await SharePlus.instance.share(
-          ShareParams(
-            subject: 'LedgerZero Backup',
-            files: [XFile(file.path)],
-          ),
+          ShareParams(subject: 'LedgerZero Backup', files: [XFile(file.path)]),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Backup failed: $e')));
       }
     } finally {
       if (mounted) {
@@ -171,7 +176,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, _restorePasswordController.text),
+              onPressed: () =>
+                  Navigator.pop(context, _restorePasswordController.text),
               child: const Text('OK'),
             ),
           ],
@@ -189,7 +195,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Confirm Restore'),
-          content: const Text('This will overwrite your current database. Are you sure?'),
+          content: const Text(
+            'This will overwrite your current database. Are you sure?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -221,7 +229,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: const Text('Restore Successful'),
-            content: const Text('The database has been restored. Please restart the app to apply changes.'),
+            content: const Text(
+              'The database has been restored. Please restart the app to apply changes.',
+            ),
             actions: [
               TextButton(
                 onPressed: () {
@@ -237,9 +247,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Restore failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Restore failed: $e')));
       }
     } finally {
       if (mounted) {
@@ -253,9 +263,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Backup & Restore'),
-      ),
+      appBar: AppBar(title: const Text('Backup & Restore')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -301,7 +309,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     ],
                     SwitchListTile(
                       title: const Text('Upload to Cloud'),
-                      subtitle: const Text('Save copy to configured cloud storage (Drive/iCloud)'),
+                      subtitle: const Text(
+                        'Save copy to configured cloud storage (Drive/iCloud)',
+                      ),
                       value: _uploadToCloud,
                       onChanged: (value) {
                         setState(() {
@@ -311,7 +321,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     ),
                     const SizedBox(height: 24),
                     AppButton.primary(
-                      label: _isLoading ? 'Creating Backup...' : 'Export Backup',
+                      label: _isLoading
+                          ? 'Creating Backup...'
+                          : 'Export Backup',
                       onPressed: _isLoading ? null : _createBackup,
                     ),
                   ],
@@ -386,7 +398,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, _restorePasswordController.text),
+              onPressed: () =>
+                  Navigator.pop(context, _restorePasswordController.text),
               child: const Text('OK'),
             ),
           ],
@@ -416,7 +429,12 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
     try {
       final restoreService = ref.read(restoreServiceProvider);
-      await restoreService.selectiveRestore(file, dateRange.start, dateRange.end, password: password);
+      await restoreService.selectiveRestore(
+        file,
+        dateRange.start,
+        dateRange.end,
+        password: password,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -425,9 +443,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Selective restore failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Selective restore failed: $e')));
       }
     } finally {
       if (mounted) {

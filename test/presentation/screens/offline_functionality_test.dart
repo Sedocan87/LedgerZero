@@ -22,10 +22,10 @@ void main() {
     mockConnectivityService = MockConnectivityService();
     statusController = StreamController<ConnectionStatus>.broadcast();
 
-    when(mockConnectivityService.connectionStatusStream)
-        .thenAnswer((_) => statusController.stream);
-    when(mockConnectivityService.isConnected)
-        .thenAnswer((_) async => true);
+    when(
+      mockConnectivityService.connectionStatusStream,
+    ).thenAnswer((_) => statusController.stream);
+    when(mockConnectivityService.isConnected).thenAnswer((_) async => true);
   });
 
   tearDown(() {
@@ -34,13 +34,16 @@ void main() {
 
   testWidgets('OfflineIndicator shows when offline', (tester) async {
     // Override stream to emit offline
-    when(mockConnectivityService.connectionStatusStream)
-        .thenAnswer((_) => Stream.value(ConnectionStatus.offline));
+    when(
+      mockConnectivityService.connectionStatusStream,
+    ).thenAnswer((_) => Stream.value(ConnectionStatus.offline));
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          connectivityServiceProvider.overrideWithValue(mockConnectivityService),
+          connectivityServiceProvider.overrideWithValue(
+            mockConnectivityService,
+          ),
         ],
         child: const MaterialApp(
           localizationsDelegates: [
@@ -50,9 +53,7 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: [Locale('en')],
-          home: Scaffold(
-            body: Column(children: [OfflineIndicator()]),
-          ),
+          home: Scaffold(body: Column(children: [OfflineIndicator()])),
         ),
       ),
     );
@@ -63,13 +64,16 @@ void main() {
   });
 
   testWidgets('OfflineIndicator hides when online', (tester) async {
-    when(mockConnectivityService.connectionStatusStream)
-        .thenAnswer((_) => Stream.value(ConnectionStatus.online));
+    when(
+      mockConnectivityService.connectionStatusStream,
+    ).thenAnswer((_) => Stream.value(ConnectionStatus.online));
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          connectivityServiceProvider.overrideWithValue(mockConnectivityService),
+          connectivityServiceProvider.overrideWithValue(
+            mockConnectivityService,
+          ),
         ],
         child: const MaterialApp(
           localizationsDelegates: [
@@ -79,9 +83,7 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: [Locale('en')],
-          home: Scaffold(
-            body: Column(children: [OfflineIndicator()]),
-          ),
+          home: Scaffold(body: Column(children: [OfflineIndicator()])),
         ),
       ),
     );

@@ -7,13 +7,19 @@ class ReassignCategoryDialog extends ConsumerStatefulWidget {
   final int count;
   final String excludeCategoryId;
 
-  const ReassignCategoryDialog({super.key, required this.count, required this.excludeCategoryId});
+  const ReassignCategoryDialog({
+    super.key,
+    required this.count,
+    required this.excludeCategoryId,
+  });
 
   @override
-  ConsumerState<ReassignCategoryDialog> createState() => _ReassignCategoryDialogState();
+  ConsumerState<ReassignCategoryDialog> createState() =>
+      _ReassignCategoryDialogState();
 }
 
-class _ReassignCategoryDialogState extends ConsumerState<ReassignCategoryDialog> {
+class _ReassignCategoryDialogState
+    extends ConsumerState<ReassignCategoryDialog> {
   String? _selectedCategoryId;
 
   @override
@@ -37,10 +43,12 @@ class _ReassignCategoryDialogState extends ConsumerState<ReassignCategoryDialog>
                   if (cat.id == widget.excludeCategoryId) {
                     continue;
                   }
-                  items.add(DropdownMenuItem(
-                    value: cat.id,
-                    child: Text('${group.group.name}: ${cat.name}'),
-                  ));
+                  items.add(
+                    DropdownMenuItem(
+                      value: cat.id,
+                      child: Text('${group.group.name}: ${cat.name}'),
+                    ),
+                  );
                 }
               }
 
@@ -67,11 +75,16 @@ class _ReassignCategoryDialogState extends ConsumerState<ReassignCategoryDialog>
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
         TextButton(
-          onPressed: _selectedCategoryId == null ? null : () {
-             Navigator.pop(context, _selectedCategoryId);
-          },
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(
+          onPressed: _selectedCategoryId == null
+              ? null
+              : () {
+                  Navigator.pop(context, _selectedCategoryId);
+                },
           child: Text(l10n.delete),
         ),
       ],

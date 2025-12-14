@@ -5,11 +5,7 @@ import 'package:ledger_zero/core/constants/app_icons.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
-enum EndCondition {
-  never,
-  onDate,
-  afterOccurrences,
-}
+enum EndCondition { never, onDate, afterOccurrences }
 
 class RecurrenceSelector extends StatelessWidget {
   final RecurrenceFrequency frequency;
@@ -52,10 +48,7 @@ class RecurrenceSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.frequency,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
+        Text(l10n.frequency, style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
@@ -87,9 +80,7 @@ class RecurrenceSelector extends StatelessWidget {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(
-              child: Text(l10n.repeatEvery),
-            ),
+            Expanded(child: Text(l10n.repeatEvery)),
             SizedBox(
               width: 80,
               child: TextFormField(
@@ -99,7 +90,10 @@ class RecurrenceSelector extends StatelessWidget {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 textAlign: TextAlign.center,
                 decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
@@ -118,10 +112,7 @@ class RecurrenceSelector extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        Text(
-          l10n.end,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
+        Text(l10n.end, style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
         DropdownButtonFormField<EndCondition>(
           key: ValueKey(_currentEndCondition),
@@ -225,7 +216,11 @@ class RecurrenceSelector extends StatelessWidget {
     );
   }
 
-  String _getFrequencyUnitLabel(AppLocalizations l10n, RecurrenceFrequency frequency, int count) {
+  String _getFrequencyUnitLabel(
+    AppLocalizations l10n,
+    RecurrenceFrequency frequency,
+    int count,
+  ) {
     switch (frequency) {
       case RecurrenceFrequency.daily:
         return l10n.unitDays(count);

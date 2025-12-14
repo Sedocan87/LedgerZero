@@ -51,8 +51,10 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
 
     // Prevent moving to same category
     if (_fromCategoryId == _toCategoryId) {
-       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Source and destination categories must be different')),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Source and destination categories must be different'),
+        ),
       );
       return;
     }
@@ -62,7 +64,8 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
     });
 
     try {
-      final amount = double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0;
+      final amount =
+          double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0;
       final month = ref.read(selectedBudgetMonthProvider);
       final budgetingService = ref.read(budgetingServiceProvider);
 
@@ -82,9 +85,9 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -128,7 +131,7 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                   ),
                   items: groupsWithCategories.expand((group) {
                     return group.categories.map((category) {
-                       return DropdownMenuItem<String>(
+                      return DropdownMenuItem<String>(
                         value: category.id,
                         child: Text('${group.group.name}: ${category.name}'),
                       );
@@ -139,7 +142,8 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                       _fromCategoryId = value;
                     });
                   },
-                  validator: (value) => value == null ? 'Please select a category' : null,
+                  validator: (value) =>
+                      value == null ? 'Please select a category' : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -151,7 +155,7 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                   ),
                   items: groupsWithCategories.expand((group) {
                     return group.categories.map((category) {
-                       return DropdownMenuItem<String>(
+                      return DropdownMenuItem<String>(
                         value: category.id,
                         child: Text('${group.group.name}: ${category.name}'),
                       );
@@ -162,13 +166,16 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                       _toCategoryId = value;
                     });
                   },
-                  validator: (value) => value == null ? 'Please select a category' : null,
+                  validator: (value) =>
+                      value == null ? 'Please select a category' : null,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
                   controller: _amountController,
                   label: AppLocalizations.of(context)!.amount,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return AppLocalizations.of(context)!.invalidAmount;

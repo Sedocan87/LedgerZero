@@ -16,7 +16,8 @@ class AddEditCategoryScreen extends ConsumerStatefulWidget {
   const AddEditCategoryScreen({super.key, this.categoryId});
 
   @override
-  ConsumerState<AddEditCategoryScreen> createState() => _AddEditCategoryScreenState();
+  ConsumerState<AddEditCategoryScreen> createState() =>
+      _AddEditCategoryScreenState();
 }
 
 class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
@@ -47,7 +48,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   Future<void> _loadCategory() async {
     setState(() => _isLoading = true);
     try {
-      final category = await ref.read(categoryRepositoryProvider).getCategoryById(widget.categoryId!);
+      final category = await ref
+          .read(categoryRepositoryProvider)
+          .getCategoryById(widget.categoryId!);
       if (category != null) {
         _existingCategory = category;
         _nameController.text = category.name;
@@ -59,7 +62,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
         // Load stats
         final transactions = await ref
             .read(transactionRepositoryProvider)
-            .getTransactions(filter: TransactionFilter(categoryIds: [category.id]));
+            .getTransactions(
+              filter: TransactionFilter(categoryIds: [category.id]),
+            );
         _transactionCount = transactions.length;
       }
     } catch (e) {
@@ -117,9 +122,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving category: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving category: $e')));
       }
     } finally {
       if (mounted) {
@@ -154,8 +159,10 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (isEditing) ...[
-                      Text('Usage: $_transactionCount transactions',
-                          style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        'Usage: $_transactionCount transactions',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                       const SizedBox(height: 16),
                     ],
                     AppTextField(
@@ -204,14 +211,18 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                       onChanged: (val) => setState(() => _isHidden = val),
                     ),
                     const SizedBox(height: 16),
-                    Text(l10n.color, style: Theme.of(context).textTheme.titleSmall),
+                    Text(
+                      l10n.color,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: categoryColors.map((colorValue) {
                         return GestureDetector(
-                          onTap: () => setState(() => _selectedColor = colorValue),
+                          onTap: () =>
+                              setState(() => _selectedColor = colorValue),
                           child: Container(
                             width: 32,
                             height: 32,
@@ -227,7 +238,10 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                       }).toList(),
                     ),
                     const SizedBox(height: 16),
-                    Text(l10n.icon, style: Theme.of(context).textTheme.titleSmall),
+                    Text(
+                      l10n.icon,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -236,13 +250,17 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                         final isSelected = _selectedIcon == entry.key;
                         return IconButton(
                           icon: Icon(entry.value),
-                          color: isSelected ? Theme.of(context).primaryColor : null,
-                          onPressed: () => setState(() => _selectedIcon = entry.key),
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : null,
+                          onPressed: () =>
+                              setState(() => _selectedIcon = entry.key),
                           style: isSelected
                               ? IconButton.styleFrom(
-                                  backgroundColor: Theme.of(context)
-                                      .primaryColor
-                                      .withValues(alpha: 0.1))
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).primaryColor.withValues(alpha: 0.1),
+                                )
                               : null,
                         );
                       }).toList(),

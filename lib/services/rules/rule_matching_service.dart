@@ -16,15 +16,15 @@ final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
 });
 
 class RulePerformanceStats {
-    final int processedCount;
-    final int modifiedCount;
-    final int durationMs;
+  final int processedCount;
+  final int modifiedCount;
+  final int durationMs;
 
-    RulePerformanceStats({
-        required this.processedCount,
-        required this.modifiedCount,
-        required this.durationMs,
-    });
+  RulePerformanceStats({
+    required this.processedCount,
+    required this.modifiedCount,
+    required this.durationMs,
+  });
 }
 
 class RuleMatchingService {
@@ -36,7 +36,10 @@ class RuleMatchingService {
   /// Applies rules to a list of transactions.
   /// Returns a list of transactions corresponding to the input list, but with rules applied.
   /// Note: The original list is not modified.
-  Future<List<Transaction>> applyRules(List<Transaction> transactions, List<Rule> rules) async {
+  Future<List<Transaction>> applyRules(
+    List<Transaction> transactions,
+    List<Rule> rules,
+  ) async {
     // Sort rules by priority (ascending: 0 is highest priority)
     final sortedRules = List<Rule>.from(rules)
       ..sort((a, b) => a.priority.compareTo(b.priority));
@@ -56,50 +59,56 @@ class RuleMatchingService {
 
   /// Bulk applies rules to all existing transactions in the database.
   /// Returns performance statistics.
-  Future<RulePerformanceStats> applyRulesToAllTransactions(List<Rule> rules) async {
+  Future<RulePerformanceStats> applyRulesToAllTransactions(
+    List<Rule> rules,
+  ) async {
     final stopwatch = Stopwatch()..start();
     try {
-        final allTransactions = await _transactionRepository.getAllTransactions();
-        if (allTransactions.isEmpty) {
-          return RulePerformanceStats(
-            processedCount: 0,
-            modifiedCount: 0,
-            durationMs: stopwatch.elapsedMilliseconds,
-          );
-        }
-
-        final modifiedTransactions = <Transaction>[];
-
-        // Process in batches if necessary, but for now simple list logic
-        final processed = await applyRules(allTransactions, rules);
-
-        for (int i = 0; i < allTransactions.length; i++) {
-            final original = allTransactions[i];
-            final updated = processed[i];
-
-            // Check if anything changed
-            if (original != updated) {
-                // To be safe, ensure we update timestamp
-                modifiedTransactions.add(updated.copyWith(updatedAt: DateTime.now()));
-            }
-        }
-
-        if (modifiedTransactions.isNotEmpty) {
-            await _transactionRepository.batchUpdateTransactions(modifiedTransactions);
-        }
-
-        stopwatch.stop();
-        final duration = stopwatch.elapsedMilliseconds;
-        Logger.info('Applied rules to ${allTransactions.length} transactions. Modified ${modifiedTransactions.length}. Duration: ${duration}ms');
-
+      final allTransactions = await _transactionRepository.getAllTransactions();
+      if (allTransactions.isEmpty) {
         return RulePerformanceStats(
-            processedCount: allTransactions.length,
-            modifiedCount: modifiedTransactions.length,
-            durationMs: duration
+          processedCount: 0,
+          modifiedCount: 0,
+          durationMs: stopwatch.elapsedMilliseconds,
         );
+      }
+
+      final modifiedTransactions = <Transaction>[];
+
+      // Process in batches if necessary, but for now simple list logic
+      final processed = await applyRules(allTransactions, rules);
+
+      for (int i = 0; i < allTransactions.length; i++) {
+        final original = allTransactions[i];
+        final updated = processed[i];
+
+        // Check if anything changed
+        if (original != updated) {
+          // To be safe, ensure we update timestamp
+          modifiedTransactions.add(updated.copyWith(updatedAt: DateTime.now()));
+        }
+      }
+
+      if (modifiedTransactions.isNotEmpty) {
+        await _transactionRepository.batchUpdateTransactions(
+          modifiedTransactions,
+        );
+      }
+
+      stopwatch.stop();
+      final duration = stopwatch.elapsedMilliseconds;
+      Logger.info(
+        'Applied rules to ${allTransactions.length} transactions. Modified ${modifiedTransactions.length}. Duration: ${duration}ms',
+      );
+
+      return RulePerformanceStats(
+        processedCount: allTransactions.length,
+        modifiedCount: modifiedTransactions.length,
+        durationMs: duration,
+      );
     } catch (e) {
-        Logger.error('Error applying rules to all transactions', e);
-        rethrow;
+      Logger.error('Error applying rules to all transactions', e);
+      rethrow;
     }
   }
 
@@ -208,43 +217,49 @@ class RuleMatchingService {
     }
   }
 
-  Future<Transaction> _applyActions(Transaction transaction, List<RuleAction> actions) async {
+  Future<Transaction> _applyActions(
+    Transaction transaction,
+    List<RuleAction> actions,
+  ) async {
     var t = transaction;
     for (final action in actions) {
       switch (action.type) {
         case RuleActionType.setCategory:
-           t = t.copyWith(categoryId: action.value);
-           break;
+          t = t.copyWith(categoryId: action.value);
+          break;
         case RuleActionType.setPayee:
-           t = t.copyWith(payeeId: action.value);
-           break;
+          t = t.copyWith(payeeId: action.value);
+          break;
         case RuleActionType.setAccount:
-           t = t.copyWith(accountId: action.value);
-           break;
+          t = t.copyWith(accountId: action.value);
+          break;
         case RuleActionType.setMemo:
-           t = t.copyWith(memo: action.value);
-           break;
+          t = t.copyWith(memo: action.value);
+          break;
         case RuleActionType.markCleared:
-            if (action.value.toLowerCase() == 'true') {
-               t = t.copyWith(cleared: TransactionClearStatus.cleared);
-            } else if (action.value.toLowerCase() == 'false') {
-               t = t.copyWith(cleared: TransactionClearStatus.uncleared);
-            }
-            break;
+          if (action.value.toLowerCase() == 'true') {
+            t = t.copyWith(cleared: TransactionClearStatus.cleared);
+          } else if (action.value.toLowerCase() == 'false') {
+            t = t.copyWith(cleared: TransactionClearStatus.uncleared);
+          }
+          break;
         case RuleActionType.markApproved:
-            if (action.value.toLowerCase() == 'true') {
-                t = t.copyWith(approved: true);
-            } else if (action.value.toLowerCase() == 'false') {
-                t = t.copyWith(approved: false);
-            }
-            break;
+          if (action.value.toLowerCase() == 'true') {
+            t = t.copyWith(approved: true);
+          } else if (action.value.toLowerCase() == 'false') {
+            t = t.copyWith(approved: false);
+          }
+          break;
       }
     }
     return t;
   }
 
   // Preview method for Task 579
-  Future<Transaction> previewRules(Transaction transaction, List<Rule> rules) async {
-      return (await applyRules([transaction], rules)).first;
+  Future<Transaction> previewRules(
+    Transaction transaction,
+    List<Rule> rules,
+  ) async {
+    return (await applyRules([transaction], rules)).first;
   }
 }

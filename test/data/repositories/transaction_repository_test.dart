@@ -55,8 +55,9 @@ void main() {
   group('getAllTransactions', () {
     test('should return list of transactions from dao', () async {
       // arrange
-      when(mockTransactionsDao.getAllTransactions())
-          .thenAnswer((_) async => [tDriftTransaction]);
+      when(
+        mockTransactionsDao.getAllTransactions(),
+      ).thenAnswer((_) async => [tDriftTransaction]);
       // act
       final result = await repository.getAllTransactions();
       // assert
@@ -66,19 +67,23 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.getAllTransactions())
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.getAllTransactions(),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.getAllTransactions(),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.getAllTransactions(),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('getTransactionById', () {
     test('should return transaction from dao when found', () async {
       // arrange
-      when(mockTransactionsDao.getTransactionById('tx1'))
-          .thenAnswer((_) async => tDriftTransaction);
+      when(
+        mockTransactionsDao.getTransactionById('tx1'),
+      ).thenAnswer((_) async => tDriftTransaction);
       // act
       final result = await repository.getTransactionById('tx1');
       // assert
@@ -87,8 +92,9 @@ void main() {
 
     test('should return null when transaction not found', () async {
       // arrange
-      when(mockTransactionsDao.getTransactionById('tx1'))
-          .thenAnswer((_) async => null);
+      when(
+        mockTransactionsDao.getTransactionById('tx1'),
+      ).thenAnswer((_) async => null);
       // act
       final result = await repository.getTransactionById('tx1');
       // assert
@@ -97,19 +103,23 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.getTransactionById(any))
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.getTransactionById(any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.getTransactionById('tx1'),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.getTransactionById('tx1'),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('createTransaction', () {
     test('should call insertTransaction on dao', () async {
       // arrange
-      when(mockTransactionsDao.insertTransaction(any))
-          .thenAnswer((_) async => 1);
+      when(
+        mockTransactionsDao.insertTransaction(any),
+      ).thenAnswer((_) async => 1);
       // act
       await repository.createTransaction(tDomainTransaction);
       // assert
@@ -118,19 +128,23 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.insertTransaction(any))
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.insertTransaction(any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.createTransaction(tDomainTransaction),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.createTransaction(tDomainTransaction),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('batchCreateTransactions', () {
     test('should call batchCreateTransactions on dao', () async {
       // arrange
-      when(mockTransactionsDao.batchCreateTransactions(any))
-          .thenAnswer((_) async {});
+      when(
+        mockTransactionsDao.batchCreateTransactions(any),
+      ).thenAnswer((_) async {});
       // act
       await repository.batchCreateTransactions([tDomainTransaction]);
       // assert
@@ -139,19 +153,23 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.batchCreateTransactions(any))
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.batchCreateTransactions(any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.batchCreateTransactions([tDomainTransaction]),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.batchCreateTransactions([tDomainTransaction]),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('updateTransaction', () {
     test('should call updateTransaction on dao', () async {
       // arrange
-      when(mockTransactionsDao.updateTransaction(any))
-          .thenAnswer((_) async => true);
+      when(
+        mockTransactionsDao.updateTransaction(any),
+      ).thenAnswer((_) async => true);
       // act
       await repository.updateTransaction(tDomainTransaction);
       // assert
@@ -160,19 +178,23 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.updateTransaction(any))
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.updateTransaction(any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.updateTransaction(tDomainTransaction),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.updateTransaction(tDomainTransaction),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('deleteTransaction', () {
     test('should call softDeleteTransaction on dao', () async {
       // arrange
-      when(mockTransactionsDao.softDeleteTransaction(any))
-          .thenAnswer((_) async {});
+      when(
+        mockTransactionsDao.softDeleteTransaction(any),
+      ).thenAnswer((_) async {});
       // act
       await repository.deleteTransaction('tx1');
       // assert
@@ -181,19 +203,23 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.softDeleteTransaction(any))
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.softDeleteTransaction(any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.deleteTransaction('tx1'),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.deleteTransaction('tx1'),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('watchAllTransactions', () {
     test('should stream list of transactions from dao', () {
       // arrange
-      when(mockTransactionsDao.watchAllTransactions())
-          .thenAnswer((_) => Stream.value([tDriftTransaction]));
+      when(
+        mockTransactionsDao.watchAllTransactions(),
+      ).thenAnswer((_) => Stream.value([tDriftTransaction]));
       // act
       final stream = repository.watchAllTransactions();
       // assert
@@ -202,8 +228,9 @@ void main() {
 
     test('should throw DatabaseException when stream emits error', () {
       // arrange
-      when(mockTransactionsDao.watchAllTransactions())
-          .thenAnswer((_) => Stream.error(Exception('DB Error')));
+      when(
+        mockTransactionsDao.watchAllTransactions(),
+      ).thenAnswer((_) => Stream.error(Exception('DB Error')));
       // act
       final stream = repository.watchAllTransactions();
       // assert
@@ -214,8 +241,9 @@ void main() {
   group('getTransactionsByAccount', () {
     test('should return list of transactions for account', () async {
       // arrange
-      when(mockTransactionsDao.getTransactionsByAccount('acc1'))
-          .thenAnswer((_) async => [tDriftTransaction]);
+      when(
+        mockTransactionsDao.getTransactionsByAccount('acc1'),
+      ).thenAnswer((_) async => [tDriftTransaction]);
       // act
       final result = await repository.getTransactionsByAccount('acc1');
       // assert
@@ -225,19 +253,23 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.getTransactionsByAccount(any))
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.getTransactionsByAccount(any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.getTransactionsByAccount('acc1'),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.getTransactionsByAccount('acc1'),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('watchTransactionsByAccount', () {
     test('should stream list of transactions for account', () {
       // arrange
-      when(mockTransactionsDao.watchTransactionsByAccount('acc1'))
-          .thenAnswer((_) => Stream.value([tDriftTransaction]));
+      when(
+        mockTransactionsDao.watchTransactionsByAccount('acc1'),
+      ).thenAnswer((_) => Stream.value([tDriftTransaction]));
       // act
       final stream = repository.watchTransactionsByAccount('acc1');
       // assert
@@ -246,8 +278,9 @@ void main() {
 
     test('should throw DatabaseException when stream emits error', () {
       // arrange
-      when(mockTransactionsDao.watchTransactionsByAccount(any))
-          .thenAnswer((_) => Stream.error(Exception('DB Error')));
+      when(
+        mockTransactionsDao.watchTransactionsByAccount(any),
+      ).thenAnswer((_) => Stream.error(Exception('DB Error')));
       // act
       final stream = repository.watchTransactionsByAccount('acc1');
       // assert
@@ -261,23 +294,28 @@ void main() {
 
     test('should return list of transactions in range', () async {
       // arrange
-      when(mockTransactionsDao.getTransactionsByDateRange(tStart, tEnd))
-          .thenAnswer((_) async => [tDriftTransaction]);
+      when(
+        mockTransactionsDao.getTransactionsByDateRange(tStart, tEnd),
+      ).thenAnswer((_) async => [tDriftTransaction]);
       // act
       final result = await repository.getTransactionsByDateRange(tStart, tEnd);
       // assert
       expect(result, equals([tDomainTransaction]));
-      verify(mockTransactionsDao.getTransactionsByDateRange(tStart, tEnd))
-          .called(1);
+      verify(
+        mockTransactionsDao.getTransactionsByDateRange(tStart, tEnd),
+      ).called(1);
     });
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockTransactionsDao.getTransactionsByDateRange(any, any))
-          .thenThrow(Exception('DB Error'));
+      when(
+        mockTransactionsDao.getTransactionsByDateRange(any, any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.getTransactionsByDateRange(tStart, tEnd),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.getTransactionsByDateRange(tStart, tEnd),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 }

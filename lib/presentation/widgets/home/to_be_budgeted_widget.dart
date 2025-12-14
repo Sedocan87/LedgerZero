@@ -4,7 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
-final tbbProvider = FutureProvider.autoDispose.family<double, DateTime>((ref, month) {
+final tbbProvider = FutureProvider.autoDispose.family<double, DateTime>((
+  ref,
+  month,
+) {
   final budgetingService = ref.watch(budgetingServiceProvider);
   return budgetingService.calculateTBB(month);
 });
@@ -37,9 +40,9 @@ class ToBeBudgetedWidget extends ConsumerWidget {
                 return Text(
                   currencyFormat.format(tbb),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
                 );
               },
               loading: () => const SizedBox(
@@ -47,7 +50,10 @@ class ToBeBudgetedWidget extends ConsumerWidget {
                 width: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              error: (err, stack) => Text('Error', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              error: (err, stack) => Text(
+                'Error',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
           ],
         ),

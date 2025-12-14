@@ -22,18 +22,19 @@ class RuleImportExportService {
         throw Exception('No rules to export');
       }
 
-      final List<Map<String, dynamic>> jsonList = rules.map((r) => _ruleToJson(r)).toList();
+      final List<Map<String, dynamic>> jsonList = rules
+          .map((r) => _ruleToJson(r))
+          .toList();
       final jsonString = const JsonEncoder.withIndent('  ').convert(jsonList);
 
       final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/rules_export_${DateTime.now().millisecondsSinceEpoch}.json');
+      final file = File(
+        '${directory.path}/rules_export_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
       await file.writeAsString(jsonString);
 
       await SharePlus.instance.share(
-        ShareParams(
-          text: 'LedgerZero Rules Export',
-          files: [XFile(file.path)],
-        ),
+        ShareParams(text: 'LedgerZero Rules Export', files: [XFile(file.path)]),
       );
     } catch (e) {
       Logger.error('Error exporting rules', e);
@@ -62,9 +63,9 @@ class RuleImportExportService {
             // check if rule with same ID exists
             final existing = await repository.getRule(rule.id);
             if (existing != null) {
-                await repository.updateRule(rule);
+              await repository.updateRule(rule);
             } else {
-                await repository.createRule(rule);
+              await repository.createRule(rule);
             }
             importedCount++;
           } catch (e) {
@@ -100,11 +101,19 @@ class RuleImportExportService {
       description: json['description'] as String?,
       priority: json['priority'] as int,
       isActive: json['isActive'] as bool,
-      matchLogic: RuleMatchLogic.values.firstWhere((e) => e.name == json['matchLogic']),
-      conditions: (json['conditions'] as List).map((e) => RuleCondition.fromJson(e)).toList(),
-      actions: (json['actions'] as List).map((e) => RuleAction.fromJson(e)).toList(),
+      matchLogic: RuleMatchLogic.values.firstWhere(
+        (e) => e.name == json['matchLogic'],
+      ),
+      conditions: (json['conditions'] as List)
+          .map((e) => RuleCondition.fromJson(e))
+          .toList(),
+      actions: (json['actions'] as List)
+          .map((e) => RuleAction.fromJson(e))
+          .toList(),
     );
   }
 }
 
-final ruleImportExportServiceProvider = Provider((ref) => RuleImportExportService(ref));
+final ruleImportExportServiceProvider = Provider(
+  (ref) => RuleImportExportService(ref),
+);

@@ -24,5 +24,9 @@ class BudgetVsActualItem {
   final double budgeted;
   final double actual;
 
-  BudgetVsActualItem({required this.categoryName, required this.budgeted, required this.actual});
+  BudgetVsActualItem({
+    required this.categoryName,
+    required this.budgeted,
+    required this.actual,
+  });
 }

@@ -18,7 +18,8 @@ class AddEditAccountScreen extends ConsumerStatefulWidget {
   const AddEditAccountScreen({super.key, this.accountId});
 
   @override
-  ConsumerState<AddEditAccountScreen> createState() => _AddEditAccountScreenState();
+  ConsumerState<AddEditAccountScreen> createState() =>
+      _AddEditAccountScreenState();
 }
 
 class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
@@ -39,14 +40,37 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   Account? _existingAccount;
   bool _isFormDirty = false;
 
-  final List<String> _currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY'];
+  final List<String> _currencies = [
+    'USD',
+    'EUR',
+    'GBP',
+    'JPY',
+    'CAD',
+    'AUD',
+    'CHF',
+    'CNY',
+  ];
 
   final List<Color> _colors = const [
-    Colors.red, Colors.pink, Colors.purple, Colors.deepPurple,
-    Colors.indigo, Colors.blue, Colors.lightBlue, Colors.cyan,
-    Colors.teal, Colors.green, Colors.lightGreen, Colors.lime,
-    Colors.yellow, Colors.amber, Colors.orange, Colors.deepOrange,
-    Colors.brown, Colors.grey, Colors.blueGrey,
+    Colors.red,
+    Colors.pink,
+    Colors.purple,
+    Colors.deepPurple,
+    Colors.indigo,
+    Colors.blue,
+    Colors.lightBlue,
+    Colors.cyan,
+    Colors.teal,
+    Colors.green,
+    Colors.lightGreen,
+    Colors.lime,
+    Colors.yellow,
+    Colors.amber,
+    Colors.orange,
+    Colors.deepOrange,
+    Colors.brown,
+    Colors.grey,
+    Colors.blueGrey,
   ];
 
   final Map<String, IconData> _icons = const {
@@ -92,43 +116,43 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   }
 
   Future<void> _restoreDraft() async {
-     final prefs = ref.read(sharedPreferencesProvider);
-     final draft = prefs.getString('draft_account_add');
-     if (draft != null) {
-       try {
-         final data = jsonDecode(draft) as Map<String, dynamic>;
-         if (data['name'] != null) {
-           _nameController.text = data['name'];
-         }
-         if (data['balance'] != null) {
-           _balanceController.text = data['balance'];
-         }
+    final prefs = ref.read(sharedPreferencesProvider);
+    final draft = prefs.getString('draft_account_add');
+    if (draft != null) {
+      try {
+        final data = jsonDecode(draft) as Map<String, dynamic>;
+        if (data['name'] != null) {
+          _nameController.text = data['name'];
+        }
+        if (data['balance'] != null) {
+          _balanceController.text = data['balance'];
+        }
 
-         setState(() {
-           if (data['type'] != null) {
-             _selectedType = AccountType.values[data['type']];
-           }
-           if (data['currency'] != null) {
-             _selectedCurrency = data['currency'];
-           }
-           if (data['color'] != null) {
-             _selectedColor = data['color'];
-           }
-           if (data['icon'] != null) {
-             _selectedIcon = data['icon'];
-           }
-           _isFormDirty = true;
-         });
+        setState(() {
+          if (data['type'] != null) {
+            _selectedType = AccountType.values[data['type']];
+          }
+          if (data['currency'] != null) {
+            _selectedCurrency = data['currency'];
+          }
+          if (data['color'] != null) {
+            _selectedColor = data['color'];
+          }
+          if (data['icon'] != null) {
+            _selectedIcon = data['icon'];
+          }
+          _isFormDirty = true;
+        });
 
-         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Draft restored')),
-           );
-         }
-       } catch (e) {
-         // Ignore corrupt draft
-       }
-     }
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Draft restored')));
+        }
+      } catch (e) {
+        // Ignore corrupt draft
+      }
+    }
   }
 
   Future<void> _clearDraft() async {
@@ -157,10 +181,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         });
       }
     } catch (e) {
-       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading account: $e')),
-        );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading account: $e')));
       }
     } finally {
       if (mounted) {
@@ -185,7 +209,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
 
       if (isEditing && _existingAccount != null) {
         final balanceDiff = startingBalance - _initialStartingBalance;
-        final newCurrentBalance = _existingAccount!.currentBalance + balanceDiff;
+        final newCurrentBalance =
+            _existingAccount!.currentBalance + balanceDiff;
 
         final updatedAccount = _existingAccount!.copyWith(
           name: name,
@@ -228,9 +253,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Error saving account: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving account: $e')));
       }
     } finally {
       if (mounted) {
@@ -241,22 +266,25 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
 
   Future<bool> _showExitConfirmation() async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Unsaved Changes'),
-        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Unsaved Changes'),
+            content: const Text(
+              'You have unsaved changes. Are you sure you want to discard them?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Discard'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Discard'),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 
   @override
@@ -286,8 +314,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       },
       child: CallbackShortcuts(
         bindings: {
-          const SingleActivator(LogicalKeyboardKey.keyS, control: true): _saveAccount,
-          const SingleActivator(LogicalKeyboardKey.keyS, meta: true): _saveAccount,
+          const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+              _saveAccount,
+          const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
+              _saveAccount,
         },
         child: Scaffold(
           appBar: AppBar(
@@ -305,7 +335,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         AppTextField(
                           label: 'Account Name',
                           hint: 'e.g. Chase Checking',
-                          helperText: 'Enter a descriptive name for this account',
+                          helperText:
+                              'Enter a descriptive name for this account',
                           controller: _nameController,
                           focusNode: _nameFocus,
                           textInputAction: TextInputAction.next,
@@ -352,7 +383,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                                 helperText: 'Current balance of the account',
                                 controller: _balanceController,
                                 focusNode: _balanceFocus,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                      signed: true,
+                                    ),
                                 textInputAction: TextInputAction.done,
                                 onChanged: (_) => _onFieldChange(),
                                 onFieldSubmitted: (_) => _saveAccount(),
@@ -372,7 +407,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                               child: DropdownButtonFormField<String>(
                                 // ignore: deprecated_member_use
                                 value: _selectedCurrency,
-                                decoration: const InputDecoration(labelText: 'Currency'),
+                                decoration: const InputDecoration(
+                                  labelText: 'Currency',
+                                ),
                                 items: _currencies.map((currency) {
                                   return DropdownMenuItem(
                                     value: currency,
@@ -391,7 +428,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
 
-                        Text('Color', style: Theme.of(context).textTheme.titleSmall),
+                        Text(
+                          'Color',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                         const SizedBox(height: AppSpacing.sm),
                         Wrap(
                           spacing: AppSpacing.sm,
@@ -417,10 +457,27 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                                   decoration: BoxDecoration(
                                     color: color,
                                     shape: BoxShape.circle,
-                                    border: isSelected ? Border.all(color: Colors.white, width: 3) : null,
-                                    boxShadow: isSelected ? [const BoxShadow(blurRadius: 5, color: Colors.black26)] : null,
+                                    border: isSelected
+                                        ? Border.all(
+                                            color: Colors.white,
+                                            width: 3,
+                                          )
+                                        : null,
+                                    boxShadow: isSelected
+                                        ? [
+                                            const BoxShadow(
+                                              blurRadius: 5,
+                                              color: Colors.black26,
+                                            ),
+                                          ]
+                                        : null,
                                   ),
-                                  child: isSelected ? const Icon(Icons.check, color: Colors.white) : null,
+                                  child: isSelected
+                                      ? const Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                        )
+                                      : null,
                                 ),
                               ),
                             );
@@ -428,7 +485,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
 
-                        Text('Icon', style: Theme.of(context).textTheme.titleSmall),
+                        Text(
+                          'Icon',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                         const SizedBox(height: AppSpacing.sm),
                         Wrap(
                           spacing: AppSpacing.sm,
@@ -436,7 +496,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                           children: _icons.entries.map((entry) {
                             final isSelected = _selectedIcon == entry.key;
                             return ChoiceChip(
-                              label: Icon(entry.value, semanticLabel: entry.key),
+                              label: Icon(
+                                entry.value,
+                                semanticLabel: entry.key,
+                              ),
                               selected: isSelected,
                               onSelected: (selected) {
                                 if (selected) {

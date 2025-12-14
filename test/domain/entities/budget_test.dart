@@ -27,10 +27,7 @@ void main() {
     });
 
     test('should use default values', () {
-      const budget = Budget(
-        id: '1',
-        month: '2023-10',
-      );
+      const budget = Budget(id: '1', month: '2023-10');
 
       expect(budget.id, '1');
       expect(budget.categoryId, isNull);
@@ -77,10 +74,7 @@ void main() {
     });
 
     test('should handle missing optional fields during serialization', () {
-      final json = {
-        'id': '1',
-        'month': '2023-10',
-      };
+      final json = {'id': '1', 'month': '2023-10'};
 
       final budget = Budget.fromJson(json);
       expect(budget.id, '1');
@@ -117,10 +111,7 @@ void main() {
         updatedAt: now,
       );
 
-      const budget3 = Budget(
-        id: '2',
-        month: '2023-11',
-      );
+      const budget3 = Budget(id: '2', month: '2023-11');
 
       // Reflexive
       expect(budget1, equals(budget1));

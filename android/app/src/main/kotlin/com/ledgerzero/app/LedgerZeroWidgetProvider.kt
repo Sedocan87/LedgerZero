@@ -30,7 +30,7 @@ class LedgerZeroWidgetProvider : HomeWidgetProvider() {
                 if (tbbStr != null) {
                     setTextViewText(R.id.widget_tbb_amount, tbbStr)
                 } else {
-                    val tbb = widgetData.getDouble("tbb_amount", 0.0)
+                    val tbb = widgetData.getFloat("tbb_amount", 0.0f).toDouble()
                     setTextViewText(R.id.widget_tbb_amount, "%.2f".format(tbb))
                 }
 

@@ -73,12 +73,18 @@ void main() {
 
       await service.processPendingChanges();
 
-      verify(mockQueue.enqueue(argThat(predicate<SyncDelta>((delta) {
-        return delta.action == SyncAction.insert &&
-            delta.tableName == 'accounts' &&
-            delta.data!['id'] == accountId &&
-            delta.data!['name'] == 'Test Account';
-      })))).called(1);
+      verify(
+        mockQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.insert &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == accountId &&
+                  delta.data!['name'] == 'Test Account';
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('UPDATE generates update delta', () async {
@@ -105,12 +111,18 @@ void main() {
 
       await service.processPendingChanges();
 
-      verify(mockQueue.enqueue(argThat(predicate<SyncDelta>((delta) {
-        return delta.action == SyncAction.update &&
-            delta.tableName == 'accounts' &&
-            delta.data!['id'] == accountId &&
-            delta.data!['name'] == 'Updated Account';
-      })))).called(1);
+      verify(
+        mockQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.update &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == accountId &&
+                  delta.data!['name'] == 'Updated Account';
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('DELETE generates delete delta', () async {
@@ -131,11 +143,17 @@ void main() {
 
       await service.processPendingChanges();
 
-      verify(mockQueue.enqueue(argThat(predicate<SyncDelta>((delta) {
-        return delta.action == SyncAction.delete &&
-            delta.tableName == 'accounts' &&
-            delta.data!['id'] == accountId;
-      })))).called(1);
+      verify(
+        mockQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.delete &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == accountId;
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('Squashing: INSERT + UPDATE -> INSERT', () async {
@@ -160,12 +178,18 @@ void main() {
       await service.processPendingChanges();
 
       // Should generate only 1 delta: INSERT with the updated name
-      verify(mockQueue.enqueue(argThat(predicate<SyncDelta>((delta) {
-        return delta.action == SyncAction.insert &&
-            delta.tableName == 'accounts' &&
-            delta.data!['id'] == accountId &&
-            delta.data!['name'] == 'Updated Account';
-      })))).called(1);
+      verify(
+        mockQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.insert &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == accountId &&
+                  delta.data!['name'] == 'Updated Account';
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('Squashing: UPDATE + DELETE -> DELETE', () async {
@@ -195,11 +219,17 @@ void main() {
       await service.processPendingChanges();
 
       // Should generate only 1 delta: DELETE
-      verify(mockQueue.enqueue(argThat(predicate<SyncDelta>((delta) {
-        return delta.action == SyncAction.delete &&
-            delta.tableName == 'accounts' &&
-            delta.data!['id'] == accountId;
-      })))).called(1);
+      verify(
+        mockQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.delete &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == accountId;
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('Squashing: INSERT + DELETE -> NO OP', () async {
@@ -254,12 +284,18 @@ void main() {
       await service.processPendingChanges();
 
       // Should generate only 1 delta: UPDATE with latest name
-      verify(mockQueue.enqueue(argThat(predicate<SyncDelta>((delta) {
-        return delta.action == SyncAction.update &&
-            delta.tableName == 'accounts' &&
-            delta.data!['id'] == accountId &&
-            delta.data!['name'] == 'Updated 2';
-      })))).called(1);
+      verify(
+        mockQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.update &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == accountId &&
+                  delta.data!['name'] == 'Updated 2';
+            }),
+          ),
+        ),
+      ).called(1);
     });
   });
 }

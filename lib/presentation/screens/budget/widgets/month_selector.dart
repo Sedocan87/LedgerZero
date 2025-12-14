@@ -16,8 +16,10 @@ class MonthSelector extends ConsumerWidget {
         IconButton(
           icon: const Icon(Icons.chevron_left),
           onPressed: () {
-             ref.read(selectedBudgetMonthProvider.notifier).state =
-               DateTime(selectedMonth.year, selectedMonth.month - 1);
+            ref.read(selectedBudgetMonthProvider.notifier).state = DateTime(
+              selectedMonth.year,
+              selectedMonth.month - 1,
+            );
           },
         ),
         Padding(
@@ -30,8 +32,10 @@ class MonthSelector extends ConsumerWidget {
         IconButton(
           icon: const Icon(Icons.chevron_right),
           onPressed: () {
-             ref.read(selectedBudgetMonthProvider.notifier).state =
-               DateTime(selectedMonth.year, selectedMonth.month + 1);
+            ref.read(selectedBudgetMonthProvider.notifier).state = DateTime(
+              selectedMonth.year,
+              selectedMonth.month + 1,
+            );
           },
         ),
       ],

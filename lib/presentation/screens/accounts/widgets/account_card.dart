@@ -7,15 +7,13 @@ class AccountCard extends StatelessWidget {
   final Account account;
   final VoidCallback? onTap;
 
-  const AccountCard({
-    super.key,
-    required this.account,
-    this.onTap,
-  });
+  const AccountCard({super.key, required this.account, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.simpleCurrency(name: account.currency);
+    final currencyFormatter = NumberFormat.simpleCurrency(
+      name: account.currency,
+    );
     final theme = Theme.of(context);
 
     // Determine icon based on account type
@@ -36,7 +34,9 @@ class AccountCard extends StatelessWidget {
     }
 
     // Determine color for balance (red for negative, default for positive)
-    final balanceColor = account.currentBalance < 0 ? theme.colorScheme.error : theme.colorScheme.onSurface;
+    final balanceColor = account.currentBalance < 0
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurface;
 
     return AppCard(
       onTap: onTap,
@@ -51,10 +51,7 @@ class AccountCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  account.name,
-                  style: theme.textTheme.titleMedium,
-                ),
+                Text(account.name, style: theme.textTheme.titleMedium),
                 Text(
                   account.type.name.toUpperCase(),
                   style: theme.textTheme.bodySmall?.copyWith(

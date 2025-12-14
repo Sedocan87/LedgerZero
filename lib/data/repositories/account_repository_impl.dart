@@ -75,24 +75,26 @@ class AccountRepositoryImpl implements AccountRepository {
 
   @override
   Stream<List<domain.Account>> watchAllAccounts() {
-    return _accountsDao.watchAllAccounts().map(
-      (accounts) {
-        return accounts.map(_mapToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchAllAccounts stream', error, stackTrace);
-      throw DatabaseException('Error watching accounts', error);
-    });
+    return _accountsDao
+        .watchAllAccounts()
+        .map((accounts) {
+          return accounts.map(_mapToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error('Error in watchAllAccounts stream', error, stackTrace);
+          throw DatabaseException('Error watching accounts', error);
+        });
   }
 
   @override
   Stream<domain.Account?> watchAccount(String id) {
-    return _accountsDao.watchAccount(id).map(
-      (account) => account == null ? null : _mapToDomain(account),
-    ).handleError((error, stackTrace) {
-      Logger.error('Error watching account $id', error, stackTrace);
-      throw DatabaseException('Error watching account $id', error);
-    });
+    return _accountsDao
+        .watchAccount(id)
+        .map((account) => account == null ? null : _mapToDomain(account))
+        .handleError((error, stackTrace) {
+          Logger.error('Error watching account $id', error, stackTrace);
+          throw DatabaseException('Error watching account $id', error);
+        });
   }
 
   domain.Account _mapToDomain(Account account) {

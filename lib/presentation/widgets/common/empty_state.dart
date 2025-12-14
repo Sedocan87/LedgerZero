@@ -27,11 +27,7 @@ class EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(
-                icon,
-                size: 64,
-                color: Theme.of(context).disabledColor,
-              ),
+              Icon(icon, size: 64, color: Theme.of(context).disabledColor),
               const SizedBox(height: AppSpacing.md),
             ],
             Text(
@@ -43,8 +39,8 @@ class EmptyState extends StatelessWidget {
             Text(
               description,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).disabledColor,
-                  ),
+                color: Theme.of(context).disabledColor,
+              ),
               textAlign: TextAlign.center,
             ),
             if (onAction != null) ...[

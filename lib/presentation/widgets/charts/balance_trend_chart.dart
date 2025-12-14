@@ -19,10 +19,14 @@ class BalanceTrendChart extends StatelessWidget {
 
     if (transactions.isEmpty) {
       return SizedBox(
-          height: 150,
-          child: Center(
-              child: Text(l10n.noTransactionsTrend,
-                  style: Theme.of(context).textTheme.bodySmall)));
+        height: 150,
+        child: Center(
+          child: Text(
+            l10n.noTransactionsTrend,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      );
     }
 
     final sorted = List<Transaction>.from(transactions)
@@ -32,7 +36,12 @@ class BalanceTrendChart extends StatelessWidget {
     double runningBalance = startingBalance;
 
     // Initial point
-    points.add(DataPoint(sorted.first.date.subtract(const Duration(days: 1)), startingBalance));
+    points.add(
+      DataPoint(
+        sorted.first.date.subtract(const Duration(days: 1)),
+        startingBalance,
+      ),
+    );
 
     for (var t in sorted) {
       runningBalance += t.amount;
@@ -44,7 +53,10 @@ class BalanceTrendChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.balanceTrend, style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            l10n.balanceTrend,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: 8),
           SizedBox(
             height: 150,
@@ -99,12 +111,19 @@ class ChartPainter extends CustomPainter {
     final path = Path();
 
     double getX(double t) => (t - minX) / safeXRange * size.width;
-    double getY(double v) => size.height - ((v - minY) / safeYRange * size.height);
+    double getY(double v) =>
+        size.height - ((v - minY) / safeYRange * size.height);
 
-    path.moveTo(getX(points.first.date.millisecondsSinceEpoch.toDouble()), getY(points.first.value));
+    path.moveTo(
+      getX(points.first.date.millisecondsSinceEpoch.toDouble()),
+      getY(points.first.value),
+    );
 
     for (int i = 1; i < points.length; i++) {
-      path.lineTo(getX(points[i].date.millisecondsSinceEpoch.toDouble()), getY(points[i].value));
+      path.lineTo(
+        getX(points[i].date.millisecondsSinceEpoch.toDouble()),
+        getY(points[i].value),
+      );
     }
 
     canvas.drawPath(path, paint);

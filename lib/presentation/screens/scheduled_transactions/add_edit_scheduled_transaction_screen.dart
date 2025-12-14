@@ -16,10 +16,12 @@ class AddEditScheduledTransactionScreen extends ConsumerStatefulWidget {
   const AddEditScheduledTransactionScreen({super.key, this.transactionId});
 
   @override
-  ConsumerState<AddEditScheduledTransactionScreen> createState() => _AddEditScheduledTransactionScreenState();
+  ConsumerState<AddEditScheduledTransactionScreen> createState() =>
+      _AddEditScheduledTransactionScreenState();
 }
 
-class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditScheduledTransactionScreen> {
+class _AddEditScheduledTransactionScreenState
+    extends ConsumerState<AddEditScheduledTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Form fields
@@ -53,7 +55,9 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
     setState(() => _isLoading = true);
     try {
       final repo = ref.read(scheduledTransactionRepositoryProvider);
-      final transaction = await repo.getScheduledTransactionById(widget.transactionId!);
+      final transaction = await repo.getScheduledTransactionById(
+        widget.transactionId!,
+      );
       if (transaction != null) {
         setState(() {
           _accountId = transaction.accountId;
@@ -110,7 +114,9 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -132,12 +138,13 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.transactionId != null ? l10n.editScheduledTransaction : l10n.createScheduledTransaction),
+        title: Text(
+          widget.transactionId != null
+              ? l10n.editScheduledTransaction
+              : l10n.createScheduledTransaction,
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(AppIcons.save),
-            onPressed: _save,
-          ),
+          IconButton(icon: const Icon(AppIcons.save), onPressed: _save),
         ],
       ),
       body: Form(
@@ -145,93 +152,113 @@ class _AddEditScheduledTransactionScreenState extends ConsumerState<AddEditSched
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-             // Amount
-             TextFormField(
-               initialValue: _amount.toString(),
-               decoration: InputDecoration(labelText: l10n.amount),
-               keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-               validator: (value) {
-                 if (value == null || value.isEmpty) {
-                   return l10n.invalidAmount;
-                 }
-                 if (double.tryParse(value) == null) {
-                   return l10n.invalidAmount;
-                 }
-                 return null;
-               },
-               onSaved: (value) => _amount = double.parse(value!),
-             ),
-             const SizedBox(height: 16),
+            // Amount
+            TextFormField(
+              initialValue: _amount.toString(),
+              decoration: InputDecoration(labelText: l10n.amount),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: true,
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return l10n.invalidAmount;
+                }
+                if (double.tryParse(value) == null) {
+                  return l10n.invalidAmount;
+                }
+                return null;
+              },
+              onSaved: (value) => _amount = double.parse(value!),
+            ),
+            const SizedBox(height: 16),
 
-             // Account
-             DropdownButtonFormField<String>(
-               key: ValueKey(_accountId),
-               initialValue: (accountMap.containsKey(_accountId)) ? _accountId : null,
-               decoration: InputDecoration(labelText: l10n.account),
-               items: accountMap.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-               onChanged: (value) => setState(() => _accountId = value),
-               validator: (value) => value == null ? l10n.selectAccount : null,
-             ),
-             const SizedBox(height: 16),
+            // Account
+            DropdownButtonFormField<String>(
+              key: ValueKey(_accountId),
+              initialValue: (accountMap.containsKey(_accountId))
+                  ? _accountId
+                  : null,
+              decoration: InputDecoration(labelText: l10n.account),
+              items: accountMap.entries
+                  .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _accountId = value),
+              validator: (value) => value == null ? l10n.selectAccount : null,
+            ),
+            const SizedBox(height: 16),
 
-             // Payee
-             DropdownButtonFormField<String>(
-               key: ValueKey(_payeeId),
-               initialValue: (payeeMap.containsKey(_payeeId)) ? _payeeId : null,
-               decoration: InputDecoration(labelText: l10n.payee),
-               items: payeeMap.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-               onChanged: (value) => setState(() => _payeeId = value),
-             ),
-             const SizedBox(height: 16),
+            // Payee
+            DropdownButtonFormField<String>(
+              key: ValueKey(_payeeId),
+              initialValue: (payeeMap.containsKey(_payeeId)) ? _payeeId : null,
+              decoration: InputDecoration(labelText: l10n.payee),
+              items: payeeMap.entries
+                  .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _payeeId = value),
+            ),
+            const SizedBox(height: 16),
 
-             // Category
-             DropdownButtonFormField<String>(
-               key: ValueKey(_categoryId),
-               initialValue: (categoryMap.containsKey(_categoryId)) ? _categoryId : null,
-               decoration: InputDecoration(labelText: l10n.category),
-               items: categoryMap.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-               onChanged: (value) => setState(() => _categoryId = value),
-             ),
-             const SizedBox(height: 16),
+            // Category
+            DropdownButtonFormField<String>(
+              key: ValueKey(_categoryId),
+              initialValue: (categoryMap.containsKey(_categoryId))
+                  ? _categoryId
+                  : null,
+              decoration: InputDecoration(labelText: l10n.category),
+              items: categoryMap.entries
+                  .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _categoryId = value),
+            ),
+            const SizedBox(height: 16),
 
-             // Frequency & End Date
-             RecurrenceSelector(
-               frequency: _frequency,
-               onFrequencyChanged: (value) => setState(() => _frequency = value),
-               interval: _interval,
-               onIntervalChanged: (value) => setState(() => _interval = value),
-               endDate: _endDate,
-               onEndDateChanged: (value) => setState(() => _endDate = value),
-               occurrenceCount: _occurrenceCount,
-               onOccurrenceCountChanged: (value) => setState(() => _occurrenceCount = value),
-               nextDate: _nextDate,
-             ),
-             const SizedBox(height: 16),
+            // Frequency & End Date
+            RecurrenceSelector(
+              frequency: _frequency,
+              onFrequencyChanged: (value) => setState(() => _frequency = value),
+              interval: _interval,
+              onIntervalChanged: (value) => setState(() => _interval = value),
+              endDate: _endDate,
+              onEndDateChanged: (value) => setState(() => _endDate = value),
+              occurrenceCount: _occurrenceCount,
+              onOccurrenceCountChanged: (value) =>
+                  setState(() => _occurrenceCount = value),
+              nextDate: _nextDate,
+            ),
+            const SizedBox(height: 16),
 
-             // Next Date
-             ListTile(
-               title: Text(l10n.nextDate),
-               subtitle: Text(DateFormat.yMMMd().format(_nextDate)),
-               trailing: const Icon(AppIcons.calendar),
-               onTap: () async {
-                 final date = await showDatePicker(
-                   context: context,
-                   initialDate: _nextDate,
-                   firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                   lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-                 );
-                 if (date != null) {
-                   setState(() => _nextDate = date);
-                 }
-               },
-             ),
+            // Next Date
+            ListTile(
+              title: Text(l10n.nextDate),
+              subtitle: Text(DateFormat.yMMMd().format(_nextDate)),
+              trailing: const Icon(AppIcons.calendar),
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _nextDate,
+                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                  lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                );
+                if (date != null) {
+                  setState(() => _nextDate = date);
+                }
+              },
+            ),
 
-             // Auto Approve
-             SwitchListTile(
-               title: Text(l10n.autoApprove),
-               value: _autoApprove,
-               onChanged: (value) => setState(() => _autoApprove = value),
-             ),
+            // Auto Approve
+            SwitchListTile(
+              title: Text(l10n.autoApprove),
+              value: _autoApprove,
+              onChanged: (value) => setState(() => _autoApprove = value),
+            ),
           ],
         ),
       ),

@@ -47,24 +47,29 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
       final existing = await _dao.getNoteByDate(note.date);
 
       if (existing != null) {
-          // Update
-          await _dao.updateNote(ReportNotesCompanion(
-            id: Value(existing.id), // Keep original ID if it exists? Or use new one? Best to keep ID.
+        // Update
+        await _dao.updateNote(
+          ReportNotesCompanion(
+            id: Value(
+              existing.id,
+            ), // Keep original ID if it exists? Or use new one? Best to keep ID.
             date: Value(note.date),
             note: Value(note.note),
             updatedAt: Value(DateTime.now().toIso8601String()),
-          ));
+          ),
+        );
       } else {
         // Insert
-        await _dao.insertNote(ReportNotesCompanion(
-          id: Value(note.id),
-          date: Value(note.date),
-          note: Value(note.note),
-          createdAt: Value(DateTime.now().toIso8601String()),
-          updatedAt: Value(DateTime.now().toIso8601String()),
-        ));
+        await _dao.insertNote(
+          ReportNotesCompanion(
+            id: Value(note.id),
+            date: Value(note.date),
+            note: Value(note.note),
+            createdAt: Value(DateTime.now().toIso8601String()),
+            updatedAt: Value(DateTime.now().toIso8601String()),
+          ),
+        );
       }
-
     } catch (e, stack) {
       Logger.error('Failed to save report note', e, stack);
       throw const DatabaseException('Failed to save report note');
@@ -83,7 +88,9 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
 
   @override
   Stream<domain.ReportNote?> watchNoteByDate(String date) {
-    return _dao.watchNoteByDate(date).map((dto) => dto != null ? _mapToDomain(dto) : null);
+    return _dao
+        .watchNoteByDate(date)
+        .map((dto) => dto != null ? _mapToDomain(dto) : null);
   }
 
   domain.ReportNote _mapToDomain(ReportNote dto) {

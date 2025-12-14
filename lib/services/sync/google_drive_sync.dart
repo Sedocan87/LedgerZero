@@ -37,7 +37,11 @@ class GoogleDriveService {
     final api = await _getDriveApi();
     final rootFolderId = await _ensureRootFolderExists(api);
 
-    String? syncFolderId = await _findFolder(api, 'Sync', parentId: rootFolderId);
+    String? syncFolderId = await _findFolder(
+      api,
+      'Sync',
+      parentId: rootFolderId,
+    );
     syncFolderId ??= await _createFolder(api, 'Sync', parentId: rootFolderId);
 
     _syncFolderId = syncFolderId;
@@ -59,8 +63,16 @@ class GoogleDriveService {
     final api = await _getDriveApi();
     final rootFolderId = await _ensureRootFolderExists(api);
 
-    String? backupsFolderId = await _findFolder(api, 'Backups', parentId: rootFolderId);
-    backupsFolderId ??= await _createFolder(api, 'Backups', parentId: rootFolderId);
+    String? backupsFolderId = await _findFolder(
+      api,
+      'Backups',
+      parentId: rootFolderId,
+    );
+    backupsFolderId ??= await _createFolder(
+      api,
+      'Backups',
+      parentId: rootFolderId,
+    );
 
     _backupsFolderId = backupsFolderId;
     await _prefs.setString(_backupsFolderIdKey, backupsFolderId);
@@ -73,8 +85,11 @@ class GoogleDriveService {
     return rootFolderId;
   }
 
-  Future<String?> _findFolder(drive.DriveApi api, String name,
-      {String? parentId}) async {
+  Future<String?> _findFolder(
+    drive.DriveApi api,
+    String name, {
+    String? parentId,
+  }) async {
     final query =
         "mimeType = 'application/vnd.google-apps.folder' and name = '$name' and trashed = false${parentId != null ? " and '$parentId' in parents" : ""}";
     final fileList = await api.files.list(q: query, spaces: 'drive');
@@ -84,8 +99,11 @@ class GoogleDriveService {
     return null;
   }
 
-  Future<String> _createFolder(drive.DriveApi api, String name,
-      {String? parentId}) async {
+  Future<String> _createFolder(
+    drive.DriveApi api,
+    String name, {
+    String? parentId,
+  }) async {
     final folder = drive.File()
       ..name = name
       ..mimeType = 'application/vnd.google-apps.folder';
@@ -109,10 +127,7 @@ class GoogleDriveService {
 
       final media = drive.Media(localFile.openRead(), localFile.lengthSync());
 
-      final result = await api.files.create(
-        driveFile,
-        uploadMedia: media,
-      );
+      final result = await api.files.create(driveFile, uploadMedia: media);
 
       Logger.info('Uploaded delta: $filename (ID: ${result.id})');
       return result.id;
@@ -130,10 +145,7 @@ class GoogleDriveService {
 
       final media = drive.Media(localFile.openRead(), localFile.lengthSync());
 
-      final result = await api.files.create(
-        driveFile,
-        uploadMedia: media,
-      );
+      final result = await api.files.create(driveFile, uploadMedia: media);
 
       Logger.info('Uploaded backup: $filename (ID: ${result.id})');
       return result.id;
@@ -143,10 +155,12 @@ class GoogleDriveService {
   Future<File> downloadDelta(String fileId, String savePath) async {
     return _retry(() async {
       final api = await _getDriveApi();
-      final media = await api.files.get(
-        fileId,
-        downloadOptions: drive.DownloadOptions.fullMedia,
-      ) as drive.Media;
+      final media =
+          await api.files.get(
+                fileId,
+                downloadOptions: drive.DownloadOptions.fullMedia,
+              )
+              as drive.Media;
 
       final file = File(savePath);
       if (!await file.parent.exists()) {
@@ -179,7 +193,9 @@ class GoogleDriveService {
   }
 
   Future<T> _retry<T>(
-      Future<T> Function() operation, String errorMessage) async {
+    Future<T> Function() operation,
+    String errorMessage,
+  ) async {
     int attempts = 0;
     while (true) {
       try {
@@ -193,7 +209,8 @@ class GoogleDriveService {
         }
         final delay = Duration(seconds: 1 << attempts);
         Logger.info(
-            'Retrying operation in ${delay.inSeconds}s (Attempt $attempts)');
+          'Retrying operation in ${delay.inSeconds}s (Attempt $attempts)',
+        );
         await Future.delayed(delay);
       }
     }
@@ -202,13 +219,13 @@ class GoogleDriveService {
   SyncException _handleError(Object error, String defaultMessage) {
     if (error is drive.DetailedApiRequestError) {
       final status = error.status;
-      final isRetryable = status == 408 || // Request Timeout
+      final isRetryable =
+          status == 408 || // Request Timeout
           status == 429 || // Too Many Requests
           (status != null && status >= 500 && status < 600); // Server Error
 
       String message = defaultMessage;
-      if (status == 403 &&
-          error.message?.contains('usageLimits') == true) {
+      if (status == 403 && error.message?.contains('usageLimits') == true) {
         message = 'Storage quota exceeded';
       } else if (status == 401) {
         message = 'Authentication failed. Please reconnect.';

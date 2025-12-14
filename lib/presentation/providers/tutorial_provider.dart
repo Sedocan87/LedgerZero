@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final tutorialProvider = StateNotifierProvider<TutorialNotifier, Set<String>>((ref) {
+final tutorialProvider = StateNotifierProvider<TutorialNotifier, Set<String>>((
+  ref,
+) {
   return TutorialNotifier();
 });
 

@@ -26,7 +26,9 @@ class ScheduledTransactionsScreen extends ConsumerWidget {
           title: Text(l10n.scheduledTransactions),
           bottom: TabBar(
             tabs: [
-              Tab(text: l10n.upcoming), // We need to add "upcoming" to ARB if not exists, checking ARB... "scheduledTransactions" exists.
+              Tab(
+                text: l10n.upcoming,
+              ), // We need to add "upcoming" to ARB if not exists, checking ARB... "scheduledTransactions" exists.
               Tab(text: l10n.allTime), // "All Time" exists
             ],
           ),
@@ -38,9 +40,16 @@ class ScheduledTransactionsScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(AppIcons.calendar, size: 64, color: Theme.of(context).disabledColor),
+                    Icon(
+                      AppIcons.calendar,
+                      size: 64,
+                      color: Theme.of(context).disabledColor,
+                    ),
                     const SizedBox(height: 16),
-                    Text(l10n.noScheduledTransactions, style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      l10n.noScheduledTransactions,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       l10n.createScheduledTransactionDescription,
@@ -53,10 +62,9 @@ class ScheduledTransactionsScreen extends ConsumerWidget {
             }
 
             // Upcoming: Filter nextDate != null, Sort by nextDate
-            final upcoming = transactions
-                .where((t) => t.nextDate != null)
-                .toList()
-              ..sort((a, b) => a.nextDate!.compareTo(b.nextDate!));
+            final upcoming =
+                transactions.where((t) => t.nextDate != null).toList()
+                  ..sort((a, b) => a.nextDate!.compareTo(b.nextDate!));
 
             return TabBarView(
               children: [
@@ -120,10 +128,15 @@ class _TransactionList extends ConsumerWidget {
           categoryName: categoryMap?[transaction.categoryId],
           accountName: accountMap?[transaction.accountId],
           onTap: () {
-            context.pushNamed('edit-scheduled-transaction', pathParameters: {'id': transaction.id});
+            context.pushNamed(
+              'edit-scheduled-transaction',
+              pathParameters: {'id': transaction.id},
+            );
           },
           onSkip: () {
-             ref.read(scheduledTransactionControllerProvider).skipScheduledTransaction(transaction.id);
+            ref
+                .read(scheduledTransactionControllerProvider)
+                .skipScheduledTransaction(transaction.id);
           },
           onDelete: () {
             showDialog(
@@ -138,7 +151,9 @@ class _TransactionList extends ConsumerWidget {
                   ),
                   TextButton(
                     onPressed: () {
-                      ref.read(scheduledTransactionControllerProvider).deleteScheduledTransaction(transaction.id);
+                      ref
+                          .read(scheduledTransactionControllerProvider)
+                          .deleteScheduledTransaction(transaction.id);
                       Navigator.pop(context);
                     },
                     child: Text(l10n.delete),

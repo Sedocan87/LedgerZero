@@ -23,7 +23,9 @@ class BudgetCategoryList extends ConsumerWidget {
             child: EmptyState(
               icon: Icons.category_outlined,
               title: AppLocalizations.of(context)!.noCategoriesTitle,
-              description: AppLocalizations.of(context)!.noCategoriesDescription,
+              description: AppLocalizations.of(
+                context,
+              )!.noCategoriesDescription,
               actionLabel: AppLocalizations.of(context)!.setupBudget,
               onAction: () => context.pushNamed('categories'),
             ),
@@ -81,9 +83,8 @@ class BudgetCategoryList extends ConsumerWidget {
       loading: () => const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (err, stack) => SliverFillRemaining(
-        child: Center(child: Text('Error: $err')),
-      ),
+      error: (err, stack) =>
+          SliverFillRemaining(child: Center(child: Text('Error: $err'))),
     );
   }
 }
@@ -94,7 +95,9 @@ class BudgetListHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         children: [
@@ -102,31 +105,48 @@ class BudgetListHeader extends StatelessWidget {
             flex: 3,
             child: Tooltip(
               message: AppLocalizations.of(context)!.categoryTooltip,
-              child: Text(AppLocalizations.of(context)!.category.toUpperCase(), style: Theme.of(context).textTheme.labelSmall),
+              child: Text(
+                AppLocalizations.of(context)!.category.toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Tooltip(
               message: AppLocalizations.of(context)!.budgetedTooltip,
-              child: Text(AppLocalizations.of(context)!.budgeted.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall),
+              child: Text(
+                AppLocalizations.of(context)!.budgeted.toUpperCase(),
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Tooltip(
               message: AppLocalizations.of(context)!.activityTooltip,
-              child: Text(AppLocalizations.of(context)!.activity.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall),
+              child: Text(
+                AppLocalizations.of(context)!.activity.toUpperCase(),
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
             ),
           ),
           Expanded(
             flex: 2,
             child: Tooltip(
               message: AppLocalizations.of(context)!.availableTooltip,
-              child: Text(AppLocalizations.of(context)!.available.toUpperCase(), textAlign: TextAlign.right, style: Theme.of(context).textTheme.labelSmall),
+              child: Text(
+                AppLocalizations.of(context)!.available.toUpperCase(),
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
             ),
           ),
-          const SizedBox(width: 48), // Approximate width of ExpansionTile trailing icon to align with content
+          const SizedBox(
+            width: 48,
+          ), // Approximate width of ExpansionTile trailing icon to align with content
         ],
       ),
     );
@@ -158,7 +178,9 @@ class BudgetSummaryFooter extends StatelessWidget {
             flex: 3,
             child: Text(
               AppLocalizations.of(context)!.total.toUpperCase(),
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
@@ -166,7 +188,9 @@ class BudgetSummaryFooter extends StatelessWidget {
             child: Text(
               currency.format(totalBudgeted),
               textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
@@ -174,7 +198,9 @@ class BudgetSummaryFooter extends StatelessWidget {
             child: Text(
               currency.format(totalActivity),
               textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
@@ -184,11 +210,15 @@ class BudgetSummaryFooter extends StatelessWidget {
               textAlign: TextAlign.right,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: totalAvailable < 0 ? Theme.of(context).colorScheme.error : null,
+                color: totalAvailable < 0
+                    ? Theme.of(context).colorScheme.error
+                    : null,
               ),
             ),
           ),
-          const SizedBox(width: 48), // Approximate width of ExpansionTile trailing icon
+          const SizedBox(
+            width: 48,
+          ), // Approximate width of ExpansionTile trailing icon
         ],
       ),
     );

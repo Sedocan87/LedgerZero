@@ -38,7 +38,7 @@ class DeltaDebugUtils {
       print('Expected: ${delta.checksum}');
       print('Calculated: ${delta.calculateChecksum()}');
     } else {
-        print('Checksum verified: OK');
+      print('Checksum verified: OK');
     }
 
     return delta;

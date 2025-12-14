@@ -32,7 +32,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     super.dispose();
   }
 
-  Future<void> _deleteCategory(BuildContext context, WidgetRef ref, Category category) async {
+  Future<void> _deleteCategory(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) async {
     final transRepo = ref.read(transactionRepositoryProvider);
     final catRepo = ref.read(categoryRepositoryProvider);
     final l10n = AppLocalizations.of(context)!;
@@ -73,11 +77,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             content: Text(l10n.deleteAccountConfirmation),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.cancel)),
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l10n.cancel),
+              ),
               TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.delete)),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(l10n.delete),
+              ),
             ],
           ),
         );
@@ -87,19 +93,26 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
-  Future<void> _deleteGroup(BuildContext context, WidgetRef ref, CategoryGroup group) async {
+  Future<void> _deleteGroup(
+    BuildContext context,
+    WidgetRef ref,
+    CategoryGroup group,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${l10n.delete} ${group.name}?'),
-        content: Text(l10n.deleteAccountConfirmation), // Reusing existing confirmation message for now, ideally specific one
+        content: Text(
+          l10n.deleteAccountConfirmation,
+        ), // Reusing existing confirmation message for now, ideally specific one
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -120,16 +133,18 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
             .deleteCategoryGroup(group.id);
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('Error: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       }
     }
   }
 
   Future<void> _exportCategories(BuildContext context, WidgetRef ref) async {
-    final groupsWithCats =
-        ref.read(categoryGroupsWithCategoriesProvider).valueOrNull;
+    final groupsWithCats = ref
+        .read(categoryGroupsWithCategoriesProvider)
+        .valueOrNull;
     if (groupsWithCats == null || groupsWithCats.isEmpty) {
       return;
     }
@@ -145,19 +160,22 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
 
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final path = '${directory.path}/categories_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final path =
+          '${directory.path}/categories_export_${DateTime.now().millisecondsSinceEpoch}.csv';
       final file = File(path);
       await file.writeAsString(csvData.toString());
 
       if (context.mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.exportedTo(path))));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.exportedTo(path))));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     }
   }
@@ -206,15 +224,17 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                     title: const Text('Category Best Practices'), // Add l10n
                     content: const SingleChildScrollView(
                       child: Text(
-                          "- Group similar expenses (e.g., 'Housing', 'Food').\n"
-                          "- Use 'Hide Category' instead of deleting to preserve history.\n"
-                          '- Use emojis or icons for quick recognition.\n'
-                          '- Keep it simple: Start with broad categories and split if needed.'),
+                        "- Group similar expenses (e.g., 'Housing', 'Food').\n"
+                        "- Use 'Hide Category' instead of deleting to preserve history.\n"
+                        '- Use emojis or icons for quick recognition.\n'
+                        '- Keep it simple: Start with broad categories and split if needed.',
+                      ),
                     ),
                     actions: [
                       TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'))
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
                     ],
                   ),
                 );
@@ -247,7 +267,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(value: 'reorder', child: Text(l10n.reorderGroups)),
+                PopupMenuItem(
+                  value: 'reorder',
+                  child: Text(l10n.reorderGroups),
+                ),
                 PopupMenuItem(value: 'export', child: Text(l10n.export)),
                 PopupMenuItem(value: 'import', child: Text(l10n.import)),
               ],
@@ -256,16 +279,28 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       ),
       body: groupsAsync.when(
         data: (groupsWithCategories) {
-          final filteredGroups = groupsWithCategories.map((group) {
-            final filteredCats = group.categories
-                .where((c) =>
-                    c.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-                .toList();
-            return CategoryGroupWithCategories(
-                group: group.group, categories: filteredCats);
-          }).where((g) =>
-              g.categories.isNotEmpty ||
-              g.group.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+          final filteredGroups = groupsWithCategories
+              .map((group) {
+                final filteredCats = group.categories
+                    .where(
+                      (c) => c.name.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      ),
+                    )
+                    .toList();
+                return CategoryGroupWithCategories(
+                  group: group.group,
+                  categories: filteredCats,
+                );
+              })
+              .where(
+                (g) =>
+                    g.categories.isNotEmpty ||
+                    g.group.name.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ),
+              )
+              .toList();
 
           if (filteredGroups.isEmpty) {
             return Center(child: Text(l10n.noRecentTransactions));
@@ -291,18 +326,23 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           showDialog(
                             context: context,
                             builder: (context) => AddEditCategoryGroupDialog(
-                                group: groupWithCats.group),
+                              group: groupWithCats.group,
+                            ),
                           );
                         } else if (value == 'reorder') {
-                          context.pushNamed('reorder-categories',
-                              pathParameters: {
-                                'groupId': groupWithCats.group.id
-                              });
+                          context.pushNamed(
+                            'reorder-categories',
+                            pathParameters: {'groupId': groupWithCats.group.id},
+                          );
                         } else if (value == 'delete') {
                           if (groupWithCats.categories.isNotEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
                                 content: Text(
-                                    'Cannot delete non-empty group. Please delete or move categories first.')));
+                                  'Cannot delete non-empty group. Please delete or move categories first.',
+                                ),
+                              ),
+                            );
                           } else {
                             _deleteGroup(context, ref, groupWithCats.group);
                           }
@@ -310,12 +350,17 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                       },
                       itemBuilder: (context) => [
                         PopupMenuItem(
-                            value: 'edit', child: Text(l10n.editCategoryGroup)),
+                          value: 'edit',
+                          child: Text(l10n.editCategoryGroup),
+                        ),
                         PopupMenuItem(
-                            value: 'reorder',
-                            child: Text(l10n.reorderCategories)),
+                          value: 'reorder',
+                          child: Text(l10n.reorderCategories),
+                        ),
                         PopupMenuItem(
-                            value: 'delete', child: Text(l10n.delete)),
+                          value: 'delete',
+                          child: Text(l10n.delete),
+                        ),
                       ],
                     ),
                   ],
@@ -344,20 +389,31 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                     trailing: PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert),
                       itemBuilder: (context) => [
-                        PopupMenuItem(value: 'edit', child: Text(l10n.editCategory)),
-                        PopupMenuItem(value: 'delete', child: Text(l10n.delete)),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text(l10n.editCategory),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text(l10n.delete),
+                        ),
                       ],
                       onSelected: (val) {
                         if (val == 'edit') {
-                          context.pushNamed('edit-category',
-                              pathParameters: {'id': category.id});
+                          context.pushNamed(
+                            'edit-category',
+                            pathParameters: {'id': category.id},
+                          );
                         } else if (val == 'delete') {
                           _deleteCategory(context, ref, category);
                         }
                       },
                     ),
                     onTap: () {
-                      context.pushNamed('edit-category', pathParameters: {'id': category.id});
+                      context.pushNamed(
+                        'edit-category',
+                        pathParameters: {'id': category.id},
+                      );
                     },
                   );
                 }).toList(),

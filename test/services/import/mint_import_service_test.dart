@@ -10,7 +10,8 @@ void main() {
     });
 
     test('should parse valid Mint CSV correctly', () {
-      const csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
+      const csv =
+          '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
 "6/09/2020","Target","TARGET 1234","50.25","debit","Shopping","Checking Account","",""
 "6/10/2020","Salary","ACME CORP PAYROLL","2000.00","credit","Income","Checking Account","","Bonus"
 "6/11/2020","Amazon","AMZN MKTPLACE","120.00","debit","Shopping","Credit Card","Tag1",""
@@ -41,14 +42,15 @@ void main() {
     });
 
     test('should handle varying date formats', () {
-       const csv = '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
+      const csv =
+          '''"Date","Description","Original Description","Amount","Transaction Type","Category","Account Name","Labels","Notes"
 "01/15/2021","Test1","Test1","10.00","debit","Test","Acc","",""
 "2021-02-20","Test2","Test2","20.00","debit","Test","Acc","",""
 ''';
-       final data = parser.parseCsvExport(csv);
+      final data = parser.parseCsvExport(csv);
 
-       expect(data.transactions[0].date, DateTime(2021, 1, 15));
-       expect(data.transactions[1].date, DateTime(2021, 2, 20));
+      expect(data.transactions[0].date, DateTime(2021, 1, 15));
+      expect(data.transactions[1].date, DateTime(2021, 2, 20));
     });
   });
 }

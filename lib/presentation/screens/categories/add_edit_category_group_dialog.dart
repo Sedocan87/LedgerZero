@@ -12,10 +12,12 @@ class AddEditCategoryGroupDialog extends ConsumerStatefulWidget {
   const AddEditCategoryGroupDialog({super.key, this.group});
 
   @override
-  ConsumerState<AddEditCategoryGroupDialog> createState() => _AddEditCategoryGroupDialogState();
+  ConsumerState<AddEditCategoryGroupDialog> createState() =>
+      _AddEditCategoryGroupDialogState();
 }
 
-class _AddEditCategoryGroupDialogState extends ConsumerState<AddEditCategoryGroupDialog> {
+class _AddEditCategoryGroupDialogState
+    extends ConsumerState<AddEditCategoryGroupDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   bool _isLoading = false;
@@ -44,21 +46,25 @@ class _AddEditCategoryGroupDialogState extends ConsumerState<AddEditCategoryGrou
       final repository = ref.read(categoryRepositoryProvider);
       if (widget.group != null) {
         await repository.updateCategoryGroup(
-            widget.group!.copyWith(name: _nameController.text.trim()));
+          widget.group!.copyWith(name: _nameController.text.trim()),
+        );
       } else {
-        await repository.createCategoryGroup(CategoryGroup(
-          id: const Uuid().v4(),
-          name: _nameController.text.trim(),
-          createdAt: DateTime.now(),
-        ));
+        await repository.createCategoryGroup(
+          CategoryGroup(
+            id: const Uuid().v4(),
+            name: _nameController.text.trim(),
+            createdAt: DateTime.now(),
+          ),
+        );
       }
       if (mounted) {
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -79,7 +85,8 @@ class _AddEditCategoryGroupDialogState extends ConsumerState<AddEditCategoryGrou
         child: AppTextField(
           controller: _nameController,
           label: l10n.groupName,
-          validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null,
+          validator: (val) =>
+              val == null || val.trim().isEmpty ? 'Required' : null,
         ),
       ),
       actions: [

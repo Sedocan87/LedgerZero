@@ -42,11 +42,13 @@ class HelpScreen extends StatelessWidget {
             title: const Text('Video Tutorials'),
             subtitle: const Text('Learn by watching on YouTube'),
             onTap: () async {
-               // Placeholder channel URL
-               final url = Uri.parse('https://www.youtube.com/channel/UC_placeholder');
-               if (await canLaunchUrl(url)) {
-                 await launchUrl(url);
-               }
+              // Placeholder channel URL
+              final url = Uri.parse(
+                'https://www.youtube.com/channel/UC_placeholder',
+              );
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              }
             },
           ),
           const Divider(),
@@ -55,10 +57,10 @@ class HelpScreen extends StatelessWidget {
             title: const Text('Contact Support'),
             subtitle: const Text('support@ledgerzero.app'),
             onTap: () async {
-               final url = Uri.parse('mailto:support@ledgerzero.app');
-               if (await canLaunchUrl(url)) {
-                 await launchUrl(url);
-               }
+              final url = Uri.parse('mailto:support@ledgerzero.app');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              }
             },
           ),
         ],

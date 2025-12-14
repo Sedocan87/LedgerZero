@@ -11,32 +11,44 @@ import 'test_utils.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Concurrent Database Operations Test', (WidgetTester tester) async {
+  testWidgets('Concurrent Database Operations Test', (
+    WidgetTester tester,
+  ) async {
     final db = await setupIntegrationTest(tester);
     await completeOnboarding(tester);
 
     // FIX: Create the account FIRST to satisfy Foreign Key constraints
     // Awaiting here ensures account exists before transactions are inserted.
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(id: 'acc_concurrent', name: 'Conc Account', type: 'cash')
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: 'acc_concurrent',
+            name: 'Conc Account',
+            type: 'cash',
+          ),
+        );
 
     // Create a lot of futures to insert transactions concurrently
     final futures = <Future>[];
     for (int i = 0; i < 50; i++) {
       futures.add(
-        db.into(db.transactions).insert(
-          TransactionsCompanion.insert(
-            id: 'concurrent_tx_$i',
-            accountId: 'acc_concurrent', // Now this account exists
-            date: DateTime.now(),
-            amount: 10.0 + i,
-          ),
-          mode: InsertMode.insertOrReplace,
-        ).catchError((e) {
-             print('Concurrent insert error: $e');
-             return 0;
-        })
+        db
+            .into(db.transactions)
+            .insert(
+              TransactionsCompanion.insert(
+                id: 'concurrent_tx_$i',
+                accountId: 'acc_concurrent', // Now this account exists
+                date: DateTime.now(),
+                amount: 10.0 + i,
+              ),
+              mode: InsertMode.insertOrReplace,
+            )
+            .catchError((e) {
+              // ignore: avoid_print
+              print('Concurrent insert error: $e');
+              return 0;
+            }),
       );
     }
 
@@ -47,7 +59,9 @@ void main() {
     final count = await db.select(db.transactions).get();
 
     // Filter by our test IDs
-    final testTxs = count.where((t) => t.id.startsWith('concurrent_tx_')).length;
+    final testTxs = count
+        .where((t) => t.id.startsWith('concurrent_tx_'))
+        .length;
     expect(testTxs, 50, reason: 'All concurrent inserts should succeed');
   });
 }

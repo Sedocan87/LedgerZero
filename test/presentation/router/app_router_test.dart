@@ -19,7 +19,9 @@ void main() {
     }
   });
 
-  testWidgets('Initial route is Home when onboarded and authenticated', (tester) async {
+  testWidgets('Initial route is Home when onboarded and authenticated', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final sharedPreferences = await SharedPreferences.getInstance();
     final db = AppDatabase(NativeDatabase.memory());
@@ -28,9 +30,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(true)..setAuthenticated(true)),
-             databaseProvider.overrideWithValue(db),
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          authProvider.overrideWith(
+            (ref) => AuthNotifier(sharedPreferences)
+              ..setOnboarded(true)
+              ..setAuthenticated(true),
+          ),
+          databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),
       ),
@@ -51,9 +57,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(false)),
-             databaseProvider.overrideWithValue(db),
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          authProvider.overrideWith(
+            (ref) => AuthNotifier(sharedPreferences)..setOnboarded(false),
+          ),
+          databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),
       ),
@@ -64,7 +72,9 @@ void main() {
     expect(find.text('Onboarding Screen'), findsOneWidget);
   });
 
-  testWidgets('Redirects to Login when onboarded but not authenticated', (tester) async {
+  testWidgets('Redirects to Login when onboarded but not authenticated', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final sharedPreferences = await SharedPreferences.getInstance();
     final db = AppDatabase(NativeDatabase.memory());
@@ -72,10 +82,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-         overrides: [
-             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(true)..setAuthenticated(false)),
-             databaseProvider.overrideWithValue(db),
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          authProvider.overrideWith(
+            (ref) => AuthNotifier(sharedPreferences)
+              ..setOnboarded(true)
+              ..setAuthenticated(false),
+          ),
+          databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),
       ),
@@ -95,9 +109,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-             authProvider.overrideWith((ref) => AuthNotifier(sharedPreferences)..setOnboarded(true)..setAuthenticated(true)),
-             databaseProvider.overrideWithValue(db),
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          authProvider.overrideWith(
+            (ref) => AuthNotifier(sharedPreferences)
+              ..setOnboarded(true)
+              ..setAuthenticated(true),
+          ),
+          databaseProvider.overrideWithValue(db),
         ],
         child: const MyApp(),
       ),

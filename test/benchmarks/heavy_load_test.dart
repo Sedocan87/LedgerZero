@@ -14,14 +14,17 @@ class BenchmarkResult {
   double get averageMs => duration.inMicroseconds / iterations / 1000;
 
   @override
-  String toString() => '$name: $iterations ops in ${duration.inMilliseconds}ms (avg: ${averageMs.toStringAsFixed(4)}ms)';
+  String toString() =>
+      '$name: $iterations ops in ${duration.inMilliseconds}ms (avg: ${averageMs.toStringAsFixed(4)}ms)';
 }
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
-  testWidgets('Heavy Load Benchmark: Budget Calculation with 10k transactions', (WidgetTester tester) async {
+  testWidgets('Heavy Load Benchmark: Budget Calculation with 10k transactions', (
+    WidgetTester tester,
+  ) async {
     // Note: This test simulates logic load. In a real scenario, we would use the actual service
     // and database. Since this is an integration test context but we want to benchmark logic,
     // we might need access to the providers.
@@ -39,15 +42,15 @@ void main() {
     double total = 0;
     const count = 10000;
     for (int i = 0; i < count; i++) {
-       // Mimic some work
-       final tx = Transaction(
-         id: 'tx_$i',
-         accountId: 'acc_1',
-         date: DateTime.now(),
-         amount: (i % 2 == 0 ? -1 : 1) * (i * 1.5),
-         approved: true,
-       );
-       total += tx.amount;
+      // Mimic some work
+      final tx = Transaction(
+        id: 'tx_$i',
+        accountId: 'acc_1',
+        date: DateTime.now(),
+        amount: (i % 2 == 0 ? -1 : 1) * (i * 1.5),
+        approved: true,
+      );
+      total += tx.amount;
     }
 
     // Use total to avoid unused variable warning
@@ -55,7 +58,9 @@ void main() {
 
     stopwatch.stop();
 
-    debugPrint('Benchmark (Simulated): Processed $count transactions in ${stopwatch.elapsedMilliseconds}ms');
+    debugPrint(
+      'Benchmark (Simulated): Processed $count transactions in ${stopwatch.elapsedMilliseconds}ms',
+    );
 
     // Assert it takes less than 1 second (1000ms) on the test device (which is likely faster than low-end,
     // but gives a baseline). 10k simple ops should be instant (<50ms).

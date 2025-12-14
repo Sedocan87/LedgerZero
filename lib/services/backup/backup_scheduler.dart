@@ -12,7 +12,8 @@ class BackupScheduler {
   BackupScheduler(this._prefs, this._notificationService);
 
   Future<void> checkBackupDue() async {
-    final frequency = _prefs.getString(_backupFrequencyKey) ?? 'weekly'; // Default to weekly
+    final frequency =
+        _prefs.getString(_backupFrequencyKey) ?? 'weekly'; // Default to weekly
     if (frequency == 'never') {
       return;
     }
@@ -41,8 +42,8 @@ class BackupScheduler {
 
       // Remind at most once every 24 hours if overdue
       if (now.difference(lastReminder).inHours >= 24) {
-         await _showBackupNotification();
-         await _prefs.setInt(_lastReminderKey, now.millisecondsSinceEpoch);
+        await _showBackupNotification();
+        await _prefs.setInt(_lastReminderKey, now.millisecondsSinceEpoch);
       }
     }
   }

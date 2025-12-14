@@ -78,8 +78,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             onSelected: (value) {
               if (value == 'showClosed') {
                 final current = ref.read(accountFilterProvider);
-                ref.read(accountFilterProvider.notifier).state =
-                    current.copyWith(showClosed: !current.showClosed);
+                ref.read(accountFilterProvider.notifier).state = current
+                    .copyWith(showClosed: !current.showClosed);
               }
             },
             itemBuilder: (context) {
@@ -160,8 +160,10 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                     child: AccountCard(
                       account: account,
                       onTap: () {
-                        context.goNamed('account-detail',
-                            pathParameters: {'id': account.id});
+                        context.goNamed(
+                          'account-detail',
+                          pathParameters: {'id': account.id},
+                        );
                       },
                     ),
                   );

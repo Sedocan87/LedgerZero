@@ -25,12 +25,12 @@ class WidgetCategorySummary {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'available': available,
-        'formattedAvailable': formattedAvailable,
-        'percentFunded': percentFunded,
-      };
+    'id': id,
+    'name': name,
+    'available': available,
+    'formattedAvailable': formattedAvailable,
+    'percentFunded': percentFunded,
+  };
 }
 
 class WidgetTransactionSummary {
@@ -49,12 +49,12 @@ class WidgetTransactionSummary {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'payeeName': payeeName,
-        'amount': amount,
-        'date': date,
-        'categoryName': categoryName,
-      };
+    'id': id,
+    'payeeName': payeeName,
+    'amount': amount,
+    'date': date,
+    'categoryName': categoryName,
+  };
 }
 
 class WidgetService {
@@ -88,16 +88,16 @@ class WidgetService {
       await _prefs.setString('widget_account_id', accountId);
       await HomeWidget.saveWidgetData<String>('account_id', accountId);
     } else {
-        await _prefs.remove('widget_account_id');
-        await HomeWidget.saveWidgetData<String>('account_id', null);
+      await _prefs.remove('widget_account_id');
+      await HomeWidget.saveWidgetData<String>('account_id', null);
     }
 
     if (categoryId != null) {
       await _prefs.setString('widget_category_id', categoryId);
       await HomeWidget.saveWidgetData<String>('category_id', categoryId);
     } else {
-        await _prefs.remove('widget_category_id');
-        await HomeWidget.saveWidgetData<String>('category_id', null);
+      await _prefs.remove('widget_category_id');
+      await HomeWidget.saveWidgetData<String>('category_id', null);
     }
 
     await updateWidgetData();
@@ -111,36 +111,48 @@ class WidgetService {
       final tbb = await _budgetingService.calculateTBB(currentMonth);
 
       // Use NumberFormat for consistent formatting
-      final currencyFormat = NumberFormat.simpleCurrency(decimalDigits: 2); // Or locale aware
+      final currencyFormat = NumberFormat.simpleCurrency(
+        decimalDigits: 2,
+      ); // Or locale aware
 
       await HomeWidget.saveWidgetData<double>('tbb_amount', tbb);
-      await HomeWidget.saveWidgetData<String>('tbb_amount_str', currencyFormat.format(tbb));
+      await HomeWidget.saveWidgetData<String>(
+        'tbb_amount_str',
+        currencyFormat.format(tbb),
+      );
 
       // 2. Categories
       // Fetch some "top" or active categories.
       final allCategories = await _categoryRepository.getAllCategories();
       // We need their available amounts.
-      final categoryPerformance = await _budgetingService.calculateBatchCategoryPerformance(currentMonth);
+      final categoryPerformance = await _budgetingService
+          .calculateBatchCategoryPerformance(currentMonth);
 
-      final pinnedCategoryIds = _prefs.getStringList(_kPinnedCategoriesKey) ?? [];
+      final pinnedCategoryIds =
+          _prefs.getStringList(_kPinnedCategoriesKey) ?? [];
 
       final List<WidgetCategorySummary> categoriesList = [];
       for (final category in allCategories) {
         final available = categoryPerformance[category.id]?['available'] ?? 0.0;
-        final funded = await _budgetingService.calculateFundedPercentage(category, currentMonth);
+        final funded = await _budgetingService.calculateFundedPercentage(
+          category,
+          currentMonth,
+        );
 
         // Exclude hidden categories if any (Category entity has isHidden)
         if (category.isHidden) {
           continue;
         }
 
-        categoriesList.add(WidgetCategorySummary(
-          id: category.id,
-          name: category.name,
-          available: available,
-          formattedAvailable: currencyFormat.format(available),
-          percentFunded: funded,
-        ));
+        categoriesList.add(
+          WidgetCategorySummary(
+            id: category.id,
+            name: category.name,
+            available: available,
+            formattedAvailable: currencyFormat.format(available),
+            percentFunded: funded,
+          ),
+        );
       }
 
       List<WidgetCategorySummary> topCategories;
@@ -153,31 +165,40 @@ class WidgetService {
 
         // Sort them to match the pinned order
         topCategories.sort((a, b) {
-           final indexA = pinnedCategoryIds.indexOf(a.id);
-           final indexB = pinnedCategoryIds.indexOf(b.id);
-           return indexA.compareTo(indexB);
+          final indexA = pinnedCategoryIds.indexOf(a.id);
+          final indexB = pinnedCategoryIds.indexOf(b.id);
+          return indexA.compareTo(indexB);
         });
 
         // Ensure we don't exceed 4 even if prefs somehow has more
         if (topCategories.length > 4) {
           topCategories = topCategories.take(4).toList();
         }
-
       } else {
         // Sort by available amount descending, take top 4
         categoriesList.sort((a, b) => b.available.compareTo(a.available));
         topCategories = categoriesList.take(4).toList();
       }
 
-      final categoriesJson = jsonEncode(topCategories.map((e) => e.toJson()).toList());
-      await HomeWidget.saveWidgetData<String>('categories_json', categoriesJson);
+      final categoriesJson = jsonEncode(
+        topCategories.map((e) => e.toJson()).toList(),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'categories_json',
+        categoriesJson,
+      );
 
       // 3. Recent Transactions
       // OPTIMIZED: Replaced N+1 loop with bulk fetching and caching
-      final transactions = await _transactionRepository.getTransactions(limit: 5);
+      final transactions = await _transactionRepository.getTransactions(
+        limit: 5,
+      );
 
       // Collect IDs to fetch
-      final payeeIds = transactions.map((t) => t.payeeId).whereType<String>().toSet();
+      final payeeIds = transactions
+          .map((t) => t.payeeId)
+          .whereType<String>()
+          .toSet();
 
       // Batch fetch Payees (if we don't have a getByIds method, we can fallback to fetching all payees if the list is small,
       // but ideally we should iterate the list we already have or add a batch fetch.
@@ -196,13 +217,12 @@ class WidgetService {
       // Or we can fetch all payees if the list isn't huge. But let's stick to concurrent fetch for just these 5.
       final uniquePayeeIds = payeeIds.toList();
       final List<Payee?> payees = await Future.wait(
-        uniquePayeeIds.map((id) => _payeeRepository.getPayeeById(id))
+        uniquePayeeIds.map((id) => _payeeRepository.getPayeeById(id)),
       );
       final payeeMap = {
         for (var i = 0; i < uniquePayeeIds.length; i++)
-          uniquePayeeIds[i]: payees[i]
+          uniquePayeeIds[i]: payees[i],
       };
-
 
       final widgetTransactions = <WidgetTransactionSummary>[];
 
@@ -219,25 +239,31 @@ class WidgetService {
           categoryName = category?.name;
         }
 
-        widgetTransactions.add(WidgetTransactionSummary(
-          id: t.id,
-          payeeName: payeeName,
-          amount: t.amount,
-          date: DateFormat('MMM d').format(t.date),
-          categoryName: categoryName,
-        ));
+        widgetTransactions.add(
+          WidgetTransactionSummary(
+            id: t.id,
+            payeeName: payeeName,
+            amount: t.amount,
+            date: DateFormat('MMM d').format(t.date),
+            categoryName: categoryName,
+          ),
+        );
       }
 
-      final transactionsJson = jsonEncode(widgetTransactions.map((e) => e.toJson()).toList());
-      await HomeWidget.saveWidgetData<String>('transactions_json', transactionsJson);
-
-      await HomeWidget.updateWidget(
-        iOSName: _iOSWidgetName,
+      final transactionsJson = jsonEncode(
+        widgetTransactions.map((e) => e.toJson()).toList(),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'transactions_json',
+        transactionsJson,
       );
 
-      stopwatch.stop();
-      Logger.debug('Widget update completed in ${stopwatch.elapsedMilliseconds}ms');
+      await HomeWidget.updateWidget(iOSName: _iOSWidgetName);
 
+      stopwatch.stop();
+      Logger.debug(
+        'Widget update completed in ${stopwatch.elapsedMilliseconds}ms',
+      );
     } catch (e) {
       Logger.error('Error updating widget data', e);
     }

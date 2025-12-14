@@ -26,16 +26,21 @@ class MockSyncController extends Mock implements SyncController {
 
 void main() {
   group('Loading States', () {
-    testWidgets('HomeScreen shows loading indicator when checking accounts', (tester) async {
+    testWidgets('HomeScreen shows loading indicator when checking accounts', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-             hasAccountsProvider.overrideWith((ref) => Future<bool>.delayed(const Duration(seconds: 1), () => true)),
-             // Mock backup scheduler to avoid NPE or timer issues
-             backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
-             // Mock sync controller to avoid background tasks
-             syncControllerProvider.overrideWith((ref) => MockSyncController()),
-             recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
+            hasAccountsProvider.overrideWith(
+              (ref) =>
+                  Future<bool>.delayed(const Duration(seconds: 1), () => true),
+            ),
+            // Mock backup scheduler to avoid NPE or timer issues
+            backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
+            // Mock sync controller to avoid background tasks
+            syncControllerProvider.overrideWith((ref) => MockSyncController()),
+            recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

@@ -42,11 +42,13 @@ void main() {
       data: const {'id': '1', 'name': 'Test'},
     );
 
-    when(mockFilenameGenerator.generate(
-      timestamp: anyNamed('timestamp'),
-      deviceUuid: anyNamed('deviceUuid'),
-      sequence: anyNamed('sequence'),
-    )).thenReturn('test_delta');
+    when(
+      mockFilenameGenerator.generate(
+        timestamp: anyNamed('timestamp'),
+        deviceUuid: anyNamed('deviceUuid'),
+        sequence: anyNamed('sequence'),
+      ),
+    ).thenReturn('test_delta');
 
     final file = await queue.enqueue(delta);
 
@@ -56,7 +58,10 @@ void main() {
     // Verify content
     final bytes = await file.readAsBytes();
     // It should be GZIP compressed
-    expect(() => utf8.decode(bytes), throwsException); // Should fail if valid gzip
+    expect(
+      () => utf8.decode(bytes),
+      throwsException,
+    ); // Should fail if valid gzip
 
     final decoded = await queue.readDelta(file);
     expect(decoded, equals(delta));
@@ -113,7 +118,9 @@ void main() {
     final otherFile = File('${dir.path}/other.txt');
     await otherFile.create();
 
-    final count = await queue.cleanupOldUploadedDeltas(const Duration(days: 30));
+    final count = await queue.cleanupOldUploadedDeltas(
+      const Duration(days: 30),
+    );
 
     expect(count, 1);
     expect(await oldFile.exists(), isFalse);
@@ -121,25 +128,28 @@ void main() {
     expect(await otherFile.exists(), isTrue);
   });
 
-  test('enqueueIncoming moves file and getPendingIncomingDeltas returns sorted files', () async {
-    // Simulate a downloaded file in a temp location
-    final tempDownloadDir = Directory('${tempDir.path}/temp_downloads');
-    await tempDownloadDir.create(recursive: true);
+  test(
+    'enqueueIncoming moves file and getPendingIncomingDeltas returns sorted files',
+    () async {
+      // Simulate a downloaded file in a temp location
+      final tempDownloadDir = Directory('${tempDir.path}/temp_downloads');
+      await tempDownloadDir.create(recursive: true);
 
-    final file1 = File('${tempDownloadDir.path}/2_delta.json.gz');
-    await file1.create();
+      final file1 = File('${tempDownloadDir.path}/2_delta.json.gz');
+      await file1.create();
 
-    final file2 = File('${tempDownloadDir.path}/1_delta.json.gz');
-    await file2.create();
+      final file2 = File('${tempDownloadDir.path}/1_delta.json.gz');
+      await file2.create();
 
-    await queue.enqueueIncoming(file1, '2_delta.json.gz');
-    await queue.enqueueIncoming(file2, '1_delta.json.gz');
+      await queue.enqueueIncoming(file1, '2_delta.json.gz');
+      await queue.enqueueIncoming(file2, '1_delta.json.gz');
 
-    final pending = await queue.getPendingIncomingDeltas();
-    expect(pending.length, 2);
-    expect(pending[0].path, endsWith('1_delta.json.gz'));
-    expect(pending[1].path, endsWith('2_delta.json.gz'));
-  });
+      final pending = await queue.getPendingIncomingDeltas();
+      expect(pending.length, 2);
+      expect(pending[0].path, endsWith('1_delta.json.gz'));
+      expect(pending[1].path, endsWith('2_delta.json.gz'));
+    },
+  );
 
   test('markAsApplied moves file to applied', () async {
     // Manually create file in incoming since getPendingIncomingDeltas relies on it
@@ -154,7 +164,9 @@ void main() {
     await queue.markAsApplied(file);
 
     expect(await file.exists(), isFalse);
-    final appliedFile = File('${tempDir.path}/deltas/applied/test_applied.json.gz');
+    final appliedFile = File(
+      '${tempDir.path}/deltas/applied/test_applied.json.gz',
+    );
     expect(await appliedFile.exists(), isTrue);
   });
 }

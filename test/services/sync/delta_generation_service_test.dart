@@ -45,7 +45,7 @@ void main() {
       database,
       mockLocalDeltaQueue,
       prefs,
-      deviceUuid: 'test-device-uuid'
+      deviceUuid: 'test-device-uuid',
     );
   });
 
@@ -57,11 +57,13 @@ void main() {
     test('INSERT action generates correct delta', () async {
       // 1. Simulate an INSERT change
       const id = 'test-id-1';
-      await database.accounts.insertOne(AccountsCompanion.insert(
-        id: id,
-        name: 'Test Account',
-        type: 'checking',
-      ));
+      await database.accounts.insertOne(
+        AccountsCompanion.insert(
+          id: id,
+          name: 'Test Account',
+          type: 'checking',
+        ),
+      );
 
       final pending = await database.pendingSyncChangesDao.getPendingChanges();
       expect(pending.isNotEmpty, isTrue);
@@ -73,125 +75,141 @@ void main() {
       final syncLogs = await database.syncLogDao.getAllFilenames();
       expect(syncLogs.length, equals(1));
 
-      verify(mockLocalDeltaQueue.enqueue(argThat(
-        predicate<SyncDelta>((delta) {
-          return delta.action == SyncAction.insert &&
-                 delta.tableName == 'accounts' &&
-                 delta.data!['id'] == id &&
-                 delta.data!['name'] == 'Test Account';
-        })
-      ))).called(1);
+      verify(
+        mockLocalDeltaQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.insert &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == id &&
+                  delta.data!['name'] == 'Test Account';
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('UPDATE action generates correct delta', () async {
       const id = 'test-id-2';
-      await database.accounts.insertOne(AccountsCompanion.insert(
-        id: id,
-        name: 'Original Name',
-        type: 'checking',
-      ));
+      await database.accounts.insertOne(
+        AccountsCompanion.insert(
+          id: id,
+          name: 'Original Name',
+          type: 'checking',
+        ),
+      );
 
       // Clear initial insert pending change
-      await database.pendingSyncChangesDao.customStatement('DELETE FROM pending_sync_changes');
+      await database.pendingSyncChangesDao.customStatement(
+        'DELETE FROM pending_sync_changes',
+      );
 
       // Update
       await database.accounts.update().replace(
         const AccountsCompanion(
-           id: Value(id),
-           name: Value('Updated Name'),
-           type: Value('checking'),
-           currency: Value('USD'),
-           startingBalance: Value(0.0),
-           currentBalance: Value(0.0),
-           isClosed: Value(false),
-        )
+          id: Value(id),
+          name: Value('Updated Name'),
+          type: Value('checking'),
+          currency: Value('USD'),
+          startingBalance: Value(0.0),
+          currentBalance: Value(0.0),
+          isClosed: Value(false),
+        ),
       );
 
       await service.processPendingChanges();
 
-      verify(mockLocalDeltaQueue.enqueue(argThat(
-        predicate<SyncDelta>((delta) {
-          return delta.action == SyncAction.update &&
-                 delta.tableName == 'accounts' &&
-                 delta.data!['name'] == 'Updated Name';
-        })
-      ))).called(1);
+      verify(
+        mockLocalDeltaQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.update &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['name'] == 'Updated Name';
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('DELETE action generates correct delta', () async {
       const id = 'test-id-3';
-      await database.accounts.insertOne(AccountsCompanion.insert(
-        id: id,
-        name: 'To Delete',
-        type: 'checking',
-      ));
+      await database.accounts.insertOne(
+        AccountsCompanion.insert(id: id, name: 'To Delete', type: 'checking'),
+      );
 
-      await database.pendingSyncChangesDao.customStatement('DELETE FROM pending_sync_changes');
+      await database.pendingSyncChangesDao.customStatement(
+        'DELETE FROM pending_sync_changes',
+      );
 
       await database.accounts.deleteWhere((tbl) => tbl.id.equals(id));
 
       await service.processPendingChanges();
 
-      verify(mockLocalDeltaQueue.enqueue(argThat(
-        predicate<SyncDelta>((delta) {
-          return delta.action == SyncAction.delete &&
-                 delta.tableName == 'accounts' &&
-                 delta.data!['id'] == id;
-        })
-      ))).called(1);
+      verify(
+        mockLocalDeltaQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.delete &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['id'] == id;
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('Squashes INSERT + UPDATE into INSERT', () async {
-       const id = 'test-id-4';
+      const id = 'test-id-4';
 
-       // Insert
-       await database.accounts.insertOne(AccountsCompanion.insert(
-        id: id,
-        name: 'Initial',
-        type: 'checking',
-      ));
+      // Insert
+      await database.accounts.insertOne(
+        AccountsCompanion.insert(id: id, name: 'Initial', type: 'checking'),
+      );
 
-       // Update immediately
-       await database.accounts.update().replace(
-         const AccountsCompanion(
-           id: Value(id),
-           name: Value('Updated'),
-           type: Value('checking'),
-           currency: Value('USD'),
-           startingBalance: Value(0.0),
-           currentBalance: Value(0.0),
-           isClosed: Value(false),
-         )
-       );
+      // Update immediately
+      await database.accounts.update().replace(
+        const AccountsCompanion(
+          id: Value(id),
+          name: Value('Updated'),
+          type: Value('checking'),
+          currency: Value('USD'),
+          startingBalance: Value(0.0),
+          currentBalance: Value(0.0),
+          isClosed: Value(false),
+        ),
+      );
 
-       await service.processPendingChanges();
+      await service.processPendingChanges();
 
-       verify(mockLocalDeltaQueue.enqueue(argThat(
-        predicate<SyncDelta>((delta) {
-          return delta.action == SyncAction.insert &&
-                 delta.tableName == 'accounts' &&
-                 delta.data!['name'] == 'Updated';
-        })
-      ))).called(1);
+      verify(
+        mockLocalDeltaQueue.enqueue(
+          argThat(
+            predicate<SyncDelta>((delta) {
+              return delta.action == SyncAction.insert &&
+                  delta.tableName == 'accounts' &&
+                  delta.data!['name'] == 'Updated';
+            }),
+          ),
+        ),
+      ).called(1);
     });
 
     test('Squashes INSERT + DELETE into Nothing', () async {
-       const id = 'test-id-5';
+      const id = 'test-id-5';
 
-       // Insert
-       await database.accounts.insertOne(AccountsCompanion.insert(
-        id: id,
-        name: 'Ephemeral',
-        type: 'checking',
-      ));
+      // Insert
+      await database.accounts.insertOne(
+        AccountsCompanion.insert(id: id, name: 'Ephemeral', type: 'checking'),
+      );
 
-       // Delete immediately
-       await database.accounts.deleteWhere((tbl) => tbl.id.equals(id));
+      // Delete immediately
+      await database.accounts.deleteWhere((tbl) => tbl.id.equals(id));
 
-       await service.processPendingChanges();
+      await service.processPendingChanges();
 
-       // Should generate NO deltas
-       verifyNever(mockLocalDeltaQueue.enqueue(any));
+      // Should generate NO deltas
+      verifyNever(mockLocalDeltaQueue.enqueue(any));
     });
   });
 }

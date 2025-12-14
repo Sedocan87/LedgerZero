@@ -24,8 +24,9 @@ Future<void> pumpTestWidget(
         ],
         supportedLocales: const [Locale('en')],
         home: Material(child: child),
-        navigatorObservers:
-            navigatorObserver != null ? [navigatorObserver] : [],
+        navigatorObservers: navigatorObserver != null
+            ? [navigatorObserver]
+            : [],
       ),
     ),
   );

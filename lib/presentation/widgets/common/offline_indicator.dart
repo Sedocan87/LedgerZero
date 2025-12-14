@@ -22,8 +22,8 @@ class OfflineIndicator extends ConsumerWidget {
               AppLocalizations.of(context)!.offlineMode,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onErrorContainer,
-                  ),
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
             ),
           );
         }

@@ -21,7 +21,10 @@ void main() {
     group('toString', () {
       test('Account.toString', () {
         final account = createTestAccount();
-        expect(account.toString(), contains('Account(id: acc1, name: Test Account'));
+        expect(
+          account.toString(),
+          contains('Account(id: acc1, name: Test Account'),
+        );
       });
       test('Transaction.toString', () {
         final tx = createTestTransaction();
@@ -49,7 +52,7 @@ void main() {
         expect(errors, contains('Transaction amount cannot be zero'));
       });
 
-       test('Budget validation', () {
+      test('Budget validation', () {
         final validBudget = createTestBudget();
         expect(validBudget.validate(), isEmpty);
 
@@ -82,7 +85,9 @@ void main() {
         final transfer = createTestTransaction(transferAccountId: 'acc2');
         expect(transfer.isTransfer, true);
 
-        final cleared = createTestTransaction(cleared: TransactionClearStatus.cleared);
+        final cleared = createTestTransaction(
+          cleared: TransactionClearStatus.cleared,
+        );
         expect(cleared.isCleared, true);
       });
 

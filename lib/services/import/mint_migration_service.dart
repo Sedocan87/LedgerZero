@@ -62,15 +62,15 @@ class MintMigrationService {
     required CategoryRepository categoryRepository,
     required PayeeRepository payeeRepository,
     required TransactionRepository transactionRepository,
-  })  : _accountRepository = accountRepository,
-        _categoryRepository = categoryRepository,
-        _payeeRepository = payeeRepository,
-        _transactionRepository = transactionRepository;
+  }) : _accountRepository = accountRepository,
+       _categoryRepository = categoryRepository,
+       _payeeRepository = payeeRepository,
+       _transactionRepository = transactionRepository;
 
   Future<MintMigrationResult> importFile(
-      String csvContent, {
-        Function(double)? onProgress,
-      }) async {
+    String csvContent, {
+    Function(double)? onProgress,
+  }) async {
     try {
       onProgress?.call(0.1); // Parsing started
 
@@ -80,7 +80,10 @@ class MintMigrationService {
 
       // 2. Map Data
       final existingCategories = await _categoryRepository.getAllCategories();
-      final mappedData = _mapper.mapData(importData, existingCategories: existingCategories);
+      final mappedData = _mapper.mapData(
+        importData,
+        existingCategories: existingCategories,
+      );
       onProgress?.call(0.3); // Mapping done
 
       // Validation
@@ -90,19 +93,20 @@ class MintMigrationService {
         // For now, we log and proceed or throw?
         // Let's throw if errors exist.
         if (validation.errors.isNotEmpty) {
-           throw Exception('Validation failed: ${validation.errors.join(", ")}');
+          throw Exception('Validation failed: ${validation.errors.join(", ")}');
         }
       }
 
       // 3. Deduplicate
-      final existingTransactions = await _transactionRepository.getAllTransactions();
+      final existingTransactions = await _transactionRepository
+          .getAllTransactions();
       final existingPayees = await _payeeRepository.getAllPayees();
 
       final deduplicationResult = _removeDuplicates(
-          mappedData.transactions,
-          existingTransactions,
-          mappedData.payees,
-          existingPayees
+        mappedData.transactions,
+        existingTransactions,
+        mappedData.payees,
+        existingPayees,
       );
 
       final transactionsToImport = deduplicationResult.uniqueTransactions;
@@ -131,13 +135,13 @@ class MintMigrationService {
 
       // Save Transactions
       if (transactionsToImport.isNotEmpty) {
-         final chunks = _chunkList(transactionsToImport, 500);
-         final totalChunks = chunks.length;
-         for (var i = 0; i < totalChunks; i++) {
-           await _transactionRepository.batchCreateTransactions(chunks[i]);
-           final progress = 0.4 + (0.6 * ((i + 1) / totalChunks));
-           onProgress?.call(progress);
-         }
+        final chunks = _chunkList(transactionsToImport, 500);
+        final totalChunks = chunks.length;
+        for (var i = 0; i < totalChunks; i++) {
+          await _transactionRepository.batchCreateTransactions(chunks[i]);
+          final progress = 0.4 + (0.6 * ((i + 1) / totalChunks));
+          onProgress?.call(progress);
+        }
       }
 
       onProgress?.call(1.0);
@@ -149,7 +153,6 @@ class MintMigrationService {
         payeesCreated: mappedData.payees.length,
         duplicatesSkipped: skippedCount,
       );
-
     } catch (e, stack) {
       Logger.error('Mint Migration Failed', e, stack);
       rethrow;
@@ -159,17 +162,22 @@ class MintMigrationService {
   List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
     final List<List<T>> result = [];
     for (var i = 0; i < list.length; i += chunkSize) {
-      result.add(list.sublist(i, i + chunkSize > list.length ? list.length : i + chunkSize));
+      result.add(
+        list.sublist(
+          i,
+          i + chunkSize > list.length ? list.length : i + chunkSize,
+        ),
+      );
     }
     return result;
   }
 
   _DeduplicationResult _removeDuplicates(
-      List<Transaction> newTransactions,
-      List<Transaction> existingTransactions,
-      List<Payee> newPayees,
-      List<Payee> existingPayees,
-      ) {
+    List<Transaction> newTransactions,
+    List<Transaction> existingTransactions,
+    List<Payee> newPayees,
+    List<Payee> existingPayees,
+  ) {
     // Create lookup for Payee Names
     final payeeMap = <String, String>{};
     for (final p in existingPayees) {
@@ -179,7 +187,9 @@ class MintMigrationService {
       payeeMap[p.id] = p.name;
     }
 
-    final existingHashes = existingTransactions.map((tx) => _generateTransactionHash(tx, payeeMap)).toSet();
+    final existingHashes = existingTransactions
+        .map((tx) => _generateTransactionHash(tx, payeeMap))
+        .toSet();
     final uniqueTransactions = <Transaction>[];
     int duplicatesCount = 0;
 
@@ -227,14 +237,23 @@ class MintMigrationService {
     );
   }
 
-  String _generateTransactionHash(Transaction tx, Map<String, String> payeeMap) {
+  String _generateTransactionHash(
+    Transaction tx,
+    Map<String, String> payeeMap,
+  ) {
     final dateStr = tx.date.toIso8601String().substring(0, 10);
     final amountStr = tx.amount.toStringAsFixed(2);
     // Use Payee Name if available, otherwise empty string (though practically should always be available for imported data)
-    final payeeName = (tx.payeeId != null ? payeeMap[tx.payeeId!] : '')?.trim().toLowerCase() ?? '';
+    final payeeName =
+        (tx.payeeId != null ? payeeMap[tx.payeeId!] : '')
+            ?.trim()
+            .toLowerCase() ??
+        '';
 
     // We use a pipe delimiter to avoid ambiguity
-    return sha256.convert(utf8.encode('$dateStr|$amountStr|$payeeName')).toString();
+    return sha256
+        .convert(utf8.encode('$dateStr|$amountStr|$payeeName'))
+        .toString();
   }
 }
 

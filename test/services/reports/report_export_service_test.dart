@@ -62,7 +62,7 @@ void main() {
     final data = <List<dynamic>>[
       ['Category', 'Amount'],
       ['Food', 100.0],
-      ['Rent', 500.0]
+      ['Rent', 500.0],
     ];
 
     await service.shareCsv(data, 'test_report');
@@ -75,7 +75,7 @@ void main() {
     final headers = ['Category', 'Amount'];
     final data = <List<String>>[
       ['Food', '\$100.00'],
-      ['Rent', '\$500.00']
+      ['Rent', '\$500.00'],
     ];
 
     await service.generateAndSharePdf(

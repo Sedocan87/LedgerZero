@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,17 +56,19 @@ class SecuritySettingsScreen extends ConsumerWidget {
                       color: isEncrypted ? Colors.green : Colors.red,
                     ),
                     title: Text(l10n.encryptionStatus),
-                    subtitle:
-                        Text(isEncrypted ? l10n.encrypted : l10n.notEncrypted),
+                    subtitle: Text(
+                      isEncrypted ? l10n.encrypted : l10n.notEncrypted,
+                    ),
                   );
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.security),
-                title: Text(l10n.recoveryKey),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/security/recovery-key'),
-              ),
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.security),
+                  title: Text(l10n.recoveryKey),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/security/recovery-key'),
+                ),
               ListTile(
                 leading: const Icon(Icons.timer),
                 title: Text(l10n.autoLock),
@@ -87,43 +90,50 @@ class SecuritySettingsScreen extends ConsumerWidget {
                   );
 
                   if (selected != null) {
-                    await ref.read(autoLockDurationProvider.notifier).setDuration(selected);
+                    await ref
+                        .read(autoLockDurationProvider.notifier)
+                        .setDuration(selected);
                   }
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.password),
-                title: Text(l10n.changePassword),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/security/change-password'),
-              ),
-              biometricsState.when(
-                data: (state) => SwitchListTile(
-                  secondary: const Icon(Icons.fingerprint),
-                  title: Text(l10n.biometrics),
-                  subtitle: Text(l10n.useBiometricsDescription),
-                  value: state.isEnabled,
-                  onChanged: state.isAvailable
-                      ? (value) async {
-                          final success = await ref
-                              .read(biometricsProvider.notifier)
-                              .toggleBiometrics(value);
-                          if (!success && value) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(l10n.biometricsSetupFailed)),
-                              );
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.password),
+                  title: Text(l10n.changePassword),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () =>
+                      context.push('/settings/security/change-password'),
+                ),
+              if (!kIsWeb)
+                biometricsState.when(
+                  data: (state) => SwitchListTile(
+                    secondary: const Icon(Icons.fingerprint),
+                    title: Text(l10n.biometrics),
+                    subtitle: Text(l10n.useBiometricsDescription),
+                    value: state.isEnabled,
+                    onChanged: state.isAvailable
+                        ? (value) async {
+                            final success = await ref
+                                .read(biometricsProvider.notifier)
+                                .toggleBiometrics(value);
+                            if (!success && value) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n.biometricsSetupFailed),
+                                  ),
+                                );
+                              }
                             }
                           }
-                        }
-                      : null,
+                        : null,
+                  ),
+                  loading: () => ListTile(
+                    leading: const Icon(Icons.fingerprint),
+                    title: Text(l10n.loading),
+                  ),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
-                loading: () => ListTile(
-                  leading: const Icon(Icons.fingerprint),
-                  title: Text(l10n.loading),
-                ),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
             ],
           ),
         ],

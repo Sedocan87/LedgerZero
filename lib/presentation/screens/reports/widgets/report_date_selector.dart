@@ -20,7 +20,10 @@ class ReportDateSelector extends ConsumerWidget {
   }
 
   void _showDateRangeOptions(
-      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -34,7 +37,14 @@ class ReportDateSelector extends ConsumerWidget {
                 onTap: () {
                   final now = DateTime.now();
                   final start = DateTime(now.year, now.month, 1);
-                  final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59).subtract(const Duration(milliseconds: 1));
+                  final end = DateTime(
+                    now.year,
+                    now.month + 1,
+                    0,
+                    23,
+                    59,
+                    59,
+                  ).subtract(const Duration(milliseconds: 1));
                   ref.read(reportDateRangeProvider.notifier).state =
                       DateTimeRange(start: start, end: end);
                   Navigator.pop(context);
@@ -57,19 +67,33 @@ class ReportDateSelector extends ConsumerWidget {
                 title: Text(l10n.last3Months),
                 onTap: () {
                   final now = DateTime.now();
-                  final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+                  final end = DateTime(
+                    now.year,
+                    now.month,
+                    now.day,
+                    23,
+                    59,
+                    59,
+                  );
                   final start = now.subtract(const Duration(days: 90));
                   ref.read(reportDateRangeProvider.notifier).state =
                       DateTimeRange(start: start, end: end);
                   Navigator.pop(context);
                 },
               ),
-               ListTile(
+              ListTile(
                 leading: const Icon(Icons.date_range),
                 title: Text(l10n.last6Months),
                 onTap: () {
                   final now = DateTime.now();
-                  final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+                  final end = DateTime(
+                    now.year,
+                    now.month,
+                    now.day,
+                    23,
+                    59,
+                    59,
+                  );
                   final start = now.subtract(const Duration(days: 180));
                   ref.read(reportDateRangeProvider.notifier).state =
                       DateTimeRange(start: start, end: end);

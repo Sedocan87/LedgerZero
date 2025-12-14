@@ -9,7 +9,8 @@ import 'package:ledger_zero/services/sync/sync_status.dart';
 class ICloudDriveService {
   final String containerId;
   ICloudStorage? _iCloudStorage;
-  final StreamController<SyncState> _statusController = StreamController<SyncState>.broadcast();
+  final StreamController<SyncState> _statusController =
+      StreamController<SyncState>.broadcast();
 
   ICloudDriveService({
     this.containerId = 'iCloud.com.ledgerzero.app',
@@ -48,7 +49,11 @@ class ICloudDriveService {
 
   /// Uploads a delta file to iCloud Drive.
   Future<void> uploadDelta(File localFile, String filename) async {
-    _updateStatus(SyncStatus.syncing, message: 'Uploading $filename', progress: 0);
+    _updateStatus(
+      SyncStatus.syncing,
+      message: 'Uploading $filename',
+      progress: 0,
+    );
     try {
       final storage = await _getStorage();
       await storage.startUpload(
@@ -57,10 +62,14 @@ class ICloudDriveService {
         onProgress: (stream) {
           stream.listen(
             (progress) {
-              _updateStatus(SyncStatus.syncing, message: 'Uploading $filename', progress: progress);
+              _updateStatus(
+                SyncStatus.syncing,
+                message: 'Uploading $filename',
+                progress: progress,
+              );
             },
             onError: (e) {
-               // Handle stream error if needed, but startUpload exception handles main errors.
+              // Handle stream error if needed, but startUpload exception handles main errors.
             },
             cancelOnError: true,
           );
@@ -76,7 +85,11 @@ class ICloudDriveService {
 
   /// Uploads a backup file to iCloud Drive.
   Future<void> uploadBackup(File localFile, String filename) async {
-    _updateStatus(SyncStatus.syncing, message: 'Uploading backup $filename', progress: 0);
+    _updateStatus(
+      SyncStatus.syncing,
+      message: 'Uploading backup $filename',
+      progress: 0,
+    );
     try {
       final storage = await _getStorage();
       await storage.startUpload(
@@ -85,7 +98,11 @@ class ICloudDriveService {
         onProgress: (stream) {
           stream.listen(
             (progress) {
-              _updateStatus(SyncStatus.syncing, message: 'Uploading backup $filename', progress: progress);
+              _updateStatus(
+                SyncStatus.syncing,
+                message: 'Uploading backup $filename',
+                progress: progress,
+              );
             },
             onError: (e) {},
             cancelOnError: true,
@@ -102,19 +119,27 @@ class ICloudDriveService {
 
   /// Downloads a delta file from iCloud Drive.
   Future<File> downloadDelta(String filename, String savePath) async {
-    _updateStatus(SyncStatus.syncing, message: 'Downloading $filename', progress: 0);
+    _updateStatus(
+      SyncStatus.syncing,
+      message: 'Downloading $filename',
+      progress: 0,
+    );
     try {
       final storage = await _getStorage();
       await storage.startDownload(
         relativePath: filename,
         destinationFilePath: savePath,
         onProgress: (stream) {
-           stream.listen(
+          stream.listen(
             (progress) {
-              _updateStatus(SyncStatus.syncing, message: 'Downloading $filename', progress: progress);
+              _updateStatus(
+                SyncStatus.syncing,
+                message: 'Downloading $filename',
+                progress: progress,
+              );
             },
-             onError: (e) {},
-             cancelOnError: true,
+            onError: (e) {},
+            cancelOnError: true,
           );
         },
       );
@@ -154,25 +179,43 @@ class ICloudDriveService {
 
   void _updateStatus(SyncStatus status, {String? message, double? progress}) {
     if (!_statusController.isClosed) {
-      _statusController.add(SyncState(status: status, message: message, progress: progress));
+      _statusController.add(
+        SyncState(status: status, message: message, progress: progress),
+      );
     }
   }
 
   SyncException _handleError(Object error, String defaultMessage) {
     if (error is PlatformException) {
       if (error.code == 'cloud_disabled') {
-        return SyncException('iCloud is disabled', originalError: error, retryable: false);
+        return SyncException(
+          'iCloud is disabled',
+          originalError: error,
+          retryable: false,
+        );
       }
       // Check for quota/storage issues
       if (error.message?.toLowerCase().contains('quota') == true ||
           error.message?.toLowerCase().contains('full') == true) {
-        return SyncException('iCloud storage is full', originalError: error, retryable: false);
+        return SyncException(
+          'iCloud storage is full',
+          originalError: error,
+          retryable: false,
+        );
       }
       // Network issues on iCloud are often handled by OS but if we see timeouts
       // we can mark them retryable.
       // Default to retryable for unknown platform exceptions as they might be transient.
-      return SyncException(error.message ?? defaultMessage, originalError: error, retryable: true);
+      return SyncException(
+        error.message ?? defaultMessage,
+        originalError: error,
+        retryable: true,
+      );
     }
-    return SyncException(defaultMessage, originalError: error, retryable: false);
+    return SyncException(
+      defaultMessage,
+      originalError: error,
+      retryable: false,
+    );
   }
 }

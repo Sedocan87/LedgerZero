@@ -123,15 +123,12 @@ class CsvImportService {
       // Should not reach here if not empty
     }
 
-    final List<String> headers =
-        rawRows.first.map((e) => e.toString()).toList();
+    final List<String> headers = rawRows.first
+        .map((e) => e.toString())
+        .toList();
     final List<List<dynamic>> rows = rawRows.skip(1).toList();
 
-    return CsvImportData(
-      headers: headers,
-      rows: rows,
-      delimiter: delimiter,
-    );
+    return CsvImportData(headers: headers, rows: rows, delimiter: delimiter);
   }
 
   CsvValidationResult validateCsvData({
@@ -155,7 +152,10 @@ class CsvImportService {
 
     if (errors.isNotEmpty) {
       return CsvValidationResult(
-          isValid: false, errors: errors, warnings: warnings);
+        isValid: false,
+        errors: errors,
+        warnings: warnings,
+      );
     }
 
     final dateIndex = data.headers.indexOf(dateCol!);
@@ -164,7 +164,10 @@ class CsvImportService {
     if (dateIndex == -1 || amountIndex == -1) {
       errors.add('Mapped columns not found in CSV headers.');
       return CsvValidationResult(
-          isValid: false, errors: errors, warnings: warnings);
+        isValid: false,
+        errors: errors,
+        warnings: warnings,
+      );
     }
 
     int invalidDateCount = 0;
@@ -191,9 +194,11 @@ class CsvImportService {
         // Handle decimal separator
         String normalizedAmount = amountStr;
         if (decimalSeparator == ',') {
-           normalizedAmount = normalizedAmount.replaceAll('.', '').replaceAll(',', '.');
+          normalizedAmount = normalizedAmount
+              .replaceAll('.', '')
+              .replaceAll(',', '.');
         } else {
-           normalizedAmount = normalizedAmount.replaceAll(',', '');
+          normalizedAmount = normalizedAmount.replaceAll(',', '');
         }
         // Remove currency symbols and spaces
         normalizedAmount = normalizedAmount.replaceAll(RegExp(r'[^\d.-]'), '');
@@ -207,7 +212,9 @@ class CsvImportService {
     }
 
     if (invalidDateCount > 0) {
-      errors.add('$invalidDateCount rows have invalid dates (format: $dateFormat).');
+      errors.add(
+        '$invalidDateCount rows have invalid dates (format: $dateFormat).',
+      );
     }
 
     if (invalidAmountCount > 0) {
@@ -232,8 +239,12 @@ class CsvImportService {
 
     final dateIndex = data.headers.indexOf(columnMapping['Date']!);
     final amountIndex = data.headers.indexOf(columnMapping['Amount']!);
-    final payeeIndex = columnMapping['Payee'] != null ? data.headers.indexOf(columnMapping['Payee']!) : -1;
-    final memoIndex = columnMapping['Memo'] != null ? data.headers.indexOf(columnMapping['Memo']!) : -1;
+    final payeeIndex = columnMapping['Payee'] != null
+        ? data.headers.indexOf(columnMapping['Payee']!)
+        : -1;
+    final memoIndex = columnMapping['Memo'] != null
+        ? data.headers.indexOf(columnMapping['Memo']!)
+        : -1;
 
     final dateFmt = DateFormat(dateFormat);
 
@@ -256,15 +267,17 @@ class CsvImportService {
         // Parse amount
         String normalizedAmount = amountStr;
         if (decimalSeparator == ',') {
-           normalizedAmount = normalizedAmount.replaceAll('.', '').replaceAll(',', '.');
+          normalizedAmount = normalizedAmount
+              .replaceAll('.', '')
+              .replaceAll(',', '.');
         } else {
-           normalizedAmount = normalizedAmount.replaceAll(',', '');
+          normalizedAmount = normalizedAmount.replaceAll(',', '');
         }
         normalizedAmount = normalizedAmount.replaceAll(RegExp(r'[^\d.-]'), '');
 
         double amount = double.tryParse(normalizedAmount) ?? 0.0;
         if (!outflowIsNegative && amount > 0) {
-            amount = -amount;
+          amount = -amount;
         }
 
         String? payeeName;
@@ -277,13 +290,15 @@ class CsvImportService {
           memo = row[memoIndex].toString();
         }
 
-        transactions.add(ImportTransaction(
-          date: date,
-          amount: amount,
-          payeeName: payeeName,
-          memo: memo,
-          originalDescription: payeeName,
-        ));
+        transactions.add(
+          ImportTransaction(
+            date: date,
+            amount: amount,
+            payeeName: payeeName,
+            memo: memo,
+            originalDescription: payeeName,
+          ),
+        );
       } catch (e) {
         continue;
       }

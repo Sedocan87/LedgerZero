@@ -60,18 +60,31 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isOnboarded = authState.isOnboarded;
       final isAuthenticated = authState.isAuthenticated;
-      final isGoingToOnboarding = state.matchedLocation.startsWith('/onboarding');
+      final isGoingToOnboarding = state.matchedLocation.startsWith(
+        '/onboarding',
+      );
       final isGoingToLogin = state.matchedLocation == '/login';
 
+      debugPrint(
+        'Redirect Check: loc=${state.matchedLocation}, onboarded=$isOnboarded, auth=$isAuthenticated',
+      );
+
       if (!isOnboarded) {
+        debugPrint(
+          'Redirect: Not onboarded. Going to onboarding? $isGoingToOnboarding',
+        );
         return isGoingToOnboarding ? null : '/onboarding';
       }
 
       if (!isAuthenticated) {
+        debugPrint(
+          'Redirect: Not authenticated. Going to login? $isGoingToLogin',
+        );
         return isGoingToLogin ? null : '/login';
       }
 
       if (isGoingToOnboarding || isGoingToLogin) {
+        debugPrint('Redirect: Already auth/onboarded. Going home.');
         return '/';
       }
 
@@ -180,26 +193,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => const HelpScreen(),
             routes: [
-               GoRoute(
-                  path: 'faq',
-                  name: 'faq',
-                  builder: (context, state) => const FaqScreen(),
-               ),
-               GoRoute(
-                  path: 'user-guide',
-                  name: 'user-guide',
-                  builder: (context, state) => const UserGuideScreen(),
-               ),
-               GoRoute(
-                  path: 'widget-tutorial',
-                  name: 'widget-tutorial',
-                  builder: (context, state) => const WidgetTutorialScreen(),
-               ),
-               GoRoute(
-                  path: 'shortcuts',
-                  name: 'keyboard-shortcuts',
-                  builder: (context, state) => const KeyboardShortcutsScreen(),
-               ),
+              GoRoute(
+                path: 'faq',
+                name: 'faq',
+                builder: (context, state) => const FaqScreen(),
+              ),
+              GoRoute(
+                path: 'user-guide',
+                name: 'user-guide',
+                builder: (context, state) => const UserGuideScreen(),
+              ),
+              GoRoute(
+                path: 'widget-tutorial',
+                name: 'widget-tutorial',
+                builder: (context, state) => const WidgetTutorialScreen(),
+              ),
+              GoRoute(
+                path: 'shortcuts',
+                name: 'keyboard-shortcuts',
+                builder: (context, state) => const KeyboardShortcutsScreen(),
+              ),
             ],
           ),
           GoRoute(
@@ -265,7 +278,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'add',
                 name: 'add-scheduled-transaction',
-                builder: (context, state) => const AddEditScheduledTransactionScreen(),
+                builder: (context, state) =>
+                    const AddEditScheduledTransactionScreen(),
               ),
               GoRoute(
                 path: 'edit/:id',
@@ -291,8 +305,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'edit/:id',
                 name: 'edit-rule',
                 builder: (context, state) {
-                   final id = state.pathParameters['id'];
-                   return AddEditRuleScreen(ruleId: id);
+                  final id = state.pathParameters['id'];
+                  return AddEditRuleScreen(ruleId: id);
                 },
               ),
             ],
@@ -312,9 +326,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const HomeScreen(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
               ),
             ],
@@ -327,9 +342,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const BudgetScreen(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
                 routes: [
                   GoRoute(
@@ -342,7 +358,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'add',
                         name: 'add-category',
                         parentNavigatorKey: _rootNavigatorKey,
-                        builder: (context, state) => const AddEditCategoryScreen(),
+                        builder: (context, state) =>
+                            const AddEditCategoryScreen(),
                       ),
                       GoRoute(
                         path: ':id',
@@ -357,7 +374,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'reorder-groups',
                         name: 'reorder-groups',
                         parentNavigatorKey: _rootNavigatorKey,
-                        builder: (context, state) => const ReorderGroupsScreen(),
+                        builder: (context, state) =>
+                            const ReorderGroupsScreen(),
                       ),
                       GoRoute(
                         path: 'reorder-categories/:groupId',
@@ -382,9 +400,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const AccountsScreen(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
                 routes: [
                   GoRoute(
@@ -434,9 +453,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const TransactionsScreen(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
               ),
             ],
@@ -449,9 +469,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 pageBuilder: (context, state) => CustomTransitionPage(
                   key: state.pageKey,
                   child: const ReportsScreen(),
-                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
                 ),
               ),
             ],

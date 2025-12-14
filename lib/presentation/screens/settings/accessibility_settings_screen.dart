@@ -12,9 +12,7 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
     final themeState = ref.watch(themeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Accessibility'),
-      ),
+      appBar: AppBar(title: const Text('Accessibility')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -32,7 +30,9 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
               children: [
                 SwitchListTile(
                   title: const Text('High Contrast Mode'),
-                  subtitle: const Text('Increase contrast of colors and borders'),
+                  subtitle: const Text(
+                    'Increase contrast of colors and borders',
+                  ),
                   value: themeState.isHighContrast,
                   onChanged: (value) {
                     ref.read(themeProvider.notifier).toggleHighContrast(value);

@@ -29,7 +29,9 @@ class MockAccountRepository implements AccountRepository {
 }
 
 void main() {
-  testWidgets('AddEditAccountScreen form validation', (WidgetTester tester) async {
+  testWidgets('AddEditAccountScreen form validation', (
+    WidgetTester tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
@@ -39,14 +41,15 @@ void main() {
           accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: const MaterialApp(
-          home: AddEditAccountScreen(),
-        ),
+        child: const MaterialApp(home: AddEditAccountScreen()),
       ),
     );
 
     // Scroll down to reveal button
-    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -500));
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -500),
+    );
     await tester.pumpAndSettle();
 
     // Tap save without entering data
@@ -61,9 +64,11 @@ void main() {
     expect(find.text('Please enter an account name'), findsOneWidget);
   });
 
-  testWidgets('AddEditAccountScreen accessibility check', (WidgetTester tester) async {
-     SharedPreferences.setMockInitialValues({});
-     final prefs = await SharedPreferences.getInstance();
+  testWidgets('AddEditAccountScreen accessibility check', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -71,9 +76,7 @@ void main() {
           accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: const MaterialApp(
-          home: AddEditAccountScreen(),
-        ),
+        child: const MaterialApp(home: AddEditAccountScreen()),
       ),
     );
 

@@ -29,16 +29,14 @@ class RuleCondition {
   factory RuleCondition.fromJson(Map<String, dynamic> json) {
     return RuleCondition(
       type: RuleConditionType.values.firstWhere((e) => e.name == json['type']),
-      operator: RuleConditionOperator.values.firstWhere((e) => e.name == json['operator']),
+      operator: RuleConditionOperator.values.firstWhere(
+        (e) => e.name == json['operator'],
+      ),
       value: json['value'] as String,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type.name,
-      'operator': operator.name,
-      'value': value,
-    };
+    return {'type': type.name, 'operator': operator.name, 'value': value};
   }
 }

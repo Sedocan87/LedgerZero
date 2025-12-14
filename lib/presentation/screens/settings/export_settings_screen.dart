@@ -12,7 +12,8 @@ class ExportSettingsScreen extends ConsumerStatefulWidget {
   const ExportSettingsScreen({super.key});
 
   @override
-  ConsumerState<ExportSettingsScreen> createState() => _ExportSettingsScreenState();
+  ConsumerState<ExportSettingsScreen> createState() =>
+      _ExportSettingsScreenState();
 }
 
 class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
@@ -32,10 +33,18 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
             subtitle: const Text('Export transactions to CSV'),
             onTap: () async {
               try {
-                final transactions = await ref.read(transactionRepositoryProvider).getAllTransactions();
-                final payees = await ref.read(payeeRepositoryProvider).getAllPayees();
-                final categories = await ref.read(categoryRepositoryProvider).getAllCategories();
-                final accounts = await ref.read(accountRepositoryProvider).getAllAccounts();
+                final transactions = await ref
+                    .read(transactionRepositoryProvider)
+                    .getAllTransactions();
+                final payees = await ref
+                    .read(payeeRepositoryProvider)
+                    .getAllPayees();
+                final categories = await ref
+                    .read(categoryRepositoryProvider)
+                    .getAllCategories();
+                final accounts = await ref
+                    .read(accountRepositoryProvider)
+                    .getAllAccounts();
 
                 await TransactionExportService().exportTransactionsToCsv(
                   transactions: transactions,
@@ -45,7 +54,9 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
                 );
               } catch (e) {
                 if (context.mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
                 }
               }
             },
@@ -67,10 +78,14 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
             subtitle: const Text('Full backup in JSON format'),
             onTap: () async {
               try {
-                await ref.read(dataPortabilityServiceProvider).exportAllDataToJson();
+                await ref
+                    .read(dataPortabilityServiceProvider)
+                    .exportAllDataToJson();
               } catch (e) {
                 if (context.mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
                 }
               }
             },
@@ -83,16 +98,22 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
             title: const Text('Create Full Backup'),
             subtitle: const Text('Create a full database backup'),
             onTap: () async {
-               try {
-                 final path = await ref.read(backupServiceProvider).createBackup();
-                 if (context.mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backup created at $path')));
-                 }
-               } catch (e) {
-                 if (context.mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backup failed: $e')));
-                 }
-               }
+              try {
+                final path = await ref
+                    .read(backupServiceProvider)
+                    .createBackup();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Backup created at $path')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Backup failed: $e')));
+                }
+              }
             },
           ),
           ListTile(
@@ -100,9 +121,13 @@ class _ExportSettingsScreenState extends ConsumerState<ExportSettingsScreen> {
             title: const Text('Restore Backup'),
             subtitle: const Text('Restore from a backup file'),
             onTap: () {
-               // Restore logic involves picking a file, which RestoreService handles usually
-               // For now just show a message or implement file picker if RestoreService requires path
-               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Restore not fully implemented in UI yet')));
+              // Restore logic involves picking a file, which RestoreService handles usually
+              // For now just show a message or implement file picker if RestoreService requires path
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Restore not fully implemented in UI yet'),
+                ),
+              );
             },
           ),
 

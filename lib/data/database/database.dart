@@ -83,8 +83,21 @@ class AppDatabase extends _$AppDatabase {
   // Default connection for the application
   AppDatabase.defaultConnection() : super(openConnection());
 
-  static final AppDatabase _instance = AppDatabase.defaultConnection();
-  static AppDatabase get instance => _instance;
+  static AppDatabase? _instance;
+  static AppDatabase get instance {
+    _instance ??= AppDatabase.defaultConnection();
+    return _instance!;
+  }
+
+  /// Resets the database instance so the next access creates a new connection.
+  /// Call this after setting the encryption key during onboarding.
+  /// Note: Only resets if instance was created. Does not close existing connection
+  /// as that can cause native library unloading issues.
+  static void resetInstance() {
+    // Simple reset - the old connection will be garbage collected.
+    // This works because LazyDatabase hasn't opened yet if we call this early enough.
+    _instance = null;
+  }
 
   @override
   int get schemaVersion => 14;
@@ -103,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
           await _createSyncTriggersForTable('rules');
         }
         if (from < 13) {
-           await m.createTable(importProfiles);
+          await m.createTable(importProfiles);
         }
         if (from < 12) {
           await m.createTable(parsingHistory);
@@ -115,8 +128,14 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 10) {
           // Add interval and occurrenceCount to scheduled_transactions
-          await m.addColumn(scheduledTransactions, scheduledTransactions.interval);
-          await m.addColumn(scheduledTransactions, scheduledTransactions.occurrenceCount);
+          await m.addColumn(
+            scheduledTransactions,
+            scheduledTransactions.interval,
+          );
+          await m.addColumn(
+            scheduledTransactions,
+            scheduledTransactions.occurrenceCount,
+          );
         }
         if (from < 2) {
           // Add new columns to categories table
@@ -156,9 +175,15 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 9) {
           // Add indices for payee optimization
-          await customStatement('CREATE INDEX IF NOT EXISTS idx_transactions_payee ON transactions (payee_id)');
-          await customStatement('CREATE INDEX IF NOT EXISTS idx_payees_name ON payees (name)');
-          await customStatement('CREATE INDEX IF NOT EXISTS idx_payees_is_favorite ON payees (is_favorite)');
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_transactions_payee ON transactions (payee_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_payees_name ON payees (name)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_payees_is_favorite ON payees (is_favorite)',
+          );
         }
       },
       beforeOpen: (details) async {
@@ -170,8 +195,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _createSyncTriggersForTable(String table) async {
-      // INSERT
-      await customStatement('''
+    // INSERT
+    await customStatement('''
         CREATE TRIGGER IF NOT EXISTS ${table}_insert_trigger
         AFTER INSERT ON $table
         BEGIN
@@ -180,8 +205,8 @@ class AppDatabase extends _$AppDatabase {
         END;
       ''');
 
-      // UPDATE
-      await customStatement('''
+    // UPDATE
+    await customStatement('''
         CREATE TRIGGER IF NOT EXISTS ${table}_update_trigger
         AFTER UPDATE ON $table
         BEGIN
@@ -190,8 +215,8 @@ class AppDatabase extends _$AppDatabase {
         END;
       ''');
 
-      // DELETE
-      await customStatement('''
+    // DELETE
+    await customStatement('''
         CREATE TRIGGER IF NOT EXISTS ${table}_delete_trigger
         AFTER DELETE ON $table
         BEGIN
@@ -246,14 +271,14 @@ class AppDatabase extends _$AppDatabase {
         'Water',
         'Internet',
         'Groceries',
-        'Transportation'
+        'Transportation',
       ],
       'True Expenses': [
         'Medical',
         'Auto Maintenance',
         'Home Maintenance',
         'Renter\'s/Home Insurance',
-        'Software Subscriptions'
+        'Software Subscriptions',
       ],
       'Debt Payments': ['Student Loan', 'Car Payment', 'Credit Card'],
       'Quality of Life': [
@@ -261,7 +286,7 @@ class AppDatabase extends _$AppDatabase {
         'Fitness',
         'Education',
         'Dining Out',
-        'Entertainment'
+        'Entertainment',
       ],
       'Just for Fun': ['Gaming', 'Music', 'Fun Money'],
     };
@@ -272,25 +297,27 @@ class AppDatabase extends _$AppDatabase {
       for (final entry in defaults.entries) {
         final groupId = uuid.v4();
         batch.insert(
-            categoryGroups,
-            CategoryGroupsCompanion.insert(
-              id: groupId,
-              name: entry.key,
-              sortOrder: Value(groupSort++),
-              createdAt: Value(now),
-            ));
+          categoryGroups,
+          CategoryGroupsCompanion.insert(
+            id: groupId,
+            name: entry.key,
+            sortOrder: Value(groupSort++),
+            createdAt: Value(now),
+          ),
+        );
 
         int catSort = 0;
         for (final catName in entry.value) {
           batch.insert(
-              categories,
-              CategoriesCompanion.insert(
-                id: uuid.v4(),
-                name: catName,
-                categoryGroupId: Value(groupId),
-                sortOrder: Value(catSort++),
-                createdAt: Value(now),
-              ));
+            categories,
+            CategoriesCompanion.insert(
+              id: uuid.v4(),
+              name: catName,
+              categoryGroupId: Value(groupId),
+              sortOrder: Value(catSort++),
+              createdAt: Value(now),
+            ),
+          );
         }
       }
     });

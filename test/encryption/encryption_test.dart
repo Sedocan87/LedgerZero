@@ -35,7 +35,9 @@ void main() {
     const wrongKey = 'wrong-key-456';
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('ledger_zero_encryption_test');
+      tempDir = await Directory.systemTemp.createTemp(
+        'ledger_zero_encryption_test',
+      );
       dbFile = File(p.join(tempDir.path, 'encrypted.db'));
     });
 
@@ -46,52 +48,61 @@ void main() {
     });
 
     Future<AppDatabase> openDb(String? key) async {
-      final db = AppDatabase(NativeDatabase(
-        dbFile,
-        setup: (rawDb) {
-          if (key != null) {
-            rawDb.execute("PRAGMA key = '$key'");
-          }
-        },
-      ));
+      final db = AppDatabase(
+        NativeDatabase(
+          dbFile,
+          setup: (rawDb) {
+            if (key != null) {
+              rawDb.execute("PRAGMA key = '$key'");
+            }
+          },
+        ),
+      );
       return db;
     }
 
-    test('Should create an encrypted database and read/write with correct key', () async {
-      // 1. Create and write with correct key
-      var db = await openDb(correctKey);
+    test(
+      'Should create an encrypted database and read/write with correct key',
+      () async {
+        // 1. Create and write with correct key
+        var db = await openDb(correctKey);
 
-      // Add an account
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          id: 'acc1',
-          name: 'Test Account',
-          type: 'checking',
-          createdAt: Value(DateTime.now()),
-        ),
-      );
+        // Add an account
+        await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                id: 'acc1',
+                name: 'Test Account',
+                type: 'checking',
+                createdAt: Value(DateTime.now()),
+              ),
+            );
 
-      await db.close();
+        await db.close();
 
-      // 2. Re-open with correct key and verify
-      db = await openDb(correctKey);
-      final accounts = await db.select(db.accounts).get();
-      expect(accounts.length, 1);
-      expect(accounts.first.name, 'Test Account');
-      await db.close();
-    });
+        // 2. Re-open with correct key and verify
+        db = await openDb(correctKey);
+        final accounts = await db.select(db.accounts).get();
+        expect(accounts.length, 1);
+        expect(accounts.first.name, 'Test Account');
+        await db.close();
+      },
+    );
 
     test('Should fail to read encrypted database without key', () async {
       // 1. Create and write with correct key
       var db = await openDb(correctKey);
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          id: 'acc1',
-          name: 'Test Account',
-          type: 'checking',
-          createdAt: Value(DateTime.now()),
-        ),
-      );
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              id: 'acc1',
+              name: 'Test Account',
+              type: 'checking',
+              createdAt: Value(DateTime.now()),
+            ),
+          );
       await db.close();
 
       // 2. Try to open without key
@@ -110,14 +121,16 @@ void main() {
     test('Should fail to read encrypted database with wrong key', () async {
       // 1. Create and write with correct key
       var db = await openDb(correctKey);
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          id: 'acc1',
-          name: 'Test Account',
-          type: 'checking',
-          createdAt: Value(DateTime.now()),
-        ),
-      );
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              id: 'acc1',
+              name: 'Test Account',
+              type: 'checking',
+              createdAt: Value(DateTime.now()),
+            ),
+          );
       await db.close();
 
       // 2. Try to open with wrong key
@@ -136,14 +149,16 @@ void main() {
     test('Database file should not have standard SQLite header', () async {
       // 1. Create and write with correct key
       final db = await openDb(correctKey);
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          id: 'acc1',
-          name: 'Test Account',
-          type: 'checking',
-          createdAt: Value(DateTime.now()),
-        ),
-      );
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              id: 'acc1',
+              name: 'Test Account',
+              type: 'checking',
+              createdAt: Value(DateTime.now()),
+            ),
+          );
       await db.close();
 
       // 2. Read first 16 bytes of the file

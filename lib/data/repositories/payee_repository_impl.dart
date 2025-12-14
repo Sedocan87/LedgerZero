@@ -75,26 +75,32 @@ class PayeeRepositoryImpl implements PayeeRepository {
 
   @override
   Stream<List<Payee>> watchAllPayees() {
-    return _payeesDao.watchAllPayees().map(
-      (payees) {
-        return payees.map(_mapToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchAllPayees stream', error, stackTrace);
-      throw DatabaseException('Error watching payees', error);
-    });
+    return _payeesDao
+        .watchAllPayees()
+        .map((payees) {
+          return payees.map(_mapToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error('Error in watchAllPayees stream', error, stackTrace);
+          throw DatabaseException('Error watching payees', error);
+        });
   }
 
   @override
   Stream<List<Payee>> watchSuggestedPayees() {
-    return _payeesDao.watchSuggestedPayees().map(
-      (payees) {
-        return payees.map(_mapToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchSuggestedPayees stream', error, stackTrace);
-      throw DatabaseException('Error watching suggested payees', error);
-    });
+    return _payeesDao
+        .watchSuggestedPayees()
+        .map((payees) {
+          return payees.map(_mapToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error(
+            'Error in watchSuggestedPayees stream',
+            error,
+            stackTrace,
+          );
+          throw DatabaseException('Error watching suggested payees', error);
+        });
   }
 
   Payee _mapToDomain(db.Payee p) {

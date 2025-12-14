@@ -102,7 +102,10 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
             Text('Categories Created: ${result.categoriesCreated}'),
             Text('Payees Created: ${result.payeesCreated}'),
             if (result.duplicatesSkipped > 0)
-              Text('Duplicates Skipped: ${result.duplicatesSkipped}', style: const TextStyle(color: Colors.orange)),
+              Text(
+                'Duplicates Skipped: ${result.duplicatesSkipped}',
+                style: const TextStyle(color: Colors.orange),
+              ),
           ],
         ),
         actions: [
@@ -121,9 +124,7 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Import from Mint'),
-      ),
+      appBar: AppBar(title: const Text('Import from Mint')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -158,21 +159,27 @@ class _MintImportScreenState extends ConsumerState<MintImportScreen> {
               ),
 
             if (_isLoading) ...[
-               const SizedBox(height: 24),
-               LinearProgressIndicator(value: _progress),
-               const SizedBox(height: 8),
-               Text('${(_progress * 100).toInt()}%', textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              LinearProgressIndicator(value: _progress),
+              const SizedBox(height: 8),
+              Text(
+                '${(_progress * 100).toInt()}%',
+                textAlign: TextAlign.center,
+              ),
             ],
 
             if (_error != null)
-              Expanded(child: ErrorView(title: 'Import Error', message: _error!, onRetry: _pickFile)),
+              Expanded(
+                child: ErrorView(
+                  title: 'Import Error',
+                  message: _error!,
+                  onRetry: _pickFile,
+                ),
+              ),
 
             if (_selectedFile != null && !_isLoading) ...[
               const Spacer(),
-              AppButton.primary(
-                label: 'Start Import',
-                onPressed: _importData,
-              ),
+              AppButton.primary(label: 'Start Import', onPressed: _importData),
             ],
           ],
         ),

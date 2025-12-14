@@ -56,10 +56,7 @@ void main() {
     });
 
     test('copyWith returns new instance with updated fields', () {
-      final updated = transaction.copyWith(
-        amount: -60.0,
-        memo: 'Supermarket',
-      );
+      final updated = transaction.copyWith(amount: -60.0, memo: 'Supermarket');
 
       expect(updated.amount, equals(-60.0));
       expect(updated.memo, equals('Supermarket'));
@@ -118,10 +115,15 @@ void main() {
     });
 
     test('defaults are set correctly', () {
-       final defaultT = Transaction(id: '1', accountId: 'a1', date: testDate, amount: 10.0);
-       expect(defaultT.cleared, TransactionClearStatus.uncleared);
-       expect(defaultT.approved, true);
-       expect(defaultT.isDeleted, false);
+      final defaultT = Transaction(
+        id: '1',
+        accountId: 'a1',
+        date: testDate,
+        amount: 10.0,
+      );
+      expect(defaultT.cleared, TransactionClearStatus.uncleared);
+      expect(defaultT.approved, true);
+      expect(defaultT.isDeleted, false);
     });
   });
 }

@@ -62,9 +62,7 @@ class ErrorDialog extends PlatformWidget {
   Widget buildMaterialWidget(BuildContext context) {
     return AlertDialog(
       title: Text(title),
-      content: SingleChildScrollView(
-        child: Text(message),
-      ),
+      content: SingleChildScrollView(child: Text(message)),
       actions: [
         if (onRetry != null)
           TextButton(
@@ -73,7 +71,11 @@ class ErrorDialog extends PlatformWidget {
           ),
         TextButton(
           onPressed: onDismiss ?? () => Navigator.of(context).pop(),
-          child: Text(onRetry != null ? AppLocalizations.of(context)!.cancel : AppLocalizations.of(context)!.ok),
+          child: Text(
+            onRetry != null
+                ? AppLocalizations.of(context)!.cancel
+                : AppLocalizations.of(context)!.ok,
+          ),
         ),
       ],
     );
@@ -93,7 +95,11 @@ class ErrorDialog extends PlatformWidget {
         CupertinoDialogAction(
           isDefaultAction: true,
           onPressed: onDismiss ?? () => Navigator.of(context).pop(),
-          child: Text(onRetry != null ? AppLocalizations.of(context)!.cancel : AppLocalizations.of(context)!.ok),
+          child: Text(
+            onRetry != null
+                ? AppLocalizations.of(context)!.cancel
+                : AppLocalizations.of(context)!.ok,
+          ),
         ),
       ],
     );

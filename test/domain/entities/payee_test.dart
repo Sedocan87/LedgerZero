@@ -19,10 +19,7 @@ void main() {
     });
 
     test('should use default values', () {
-      const payee = Payee(
-        id: '1',
-        name: 'Test Payee',
-      );
+      const payee = Payee(id: '1', name: 'Test Payee');
 
       expect(payee.id, '1');
       expect(payee.name, 'Test Payee');
@@ -53,10 +50,7 @@ void main() {
     });
 
     test('should handle missing optional fields during serialization', () {
-      final json = {
-        'id': '1',
-        'name': 'Test Payee',
-      };
+      final json = {'id': '1', 'name': 'Test Payee'};
 
       final payee = Payee.fromJson(json);
       expect(payee.id, '1');
@@ -81,10 +75,7 @@ void main() {
         createdAt: now,
       );
 
-      const payee3 = Payee(
-        id: '2',
-        name: 'Other Payee',
-      );
+      const payee3 = Payee(id: '2', name: 'Other Payee');
 
       // Reflexive
       expect(payee1, equals(payee1));

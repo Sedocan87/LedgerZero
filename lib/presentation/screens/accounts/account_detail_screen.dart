@@ -13,13 +13,17 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
-final accountDetailProvider = StreamProvider.family.autoDispose<Account?, String>((ref, id) {
-  return ref.watch(accountRepositoryProvider).watchAccount(id);
-});
+final accountDetailProvider = StreamProvider.family
+    .autoDispose<Account?, String>((ref, id) {
+      return ref.watch(accountRepositoryProvider).watchAccount(id);
+    });
 
-final accountTransactionsProvider = StreamProvider.family.autoDispose<List<Transaction>, String>((ref, accountId) {
-  return ref.watch(transactionRepositoryProvider).watchTransactionsByAccount(accountId);
-});
+final accountTransactionsProvider = StreamProvider.family
+    .autoDispose<List<Transaction>, String>((ref, accountId) {
+      return ref
+          .watch(transactionRepositoryProvider)
+          .watchTransactionsByAccount(accountId);
+    });
 
 final payeesProvider = StreamProvider.autoDispose<List<Payee>>((ref) {
   return ref.watch(payeeRepositoryProvider).watchAllPayees();
@@ -45,8 +49,10 @@ class AccountDetailScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () => context.goNamed('edit-account',
-                pathParameters: {'id': accountId}),
+            onPressed: () => context.goNamed(
+              'edit-account',
+              pathParameters: {'id': accountId},
+            ),
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -58,11 +64,13 @@ class AccountDetailScreen extends ConsumerWidget {
                     content: Text(l10n.deleteAccountConfirmation),
                     actions: [
                       TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: Text(l10n.cancel)),
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text(l10n.cancel),
+                      ),
                       TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: Text(l10n.delete)),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text(l10n.delete),
+                      ),
                     ],
                   ),
                 );
@@ -83,8 +91,10 @@ class AccountDetailScreen extends ConsumerWidget {
                       .updateAccount(updated);
                 }
               } else if (value == 'reconcile') {
-                context.goNamed('reconcile-account',
-                    pathParameters: {'id': accountId});
+                context.goNamed(
+                  'reconcile-account',
+                  pathParameters: {'id': accountId},
+                );
               } else if (value == 'export') {
                 final account = accountAsync.value;
                 if (account != null) {
@@ -92,8 +102,9 @@ class AccountDetailScreen extends ConsumerWidget {
                       .read(transactionRepositoryProvider)
                       .getTransactionsByAccount(accountId);
 
-                  final payees =
-                      await ref.read(payeeRepositoryProvider).getAllPayees();
+                  final payees = await ref
+                      .read(payeeRepositoryProvider)
+                      .getAllPayees();
                   final payeeMap = {for (var p in payees) p.id: p.name};
 
                   final categories = await ref
@@ -117,20 +128,16 @@ class AccountDetailScreen extends ConsumerWidget {
                 value: 'reconcile',
                 child: Text(l10n.reconcileAccount),
               ),
-              PopupMenuItem(
-                value: 'export',
-                child: Text(l10n.exportToCsv),
-              ),
+              PopupMenuItem(value: 'export', child: Text(l10n.exportToCsv)),
               PopupMenuItem(
                 value: 'close',
-                child: Text(accountAsync.value?.isClosed == true
-                    ? l10n.reopenAccount
-                    : l10n.closeAccount),
+                child: Text(
+                  accountAsync.value?.isClosed == true
+                      ? l10n.reopenAccount
+                      : l10n.closeAccount,
+                ),
               ),
-              PopupMenuItem(
-                value: 'delete',
-                child: Text(l10n.deleteAccount),
-              ),
+              PopupMenuItem(value: 'delete', child: Text(l10n.deleteAccount)),
             ],
           ),
         ],
@@ -143,10 +150,14 @@ class AccountDetailScreen extends ConsumerWidget {
           return Column(
             children: [
               TransactionListChartWrapper(
-                  accountId: accountId, startingBalance: account.startingBalance),
+                accountId: accountId,
+                startingBalance: account.startingBalance,
+              ),
               Expanded(
                 child: TransactionList(
-                    accountId: accountId, currency: account.currency),
+                  accountId: accountId,
+                  currency: account.currency,
+                ),
               ),
             ],
           );
@@ -161,13 +172,20 @@ class AccountDetailScreen extends ConsumerWidget {
 class TransactionListChartWrapper extends ConsumerWidget {
   final String accountId;
   final double startingBalance;
-  const TransactionListChartWrapper({super.key, required this.accountId, required this.startingBalance});
+  const TransactionListChartWrapper({
+    super.key,
+    required this.accountId,
+    required this.startingBalance,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(accountTransactionsProvider(accountId));
     return transactionsAsync.when(
-      data: (transactions) => BalanceTrendChart(transactions: transactions, startingBalance: startingBalance),
+      data: (transactions) => BalanceTrendChart(
+        transactions: transactions,
+        startingBalance: startingBalance,
+      ),
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
@@ -178,7 +196,11 @@ class TransactionList extends ConsumerWidget {
   final String accountId;
   final String currency;
 
-  const TransactionList({super.key, required this.accountId, required this.currency});
+  const TransactionList({
+    super.key,
+    required this.accountId,
+    required this.currency,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -197,13 +219,15 @@ class TransactionList extends ConsumerWidget {
           separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final t = transactions[index];
-            final payeeName = payeesAsync.valueOrNull
+            final payeeName =
+                payeesAsync.valueOrNull
                     ?.firstWhereOrNull((p) => p.id == t.payeeId)
                     ?.name ??
                 l10n.unknownPayee;
 
-            final currencyFormatter =
-                NumberFormat.simpleCurrency(name: currency);
+            final currencyFormatter = NumberFormat.simpleCurrency(
+              name: currency,
+            );
 
             return ListTile(
               title: Text(t.memo ?? payeeName),

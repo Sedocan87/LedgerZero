@@ -51,7 +51,13 @@ void main() {
 
     test('getAllAccounts returns all inserted accounts', () async {
       await repository.createAccount(testAccount);
-      await repository.createAccount(testAccount.copyWith(id: '2', name: 'Savings', type: domain.AccountType.savings));
+      await repository.createAccount(
+        testAccount.copyWith(
+          id: '2',
+          name: 'Savings',
+          type: domain.AccountType.savings,
+        ),
+      );
 
       final accounts = await repository.getAllAccounts();
       expect(accounts.length, equals(2));
@@ -62,7 +68,10 @@ void main() {
     test('updateAccount modifies existing account', () async {
       await repository.createAccount(testAccount);
 
-      final updated = testAccount.copyWith(name: 'Updated Name', currentBalance: 500.0);
+      final updated = testAccount.copyWith(
+        name: 'Updated Name',
+        currentBalance: 500.0,
+      );
       await repository.updateAccount(updated);
 
       final retrieved = await repository.getAccountById('1');
@@ -82,15 +91,14 @@ void main() {
       await repository.createAccount(testAccount);
 
       final stream = repository.watchAllAccounts();
-      expect(stream, emitsInOrder([
-        hasLength(1),
-        hasLength(2),
-      ]));
+      expect(stream, emitsInOrder([hasLength(1), hasLength(2)]));
 
       // Allow stream subscription to catch up
       await Future.delayed(Duration.zero);
 
-      await repository.createAccount(testAccount.copyWith(id: '2', name: 'Savings'));
+      await repository.createAccount(
+        testAccount.copyWith(id: '2', name: 'Savings'),
+      );
     });
   });
 }

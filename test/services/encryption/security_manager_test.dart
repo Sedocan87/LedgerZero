@@ -10,7 +10,16 @@ class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {
   final Map<String, String> _storage = {};
 
   @override
-  Future<void> write({required String key, required String? value, IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, MacOsOptions? mOptions, WindowsOptions? wOptions}) async {
+  Future<void> write({
+    required String key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     if (value != null) {
       _storage[key] = value;
     } else {
@@ -19,12 +28,28 @@ class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {
   }
 
   @override
-  Future<String?> read({required String key, IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, MacOsOptions? mOptions, WindowsOptions? wOptions}) async {
+  Future<String?> read({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     return _storage[key];
   }
 
   @override
-  Future<void> delete({required String key, IOSOptions? iOptions, AndroidOptions? aOptions, LinuxOptions? lOptions, WebOptions? webOptions, MacOsOptions? mOptions, WindowsOptions? wOptions}) async {
+  Future<void> delete({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     _storage.remove(key);
   }
 }
@@ -97,10 +122,10 @@ void main() {
     });
 
     test('session key management', () {
-        SecurityManager.setSessionKey('session-key');
-        expect(SecurityManager.sessionKey, 'session-key');
-        SecurityManager.setSessionKey(null);
-        expect(SecurityManager.sessionKey, null);
+      SecurityManager.setSessionKey('session-key');
+      expect(SecurityManager.sessionKey, 'session-key');
+      SecurityManager.setSessionKey(null);
+      expect(SecurityManager.sessionKey, null);
     });
   });
 }

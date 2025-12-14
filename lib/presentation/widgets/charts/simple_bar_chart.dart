@@ -43,12 +43,16 @@ class SimpleBarChart extends StatelessWidget {
       // Show top 7 categories + Others
       entries = sortedEntries.take(7).toList();
       if (sortedEntries.length > 7) {
-        final otherSum = sortedEntries.skip(7).fold(0.0, (sum, item) => sum + item.value);
+        final otherSum = sortedEntries
+            .skip(7)
+            .fold(0.0, (sum, item) => sum + item.value);
         entries.add(MapEntry('Others', otherSum));
       }
     }
 
-    final semanticDescription = entries.map((e) => '${e.key}: ${e.value.toStringAsFixed(2)}').join(', ');
+    final semanticDescription = entries
+        .map((e) => '${e.key}: ${e.value.toStringAsFixed(2)}')
+        .join(', ');
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -125,7 +129,11 @@ class BarChartPainter extends CustomPainter {
       // Draw Value on top
       final valSpan = TextSpan(
         text: compactCurrency(entry.value),
-        style: TextStyle(color: labelColor, fontSize: 10, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: labelColor,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       );
       final valPainter = TextPainter(
         text: valSpan,
@@ -133,10 +141,7 @@ class BarChartPainter extends CustomPainter {
         textAlign: TextAlign.center,
       );
       valPainter.layout(minWidth: barWidth);
-      valPainter.paint(
-        canvas,
-        Offset(left, top - 15)
-      );
+      valPainter.paint(canvas, Offset(left, top - 15));
 
       // Draw Label (Category Name) - with ellipsis
       final textSpan = TextSpan(
@@ -156,7 +161,10 @@ class BarChartPainter extends CustomPainter {
       // Paint centered under bar
       textPainter.paint(
         canvas,
-        Offset(left - (spacing/2) + (barWidth + spacing - textPainter.width)/2, bottom + 5)
+        Offset(
+          left - (spacing / 2) + (barWidth + spacing - textPainter.width) / 2,
+          bottom + 5,
+        ),
       );
     }
   }

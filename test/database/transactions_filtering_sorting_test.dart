@@ -15,34 +15,42 @@ void main() {
     transactionsDao = TransactionsDao(database);
 
     // Setup data
-    await database.into(database.accounts).insert(
-      const AccountsCompanion(
-        id: Value('acc1'),
-        name: Value('Checking'),
-        type: Value('checking'),
-      ),
-    );
-    await database.into(database.accounts).insert(
-      const AccountsCompanion(
-        id: Value('acc2'),
-        name: Value('Savings'),
-        type: Value('savings'),
-      ),
-    );
+    await database
+        .into(database.accounts)
+        .insert(
+          const AccountsCompanion(
+            id: Value('acc1'),
+            name: Value('Checking'),
+            type: Value('checking'),
+          ),
+        );
+    await database
+        .into(database.accounts)
+        .insert(
+          const AccountsCompanion(
+            id: Value('acc2'),
+            name: Value('Savings'),
+            type: Value('savings'),
+          ),
+        );
 
-    await database.into(database.payees).insert(
-      const PayeesCompanion(id: Value('p1'), name: Value('Walmart')),
-    );
-    await database.into(database.payees).insert(
-      const PayeesCompanion(id: Value('p2'), name: Value('Amazon')),
-    );
+    await database
+        .into(database.payees)
+        .insert(const PayeesCompanion(id: Value('p1'), name: Value('Walmart')));
+    await database
+        .into(database.payees)
+        .insert(const PayeesCompanion(id: Value('p2'), name: Value('Amazon')));
 
-    await database.into(database.categories).insert(
-      const CategoriesCompanion(id: Value('c1'), name: Value('Groceries')),
-    );
-    await database.into(database.categories).insert(
-      const CategoriesCompanion(id: Value('c2'), name: Value('Shopping')),
-    );
+    await database
+        .into(database.categories)
+        .insert(
+          const CategoriesCompanion(id: Value('c1'), name: Value('Groceries')),
+        );
+    await database
+        .into(database.categories)
+        .insert(
+          const CategoriesCompanion(id: Value('c2'), name: Value('Shopping')),
+        );
 
     // Insert Transactions
     await transactionsDao.insertTransaction(
@@ -132,7 +140,9 @@ void main() {
     });
 
     test('filter by cleared status', () async {
-      const filter = TransactionFilter(clearedStatuses: [domain.TransactionClearStatus.uncleared]);
+      const filter = TransactionFilter(
+        clearedStatuses: [domain.TransactionClearStatus.uncleared],
+      );
       final results = await transactionsDao.getTransactions(filter: filter);
       expect(results.length, 1);
       expect(results.first.id, 't2');
@@ -149,7 +159,10 @@ void main() {
     });
 
     test('sort by date asc', () async {
-      const sort = TransactionSort(field: TransactionSortField.date, ascending: true);
+      const sort = TransactionSort(
+        field: TransactionSortField.date,
+        ascending: true,
+      );
       final results = await transactionsDao.getTransactions(sort: sort);
       expect(results[0].id, 't1');
       expect(results[1].id, 't2');
@@ -157,7 +170,10 @@ void main() {
     });
 
     test('sort by amount asc', () async {
-      const sort = TransactionSort(field: TransactionSortField.amount, ascending: true);
+      const sort = TransactionSort(
+        field: TransactionSortField.amount,
+        ascending: true,
+      );
       final results = await transactionsDao.getTransactions(sort: sort);
       // -100, -50, 1000
       expect(results[0].id, 't2');
@@ -167,14 +183,20 @@ void main() {
 
     test('sort by payee name asc', () async {
       // Amazon (p2), Walmart (p1), null
-      const sort = TransactionSort(field: TransactionSortField.payeeName, ascending: true);
+      const sort = TransactionSort(
+        field: TransactionSortField.payeeName,
+        ascending: true,
+      );
       // Remove unused local variable check if just running
       // final results = await transactionsDao.getTransactions(sort: sort);
 
       // Actually checking names: "Amazon" < "Walmart".
       // Let's filter out t3 to be deterministic about names.
       const filter = TransactionFilter(accountIds: ['acc1']);
-      final resultsFiltered = await transactionsDao.getTransactions(filter: filter, sort: sort);
+      final resultsFiltered = await transactionsDao.getTransactions(
+        filter: filter,
+        sort: sort,
+      );
 
       expect(resultsFiltered[0].id, 't2'); // Amazon
       expect(resultsFiltered[1].id, 't1'); // Walmart
@@ -182,9 +204,15 @@ void main() {
 
     test('sort by category name asc', () async {
       // Groceries (c1), Shopping (c2)
-      const sort = TransactionSort(field: TransactionSortField.categoryName, ascending: true);
+      const sort = TransactionSort(
+        field: TransactionSortField.categoryName,
+        ascending: true,
+      );
       const filter = TransactionFilter(accountIds: ['acc1']);
-      final results = await transactionsDao.getTransactions(filter: filter, sort: sort);
+      final results = await transactionsDao.getTransactions(
+        filter: filter,
+        sort: sort,
+      );
 
       expect(results[0].id, 't1'); // Groceries
       expect(results[1].id, 't2'); // Shopping

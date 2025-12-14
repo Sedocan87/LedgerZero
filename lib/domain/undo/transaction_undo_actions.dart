@@ -24,7 +24,11 @@ class UpdateTransactionAction implements ReversibleAction {
   final Transaction oldTransaction;
   final Transaction newTransaction;
 
-  UpdateTransactionAction(this.repository, this.oldTransaction, this.newTransaction);
+  UpdateTransactionAction(
+    this.repository,
+    this.oldTransaction,
+    this.newTransaction,
+  );
 
   @override
   Future<void> redo() async {
@@ -64,12 +68,16 @@ class BatchDeleteTransactionsAction implements ReversibleAction {
 
   @override
   Future<void> redo() async {
-    await repository.batchDeleteTransactions(transactions.map((t) => t.id).toList());
+    await repository.batchDeleteTransactions(
+      transactions.map((t) => t.id).toList(),
+    );
   }
 
   @override
   Future<void> undo() async {
-    final restored = transactions.map((t) => t.copyWith(isDeleted: false)).toList();
+    final restored = transactions
+        .map((t) => t.copyWith(isDeleted: false))
+        .toList();
     await repository.batchUpdateTransactions(restored);
   }
 }
@@ -79,7 +87,11 @@ class BatchUpdateTransactionsAction implements ReversibleAction {
   final List<Transaction> oldTransactions;
   final List<Transaction> newTransactions;
 
-  BatchUpdateTransactionsAction(this.repository, this.oldTransactions, this.newTransactions);
+  BatchUpdateTransactionsAction(
+    this.repository,
+    this.oldTransactions,
+    this.newTransactions,
+  );
 
   @override
   Future<void> redo() async {
@@ -148,15 +160,18 @@ class DeleteLinkedTransactionAction implements ReversibleAction {
 
   @override
   Future<void> undo() async {
-    await repository
-        .updateTransaction(primaryTransaction.copyWith(isDeleted: false));
+    await repository.updateTransaction(
+      primaryTransaction.copyWith(isDeleted: false),
+    );
     if (relatedTransaction != null) {
-      await repository
-          .updateTransaction(relatedTransaction!.copyWith(isDeleted: false));
+      await repository.updateTransaction(
+        relatedTransaction!.copyWith(isDeleted: false),
+      );
     }
     if (children.isNotEmpty) {
-      final restoredChildren =
-          children.map((c) => c.copyWith(isDeleted: false)).toList();
+      final restoredChildren = children
+          .map((c) => c.copyWith(isDeleted: false))
+          .toList();
       await repository.batchUpdateTransactions(restoredChildren);
     }
   }

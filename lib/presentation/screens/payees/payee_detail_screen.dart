@@ -14,7 +14,9 @@ import 'package:ledger_zero/presentation/screens/transactions/widgets/transactio
 import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
 
 // Local provider for accounts
-final _accountsStreamProvider = StreamProvider.autoDispose<List<Account>>((ref) {
+final _accountsStreamProvider = StreamProvider.autoDispose<List<Account>>((
+  ref,
+) {
   return ref.watch(accountRepositoryProvider).watchAllAccounts();
 });
 
@@ -73,7 +75,11 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.deletePayeeConfirmation),
-        content: Text(l10n.deletePayeeWarning(ref.read(payeeProvider(widget.payeeId)).value!.name)),
+        content: Text(
+          l10n.deletePayeeWarning(
+            ref.read(payeeProvider(widget.payeeId)).value!.name,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -81,7 +87,9 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
           ),
           TextButton(
             onPressed: () async {
-              await ref.read(payeeControllerProvider).deletePayee(widget.payeeId);
+              await ref
+                  .read(payeeControllerProvider)
+                  .deletePayee(widget.payeeId);
               if (context.mounted) {
                 Navigator.pop(context); // Dialog
                 Navigator.pop(context); // Screen
@@ -114,11 +122,12 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
               spacing: 16,
               runSpacing: 16,
               children: [
-                 IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: l10n.none,
-                    onPressed: () {
-                      _updatePayee(Payee(
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: l10n.none,
+                  onPressed: () {
+                    _updatePayee(
+                      Payee(
                         id: payee.id,
                         name: payee.name,
                         autoCategoryId: payee.autoCategoryId,
@@ -128,14 +137,17 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                         color: payee.color,
                         notes: payee.notes,
                         isFavorite: payee.isFavorite,
-                      ));
-                      Navigator.pop(context);
-                    },
-                 ),
-                 ...categoryIcons.entries.map((entry) {
+                      ),
+                    );
+                    Navigator.pop(context);
+                  },
+                ),
+                ...categoryIcons.entries.map((entry) {
                   return IconButton(
                     icon: Icon(entry.value),
-                    color: payee.icon == entry.key ? Theme.of(context).primaryColor : null,
+                    color: payee.icon == entry.key
+                        ? Theme.of(context).primaryColor
+                        : null,
                     onPressed: () {
                       _updatePayee(payee.copyWith(icon: entry.key));
                       Navigator.pop(context);
@@ -161,19 +173,21 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-               GestureDetector(
+              GestureDetector(
                 onTap: () {
-                   _updatePayee(Payee(
-                        id: payee.id,
-                        name: payee.name,
-                        autoCategoryId: payee.autoCategoryId,
-                        defaultAccountId: payee.defaultAccountId,
-                        createdAt: payee.createdAt,
-                        icon: payee.icon,
-                        color: null,
-                        notes: payee.notes,
-                        isFavorite: payee.isFavorite,
-                      ));
+                  _updatePayee(
+                    Payee(
+                      id: payee.id,
+                      name: payee.name,
+                      autoCategoryId: payee.autoCategoryId,
+                      defaultAccountId: payee.defaultAccountId,
+                      createdAt: payee.createdAt,
+                      icon: payee.icon,
+                      color: null,
+                      notes: payee.notes,
+                      isFavorite: payee.isFavorite,
+                    ),
+                  );
                   Navigator.pop(context);
                 },
                 child: Container(
@@ -215,7 +229,9 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final payeeAsync = ref.watch(payeeProvider(widget.payeeId));
-    final transactionsAsync = ref.watch(payeeTransactionsProvider(widget.payeeId));
+    final transactionsAsync = ref.watch(
+      payeeTransactionsProvider(widget.payeeId),
+    );
     final categoriesAsync = ref.watch(categoriesStreamProvider);
     final accountsAsync = ref.watch(_accountsStreamProvider);
     final l10n = AppLocalizations.of(context)!;
@@ -234,9 +250,9 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
 
         // Initialize controllers if not editing to keep them in sync
         if (!_notesFocusNode.hasFocus) {
-           if (_notesController.text != (payee.notes ?? '')) {
-             _notesController.text = payee.notes ?? '';
-           }
+          if (_notesController.text != (payee.notes ?? '')) {
+            _notesController.text = payee.notes ?? '';
+          }
         }
 
         return Scaffold(
@@ -253,15 +269,20 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
               IconButton(
                 icon: Icon(payee.isFavorite ? Icons.star : Icons.star_border),
                 color: payee.isFavorite ? Colors.amber : null,
-                tooltip: payee.isFavorite ? l10n.removeFromFavorites : l10n.addToFavorites,
-                onPressed: () => _updatePayee(payee.copyWith(isFavorite: !payee.isFavorite)),
+                tooltip: payee.isFavorite
+                    ? l10n.removeFromFavorites
+                    : l10n.addToFavorites,
+                onPressed: () =>
+                    _updatePayee(payee.copyWith(isFavorite: !payee.isFavorite)),
               ),
               if (_isEditing)
                 IconButton(
                   icon: const Icon(Icons.check),
                   onPressed: () async {
                     if (_nameController.text.isNotEmpty) {
-                      await _updatePayee(payee.copyWith(name: _nameController.text));
+                      await _updatePayee(
+                        payee.copyWith(name: _nameController.text),
+                      );
                       setState(() {
                         _isEditing = false;
                       });
@@ -286,7 +307,13 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                   itemBuilder: (context) => [
                     PopupMenuItem(value: 'edit', child: Text(l10n.rename)),
                     PopupMenuItem(value: 'merge', child: Text(l10n.merge)),
-                    PopupMenuItem(value: 'delete', child: Text(l10n.delete, style: const TextStyle(color: Colors.red))),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        l10n.delete,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
                   ],
                 ),
             ],
@@ -296,34 +323,59 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
               constraints: const BoxConstraints(maxWidth: 800),
               child: Column(
                 children: [
-                   // Stats & Settings
-                   transactionsAsync.when(
-                     data: (transactions) {
-                    final count = transactions.length;
-                    final totalSpent = transactions.fold<double>(0.0, (sum, t) => sum + (t.amount < 0 ? t.amount.abs() : 0));
-                    final lastUsed = transactions.isNotEmpty ? transactions.first.date : null;
+                  // Stats & Settings
+                  transactionsAsync.when(
+                    data: (transactions) {
+                      final count = transactions.length;
+                      final totalSpent = transactions.fold<double>(
+                        0.0,
+                        (sum, t) => sum + (t.amount < 0 ? t.amount.abs() : 0),
+                      );
+                      final lastUsed = transactions.isNotEmpty
+                          ? transactions.first.date
+                          : null;
 
-                    return Card(
-                      margin: const EdgeInsets.all(16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                           crossAxisAlignment: CrossAxisAlignment.start,
-                           children: [
-                              Text(l10n.usageStats, style: Theme.of(context).textTheme.titleMedium),
+                      return Card(
+                        margin: const EdgeInsets.all(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.usageStats,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               const SizedBox(height: 16),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  _StatItem(label: l10n.timesUsed, value: count.toString()),
-                                  _StatItem(label: l10n.totalSpent, value: NumberFormat.simpleCurrency().format(totalSpent)),
-                                  _StatItem(label: l10n.lastUsed, value: lastUsed != null ? DateFormat.yMMMd().format(lastUsed) : '-'),
+                                  _StatItem(
+                                    label: l10n.timesUsed,
+                                    value: count.toString(),
+                                  ),
+                                  _StatItem(
+                                    label: l10n.totalSpent,
+                                    value: NumberFormat.simpleCurrency().format(
+                                      totalSpent,
+                                    ),
+                                  ),
+                                  _StatItem(
+                                    label: l10n.lastUsed,
+                                    value: lastUsed != null
+                                        ? DateFormat.yMMMd().format(lastUsed)
+                                        : '-',
+                                  ),
                                 ],
                               ),
                               const Divider(height: 24),
 
                               // Configuration
-                              Text(l10n.configuration, style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                l10n.configuration,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               const SizedBox(height: 16),
 
                               // Icon & Color
@@ -331,21 +383,40 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                 children: [
                                   Expanded(
                                     child: InkWell(
-                                      onTap: () => _showIconPicker(context, payee),
+                                      onTap: () =>
+                                          _showIconPicker(context, payee),
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
                                         child: Row(
                                           children: [
                                             Icon(
-                                                payee.icon != null ? categoryIcons[payee.icon] ?? Icons.category : Icons.category,
-                                                color: payee.color != null ? Color(payee.color!) : Colors.grey,
+                                              payee.icon != null
+                                                  ? categoryIcons[payee.icon] ??
+                                                        Icons.category
+                                                  : Icons.category,
+                                              color: payee.color != null
+                                                  ? Color(payee.color!)
+                                                  : Colors.grey,
                                             ),
                                             const SizedBox(width: 8),
                                             Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Text(l10n.icon, style: Theme.of(context).textTheme.bodySmall),
-                                                Text(payee.icon ?? 'Default', style: Theme.of(context).textTheme.bodyMedium),
+                                                Text(
+                                                  l10n.icon,
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.bodySmall,
+                                                ),
+                                                Text(
+                                                  payee.icon ?? 'Default',
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.bodyMedium,
+                                                ),
                                               ],
                                             ),
                                           ],
@@ -355,21 +426,40 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                   ),
                                   Expanded(
                                     child: InkWell(
-                                      onTap: () => _showColorPicker(context, payee),
+                                      onTap: () =>
+                                          _showColorPicker(context, payee),
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
                                         child: Row(
                                           children: [
                                             CircleAvatar(
-                                              backgroundColor: payee.color != null ? Color(payee.color!) : Colors.grey,
+                                              backgroundColor:
+                                                  payee.color != null
+                                                  ? Color(payee.color!)
+                                                  : Colors.grey,
                                               radius: 12,
                                             ),
                                             const SizedBox(width: 8),
                                             Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Text(l10n.color, style: Theme.of(context).textTheme.bodySmall),
-                                                Text(payee.color != null ? l10n.custom : l10n.defaultLabel, style: Theme.of(context).textTheme.bodyMedium),
+                                                Text(
+                                                  l10n.color,
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.bodySmall,
+                                                ),
+                                                Text(
+                                                  payee.color != null
+                                                      ? l10n.custom
+                                                      : l10n.defaultLabel,
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.bodyMedium,
+                                                ),
                                               ],
                                             ),
                                           ],
@@ -383,21 +473,41 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
 
                               // Auto Category
                               categoriesAsync.when(
-                                data: (categories) => DropdownButtonFormField<String>(
-                                  key: ValueKey('cat_${payee.autoCategoryId}'),
-                                  decoration: InputDecoration(labelText: l10n.autoCategory),
-                                  initialValue: payee.autoCategoryId,
-                                  isExpanded: true,
-                                  items: [
-                                    DropdownMenuItem(value: null, child: Text(l10n.none)),
-                                    ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis))),
-                                  ],
-                                  onChanged: (value) {
-                                    if (value != payee.autoCategoryId) {
-                                      _updatePayee(payee.copyWith(autoCategoryId: value));
-                                    }
-                                  },
-                                ),
+                                data: (categories) =>
+                                    DropdownButtonFormField<String>(
+                                      key: ValueKey(
+                                        'cat_${payee.autoCategoryId}',
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: l10n.autoCategory,
+                                      ),
+                                      initialValue: payee.autoCategoryId,
+                                      isExpanded: true,
+                                      items: [
+                                        DropdownMenuItem(
+                                          value: null,
+                                          child: Text(l10n.none),
+                                        ),
+                                        ...categories.map(
+                                          (c) => DropdownMenuItem(
+                                            value: c.id,
+                                            child: Text(
+                                              c.name,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        if (value != payee.autoCategoryId) {
+                                          _updatePayee(
+                                            payee.copyWith(
+                                              autoCategoryId: value,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
                                 loading: () => const LinearProgressIndicator(),
                                 error: (_, __) => const SizedBox(),
                               ),
@@ -405,21 +515,41 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
 
                               // Default Account
                               accountsAsync.when(
-                                data: (accounts) => DropdownButtonFormField<String>(
-                                  key: ValueKey('acc_${payee.defaultAccountId}'),
-                                  decoration: InputDecoration(labelText: l10n.defaultAccount),
-                                  initialValue: payee.defaultAccountId,
-                                  isExpanded: true,
-                                  items: [
-                                    DropdownMenuItem(value: null, child: Text(l10n.none)),
-                                    ...accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name, overflow: TextOverflow.ellipsis))),
-                                  ],
-                                  onChanged: (value) {
-                                    if (value != payee.defaultAccountId) {
-                                      _updatePayee(payee.copyWith(defaultAccountId: value));
-                                    }
-                                  },
-                                ),
+                                data: (accounts) =>
+                                    DropdownButtonFormField<String>(
+                                      key: ValueKey(
+                                        'acc_${payee.defaultAccountId}',
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: l10n.defaultAccount,
+                                      ),
+                                      initialValue: payee.defaultAccountId,
+                                      isExpanded: true,
+                                      items: [
+                                        DropdownMenuItem(
+                                          value: null,
+                                          child: Text(l10n.none),
+                                        ),
+                                        ...accounts.map(
+                                          (a) => DropdownMenuItem(
+                                            value: a.id,
+                                            child: Text(
+                                              a.name,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        if (value != payee.defaultAccountId) {
+                                          _updatePayee(
+                                            payee.copyWith(
+                                              defaultAccountId: value,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
                                 loading: () => const LinearProgressIndicator(),
                                 error: (_, __) => const SizedBox(),
                               ),
@@ -429,45 +559,49 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                               TextFormField(
                                 controller: _notesController,
                                 focusNode: _notesFocusNode,
-                                decoration: InputDecoration(labelText: l10n.notes),
+                                decoration: InputDecoration(
+                                  labelText: l10n.notes,
+                                ),
                                 maxLines: 2,
                                 onChanged: (_) {
                                   _notesDirty = true;
                                 },
                               ),
-                           ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                 },
-                 loading: () => const LinearProgressIndicator(),
-                 error: (_, __) => const SizedBox(),
-               ),
+                      );
+                    },
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const SizedBox(),
+                  ),
 
-              Expanded(
-                child: transactionsAsync.when(
-                  data: (transactions) {
-                    if (transactions.isEmpty) {
-                      return Center(child: Text(l10n.noTransactions));
-                    }
-                    return ListView.builder(
-                      itemCount: transactions.length,
-                      itemBuilder: (context, index) {
-                        final tx = transactions[index];
-                        return TransactionListItem(
-                          transaction: tx,
-                          payeeName: payee.name,
-                          categoryName: categoriesMap[tx.categoryId],
-                          accountName: accountsMap[tx.accountId],
-                          onTap: () {
-                            context.push('/edit-transaction/${tx.id}');
+                  Expanded(
+                    child: transactionsAsync.when(
+                      data: (transactions) {
+                        if (transactions.isEmpty) {
+                          return Center(child: Text(l10n.noTransactions));
+                        }
+                        return ListView.builder(
+                          itemCount: transactions.length,
+                          itemBuilder: (context, index) {
+                            final tx = transactions[index];
+                            return TransactionListItem(
+                              transaction: tx,
+                              payeeName: payee.name,
+                              categoryName: categoriesMap[tx.categoryId],
+                              accountName: accountsMap[tx.accountId],
+                              onTap: () {
+                                context.push('/edit-transaction/${tx.id}');
+                              },
+                            );
                           },
                         );
                       },
-                    );
-                  },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, s) => ErrorView(title: l10n.error, message: e.toString()),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (e, s) =>
+                          ErrorView(title: l10n.error, message: e.toString()),
                     ),
                   ),
                 ],
@@ -476,8 +610,11 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
           ),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: ErrorView(title: l10n.error, message: err.toString())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, stack) => Scaffold(
+        body: ErrorView(title: l10n.error, message: err.toString()),
+      ),
     );
   }
 }
@@ -492,7 +629,12 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 4),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
@@ -525,10 +667,12 @@ class _MergePayeeDialogState extends ConsumerState<MergePayeeDialog> {
           const SizedBox(height: 16),
           payeesAsync.when(
             data: (payees) {
-              final candidates = payees
-                  .where((p) => p.id != widget.sourcePayee.id)
-                  .toList()
-                ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+              final candidates =
+                  payees.where((p) => p.id != widget.sourcePayee.id).toList()
+                    ..sort(
+                      (a, b) =>
+                          a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+                    );
 
               if (candidates.isEmpty) {
                 return Text(l10n.noPayees);
@@ -536,7 +680,9 @@ class _MergePayeeDialogState extends ConsumerState<MergePayeeDialog> {
               return DropdownButtonFormField<String>(
                 decoration: InputDecoration(labelText: l10n.payee),
                 items: candidates
-                    .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name)))
+                    .map(
+                      (p) => DropdownMenuItem(value: p.id, child: Text(p.name)),
+                    )
                     .toList(),
                 onChanged: (value) {
                   setState(() {
@@ -552,23 +698,30 @@ class _MergePayeeDialogState extends ConsumerState<MergePayeeDialog> {
           if (_selectedTargetId != null)
             payeesAsync.maybeWhen(
               data: (payees) {
-                 final targetName = payees.firstWhere((p) => p.id == _selectedTargetId).name;
-                 return Text(
-                    l10n.mergeWarning(targetName),
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
-                 );
+                final targetName = payees
+                    .firstWhere((p) => p.id == _selectedTargetId)
+                    .name;
+                return Text(
+                  l10n.mergeWarning(targetName),
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                );
               },
               orElse: () => const SizedBox.shrink(),
             ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
         TextButton(
           onPressed: _selectedTargetId == null
               ? null
               : () async {
-                  await ref.read(payeeControllerProvider).mergePayees(widget.sourcePayee.id, _selectedTargetId!);
+                  await ref
+                      .read(payeeControllerProvider)
+                      .mergePayees(widget.sourcePayee.id, _selectedTargetId!);
                   if (context.mounted) {
                     Navigator.pop(context); // Close dialog
                     Navigator.pop(context); // Close detail screen

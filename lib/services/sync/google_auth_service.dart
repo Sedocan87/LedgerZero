@@ -6,9 +6,7 @@ import 'package:ledger_zero/core/utils/logger.dart';
 
 class GoogleAuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      drive.DriveApi.driveFileScope,
-    ],
+    scopes: [drive.DriveApi.driveFileScope],
   );
 
   GoogleSignInAccount? get currentUser => _googleSignIn.currentUser;

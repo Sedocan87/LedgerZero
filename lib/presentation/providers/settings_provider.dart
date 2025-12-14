@@ -86,11 +86,19 @@ class SettingsState {
       numberFormat: numberFormat ?? this.numberFormat,
       firstDayOfWeek: firstDayOfWeek ?? this.firstDayOfWeek,
       language: language != null ? language.value : this.language,
-      defaultAccountId: defaultAccountId != null ? defaultAccountId.value : this.defaultAccountId,
-      defaultCategoryId: defaultCategoryId != null ? defaultCategoryId.value : this.defaultCategoryId,
-      scheduledTransactionNotifications: scheduledTransactionNotifications ?? this.scheduledTransactionNotifications,
-      budgetAlertNotifications: budgetAlertNotifications ?? this.budgetAlertNotifications,
-      syncStatusNotifications: syncStatusNotifications ?? this.syncStatusNotifications,
+      defaultAccountId: defaultAccountId != null
+          ? defaultAccountId.value
+          : this.defaultAccountId,
+      defaultCategoryId: defaultCategoryId != null
+          ? defaultCategoryId.value
+          : this.defaultCategoryId,
+      scheduledTransactionNotifications:
+          scheduledTransactionNotifications ??
+          this.scheduledTransactionNotifications,
+      budgetAlertNotifications:
+          budgetAlertNotifications ?? this.budgetAlertNotifications,
+      syncStatusNotifications:
+          syncStatusNotifications ?? this.syncStatusNotifications,
       developerMode: developerMode ?? this.developerMode,
     );
   }
@@ -105,9 +113,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
   static const String _keyDefaultAccount = 'settings_default_account';
   static const String _keyDefaultCategory = 'settings_default_category';
 
-  static const String _keyScheduledTxNotifications = 'settings_notif_scheduled_tx';
-  static const String _keyBudgetAlertNotifications = 'settings_notif_budget_alert';
-  static const String _keySyncStatusNotifications = 'settings_notif_sync_status';
+  static const String _keyScheduledTxNotifications =
+      'settings_notif_scheduled_tx';
+  static const String _keyBudgetAlertNotifications =
+      'settings_notif_budget_alert';
+  static const String _keySyncStatusNotifications =
+      'settings_notif_sync_status';
   static const String _keyDeveloperMode = 'settings_developer_mode';
 
   late SharedPreferences _prefs;
@@ -128,15 +139,24 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final defaultCategoryId = _prefs.getString(_keyDefaultCategory);
 
     // Map indices to enums safely
-    final dateFormat = AppDateFormat.values.elementAtOrNull(dateFormatIdx) ?? AppDateFormat.iso8601;
-    final numberFormat = AppNumberFormat.values.elementAtOrNull(numberFormatIdx) ?? AppNumberFormat.dot;
-    final firstDayOfWeek = AppFirstDayOfWeek.values.elementAtOrNull(firstDayOfWeekIdx) ?? AppFirstDayOfWeek.sunday;
+    final dateFormat =
+        AppDateFormat.values.elementAtOrNull(dateFormatIdx) ??
+        AppDateFormat.iso8601;
+    final numberFormat =
+        AppNumberFormat.values.elementAtOrNull(numberFormatIdx) ??
+        AppNumberFormat.dot;
+    final firstDayOfWeek =
+        AppFirstDayOfWeek.values.elementAtOrNull(firstDayOfWeekIdx) ??
+        AppFirstDayOfWeek.sunday;
 
     final language = languageCode != null ? Locale(languageCode) : null;
 
-    final scheduledTransactionNotifications = _prefs.getBool(_keyScheduledTxNotifications) ?? true;
-    final budgetAlertNotifications = _prefs.getBool(_keyBudgetAlertNotifications) ?? true;
-    final syncStatusNotifications = _prefs.getBool(_keySyncStatusNotifications) ?? true;
+    final scheduledTransactionNotifications =
+        _prefs.getBool(_keyScheduledTxNotifications) ?? true;
+    final budgetAlertNotifications =
+        _prefs.getBool(_keyBudgetAlertNotifications) ?? true;
+    final syncStatusNotifications =
+        _prefs.getBool(_keySyncStatusNotifications) ?? true;
     final developerMode = _prefs.getBool(_keyDeveloperMode) ?? false;
 
     return SettingsState(
@@ -222,4 +242,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
   }
 }
 
-final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(SettingsNotifier.new);
+final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(
+  SettingsNotifier.new,
+);

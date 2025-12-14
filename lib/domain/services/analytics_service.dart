@@ -11,8 +11,8 @@ class AnalyticsService {
   AnalyticsService({
     required AccountRepository accountRepository,
     required TransactionRepository transactionRepository,
-  })  : _accountRepository = accountRepository,
-        _transactionRepository = transactionRepository;
+  }) : _accountRepository = accountRepository,
+       _transactionRepository = transactionRepository;
 
   /// Calculates the current net worth and breakdown of assets vs liabilities.
   Future<AssetLiabilityBreakdown> calculateNetWorth() async {
@@ -46,12 +46,17 @@ class AnalyticsService {
   /// Calculates spending statistics for the given date range.
   ///
   /// [start] and [end] define the inclusive range.
-  Future<SpendingStats> calculateSpendingStats(DateTime start, DateTime end) async {
+  Future<SpendingStats> calculateSpendingStats(
+    DateTime start,
+    DateTime end,
+  ) async {
     // Ensure accurate duration calculation including the last day
     // e.g. Jan 1 to Jan 1 is 1 day.
     // Difference between Jan 2 00:00 and Jan 1 00:00 is 1 day.
     final duration = end.difference(start);
-    final days = duration.inDays + 1; // +1 to include the start day itself if end is same day
+    final days =
+        duration.inDays +
+        1; // +1 to include the start day itself if end is same day
 
     if (days <= 0) {
       return const SpendingStats(
@@ -66,7 +71,10 @@ class AnalyticsService {
     // We want the magnitude of spending, so we might want to flip the sign or return negative.
     // Usually "Spending" implies a positive magnitude of outflow.
     // getExpenseSumsByDateRange returns a Map<CategoryId, Sum>.
-    final expenseMap = await _transactionRepository.getExpenseSumsByDateRange(start, end);
+    final expenseMap = await _transactionRepository.getExpenseSumsByDateRange(
+      start,
+      end,
+    );
 
     // Sum all category expenses.
     // Assuming database returns negative values for expenses.
@@ -104,8 +112,14 @@ class AnalyticsService {
     // But repos usually take start/end.
     final end = DateTime(year, 12, 31, 23, 59, 59);
 
-    final income = await _transactionRepository.getIncomeSumByDateRange(start, end);
-    final expenseMap = await _transactionRepository.getExpenseSumsByDateRange(start, end);
+    final income = await _transactionRepository.getIncomeSumByDateRange(
+      start,
+      end,
+    );
+    final expenseMap = await _transactionRepository.getExpenseSumsByDateRange(
+      start,
+      end,
+    );
 
     double totalExpense = 0.0;
     for (final amount in expenseMap.values) {

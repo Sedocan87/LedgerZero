@@ -31,9 +31,9 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
   Future<List<CategoryGroup>> getAllCategoryGroups() =>
       select(categoryGroups).get();
 
-  Future<CategoryGroup?> getCategoryGroupById(String id) =>
-      (select(categoryGroups)..where((tbl) => tbl.id.equals(id)))
-          .getSingleOrNull();
+  Future<CategoryGroup?> getCategoryGroupById(String id) => (select(
+    categoryGroups,
+  )..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
 
   Future<int> insertCategoryGroup(CategoryGroupsCompanion group) =>
       into(categoryGroups).insert(group);

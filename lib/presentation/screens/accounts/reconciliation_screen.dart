@@ -8,8 +8,11 @@ import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
-final accountProvider = FutureProvider.family.autoDispose<Account?, String>((ref, id) {
-   return ref.watch(accountRepositoryProvider).getAccountById(id);
+final accountProvider = FutureProvider.family.autoDispose<Account?, String>((
+  ref,
+  id,
+) {
+  return ref.watch(accountRepositoryProvider).getAccountById(id);
 });
 
 class ReconciliationScreen extends ConsumerStatefulWidget {
@@ -17,7 +20,8 @@ class ReconciliationScreen extends ConsumerStatefulWidget {
   const ReconciliationScreen({super.key, required this.accountId});
 
   @override
-  ConsumerState<ReconciliationScreen> createState() => _ReconciliationScreenState();
+  ConsumerState<ReconciliationScreen> createState() =>
+      _ReconciliationScreenState();
 }
 
 class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
@@ -48,8 +52,9 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
                     labelText: l10n.enterActualBalance,
                     border: const OutlineInputBorder(),
                   ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
@@ -65,7 +70,8 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
                       // Perfect match
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.accountReconciled)));
+                          SnackBar(content: Text(l10n.accountReconciled)),
+                        );
                         Navigator.pop(context);
                       }
                     } else {
@@ -74,14 +80,17 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
                         builder: (context) => AlertDialog(
                           title: Text(l10n.discrepancyFound),
                           content: Text(
-                              l10n.discrepancyMessage(diff.toStringAsFixed(2))),
+                            l10n.discrepancyMessage(diff.toStringAsFixed(2)),
+                          ),
                           actions: [
                             TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text(l10n.no)),
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text(l10n.no),
+                            ),
                             TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text(l10n.yes)),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text(l10n.yes),
+                            ),
                           ],
                         ),
                       );
@@ -99,8 +108,9 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
                             .read(transactionRepositoryProvider)
                             .createTransaction(transaction);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(l10n.adjustmentCreated)));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.adjustmentCreated)),
+                          );
                           Navigator.pop(context);
                         }
                       }

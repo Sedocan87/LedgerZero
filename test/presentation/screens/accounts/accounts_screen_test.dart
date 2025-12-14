@@ -30,7 +30,9 @@ class FakeAccountRepository implements AccountRepository {
 }
 
 void main() {
-  testWidgets('AccountsScreen shows accounts list', (WidgetTester tester) async {
+  testWidgets('AccountsScreen shows accounts list', (
+    WidgetTester tester,
+  ) async {
     const tAccount = Account(
       id: '1',
       name: 'Checking',
@@ -43,9 +45,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          accountRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
+        overrides: [accountRepositoryProvider.overrideWithValue(fakeRepo)],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -65,9 +65,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          accountRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
+        overrides: [accountRepositoryProvider.overrideWithValue(fakeRepo)],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -78,6 +76,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Create your first account to get started with budgeting.'), findsOneWidget);
+    expect(
+      find.text('Create your first account to get started with budgeting.'),
+      findsOneWidget,
+    );
   });
 }

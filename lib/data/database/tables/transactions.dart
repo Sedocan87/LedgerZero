@@ -23,12 +23,14 @@ class Transactions extends Table {
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 
   @ReferenceName('transferTransactions')
-  TextColumn get transferAccountId => text().nullable().references(Accounts, #id)();
+  TextColumn get transferAccountId =>
+      text().nullable().references(Accounts, #id)();
 
   TextColumn get transferTransactionId => text().nullable()();
 
   @ReferenceName('parentTransactions')
-  TextColumn get parentTransactionId => text().nullable().references(Transactions, #id)();
+  TextColumn get parentTransactionId =>
+      text().nullable().references(Transactions, #id)();
 
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();

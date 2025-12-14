@@ -19,12 +19,14 @@ class WidgetTutorialScreen extends StatelessWidget {
           StepCard(
             number: 2,
             title: 'Enter Edit Mode',
-            description: 'Long press on an empty area until icons start jiggling.',
+            description:
+                'Long press on an empty area until icons start jiggling.',
           ),
           StepCard(
             number: 3,
             title: 'Add Widget',
-            description: 'Tap the + button (usually top left) to open the widget gallery.',
+            description:
+                'Tap the + button (usually top left) to open the widget gallery.',
           ),
           StepCard(
             number: 4,

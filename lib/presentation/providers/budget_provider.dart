@@ -18,7 +18,10 @@ final budgetSearchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Provider that emits when transactions change. Used to trigger rebuilds of budget view.
 final budgetTransactionUpdateProvider = StreamProvider.autoDispose<void>((ref) {
-  return ref.watch(transactionRepositoryProvider).watchTransactions(limit: 1).map((_) {});
+  return ref
+      .watch(transactionRepositoryProvider)
+      .watchTransactions(limit: 1)
+      .map((_) {});
 });
 
 /// Provider for "To Be Budgeted" amount for the selected month.
@@ -55,100 +58,106 @@ class BudgetGroupViewModel {
   final CategoryGroup group;
   final List<BudgetCategoryViewModel> categories;
 
-  const BudgetGroupViewModel({
-    required this.group,
-    required this.categories,
-  });
+  const BudgetGroupViewModel({required this.group, required this.categories});
 }
 
 /// Provider that builds the list of budget groups and categories with their calculated amounts.
-final budgetViewModelProvider = FutureProvider.autoDispose<List<BudgetGroupViewModel>>((ref) async {
-  final month = ref.watch(selectedBudgetMonthProvider);
-  final searchQuery = ref.watch(budgetSearchQueryProvider).toLowerCase();
+final budgetViewModelProvider =
+    FutureProvider.autoDispose<List<BudgetGroupViewModel>>((ref) async {
+      final month = ref.watch(selectedBudgetMonthProvider);
+      final searchQuery = ref.watch(budgetSearchQueryProvider).toLowerCase();
 
-  // Watch for transaction updates to trigger recalculation
-  ref.watch(budgetTransactionUpdateProvider);
+      // Watch for transaction updates to trigger recalculation
+      ref.watch(budgetTransactionUpdateProvider);
 
-  // Wait for category data streams to load.
-  // This ensures the provider stays in 'loading' state until data is ready,
-  // preventing UI flash of empty state.
-  final groups = await ref.watch(categoryGroupsStreamProvider.future);
-  final categories = await ref.watch(categoriesStreamProvider.future);
+      // Wait for category data streams to load.
+      // This ensures the provider stays in 'loading' state until data is ready,
+      // preventing UI flash of empty state.
+      final groups = await ref.watch(categoryGroupsStreamProvider.future);
+      final categories = await ref.watch(categoriesStreamProvider.future);
 
-  final budgetingService = ref.watch(budgetingServiceProvider);
-  final budgetRepository = ref.watch(budgetRepositoryProvider);
-  final dateFormat = DateFormat('yyyy-MM');
-  final monthString = dateFormat.format(month);
+      final budgetingService = ref.watch(budgetingServiceProvider);
+      final budgetRepository = ref.watch(budgetRepositoryProvider);
+      final dateFormat = DateFormat('yyyy-MM');
+      final monthString = dateFormat.format(month);
 
-  // Batch fetch budgets for the month to avoid N+1 queries
-  final budgets = await budgetRepository.getBudgetsForMonth(monthString);
-  final budgetMap = { for (var b in budgets) b.categoryId: b };
+      // Batch fetch budgets for the month to avoid N+1 queries
+      final budgets = await budgetRepository.getBudgetsForMonth(monthString);
+      final budgetMap = {for (var b in budgets) b.categoryId: b};
 
-  // Batch fetch performance data (Activity, Available) to avoid N+1 queries
-  final performanceData = await budgetingService.calculateBatchCategoryPerformance(month);
+      // Batch fetch performance data (Activity, Available) to avoid N+1 queries
+      final performanceData = await budgetingService
+          .calculateBatchCategoryPerformance(month);
 
-  // Batch fetch goal targets
-  final goalTargets = await budgetingService.calculateBatchGoalTargets(month, categories);
-
-  // Sort groups by sortOrder
-  final sortedGroups = List<CategoryGroup>.from(groups)
-    ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
-
-  final List<BudgetGroupViewModel> result = [];
-
-  for (final group in sortedGroups) {
-    var groupCategories = categories
-        .where((c) => c.categoryGroupId == group.id)
-        .toList();
-
-    // Apply search filter
-    if (searchQuery.isNotEmpty) {
-      groupCategories = groupCategories.where((c) => c.name.toLowerCase().contains(searchQuery)).toList();
-    }
-
-    // Skip group if no categories match (and we are searching)
-    if (searchQuery.isNotEmpty && groupCategories.isEmpty) {
-      continue;
-    }
-
-    groupCategories.sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
-
-    final categoryViewModels = groupCategories.map((category) {
-      // Get budgeted amount from batch fetched map
-      final budget = budgetMap[category.id];
-      final budgeted = budget?.budgeted ?? 0.0;
-
-      // Get calculated activity and available from batch data
-      final catPerf = performanceData[category.id];
-      final activity = catPerf?['activity'] ?? 0.0;
-      final available = catPerf?['available'] ?? 0.0;
-
-      // Get calculated goal target
-      final goalTarget = goalTargets[category.id] ?? 0.0;
-
-      return BudgetCategoryViewModel(
-        category: category,
-        budgeted: budgeted,
-        activity: activity,
-        available: available,
-        goalTarget: goalTarget,
+      // Batch fetch goal targets
+      final goalTargets = await budgetingService.calculateBatchGoalTargets(
+        month,
+        categories,
       );
-    }).toList();
 
-    result.add(BudgetGroupViewModel(
-      group: group,
-      categories: categoryViewModels,
-    ));
-  }
+      // Sort groups by sortOrder
+      final sortedGroups = List<CategoryGroup>.from(groups)
+        ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
 
-  return result;
-});
+      final List<BudgetGroupViewModel> result = [];
+
+      for (final group in sortedGroups) {
+        var groupCategories = categories
+            .where((c) => c.categoryGroupId == group.id)
+            .toList();
+
+        // Apply search filter
+        if (searchQuery.isNotEmpty) {
+          groupCategories = groupCategories
+              .where((c) => c.name.toLowerCase().contains(searchQuery))
+              .toList();
+        }
+
+        // Skip group if no categories match (and we are searching)
+        if (searchQuery.isNotEmpty && groupCategories.isEmpty) {
+          continue;
+        }
+
+        groupCategories.sort(
+          (a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0),
+        );
+
+        final categoryViewModels = groupCategories.map((category) {
+          // Get budgeted amount from batch fetched map
+          final budget = budgetMap[category.id];
+          final budgeted = budget?.budgeted ?? 0.0;
+
+          // Get calculated activity and available from batch data
+          final catPerf = performanceData[category.id];
+          final activity = catPerf?['activity'] ?? 0.0;
+          final available = catPerf?['available'] ?? 0.0;
+
+          // Get calculated goal target
+          final goalTarget = goalTargets[category.id] ?? 0.0;
+
+          return BudgetCategoryViewModel(
+            category: category,
+            budgeted: budgeted,
+            activity: activity,
+            available: available,
+            goalTarget: goalTarget,
+          );
+        }).toList();
+
+        result.add(
+          BudgetGroupViewModel(group: group, categories: categoryViewModels),
+        );
+      }
+
+      return result;
+    });
 
 /// Provider that returns a flat list of category IDs in the order they appear in the budget screen.
 /// Used for keyboard navigation.
-final budgetOrderedCategoriesProvider = FutureProvider.autoDispose<List<String>>((ref) async {
-  final viewModels = await ref.watch(budgetViewModelProvider.future);
-  return viewModels
-      .expand((group) => group.categories.map((c) => c.category.id))
-      .toList();
-});
+final budgetOrderedCategoriesProvider =
+    FutureProvider.autoDispose<List<String>>((ref) async {
+      final viewModels = await ref.watch(budgetViewModelProvider.future);
+      return viewModels
+          .expand((group) => group.categories.map((c) => c.category.id))
+          .toList();
+    });

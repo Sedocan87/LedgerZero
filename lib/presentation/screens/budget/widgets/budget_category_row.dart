@@ -40,7 +40,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     );
 
     if (oldAmount != value) {
-      ref.read(undoServiceProvider).addAction(
+      ref
+          .read(undoServiceProvider)
+          .addAction(
             BudgetChangeAction(
               budgetingService: budgetingService,
               categoryId: widget.viewModel.category.id,
@@ -65,8 +67,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
   void _moveFocus(int direction) {
     ref.read(budgetOrderedCategoriesProvider.future).then((orderedCategories) {
-      final currentIndex =
-          orderedCategories.indexOf(widget.viewModel.category.id);
+      final currentIndex = orderedCategories.indexOf(
+        widget.viewModel.category.id,
+      );
       if (currentIndex == -1) {
         return;
       }
@@ -81,37 +84,42 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
   void _onDragAccept(double tbbAmount) {
     showDialog(
-        context: context,
-        builder: (context) {
-          final controller =
-              TextEditingController(text: tbbAmount.toStringAsFixed(2));
-          return AlertDialog(
-            title: Text(AppLocalizations.of(context)!
-                .assignTo(widget.viewModel.category.name)),
-            content: AppTextField(
-              controller: controller,
-              label: AppLocalizations.of(context)!.amount,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController(
+          text: tbbAmount.toStringAsFixed(2),
+        );
+        return AlertDialog(
+          title: Text(
+            AppLocalizations.of(
+              context,
+            )!.assignTo(widget.viewModel.category.name),
+          ),
+          content: AppTextField(
+            controller: controller,
+            label: AppLocalizations.of(context)!.amount,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(AppLocalizations.of(context)!.cancel)),
-              TextButton(
-                onPressed: () {
-                  final val = double.tryParse(controller.text) ?? 0.0;
-                  if (val > 0) {
-                    // Add to existing budgeted amount
-                    _onSubmit(widget.viewModel.budgeted + val);
-                  }
-                  Navigator.pop(context);
-                },
-                child: Text(AppLocalizations.of(context)!.save),
-              ),
-            ],
-          );
-        });
+            TextButton(
+              onPressed: () {
+                final val = double.tryParse(controller.text) ?? 0.0;
+                if (val > 0) {
+                  // Add to existing budgeted amount
+                  _onSubmit(widget.viewModel.budgeted + val);
+                }
+                Navigator.pop(context);
+              },
+              child: Text(AppLocalizations.of(context)!.save),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _autoAssign(AutoAssignRule rule) async {
@@ -136,7 +144,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     final newAmount = newBudget?.budgeted ?? 0.0;
 
     if (oldAmount != newAmount) {
-      ref.read(undoServiceProvider).addAction(
+      ref
+          .read(undoServiceProvider)
+          .addAction(
             BudgetChangeAction(
               budgetingService: budgetingService,
               categoryId: widget.viewModel.category.id,
@@ -173,8 +183,11 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
   void _inspectCategory() {
     final month = ref.read(selectedBudgetMonthProvider);
     final startDate = DateTime(month.year, month.month, 1);
-    final endDate = DateTime(month.year, month.month + 1, 1)
-        .subtract(const Duration(milliseconds: 1));
+    final endDate = DateTime(
+      month.year,
+      month.month + 1,
+      1,
+    ).subtract(const Duration(milliseconds: 1));
 
     final filter = TransactionFilter(
       categoryIds: [widget.viewModel.category.id],
@@ -271,14 +284,21 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       }
     } else {
       bubbleColor = Colors.grey.withValues(alpha: 0.1);
-      textColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+      textColor = Theme.of(
+        context,
+      ).colorScheme.onSurface.withValues(alpha: 0.6);
     }
 
     // Optimize rebuilds: only rebuild if THIS category's editing state changes
-    final isEditing = ref.watch(editingCategoryProvider.select((value) => value == widget.viewModel.category.id));
+    final isEditing = ref.watch(
+      editingCategoryProvider.select(
+        (value) => value == widget.viewModel.category.id,
+      ),
+    );
     final viewMode = ref.watch(budgetViewModeProvider);
 
-    final semanticLabel = '${widget.viewModel.category.name}. '
+    final semanticLabel =
+        '${widget.viewModel.category.name}. '
         '${AppLocalizations.of(context)!.budgeted}: ${currency.format(widget.viewModel.budgeted)}. '
         '${AppLocalizations.of(context)!.activity}: ${currency.format(widget.viewModel.activity)}. '
         '${AppLocalizations.of(context)!.available}: ${currency.format(available)}.';
@@ -295,8 +315,10 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
                 : Colors.transparent,
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                vertical: 8.0,
+                horizontal: 16.0,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -315,7 +337,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                               initialValue: widget.viewModel.budgeted,
                               onSubmitted: _onSubmit,
                               onCancel: () {
-                                ref.read(editingCategoryProvider.notifier).state =
+                                ref
+                                        .read(editingCategoryProvider.notifier)
+                                        .state =
                                     null;
                               },
                               onNext: () => _moveFocus(1),
@@ -323,14 +347,18 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                             )
                           : GestureDetector(
                               onTap: () {
-                                ref.read(editingCategoryProvider.notifier).state =
+                                ref
+                                        .read(editingCategoryProvider.notifier)
+                                        .state =
                                     widget.viewModel.category.id;
                               },
                               onLongPress: _showQuickActions,
                               behavior: HitTestBehavior.opaque,
                               child: Container(
                                 alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -338,10 +366,13 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                                         widget.viewModel.budgeted <
                                             widget.viewModel.goalTarget)
                                       Tooltip(
-                                        message: AppLocalizations.of(context)!
-                                            .underfunded,
+                                        message: AppLocalizations.of(
+                                          context,
+                                        )!.underfunded,
                                         child: Padding(
-                                          padding: const EdgeInsets.only(right: 4.0),
+                                          padding: const EdgeInsets.only(
+                                            right: 4.0,
+                                          ),
                                           child: Icon(
                                             Icons.warning_amber_rounded,
                                             size: 16,
@@ -353,7 +384,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                                       value: widget.viewModel.budgeted,
                                       format: currency,
                                       textAlign: TextAlign.right,
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 ),
@@ -367,16 +400,18 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                         borderRadius: BorderRadius.circular(4),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 8.0, horizontal: 4.0),
+                            vertical: 8.0,
+                            horizontal: 4.0,
+                          ),
                           child: AnimatedCountText(
                             value: widget.viewModel.activity,
                             format: currency,
                             textAlign: TextAlign.right,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      decoration: TextDecoration.underline,
-                                      decorationStyle: TextDecorationStyle.dotted,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  decoration: TextDecoration.underline,
+                                  decorationStyle: TextDecorationStyle.dotted,
+                                ),
                           ),
                         ),
                       ),
@@ -385,7 +420,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                       flex: 2,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 4),
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: bubbleColor,
                           borderRadius: BorderRadius.circular(8),
@@ -394,7 +431,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                             if (available < 0)
+                            if (available < 0)
                               Padding(
                                 padding: const EdgeInsets.only(right: 2.0),
                                 child: Icon(
@@ -407,7 +444,8 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                               child: AnimatedCountText(
                                 value: available,
                                 format: currency,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
                                       color: textColor,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -421,63 +459,78 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                   ] else ...[
                     Expanded(
                       flex: 6,
-                      child: Builder(builder: (context) {
-                        final budgeted = widget.viewModel.budgeted;
-                        final spent = widget.viewModel.activity.abs();
-                        final progress = budgeted > 0
-                            ? (spent / budgeted).clamp(0.0, 1.0)
-                            : (spent > 0 ? 1.0 : 0.0);
-                        final isOverspent = spent > budgeted;
-                        final barColor =
-                            isOverspent ? Colors.red : Colors.green;
+                      child: Builder(
+                        builder: (context) {
+                          final budgeted = widget.viewModel.budgeted;
+                          final spent = widget.viewModel.activity.abs();
+                          final progress = budgeted > 0
+                              ? (spent / budgeted).clamp(0.0, 1.0)
+                              : (spent > 0 ? 1.0 : 0.0);
+                          final isOverspent = spent > budgeted;
+                          final barColor = isOverspent
+                              ? Colors.red
+                              : Colors.green;
 
-                        String varianceText;
-                        if (budgeted > 0) {
-                           final pct = ((budgeted - spent) / budgeted * 100);
-                           if (pct >= 0) {
-                              varianceText = '${AppLocalizations.of(context)!.remaining}: ${pct.toStringAsFixed(0)}%';
-                           } else {
-                              varianceText = '${AppLocalizations.of(context)!.overspent}: ${pct.abs().toStringAsFixed(0)}%';
-                           }
-                        } else if (spent > 0) {
-                           varianceText = AppLocalizations.of(context)!.overspent;
-                        } else {
-                           // Default text when nothing budgeted or spent
-                           varianceText = '${AppLocalizations.of(context)!.remaining}: 100%';
-                        }
+                          String varianceText;
+                          if (budgeted > 0) {
+                            final pct = ((budgeted - spent) / budgeted * 100);
+                            if (pct >= 0) {
+                              varianceText =
+                                  '${AppLocalizations.of(context)!.remaining}: ${pct.toStringAsFixed(0)}%';
+                            } else {
+                              varianceText =
+                                  '${AppLocalizations.of(context)!.overspent}: ${pct.abs().toStringAsFixed(0)}%';
+                            }
+                          } else if (spent > 0) {
+                            varianceText = AppLocalizations.of(
+                              context,
+                            )!.overspent;
+                          } else {
+                            // Default text when nothing budgeted or spent
+                            varianceText =
+                                '${AppLocalizations.of(context)!.remaining}: 100%';
+                          }
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${currency.format(spent)} / ${currency.format(budgeted)}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                Text(
-                                  varianceText,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontSize: 10,
-                                    color: isOverspent ? Colors.red : null,
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${currency.format(spent)} / ${currency.format(budgeted)}',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            LinearProgressIndicator(
-                              value: progress,
-                              color: barColor,
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.surfaceContainerHighest,
-                              minHeight: 8,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ],
-                        );
-                      }),
+                                  Text(
+                                    varianceText,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          fontSize: 10,
+                                          color: isOverspent
+                                              ? Colors.red
+                                              : null,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              LinearProgressIndicator(
+                                value: progress,
+                                color: barColor,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                minHeight: 8,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ],

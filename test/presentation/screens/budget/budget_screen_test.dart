@@ -6,7 +6,9 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.d
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('MonthSelector displays current month and navigates', (tester) async {
+  testWidgets('MonthSelector displays current month and navigates', (
+    tester,
+  ) async {
     final now = DateTime.now();
     final currentMonth = DateTime(now.year, now.month);
     final previousMonth = DateTime(now.year, now.month - 1);

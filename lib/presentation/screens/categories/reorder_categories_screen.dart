@@ -10,10 +10,12 @@ class ReorderCategoriesScreen extends ConsumerStatefulWidget {
   const ReorderCategoriesScreen({super.key, required this.groupId});
 
   @override
-  ConsumerState<ReorderCategoriesScreen> createState() => _ReorderCategoriesScreenState();
+  ConsumerState<ReorderCategoriesScreen> createState() =>
+      _ReorderCategoriesScreenState();
 }
 
-class _ReorderCategoriesScreenState extends ConsumerState<ReorderCategoriesScreen> {
+class _ReorderCategoriesScreenState
+    extends ConsumerState<ReorderCategoriesScreen> {
   List<Category>? _categories;
   bool _isSaving = false;
 
@@ -26,13 +28,16 @@ class _ReorderCategoriesScreenState extends ConsumerState<ReorderCategoriesScree
   Future<void> _loadCategories() async {
     // We need to fetch all categories and filter, or add getCategoriesByGroupId to repository.
     // Assuming watchAllCategories is available or getAllCategories.
-    final allCategories = await ref.read(categoryRepositoryProvider).getAllCategories();
+    final allCategories = await ref
+        .read(categoryRepositoryProvider)
+        .getAllCategories();
     if (mounted) {
       setState(() {
-        _categories = allCategories
-            .where((c) => c.categoryGroupId == widget.groupId)
-            .toList()
-          ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
+        _categories =
+            allCategories
+                .where((c) => c.categoryGroupId == widget.groupId)
+                .toList()
+              ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
       });
     }
   }
@@ -55,8 +60,9 @@ class _ReorderCategoriesScreenState extends ConsumerState<ReorderCategoriesScree
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -83,7 +89,7 @@ class _ReorderCategoriesScreenState extends ConsumerState<ReorderCategoriesScree
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: _isSaving ? null : _save,
-          )
+          ),
         ],
       ),
       body: ReorderableListView(

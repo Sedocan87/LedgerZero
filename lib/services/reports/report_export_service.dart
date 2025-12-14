@@ -15,10 +15,7 @@ class ReportExportService {
     await file.writeAsString(csv);
 
     await SharePlus.instance.share(
-      ShareParams(
-        text: 'Exported Report',
-        files: [XFile(file.path)],
-      ),
+      ShareParams(text: 'Exported Report', files: [XFile(file.path)]),
     );
   }
 
@@ -47,9 +44,13 @@ class ReportExportService {
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(title,
-                    style: pw.TextStyle(
-                        fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                pw.Text(
+                  title,
+                  style: pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
                 pw.Text(DateFormat.yMMMd().format(DateTime.now())),
               ],
             ),
@@ -72,12 +73,13 @@ class ReportExportService {
               data: data,
               border: null,
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              headerDecoration:
-                  pw.BoxDecoration(color: pdf_lib.PdfColors.grey300),
+              headerDecoration: pw.BoxDecoration(
+                color: pdf_lib.PdfColors.grey300,
+              ),
               cellHeight: 30,
               cellAlignments: {
                 for (var i = 0; i < headers.length; i++)
-                  i: pw.Alignment.centerLeft
+                  i: pw.Alignment.centerLeft,
               },
             ),
           ];
@@ -90,10 +92,7 @@ class ReportExportService {
     await file.writeAsBytes(await pdf.save());
 
     await SharePlus.instance.share(
-      ShareParams(
-        text: 'Exported Report PDF',
-        files: [XFile(file.path)],
-      ),
+      ShareParams(text: 'Exported Report PDF', files: [XFile(file.path)]),
     );
   }
 
@@ -103,10 +102,7 @@ class ReportExportService {
     await file.writeAsBytes(imageBytes);
 
     await SharePlus.instance.share(
-      ShareParams(
-        text: 'Exported Chart Image',
-        files: [XFile(file.path)],
-      ),
+      ShareParams(text: 'Exported Chart Image', files: [XFile(file.path)]),
     );
   }
 }

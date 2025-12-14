@@ -17,7 +17,11 @@ class FakeTransactionRepository extends Fake implements TransactionRepository {
   FakeTransactionRepository(this.initialData);
 
   @override
-  Stream<List<Transaction>> watchTransactions({TransactionFilter? filter, TransactionSort? sort, int? limit}) {
+  Stream<List<Transaction>> watchTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+    int? limit,
+  }) {
     return Stream.value(initialData);
   }
 
@@ -36,7 +40,9 @@ void main() {
     // likely due to provider initialization timing or stream behavior in tests.
     // Logic for Swipe and Long Press is implemented in the codebase and verified manually.
 
-    testWidgets('Transaction item swipe actions trigger interactions', (tester) async {
+    testWidgets('Transaction item swipe actions trigger interactions', (
+      tester,
+    ) async {
       final transaction = Transaction(
         id: '1',
         accountId: 'acc1',
@@ -56,13 +62,22 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            transactionsProvider.overrideWith((ref) => TransactionsNotifier(ref)..state = TransactionsState(
-              transactions: AsyncValue.data([transaction]),
-            )),
+            transactionsProvider.overrideWith(
+              (ref) => TransactionsNotifier(ref)
+                ..state = TransactionsState(
+                  transactions: AsyncValue.data([transaction]),
+                ),
+            ),
             transactionRepositoryProvider.overrideWithValue(fakeRepo),
-            categoryMapProvider.overrideWith((ref) => Stream.value({'cat1': 'Groceries'})),
-            payeeMapProvider.overrideWith((ref) => Stream.value({'payee1': 'Walmart'})),
-            accountMapProvider.overrideWith((ref) => Stream.value({'acc1': 'Checking'})),
+            categoryMapProvider.overrideWith(
+              (ref) => Stream.value({'cat1': 'Groceries'}),
+            ),
+            payeeMapProvider.overrideWith(
+              (ref) => Stream.value({'payee1': 'Walmart'}),
+            ),
+            accountMapProvider.overrideWith(
+              (ref) => Stream.value({'acc1': 'Checking'}),
+            ),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -89,7 +104,9 @@ void main() {
       // expect(find.text('Transaction deleted'), findsOneWidget);
     }, skip: true); // Fix test setup - Empty state rendered instead of list
 
-    testWidgets('Transaction item long press toggles selection mode', (tester) async {
+    testWidgets('Transaction item long press toggles selection mode', (
+      tester,
+    ) async {
       final transaction = Transaction(
         id: '1',
         accountId: 'acc1',
@@ -109,13 +126,22 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            transactionsProvider.overrideWith((ref) => TransactionsNotifier(ref)..state = TransactionsState(
-              transactions: AsyncValue.data([transaction]),
-            )),
+            transactionsProvider.overrideWith(
+              (ref) => TransactionsNotifier(ref)
+                ..state = TransactionsState(
+                  transactions: AsyncValue.data([transaction]),
+                ),
+            ),
             transactionRepositoryProvider.overrideWithValue(fakeRepo),
-            categoryMapProvider.overrideWith((ref) => Stream.value({'cat1': 'Groceries'})),
-            payeeMapProvider.overrideWith((ref) => Stream.value({'payee1': 'Walmart'})),
-            accountMapProvider.overrideWith((ref) => Stream.value({'acc1': 'Checking'})),
+            categoryMapProvider.overrideWith(
+              (ref) => Stream.value({'cat1': 'Groceries'}),
+            ),
+            payeeMapProvider.overrideWith(
+              (ref) => Stream.value({'payee1': 'Walmart'}),
+            ),
+            accountMapProvider.overrideWith(
+              (ref) => Stream.value({'acc1': 'Checking'}),
+            ),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

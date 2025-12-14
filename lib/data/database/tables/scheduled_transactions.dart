@@ -9,9 +9,11 @@ class ScheduledTransactions extends Table {
   TextColumn get payeeId => text().nullable().references(Payees, #id)();
   TextColumn get categoryId => text().nullable().references(Categories, #id)();
   RealColumn get amount => real().nullable()();
-  TextColumn get frequency => text().nullable()(); // daily, weekly, monthly, yearly
+  TextColumn get frequency =>
+      text().nullable()(); // daily, weekly, monthly, yearly
   IntColumn get interval => integer().nullable()(); // Every N days/weeks/etc
-  IntColumn get occurrenceCount => integer().nullable()(); // Stop after N occurrences
+  IntColumn get occurrenceCount =>
+      integer().nullable()(); // Stop after N occurrences
   DateTimeColumn get nextDate => dateTime().nullable()();
   DateTimeColumn get endDate => dateTime().nullable()();
   BoolColumn get autoApprove => boolean().withDefault(const Constant(false))();

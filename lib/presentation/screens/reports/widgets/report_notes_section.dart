@@ -158,7 +158,8 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
                 border: const OutlineInputBorder(),
               ),
               maxLines: 3,
-              validator: (value) => value == null || value.isEmpty ? l10n.enterNote : null,
+              validator: (value) =>
+                  value == null || value.isEmpty ? l10n.enterNote : null,
             ),
           ],
         ),
@@ -173,21 +174,29 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
                   title: Text(l10n.deleteNoteConfirmationTitle),
                   content: Text(l10n.deleteNoteConfirmationMessage),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
-                    TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.delete)),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text(l10n.cancel),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text(l10n.delete),
+                    ),
                   ],
                 ),
               );
 
               if (confirm == true && context.mounted) {
-                 await ref.read(reportNoteRepositoryProvider).deleteNote(widget.note!.id);
-                 if (context.mounted) {
-                    ref.invalidate(reportNotesListProvider);
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.noteDeleted)),
-                    );
-                 }
+                await ref
+                    .read(reportNoteRepositoryProvider)
+                    .deleteNote(widget.note!.id);
+                if (context.mounted) {
+                  ref.invalidate(reportNotesListProvider);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(l10n.noteDeleted)));
+                }
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -213,9 +222,9 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
               if (context.mounted) {
                 ref.invalidate(reportNotesListProvider);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.noteSaved)),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(l10n.noteSaved)));
               }
             }
           },

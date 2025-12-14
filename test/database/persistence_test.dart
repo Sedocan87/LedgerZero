@@ -15,14 +15,16 @@ void main() {
     var database = AppDatabase(NativeDatabase(dbFile));
 
     // Insert data
-    await database.into(database.accounts).insert(
-      AccountsCompanion(
-        id: const Value('acc_persistent'),
-        name: const Value('Persistent Account'),
-        type: const Value('checking'),
-        createdAt: Value(DateTime.now()),
-      ),
-    );
+    await database
+        .into(database.accounts)
+        .insert(
+          AccountsCompanion(
+            id: const Value('acc_persistent'),
+            name: const Value('Persistent Account'),
+            type: const Value('checking'),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
 
     // Close database
     await database.close();

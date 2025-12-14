@@ -25,12 +25,16 @@ class RuleConflictService {
         final ruleA = rules[i];
         final ruleB = rules[j];
 
-        if (_areConditionsIdentical(ruleA, ruleB) && _areActionsConflicting(ruleA, ruleB)) {
-          conflicts.add(RuleConflict(
-            ruleA: ruleA,
-            ruleB: ruleB,
-            description: 'Rules have identical conditions but conflicting actions.',
-          ));
+        if (_areConditionsIdentical(ruleA, ruleB) &&
+            _areActionsConflicting(ruleA, ruleB)) {
+          conflicts.add(
+            RuleConflict(
+              ruleA: ruleA,
+              ruleB: ruleB,
+              description:
+                  'Rules have identical conditions but conflicting actions.',
+            ),
+          );
         }
       }
     }
@@ -48,10 +52,12 @@ class RuleConflictService {
     // Naive check: does every condition in A exist in B?
     // This assumes strict equality of conditions.
     for (final condA in ruleA.conditions) {
-      final hasMatch = ruleB.conditions.any((condB) =>
-          condB.type == condA.type &&
-          condB.operator == condA.operator &&
-          condB.value == condA.value);
+      final hasMatch = ruleB.conditions.any(
+        (condB) =>
+            condB.type == condA.type &&
+            condB.operator == condA.operator &&
+            condB.value == condA.value,
+      );
       if (!hasMatch) {
         return false;
       }

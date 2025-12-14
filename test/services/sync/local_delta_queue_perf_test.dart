@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -42,7 +41,11 @@ void main() {
       final enqueueTime = stopwatch.elapsedMilliseconds;
       // print('Enqueued $operationCount items in ${enqueueTime}ms');
 
-      expect(enqueueTime, lessThan(10000), reason: 'Enqueueing should be reasonably fast');
+      expect(
+        enqueueTime,
+        lessThan(10000),
+        reason: 'Enqueueing should be reasonably fast',
+      );
 
       // 2. List pending deltas
       stopwatch.reset();
@@ -63,7 +66,11 @@ void main() {
       final processTime = stopwatch.elapsedMilliseconds;
       // print('Processed $operationCount items in ${processTime}ms');
 
-      expect(processTime, lessThan(15000), reason: 'Processing should be reasonably fast');
+      expect(
+        processTime,
+        lessThan(15000),
+        reason: 'Processing should be reasonably fast',
+      );
 
       // 4. Verify queue is empty
       final remainingFiles = await queue.getPendingDeltas();

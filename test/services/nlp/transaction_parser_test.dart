@@ -26,26 +26,28 @@ import '../../mocks/repository_mocks.mocks.dart';
 import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
 import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 
-class MockParsingHistoryRepository extends Mock implements ParsingHistoryRepository {
-    @override
-    Future<List<Map<String, dynamic>>> getHistory(String? input) {
-        return super.noSuchMethod(
-            Invocation.method(#getHistory, [input]),
-            returnValue: Future.value(<Map<String, dynamic>>[]),
-            returnValueForMissingStub: Future.value(<Map<String, dynamic>>[]),
-        );
-    }
+class MockParsingHistoryRepository extends Mock
+    implements ParsingHistoryRepository {
+  @override
+  Future<List<Map<String, dynamic>>> getHistory(String? input) {
+    return super.noSuchMethod(
+      Invocation.method(#getHistory, [input]),
+      returnValue: Future.value(<Map<String, dynamic>>[]),
+      returnValueForMissingStub: Future.value(<Map<String, dynamic>>[]),
+    );
+  }
 }
 
-class MockParsingRulesRepository extends Mock implements ParsingRulesRepository {
-    @override
-    Future<List<Map<String, dynamic>>> getAllRules() {
-        return super.noSuchMethod(
-            Invocation.method(#getAllRules, []),
-            returnValue: Future.value(<Map<String, dynamic>>[]),
-            returnValueForMissingStub: Future.value(<Map<String, dynamic>>[]),
-        );
-    }
+class MockParsingRulesRepository extends Mock
+    implements ParsingRulesRepository {
+  @override
+  Future<List<Map<String, dynamic>>> getAllRules() {
+    return super.noSuchMethod(
+      Invocation.method(#getAllRules, []),
+      returnValue: Future.value(<Map<String, dynamic>>[]),
+      returnValueForMissingStub: Future.value(<Map<String, dynamic>>[]),
+    );
+  }
 }
 
 void main() {
@@ -96,7 +98,11 @@ void main() {
     });
 
     test('matches known payee', () async {
-      final payee = Payee(id: '1', name: 'Starbucks', createdAt: DateTime.now());
+      final payee = Payee(
+        id: '1',
+        name: 'Starbucks',
+        createdAt: DateTime.now(),
+      );
       when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async => [payee]);
       when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => []);
 
@@ -106,21 +112,29 @@ void main() {
     });
 
     test('matches known category by name', () async {
-      final category = Category(id: '1', name: 'Dining Out', createdAt: DateTime.now());
+      final category = Category(
+        id: '1',
+        name: 'Dining Out',
+        createdAt: DateTime.now(),
+      );
       when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async => []);
-      when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => [category]);
+      when(
+        mockCategoryRepo.getAllCategories(),
+      ).thenAnswer((_) async => [category]);
 
-      final result = await parser.parse('Dinner at restaurant'); // 'restaurant' maps to 'Dining Out' in keyword map
+      final result = await parser.parse(
+        'Dinner at restaurant',
+      ); // 'restaurant' maps to 'Dining Out' in keyword map
       expect(result.categoryName, equals('Dining Out'));
       expect(result.categoryId, equals('1'));
     });
 
     test('detects income keywords', () async {
-        when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async => []);
-        when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => []);
+      when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async => []);
+      when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => []);
 
-        final result = await parser.parse('Salary deposit');
-        expect(result.isIncome, isTrue);
+      final result = await parser.parse('Salary deposit');
+      expect(result.isIncome, isTrue);
     });
   });
 }

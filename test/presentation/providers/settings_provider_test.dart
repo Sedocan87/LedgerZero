@@ -16,9 +16,7 @@ void main() {
   setUp(() {
     mockPrefs = MockSharedPreferences();
     container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(mockPrefs),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
     );
   });
 
@@ -54,7 +52,6 @@ void main() {
       when(mockPrefs.getString('settings_language')).thenReturn(null);
       when(mockPrefs.getString('settings_default_account')).thenReturn(null);
       when(mockPrefs.getString('settings_default_category')).thenReturn(null);
-
 
       final notifier = container.read(settingsProvider.notifier);
       final state = notifier.state;

@@ -40,23 +40,21 @@ class PayeesScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextField(
-              decoration: InputDecoration(
-                labelText: l10n.searchPayees,
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.searchPayees,
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    ref.read(payeeSearchQueryProvider.notifier).state = value;
+                  },
+                ),
               ),
-              onChanged: (value) {
-                ref.read(payeeSearchQueryProvider.notifier).state = value;
-              },
-            ),
-          ),
               Expanded(
                 child: payeesAsync.when(
                   data: (payees) {
                     if (payees.isEmpty) {
-                      return Center(
-                        child: Text(l10n.noPayees),
-                      );
+                      return Center(child: Text(l10n.noPayees));
                     }
                     return ListView.builder(
                       itemCount: payees.length,
@@ -71,8 +69,10 @@ class PayeesScreen extends ConsumerWidget {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => ErrorView(title: l10n.error, message: err.toString()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) =>
+                      ErrorView(title: l10n.error, message: err.toString()),
                 ),
               ),
             ],

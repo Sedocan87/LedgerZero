@@ -10,6 +10,7 @@ void main() {
 
   testWidgets('Cross-platform environment check', (WidgetTester tester) async {
     // Simply verify that we can detect the platform.
+    // ignore: avoid_print
     print('Running on platform: ${Platform.operatingSystem}');
     expect(Platform.operatingSystem, isNotEmpty);
   });

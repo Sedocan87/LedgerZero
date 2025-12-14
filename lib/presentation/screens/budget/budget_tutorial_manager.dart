@@ -19,19 +19,22 @@ class BudgetTutorialManager {
         ),
         TutorialStep(
           title: 'Select Month',
-          description: 'Navigate between months to plan ahead or review past budgets.',
+          description:
+              'Navigate between months to plan ahead or review past budgets.',
           targetKey: monthSelectorKey,
           position: TutorialPosition.bottom,
         ),
         TutorialStep(
           title: 'To Be Budgeted',
-          description: 'This is your available money. Assign it to categories until it reaches zero.',
+          description:
+              'This is your available money. Assign it to categories until it reaches zero.',
           targetKey: tbbKey,
           position: TutorialPosition.bottom,
         ),
         TutorialStep(
           title: 'Budget Categories',
-          description: 'Tap on a category to assign money. You can also move money between categories.',
+          description:
+              'Tap on a category to assign money. You can also move money between categories.',
           targetKey: categoryListKey,
           position: TutorialPosition.top,
         ),

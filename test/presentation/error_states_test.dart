@@ -23,14 +23,18 @@ class MockSyncController extends Mock implements SyncController {
 
 void main() {
   group('Error States', () {
-    testWidgets('HomeScreen shows error message when accounts check fails', (tester) async {
+    testWidgets('HomeScreen shows error message when accounts check fails', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-             hasAccountsProvider.overrideWith((ref) => Future.error('Failed to load accounts')),
-             backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
-             syncControllerProvider.overrideWith((ref) => MockSyncController()),
-             recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
+            hasAccountsProvider.overrideWith(
+              (ref) => Future.error('Failed to load accounts'),
+            ),
+            backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
+            syncControllerProvider.overrideWith((ref) => MockSyncController()),
+            recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -44,7 +48,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Check for error text
-      expect(find.textContaining('Error: Failed to load accounts'), findsOneWidget);
+      expect(
+        find.textContaining('Error: Failed to load accounts'),
+        findsOneWidget,
+      );
     });
   });
 }

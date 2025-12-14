@@ -8,7 +8,9 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_
 void main() {
   const category = Category(id: '1', name: 'Test Category');
 
-  testWidgets('BudgetCategoryRow displays positive available amount in green', (tester) async {
+  testWidgets('BudgetCategoryRow displays positive available amount in green', (
+    tester,
+  ) async {
     const viewModel = BudgetCategoryViewModel(
       category: category,
       budgeted: 100.0,
@@ -17,13 +19,13 @@ void main() {
       goalTarget: 0.0,
     );
 
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(
-        home: Scaffold(
-          body: BudgetCategoryRow(viewModel: viewModel),
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: BudgetCategoryRow(viewModel: viewModel)),
         ),
       ),
-    ));
+    );
 
     final containerFinder = find.byWidgetPredicate((widget) {
       if (widget is Container && widget.decoration is BoxDecoration) {
@@ -46,7 +48,9 @@ void main() {
     expect(text.style?.color, Colors.green.shade800);
   });
 
-  testWidgets('BudgetCategoryRow displays negative available amount in red', (tester) async {
+  testWidgets('BudgetCategoryRow displays negative available amount in red', (
+    tester,
+  ) async {
     const viewModel = BudgetCategoryViewModel(
       category: category,
       budgeted: 0.0,
@@ -55,13 +59,13 @@ void main() {
       goalTarget: 0.0,
     );
 
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(
-        home: Scaffold(
-          body: BudgetCategoryRow(viewModel: viewModel),
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: BudgetCategoryRow(viewModel: viewModel)),
         ),
       ),
-    ));
+    );
 
     final containerFinder = find.byWidgetPredicate((widget) {
       if (widget is Container && widget.decoration is BoxDecoration) {
@@ -83,7 +87,9 @@ void main() {
     expect(text.style?.color, Colors.red.shade800);
   });
 
-  testWidgets('BudgetCategoryRow displays zero available amount in grey', (tester) async {
+  testWidgets('BudgetCategoryRow displays zero available amount in grey', (
+    tester,
+  ) async {
     const viewModel = BudgetCategoryViewModel(
       category: category,
       budgeted: 100.0,
@@ -92,13 +98,13 @@ void main() {
       goalTarget: 0.0,
     );
 
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(
-        home: Scaffold(
-          body: BudgetCategoryRow(viewModel: viewModel),
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(body: BudgetCategoryRow(viewModel: viewModel)),
         ),
       ),
-    ));
+    );
 
     final containerFinder = find.byWidgetPredicate((widget) {
       if (widget is Container && widget.decoration is BoxDecoration) {

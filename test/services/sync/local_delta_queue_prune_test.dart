@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -22,24 +21,28 @@ void main() {
 
     test('Squash INSERT + UPDATE = INSERT', () async {
       // 1. Insert
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now(),
-        deviceUuid: 'dev1',
-        sequence: 1,
-        action: SyncAction.insert,
-        tableName: 't1',
-        data: const {'id': '1', 'val': 'a'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now(),
+          deviceUuid: 'dev1',
+          sequence: 1,
+          action: SyncAction.insert,
+          tableName: 't1',
+          data: const {'id': '1', 'val': 'a'},
+        ),
+      );
 
       // 2. Update
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(const Duration(seconds: 1)),
-        deviceUuid: 'dev1',
-        sequence: 2,
-        action: SyncAction.update,
-        tableName: 't1',
-        data: const {'id': '1', 'val': 'b'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now().add(const Duration(seconds: 1)),
+          deviceUuid: 'dev1',
+          sequence: 2,
+          action: SyncAction.update,
+          tableName: 't1',
+          data: const {'id': '1', 'val': 'b'},
+        ),
+      );
 
       final count = await queue.pruneQueue();
       expect(count, equals(1)); // 1 file removed
@@ -54,23 +57,27 @@ void main() {
     });
 
     test('Squash UPDATE + UPDATE = UPDATE', () async {
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now(),
-        deviceUuid: 'dev1',
-        sequence: 1,
-        action: SyncAction.update,
-        tableName: 't1',
-        data: const {'id': '1', 'val': 'a'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now(),
+          deviceUuid: 'dev1',
+          sequence: 1,
+          action: SyncAction.update,
+          tableName: 't1',
+          data: const {'id': '1', 'val': 'a'},
+        ),
+      );
 
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(const Duration(seconds: 1)),
-        deviceUuid: 'dev1',
-        sequence: 2,
-        action: SyncAction.update,
-        tableName: 't1',
-        data: const {'id': '1', 'val': 'b'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now().add(const Duration(seconds: 1)),
+          deviceUuid: 'dev1',
+          sequence: 2,
+          action: SyncAction.update,
+          tableName: 't1',
+          data: const {'id': '1', 'val': 'b'},
+        ),
+      );
 
       final count = await queue.pruneQueue();
       expect(count, equals(1));
@@ -84,23 +91,27 @@ void main() {
     });
 
     test('Squash INSERT + DELETE = Remove All', () async {
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now(),
-        deviceUuid: 'dev1',
-        sequence: 1,
-        action: SyncAction.insert,
-        tableName: 't1',
-        data: const {'id': '1', 'val': 'a'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now(),
+          deviceUuid: 'dev1',
+          sequence: 1,
+          action: SyncAction.insert,
+          tableName: 't1',
+          data: const {'id': '1', 'val': 'a'},
+        ),
+      );
 
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(const Duration(seconds: 1)),
-        deviceUuid: 'dev1',
-        sequence: 2,
-        action: SyncAction.delete,
-        tableName: 't1',
-        data: const {'id': '1'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now().add(const Duration(seconds: 1)),
+          deviceUuid: 'dev1',
+          sequence: 2,
+          action: SyncAction.delete,
+          tableName: 't1',
+          data: const {'id': '1'},
+        ),
+      );
 
       final count = await queue.pruneQueue();
       expect(count, equals(2)); // Both removed
@@ -110,23 +121,27 @@ void main() {
     });
 
     test('Squash UPDATE + DELETE = DELETE', () async {
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now(),
-        deviceUuid: 'dev1',
-        sequence: 1,
-        action: SyncAction.update,
-        tableName: 't1',
-        data: const {'id': '1', 'val': 'a'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now(),
+          deviceUuid: 'dev1',
+          sequence: 1,
+          action: SyncAction.update,
+          tableName: 't1',
+          data: const {'id': '1', 'val': 'a'},
+        ),
+      );
 
-      await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now().add(const Duration(seconds: 1)),
-        deviceUuid: 'dev1',
-        sequence: 2,
-        action: SyncAction.delete,
-        tableName: 't1',
-        data: const {'id': '1'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now().add(const Duration(seconds: 1)),
+          deviceUuid: 'dev1',
+          sequence: 2,
+          action: SyncAction.delete,
+          tableName: 't1',
+          data: const {'id': '1'},
+        ),
+      );
 
       final count = await queue.pruneQueue();
       expect(count, equals(1));
@@ -139,14 +154,16 @@ void main() {
     });
 
     test('Export queue', () async {
-       await queue.enqueue(SyncDelta(
-        timestamp: DateTime.now(),
-        deviceUuid: 'dev1',
-        sequence: 1,
-        action: SyncAction.insert,
-        tableName: 't1',
-        data: const {'id': '1', 'val': 'a'},
-      ));
+      await queue.enqueue(
+        SyncDelta(
+          timestamp: DateTime.now(),
+          deviceUuid: 'dev1',
+          sequence: 1,
+          action: SyncAction.insert,
+          tableName: 't1',
+          data: const {'id': '1', 'val': 'a'},
+        ),
+      );
 
       final exportFile = File('${tempDir.path}/export.json');
       await queue.exportQueue(exportFile);

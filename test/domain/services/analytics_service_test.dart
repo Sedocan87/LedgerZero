@@ -23,17 +23,30 @@ void main() {
     test('should calculate correct net worth from mixed accounts', () async {
       final accounts = [
         createTestAccount(
-            id: '1', type: AccountType.checking, currentBalance: 1000.0),
+          id: '1',
+          type: AccountType.checking,
+          currentBalance: 1000.0,
+        ),
         createTestAccount(
-            id: '2', type: AccountType.savings, currentBalance: 2000.0),
+          id: '2',
+          type: AccountType.savings,
+          currentBalance: 2000.0,
+        ),
         createTestAccount(
-            id: '3', type: AccountType.credit, currentBalance: -500.0),
+          id: '3',
+          type: AccountType.credit,
+          currentBalance: -500.0,
+        ),
         createTestAccount(
-            id: '4', type: AccountType.cash, currentBalance: 100.0),
+          id: '4',
+          type: AccountType.cash,
+          currentBalance: 100.0,
+        ),
       ];
 
-      when(mockAccountRepository.getAllAccounts())
-          .thenAnswer((_) async => accounts);
+      when(
+        mockAccountRepository.getAllAccounts(),
+      ).thenAnswer((_) async => accounts);
 
       final result = await service.calculateNetWorth();
 
@@ -46,8 +59,7 @@ void main() {
     });
 
     test('should handle empty accounts list', () async {
-      when(mockAccountRepository.getAllAccounts())
-          .thenAnswer((_) async => []);
+      when(mockAccountRepository.getAllAccounts()).thenAnswer((_) async => []);
 
       final result = await service.calculateNetWorth();
 
@@ -63,13 +75,11 @@ void main() {
       final end = DateTime(2023, 1, 5); // 5 days
 
       // Mock expenses: -100 and -200 = -300 total
-      final expenseMap = {
-        'cat1': -100.0,
-        'cat2': -200.0,
-      };
+      final expenseMap = {'cat1': -100.0, 'cat2': -200.0};
 
-      when(mockTransactionRepository.getExpenseSumsByDateRange(start, end))
-          .thenAnswer((_) async => expenseMap);
+      when(
+        mockTransactionRepository.getExpenseSumsByDateRange(start, end),
+      ).thenAnswer((_) async => expenseMap);
 
       final result = await service.calculateSpendingStats(start, end);
 
@@ -83,8 +93,9 @@ void main() {
       final start = DateTime(2023, 1, 1);
       final end = DateTime(2023, 1, 1); // 1 day
 
-      when(mockTransactionRepository.getExpenseSumsByDateRange(start, end))
-          .thenAnswer((_) async => {});
+      when(
+        mockTransactionRepository.getExpenseSumsByDateRange(start, end),
+      ).thenAnswer((_) async => {});
 
       final result = await service.calculateSpendingStats(start, end);
 
@@ -103,16 +114,32 @@ void main() {
       final endPrevious = DateTime(2023, 12, 31, 23, 59, 59);
 
       // Current Year: Income 5000, Expense -3000
-      when(mockTransactionRepository.getIncomeSumByDateRange(startCurrent, endCurrent))
-          .thenAnswer((_) async => 5000.0);
-      when(mockTransactionRepository.getExpenseSumsByDateRange(startCurrent, endCurrent))
-          .thenAnswer((_) async => {'cat1': -3000.0});
+      when(
+        mockTransactionRepository.getIncomeSumByDateRange(
+          startCurrent,
+          endCurrent,
+        ),
+      ).thenAnswer((_) async => 5000.0);
+      when(
+        mockTransactionRepository.getExpenseSumsByDateRange(
+          startCurrent,
+          endCurrent,
+        ),
+      ).thenAnswer((_) async => {'cat1': -3000.0});
 
       // Previous Year: Income 4000, Expense -2000
-      when(mockTransactionRepository.getIncomeSumByDateRange(startPrevious, endPrevious))
-          .thenAnswer((_) async => 4000.0);
-      when(mockTransactionRepository.getExpenseSumsByDateRange(startPrevious, endPrevious))
-          .thenAnswer((_) async => {'cat1': -2000.0});
+      when(
+        mockTransactionRepository.getIncomeSumByDateRange(
+          startPrevious,
+          endPrevious,
+        ),
+      ).thenAnswer((_) async => 4000.0);
+      when(
+        mockTransactionRepository.getExpenseSumsByDateRange(
+          startPrevious,
+          endPrevious,
+        ),
+      ).thenAnswer((_) async => {'cat1': -2000.0});
 
       final result = await service.getYearOverYearComparison(currentYear);
 

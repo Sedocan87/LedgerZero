@@ -15,10 +15,14 @@ void main() {
 
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
-    final transactionRepository = TransactionRepositoryImpl(database.transactionsDao);
+    final transactionRepository = TransactionRepositoryImpl(
+      database.transactionsDao,
+    );
     final budgetRepository = BudgetRepositoryImpl(database.budgetsDao);
     final categoryRepository = CategoryRepositoryImpl(database.categoriesDao);
-    final budgetTemplateRepository = BudgetTemplateRepositoryImpl(database.budgetTemplatesDao);
+    final budgetTemplateRepository = BudgetTemplateRepositoryImpl(
+      database.budgetTemplatesDao,
+    );
 
     budgetingService = BudgetingService(
       transactionRepository: transactionRepository,
@@ -34,20 +38,30 @@ void main() {
 
   test('Concurrent budget edits should result in consistent state', () async {
     // Setup category
-    await database.into(database.categories).insert(
-      CategoriesCompanion(
-        id: const Value('cat_1'),
-        name: const Value('Test Category'),
-        createdAt: Value(DateTime.now()),
-      ),
-    );
+    await database
+        .into(database.categories)
+        .insert(
+          CategoriesCompanion(
+            id: const Value('cat_1'),
+            name: const Value('Test Category'),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
 
     final month = DateTime(2025, 1);
 
     // Simulate two concurrent operations trying to set the budget
     // Both start at the same time.
-    final future1 = budgetingService.setCategoryBudgetedAmount('cat_1', 100.0, month);
-    final future2 = budgetingService.setCategoryBudgetedAmount('cat_1', 200.0, month);
+    final future1 = budgetingService.setCategoryBudgetedAmount(
+      'cat_1',
+      100.0,
+      month,
+    );
+    final future2 = budgetingService.setCategoryBudgetedAmount(
+      'cat_1',
+      200.0,
+      month,
+    );
 
     // Both should succeed now that we handle the race condition
     await Future.wait([future1, future2]);

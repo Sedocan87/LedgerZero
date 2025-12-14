@@ -35,19 +35,21 @@ class CategorySelector extends ConsumerWidget {
                   child: Text(
                     group.name,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                ...categories.map((category) => ListTile(
-                      title: Text(category.name),
-                      leading: const Icon(Icons.label_outline),
-                      onTap: () {
-                        onSelected(category);
-                        Navigator.pop(context);
-                      },
-                    )),
+                ...categories.map(
+                  (category) => ListTile(
+                    title: Text(category.name),
+                    leading: const Icon(Icons.label_outline),
+                    onTap: () {
+                      onSelected(category);
+                      Navigator.pop(context);
+                    },
+                  ),
+                ),
                 const Divider(),
               ],
             );

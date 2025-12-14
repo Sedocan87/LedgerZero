@@ -30,14 +30,15 @@ class TransactionExportService {
         'Memo',
         'Amount',
         'Cleared',
-        'Approved'
+        'Approved',
       ],
     ];
 
     // Data rows
     for (var t in transactions) {
-      final payee =
-          t.payeeId != null ? (payeeNames[t.payeeId] ?? t.payeeId) : '';
+      final payee = t.payeeId != null
+          ? (payeeNames[t.payeeId] ?? t.payeeId)
+          : '';
       final category = t.categoryId != null
           ? (categoryNames[t.categoryId] ?? t.categoryId)
           : '';

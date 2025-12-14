@@ -39,20 +39,27 @@ class BudgetRepositoryImpl implements BudgetRepository {
 
   @override
   Future<Budget?> getBudgetByCategoryAndMonth(
-      String categoryId, String month) async {
+    String categoryId,
+    String month,
+  ) async {
     try {
       Logger.debug('Fetching budget for category $categoryId in month $month');
-      final budget =
-          await _budgetsDao.getBudgetByCategoryAndMonth(categoryId, month);
+      final budget = await _budgetsDao.getBudgetByCategoryAndMonth(
+        categoryId,
+        month,
+      );
       Logger.debug('Budget found: ${budget != null}');
       return budget == null ? null : _mapToDomain(budget);
     } catch (e, stackTrace) {
       Logger.error(
-          'Failed to fetch budget for category $categoryId in month $month',
-          e,
-          stackTrace);
+        'Failed to fetch budget for category $categoryId in month $month',
+        e,
+        stackTrace,
+      );
       throw DatabaseException(
-          'Failed to fetch budget for category $categoryId', e);
+        'Failed to fetch budget for category $categoryId',
+        e,
+      );
     }
   }
 
@@ -107,14 +114,19 @@ class BudgetRepositoryImpl implements BudgetRepository {
 
   @override
   Stream<List<Budget>> watchBudgetsForMonth(String month) {
-    return _budgetsDao.watchBudgetsForMonth(month).map(
-      (budgets) {
-        return budgets.map(_mapToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchBudgetsForMonth stream', error, stackTrace);
-      throw DatabaseException('Error watching budgets', error);
-    });
+    return _budgetsDao
+        .watchBudgetsForMonth(month)
+        .map((budgets) {
+          return budgets.map(_mapToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error(
+            'Error in watchBudgetsForMonth stream',
+            error,
+            stackTrace,
+          );
+          throw DatabaseException('Error watching budgets', error);
+        });
   }
 
   @override
@@ -129,21 +141,28 @@ class BudgetRepositoryImpl implements BudgetRepository {
 
   @override
   Future<double> getTotalBudgetedByCategoryAndMonthRange(
-      String categoryId, String endMonth) async {
+    String categoryId,
+    String endMonth,
+  ) async {
     try {
       return await _budgetsDao.getTotalBudgetedByCategoryAndMonthRange(
-          categoryId, endMonth);
+        categoryId,
+        endMonth,
+      );
     } catch (e, stackTrace) {
       Logger.error(
-          'Failed to calculate total budgeted for category $categoryId',
-          e,
-          stackTrace);
+        'Failed to calculate total budgeted for category $categoryId',
+        e,
+        stackTrace,
+      );
       throw DatabaseException('Failed to calculate total budgeted', e);
     }
   }
 
   @override
-  Future<Map<String, double>> getAllTimeBudgetedSumsUpToMonth(String endMonth) async {
+  Future<Map<String, double>> getAllTimeBudgetedSumsUpToMonth(
+    String endMonth,
+  ) async {
     try {
       return await _budgetsDao.getBudgetedSumsByMonthRange(endMonth);
     } catch (e, stackTrace) {

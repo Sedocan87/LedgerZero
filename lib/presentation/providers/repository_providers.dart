@@ -36,7 +36,9 @@ final budgetRepositoryProvider = Provider<BudgetRepository>((ref) {
 });
 
 /// Provides the [BudgetTemplateRepository].
-final budgetTemplateRepositoryProvider = Provider<BudgetTemplateRepository>((ref) {
+final budgetTemplateRepositoryProvider = Provider<BudgetTemplateRepository>((
+  ref,
+) {
   return BudgetTemplateRepositoryImpl(ref.watch(budgetTemplatesDaoProvider));
 });
 
@@ -61,9 +63,12 @@ final ruleRepositoryProvider = Provider<RuleRepository>((ref) {
 });
 
 /// Provides the [ScheduledTransactionRepository].
-final scheduledTransactionRepositoryProvider = Provider<ScheduledTransactionRepository>((ref) {
-  return ScheduledTransactionRepositoryImpl(ref.watch(scheduledTransactionsDaoProvider));
-});
+final scheduledTransactionRepositoryProvider =
+    Provider<ScheduledTransactionRepository>((ref) {
+      return ScheduledTransactionRepositoryImpl(
+        ref.watch(scheduledTransactionsDaoProvider),
+      );
+    });
 
 /// Provides the [TransactionRepository].
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
@@ -71,7 +76,9 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
 });
 
 /// Provides the [ParsingHistoryRepository].
-final parsingHistoryRepositoryProvider = Provider<ParsingHistoryRepository>((ref) {
+final parsingHistoryRepositoryProvider = Provider<ParsingHistoryRepository>((
+  ref,
+) {
   return ParsingHistoryRepositoryImpl(ref.watch(parsingHistoryDaoProvider));
 });
 
@@ -81,6 +88,8 @@ final parsingRulesRepositoryProvider = Provider<ParsingRulesRepository>((ref) {
 });
 
 /// Provides the [ImportProfileRepository].
-final importProfileRepositoryProvider = Provider<ImportProfileRepository>((ref) {
+final importProfileRepositoryProvider = Provider<ImportProfileRepository>((
+  ref,
+) {
   return ImportProfileRepositoryImpl(ref.read(databaseProvider));
 });

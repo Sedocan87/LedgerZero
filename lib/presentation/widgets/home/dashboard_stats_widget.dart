@@ -4,12 +4,15 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_card.dart';
 
-final monthlyStatsProvider = FutureProvider.autoDispose.family<Map<String, double>, DateTime>((ref, month) async {
-  final budgetingService = ref.watch(budgetingServiceProvider);
-  final income = await budgetingService.calculateTotalIncomeForMonth(month);
-  final spending = await budgetingService.calculateTotalSpendingForMonth(month);
-  return {'income': income, 'spending': spending};
-});
+final monthlyStatsProvider = FutureProvider.autoDispose
+    .family<Map<String, double>, DateTime>((ref, month) async {
+      final budgetingService = ref.watch(budgetingServiceProvider);
+      final income = await budgetingService.calculateTotalIncomeForMonth(month);
+      final spending = await budgetingService.calculateTotalSpendingForMonth(
+        month,
+      );
+      return {'income': income, 'spending': spending};
+    });
 
 class DashboardStatsWidget extends ConsumerWidget {
   const DashboardStatsWidget({super.key});
@@ -44,7 +47,10 @@ class DashboardStatsWidget extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Text('Error', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      error: (err, stack) => Text(
+        'Error',
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
     );
   }
 }

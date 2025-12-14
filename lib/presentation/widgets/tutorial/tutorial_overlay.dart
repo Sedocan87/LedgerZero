@@ -39,7 +39,12 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       if (renderBox != null) {
         final offset = renderBox.localToGlobal(Offset.zero);
         final size = renderBox.size;
-        targetRect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
+        targetRect = Rect.fromLTWH(
+          offset.dx,
+          offset.dy,
+          size.width,
+          size.height,
+        );
       }
     }
 
@@ -47,21 +52,23 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       children: [
         // Background with hole punch
         Positioned.fill(
-          child: CustomPaint(
-            painter: _HolePainter(targetRect: targetRect),
-          ),
+          child: CustomPaint(painter: _HolePainter(targetRect: targetRect)),
         ),
 
         // Tooltip/Card
         if (targetRect != null)
-           _buildPositionedCard(context, step, targetRect)
+          _buildPositionedCard(context, step, targetRect)
         else
-           Center(child: _buildCard(context, step)),
+          Center(child: _buildCard(context, step)),
       ],
     );
   }
 
-  Widget _buildPositionedCard(BuildContext context, TutorialStep step, Rect targetRect) {
+  Widget _buildPositionedCard(
+    BuildContext context,
+    TutorialStep step,
+    Rect targetRect,
+  ) {
     // Determine best position
     // Simple logic: if target is in top half, show below. Else above.
     final screenSize = MediaQuery.of(context).size;
@@ -108,7 +115,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
               color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
-            )
+            ),
           ],
         ),
         child: Column(
@@ -122,10 +129,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              step.description,
-              style: theme.textTheme.bodyMedium,
-            ),
+            Text(step.description, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -139,7 +143,9 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                 FilledButton(
                   onPressed: _nextStep,
                   child: Text(
-                    _currentStepIndex < widget.steps.length - 1 ? 'Next' : 'Finish'
+                    _currentStepIndex < widget.steps.length - 1
+                        ? 'Next'
+                        : 'Finish',
                   ),
                 ),
               ],
@@ -170,22 +176,19 @@ class _HolePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.black.withValues(alpha: 0.7);
 
-    final path = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final path = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final holePath = Path();
     if (targetRect != null) {
-      holePath.addRRect(RRect.fromRectAndRadius(
-        targetRect!.inflate(4), // Add padding
-        const Radius.circular(8)
-      ));
+      holePath.addRRect(
+        RRect.fromRectAndRadius(
+          targetRect!.inflate(4), // Add padding
+          const Radius.circular(8),
+        ),
+      );
     }
 
-    final finalPath = Path.combine(
-      PathOperation.difference,
-      path,
-      holePath,
-    );
+    final finalPath = Path.combine(PathOperation.difference, path, holePath);
 
     // We actually need to clear the hole area because we already have a ModalBarrier behind?
     // Wait, the ModalBarrier is already there. If I draw another layer with a hole, I need to make sure the ModalBarrier doesn't cover the hole if I want it interactive.

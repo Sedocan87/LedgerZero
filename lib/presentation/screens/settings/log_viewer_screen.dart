@@ -39,7 +39,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       final logs = await LocalErrorReportingService().getLogs();
       if (logs.isEmpty) {
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(AppLocalizations.of(context)!.noLogs)),
           );
         }
@@ -52,7 +52,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       final buffer = StringBuffer();
       for (var log in logs) {
         buffer.writeln(
-            '[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()}: ${log.message}');
+          '[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()}: ${log.message}',
+        );
         if (log.error != null) {
           buffer.writeln('Error: ${log.error}');
         }
@@ -65,15 +66,16 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       await file.writeAsString(buffer.toString());
 
       await SharePlus.instance.share(
-        ShareParams(
-          text: 'LedgerZero Logs',
-          files: [XFile(file.path)],
-        ),
+        ShareParams(text: 'LedgerZero Logs', files: [XFile(file.path)]),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.logsExportFailed(e.toString()))),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.logsExportFailed(e.toString()),
+            ),
+          ),
         );
       }
     }
@@ -100,65 +102,68 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
       appBar: AppBar(
         title: Text(l10n.errorLogs),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadLogs,
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _exportLogs,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadLogs),
+          IconButton(icon: const Icon(Icons.share), onPressed: _exportLogs),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _logs == null || _logs!.isEmpty
-              ? Center(child: Text(l10n.noLogs))
-              : ListView.builder(
-                  itemCount: _logs!.length,
-                  itemBuilder: (context, index) {
-                    final log = _logs![index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: ExpansionTile(
-                        leading: CircleAvatar(
-                          backgroundColor: _getLevelColor(log.level),
-                          radius: 10,
+          ? Center(child: Text(l10n.noLogs))
+          : ListView.builder(
+              itemCount: _logs!.length,
+              itemBuilder: (context, index) {
+                final log = _logs![index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  child: ExpansionTile(
+                    leading: CircleAvatar(
+                      backgroundColor: _getLevelColor(log.level),
+                      radius: 10,
+                    ),
+                    title: Text(
+                      log.message,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      DateFormat('yyyy-MM-dd HH:mm:ss').format(log.timestamp),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    children: [
+                      if (log.error != null || log.stackTrace != null)
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (log.error != null) ...[
+                                const Text(
+                                  'Error:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                SelectableText(log.error!),
+                                const SizedBox(height: 8),
+                              ],
+                              if (log.stackTrace != null) ...[
+                                const Text(
+                                  'Stack Trace:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                SelectableText(log.stackTrace!),
+                              ],
+                            ],
+                          ),
                         ),
-                        title: Text(
-                          log.message,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        subtitle: Text(
-                          DateFormat('yyyy-MM-dd HH:mm:ss').format(log.timestamp),
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                        children: [
-                          if (log.error != null || log.stackTrace != null)
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (log.error != null) ...[
-                                    const Text('Error:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    SelectableText(log.error!),
-                                    const SizedBox(height: 8),
-                                  ],
-                                  if (log.stackTrace != null) ...[
-                                    const Text('Stack Trace:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    SelectableText(log.stackTrace!),
-                                  ],
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }

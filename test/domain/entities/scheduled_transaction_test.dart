@@ -35,9 +35,7 @@ void main() {
     });
 
     test('should use default values', () {
-      const scheduledTransaction = ScheduledTransaction(
-        id: '1',
-      );
+      const scheduledTransaction = ScheduledTransaction(id: '1');
 
       expect(scheduledTransaction.id, '1');
       expect(scheduledTransaction.accountId, isNull);
@@ -100,9 +98,7 @@ void main() {
     });
 
     test('should handle missing optional fields during serialization', () {
-      final json = {
-        'id': '1',
-      };
+      final json = {'id': '1'};
 
       final scheduledTransaction = ScheduledTransaction.fromJson(json);
       expect(scheduledTransaction.id, '1');
@@ -164,11 +160,17 @@ void main() {
       expect(scheduledTransaction2, equals(scheduledTransaction1));
 
       // HashCode
-      expect(scheduledTransaction1.hashCode, equals(scheduledTransaction2.hashCode));
+      expect(
+        scheduledTransaction1.hashCode,
+        equals(scheduledTransaction2.hashCode),
+      );
 
       // Not Equal
       expect(scheduledTransaction1, isNot(equals(scheduledTransaction3)));
-      expect(scheduledTransaction1, isNot(equals('Not a ScheduledTransaction')));
+      expect(
+        scheduledTransaction1,
+        isNot(equals('Not a ScheduledTransaction')),
+      );
       expect(scheduledTransaction1, isNot(equals(null)));
     });
   });

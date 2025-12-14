@@ -6,11 +6,7 @@ class PayeeListItem extends StatelessWidget {
   final Payee payee;
   final VoidCallback onTap;
 
-  const PayeeListItem({
-    super.key,
-    required this.payee,
-    required this.onTap,
-  });
+  const PayeeListItem({super.key, required this.payee, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +14,21 @@ class PayeeListItem extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: payee.color != null ? Color(payee.color!) : null,
         child: payee.icon != null
-            ? Icon(categoryIcons[payee.icon] ?? Icons.category, color: Colors.white)
-            : Text(payee.name.isNotEmpty ? payee.name.characters.first.toUpperCase() : '?'),
+            ? Icon(
+                categoryIcons[payee.icon] ?? Icons.category,
+                color: Colors.white,
+              )
+            : Text(
+                payee.name.isNotEmpty
+                    ? payee.name.characters.first.toUpperCase()
+                    : '?',
+              ),
       ),
       title: Row(
         children: [
           Expanded(child: Text(payee.name)),
           if (payee.isFavorite)
-             const Icon(Icons.star, size: 16, color: Colors.amber),
+            const Icon(Icons.star, size: 16, color: Colors.amber),
         ],
       ),
       onTap: onTap,

@@ -2,7 +2,8 @@ import 'package:drift/drift.dart';
 
 class ReportNotes extends Table {
   TextColumn get id => text()();
-  TextColumn get date => text()(); // YYYY-MM or YYYY-MM-DD depending on granularity. Let's stick to YYYY-MM for monthly reports.
+  TextColumn get date =>
+      text()(); // YYYY-MM or YYYY-MM-DD depending on granularity. Let's stick to YYYY-MM for monthly reports.
   TextColumn get note => text()();
   TextColumn get createdAt => text().nullable()();
   TextColumn get updatedAt => text().nullable()();
@@ -12,7 +13,9 @@ class ReportNotes extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-    {date}, // One note per month for simplicity for now? Or allow multiple? Task says "annotations/notes". A single note block per month seems appropriate for a "Report Note".
+    {
+      date,
+    }, // One note per month for simplicity for now? Or allow multiple? Task says "annotations/notes". A single note block per month seems appropriate for a "Report Note".
   ];
 }
 

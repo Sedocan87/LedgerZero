@@ -9,7 +9,8 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
 
   @override
-  ConsumerState<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  ConsumerState<ChangePasswordScreen> createState() =>
+      _ChangePasswordScreenState();
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
@@ -46,12 +47,18 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         throw Exception('Security configuration missing');
       }
 
-      final oldKey = sm.deriveKeyFromPassword(_currentPasswordController.text, salt);
+      final oldKey = await sm.deriveKeyFromPassword(
+        _currentPasswordController.text,
+        salt,
+      );
       if (!await sm.verifyKey(oldKey)) {
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text(l10n.incorrectPassword), backgroundColor: Colors.red),
-           );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.incorrectPassword),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
         setState(() => _isLoading = false);
         return;
@@ -59,7 +66,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
       // 2. Generate new key
       final newSalt = sm.generateSecureKey();
-      final newKey = sm.deriveKeyFromPassword(_newPasswordController.text, newSalt);
+      final newKey = await sm.deriveKeyFromPassword(
+        _newPasswordController.text,
+        newSalt,
+      );
 
       // 3. Rekey Database
       // Note: This operation can be slow on large databases
@@ -78,9 +88,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       SecurityManager.setSessionKey(newKey);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.passwordChangedSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.passwordChangedSuccess)));
         Navigator.pop(context);
       }
     } catch (e) {
@@ -101,9 +111,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.changePassword),
-      ),
+      appBar: AppBar(title: Text(l10n.changePassword)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -117,8 +125,15 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   labelText: l10n.currentPassword,
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_isCurrentPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _isCurrentPasswordVisible = !_isCurrentPasswordVisible),
+                    icon: Icon(
+                      _isCurrentPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () => setState(
+                      () => _isCurrentPasswordVisible =
+                          !_isCurrentPasswordVisible,
+                    ),
                   ),
                 ),
                 validator: (value) {
@@ -136,8 +151,14 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   labelText: l10n.newPassword,
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_isNewPasswordVisible ? Icons.visibility : Icons.visibility_off),
-                    onPressed: () => setState(() => _isNewPasswordVisible = !_isNewPasswordVisible),
+                    icon: Icon(
+                      _isNewPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () => setState(
+                      () => _isNewPasswordVisible = !_isNewPasswordVisible,
+                    ),
                   ),
                 ),
                 validator: (value) {
@@ -174,8 +195,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: _isLoading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text(l10n.save),
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.save),
                 ),
               ),
             ],

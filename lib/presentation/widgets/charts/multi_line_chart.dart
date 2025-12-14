@@ -32,10 +32,18 @@ class MultiLineChart extends StatelessWidget {
       );
     }
 
-    final seriesDescriptions = seriesList.map((s) {
-      final pointsDesc = s.points.take(3).map((p) => '${DateFormat.MMMd().format(p.date)}: ${p.value.toStringAsFixed(2)}').join(', ');
-      return '${s.name}: $pointsDesc...';
-    }).join('; ');
+    final seriesDescriptions = seriesList
+        .map((s) {
+          final pointsDesc = s.points
+              .take(3)
+              .map(
+                (p) =>
+                    '${DateFormat.MMMd().format(p.date)}: ${p.value.toStringAsFixed(2)}',
+              )
+              .join(', ');
+          return '${s.name}: $pointsDesc...';
+        })
+        .join('; ');
 
     return Column(
       children: [
@@ -146,8 +154,10 @@ class MultiLineChartPainter extends CustomPainter {
     final safeXRange = xRange == 0 ? 1.0 : xRange;
     final safeYRange = (maxY - minY) == 0 ? 1.0 : (maxY - minY);
 
-    double getX(double t) => chartRect.left + ((t - minX) / safeXRange) * chartRect.width;
-    double getY(double v) => chartRect.bottom - ((v - minY) / safeYRange) * chartRect.height;
+    double getX(double t) =>
+        chartRect.left + ((t - minX) / safeXRange) * chartRect.width;
+    double getY(double v) =>
+        chartRect.bottom - ((v - minY) / safeYRange) * chartRect.height;
 
     // 2. Draw Grid & Labels
     final gridPaint = Paint()
@@ -164,10 +174,17 @@ class MultiLineChartPainter extends CustomPainter {
       final y = getY(value);
 
       // Grid line
-      canvas.drawLine(Offset(chartRect.left, y), Offset(chartRect.right, y), gridPaint);
+      canvas.drawLine(
+        Offset(chartRect.left, y),
+        Offset(chartRect.right, y),
+        gridPaint,
+      );
 
       // Label
-      final labelSpan = TextSpan(text: compactCurrency(value), style: labelStyle);
+      final labelSpan = TextSpan(
+        text: compactCurrency(value),
+        style: labelStyle,
+      );
       final textPainter = TextPainter(
         text: labelSpan,
         textDirection: ui.TextDirection.ltr,
@@ -185,7 +202,10 @@ class MultiLineChartPainter extends CustomPainter {
       final date = DateTime.fromMillisecondsSinceEpoch(t.toInt());
 
       // Label
-      final labelSpan = TextSpan(text: DateFormat.MMMd().format(date), style: labelStyle);
+      final labelSpan = TextSpan(
+        text: DateFormat.MMMd().format(date),
+        style: labelStyle,
+      );
       final textPainter = TextPainter(
         text: labelSpan,
         textDirection: ui.TextDirection.ltr,
@@ -217,10 +237,16 @@ class MultiLineChartPainter extends CustomPainter {
         ..style = PaintingStyle.stroke;
 
       final path = Path();
-      path.moveTo(getX(series.points.first.date.millisecondsSinceEpoch.toDouble()), getY(series.points.first.value));
+      path.moveTo(
+        getX(series.points.first.date.millisecondsSinceEpoch.toDouble()),
+        getY(series.points.first.value),
+      );
 
       for (int i = 1; i < series.points.length; i++) {
-        path.lineTo(getX(series.points[i].date.millisecondsSinceEpoch.toDouble()), getY(series.points[i].value));
+        path.lineTo(
+          getX(series.points[i].date.millisecondsSinceEpoch.toDouble()),
+          getY(series.points[i].value),
+        );
       }
 
       canvas.save();
@@ -228,9 +254,15 @@ class MultiLineChartPainter extends CustomPainter {
       canvas.drawPath(path, paint);
 
       // Draw points
-      final dotPaint = Paint()..color = series.color..style = PaintingStyle.fill;
-      for(var p in series.points) {
-         canvas.drawCircle(Offset(getX(p.date.millisecondsSinceEpoch.toDouble()), getY(p.value)), 3, dotPaint);
+      final dotPaint = Paint()
+        ..color = series.color
+        ..style = PaintingStyle.fill;
+      for (var p in series.points) {
+        canvas.drawCircle(
+          Offset(getX(p.date.millisecondsSinceEpoch.toDouble()), getY(p.value)),
+          3,
+          dotPaint,
+        );
       }
       canvas.restore();
     }
@@ -265,15 +297,18 @@ class MultiLineChartPainter extends CustomPainter {
       if (seriesList[i].color != oldDelegate.seriesList[i].color) {
         return true;
       }
-      if (seriesList[i].points.length != oldDelegate.seriesList[i].points.length) {
+      if (seriesList[i].points.length !=
+          oldDelegate.seriesList[i].points.length) {
         return true;
       }
 
-      for(int j=0; j<seriesList[i].points.length; j++) {
-         if (seriesList[i].points[j].date != oldDelegate.seriesList[i].points[j].date ||
-             seriesList[i].points[j].value != oldDelegate.seriesList[i].points[j].value) {
-           return true;
-         }
+      for (int j = 0; j < seriesList[i].points.length; j++) {
+        if (seriesList[i].points[j].date !=
+                oldDelegate.seriesList[i].points[j].date ||
+            seriesList[i].points[j].value !=
+                oldDelegate.seriesList[i].points[j].value) {
+          return true;
+        }
       }
     }
     return false;

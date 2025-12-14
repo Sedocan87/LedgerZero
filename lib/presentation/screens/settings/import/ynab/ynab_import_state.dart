@@ -1,13 +1,7 @@
 import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
 import 'package:file_picker/file_picker.dart';
 
-enum YnabImportStep {
-  selectMethod,
-  selectFiles,
-  preview,
-  importing,
-  success,
-}
+enum YnabImportStep { selectMethod, selectFiles, preview, importing, success }
 
 enum YnabImportMethod {
   nynabCsv, // nYNAB (CSV)

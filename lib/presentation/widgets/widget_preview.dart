@@ -52,7 +52,9 @@ class WidgetPreview extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    NumberFormat.simpleCurrency(locale: 'en_US').format(tbbAmount),
+                    NumberFormat.simpleCurrency(
+                      locale: 'en_US',
+                    ).format(tbbAmount),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -76,13 +78,17 @@ class WidgetPreview extends StatelessWidget {
 
           // Categories
           if (categories.isEmpty)
-             Text(
-               'No categories selected',
-               style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.secondary),
-             )
+            Text(
+              'No categories selected',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+            )
           else
             ...categories.take(4).map((category) {
-              final available = categoryPerformance[category.id]?['available'] ?? 0.0;
+              final available =
+                  categoryPerformance[category.id]?['available'] ?? 0.0;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
@@ -99,16 +105,23 @@ class WidgetPreview extends StatelessWidget {
                     Expanded(
                       child: Text(
                         category.name,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
-                      NumberFormat.simpleCurrency(locale: 'en_US').format(available),
+                      NumberFormat.simpleCurrency(
+                        locale: 'en_US',
+                      ).format(available),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: available >= 0 ? Theme.of(context).colorScheme.onSurface : Colors.red,
+                        color: available >= 0
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Colors.red,
                       ),
                     ),
                   ],

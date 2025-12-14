@@ -60,22 +60,26 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
   final connectivity = ref.watch(connectivityServiceProvider);
   final notificationService = ref.watch(notificationServiceProvider);
 
-  final engine = SyncEngine(genService, queue, replayService, driveService,
-      iCloudService, prefs, connectivity, notificationService);
+  final engine = SyncEngine(
+    genService,
+    queue,
+    replayService,
+    driveService,
+    iCloudService,
+    prefs,
+    connectivity,
+    notificationService,
+  );
   ref.onDispose(engine.dispose);
   return engine;
 });
 
-final syncControllerProvider =
-    StateNotifierProvider<SyncController, SyncState>((ref) {
-  final authService = ref.watch(googleAuthServiceProvider);
-  final iCloudService = ref.watch(iCloudDriveServiceProvider);
-  final prefs = ref.watch(sharedPreferencesProvider);
-  final engine = ref.watch(syncEngineProvider);
-  return SyncController(
-    authService,
-    iCloudService,
-    prefs,
-    engine,
-  );
-});
+final syncControllerProvider = StateNotifierProvider<SyncController, SyncState>(
+  (ref) {
+    final authService = ref.watch(googleAuthServiceProvider);
+    final iCloudService = ref.watch(iCloudDriveServiceProvider);
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final engine = ref.watch(syncEngineProvider);
+    return SyncController(authService, iCloudService, prefs, engine);
+  },
+);

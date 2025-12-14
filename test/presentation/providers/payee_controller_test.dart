@@ -20,7 +20,9 @@ void main() {
     container = ProviderContainer(
       overrides: [
         payeeRepositoryProvider.overrideWithValue(mockPayeeRepository),
-        transactionRepositoryProvider.overrideWithValue(mockTransactionRepository),
+        transactionRepositoryProvider.overrideWithValue(
+          mockTransactionRepository,
+        ),
       ],
     );
     controller = container.read(payeeControllerProvider);
@@ -39,20 +41,25 @@ void main() {
         ),
       ];
 
-      when(mockTransactionRepository.getTransactions(filter: anyNamed('filter')))
-          .thenAnswer((_) async => transactions);
-      when(mockTransactionRepository.batchUpdateTransactions(any))
-          .thenAnswer((_) async {});
-      when(mockPayeeRepository.deletePayee(payeeId))
-          .thenAnswer((_) async {});
+      when(
+        mockTransactionRepository.getTransactions(filter: anyNamed('filter')),
+      ).thenAnswer((_) async => transactions);
+      when(
+        mockTransactionRepository.batchUpdateTransactions(any),
+      ).thenAnswer((_) async {});
+      when(mockPayeeRepository.deletePayee(payeeId)).thenAnswer((_) async {});
 
       await controller.deletePayee(payeeId);
 
       // Verify transactions fetched
-      verify(mockTransactionRepository.getTransactions(filter: anyNamed('filter'))).called(1);
+      verify(
+        mockTransactionRepository.getTransactions(filter: anyNamed('filter')),
+      ).called(1);
 
       // Verify batch update called with null payeeId
-      final captured = verify(mockTransactionRepository.batchUpdateTransactions(captureAny)).captured;
+      final captured = verify(
+        mockTransactionRepository.batchUpdateTransactions(captureAny),
+      ).captured;
       final updatedTxs = captured.first as List<Transaction>;
       expect(updatedTxs.length, 1);
       expect(updatedTxs.first.payeeId, isNull);
@@ -63,10 +70,10 @@ void main() {
 
     test('deletePayee just deletes payee if no transactions', () async {
       const payeeId = 'p1';
-      when(mockTransactionRepository.getTransactions(filter: anyNamed('filter')))
-          .thenAnswer((_) async => []);
-      when(mockPayeeRepository.deletePayee(payeeId))
-          .thenAnswer((_) async {});
+      when(
+        mockTransactionRepository.getTransactions(filter: anyNamed('filter')),
+      ).thenAnswer((_) async => []);
+      when(mockPayeeRepository.deletePayee(payeeId)).thenAnswer((_) async {});
 
       await controller.deletePayee(payeeId);
 
@@ -88,21 +95,28 @@ void main() {
         ),
       ];
 
-      when(mockPayeeRepository.getPayeeById(sourceId)).thenAnswer((_) async => sourcePayee);
-      when(mockTransactionRepository.getTransactions(filter: anyNamed('filter')))
-          .thenAnswer((_) async => transactions);
-      when(mockTransactionRepository.batchUpdateTransactions(any))
-          .thenAnswer((_) async {});
-      when(mockPayeeRepository.deletePayee(sourceId))
-          .thenAnswer((_) async {});
+      when(
+        mockPayeeRepository.getPayeeById(sourceId),
+      ).thenAnswer((_) async => sourcePayee);
+      when(
+        mockTransactionRepository.getTransactions(filter: anyNamed('filter')),
+      ).thenAnswer((_) async => transactions);
+      when(
+        mockTransactionRepository.batchUpdateTransactions(any),
+      ).thenAnswer((_) async {});
+      when(mockPayeeRepository.deletePayee(sourceId)).thenAnswer((_) async {});
 
       await controller.mergePayees(sourceId, targetId);
 
       // Verify transactions fetched
-      verify(mockTransactionRepository.getTransactions(filter: anyNamed('filter'))).called(1);
+      verify(
+        mockTransactionRepository.getTransactions(filter: anyNamed('filter')),
+      ).called(1);
 
       // Verify batch update called with target payeeId
-      final captured = verify(mockTransactionRepository.batchUpdateTransactions(captureAny)).captured;
+      final captured = verify(
+        mockTransactionRepository.batchUpdateTransactions(captureAny),
+      ).captured;
       final updatedTxs = captured.first as List<Transaction>;
       expect(updatedTxs.length, 1);
       expect(updatedTxs.first.payeeId, targetId);

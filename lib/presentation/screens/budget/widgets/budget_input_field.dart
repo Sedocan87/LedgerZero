@@ -48,7 +48,11 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
     if (_controller == null) {
       final locale = Localizations.localeOf(context).toString();
       // Use currency format without symbol to respect locale decimal/grouping separators
-      final format = NumberFormat.currency(locale: locale, symbol: '', decimalDigits: 2);
+      final format = NumberFormat.currency(
+        locale: locale,
+        symbol: '',
+        decimalDigits: 2,
+      );
       final text = format.format(widget.initialValue).trim();
       _controller = TextEditingController(text: text);
     }
@@ -76,20 +80,29 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
   double _parseText(String text) {
     if (text.contains(RegExp(r'[+\-*/]'))) {
       final locale = Localizations.localeOf(context).toString();
-      final format = NumberFormat.currency(locale: locale, symbol: '', decimalDigits: 2);
+      final format = NumberFormat.currency(
+        locale: locale,
+        symbol: '',
+        decimalDigits: 2,
+      );
 
       if (format.symbols.GROUP_SEP.isNotEmpty) {
         text = text.replaceAll(format.symbols.GROUP_SEP, '');
       }
-      if (format.symbols.DECIMAL_SEP.isNotEmpty && format.symbols.DECIMAL_SEP != '.') {
-         text = text.replaceAll(format.symbols.DECIMAL_SEP, '.');
+      if (format.symbols.DECIMAL_SEP.isNotEmpty &&
+          format.symbols.DECIMAL_SEP != '.') {
+        text = text.replaceAll(format.symbols.DECIMAL_SEP, '.');
       }
 
       return MathEvaluator.evaluate(text);
     } else {
       try {
         final locale = Localizations.localeOf(context).toString();
-        final format = NumberFormat.currency(locale: locale, symbol: '', decimalDigits: 2);
+        final format = NumberFormat.currency(
+          locale: locale,
+          symbol: '',
+          decimalDigits: 2,
+        );
         return format.parse(text).toDouble();
       } catch (e) {
         try {
@@ -123,7 +136,11 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
       final double newValue = currentValue + delta;
 
       final locale = Localizations.localeOf(context).toString();
-      final format = NumberFormat.currency(locale: locale, symbol: '', decimalDigits: 2);
+      final format = NumberFormat.currency(
+        locale: locale,
+        symbol: '',
+        decimalDigits: 2,
+      );
       _controller!.text = format.format(newValue).trim();
     } catch (e) {
       // ignore
@@ -179,7 +196,8 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
     }
 
     return KeyboardListener(
-      focusNode: FocusNode(), // Needed for listener, but we use _focusNode for text field
+      focusNode:
+          FocusNode(), // Needed for listener, but we use _focusNode for text field
       onKeyEvent: _handleKeyEvent,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -197,7 +215,9 @@ class _BudgetInputFieldState extends State<BudgetInputField> {
             child: AppTextField(
               controller: _controller,
               focusNode: _focusNode,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
               onTap: () {

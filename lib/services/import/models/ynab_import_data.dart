@@ -9,7 +9,8 @@ class YnabAccount {
   final bool onBudget;
   final bool isClosed;
   final String currency; // Default USD
-  final double balance; // Only for initial import if no transactions? Usually calculated.
+  final double
+  balance; // Only for initial import if no transactions? Usually calculated.
 
   YnabAccount({
     required this.id,

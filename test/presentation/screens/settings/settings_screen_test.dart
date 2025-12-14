@@ -13,15 +13,15 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 class MockGoRouter extends Mock implements GoRouter {}
 
 void main() {
-  testWidgets('SettingsScreen shows Scheduled Transactions option', (WidgetTester tester) async {
+  testWidgets('SettingsScreen shows Scheduled Transactions option', (
+    WidgetTester tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
         child: const MaterialApp(
           localizationsDelegates: [
             AppLocalizations.delegate,
@@ -29,9 +29,7 @@ void main() {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: [
-            Locale('en', 'US'),
-          ],
+          supportedLocales: [Locale('en', 'US')],
           home: SettingsScreen(),
         ),
       ),

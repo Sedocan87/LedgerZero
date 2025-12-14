@@ -110,7 +110,8 @@ class Transaction {
       approved: approved ?? this.approved,
       isDeleted: isDeleted ?? this.isDeleted,
       transferAccountId: transferAccountId ?? this.transferAccountId,
-      transferTransactionId: transferTransactionId ?? this.transferTransactionId,
+      transferTransactionId:
+          transferTransactionId ?? this.transferTransactionId,
       parentTransactionId: parentTransactionId ?? this.parentTransactionId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

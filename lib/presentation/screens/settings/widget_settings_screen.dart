@@ -11,7 +11,8 @@ class WidgetSettingsScreen extends ConsumerStatefulWidget {
   const WidgetSettingsScreen({super.key});
 
   @override
-  ConsumerState<WidgetSettingsScreen> createState() => _WidgetSettingsScreenState();
+  ConsumerState<WidgetSettingsScreen> createState() =>
+      _WidgetSettingsScreenState();
 }
 
 class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
@@ -24,7 +25,9 @@ class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
   Widget build(BuildContext context) {
     // Watch actual data for selection
     final accounts = ref.watch(accountRepositoryProvider).watchAllAccounts();
-    final categories = ref.watch(categoryRepositoryProvider).watchAllCategories();
+    final categories = ref
+        .watch(categoryRepositoryProvider)
+        .watchAllCategories();
 
     return Scaffold(
       appBar: const AppAppBar(title: 'Widget Settings'),
@@ -42,8 +45,20 @@ class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
               builder: (context, ref, child) {
                 // Mock data for preview
                 final mockCategories = [
-                  const Category(id: '1', name: 'Groceries', color: 0, icon: '0', createdAt: null),
-                  const Category(id: '2', name: 'Rent', color: 0, icon: '0', createdAt: null),
+                  const Category(
+                    id: '1',
+                    name: 'Groceries',
+                    color: 0,
+                    icon: '0',
+                    createdAt: null,
+                  ),
+                  const Category(
+                    id: '2',
+                    name: 'Rent',
+                    color: 0,
+                    icon: '0',
+                    createdAt: null,
+                  ),
                 ];
                 final mockPerformance = {
                   '1': {'available': 150.0},
@@ -55,7 +70,7 @@ class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
                   categories: mockCategories,
                   categoryPerformance: mockPerformance,
                 );
-              }
+              },
             ),
           ),
           const SizedBox(height: 20),
@@ -75,50 +90,65 @@ class _WidgetSettingsScreenState extends ConsumerState<WidgetSettingsScreen> {
                 final list = snapshot.data!;
                 return DropdownButtonFormField<String>(
                   initialValue: _selectedAccountId,
-                  decoration: const InputDecoration(labelText: 'Default Account'),
+                  decoration: const InputDecoration(
+                    labelText: 'Default Account',
+                  ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('All Accounts')),
-                    ...list.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('All Accounts'),
+                    ),
+                    ...list.map(
+                      (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ),
                   ],
                   onChanged: (val) => setState(() => _selectedAccountId = val),
                 );
               }
               return const CircularProgressIndicator();
-            }
+            },
           ),
 
-           const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
-           // Category Selection
-           StreamBuilder<List<Category>>(
+          // Category Selection
+          StreamBuilder<List<Category>>(
             stream: categories,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 final list = snapshot.data!;
                 return DropdownButtonFormField<String>(
                   initialValue: _selectedCategoryId,
-                  decoration: const InputDecoration(labelText: 'Focus Category'),
+                  decoration: const InputDecoration(
+                    labelText: 'Focus Category',
+                  ),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('None')),
-                    ...list.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                    ...list.map(
+                      (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    ),
                   ],
                   onChanged: (val) => setState(() => _selectedCategoryId = val),
                 );
               }
               return const CircularProgressIndicator();
-            }
+            },
           ),
 
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {
               // Save to widget service/shared prefs
-              ref.read(widgetServiceProvider).updateWidgetConfiguration(
-                showGraph: _showGraph,
-                accountId: _selectedAccountId,
-                categoryId: _selectedCategoryId
+              ref
+                  .read(widgetServiceProvider)
+                  .updateWidgetConfiguration(
+                    showGraph: _showGraph,
+                    accountId: _selectedAccountId,
+                    categoryId: _selectedCategoryId,
+                  );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Widget settings saved')),
               );
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Widget settings saved')));
             },
             child: const Text('Save Settings'),
           ),

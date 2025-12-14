@@ -14,12 +14,12 @@ void main() {
 
     // Seed dependencies (Categories)
     // We need 100 categories
-    final categories = List.generate(100, (i) => CategoriesCompanion.insert(
-        id: 'cat_$i',
-        name: 'Category $i',
-    ));
+    final categories = List.generate(
+      100,
+      (i) => CategoriesCompanion.insert(id: 'cat_$i', name: 'Category $i'),
+    );
     await database.batch((batch) {
-        batch.insertAll(database.categories, categories);
+      batch.insertAll(database.categories, categories);
     });
   });
 
@@ -35,13 +35,15 @@ void main() {
     final budgets = <BudgetsCompanion>[];
     for (var c = 0; c < categories; c++) {
       for (var m = 0; m < months; m++) {
-        budgets.add(BudgetsCompanion.insert(
-          id: 'b_${c}_$m',
-          categoryId: 'cat_$c',
-          month: '2023-${m.toString().padLeft(2, '0')}',
-          budgeted: const Value(100.0),
-          activity: const Value(50.0),
-        ));
+        budgets.add(
+          BudgetsCompanion.insert(
+            id: 'b_${c}_$m',
+            categoryId: 'cat_$c',
+            month: '2023-${m.toString().padLeft(2, '0')}',
+            budgeted: const Value(100.0),
+            activity: const Value(50.0),
+          ),
+        );
       }
     }
 

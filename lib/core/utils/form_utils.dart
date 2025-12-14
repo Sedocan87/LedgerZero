@@ -16,14 +16,15 @@ class FormUtils {
 
       void visit(Element element) {
         if (firstErrorElement != null) {
-      return;
-    } // Found one, stop
+          return;
+        } // Found one, stop
 
         if (element.widget is FormField) {
-          final FormFieldState state = (element as StatefulElement).state as FormFieldState;
+          final FormFieldState state =
+              (element as StatefulElement).state as FormFieldState;
           if (state.hasError) {
-             firstErrorElement = element;
-             return;
+            firstErrorElement = element;
+            return;
           }
         }
         element.visitChildren(visit);
@@ -32,17 +33,17 @@ class FormUtils {
       context.visitChildElements(visit);
 
       if (firstErrorElement != null) {
-          // Try to scroll to it
-          Scrollable.ensureVisible(
-            firstErrorElement!,
-            alignment: 0.5,
-            duration: const Duration(milliseconds: 300),
-          );
+        // Try to scroll to it
+        Scrollable.ensureVisible(
+          firstErrorElement!,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 300),
+        );
 
-          // Focus logic would go here if we could reliably extract FocusNode
-          // For now, scrolling to it helps significantly.
-          // And we rely on the screen implementation passing FocusNodes correctly.
-          // But scrolling ensures it's in viewport.
+        // Focus logic would go here if we could reliably extract FocusNode
+        // For now, scrolling to it helps significantly.
+        // And we rely on the screen implementation passing FocusNodes correctly.
+        // But scrolling ensures it's in viewport.
       }
     });
   }

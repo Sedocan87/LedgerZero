@@ -37,39 +37,69 @@ abstract class TransactionRepository {
   Stream<List<Transaction>> watchTransactionsByAccount(String accountId);
 
   /// Retrieves transactions within a specific date range.
-  Future<List<Transaction>> getTransactionsByDateRange(DateTime start, DateTime end);
+  Future<List<Transaction>> getTransactionsByDateRange(
+    DateTime start,
+    DateTime end,
+  );
 
   /// Calculates the total income (positive amount, null category) within a date range.
   Future<double> getIncomeSumByDateRange(DateTime start, DateTime end);
 
   /// Calculates the total expenses (sum of amounts) for a specific category within a date range.
-  Future<double> getExpenseSumByCategoryAndDateRange(String categoryId, DateTime start, DateTime end);
+  Future<double> getExpenseSumByCategoryAndDateRange(
+    String categoryId,
+    DateTime start,
+    DateTime end,
+  );
 
   /// Calculates the total expenses (sum of amounts) for all categories within a date range.
   /// Returns a map where key is categoryId and value is the sum.
-  Future<Map<String, double>> getExpenseSumsByDateRange(DateTime start, DateTime end);
+  Future<Map<String, double>> getExpenseSumsByDateRange(
+    DateTime start,
+    DateTime end,
+  );
 
   /// Creates a transfer consisting of two linked transactions.
-  Future<void> createTransferTransaction(Transaction source, Transaction destination);
+  Future<void> createTransferTransaction(
+    Transaction source,
+    Transaction destination,
+  );
 
   /// Updates a transfer consisting of two linked transactions.
-  Future<void> updateTransferTransaction(Transaction source, Transaction destination);
+  Future<void> updateTransferTransaction(
+    Transaction source,
+    Transaction destination,
+  );
 
   /// Deletes a transaction and its linked counterparts (transfers or splits).
   Future<void> deleteLinkedTransaction(String id);
 
   /// Creates a split transaction consisting of a parent and multiple children.
-  Future<void> createSplitTransaction(Transaction parent, List<Transaction> children);
+  Future<void> createSplitTransaction(
+    Transaction parent,
+    List<Transaction> children,
+  );
 
   /// Updates a split transaction (parent and children).
-  Future<void> updateSplitTransaction(Transaction parent, List<Transaction> children);
+  Future<void> updateSplitTransaction(
+    Transaction parent,
+    List<Transaction> children,
+  );
 
   /// Retrieves the split children for a parent transaction.
   Future<List<Transaction>> getSplitTransactions(String parentId);
 
   /// Retrieves transactions matching the provided filter and sorted by the provided sort options.
-  Future<List<Transaction>> getTransactions({TransactionFilter? filter, TransactionSort? sort, int? limit});
+  Future<List<Transaction>> getTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+    int? limit,
+  });
 
   /// Watches transactions matching the provided filter and sorted by the provided sort options.
-  Stream<List<Transaction>> watchTransactions({TransactionFilter? filter, TransactionSort? sort, int? limit});
+  Stream<List<Transaction>> watchTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+    int? limit,
+  });
 }

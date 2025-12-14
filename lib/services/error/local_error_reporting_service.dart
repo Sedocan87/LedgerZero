@@ -12,7 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:synchronized/synchronized.dart';
 
 class LocalErrorReportingService {
-  static final LocalErrorReportingService _instance = LocalErrorReportingService._internal();
+  static final LocalErrorReportingService _instance =
+      LocalErrorReportingService._internal();
 
   factory LocalErrorReportingService() {
     return _instance;
@@ -72,7 +73,11 @@ class LocalErrorReportingService {
     });
   }
 
-  Future<void> generateCrashReport(Object error, StackTrace? stack, {String? userComments}) async {
+  Future<void> generateCrashReport(
+    Object error,
+    StackTrace? stack, {
+    String? userComments,
+  }) async {
     await _lock.synchronized(() async {
       try {
         final directory = await _directory;
@@ -82,7 +87,9 @@ class LocalErrorReportingService {
         }
 
         final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-        final file = File(path.join(crashDir.path, 'crash_report_$timestamp.txt'));
+        final file = File(
+          path.join(crashDir.path, 'crash_report_$timestamp.txt'),
+        );
 
         final buffer = StringBuffer();
         buffer.writeln('CRASH REPORT');
@@ -115,24 +122,24 @@ class LocalErrorReportingService {
             buffer.writeln('  System Name: ${iosInfo.systemName}');
             buffer.writeln('  System Version: ${iosInfo.systemVersion}');
           } else if (Platform.isLinux) {
-             final linuxInfo = await deviceInfo.linuxInfo;
-             buffer.writeln('  Name: ${linuxInfo.name}');
-             buffer.writeln('  Version: ${linuxInfo.version}');
+            final linuxInfo = await deviceInfo.linuxInfo;
+            buffer.writeln('  Name: ${linuxInfo.name}');
+            buffer.writeln('  Version: ${linuxInfo.version}');
           } else if (Platform.isMacOS) {
             final macOsInfo = await deviceInfo.macOsInfo;
             buffer.writeln('  Model: ${macOsInfo.model}');
             buffer.writeln('  OS Release: ${macOsInfo.osRelease}');
           } else if (Platform.isWindows) {
             final windowsInfo = await deviceInfo.windowsInfo;
-             buffer.writeln('  Computer Name: ${windowsInfo.computerName}');
+            buffer.writeln('  Computer Name: ${windowsInfo.computerName}');
           }
         } catch (_) {
           buffer.writeln('  Unavailable');
         }
 
         if (userComments != null && userComments.isNotEmpty) {
-           buffer.writeln('\nUser Comments:');
-           buffer.writeln(userComments);
+          buffer.writeln('\nUser Comments:');
+          buffer.writeln(userComments);
         }
 
         buffer.writeln('\nError:');
@@ -146,15 +153,16 @@ class LocalErrorReportingService {
         await file.writeAsString(buffer.toString());
 
         // Also log to standard log
-        await log(LogEntry(
-          timestamp: DateTime.now(),
-          level: LogLevel.error,
-          message: 'Crash Report Generated: ${file.path}',
-          error: error.toString()
-        ));
+        await log(
+          LogEntry(
+            timestamp: DateTime.now(),
+            level: LogLevel.error,
+            message: 'Crash Report Generated: ${file.path}',
+            error: error.toString(),
+          ),
+        );
 
         await _incrementErrorCount('Crash');
-
       } catch (e) {
         if (kDebugMode) {
           print('Failed to generate crash report: $e');
@@ -174,7 +182,9 @@ class LocalErrorReportingService {
       // But for analytics, maybe we just want "Crash", "Database", "Sync".
       // Let's rely on the caller or just distinct keys.
       // For this task, keeping it simple.
-      final key = errorType.length > 50 ? errorType.substring(0, 50) : errorType;
+      final key = errorType.length > 50
+          ? errorType.substring(0, 50)
+          : errorType;
 
       stats[key] = (stats[key] ?? 0) + 1;
       await prefs.setString(_errorStatsKey, jsonEncode(stats));
@@ -242,11 +252,21 @@ class LocalErrorReportingService {
 
   File _createNewLogFile(Directory directory) {
     var timestamp = DateTime.now().millisecondsSinceEpoch;
-    var file = File(path.join(directory.path, '$_logFileNamePrefix$timestamp$_logFileExtension'));
+    var file = File(
+      path.join(
+        directory.path,
+        '$_logFileNamePrefix$timestamp$_logFileExtension',
+      ),
+    );
 
     while (file.existsSync()) {
       timestamp++;
-      file = File(path.join(directory.path, '$_logFileNamePrefix$timestamp$_logFileExtension'));
+      file = File(
+        path.join(
+          directory.path,
+          '$_logFileNamePrefix$timestamp$_logFileExtension',
+        ),
+      );
     }
     return file;
   }
@@ -260,10 +280,13 @@ class LocalErrorReportingService {
       final entities = await directory.list().toList();
       final files = entities.whereType<File>().where((file) {
         final name = path.basename(file.path);
-        return name.startsWith(_logFileNamePrefix) && name.endsWith(_logFileExtension);
+        return name.startsWith(_logFileNamePrefix) &&
+            name.endsWith(_logFileExtension);
       }).toList();
 
-      files.sort((a, b) => path.basename(a.path).compareTo(path.basename(b.path)));
+      files.sort(
+        (a, b) => path.basename(a.path).compareTo(path.basename(b.path)),
+      );
       return files;
     } catch (e) {
       return [];
@@ -271,14 +294,14 @@ class LocalErrorReportingService {
   }
 
   Future<void> _pruneOldLogs(Directory directory) async {
-     final files = await _getLogFiles(directory);
-     if (files.length > _maxLogFiles) {
-       final filesToDelete = files.sublist(0, files.length - _maxLogFiles);
-       for (var file in filesToDelete) {
-         try {
-           await file.delete();
-         } catch (_) {}
-       }
-     }
+    final files = await _getLogFiles(directory);
+    if (files.length > _maxLogFiles) {
+      final filesToDelete = files.sublist(0, files.length - _maxLogFiles);
+      for (var file in filesToDelete) {
+        try {
+          await file.delete();
+        } catch (_) {}
+      }
+    }
   }
 }

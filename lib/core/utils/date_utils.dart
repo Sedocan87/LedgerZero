@@ -13,7 +13,11 @@ class DateUtils {
   /// Returns the end of the month for the given date (last millisecond).
   /// Example: 2023-05-15 -> 2023-05-31 23:59:59.999
   static DateTime endOfMonth(DateTime date) {
-    return DateTime(date.year, date.month + 1, 1).subtract(const Duration(milliseconds: 1));
+    return DateTime(
+      date.year,
+      date.month + 1,
+      1,
+    ).subtract(const Duration(milliseconds: 1));
   }
 
   /// Formats a date as YYYY-MM.

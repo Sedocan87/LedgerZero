@@ -15,12 +15,12 @@ Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-             Text(AppLocalizations.of(context)!.createTemplateDescription),
-             const SizedBox(height: 16),
-             AppTextField(
-               controller: controller,
-               label: AppLocalizations.of(context)!.templateName,
-             ),
+            Text(AppLocalizations.of(context)!.createTemplateDescription),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: controller,
+              label: AppLocalizations.of(context)!.templateName,
+            ),
           ],
         ),
         actions: [
@@ -33,11 +33,17 @@ Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
               final name = controller.text.trim();
               if (name.isNotEmpty) {
                 final month = ref.read(selectedBudgetMonthProvider);
-                await ref.read(budgetingServiceProvider).saveBudgetTemplate(name, month);
+                await ref
+                    .read(budgetingServiceProvider)
+                    .saveBudgetTemplate(name, month);
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(AppLocalizations.of(context)!.templateSaved)),
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(context)!.templateSaved,
+                      ),
+                    ),
                   );
                 }
               }
@@ -50,7 +56,10 @@ Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
   );
 }
 
-Future<void> showApplyTemplateDialog(BuildContext context, WidgetRef ref) async {
+Future<void> showApplyTemplateDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
   final l10n = AppLocalizations.of(context)!;
   // Fetch templates
   final templates = await ref.read(budgetingServiceProvider).getAllTemplates();
@@ -60,10 +69,10 @@ Future<void> showApplyTemplateDialog(BuildContext context, WidgetRef ref) async 
   }
 
   if (templates.isEmpty) {
-     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.noTemplates)),
-     );
-     return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.noTemplates)),
+    );
+    return;
   }
 
   return showDialog(
@@ -84,7 +93,9 @@ Future<void> showApplyTemplateDialog(BuildContext context, WidgetRef ref) async 
                   icon: const Icon(Icons.delete),
                   tooltip: AppLocalizations.of(context)!.deleteTemplate,
                   onPressed: () async {
-                    await ref.read(budgetingServiceProvider).deleteTemplate(template.id);
+                    await ref
+                        .read(budgetingServiceProvider)
+                        .deleteTemplate(template.id);
                     if (context.mounted) {
                       Navigator.pop(context);
                     }
@@ -92,18 +103,20 @@ Future<void> showApplyTemplateDialog(BuildContext context, WidgetRef ref) async 
                   },
                 ),
                 onTap: () async {
-                   final month = ref.read(selectedBudgetMonthProvider);
-                   await ref.read(budgetingServiceProvider).applyBudgetTemplate(template.id, month);
+                  final month = ref.read(selectedBudgetMonthProvider);
+                  await ref
+                      .read(budgetingServiceProvider)
+                      .applyBudgetTemplate(template.id, month);
 
-                   ref.invalidate(budgetViewModelProvider);
-                   ref.invalidate(tbbProvider);
+                  ref.invalidate(budgetViewModelProvider);
+                  ref.invalidate(tbbProvider);
 
-                   if (context.mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.budgetUpdated)),
-                     );
-                     Navigator.pop(context);
-                   }
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(l10n.budgetUpdated)));
+                    Navigator.pop(context);
+                  }
                 },
               );
             },

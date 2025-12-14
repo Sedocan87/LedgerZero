@@ -5,10 +5,7 @@ class MintAccount {
   final String name; // Mint CSV only provides "Account Name"
   final AccountType type; // Inferred from transactions
 
-  MintAccount({
-    required this.name,
-    required this.type,
-  });
+  MintAccount({required this.name, required this.type});
 }
 
 /// Represents a raw transaction imported from Mint

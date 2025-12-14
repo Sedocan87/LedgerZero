@@ -4,7 +4,8 @@ import 'package:ledger_zero/data/database/tables/category_groups.dart';
 class Categories extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  TextColumn get categoryGroupId => text().nullable().references(CategoryGroups, #id)();
+  TextColumn get categoryGroupId =>
+      text().nullable().references(CategoryGroups, #id)();
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().nullable()();
   TextColumn get goalType => text().nullable()();

@@ -51,7 +51,7 @@ class SampleDataGenerator {
       ),
     );
 
-     await transactionRepository.createTransaction(
+    await transactionRepository.createTransaction(
       Transaction(
         id: const Uuid().v4(),
         accountId: savingsId,

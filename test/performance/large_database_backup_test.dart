@@ -24,7 +24,7 @@ void main() {
   tearDown(() async {
     await db.close();
     if (await tempDir.exists()) {
-       await tempDir.delete(recursive: true);
+      await tempDir.delete(recursive: true);
     }
   });
 
@@ -51,7 +51,8 @@ void main() {
           TransactionsCompanion.insert(
             id: 'tx_$i',
             accountId: 'acc_1',
-            date: DateTime.now(), // Drift automatically converts to string if column is Text
+            date:
+                DateTime.now(), // Drift automatically converts to string if column is Text
             amount: (i % 100).toDouble(),
             memo: Value('Transaction $i'),
           ),
@@ -64,8 +65,8 @@ void main() {
     const channel = MethodChannel('plugins.flutter.io/path_provider');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-      return tempDir.path;
-    });
+          return tempDir.path;
+        });
 
     backupService = BackupService(db);
 

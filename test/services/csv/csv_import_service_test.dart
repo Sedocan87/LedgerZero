@@ -121,9 +121,11 @@ void main() {
     test('checkForDuplicates marks duplicates', () {
       final imported = service.convertCsvToTransactions(
         data: CsvImportData(
-            headers: ['Date', 'Payee', 'Amount'],
-            rows: [['2023-01-01', 'Store', '-50.00']],
-            delimiter: ','
+          headers: ['Date', 'Payee', 'Amount'],
+          rows: [
+            ['2023-01-01', 'Store', '-50.00'],
+          ],
+          delimiter: ',',
         ),
         columnMapping: {'Date': 'Date', 'Amount': 'Amount', 'Payee': 'Payee'},
         dateFormat: 'yyyy-MM-dd',
@@ -138,7 +140,7 @@ void main() {
           date: DateTime(2023, 1, 1),
           amount: -50.00,
           payeeId: 'p1', // mapped to 'Store' below
-        )
+        ),
       ];
 
       service.checkForDuplicates(

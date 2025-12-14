@@ -97,13 +97,16 @@ class SyncController extends StateNotifier<SyncState> {
         );
       }
     } else if (state.selectedProvider == SyncProviderType.iCloud) {
-       // Check if iCloud is accessible
-       try {
-         await _iCloudService.verifyContainerAccess();
-         state = state.copyWith(status: SyncStatus.connected);
-       } catch (e) {
-          state = state.copyWith(status: SyncStatus.error, errorMessage: e.toString());
-       }
+      // Check if iCloud is accessible
+      try {
+        await _iCloudService.verifyContainerAccess();
+        state = state.copyWith(status: SyncStatus.connected);
+      } catch (e) {
+        state = state.copyWith(
+          status: SyncStatus.error,
+          errorMessage: e.toString(),
+        );
+      }
     }
   }
 
@@ -113,21 +116,26 @@ class SyncController extends StateNotifier<SyncState> {
     }
 
     await _prefs.setString(_syncProviderKey, provider.name);
-    state = state.copyWith(selectedProvider: provider, status: SyncStatus.disconnected, errorMessage: null, accountEmail: null);
+    state = state.copyWith(
+      selectedProvider: provider,
+      status: SyncStatus.disconnected,
+      errorMessage: null,
+      accountEmail: null,
+    );
 
     if (provider == SyncProviderType.googleDrive) {
-       // Check if already signed in
-       final isSignedIn = await _authService.isSignedIn();
-       if (isSignedIn) {
-          final user = _authService.currentUser;
-          state = state.copyWith(
-            status: SyncStatus.connected,
-            accountEmail: user?.email
-          );
-       }
+      // Check if already signed in
+      final isSignedIn = await _authService.isSignedIn();
+      if (isSignedIn) {
+        final user = _authService.currentUser;
+        state = state.copyWith(
+          status: SyncStatus.connected,
+          accountEmail: user?.email,
+        );
+      }
     } else if (provider == SyncProviderType.iCloud) {
-        // Auto-connect for iCloud
-        await connect();
+      // Auto-connect for iCloud
+      await connect();
     }
   }
 

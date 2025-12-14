@@ -22,7 +22,8 @@ class MockBackupScheduler extends Mock implements BackupScheduler {
 }
 
 // Create a mock for SyncController
-class MockSyncController extends StateNotifier<SyncState> implements SyncController {
+class MockSyncController extends StateNotifier<SyncState>
+    implements SyncController {
   MockSyncController() : super(const SyncState());
 
   @override
@@ -57,7 +58,9 @@ void main() {
       currentMonth = DateTime(now.year, now.month);
     });
 
-    testWidgets('HomeScreen handles orientation changes', (WidgetTester tester) async {
+    testWidgets('HomeScreen handles orientation changes', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 1920);
       tester.view.devicePixelRatio = 3.0;
 
@@ -68,7 +71,9 @@ void main() {
           hasAccountsProvider.overrideWith((ref) => Future.value(true)),
           backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
           tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith((ref) => Future.value({'income': 5000.0, 'spending': 2000.0})),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          ),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],
@@ -84,7 +89,9 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
     });
 
-    testWidgets('HomeScreen handles split-screen (tablet)', (WidgetTester tester) async {
+    testWidgets('HomeScreen handles split-screen (tablet)', (
+      WidgetTester tester,
+    ) async {
       // Simulate 600px width (e.g. half of a tablet screen or a large phone)
       tester.view.physicalSize = const Size(600 * 3, 1000 * 3);
       tester.view.devicePixelRatio = 3.0;
@@ -96,7 +103,9 @@ void main() {
           hasAccountsProvider.overrideWith((ref) => Future.value(true)),
           backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
           tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith((ref) => Future.value({'income': 5000.0, 'spending': 2000.0})),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          ),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],
@@ -109,7 +118,9 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
     });
 
-    testWidgets('HomeScreen handles large font scaling', (WidgetTester tester) async {
+    testWidgets('HomeScreen handles large font scaling', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 1920);
       tester.view.devicePixelRatio = 3.0;
       // Set text scale factor to 2.0
@@ -122,7 +133,9 @@ void main() {
           hasAccountsProvider.overrideWith((ref) => Future.value(true)),
           backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
           tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith((ref) => Future.value({'income': 5000.0, 'spending': 2000.0})),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          ),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],
@@ -151,7 +164,9 @@ void main() {
           hasAccountsProvider.overrideWith((ref) => Future.value(true)),
           backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
           tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith((ref) => Future.value({'income': 5000.0, 'spending': 2000.0})),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          ),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],

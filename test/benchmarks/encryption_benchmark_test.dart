@@ -44,14 +44,16 @@ void main() {
     });
 
     Future<AppDatabase> openDb(File file, String? key) async {
-      return AppDatabase(NativeDatabase(
-        file,
-        setup: (rawDb) {
-          if (key != null) {
-            rawDb.execute("PRAGMA key = '$key'");
-          }
-        },
-      ));
+      return AppDatabase(
+        NativeDatabase(
+          file,
+          setup: (rawDb) {
+            if (key != null) {
+              rawDb.execute("PRAGMA key = '$key'");
+            }
+          },
+        ),
+      );
     }
 
     Future<void> runBenchmark(String label, File file, String? key) async {

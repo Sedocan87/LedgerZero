@@ -22,20 +22,24 @@ void main() {
     // However, the test intent is to verify that IF encryption is applied, it works.
 
     try {
-      final db = AppDatabase(NativeDatabase(
-        dbFile,
-        setup: (database) {
-          database.execute("PRAGMA key = '$key';");
-        },
-      ));
-
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          id: 'acc_1',
-          name: 'Secret Account',
-          type: 'checking',
+      final db = AppDatabase(
+        NativeDatabase(
+          dbFile,
+          setup: (database) {
+            database.execute("PRAGMA key = '$key';");
+          },
         ),
       );
+
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              id: 'acc_1',
+              name: 'Secret Account',
+              type: 'checking',
+            ),
+          );
 
       await db.close();
 
@@ -54,7 +58,6 @@ void main() {
 
         // Check if we can verify if it *should* have failed.
         // For the purpose of this task, we want to ensure the CODE attempts to encrypt.
-
       } catch (e) {
         // If it throws, it's likely "file is not a database" or similar, which is GOOD.
         // print('Success: Access denied as expected: $e');
@@ -62,7 +65,6 @@ void main() {
       }
 
       rawDb.dispose();
-
     } catch (e) {
       // If setup fails (e.g. library load), log it
       // print('Test setup failed (possibly due to missing libraries): $e');

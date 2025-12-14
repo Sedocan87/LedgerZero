@@ -54,7 +54,8 @@ class _CategoryFilterSheet extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_CategoryFilterSheet> createState() => _CategoryFilterSheetState();
+  ConsumerState<_CategoryFilterSheet> createState() =>
+      _CategoryFilterSheetState();
 }
 
 class _CategoryFilterSheetState extends ConsumerState<_CategoryFilterSheet> {
@@ -81,15 +82,21 @@ class _CategoryFilterSheetState extends ConsumerState<_CategoryFilterSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   Text(AppLocalizations.of(context)!.filterCategories, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                   TextButton(
-                     onPressed: () {
-                       setState(() {
-                         _selectedIds.clear();
-                       });
-                     },
-                     child: Text(AppLocalizations.of(context)!.clear)
-                   ),
+                  Text(
+                    AppLocalizations.of(context)!.filterCategories,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedIds.clear();
+                      });
+                    },
+                    child: Text(AppLocalizations.of(context)!.clear),
+                  ),
                 ],
               ),
             ),
@@ -130,7 +137,8 @@ class _CategoryFilterSheetState extends ConsumerState<_CategoryFilterSheet> {
                   Expanded(
                     child: FilledButton(
                       onPressed: () {
-                        ref.read(reportCategoryFilterProvider.notifier).state = _selectedIds;
+                        ref.read(reportCategoryFilterProvider.notifier).state =
+                            _selectedIds;
                         Navigator.pop(context);
                       },
                       child: Text(AppLocalizations.of(context)!.apply),

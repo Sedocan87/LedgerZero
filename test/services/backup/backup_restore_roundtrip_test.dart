@@ -23,8 +23,8 @@ void main() {
     const channel = MethodChannel('plugins.flutter.io/path_provider');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-      return tempDir.path;
-    });
+          return tempDir.path;
+        });
 
     SharedPreferences.setMockInitialValues({});
   });
@@ -32,7 +32,7 @@ void main() {
   tearDown(() async {
     await db.close();
     if (await tempDir.exists()) {
-       await tempDir.delete(recursive: true);
+      await tempDir.delete(recursive: true);
     }
   });
 
@@ -42,18 +42,26 @@ void main() {
     db = AppDatabase(NativeDatabase(file));
 
     // Insert some data
-    await db.into(db.accounts).insert(
-       AccountsCompanion.insert(id: 'acc_1', name: 'Source Account', type: 'checking')
-    );
-    await db.into(db.transactions).insert(
-       TransactionsCompanion.insert(
-         id: 'tx_1',
-         accountId: 'acc_1',
-         date: DateTime.now(),
-         amount: 100.0,
-         memo: const Value('Original Transaction')
-       )
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: 'acc_1',
+            name: 'Source Account',
+            type: 'checking',
+          ),
+        );
+    await db
+        .into(db.transactions)
+        .insert(
+          TransactionsCompanion.insert(
+            id: 'tx_1',
+            accountId: 'acc_1',
+            date: DateTime.now(),
+            amount: 100.0,
+            memo: const Value('Original Transaction'),
+          ),
+        );
 
     // 2. Create Backup
     backupService = BackupService(db);
@@ -73,7 +81,9 @@ void main() {
     // But here `db` points to `db_source.sqlite`.
     // RestoreService will write to `tempDir/db.sqlite` (default name).
 
-    restoreService = RestoreService(db); // It takes a DB instance but uses file ops internally
+    restoreService = RestoreService(
+      db,
+    ); // It takes a DB instance but uses file ops internally
 
     await restoreService.restoreBackup(backupFile, password: 'secret123');
 

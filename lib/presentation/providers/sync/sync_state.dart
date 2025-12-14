@@ -1,18 +1,8 @@
 import 'package:equatable/equatable.dart';
 
-enum SyncStatus {
-  idle,
-  disconnected,
-  connected,
-  syncing,
-  error,
-}
+enum SyncStatus { idle, disconnected, connected, syncing, error }
 
-enum SyncProviderType {
-  none,
-  googleDrive,
-  iCloud,
-}
+enum SyncProviderType { none, googleDrive, iCloud }
 
 enum SyncFrequency {
   manual,
@@ -71,14 +61,14 @@ class SyncState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        selectedProvider,
-        lastSyncTime,
-        errorMessage,
-        accountEmail,
-        message,
-        progress,
-        wifiOnly,
-        syncFrequency,
-      ];
+    status,
+    selectedProvider,
+    lastSyncTime,
+    errorMessage,
+    accountEmail,
+    message,
+    progress,
+    wifiOnly,
+    syncFrequency,
+  ];
 }

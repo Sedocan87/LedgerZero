@@ -10,7 +10,9 @@ import 'test_utils.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Security: Password Setup and Unlock', (WidgetTester tester) async {
+  testWidgets('Security: Password Setup and Unlock', (
+    WidgetTester tester,
+  ) async {
     await setupIntegrationTest(tester);
 
     // 1. We start at Onboarding usually.

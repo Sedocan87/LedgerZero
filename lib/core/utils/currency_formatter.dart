@@ -8,7 +8,12 @@ class CurrencyFormatter {
   /// [locale]: The locale to use for formatting (e.g., 'en_US', 'de_DE').
   /// [symbol]: Optional currency symbol override. If null, uses locale default.
   /// [decimalDigits]: Number of decimal places (default 2).
-  static String format(double amount, {String? locale, String? symbol, int decimalDigits = 2}) {
+  static String format(
+    double amount, {
+    String? locale,
+    String? symbol,
+    int decimalDigits = 2,
+  }) {
     final format = NumberFormat.currency(
       locale: locale,
       symbol: symbol,
@@ -25,10 +30,7 @@ class CurrencyFormatter {
 
   /// Formats compact currency (e.g., $1.2M).
   static String formatCompact(double amount, {String? locale, String? symbol}) {
-    final format = NumberFormat.compactCurrency(
-      locale: locale,
-      symbol: symbol,
-    );
+    final format = NumberFormat.compactCurrency(locale: locale, symbol: symbol);
     return format.format(amount);
   }
 }

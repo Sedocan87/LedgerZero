@@ -49,7 +49,8 @@ class BankImportPresets {
       name: 'Citibank',
       columnMapping: {
         'Date': 'Date',
-        'Amount': 'Debit', // Or Credit, requires careful handling or custom logic
+        'Amount':
+            'Debit', // Or Credit, requires careful handling or custom logic
         'Payee': 'Description',
       },
       dateFormat: 'MM/dd/yyyy',

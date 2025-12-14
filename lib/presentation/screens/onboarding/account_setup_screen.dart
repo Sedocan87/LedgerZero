@@ -53,9 +53,9 @@ class _AccountSetupScreenState extends ConsumerState<AccountSetupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating account: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error creating account: $e')));
       }
     } finally {
       if (mounted) {
@@ -73,9 +73,9 @@ class _AccountSetupScreenState extends ConsumerState<AccountSetupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading demo data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading demo data: $e')));
       }
     } finally {
       if (mounted) {
@@ -91,8 +91,8 @@ class _AccountSetupScreenState extends ConsumerState<AccountSetupScreen> {
         title: const Text('Setup Your First Account'),
         actions: [
           TextButton(
-             onPressed: () => context.goNamed('budget-setup'),
-             child: const Text('Skip'),
+            onPressed: () => context.goNamed('budget-setup'),
+            child: const Text('Skip'),
           ),
         ],
       ),
@@ -145,7 +145,9 @@ class _AccountSetupScreenState extends ConsumerState<AccountSetupScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _balanceController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Current Balance',
                     prefixText: '\$ ',
@@ -173,7 +175,10 @@ class _AccountSetupScreenState extends ConsumerState<AccountSetupScreen> {
                           width: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Create Account & Continue', style: TextStyle(fontSize: 18)),
+                      : const Text(
+                          'Create Account & Continue',
+                          style: TextStyle(fontSize: 18),
+                        ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(

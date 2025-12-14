@@ -10,22 +10,27 @@ class ParsingHistoryRepositoryImpl implements ParsingHistoryRepository {
   ParsingHistoryRepositoryImpl(this._dao);
 
   @override
-  Future<void> addHistory(String input, String? payeeId, String? categoryId) async {
-    await _dao.addHistory(ParsingHistoryCompanion.insert(
-      id: const Uuid().v4(),
-      input: input,
-      payeeId: Value(payeeId),
-      categoryId: Value(categoryId),
-      createdAt: DateTime.now().toIso8601String(),
-    ));
+  Future<void> addHistory(
+    String input,
+    String? payeeId,
+    String? categoryId,
+  ) async {
+    await _dao.addHistory(
+      ParsingHistoryCompanion.insert(
+        id: const Uuid().v4(),
+        input: input,
+        payeeId: Value(payeeId),
+        categoryId: Value(categoryId),
+        createdAt: DateTime.now().toIso8601String(),
+      ),
+    );
   }
 
   @override
   Future<List<Map<String, dynamic>>> getHistory(String input) async {
     final results = await _dao.getHistoryForInput(input);
-    return results.map((e) => {
-      'payeeId': e.payeeId,
-      'categoryId': e.categoryId,
-    }).toList();
+    return results
+        .map((e) => {'payeeId': e.payeeId, 'categoryId': e.categoryId})
+        .toList();
   }
 }

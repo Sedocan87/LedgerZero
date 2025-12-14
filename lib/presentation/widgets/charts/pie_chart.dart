@@ -46,11 +46,13 @@ class PieChart extends StatelessWidget {
     final processedData = <MapEntry<String, double>>[];
 
     if (sortedEntries.length > 7) {
-        processedData.addAll(sortedEntries.take(7));
-        final otherSum = sortedEntries.skip(7).fold(0.0, (sum, e) => sum + e.value);
-        processedData.add(MapEntry('Others', otherSum));
+      processedData.addAll(sortedEntries.take(7));
+      final otherSum = sortedEntries
+          .skip(7)
+          .fold(0.0, (sum, e) => sum + e.value);
+      processedData.add(MapEntry('Others', otherSum));
     } else {
-        processedData.addAll(sortedEntries);
+      processedData.addAll(sortedEntries);
     }
 
     // Normalize for Pie
@@ -67,10 +69,12 @@ class PieChart extends StatelessWidget {
       );
     }
 
-    final semanticDescription = processedData.map((e) {
-      final percentage = (e.value / total * 100).toStringAsFixed(1);
-      return '${e.key}: $percentage%';
-    }).join(', ');
+    final semanticDescription = processedData
+        .map((e) {
+          final percentage = (e.value / total * 100).toStringAsFixed(1);
+          return '${e.key}: $percentage%';
+        })
+        .join(', ');
 
     return Semantics(
       label: 'Pie Chart showing distribution. $semanticDescription',
@@ -102,31 +106,33 @@ class PieChart extends StatelessWidget {
                 physics: const ClampingScrollPhysics(),
                 itemCount: processedData.length,
                 itemBuilder: (context, index) {
-                   final entry = processedData[index];
-                   final percentage = (entry.value / total * 100).toStringAsFixed(1);
-                   return Padding(
-                     padding: const EdgeInsets.symmetric(vertical: 2.0),
-                     child: Row(
-                       children: [
-                         Container(
-                           width: 12, height: 12,
-                           decoration: BoxDecoration(
-                             color: colors[index % colors.length],
-                             shape: BoxShape.circle,
-                           ),
-                         ),
-                         const SizedBox(width: 8),
-                         Expanded(
-                           child: Text(
-                             '${entry.key}\n$percentage%',
-                             style: TextStyle(color: labelColor, fontSize: 11),
-                             overflow: TextOverflow.ellipsis,
-                             maxLines: 2,
-                           ),
-                         ),
-                       ],
-                     ),
-                   );
+                  final entry = processedData[index];
+                  final percentage = (entry.value / total * 100)
+                      .toStringAsFixed(1);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: colors[index % colors.length],
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${entry.key}\n$percentage%',
+                            style: TextStyle(color: labelColor, fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 },
               ),
             ),
@@ -157,8 +163,7 @@ class PieChartPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = min(size.width / 2, size.height / 2);
 
-    final paint = Paint()
-      ..style = PaintingStyle.fill;
+    final paint = Paint()..style = PaintingStyle.fill;
 
     double startAngle = -pi / 2;
 
@@ -190,10 +195,10 @@ class PieChartPainter extends CustomPainter {
     }
 
     for (int i = 0; i < data.length; i++) {
-       if (data[i].key != oldDelegate.data[i].key ||
-           data[i].value != oldDelegate.data[i].value) {
-         return true;
-       }
+      if (data[i].key != oldDelegate.data[i].key ||
+          data[i].value != oldDelegate.data[i].value) {
+        return true;
+      }
     }
     return false;
   }

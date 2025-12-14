@@ -11,7 +11,9 @@ class RulesDao extends DatabaseAccessor<AppDatabase> with _$RulesDaoMixin {
   Future<List<Rule>> getAllRules() => select(rules).get();
 
   Stream<List<Rule>> watchAllRules() {
-    return (select(rules)..orderBy([(t) => OrderingTerm(expression: t.priority)])).watch();
+    return (select(
+      rules,
+    )..orderBy([(t) => OrderingTerm(expression: t.priority)])).watch();
   }
 
   Future<Rule?> getRuleById(String id) {

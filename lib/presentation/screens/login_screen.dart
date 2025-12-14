@@ -52,7 +52,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (key != null) {
           _loginSuccess(key);
         } else {
-           _showError('Biometric key not found. Please use password.');
+          _showError('Biometric key not found. Please use password.');
         }
       }
     } catch (e) {
@@ -79,7 +79,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
-      final key = securityManager.deriveKeyFromPassword(_passwordController.text, salt);
+      final key = await securityManager.deriveKeyFromPassword(
+        _passwordController.text,
+        salt,
+      );
       final isValid = await securityManager.verifyKey(key);
 
       if (isValid) {
@@ -142,7 +145,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -165,7 +170,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         width: 24,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Unlock Database', style: TextStyle(fontSize: 18)),
+                    : const Text(
+                        'Unlock Database',
+                        style: TextStyle(fontSize: 18),
+                      ),
               ),
               if (_isBiometricsAvailable) ...[
                 const SizedBox(height: 24),

@@ -14,54 +14,73 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 11', () {
-    expect(database.schemaVersion, 11);
+  test('schema version should be 14', () {
+    expect(database.schemaVersion, 14);
   });
 
   group('Database Tables Creation & Defaults', () {
-    test('should create accounts table with default values and new columns', () async {
-      final account = AccountsCompanion(
-        id: const Value('acc_1'),
-        name: const Value('Checking'),
-        type: const Value('checking'),
-        createdAt: Value(DateTime.now()),
-      );
-      await database.into(database.accounts).insert(account);
-      final result = await database.select(database.accounts).getSingle();
+    test(
+      'should create accounts table with default values and new columns',
+      () async {
+        final account = AccountsCompanion(
+          id: const Value('acc_1'),
+          name: const Value('Checking'),
+          type: const Value('checking'),
+          createdAt: Value(DateTime.now()),
+        );
+        await database.into(database.accounts).insert(account);
+        final result = await database.select(database.accounts).getSingle();
 
-      expect(result.id, 'acc_1');
-      expect(result.currency, 'USD'); // Default
-      expect(result.startingBalance, 0.0); // Default
-      expect(result.currentBalance, 0.0); // Default
-      expect(result.isClosed, false); // Default (0 -> false)
-      expect(result.color, isNull);
-      expect(result.icon, isNull);
-      expect(result.notes, isNull);
-    });
+        expect(result.id, 'acc_1');
+        expect(result.currency, 'USD'); // Default
+        expect(result.startingBalance, 0.0); // Default
+        expect(result.currentBalance, 0.0); // Default
+        expect(result.isClosed, false); // Default (0 -> false)
+        expect(result.color, isNull);
+        expect(result.icon, isNull);
+        expect(result.notes, isNull);
+      },
+    );
 
-    test('should create categories table with default values and new columns', () async {
-      await database.into(database.categoryGroups).insert(
-        const CategoryGroupsCompanion(id: Value('grp_1'), name: Value('Living')),
-      );
+    test(
+      'should create categories table with default values and new columns',
+      () async {
+        await database
+            .into(database.categoryGroups)
+            .insert(
+              const CategoryGroupsCompanion(
+                id: Value('grp_1'),
+                name: Value('Living'),
+              ),
+            );
 
-      const category = CategoriesCompanion(
-        id: Value('cat_1'),
-        name: Value('Groceries'),
-        categoryGroupId: Value('grp_1'),
-      );
-      await database.into(database.categories).insert(category);
-      final result = await (database.select(database.categories)..where((tbl) => tbl.id.equals('cat_1'))).getSingle();
+        const category = CategoriesCompanion(
+          id: Value('cat_1'),
+          name: Value('Groceries'),
+          categoryGroupId: Value('grp_1'),
+        );
+        await database.into(database.categories).insert(category);
+        final result = await (database.select(
+          database.categories,
+        )..where((tbl) => tbl.id.equals('cat_1'))).getSingle();
 
-      expect(result.isHidden, false); // Default
-      expect(result.goalType, isNull);
-      expect(result.targetAmount, isNull);
-      expect(result.targetDate, isNull);
-    });
+        expect(result.isHidden, false); // Default
+        expect(result.goalType, isNull);
+        expect(result.targetAmount, isNull);
+        expect(result.targetDate, isNull);
+      },
+    );
 
     test('should create transactions table with default values', () async {
-      await database.into(database.accounts).insert(
-        const AccountsCompanion(id: Value('acc_1'), name: Value('Checking'), type: Value('checking')),
-      );
+      await database
+          .into(database.accounts)
+          .insert(
+            const AccountsCompanion(
+              id: Value('acc_1'),
+              name: Value('Checking'),
+              type: Value('checking'),
+            ),
+          );
 
       final tx = TransactionsCompanion(
         id: const Value('tx_1'),
@@ -77,12 +96,23 @@ void main() {
     });
 
     test('should create budgets table with default values', () async {
-       await database.into(database.categoryGroups).insert(
-        const CategoryGroupsCompanion(id: Value('grp_1'), name: Value('Living')),
-      );
-      await database.into(database.categories).insert(
-        const CategoriesCompanion(id: Value('cat_1'), name: Value('Groceries'), categoryGroupId: Value('grp_1')),
-      );
+      await database
+          .into(database.categoryGroups)
+          .insert(
+            const CategoryGroupsCompanion(
+              id: Value('grp_1'),
+              name: Value('Living'),
+            ),
+          );
+      await database
+          .into(database.categories)
+          .insert(
+            const CategoriesCompanion(
+              id: Value('cat_1'),
+              name: Value('Groceries'),
+              categoryGroupId: Value('grp_1'),
+            ),
+          );
 
       const budget = BudgetsCompanion(
         id: Value('bud_1'),
@@ -98,11 +128,11 @@ void main() {
     });
 
     test('should create scheduled_transactions with default values', () async {
-      const sch = ScheduledTransactionsCompanion(
-        id: Value('sch_1'),
-      );
+      const sch = ScheduledTransactionsCompanion(id: Value('sch_1'));
       await database.into(database.scheduledTransactions).insert(sch);
-      final result = await database.select(database.scheduledTransactions).getSingle();
+      final result = await database
+          .select(database.scheduledTransactions)
+          .getSingle();
 
       expect(result.autoApprove, false); // Default
     });
@@ -111,9 +141,9 @@ void main() {
   group('Database Indexes', () {
     test('should have expected indexes', () async {
       // Query sqlite_master to verify indexes exist
-      final indexes = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='index'"
-      ).get();
+      final indexes = await database
+          .customSelect("SELECT name FROM sqlite_master WHERE type='index'")
+          .get();
 
       final indexNames = indexes.map((row) => row.read<String>('name')).toSet();
 

@@ -6,13 +6,12 @@ import '../../../widget_test_helpers.dart';
 
 void main() {
   group('Budget Screen Widgets Tests', () {
-    testWidgets('MonthSelector shows month and navigation buttons',
-        (tester) async {
+    testWidgets('MonthSelector shows month and navigation buttons', (
+      tester,
+    ) async {
       await pumpTestWidget(
         tester,
-        child: const Scaffold(
-          body: MonthSelector(),
-        ),
+        child: const Scaffold(body: MonthSelector()),
       );
 
       // Verify date is shown (we need to know what date it defaults to, usually now)

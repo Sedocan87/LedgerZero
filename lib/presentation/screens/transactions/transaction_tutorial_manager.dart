@@ -22,7 +22,8 @@ class TransactionTutorialManager {
         ),
         TutorialStep(
           title: 'Select Payee',
-          description: 'Choose who you paid or who paid you. New payees are saved automatically.',
+          description:
+              'Choose who you paid or who paid you. New payees are saved automatically.',
           targetKey: payeeKey,
           position: TutorialPosition.bottom,
         ),
@@ -34,7 +35,8 @@ class TransactionTutorialManager {
         ),
         TutorialStep(
           title: 'Save',
-          description: 'Tap here to save. You can also "Save & Add Another" below.',
+          description:
+              'Tap here to save. You can also "Save & Add Another" below.',
           targetKey: saveKey,
           position: TutorialPosition.left,
         ),

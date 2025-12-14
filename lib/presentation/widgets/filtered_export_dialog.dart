@@ -11,7 +11,8 @@ class FilteredExportDialog extends ConsumerStatefulWidget {
   const FilteredExportDialog({super.key});
 
   @override
-  ConsumerState<FilteredExportDialog> createState() => _FilteredExportDialogState();
+  ConsumerState<FilteredExportDialog> createState() =>
+      _FilteredExportDialogState();
 }
 
 class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
@@ -24,8 +25,12 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final accountsAsync = ref.watch(accountRepositoryProvider).watchAllAccounts();
-    final categoriesAsync = ref.watch(categoryRepositoryProvider).watchAllCategories();
+    final accountsAsync = ref
+        .watch(accountRepositoryProvider)
+        .watchAllAccounts();
+    final categoriesAsync = ref
+        .watch(categoryRepositoryProvider)
+        .watchAllCategories();
 
     return AlertDialog(
       title: const Text('Export Filtered Transactions'),
@@ -117,7 +122,10 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
             const SizedBox(height: 16),
 
             // Categories
-            Text(l10n.categories, style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              l10n.categories,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             StreamBuilder(
               stream: categoriesAsync,
               builder: (context, snapshot) {
@@ -126,52 +134,67 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
                 }
                 final categories = snapshot.data!;
                 // Just show a count or simplified selector if too many
-                 if (categories.length > 10) {
-                   return OutlinedButton(
-                     onPressed: () {
-                       // Show full category picker dialog
-                       // Simplified for this MVP: Just toggle "All" or "None"
-                       setState(() {
-                         if (_selectedCategoryIds.isEmpty) {
-                           _selectedCategoryIds.addAll(categories.map((c) => c.id));
-                         } else {
-                           _selectedCategoryIds.clear();
-                         }
-                       });
-                     },
-                     child: Text(_selectedCategoryIds.isEmpty ? 'Select All Categories' : '${_selectedCategoryIds.length} Categories Selected'),
-                   );
-                 }
+                if (categories.length > 10) {
+                  return OutlinedButton(
+                    onPressed: () {
+                      // Show full category picker dialog
+                      // Simplified for this MVP: Just toggle "All" or "None"
+                      setState(() {
+                        if (_selectedCategoryIds.isEmpty) {
+                          _selectedCategoryIds.addAll(
+                            categories.map((c) => c.id),
+                          );
+                        } else {
+                          _selectedCategoryIds.clear();
+                        }
+                      });
+                    },
+                    child: Text(
+                      _selectedCategoryIds.isEmpty
+                          ? 'Select All Categories'
+                          : '${_selectedCategoryIds.length} Categories Selected',
+                    ),
+                  );
+                }
 
-                 return Wrap(
-                   spacing: 8,
-                   children: categories.map((cat) {
-                      final isSelected = _selectedCategoryIds.contains(cat.id);
-                      return FilterChip(
-                        label: Text(cat.name),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                           setState(() {
-                             if (selected) {
-                               _selectedCategoryIds.add(cat.id);
-                             } else {
-                               _selectedCategoryIds.remove(cat.id);
-                             }
-                           });
-                        },
-                      );
-                   }).toList(),
-                 );
+                return Wrap(
+                  spacing: 8,
+                  children: categories.map((cat) {
+                    final isSelected = _selectedCategoryIds.contains(cat.id);
+                    return FilterChip(
+                      label: Text(cat.name),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedCategoryIds.add(cat.id);
+                          } else {
+                            _selectedCategoryIds.remove(cat.id);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                );
               },
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
         FilledButton(
           onPressed: _isLoading ? null : _export,
-          child: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(l10n.export),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.export),
         ),
       ],
     );
@@ -184,14 +207,22 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
         startDate: _startDate,
         endDate: _endDate,
         accountIds: _selectedAccountIds.isNotEmpty ? _selectedAccountIds : null,
-        categoryIds: _selectedCategoryIds.isNotEmpty ? _selectedCategoryIds : null,
+        categoryIds: _selectedCategoryIds.isNotEmpty
+            ? _selectedCategoryIds
+            : null,
       );
 
-      final transactions = await ref.read(transactionRepositoryProvider).getTransactions(filter: filter);
+      final transactions = await ref
+          .read(transactionRepositoryProvider)
+          .getTransactions(filter: filter);
 
       final payees = await ref.read(payeeRepositoryProvider).getAllPayees();
-      final categories = await ref.read(categoryRepositoryProvider).getAllCategories();
-      final accounts = await ref.read(accountRepositoryProvider).getAllAccounts();
+      final categories = await ref
+          .read(categoryRepositoryProvider)
+          .getAllCategories();
+      final accounts = await ref
+          .read(accountRepositoryProvider)
+          .getAllAccounts();
 
       await TransactionExportService().exportTransactionsToCsv(
         transactions: transactions,
@@ -203,12 +234,15 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.exportSuccess)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.exportSuccess)),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     } finally {
       if (mounted) {

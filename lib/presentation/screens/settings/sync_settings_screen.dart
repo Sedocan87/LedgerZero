@@ -17,7 +17,6 @@ class SyncSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -178,9 +177,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                     : () => controller.disconnect(),
                 icon: const Icon(Icons.logout),
                 label: Text(l10n.disconnect),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
               ),
             ],
 

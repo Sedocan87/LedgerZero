@@ -18,9 +18,9 @@ class WelcomeSlide extends StatelessWidget {
           const SizedBox(height: 40),
           Text(
             'LedgerZero',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Text(
@@ -33,8 +33,10 @@ class WelcomeSlide extends StatelessWidget {
             'Take control of your finances with a private, local-first budgeting app.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.7),
-                ),
+              color: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.color?.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
@@ -54,9 +56,9 @@ class BenefitsSlide extends StatelessWidget {
         children: [
           Text(
             'Why LedgerZero?',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 32),
           _buildBenefitItem(
@@ -70,14 +72,16 @@ class BenefitsSlide extends StatelessWidget {
             context,
             icon: Icons.storage,
             title: 'Data Sovereignty',
-            description: 'Your data stays on your device. Encrypted and secure.',
+            description:
+                'Your data stays on your device. Encrypted and secure.',
           ),
           const SizedBox(height: 24),
           _buildBenefitItem(
             context,
             icon: Icons.offline_bolt,
             title: 'Operational Sovereignty',
-            description: 'Works fully offline. Zero latency. No server dependencies.',
+            description:
+                'Works fully offline. Zero latency. No server dependencies.',
           ),
         ],
       ),
@@ -101,15 +105,12 @@ class BenefitsSlide extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              Text(
-                description,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              Text(description, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
         ),
@@ -136,9 +137,9 @@ class PrivacySlide extends StatelessWidget {
           const SizedBox(height: 32),
           Text(
             'Your Data, Your Device',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -162,23 +163,25 @@ class PrivacySlide extends StatelessWidget {
           _buildPrivacyItem(
             context,
             icon: Icons.cloud_off,
-            text: 'We never see your financial data. Sync happens via YOUR cloud (Google Drive, iCloud).',
+            text:
+                'We never see your financial data. Sync happens via YOUR cloud (Google Drive, iCloud).',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPrivacyItem(BuildContext context, {required IconData icon, required String text}) {
+  Widget _buildPrivacyItem(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+  }) {
     return Row(
       children: [
         Icon(icon, color: Theme.of(context).colorScheme.secondary),
         const SizedBox(width: 16),
         Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
         ),
       ],
     );

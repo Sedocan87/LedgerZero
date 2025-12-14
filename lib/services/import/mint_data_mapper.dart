@@ -12,7 +12,10 @@ class MintDataMapper {
   final Uuid _uuid = const Uuid();
 
   /// Converts [MintImportData] into lists of domain entities.
-  MintMappedData mapData(MintImportData data, {List<Category>? existingCategories}) {
+  MintMappedData mapData(
+    MintImportData data, {
+    List<Category>? existingCategories,
+  }) {
     final accounts = <Account>[];
     final categoryGroups = <CategoryGroup>[];
     final categories = <Category>[];
@@ -31,13 +34,16 @@ class MintDataMapper {
       // Infer account type from name
       final AccountType type = _inferAccountType(rawAcc.name);
 
-      accounts.add(Account(
-        id: id,
-        name: rawAcc.name,
-        type: type,
-        startingBalance: 0.0, // Mint export doesn't have balances. User must reconcile.
-        currentBalance: 0.0,
-      ));
+      accounts.add(
+        Account(
+          id: id,
+          name: rawAcc.name,
+          type: type,
+          startingBalance:
+              0.0, // Mint export doesn't have balances. User must reconcile.
+          currentBalance: 0.0,
+        ),
+      );
     }
 
     // 2. Map Categories
@@ -64,22 +70,26 @@ class MintDataMapper {
         // Create new category in "Mint Import" group
         if (mintImportGroupId == null) {
           mintImportGroupId = _uuid.v4();
-          categoryGroups.add(CategoryGroup(
-            id: mintImportGroupId,
-            name: 'Mint Import',
-            sortOrder: 0,
-          ));
+          categoryGroups.add(
+            CategoryGroup(
+              id: mintImportGroupId,
+              name: 'Mint Import',
+              sortOrder: 0,
+            ),
+          );
         }
 
         final id = _uuid.v4();
         categoryNameIdMap[catName] = id;
-        categories.add(Category(
-          id: id,
-          name: catName,
-          categoryGroupId: mintImportGroupId,
-          goalType: GoalType.targetBalance,
-          targetAmount: 0,
-        ));
+        categories.add(
+          Category(
+            id: id,
+            name: catName,
+            categoryGroupId: mintImportGroupId,
+            goalType: GoalType.targetBalance,
+            targetAmount: 0,
+          ),
+        );
       }
     }
 
@@ -87,61 +97,62 @@ class MintDataMapper {
     final payeeNameIdMap = <String, String>{};
 
     for (final rawTx in data.transactions) {
-       // Payee
-       String payeeId;
-       final payeeName = rawTx.description.trim();
+      // Payee
+      String payeeId;
+      final payeeName = rawTx.description.trim();
 
-       if (payeeNameIdMap.containsKey(payeeName)) {
-         payeeId = payeeNameIdMap[payeeName]!;
-       } else {
-         payeeId = _uuid.v4();
-         payeeNameIdMap[payeeName] = payeeId;
-         payees.add(Payee(
-           id: payeeId,
-           name: payeeName,
-           createdAt: DateTime.now(),
-         ));
-       }
+      if (payeeNameIdMap.containsKey(payeeName)) {
+        payeeId = payeeNameIdMap[payeeName]!;
+      } else {
+        payeeId = _uuid.v4();
+        payeeNameIdMap[payeeName] = payeeId;
+        payees.add(
+          Payee(id: payeeId, name: payeeName, createdAt: DateTime.now()),
+        );
+      }
 
-       // Account
-       final accountId = accountNameIdMap[rawTx.accountName];
-       if (accountId == null) {
-         // Should not happen if accounts were extracted correctly
-         continue;
-       }
+      // Account
+      final accountId = accountNameIdMap[rawTx.accountName];
+      if (accountId == null) {
+        // Should not happen if accounts were extracted correctly
+        continue;
+      }
 
-       // Category
-       // If category is "Transfer", "Credit Card Payment", etc., handle logic?
-       // Mint transfers usually have category "Transfer".
-       // In LedgerZero, transfers are linked transactions.
-       // Handling transfers from CSV is hard without matching pairs.
-       // For now, treat "Transfer" as a category or skip category if it's a transfer?
-       // If we import as is, user can fix later.
+      // Category
+      // If category is "Transfer", "Credit Card Payment", etc., handle logic?
+      // Mint transfers usually have category "Transfer".
+      // In LedgerZero, transfers are linked transactions.
+      // Handling transfers from CSV is hard without matching pairs.
+      // For now, treat "Transfer" as a category or skip category if it's a transfer?
+      // If we import as is, user can fix later.
 
-       final categoryId = categoryNameIdMap[rawTx.category];
+      final categoryId = categoryNameIdMap[rawTx.category];
 
-       // Labels to Memo
-       String memo = rawTx.notes;
-       if (rawTx.labels.isNotEmpty) {
-         if (memo.isNotEmpty) {
-           memo += ' ';
-         }
-         memo += '[Tags: ${rawTx.labels}]';
-       }
+      // Labels to Memo
+      String memo = rawTx.notes;
+      if (rawTx.labels.isNotEmpty) {
+        if (memo.isNotEmpty) {
+          memo += ' ';
+        }
+        memo += '[Tags: ${rawTx.labels}]';
+      }
 
-       transactions.add(Transaction(
-         id: _uuid.v4(),
-         accountId: accountId,
-         date: rawTx.date,
-         amount: rawTx.amount,
-         payeeId: payeeId,
-         categoryId: categoryId, // Nullable in Transaction? Yes.
-         memo: memo,
-         cleared: TransactionClearStatus.cleared, // Assume imported are cleared
-         approved: true,
-         createdAt: DateTime.now(),
-         updatedAt: DateTime.now(),
-       ));
+      transactions.add(
+        Transaction(
+          id: _uuid.v4(),
+          accountId: accountId,
+          date: rawTx.date,
+          amount: rawTx.amount,
+          payeeId: payeeId,
+          categoryId: categoryId, // Nullable in Transaction? Yes.
+          memo: memo,
+          cleared:
+              TransactionClearStatus.cleared, // Assume imported are cleared
+          approved: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
     }
 
     return MintMappedData(
@@ -155,19 +166,26 @@ class MintDataMapper {
 
   AccountType _inferAccountType(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('credit') || lower.contains('card') || lower.contains('visa') || lower.contains('amex') || lower.contains('mastercard')) {
+    if (lower.contains('credit') ||
+        lower.contains('card') ||
+        lower.contains('visa') ||
+        lower.contains('amex') ||
+        lower.contains('mastercard')) {
       return AccountType.credit;
     } else if (lower.contains('save') || lower.contains('savings')) {
       return AccountType.savings;
     } else if (lower.contains('cash')) {
       return AccountType.cash;
-    } else if (lower.contains('investment') || lower.contains('brokerage') || lower.contains('ira') || lower.contains('401k')) {
-       // LedgerZero doesn't have investment type explicitly in the enum list in memory,
-       // but memory said "AccountType enum with values: checking, savings, credit, cash".
-       // Wait, memory said "AccountType.checking, savings, credit, cash".
-       // Implementation.md mentions "Investment (tracking only)" but maybe not in enum yet?
-       // Let's check AccountType definition.
-       return AccountType.savings; // Fallback or checking
+    } else if (lower.contains('investment') ||
+        lower.contains('brokerage') ||
+        lower.contains('ira') ||
+        lower.contains('401k')) {
+      // LedgerZero doesn't have investment type explicitly in the enum list in memory,
+      // but memory said "AccountType enum with values: checking, savings, credit, cash".
+      // Wait, memory said "AccountType.checking, savings, credit, cash".
+      // Implementation.md mentions "Investment (tracking only)" but maybe not in enum yet?
+      // Let's check AccountType definition.
+      return AccountType.savings; // Fallback or checking
     }
     return AccountType.checking;
   }

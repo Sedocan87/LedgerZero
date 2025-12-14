@@ -6,7 +6,8 @@ import 'package:ledger_zero/domain/entities/import_profile.dart' as domain;
 part 'import_profiles_dao.g.dart';
 
 @DriftAccessor(tables: [ImportProfiles])
-class ImportProfilesDao extends DatabaseAccessor<AppDatabase> with _$ImportProfilesDaoMixin {
+class ImportProfilesDao extends DatabaseAccessor<AppDatabase>
+    with _$ImportProfilesDaoMixin {
   ImportProfilesDao(super.db);
 
   Future<List<domain.ImportProfile>> getAllProfiles() {
@@ -18,9 +19,9 @@ class ImportProfilesDao extends DatabaseAccessor<AppDatabase> with _$ImportProfi
   }
 
   Future<domain.ImportProfile?> getProfileById(String id) {
-    return (select(importProfiles)..where((t) => t.id.equals(id)))
-        .map(_toDomain)
-        .getSingleOrNull();
+    return (select(
+      importProfiles,
+    )..where((t) => t.id.equals(id))).map(_toDomain).getSingleOrNull();
   }
 
   Future<void> createProfile(domain.ImportProfile profile) {

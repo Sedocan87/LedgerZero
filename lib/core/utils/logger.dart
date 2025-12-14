@@ -22,13 +22,15 @@ class Logger {
           stackTrace: stackTrace,
         );
 
-        LocalErrorReportingService().log(LogEntry(
-          timestamp: DateTime.now(),
-          level: level,
-          message: '[$name] $message',
-          error: error?.toString(),
-          stackTrace: stackTrace?.toString(),
-        ));
+        LocalErrorReportingService().log(
+          LogEntry(
+            timestamp: DateTime.now(),
+            level: level,
+            message: '[$name] $message',
+            error: error?.toString(),
+            stackTrace: stackTrace?.toString(),
+          ),
+        );
       }
     } catch (_) {
       // Fallback if AppConfig is not initialized or other error
@@ -54,6 +56,12 @@ class Logger {
   }
 
   static void error(String message, [Object? error, StackTrace? stackTrace]) {
-    log(message, name: 'ERROR', error: error, stackTrace: stackTrace, level: LogLevel.error);
+    log(
+      message,
+      name: 'ERROR',
+      error: error,
+      stackTrace: stackTrace,
+      level: LogLevel.error,
+    );
   }
 }

@@ -31,18 +31,20 @@ class YnabDataMapper {
     required TransactionRepository transactionRepo,
     required BudgetRepository budgetRepo,
     required ScheduledTransactionRepository scheduledTransactionRepo,
-  })  : _accountRepo = accountRepo,
-        _categoryRepo = categoryRepo,
-        _payeeRepo = payeeRepo,
-        _transactionRepo = transactionRepo,
-        _budgetRepo = budgetRepo,
-        _scheduledTransactionRepo = scheduledTransactionRepo;
+  }) : _accountRepo = accountRepo,
+       _categoryRepo = categoryRepo,
+       _payeeRepo = payeeRepo,
+       _transactionRepo = transactionRepo,
+       _budgetRepo = budgetRepo,
+       _scheduledTransactionRepo = scheduledTransactionRepo;
 
   Future<void> importData(YnabImportData data) async {
     Logger.info('Starting YNAB import...');
 
     // 1. Categories & Groups
-    final categoryNameMap = await _importCategories(data); // Returns "Group:Category" -> LZ ID
+    final categoryNameMap = await _importCategories(
+      data,
+    ); // Returns "Group:Category" -> LZ ID
 
     // 2. Accounts
     final accountIdMap = await _importAccounts(data);
@@ -75,12 +77,14 @@ class YnabDataMapper {
 
       if (!groupNameMap.containsKey(yGroup.name)) {
         final groupId = const Uuid().v4();
-        await _categoryRepo.createCategoryGroup(CategoryGroup(
-          id: groupId,
-          name: yGroup.name,
-          sortOrder: 0,
-          createdAt: DateTime.now(),
-        ));
+        await _categoryRepo.createCategoryGroup(
+          CategoryGroup(
+            id: groupId,
+            name: yGroup.name,
+            sortOrder: 0,
+            createdAt: DateTime.now(),
+          ),
+        );
         groupNameMap[yGroup.name] = groupId;
       }
     }
@@ -94,12 +98,12 @@ class YnabDataMapper {
 
     final catNameMap = <String, String>{};
     for (var c in existingCategories) {
-       if (c.categoryGroupId != null) {
-          final gName = groupIdToName[c.categoryGroupId!];
-          if (gName != null) {
-             catNameMap['$gName:${c.name}'] = c.id;
-          }
-       }
+      if (c.categoryGroupId != null) {
+        final gName = groupIdToName[c.categoryGroupId!];
+        if (gName != null) {
+          catNameMap['$gName:${c.name}'] = c.id;
+        }
+      }
     }
 
     for (final yCat in data.categories) {
@@ -122,22 +126,24 @@ class YnabDataMapper {
 
       final key = '${sourceGroup.name}:${yCat.name}';
 
-       if (!catNameMap.containsKey(key)) {
-         final catId = const Uuid().v4();
-         await _categoryRepo.createCategory(Category(
-           id: catId,
-           name: yCat.name,
-           categoryGroupId: targetGroupId,
-           isHidden: yCat.isHidden,
-           color: 0xFF000000,
-           icon: null, // Icon is String? in Category
-           createdAt: DateTime.now(),
-           goalType: null,
-           targetAmount: null,
-           targetDate: null,
-         ));
-         catNameMap[key] = catId;
-       }
+      if (!catNameMap.containsKey(key)) {
+        final catId = const Uuid().v4();
+        await _categoryRepo.createCategory(
+          Category(
+            id: catId,
+            name: yCat.name,
+            categoryGroupId: targetGroupId,
+            isHidden: yCat.isHidden,
+            color: 0xFF000000,
+            icon: null, // Icon is String? in Category
+            createdAt: DateTime.now(),
+            goalType: null,
+            targetAmount: null,
+            targetDate: null,
+          ),
+        );
+        catNameMap[key] = catId;
+      }
     }
 
     return catNameMap;
@@ -159,17 +165,19 @@ class YnabDataMapper {
         accId = accNameMap[yAcc.name]!;
       } else {
         accId = const Uuid().v4();
-        await _accountRepo.createAccount(Account(
-          id: accId,
-          name: yAcc.name,
-          type: yAcc.type,
-          currency: yAcc.currency,
-          startingBalance: 0,
-          currentBalance: 0,
-          isClosed: yAcc.isClosed,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ));
+        await _accountRepo.createAccount(
+          Account(
+            id: accId,
+            name: yAcc.name,
+            type: yAcc.type,
+            currency: yAcc.currency,
+            startingBalance: 0,
+            currentBalance: 0,
+            isClosed: yAcc.isClosed,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
         accNameMap[yAcc.name] = accId;
       }
       mapping[yAcc.id] = accId;
@@ -183,7 +191,9 @@ class YnabDataMapper {
     Map<String, String> categoryNameMap,
   ) async {
     final existingPayees = await _payeeRepo.getAllPayees();
-    final payeeNameMap = {for (var p in existingPayees) p.name.toLowerCase(): p.id};
+    final payeeNameMap = {
+      for (var p in existingPayees) p.name.toLowerCase(): p.id,
+    };
 
     Future<String?> getPayeeId(String? name) async {
       if (name == null || name.isEmpty) {
@@ -195,9 +205,11 @@ class YnabDataMapper {
       }
 
       final id = const Uuid().v4();
-       await _payeeRepo.createPayee(Payee(id: id, name: name, createdAt: DateTime.now()));
-       payeeNameMap[lower] = id;
-       return id;
+      await _payeeRepo.createPayee(
+        Payee(id: id, name: name, createdAt: DateTime.now()),
+      );
+      payeeNameMap[lower] = id;
+      return id;
     }
 
     final transactionsToInsert = <Transaction>[];
@@ -210,17 +222,18 @@ class YnabDataMapper {
 
       final payeeId = await getPayeeId(tx.payeeName);
 
-       String? catId;
-       if (tx.categoryGroupName != null && tx.categoryName != null) {
-          final key = '${tx.categoryGroupName}:${tx.categoryName}';
-          catId = categoryNameMap[key];
-       }
+      String? catId;
+      if (tx.categoryGroupName != null && tx.categoryName != null) {
+        final key = '${tx.categoryGroupName}:${tx.categoryName}';
+        catId = categoryNameMap[key];
+      }
 
-       if (tx.splits.isNotEmpty) {
-          // Parent transaction
-          final parentId = const Uuid().v4();
+      if (tx.splits.isNotEmpty) {
+        // Parent transaction
+        final parentId = const Uuid().v4();
 
-          transactionsToInsert.add(Transaction(
+        transactionsToInsert.add(
+          Transaction(
             id: parentId,
             accountId: accId,
             date: tx.date,
@@ -228,44 +241,56 @@ class YnabDataMapper {
             payeeId: payeeId,
             categoryId: null,
             memo: tx.memo,
-            cleared: tx.reconciled ? TransactionClearStatus.reconciled : (tx.cleared ? TransactionClearStatus.cleared : TransactionClearStatus.uncleared),
+            cleared: tx.reconciled
+                ? TransactionClearStatus.reconciled
+                : (tx.cleared
+                      ? TransactionClearStatus.cleared
+                      : TransactionClearStatus.uncleared),
             approved: true,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
-          ));
+          ),
+        );
 
-          // Insert Children
-          for (final split in tx.splits) {
-             String? splitCatId;
-             if (split.categoryGroupName != null && split.categoryName != null) {
-                final key = '${split.categoryGroupName}:${split.categoryName}';
-                splitCatId = categoryNameMap[key];
-             }
-
-             final splitPayeeId = await getPayeeId(split.payeeName) ?? payeeId;
-
-             transactionsToInsert.add(Transaction(
-               id: const Uuid().v4(),
-               accountId: accId,
-               date: tx.date,
-               amount: split.amount,
-               payeeId: splitPayeeId,
-               categoryId: splitCatId,
-               memo: split.memo,
-               cleared: tx.reconciled ? TransactionClearStatus.reconciled : (tx.cleared ? TransactionClearStatus.cleared : TransactionClearStatus.uncleared),
-               approved: true,
-               parentTransactionId: parentId,
-               createdAt: DateTime.now(),
-               updatedAt: DateTime.now(),
-             ));
-          }
-       } else {
-          String? transferAccId;
-          if (tx.transferAccountId != null) {
-             transferAccId = accountMap[tx.transferAccountId];
+        // Insert Children
+        for (final split in tx.splits) {
+          String? splitCatId;
+          if (split.categoryGroupName != null && split.categoryName != null) {
+            final key = '${split.categoryGroupName}:${split.categoryName}';
+            splitCatId = categoryNameMap[key];
           }
 
-          transactionsToInsert.add(Transaction(
+          final splitPayeeId = await getPayeeId(split.payeeName) ?? payeeId;
+
+          transactionsToInsert.add(
+            Transaction(
+              id: const Uuid().v4(),
+              accountId: accId,
+              date: tx.date,
+              amount: split.amount,
+              payeeId: splitPayeeId,
+              categoryId: splitCatId,
+              memo: split.memo,
+              cleared: tx.reconciled
+                  ? TransactionClearStatus.reconciled
+                  : (tx.cleared
+                        ? TransactionClearStatus.cleared
+                        : TransactionClearStatus.uncleared),
+              approved: true,
+              parentTransactionId: parentId,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+        }
+      } else {
+        String? transferAccId;
+        if (tx.transferAccountId != null) {
+          transferAccId = accountMap[tx.transferAccountId];
+        }
+
+        transactionsToInsert.add(
+          Transaction(
             id: const Uuid().v4(),
             accountId: accId,
             date: tx.date,
@@ -273,13 +298,18 @@ class YnabDataMapper {
             payeeId: payeeId,
             categoryId: catId,
             memo: tx.memo,
-            cleared: tx.reconciled ? TransactionClearStatus.reconciled : (tx.cleared ? TransactionClearStatus.cleared : TransactionClearStatus.uncleared),
+            cleared: tx.reconciled
+                ? TransactionClearStatus.reconciled
+                : (tx.cleared
+                      ? TransactionClearStatus.cleared
+                      : TransactionClearStatus.uncleared),
             approved: true,
             transferAccountId: transferAccId,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
-          ));
-       }
+          ),
+        );
+      }
     }
 
     // Batch insert
@@ -287,64 +317,71 @@ class YnabDataMapper {
   }
 
   Future<void> _importScheduledTransactions(
-      YnabImportData data,
-      Map<String, String> accountMap,
-      Map<String, String> categoryNameMap
+    YnabImportData data,
+    Map<String, String> accountMap,
+    Map<String, String> categoryNameMap,
   ) async {
-      final toInsert = <ScheduledTransaction>[];
-      final existingPayees = await _payeeRepo.getAllPayees();
-      final payeeNameMap = {for (var p in existingPayees) p.name.toLowerCase(): p.id};
+    final toInsert = <ScheduledTransaction>[];
+    final existingPayees = await _payeeRepo.getAllPayees();
+    final payeeNameMap = {
+      for (var p in existingPayees) p.name.toLowerCase(): p.id,
+    };
 
-      Future<String?> getPayeeId(String? name) async {
-        if (name == null || name.isEmpty) {
-          return null;
-        }
-        final lower = name.toLowerCase();
-        if (payeeNameMap.containsKey(lower)) {
-          return payeeNameMap[lower]!;
-        }
-        final id = const Uuid().v4();
-        await _payeeRepo.createPayee(
-          Payee(id: id, name: name, createdAt: DateTime.now()),
-        );
-         payeeNameMap[lower] = id;
-         return id;
+    Future<String?> getPayeeId(String? name) async {
+      if (name == null || name.isEmpty) {
+        return null;
+      }
+      final lower = name.toLowerCase();
+      if (payeeNameMap.containsKey(lower)) {
+        return payeeNameMap[lower]!;
+      }
+      final id = const Uuid().v4();
+      await _payeeRepo.createPayee(
+        Payee(id: id, name: name, createdAt: DateTime.now()),
+      );
+      payeeNameMap[lower] = id;
+      return id;
+    }
+
+    for (final sch in data.scheduledTransactions) {
+      final accId = accountMap[sch.accountId];
+      if (accId == null) {
+        continue;
       }
 
-      for (final sch in data.scheduledTransactions) {
-        final accId = accountMap[sch.accountId];
-        if (accId == null) {
-          continue;
-        }
+      final payeeId = await getPayeeId(sch.payeeName);
 
-        final payeeId = await getPayeeId(sch.payeeName);
-
-         String? catId;
-         if (sch.categoryGroupName != null && sch.categoryName != null) {
-            final key = '${sch.categoryGroupName}:${sch.categoryName}';
-            catId = categoryNameMap[key];
-         }
-
-         toInsert.add(ScheduledTransaction(
-           id: const Uuid().v4(),
-           accountId: accId,
-           payeeId: payeeId,
-           categoryId: catId,
-           amount: sch.amount,
-           frequency: sch.frequency,
-           nextDate: sch.nextDate,
-           endDate: null,
-           autoApprove: false,
-           createdAt: DateTime.now(),
-         ));
+      String? catId;
+      if (sch.categoryGroupName != null && sch.categoryName != null) {
+        final key = '${sch.categoryGroupName}:${sch.categoryName}';
+        catId = categoryNameMap[key];
       }
 
-      for (final st in toInsert) {
-         await _scheduledTransactionRepo.createScheduledTransaction(st);
-      }
+      toInsert.add(
+        ScheduledTransaction(
+          id: const Uuid().v4(),
+          accountId: accId,
+          payeeId: payeeId,
+          categoryId: catId,
+          amount: sch.amount,
+          frequency: sch.frequency,
+          nextDate: sch.nextDate,
+          endDate: null,
+          autoApprove: false,
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+
+    for (final st in toInsert) {
+      await _scheduledTransactionRepo.createScheduledTransaction(st);
+    }
   }
 
-  Future<void> _importBudgets(YnabImportData data, Map<String, String> categoryNameMap) async {
+  Future<void> _importBudgets(
+    YnabImportData data,
+    Map<String, String> categoryNameMap,
+  ) async {
     for (final entry in data.budgetEntries) {
       final key = '${entry.categoryGroupName}:${entry.categoryName}';
       final catId = categoryNameMap[key];
@@ -353,24 +390,31 @@ class YnabDataMapper {
       }
 
       // Use DateFormat for string key
-        final monthStr = DateFormat('yyyy-MM').format(entry.month);
+      final monthStr = DateFormat('yyyy-MM').format(entry.month);
 
-        // Check if budget exists
-        final existing = await _budgetRepo.getBudgetByCategoryAndMonth(catId, monthStr);
-        if (existing != null) {
-           await _budgetRepo.updateBudget(existing.copyWith(budgeted: entry.budgeted));
-        } else {
-           await _budgetRepo.createBudget(Budget(
-             id: const Uuid().v4(),
-             categoryId: catId,
-             month: monthStr,
-             budgeted: entry.budgeted,
-             activity: 0,
-             available: 0,
-             createdAt: DateTime.now(),
-             updatedAt: DateTime.now(),
-           ));
-        }
-     }
+      // Check if budget exists
+      final existing = await _budgetRepo.getBudgetByCategoryAndMonth(
+        catId,
+        monthStr,
+      );
+      if (existing != null) {
+        await _budgetRepo.updateBudget(
+          existing.copyWith(budgeted: entry.budgeted),
+        );
+      } else {
+        await _budgetRepo.createBudget(
+          Budget(
+            id: const Uuid().v4(),
+            categoryId: catId,
+            month: monthStr,
+            budgeted: entry.budgeted,
+            activity: 0,
+            available: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
+    }
   }
 }

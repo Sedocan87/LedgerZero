@@ -27,9 +27,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Account Name'), 'Persistent Account');
+      find.widgetWithText(TextFormField, 'Account Name'),
+      'Persistent Account',
+    );
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Starting Balance'), '100.00');
+      find.widgetWithText(TextFormField, 'Starting Balance'),
+      '100.00',
+    );
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 

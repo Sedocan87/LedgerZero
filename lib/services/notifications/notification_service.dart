@@ -17,22 +17,21 @@ class NotificationService {
 
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        );
 
     const LinuxInitializationSettings initializationSettingsLinux =
-        LinuxInitializationSettings(
-      defaultActionName: 'Open notification',
-    );
+        LinuxInitializationSettings(defaultActionName: 'Open notification');
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsDarwin,
-      macOS: initializationSettingsDarwin,
-      linux: initializationSettingsLinux,
-    );
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsDarwin,
+          macOS: initializationSettingsDarwin,
+          linux: initializationSettingsLinux,
+        );
 
     await _notificationsPlugin.initialize(
       initializationSettings,
@@ -46,25 +45,20 @@ class NotificationService {
     if (Platform.isIOS) {
       await _notificationsPlugin
           .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
+            IOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
     } else if (Platform.isMacOS) {
       await _notificationsPlugin
           .resolvePlatformSpecificImplementation<
-              MacOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
+            MacOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
     } else if (Platform.isAndroid) {
       final androidImplementation = _notificationsPlugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
 
       await androidImplementation?.requestNotificationsPermission();
     }
@@ -78,18 +72,21 @@ class NotificationService {
   }) async {
     try {
       if (scheduledDate.isBefore(DateTime.now())) {
-        Logger.warning('Cannot schedule notification in the past: $scheduledDate');
+        Logger.warning(
+          'Cannot schedule notification in the past: $scheduledDate',
+        );
         return;
       }
 
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
-        'scheduled_transactions',
-        'Scheduled Transactions',
-        channelDescription: 'Notifications for upcoming scheduled transactions',
-        importance: Importance.high,
-        priority: Priority.high,
-      );
+            'scheduled_transactions',
+            'Scheduled Transactions',
+            channelDescription:
+                'Notifications for upcoming scheduled transactions',
+            importance: Importance.high,
+            priority: Priority.high,
+          );
 
       const NotificationDetails details = NotificationDetails(
         android: androidDetails,
@@ -116,12 +113,12 @@ class NotificationService {
   Future<void> showBackupReminderNotification() async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      'backup_reminders',
-      'Backup Reminders',
-      channelDescription: 'Reminders to backup your data',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
-    );
+          'backup_reminders',
+          'Backup Reminders',
+          channelDescription: 'Reminders to backup your data',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        );
 
     const NotificationDetails details = NotificationDetails(
       android: androidDetails,
@@ -142,12 +139,12 @@ class NotificationService {
   }) async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      'sync_status',
-      'Sync Status',
-      channelDescription: 'Notifications for sync status',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
-    );
+          'sync_status',
+          'Sync Status',
+          channelDescription: 'Notifications for sync status',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        );
 
     const NotificationDetails details = NotificationDetails(
       android: androidDetails,
@@ -160,5 +157,4 @@ class NotificationService {
       details,
     );
   }
-
 }

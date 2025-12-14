@@ -11,10 +11,7 @@ class RuleAction {
   final RuleActionType type;
   final String value;
 
-  const RuleAction({
-    required this.type,
-    required this.value,
-  });
+  const RuleAction({required this.type, required this.value});
 
   factory RuleAction.fromJson(Map<String, dynamic> json) {
     return RuleAction(
@@ -24,9 +21,6 @@ class RuleAction {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type.name,
-      'value': value,
-    };
+    return {'type': type.name, 'value': value};
   }
 }

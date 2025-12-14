@@ -46,9 +46,9 @@ class DashboardStatsCard extends StatelessWidget {
               Text(
                 currencyFormat.format(amount),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: amountColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: amountColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),

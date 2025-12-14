@@ -14,7 +14,11 @@ class HomeEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.account_balance_wallet, size: 64, color: Colors.grey),
+            const Icon(
+              Icons.account_balance_wallet,
+              size: 64,
+              color: Colors.grey,
+            ),
             const SizedBox(height: 16),
             Text(
               l10n.welcomeToLedgerZero,

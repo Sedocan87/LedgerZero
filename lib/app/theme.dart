@@ -5,8 +5,9 @@ class AppColors {
   // Light Mode Colors
   static const Color primaryLight = Color(0xFF00796B); // Teal 700
   static const Color onPrimaryLight = Colors.white;
-  static const Color primaryContainerLight =
-      Color(0xFFB2DFDB); // Teal 100 for containers
+  static const Color primaryContainerLight = Color(
+    0xFFB2DFDB,
+  ); // Teal 100 for containers
   static const Color onPrimaryContainerLight = Color(0xFF004D40); // Teal 900
 
   static const Color secondaryLight = Color(0xFF455A64); // Blue Grey 700
@@ -32,8 +33,12 @@ class AppColors {
 
   static const Color secondaryDark = Color(0xFFB0BEC5); // Blue Grey 200
   static const Color onSecondaryDark = Color(0xFF263238); // Blue Grey 900
-  static const Color secondaryContainerDark = Color(0xFF37474F); // Blue Grey 800
-  static const Color onSecondaryContainerDark = Color(0xFFCFD8DC); // Blue Grey 100
+  static const Color secondaryContainerDark = Color(
+    0xFF37474F,
+  ); // Blue Grey 800
+  static const Color onSecondaryContainerDark = Color(
+    0xFFCFD8DC,
+  ); // Blue Grey 100
 
   static const Color tertiaryDark = Color(0xFFFFE082); // Amber 200
   static const Color onTertiaryDark = Colors.black;
@@ -166,7 +171,9 @@ class AppTheme {
     Color? onTertiary,
     bool isHighContrast = false,
   }) {
-    final base = brightness == Brightness.light ? ThemeData.light() : ThemeData.dark();
+    final base = brightness == Brightness.light
+        ? ThemeData.light()
+        : ThemeData.dark();
 
     // Default fallback logic if not provided (similar to high contrast simplifications)
     final effectiveSecondary = secondary ?? primary;
@@ -185,8 +192,12 @@ class AppTheme {
         onSecondaryContainer: onSecondaryContainer,
         tertiary: tertiary,
         onTertiary: onTertiary,
-        error: brightness == Brightness.light ? AppColors.errorLight : AppColors.errorDark,
-        onError: brightness == Brightness.light ? AppColors.onErrorLight : AppColors.onErrorDark,
+        error: brightness == Brightness.light
+            ? AppColors.errorLight
+            : AppColors.errorDark,
+        onError: brightness == Brightness.light
+            ? AppColors.onErrorLight
+            : AppColors.onErrorDark,
         surface: surface,
         onSurface: onSurface,
       ),
@@ -196,10 +207,7 @@ class AppTheme {
         headlineMedium: AppTextStyles.heading2,
         bodyLarge: AppTextStyles.body,
         labelSmall: AppTextStyles.caption,
-      ).apply(
-        bodyColor: onSurface,
-        displayColor: onSurface,
-      ),
+      ).apply(bodyColor: onSurface, displayColor: onSurface),
       appBarTheme: AppBarTheme(
         backgroundColor: isHighContrast ? background : primary,
         foregroundColor: isHighContrast ? onSurface : onPrimary,
@@ -211,7 +219,9 @@ class AppTheme {
         elevation: AppElevation.sm,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          side: isHighContrast ? BorderSide(color: onSurface, width: 2) : BorderSide.none,
+          side: isHighContrast
+              ? BorderSide(color: onSurface, width: 2)
+              : BorderSide.none,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -253,19 +263,27 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isHighContrast ? background : (brightness == Brightness.light ? const Color(0xFFEEEEEE) : const Color(0xFF212121)),
+        fillColor: isHighContrast
+            ? background
+            : (brightness == Brightness.light
+                  ? const Color(0xFFEEEEEE)
+                  : const Color(0xFF212121)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          borderSide: isHighContrast ? BorderSide(color: onSurface) : BorderSide.none,
+          borderSide: isHighContrast
+              ? BorderSide(color: onSurface)
+              : BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),
           borderSide: BorderSide(color: primary, width: 2),
         ),
-        enabledBorder: isHighContrast ? OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          borderSide: BorderSide(color: onSurface, width: 1),
-        ) : null,
+        enabledBorder: isHighContrast
+            ? OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                borderSide: BorderSide(color: onSurface, width: 1),
+              )
+            : null,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,

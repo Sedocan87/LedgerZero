@@ -74,12 +74,7 @@ class CategoryGroup {
 
   @override
   int get hashCode {
-    return Object.hash(
-      id,
-      name,
-      sortOrder,
-      createdAt,
-    );
+    return Object.hash(id, name, sortOrder, createdAt);
   }
 
   @override

@@ -32,7 +32,9 @@ class TransactionListItem extends StatelessWidget {
     // Task 203: Color coding
     final isIncome = transaction.amount >= 0;
     // Using simple colors for now, can be improved with custom theme extensions
-    final amountColor = isIncome ? Colors.green.shade700 : theme.colorScheme.error;
+    final amountColor = isIncome
+        ? Colors.green.shade700
+        : theme.colorScheme.error;
 
     return ListTile(
       onTap: onTap,
@@ -50,13 +52,19 @@ class TransactionListItem extends StatelessWidget {
             child: Text(
               // Task 204: Payee
               payeeName ?? 'No Payee',
-              style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: 8),
           if (!transaction.approved) ...[
-            Icon(Icons.info_outline, size: 16, color: theme.colorScheme.tertiary),
+            Icon(
+              Icons.info_outline,
+              size: 16,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(width: 4),
           ],
           Text(
@@ -92,16 +100,16 @@ class TransactionListItem extends StatelessWidget {
             ],
           ),
           if (accountName != null) ...[
-             const SizedBox(height: 2),
-             Text(
-               accountName!,
-               style: theme.textTheme.bodySmall?.copyWith(
-                 fontStyle: FontStyle.italic,
-                 // ignore: deprecated_member_use
-                 color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
-               ),
-             ),
-          ]
+            const SizedBox(height: 2),
+            Text(
+              accountName!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontStyle: FontStyle.italic,
+                // ignore: deprecated_member_use
+                color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -18,26 +18,26 @@ class DeviceUtils {
 
     try {
       if (Platform.isAndroid) {
-          final androidInfo = await deviceInfo.androidInfo;
-          uuid = androidInfo.id;
+        final androidInfo = await deviceInfo.androidInfo;
+        uuid = androidInfo.id;
       } else if (Platform.isIOS) {
-          final iosInfo = await deviceInfo.iosInfo;
-          uuid = iosInfo.identifierForVendor;
+        final iosInfo = await deviceInfo.iosInfo;
+        uuid = iosInfo.identifierForVendor;
       } else if (Platform.isLinux) {
-          final linuxInfo = await deviceInfo.linuxInfo;
-          uuid = linuxInfo.machineId;
+        final linuxInfo = await deviceInfo.linuxInfo;
+        uuid = linuxInfo.machineId;
       } else if (Platform.isWindows) {
-          final windowsInfo = await deviceInfo.windowsInfo;
-          uuid = windowsInfo.deviceId;
+        final windowsInfo = await deviceInfo.windowsInfo;
+        uuid = windowsInfo.deviceId;
       } else if (Platform.isMacOS) {
-          // macOS specific handling if needed, or fallback
+        // macOS specific handling if needed, or fallback
       }
     } catch (e) {
       // Fallback if platform info fails
     }
 
     if (uuid == null || uuid.isEmpty) {
-        uuid = const Uuid().v4();
+      uuid = const Uuid().v4();
     }
 
     await prefs.setString(_deviceUuidKey, uuid);

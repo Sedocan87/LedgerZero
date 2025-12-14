@@ -11,14 +11,22 @@ import 'test_utils.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Stress Test: Large Transaction Volume', (WidgetTester tester) async {
+  testWidgets('Stress Test: Large Transaction Volume', (
+    WidgetTester tester,
+  ) async {
     final db = await setupIntegrationTest(tester);
     await completeOnboarding(tester);
 
     // Create Account
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(id: 'acc_stress', name: 'Stress Account', type: 'checking')
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: 'acc_stress',
+            name: 'Stress Account',
+            type: 'checking',
+          ),
+        );
 
     // Prepare 1000 transactions
     const count = 1000;
@@ -31,7 +39,7 @@ void main() {
           date: DateTime.now().subtract(Duration(days: i % 365)),
           amount: (i % 2 == 0 ? -1 : 1) * (i.toDouble() + 1.0),
           memo: Value('Stress transaction $i'),
-        )
+        ),
       );
     }
 

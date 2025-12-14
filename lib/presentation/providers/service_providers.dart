@@ -64,17 +64,21 @@ final csvImportServiceProvider = Provider<CsvImportService>((ref) {
   return CsvImportService();
 });
 
-final scheduledTransactionServiceProvider = Provider<ScheduledTransactionService>((ref) {
-  return ScheduledTransactionService(
-    ref.watch(scheduledTransactionRepositoryProvider),
-    ref.watch(transactionRepositoryProvider),
-    ref.watch(notificationServiceProvider),
-    const Uuid(),
-  );
-});
+final scheduledTransactionServiceProvider =
+    Provider<ScheduledTransactionService>((ref) {
+      return ScheduledTransactionService(
+        ref.watch(scheduledTransactionRepositoryProvider),
+        ref.watch(transactionRepositoryProvider),
+        ref.watch(notificationServiceProvider),
+        const Uuid(),
+      );
+    });
 
 final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
-  return RuleMatchingService(ref.watch(payeeRepositoryProvider), ref.watch(transactionRepositoryProvider));
+  return RuleMatchingService(
+    ref.watch(payeeRepositoryProvider),
+    ref.watch(transactionRepositoryProvider),
+  );
 });
 
 final widgetServiceProvider = Provider<WidgetService>((ref) {

@@ -65,7 +65,9 @@ class _NaturalLanguageInputScreenState
   }
 
   Future<void> _createTransaction() async {
-    if (_parsedTransaction == null || _selectedAccount == null || _parsedTransaction!.amount == null) {
+    if (_parsedTransaction == null ||
+        _selectedAccount == null ||
+        _parsedTransaction!.amount == null) {
       return;
     }
 
@@ -92,23 +94,26 @@ class _NaturalLanguageInputScreenState
       amount: tx.isIncome ? tx.amount! : -tx.amount!,
       payeeId: payeeId,
       categoryId: tx.categoryId,
-      memo: tx.note ?? _controller.text, // Use original text as memo if no note extracted? Or maybe extracting note is better.
+      memo:
+          tx.note ??
+          _controller
+              .text, // Use original text as memo if no note extracted? Or maybe extracting note is better.
       cleared: TransactionClearStatus.uncleared,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
-    await ref.read(transactionRepositoryProvider).createTransaction(transaction);
+    await ref
+        .read(transactionRepositoryProvider)
+        .createTransaction(transaction);
 
     // Task 494: Save Parsing History
     // We only save if we successfully created the transaction.
     // We save the original input and the final IDs.
     try {
-      await ref.read(parsingHistoryRepositoryProvider).addHistory(
-        _controller.text,
-        payeeId,
-        tx.categoryId,
-      );
+      await ref
+          .read(parsingHistoryRepositoryProvider)
+          .addHistory(_controller.text, payeeId, tx.categoryId);
     } catch (_) {
       // Ignore history save errors
     }
@@ -144,7 +149,9 @@ class _NaturalLanguageInputScreenState
     await prefs.setString(key, jsonEncode(draft));
 
     if (mounted) {
-      await context.pushNamed('add-transaction'); // This opens the screen which restores the draft
+      await context.pushNamed(
+        'add-transaction',
+      ); // This opens the screen which restores the draft
     }
   }
 
@@ -162,23 +169,23 @@ class _NaturalLanguageInputScreenState
     final accountsAsync = ref.watch(_allAccountsProvider);
 
     accountsAsync.whenData((accounts) {
-       if (!_accountInitialized && accounts.isNotEmpty) {
-           // Default to first checking account or just first account
-           final defaultAccount = accounts.firstWhere(
-             (a) => a.type == AccountType.checking,
-             orElse: () => accounts.first
-           );
+      if (!_accountInitialized && accounts.isNotEmpty) {
+        // Default to first checking account or just first account
+        final defaultAccount = accounts.firstWhere(
+          (a) => a.type == AccountType.checking,
+          orElse: () => accounts.first,
+        );
 
-           // Use simple setState via a post-frame callback to avoid build errors
-           WidgetsBinding.instance.addPostFrameCallback((_) {
-               if (mounted && _selectedAccount == null) {
-                   setState(() {
-                       _selectedAccount = defaultAccount;
-                       _accountInitialized = true;
-                   });
-               }
-           });
-       }
+        // Use simple setState via a post-frame callback to avoid build errors
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _selectedAccount == null) {
+            setState(() {
+              _selectedAccount = defaultAccount;
+              _accountInitialized = true;
+            });
+          }
+        });
+      }
     });
 
     return Scaffold(
@@ -232,12 +239,19 @@ class _NaturalLanguageInputScreenState
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
-                items: accounts.map((account) => DropdownMenuItem(
-                  value: account,
-                  child: Text(account.name),
-                )).toList(),
+                items: accounts
+                    .map(
+                      (account) => DropdownMenuItem(
+                        value: account,
+                        child: Text(account.name),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (value) {
                   setState(() {
                     _selectedAccount = value;
@@ -251,29 +265,31 @@ class _NaturalLanguageInputScreenState
             const SizedBox(height: AppSpacing.md),
 
             if (_parsedTransaction != null) ...[
-               _buildPreviewCard(_parsedTransaction!),
-               const SizedBox(height: AppSpacing.lg),
-               Row(
-                 children: [
-                   Expanded(
-                     child: AppButton.secondary(
-                       label: l10n.editDetails,
-                       onPressed: _editDetails,
-                       icon: Icons.edit,
-                     ),
-                   ),
-                   const SizedBox(width: AppSpacing.md),
-                   Expanded(
-                     child: AppButton.primary(
-                       label: l10n.create,
-                       onPressed: (_parsedTransaction!.amount != null && _selectedAccount != null)
-                         ? _createTransaction
-                         : null,
-                       icon: Icons.check,
-                     ),
-                   ),
-                 ],
-               ),
+              _buildPreviewCard(_parsedTransaction!),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppButton.secondary(
+                      label: l10n.editDetails,
+                      onPressed: _editDetails,
+                      icon: Icons.edit,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: AppButton.primary(
+                      label: l10n.create,
+                      onPressed:
+                          (_parsedTransaction!.amount != null &&
+                              _selectedAccount != null)
+                          ? _createTransaction
+                          : null,
+                      icon: Icons.check,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ],
         ),
@@ -288,7 +304,9 @@ class _NaturalLanguageInputScreenState
     final hasCategory = transaction.categoryName != null;
 
     // Determine color based on income/expense
-    final amountColor = transaction.isIncome ? AppColors.income : AppColors.expense;
+    final amountColor = transaction.isIncome
+        ? AppColors.income
+        : AppColors.expense;
     final amountPrefix = transaction.isIncome ? '+' : '-';
 
     return AppCard(
@@ -305,7 +323,10 @@ class _NaturalLanguageInputScreenState
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: _getConfidenceColor(transaction.confidence),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -324,27 +345,30 @@ class _NaturalLanguageInputScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                 Row(
-                   children: [
-                     Icon(hasAmount ? Icons.attach_money : Icons.money_off,
-                          color: hasAmount ? amountColor : Colors.grey),
-                     const SizedBox(width: AppSpacing.xs),
-                     Text(
-                       hasAmount
-                         ? '$amountPrefix${NumberFormat.simpleCurrency(name: transaction.currency ?? '').format(transaction.amount).substring(1)}' // simplistic formatting
-                         : l10n.noAmount,
-                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                         color: hasAmount ? amountColor : Colors.grey,
-                         fontWeight: FontWeight.bold,
-                       ),
-                     ),
-                   ],
-                 ),
-                 if (transaction.date != null)
-                   Chip(
-                     avatar: const Icon(Icons.calendar_today, size: 16),
-                     label: Text(DateFormat.yMMMd().format(transaction.date!)),
-                   ),
+                Row(
+                  children: [
+                    Icon(
+                      hasAmount ? Icons.attach_money : Icons.money_off,
+                      color: hasAmount ? amountColor : Colors.grey,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      hasAmount
+                          ? '$amountPrefix${NumberFormat.simpleCurrency(name: transaction.currency ?? '').format(transaction.amount).substring(1)}' // simplistic formatting
+                          : l10n.noAmount,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: hasAmount ? amountColor : Colors.grey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+                if (transaction.date != null)
+                  Chip(
+                    avatar: const Icon(Icons.calendar_today, size: 16),
+                    label: Text(DateFormat.yMMMd().format(transaction.date!)),
+                  ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -356,8 +380,8 @@ class _NaturalLanguageInputScreenState
               title: Text(transaction.payeeName ?? l10n.unknownPayee),
               subtitle: Text(hasPayee ? l10n.payee : l10n.payeeNotFound),
               trailing: hasPayee
-                ? const Icon(Icons.check_circle, color: AppColors.success)
-                : const Icon(Icons.help_outline, color: AppColors.warning),
+                  ? const Icon(Icons.check_circle, color: AppColors.success)
+                  : const Icon(Icons.help_outline, color: AppColors.warning),
             ),
 
             // Category
@@ -366,9 +390,9 @@ class _NaturalLanguageInputScreenState
               leading: const Icon(AppIcons.category),
               title: Text(transaction.categoryName ?? l10n.uncategorized),
               subtitle: Text(hasCategory ? l10n.category : l10n.uncategorized),
-               trailing: hasCategory
-                ? const Icon(Icons.check_circle, color: AppColors.success)
-                : const Icon(Icons.help_outline, color: AppColors.warning),
+              trailing: hasCategory
+                  ? const Icon(Icons.check_circle, color: AppColors.success)
+                  : const Icon(Icons.help_outline, color: AppColors.warning),
             ),
           ],
         ),
@@ -399,14 +423,20 @@ class _NaturalLanguageInputScreenState
             children: [
               Text(l10n.parsingTipsDescription),
               const SizedBox(height: 16),
-              Text('${l10n.examples}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                '${l10n.examples}:',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               const Text('• "Lunch 15"'),
               const Text('• "Coffee \$5 at Starbucks"'),
               const Text('• "Uber 25 tomorrow"'),
               const Text('• "Salary 3000" (Income)'),
               const SizedBox(height: 16),
-              Text('${l10n.appDetects}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                '${l10n.appDetects}:',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               Text('• ${l10n.amount}'),
               Text('• ${l10n.payee}'),

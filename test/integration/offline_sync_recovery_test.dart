@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -34,24 +33,26 @@ void main() {
     // Mock Path Provider for getTemporaryDirectory calls inside SyncEngine
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-            const MethodChannel('plugins.flutter.io/path_provider'),
-            (MethodCall methodCall) async {
-      return '.';
-    });
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (MethodCall methodCall) async {
+            return '.';
+          },
+        );
 
     // Mock PackageInfo
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-            const MethodChannel('dev.fluttercommunity.plus/package_info'),
-            (MethodCall methodCall) async {
-      return {
-        'appName': 'LedgerZero',
-        'packageName': 'com.ledgerzero.app',
-        'version': '1.0.0',
-        'buildNumber': '1',
-        'buildSignature': '',
-      };
-    });
+          const MethodChannel('dev.fluttercommunity.plus/package_info'),
+          (MethodCall methodCall) async {
+            return {
+              'appName': 'LedgerZero',
+              'packageName': 'com.ledgerzero.app',
+              'version': '1.0.0',
+              'buildNumber': '1',
+              'buildSignature': '',
+            };
+          },
+        );
 
     tempDir = await Directory.systemTemp.createTemp('offline_sync_test');
     db = AppDatabase(NativeDatabase.memory());
@@ -68,7 +69,12 @@ void main() {
     when(mockPrefs.setInt(any, any)).thenAnswer((_) async => true);
 
     // Use REAL DeltaGenerationService
-    deltaGenService = DeltaGenerationService(db, localDeltaQueue, mockPrefs, deviceUuid: 'test-device');
+    deltaGenService = DeltaGenerationService(
+      db,
+      localDeltaQueue,
+      mockPrefs,
+      deviceUuid: 'test-device',
+    );
 
     mockGoogleDriveService = MockGoogleDriveService();
     mockICloudDriveService = MockICloudDriveService();
@@ -77,7 +83,9 @@ void main() {
     mockDeltaReplayService = MockDeltaReplayService();
 
     // Default connectivity: Offline initially
-    when(mockConnectivityService.connectionStatusStream).thenAnswer((_) => const Stream.empty());
+    when(
+      mockConnectivityService.connectionStatusStream,
+    ).thenAnswer((_) => const Stream.empty());
     when(mockConnectivityService.isConnected).thenAnswer((_) async => false);
 
     syncEngine = SyncEngine(
@@ -103,15 +111,17 @@ void main() {
     when(mockConnectivityService.isConnected).thenAnswer((_) async => false);
 
     // 2. Add data to DB -> Generates Pending Change
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(
-        id: 'acc1',
-        name: 'Test Account',
-        type: 'checking',
-        createdAt: Value(DateTime.now()),
-        updatedAt: Value(DateTime.now()),
-      ),
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: 'acc1',
+            name: 'Test Account',
+            type: 'checking',
+            createdAt: Value(DateTime.now()),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
 
     // 3. Process changes (offline) -> Generates Delta in Queue
     await deltaGenService.processPendingChanges();
@@ -148,8 +158,12 @@ void main() {
     when(mockConnectivityService.isWifi).thenAnswer((_) async => true);
 
     // Mock upload success
-    when(mockGoogleDriveService.uploadDelta(any, any)).thenAnswer((_) async => 'fake-file-id');
-    when(mockGoogleDriveService.listDeltas()).thenAnswer((_) async => []); // No remote deltas
+    when(
+      mockGoogleDriveService.uploadDelta(any, any),
+    ).thenAnswer((_) async => 'fake-file-id');
+    when(
+      mockGoogleDriveService.listDeltas(),
+    ).thenAnswer((_) async => []); // No remote deltas
 
     // 7. Trigger Sync
     await newSyncEngine.sync();

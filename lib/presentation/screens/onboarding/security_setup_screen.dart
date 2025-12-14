@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/encryption/security_manager.dart';
@@ -9,7 +10,8 @@ class SecuritySetupScreen extends ConsumerStatefulWidget {
   const SecuritySetupScreen({super.key});
 
   @override
-  ConsumerState<SecuritySetupScreen> createState() => _SecuritySetupScreenState();
+  ConsumerState<SecuritySetupScreen> createState() =>
+      _SecuritySetupScreenState();
 }
 
 class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
@@ -53,71 +55,90 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
 
     setState(() => _isLoading = true);
 
+    final securityManager = ref.read(securityManagerProvider);
+    final password = _passwordController.text;
+    String? key;
+    String? salt;
+
     try {
-      final securityManager = ref.read(securityManagerProvider);
-      final password = _passwordController.text;
-
       // 1. Generate Salt
-      final salt = securityManager.generateSecureKey(); // Using as salt
+      salt = securityManager.generateSecureKey();
 
-      // 2. Derive Key
-      final key = securityManager.deriveKeyFromPassword(password, salt);
+      // 2. Derive Key (now async, runs in isolate)
+      key = await securityManager.deriveKeyFromPassword(password, salt);
 
       // 3. Store Salt and Verifier
       await securityManager.storeSalt(salt);
       await securityManager.storeVerifier(key);
-
-      // 4. Store Key if Biometrics enabled
-      if (_useBiometrics) {
-         // Optionally authenticate here to confirm user ownership before storing
-         final authenticated = await securityManager.authenticateWithBiometrics();
-         if (authenticated) {
-           await securityManager.storeKey(key);
-         } else {
-           // If auth fails, maybe don't store key? Or warn?
-           // For now, let's assume we require auth to enable this feature.
-           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-               const SnackBar(content: Text('Biometric authentication failed. Key not stored securely.')),
-             );
-             setState(() => _isLoading = false);
-             return;
-           }
-         }
-      } else {
-        // Ensure no key is stored if biometrics disabled
-        await securityManager.clearKey();
-      }
-
-      // Set session key for immediate DB access
-      SecurityManager.setSessionKey(key);
-
-      // 5. Proceed to next step
-      if (mounted) {
-        // Authenticate the user for the session so they can create data
-        ref.read(authProvider.notifier).setAuthenticated(true);
-        // Do NOT set onboarded to true yet, as there are more steps
-        context.goNamed('account-setup');
-      }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Security Setup ERROR (salt/verifier): $e');
+      debugPrint('Stack: $stack');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error setting up security: $e')),
         );
-      }
-    } finally {
-      if (mounted) {
         setState(() => _isLoading = false);
       }
+      return;
+    }
+
+    // 4. Store Key if Biometrics enabled (optional, non-fatal)
+    if (_useBiometrics) {
+      try {
+        final authenticated = await securityManager
+            .authenticateWithBiometrics();
+        if (authenticated) {
+          await securityManager.storeKey(key);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Biometric auth failed. Key not stored.'),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Biometric key storage failed (non-fatal): $e');
+        // Continue anyway - biometrics is optional
+      }
+    } else {
+      try {
+        await securityManager.clearKey();
+      } catch (e) {
+        debugPrint('Clear key failed (non-fatal): $e');
+      }
+    }
+
+    // Set session key for immediate DB access
+    SecurityManager.setSessionKey(key);
+
+    // Reset database instance so it gets created with the new encryption key
+    AppDatabase.resetInstance();
+
+    debugPrint('Security Setup: Key derived and stored. Session key set.');
+
+    // 5. Proceed to next step
+    if (mounted) {
+      debugPrint('Security Setup: Setting authenticated=true');
+      ref.read(authProvider.notifier).setAuthenticated(true);
+      debugPrint('Security Setup: Scheduling navigation to account-setup');
+      setState(() => _isLoading = false);
+
+      // Navigate in the next frame to avoid router state conflicts
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          debugPrint('Security Setup: Now navigating to account-setup');
+          context.goNamed('account-setup');
+        }
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Protect Your Data'),
-      ),
+      appBar: AppBar(title: const Text('Protect Your Data')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -145,7 +166,9 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
@@ -183,7 +206,9 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
                 if (_isBiometricsAvailable) ...[
                   SwitchListTile(
                     title: const Text('Use Biometrics'),
-                    subtitle: const Text('Unlock the app with Face ID / Fingerprint'),
+                    subtitle: const Text(
+                      'Unlock the app with Face ID / Fingerprint',
+                    ),
                     value: _useBiometrics,
                     onChanged: (value) {
                       setState(() => _useBiometrics = value);
@@ -202,7 +227,10 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
                           width: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Save & Continue', style: TextStyle(fontSize: 18)),
+                      : const Text(
+                          'Save & Continue',
+                          style: TextStyle(fontSize: 18),
+                        ),
                 ),
               ],
             ),

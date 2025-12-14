@@ -19,8 +19,12 @@ class DeltaGenerationService {
 
   static const String _lastSequenceKey = 'last_delta_sequence';
 
-  DeltaGenerationService(this._db, this._localDeltaQueue, this._prefs, {String? deviceUuid})
-      : _deviceUuidOverride = deviceUuid;
+  DeltaGenerationService(
+    this._db,
+    this._localDeltaQueue,
+    this._prefs, {
+    String? deviceUuid,
+  }) : _deviceUuidOverride = deviceUuid;
 
   Future<int> _getNextSequence() {
     return _sequenceLock.protect(() async {
@@ -38,7 +42,9 @@ class DeltaGenerationService {
     final schemaVersion = _db.schemaVersion;
 
     while (true) {
-      final changes = await _db.pendingSyncChangesDao.getPendingChanges(limit: 500);
+      final changes = await _db.pendingSyncChangesDao.getPendingChanges(
+        limit: 500,
+      );
 
       if (changes.isEmpty) {
         break;
@@ -81,19 +87,25 @@ class DeltaGenerationService {
         const chunkSize = 500;
         for (var i = 0; i < ids.length; i += chunkSize) {
           final chunk = ids.sublist(
-              i, i + chunkSize < ids.length ? i + chunkSize : ids.length);
+            i,
+            i + chunkSize < ids.length ? i + chunkSize : ids.length,
+          );
 
           final sql =
               'SELECT * FROM $table WHERE id IN (${chunk.map((_) => '?').join(',')})';
-          final rows = await _db.customSelect(
-            sql,
-            variables: chunk.map((id) => Variable.withString(id)).toList(),
-            readsFrom: {},
-          ).get();
+          final rows = await _db
+              .customSelect(
+                sql,
+                variables: chunk.map((id) => Variable.withString(id)).toList(),
+                readsFrom: {},
+              )
+              .get();
 
           for (final row in rows) {
-            fetchedData.putIfAbsent(table, () => {})[row.data['id'].toString()] =
-                row.data;
+            fetchedData.putIfAbsent(
+              table,
+              () => {},
+            )[row.data['id'].toString()] = row.data;
           }
         }
       }
@@ -125,7 +137,9 @@ class DeltaGenerationService {
             data = fetchedData[tableName]?[recordId];
 
             if (data == null) {
-              Logger.warning('Data missing for $tableName:$recordId during delta generation. Skipping.');
+              Logger.warning(
+                'Data missing for $tableName:$recordId during delta generation. Skipping.',
+              );
               shouldGenerateDelta = false;
             } else {
               if (firstChange.action == 'INSERT') {
@@ -177,13 +191,17 @@ class DeltaGenerationService {
           processedChangesCount += group.length;
         } catch (e, stackTrace) {
           Logger.error(
-              'Error processing changes for $tableName:$recordId', e, stackTrace);
+            'Error processing changes for $tableName:$recordId',
+            e,
+            stackTrace,
+          );
         }
       }
 
       if (processedChangesCount == 0) {
         Logger.warning(
-            'ProcessPendingChanges: Fetched ${changes.length} changes but failed to process any. Breaking to avoid infinite loop.');
+          'ProcessPendingChanges: Fetched ${changes.length} changes but failed to process any. Breaking to avoid infinite loop.',
+        );
         break;
       }
     }

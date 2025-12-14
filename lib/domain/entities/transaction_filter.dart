@@ -1,20 +1,12 @@
 import 'package:ledger_zero/domain/entities/transaction.dart';
 
-enum TransactionSortField {
-  date,
-  amount,
-  payeeName,
-  categoryName,
-}
+enum TransactionSortField { date, amount, payeeName, categoryName }
 
 class TransactionSort {
   final TransactionSortField field;
   final bool ascending;
 
-  const TransactionSort({
-    required this.field,
-    this.ascending = true,
-  });
+  const TransactionSort({required this.field, this.ascending = true});
 }
 
 class TransactionFilter {
@@ -96,8 +88,9 @@ class TransactionFilter {
       payeeIds: (json['payeeIds'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
-      startDate:
-          json['startDate'] != null ? DateTime.parse(json['startDate']) : null,
+      startDate: json['startDate'] != null
+          ? DateTime.parse(json['startDate'])
+          : null,
       endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
       minAmount: (json['minAmount'] as num?)?.toDouble(),
       maxAmount: (json['maxAmount'] as num?)?.toDouble(),

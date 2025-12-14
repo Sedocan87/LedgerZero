@@ -19,7 +19,8 @@ class RuleTemplateService {
   static List<RuleTemplate> get templates => [
     RuleTemplate(
       name: 'Categorize by Payee Name',
-      description: 'Automatically set a category when the payee name contains a specific keyword.',
+      description:
+          'Automatically set a category when the payee name contains a specific keyword.',
       createRule: () => Rule(
         id: const Uuid().v4(),
         name: 'Categorize by Payee',
@@ -43,7 +44,8 @@ class RuleTemplateService {
     ),
     RuleTemplate(
       name: 'Small Transaction Auto-Clear',
-      description: 'Automatically mark transactions under a certain amount as cleared.',
+      description:
+          'Automatically mark transactions under a certain amount as cleared.',
       createRule: () => Rule(
         id: const Uuid().v4(),
         name: 'Auto-Clear Small Tx',
@@ -58,16 +60,14 @@ class RuleTemplateService {
           ),
         ],
         actions: [
-          const RuleAction(
-            type: RuleActionType.markCleared,
-            value: 'true',
-          ),
+          const RuleAction(type: RuleActionType.markCleared, value: 'true'),
         ],
       ),
     ),
     RuleTemplate(
       name: 'Recurring Bill Auto-Approve',
-      description: 'Automatically approve transactions for a specific payee (e.g., Netflix).',
+      description:
+          'Automatically approve transactions for a specific payee (e.g., Netflix).',
       createRule: () => Rule(
         id: const Uuid().v4(),
         name: 'Auto-Approve Bill',
@@ -82,10 +82,7 @@ class RuleTemplateService {
           ),
         ],
         actions: [
-          const RuleAction(
-            type: RuleActionType.markApproved,
-            value: 'true',
-          ),
+          const RuleAction(type: RuleActionType.markApproved, value: 'true'),
         ],
       ),
     ),

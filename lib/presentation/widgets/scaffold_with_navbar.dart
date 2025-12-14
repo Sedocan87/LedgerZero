@@ -5,10 +5,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/widgets/common/offline_indicator.dart';
 
 class ScaffoldWithNavBar extends StatefulWidget {
-  const ScaffoldWithNavBar({
-    required this.navigationShell,
-    super.key,
-  });
+  const ScaffoldWithNavBar({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
@@ -51,7 +48,10 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
                         child: const Text('Skip to content'),
                       ),
                     )
-                  : const SizedBox(width: 1, height: 1), // Minimal size when hidden
+                  : const SizedBox(
+                      width: 1,
+                      height: 1,
+                    ), // Minimal size when hidden
             ),
           ),
           const OfflineIndicator(),

@@ -7,7 +7,9 @@ import '../../widget_test_helpers.dart';
 
 void main() {
   group('Account Widgets Tests', () {
-    testWidgets('AccountCard displays account details correctly', (tester) async {
+    testWidgets('AccountCard displays account details correctly', (
+      tester,
+    ) async {
       final account = Account(
         id: '1',
         name: 'Checking Account',
@@ -20,10 +22,7 @@ void main() {
       await pumpTestWidget(
         tester,
         child: Scaffold(
-          body: AccountCard(
-            account: account,
-            onTap: () {},
-          ),
+          body: AccountCard(account: account, onTap: () {}),
         ),
       );
 

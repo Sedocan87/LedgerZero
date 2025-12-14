@@ -12,7 +12,8 @@ class CategoryImportDialog extends ConsumerStatefulWidget {
   const CategoryImportDialog({super.key});
 
   @override
-  ConsumerState<CategoryImportDialog> createState() => _CategoryImportDialogState();
+  ConsumerState<CategoryImportDialog> createState() =>
+      _CategoryImportDialogState();
 }
 
 class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
@@ -37,9 +38,14 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
         return;
       }
 
-      final files = directory.listSync().where((e) => e.path.endsWith('.csv')).toList();
+      final files = directory
+          .listSync()
+          .where((e) => e.path.endsWith('.csv'))
+          .toList();
       // Sort by modified date descending
-      files.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+      files.sort(
+        (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+      );
 
       if (mounted) {
         setState(() {
@@ -65,8 +71,10 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
 
     try {
       final content = await file.readAsString();
-      final List<List<dynamic>> rows =
-          const CsvToListConverter().convert(content, eol: '\n');
+      final List<List<dynamic>> rows = const CsvToListConverter().convert(
+        content,
+        eol: '\n',
+      );
 
       if (rows.isEmpty) {
         throw 'Empty file';
@@ -77,7 +85,9 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
       int catIdx = -1;
       int hiddenIdx = -1;
 
-      final header = rows.first.map((e) => e.toString().trim().toLowerCase()).toList();
+      final header = rows.first
+          .map((e) => e.toString().trim().toLowerCase())
+          .toList();
 
       if (header.contains('group')) {
         groupIdx = header.indexOf('group');
@@ -91,21 +101,25 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
 
       // Fallback
       if (groupIdx == -1 || catIdx == -1) {
-         if (rows.first.length >= 2) {
-            // Assume no header, just columns
-            // But if first row contains "Group" string, treat as header
-            if (rows.first[0].toString().toLowerCase().contains('group')) {
-               // Header present but maybe different case or spaces?
-               // We logic above covered it.
-               // Assume malformed header or standard positions 0, 1, 2
-               groupIdx = 0; catIdx = 1; hiddenIdx = 2;
-            } else {
-               // No header, data starts at 0
-               groupIdx = 0; catIdx = 1; hiddenIdx = 2;
-            }
-         } else {
-            throw 'Invalid CSV format. Expected columns: Group, Category';
-         }
+        if (rows.first.length >= 2) {
+          // Assume no header, just columns
+          // But if first row contains "Group" string, treat as header
+          if (rows.first[0].toString().toLowerCase().contains('group')) {
+            // Header present but maybe different case or spaces?
+            // We logic above covered it.
+            // Assume malformed header or standard positions 0, 1, 2
+            groupIdx = 0;
+            catIdx = 1;
+            hiddenIdx = 2;
+          } else {
+            // No header, data starts at 0
+            groupIdx = 0;
+            catIdx = 1;
+            hiddenIdx = 2;
+          }
+        } else {
+          throw 'Invalid CSV format. Expected columns: Group, Category';
+        }
       }
 
       final catRepo = ref.read(categoryRepositoryProvider);
@@ -117,8 +131,9 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
       int importedCount = 0;
 
       // Determine start index
-      final hasHeader =
-          rows.first[groupIdx].toString().toLowerCase().contains('group');
+      final hasHeader = rows.first[groupIdx].toString().toLowerCase().contains(
+        'group',
+      );
       final startIndex = hasHeader ? 1 : 0;
 
       for (int i = startIndex; i < rows.length; i++) {
@@ -146,32 +161,30 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
         );
 
         if (group.id == 'placeholder') {
-           group = CategoryGroup(
-             id: uuid.v4(),
-             name: groupName,
-             createdAt: now,
-           );
-           await catRepo.createCategoryGroup(group);
-           existingGroups.add(group);
+          group = CategoryGroup(id: uuid.v4(), name: groupName, createdAt: now);
+          await catRepo.createCategoryGroup(group);
+          existingGroups.add(group);
         }
 
         // Find or Create Category
         var category = existingCats.firstWhere(
-          (c) => c.name.toLowerCase() == catName.toLowerCase() && c.categoryGroupId == group.id,
+          (c) =>
+              c.name.toLowerCase() == catName.toLowerCase() &&
+              c.categoryGroupId == group.id,
           orElse: () => const Category(id: 'placeholder', name: ''),
         );
 
         if (category.id == 'placeholder') {
-           category = Category(
-             id: uuid.v4(),
-             name: catName,
-             categoryGroupId: group.id,
-             isHidden: isHidden,
-             createdAt: now,
-           );
-           await catRepo.createCategory(category);
-           existingCats.add(category);
-           importedCount++;
+          category = Category(
+            id: uuid.v4(),
+            name: catName,
+            categoryGroupId: group.id,
+            isHidden: isHidden,
+            createdAt: now,
+          );
+          await catRepo.createCategory(category);
+          existingCats.add(category);
+          importedCount++;
         }
       }
 
@@ -202,14 +215,22 @@ class _CategoryImportDialogState extends ConsumerState<CategoryImportDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_status != null) ...[
-              Text(_status!, style: TextStyle(color: _status!.startsWith('Error') ? Colors.red : Colors.green)),
+              Text(
+                _status!,
+                style: TextStyle(
+                  color: _status!.startsWith('Error')
+                      ? Colors.red
+                      : Colors.green,
+                ),
+              ),
               const SizedBox(height: 16),
             ],
             if (_isLoading)
               const Center(child: CircularProgressIndicator())
             else if (_files.isEmpty)
               const Text(
-                  'No CSV files found in Documents directory.\n\nExport categories first to see how it works, or place a .csv file in the app documents folder.')
+                'No CSV files found in Documents directory.\n\nExport categories first to see how it works, or place a .csv file in the app documents folder.',
+              )
             else
               Flexible(
                 child: ListView.builder(

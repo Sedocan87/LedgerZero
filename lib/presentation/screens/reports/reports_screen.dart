@@ -26,11 +26,7 @@ enum ReportType {
   budgetVsActual,
 }
 
-enum ExportFormat {
-  csv,
-  pdf,
-  image,
-}
+enum ExportFormat { csv, pdf, image }
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -50,31 +46,38 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     ReportType.budgetVsActual: GlobalKey(),
   };
 
-  Future<void> _exportReport(ReportType type, ExportFormat format, String title) async {
+  Future<void> _exportReport(
+    ReportType type,
+    ExportFormat format,
+    String title,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
 
     // Show loading
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.exporting)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.exporting)));
 
     try {
       Uint8List? imageBytes;
       if (format != ExportFormat.csv) {
         final key = _chartKeys[type];
         if (key?.currentContext != null) {
-          final boundary = key!.currentContext!.findRenderObject() as RenderRepaintBoundary?;
+          final boundary =
+              key!.currentContext!.findRenderObject() as RenderRepaintBoundary?;
           if (boundary != null) {
             // Check if boundary is attached and has size
-             if (boundary.debugNeedsPaint) {
-                // Should be painted.
-             }
-             final image = await boundary.toImage(pixelRatio: 3.0);
-             final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-             imageBytes = byteData?.buffer.asUint8List();
+            if (boundary.debugNeedsPaint) {
+              // Should be painted.
+            }
+            final image = await boundary.toImage(pixelRatio: 3.0);
+            final byteData = await image.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            imageBytes = byteData?.buffer.asUint8List();
           }
         }
       }
@@ -105,12 +108,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       }
 
       if (data == null && format == ExportFormat.csv) {
-         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text(l10n.exportFailed('No data available'))),
-           );
-         }
-         return;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.exportFailed('No data available'))),
+          );
+        }
+        return;
       }
 
       final service = ReportExportService();
@@ -154,24 +157,36 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         } else if (data is Map<DateTime, double>) {
           headers = [l10n.date, l10n.amount];
           rows = data.entries
-              .map((e) => [dateFormat.format(e.key), currencyFormat.format(e.value)])
+              .map(
+                (e) => [
+                  dateFormat.format(e.key),
+                  currencyFormat.format(e.value),
+                ],
+              )
               .toList();
         } else if (data is List<MapEntry<String, double>>) {
           headers = [l10n.payee, l10n.amount];
           rows = data
               .map((e) => [e.key, currencyFormat.format(e.value)])
               .toList();
-        } else if (type == ReportType.budgetVsActual && data is List<BudgetVsActualItem>) {
-           headers = [l10n.category, l10n.budgeted, l10n.activity];
-           rows = data.map((e) => [
-             e.categoryName,
-             currencyFormat.format(e.budgeted),
-             currencyFormat.format(e.actual),
-           ]).toList();
+        } else if (type == ReportType.budgetVsActual &&
+            data is List<BudgetVsActualItem>) {
+          headers = [l10n.category, l10n.budgeted, l10n.activity];
+          rows = data
+              .map(
+                (e) => [
+                  e.categoryName,
+                  currencyFormat.format(e.budgeted),
+                  currencyFormat.format(e.actual),
+                ],
+              )
+              .toList();
         } else {
-             // Fallback for types not explicitly handled or complex types
-             headers = ['Data'];
-             rows = [[data.toString()]];
+          // Fallback for types not explicitly handled or complex types
+          headers = ['Data'];
+          rows = [
+            [data.toString()],
+          ];
         }
 
         await service.generateAndSharePdf(
@@ -180,22 +195,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           data: rows,
           filename: '${type.name}_export',
         );
-
       } else if (format == ExportFormat.image && imageBytes != null) {
         await service.shareImage(imageBytes, '${type.name}_chart');
       } else if (format == ExportFormat.csv && csvHeaders != null) {
-         // CSV Export Logic (existing)
-         final List<List<dynamic>> rows = [csvHeaders];
-         if (data is Map<String, double>) {
-             rows.addAll(data.entries.map((e) => [e.key, e.value]));
-         } else if (data is Map<DateTime, double>) {
-             rows.addAll(data.entries.map((e) => [e.key.toIso8601String(), e.value]));
-         } else if (data is List<MapEntry<String, double>>) {
-             rows.addAll(data.map((e) => [e.key, e.value]));
-         }
-         // ... Add other CSV conversions ...
+        // CSV Export Logic (existing)
+        final List<List<dynamic>> rows = [csvHeaders];
+        if (data is Map<String, double>) {
+          rows.addAll(data.entries.map((e) => [e.key, e.value]));
+        } else if (data is Map<DateTime, double>) {
+          rows.addAll(
+            data.entries.map((e) => [e.key.toIso8601String(), e.value]),
+          );
+        } else if (data is List<MapEntry<String, double>>) {
+          rows.addAll(data.map((e) => [e.key, e.value]));
+        }
+        // ... Add other CSV conversions ...
 
-         await service.shareCsv(rows, '${type.name}_export');
+        await service.shareCsv(rows, '${type.name}_export');
       }
 
       if (mounted) {
@@ -256,79 +272,102 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Spending Trends (Compare Months)
-              Text(l10n.spendingTrends, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.spendingTrends,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.spendingTrends],
                 child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor, // Ensure background is captured
-                    child: _SpendingTrendsChart()
+                  color: Theme.of(
+                    context,
+                  ).scaffoldBackgroundColor, // Ensure background is captured
+                  child: _SpendingTrendsChart(),
                 ),
               ),
               const SizedBox(height: 32),
 
               // Spending by Category (Bar Chart)
-              Text(l10n.spendingByCategory, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.spendingByCategory,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.spendingByCategory],
                 child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: _SpendingChart()
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: _SpendingChart(),
                 ),
               ),
               const SizedBox(height: 32),
 
               // Category Breakdown (Pie Chart)
-              Text(l10n.categoryBreakdown, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.categoryBreakdown,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.categoryBreakdown],
                 child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: _CategoryPieChart()
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: _CategoryPieChart(),
                 ),
               ),
               const SizedBox(height: 32),
 
               // Income vs Expense
-              Text(l10n.incomeVsExpense, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.incomeVsExpense,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.incomeVsExpense],
                 child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: _IncomeExpenseChart()
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: _IncomeExpenseChart(),
                 ),
               ),
               const SizedBox(height: 32),
 
               // Net Worth
-              Text(l10n.netWorth, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.netWorth,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.netWorth],
                 child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: _NetWorthChart()
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: _NetWorthChart(),
                 ),
               ),
               const SizedBox(height: 32),
 
               // Top Payees
-              Text(l10n.topPayees, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.topPayees,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.topPayees],
                 child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: _TopPayeesList()
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: _TopPayeesList(),
                 ),
               ),
               const SizedBox(height: 32),
 
               // Budget vs Actual
-              Text('Budget vs Actual', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'Budget vs Actual',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.budgetVsActual],
@@ -380,7 +419,10 @@ class _ExportDialogState extends State<_ExportDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.selectReportToExport, style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              l10n.selectReportToExport,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             DropdownButtonFormField<ReportType>(
               initialValue: _selectedType,
@@ -399,7 +441,10 @@ class _ExportDialogState extends State<_ExportDialog> {
               },
             ),
             const SizedBox(height: 16),
-            Text(l10n.exportFormat, style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              l10n.exportFormat,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 8),
             SegmentedButton<ExportFormat>(
               segments: [
@@ -435,7 +480,11 @@ class _ExportDialogState extends State<_ExportDialog> {
         FilledButton(
           onPressed: () {
             Navigator.pop(context);
-            widget.onExport(_selectedType, _selectedFormat, reportTitles[_selectedType]!);
+            widget.onExport(
+              _selectedType,
+              _selectedFormat,
+              reportTitles[_selectedType]!,
+            );
           },
           child: Text(l10n.export),
         ),
@@ -453,14 +502,20 @@ class _SpendingTrendsChart extends ConsumerWidget {
     return trendsAsync.when(
       data: (data) {
         if (data.isEmpty) {
-          return SizedBox(height: 200, child: Center(child: Text(AppLocalizations.of(context)!.noTransactions)));
+          return SizedBox(
+            height: 200,
+            child: Center(
+              child: Text(AppLocalizations.of(context)!.noTransactions),
+            ),
+          );
         }
 
         final sortedKeys = data.keys.toList()..sort();
         final chartData = <String, double>{};
 
         // If range spans multiple years, show year in label
-        final multiYear = data.keys.isNotEmpty &&
+        final multiYear =
+            data.keys.isNotEmpty &&
             (data.keys.first.year != data.keys.last.year);
 
         for (var date in sortedKeys) {
@@ -477,8 +532,12 @@ class _SpendingTrendsChart extends ConsumerWidget {
           preserveOrder: true,
         );
       },
-      loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-      error: (e, st) => SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) =>
+          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
     );
   }
 }
@@ -494,8 +553,12 @@ class _SpendingChart extends ConsumerWidget {
         barColor: AppColors.primaryLight,
         labelColor: Theme.of(context).colorScheme.onSurface,
       ),
-      loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-      error: (e, st) => SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) =>
+          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
     );
   }
 }
@@ -510,8 +573,12 @@ class _CategoryPieChart extends ConsumerWidget {
         data: data,
         labelColor: Theme.of(context).colorScheme.onSurface,
       ),
-      loading: () => const SizedBox(height: 300, child: Center(child: CircularProgressIndicator())),
-      error: (e, st) => SizedBox(height: 300, child: Center(child: Text('Error: $e'))),
+      loading: () => const SizedBox(
+        height: 300,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) =>
+          SizedBox(height: 300, child: Center(child: Text('Error: $e'))),
     );
   }
 }
@@ -527,8 +594,12 @@ class _IncomeExpenseChart extends ConsumerWidget {
         gridColor: Theme.of(context).dividerColor,
         labelColor: Theme.of(context).colorScheme.onSurface,
       ),
-      loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-      error: (e, st) => SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) =>
+          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
     );
   }
 }
@@ -544,8 +615,12 @@ class _NetWorthChart extends ConsumerWidget {
         gridColor: Theme.of(context).dividerColor,
         labelColor: Theme.of(context).colorScheme.onSurface,
       ),
-      loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-      error: (e, st) => SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) =>
+          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
     );
   }
 }
@@ -559,29 +634,38 @@ class _TopPayeesList extends ConsumerWidget {
     return payeesAsync.when(
       data: (data) {
         if (data.isEmpty) {
-          return SizedBox(height: 100, child: Center(child: Text(AppLocalizations.of(context)!.noTransactions)));
+          return SizedBox(
+            height: 100,
+            child: Center(
+              child: Text(AppLocalizations.of(context)!.noTransactions),
+            ),
+          );
         }
 
         return Card(
-           child: Column(
-             children: data.map((entry) {
-               return ListTile(
-                 title: Text(entry.key),
-                 trailing: Text(
-                     currencyFormat.format(entry.value),
-                     style: TextStyle(
-                         fontWeight: FontWeight.bold,
-                         color: Theme.of(context).colorScheme.onSurface
-                     )
-                 ),
-                 dense: true,
-               );
-             }).toList(),
-           ),
+          child: Column(
+            children: data.map((entry) {
+              return ListTile(
+                title: Text(entry.key),
+                trailing: Text(
+                  currencyFormat.format(entry.value),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                dense: true,
+              );
+            }).toList(),
+          ),
         );
       },
-      loading: () => const SizedBox(height: 100, child: Center(child: CircularProgressIndicator())),
-      error: (e, st) => SizedBox(height: 100, child: Center(child: Text('Error: $e'))),
+      loading: () => const SizedBox(
+        height: 100,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) =>
+          SizedBox(height: 100, child: Center(child: Text('Error: $e'))),
     );
   }
 }

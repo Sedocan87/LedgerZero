@@ -12,12 +12,13 @@ void main() {
   late Directory tempDir;
 
   setUpAll(() async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      (MethodCall methodCall) async {
-        return tempDir.path;
-      },
-    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (MethodCall methodCall) async {
+            return tempDir.path;
+          },
+        );
   });
 
   setUp(() async {
@@ -60,8 +61,10 @@ void main() {
     final fileNames = List.generate(6, (i) => 'app_log_${1000 + i}.jsonl');
 
     for (var name in fileNames) {
-       final file = File(path.join(logDir.path, name));
-       await file.writeAsString('{"timestamp":"2023-01-01T00:00:00.000","level":"info","message":"old"}\n');
+      final file = File(path.join(logDir.path, name));
+      await file.writeAsString(
+        '{"timestamp":"2023-01-01T00:00:00.000","level":"info","message":"old"}\n',
+      );
     }
 
     // Verify initial state: 6 files exist
@@ -69,21 +72,31 @@ void main() {
     expect(files.length, 6);
 
     // Trigger log which should prune.
-    await service.log(LogEntry(
-      timestamp: DateTime.now(),
-      level: LogLevel.info,
-      message: 'New message',
-    ));
+    await service.log(
+      LogEntry(
+        timestamp: DateTime.now(),
+        level: LogLevel.info,
+        message: 'New message',
+      ),
+    );
 
     // Check files
-    files = logDir.listSync().whereType<File>().where((f) => path.basename(f.path).startsWith('app_log_')).toList();
+    files = logDir
+        .listSync()
+        .whereType<File>()
+        .where((f) => path.basename(f.path).startsWith('app_log_'))
+        .toList();
 
     // Should be 5 files now
     expect(files.length, 5, reason: 'Should prune to max 5 files');
 
     // Oldest should be gone
     final oldestFile = File(path.join(logDir.path, fileNames[0]));
-    expect(await oldestFile.exists(), false, reason: 'Oldest file should be deleted');
+    expect(
+      await oldestFile.exists(),
+      false,
+      reason: 'Oldest file should be deleted',
+    );
 
     final lastFile = File(path.join(logDir.path, fileNames[5]));
     expect(await lastFile.exists(), true);

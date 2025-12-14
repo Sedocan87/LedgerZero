@@ -87,7 +87,9 @@ class MathEvaluator {
       final char = expr[i];
       if ('+-*/'.contains(char)) {
         // Handle negative numbers at start or after another operator
-        if (char == '-' && (buffer.isEmpty && (tokens.isEmpty || '+-*/'.contains(tokens.last)))) {
+        if (char == '-' &&
+            (buffer.isEmpty &&
+                (tokens.isEmpty || '+-*/'.contains(tokens.last)))) {
           buffer += char;
         } else {
           if (buffer.isNotEmpty) {

@@ -45,8 +45,9 @@ void main() {
   group('getAllAccounts', () {
     test('should return list of accounts from dao', () async {
       // arrange
-      when(mockAccountsDao.getAllAccounts())
-          .thenAnswer((_) async => [tDriftAccount]);
+      when(
+        mockAccountsDao.getAllAccounts(),
+      ).thenAnswer((_) async => [tDriftAccount]);
       // act
       final result = await repository.getAllAccounts();
       // assert
@@ -58,16 +59,19 @@ void main() {
       // arrange
       when(mockAccountsDao.getAllAccounts()).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.getAllAccounts(),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.getAllAccounts(),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('getAccountById', () {
     test('should return account from dao when found', () async {
       // arrange
-      when(mockAccountsDao.getAccountById('acc1'))
-          .thenAnswer((_) async => tDriftAccount);
+      when(
+        mockAccountsDao.getAccountById('acc1'),
+      ).thenAnswer((_) async => tDriftAccount);
       // act
       final result = await repository.getAccountById('acc1');
       // assert
@@ -76,8 +80,9 @@ void main() {
 
     test('should return null when account not found', () async {
       // arrange
-      when(mockAccountsDao.getAccountById('acc1'))
-          .thenAnswer((_) async => null);
+      when(
+        mockAccountsDao.getAccountById('acc1'),
+      ).thenAnswer((_) async => null);
       // act
       final result = await repository.getAccountById('acc1');
       // assert
@@ -86,10 +91,14 @@ void main() {
 
     test('should throw DatabaseException when dao fails', () async {
       // arrange
-      when(mockAccountsDao.getAccountById(any)).thenThrow(Exception('DB Error'));
+      when(
+        mockAccountsDao.getAccountById(any),
+      ).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.getAccountById('acc1'),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.getAccountById('acc1'),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
@@ -107,8 +116,10 @@ void main() {
       // arrange
       when(mockAccountsDao.insertAccount(any)).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.createAccount(tDomainAccount),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.createAccount(tDomainAccount),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
@@ -126,8 +137,10 @@ void main() {
       // arrange
       when(mockAccountsDao.updateAccount(any)).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.updateAccount(tDomainAccount),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.updateAccount(tDomainAccount),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
@@ -145,16 +158,19 @@ void main() {
       // arrange
       when(mockAccountsDao.deleteAccount(any)).thenThrow(Exception('DB Error'));
       // act & assert
-      expect(() => repository.deleteAccount('acc1'),
-          throwsA(isA<DatabaseException>()));
+      expect(
+        () => repository.deleteAccount('acc1'),
+        throwsA(isA<DatabaseException>()),
+      );
     });
   });
 
   group('watchAllAccounts', () {
     test('should stream list of accounts from dao', () {
       // arrange
-      when(mockAccountsDao.watchAllAccounts())
-          .thenAnswer((_) => Stream.value([tDriftAccount]));
+      when(
+        mockAccountsDao.watchAllAccounts(),
+      ).thenAnswer((_) => Stream.value([tDriftAccount]));
       // act
       final stream = repository.watchAllAccounts();
       // assert
@@ -163,8 +179,9 @@ void main() {
 
     test('should throw DatabaseException when stream emits error', () {
       // arrange
-      when(mockAccountsDao.watchAllAccounts())
-          .thenAnswer((_) => Stream.error(Exception('DB Error')));
+      when(
+        mockAccountsDao.watchAllAccounts(),
+      ).thenAnswer((_) => Stream.error(Exception('DB Error')));
       // act
       final stream = repository.watchAllAccounts();
       // assert
@@ -175,8 +192,9 @@ void main() {
   group('watchAccount', () {
     test('should stream account from dao', () {
       // arrange
-      when(mockAccountsDao.watchAccount('acc1'))
-          .thenAnswer((_) => Stream.value(tDriftAccount));
+      when(
+        mockAccountsDao.watchAccount('acc1'),
+      ).thenAnswer((_) => Stream.value(tDriftAccount));
       // act
       final stream = repository.watchAccount('acc1');
       // assert
@@ -185,8 +203,9 @@ void main() {
 
     test('should emit null when account not found', () {
       // arrange
-      when(mockAccountsDao.watchAccount('acc1'))
-          .thenAnswer((_) => Stream.value(null));
+      when(
+        mockAccountsDao.watchAccount('acc1'),
+      ).thenAnswer((_) => Stream.value(null));
       // act
       final stream = repository.watchAccount('acc1');
       // assert

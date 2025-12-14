@@ -18,15 +18,33 @@ void main() {
     // Override providers to return dummy data immediately
     final container = ProviderContainer(
       overrides: [
-        spendingByCategoryProvider.overrideWith((ref) => Future.value({'Food': 100.0})),
-        spendingTrendsProvider.overrideWith((ref) => Future.value({DateTime(2025, 1, 1): 500.0})),
-        topPayeesProvider.overrideWith((ref) => Future.value([const MapEntry('Mario', 50.0)])),
-        incomeVsExpenseHistoryProvider.overrideWith((ref) => Future.value([
-          ChartSeries(name: 'Income', color: Colors.green, points: [TimeSeriesPoint(DateTime.now(), 100)]),
-        ])),
-        netWorthHistoryProvider.overrideWith((ref) => Future.value([
-           ChartSeries(name: 'Net Worth', color: Colors.blue, points: [TimeSeriesPoint(DateTime.now(), 1000)]),
-        ])),
+        spendingByCategoryProvider.overrideWith(
+          (ref) => Future.value({'Food': 100.0}),
+        ),
+        spendingTrendsProvider.overrideWith(
+          (ref) => Future.value({DateTime(2025, 1, 1): 500.0}),
+        ),
+        topPayeesProvider.overrideWith(
+          (ref) => Future.value([const MapEntry('Mario', 50.0)]),
+        ),
+        incomeVsExpenseHistoryProvider.overrideWith(
+          (ref) => Future.value([
+            ChartSeries(
+              name: 'Income',
+              color: Colors.green,
+              points: [TimeSeriesPoint(DateTime.now(), 100)],
+            ),
+          ]),
+        ),
+        netWorthHistoryProvider.overrideWith(
+          (ref) => Future.value([
+            ChartSeries(
+              name: 'Net Worth',
+              color: Colors.blue,
+              points: [TimeSeriesPoint(DateTime.now(), 1000)],
+            ),
+          ]),
+        ),
         // Override all data providers to prevent loading states during test
         budgetVsActualProvider.overrideWith((ref) => Future.value([])),
         reportNotesListProvider.overrideWith((ref) => Future.value([])),
@@ -54,9 +72,15 @@ void main() {
     expect(find.byType(ReportsScreen), findsOneWidget);
 
     // Charts
-    expect(find.byType(SimpleBarChart), findsNWidgets(2)); // Trends + SpendingByCategory
+    expect(
+      find.byType(SimpleBarChart),
+      findsNWidgets(2),
+    ); // Trends + SpendingByCategory
     expect(find.byType(PieChart), findsOneWidget); // CategoryBreakdown
-    expect(find.byType(MultiLineChart), findsNWidgets(2)); // IncomeVsExpense + NetWorth
+    expect(
+      find.byType(MultiLineChart),
+      findsNWidgets(2),
+    ); // IncomeVsExpense + NetWorth
 
     // Titles
     expect(find.text('Spending Trends'), findsOneWidget);

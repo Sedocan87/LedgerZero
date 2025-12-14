@@ -5,7 +5,8 @@ import 'package:ledger_zero/data/database/tables/budget_templates.dart';
 part 'budget_templates_dao.g.dart';
 
 @DriftAccessor(tables: [BudgetTemplates])
-class BudgetTemplatesDao extends DatabaseAccessor<AppDatabase> with _$BudgetTemplatesDaoMixin {
+class BudgetTemplatesDao extends DatabaseAccessor<AppDatabase>
+    with _$BudgetTemplatesDaoMixin {
   BudgetTemplatesDao(super.db);
 
   Future<List<BudgetTemplate>> getAllBudgetTemplates() {
@@ -13,7 +14,9 @@ class BudgetTemplatesDao extends DatabaseAccessor<AppDatabase> with _$BudgetTemp
   }
 
   Future<BudgetTemplate?> getBudgetTemplateById(String id) {
-    return (select(budgetTemplates)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return (select(
+      budgetTemplates,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<void> createBudgetTemplate(BudgetTemplatesCompanion template) {

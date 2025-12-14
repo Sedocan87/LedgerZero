@@ -15,15 +15,19 @@ class RetryUtils {
         attempt++;
         return await operation();
       } catch (e) {
-        if (attempt >= maxAttempts || (shouldRetry != null && !shouldRetry(e))) {
+        if (attempt >= maxAttempts ||
+            (shouldRetry != null && !shouldRetry(e))) {
           rethrow;
         }
 
-        final delaySeconds = initialDelay.inSeconds * pow(backoffFactor, attempt - 1);
+        final delaySeconds =
+            initialDelay.inSeconds * pow(backoffFactor, attempt - 1);
         final delay = Duration(seconds: delaySeconds.toInt());
 
         if (kDebugMode) {
-          print('Retry attempt $attempt failed. Retrying in ${delay.inSeconds} seconds...');
+          print(
+            'Retry attempt $attempt failed. Retrying in ${delay.inSeconds} seconds...',
+          );
         }
 
         await Future.delayed(delay);

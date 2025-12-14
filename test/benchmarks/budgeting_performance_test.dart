@@ -24,7 +24,9 @@ void main() {
     transactionRepository = TransactionRepositoryImpl(database.transactionsDao);
     budgetRepository = BudgetRepositoryImpl(database.budgetsDao);
     categoryRepository = CategoryRepositoryImpl(database.categoriesDao);
-    budgetTemplateRepository = BudgetTemplateRepositoryImpl(database.budgetTemplatesDao);
+    budgetTemplateRepository = BudgetTemplateRepositoryImpl(
+      database.budgetTemplatesDao,
+    );
     budgetingService = BudgetingService(
       transactionRepository: transactionRepository,
       budgetRepository: budgetRepository,
@@ -43,27 +45,31 @@ void main() {
   }) async {
     // 1. Create Account
     const accountId = 'acc_1';
-    await database.into(database.accounts).insert(
-      AccountsCompanion(
-        id: Value(accountId),
-        name: const Value('Test Account'),
-        type: const Value('checking'),
-        createdAt: Value(DateTime.now()),
-      ),
-    );
+    await database
+        .into(database.accounts)
+        .insert(
+          AccountsCompanion(
+            id: Value(accountId),
+            name: const Value('Test Account'),
+            type: const Value('checking'),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
 
     // 2. Create Categories
     final categoryIds = <String>[];
     for (int i = 0; i < categoryCount; i++) {
       final id = 'cat_$i';
       categoryIds.add(id);
-      await database.into(database.categories).insert(
-        CategoriesCompanion(
-          id: Value(id),
-          name: Value('Category $i'),
-          createdAt: Value(DateTime.now()),
-        ),
-      );
+      await database
+          .into(database.categories)
+          .insert(
+            CategoriesCompanion(
+              id: Value(id),
+              name: Value('Category $i'),
+              createdAt: Value(DateTime.now()),
+            ),
+          );
     }
 
     // 3. Create Transactions
@@ -99,16 +105,20 @@ void main() {
 
     // 4. Create some budgets
     for (var catId in categoryIds) {
-      await database.into(database.budgets).insert(
-        BudgetsCompanion(
-          id: Value('budget_${catId}_${now.month}'),
-          categoryId: Value(catId),
-          month: Value('${now.year}-${now.month.toString().padLeft(2, '0')}'),
-          budgeted: const Value(100.0),
-          createdAt: Value(now),
-          updatedAt: Value(now),
-        ),
-      );
+      await database
+          .into(database.budgets)
+          .insert(
+            BudgetsCompanion(
+              id: Value('budget_${catId}_${now.month}'),
+              categoryId: Value(catId),
+              month: Value(
+                '${now.year}-${now.month.toString().padLeft(2, '0')}',
+              ),
+              budgeted: const Value(100.0),
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
     }
   }
 
@@ -118,7 +128,10 @@ void main() {
 
     // print('Generating $transactionCount transactions...');
     final stopwatchGen = Stopwatch()..start();
-    await generateData(transactionCount: transactionCount, categoryCount: categoryCount);
+    await generateData(
+      transactionCount: transactionCount,
+      categoryCount: categoryCount,
+    );
     stopwatchGen.stop();
     // print('Data generation took: ${stopwatchGen.elapsedMilliseconds}ms');
 
@@ -136,7 +149,10 @@ void main() {
     const testCategoryId = 'cat_0';
     // print('Running calculateCategoryAvailable for $testCategoryId...');
     final stopwatchCat = Stopwatch()..start();
-    final available = await budgetingService.calculateCategoryAvailable(testCategoryId, targetMonth);
+    final available = await budgetingService.calculateCategoryAvailable(
+      testCategoryId,
+      targetMonth,
+    );
     stopwatchCat.stop();
     // print('calculateCategoryAvailable took: ${stopwatchCat.elapsedMilliseconds}ms');
     // print('Available Result: $available');
@@ -144,7 +160,8 @@ void main() {
     // Measure calculateBatchCategoryPerformance
     // print('Running calculateBatchCategoryPerformance...');
     final stopwatchBatch = Stopwatch()..start();
-    final batchResult = await budgetingService.calculateBatchCategoryPerformance(targetMonth);
+    final batchResult = await budgetingService
+        .calculateBatchCategoryPerformance(targetMonth);
     stopwatchBatch.stop();
     // print('calculateBatchCategoryPerformance took: ${stopwatchBatch.elapsedMilliseconds}ms');
     // print('Batch Result Size: ${batchResult.length}');

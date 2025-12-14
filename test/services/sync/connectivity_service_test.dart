@@ -18,11 +18,13 @@ void main() {
     mockConnectivity = MockConnectivity();
     controller = StreamController<List<ConnectivityResult>>();
 
-    when(mockConnectivity.onConnectivityChanged)
-        .thenAnswer((_) => controller.stream);
+    when(
+      mockConnectivity.onConnectivityChanged,
+    ).thenAnswer((_) => controller.stream);
 
-    when(mockConnectivity.checkConnectivity())
-        .thenAnswer((_) async => [ConnectivityResult.wifi]);
+    when(
+      mockConnectivity.checkConnectivity(),
+    ).thenAnswer((_) async => [ConnectivityResult.wifi]);
   });
 
   tearDown(() {
@@ -59,8 +61,9 @@ void main() {
 
   test('emits online when connection is restored', () async {
     // Start with none
-    when(mockConnectivity.checkConnectivity())
-        .thenAnswer((_) async => [ConnectivityResult.none]);
+    when(
+      mockConnectivity.checkConnectivity(),
+    ).thenAnswer((_) async => [ConnectivityResult.none]);
 
     service = ConnectivityService(connectivity: mockConnectivity);
 

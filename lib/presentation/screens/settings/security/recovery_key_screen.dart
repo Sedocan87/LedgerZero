@@ -23,7 +23,8 @@ class _RecoveryKeyScreenState extends ConsumerState<RecoveryKeyScreen> {
       // 1. Try Biometrics first if available
       final biometricsAvailable = await securityManager.isBiometricsAvailable;
       if (biometricsAvailable) {
-        final authenticated = await securityManager.authenticateWithBiometrics();
+        final authenticated = await securityManager
+            .authenticateWithBiometrics();
         if (authenticated) {
           final storedKey = await securityManager.getKey();
           if (storedKey != null) {
@@ -42,9 +43,9 @@ class _RecoveryKeyScreenState extends ConsumerState<RecoveryKeyScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted && _recoveryKey == null) {
@@ -96,7 +97,10 @@ class _RecoveryKeyScreenState extends ConsumerState<RecoveryKeyScreen> {
         throw Exception('Security setup not found');
       }
 
-      final derivedKey = securityManager.deriveKeyFromPassword(password, salt);
+      final derivedKey = await securityManager.deriveKeyFromPassword(
+        password,
+        salt,
+      );
       final isValid = await securityManager.verifyKey(derivedKey);
 
       if (isValid) {
@@ -105,16 +109,16 @@ class _RecoveryKeyScreenState extends ConsumerState<RecoveryKeyScreen> {
         });
       } else {
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid password')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Invalid password')));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {
@@ -142,19 +146,13 @@ class _RecoveryKeyScreenState extends ConsumerState<RecoveryKeyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Backup Recovery Key'),
-      ),
+      appBar: AppBar(title: const Text('Backup Recovery Key')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.lock_outline,
-              size: 64,
-              color: Colors.amber,
-            ),
+            const Icon(Icons.lock_outline, size: 64, color: Colors.amber),
             const SizedBox(height: 24),
             const Text(
               'Your Recovery Key is the only way to restore your data if you forget your password.',
@@ -180,9 +178,15 @@ class _RecoveryKeyScreenState extends ConsumerState<RecoveryKeyScreen> {
                     ? const SizedBox(
                         height: 24,
                         width: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : const Text('Reveal Recovery Key', style: TextStyle(fontSize: 18)),
+                    : const Text(
+                        'Reveal Recovery Key',
+                        style: TextStyle(fontSize: 18),
+                      ),
               )
             else ...[
               Container(

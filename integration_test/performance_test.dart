@@ -13,15 +13,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // Scroll the first found ListView
-    await binding.traceAction(
-      () async {
-        final listFinder = find.byType(ListView).first;
-        if (listFinder.evaluate().isNotEmpty) {
-           await tester.fling(listFinder, const Offset(0, -500), 1000);
-           await tester.pumpAndSettle();
-        }
-      },
-      reportKey: 'scrolling_timeline',
-    );
+    await binding.traceAction(() async {
+      final listFinder = find.byType(ListView).first;
+      if (listFinder.evaluate().isNotEmpty) {
+        await tester.fling(listFinder, const Offset(0, -500), 1000);
+        await tester.pumpAndSettle();
+      }
+    }, reportKey: 'scrolling_timeline');
   });
 }

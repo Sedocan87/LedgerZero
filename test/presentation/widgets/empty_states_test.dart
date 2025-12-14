@@ -9,9 +9,7 @@ void main() {
     testWidgets('HomeEmptyState displays correctly', (tester) async {
       await pumpTestWidget(
         tester,
-        child: const Scaffold(
-          body: HomeEmptyState(),
-        ),
+        child: const Scaffold(body: HomeEmptyState()),
       );
 
       // Verify empty state content

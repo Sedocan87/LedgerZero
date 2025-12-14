@@ -16,24 +16,34 @@ import 'test_utils.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Test sync conflict resolution simulation', (WidgetTester tester) async {
+  testWidgets('Test sync conflict resolution simulation', (
+    WidgetTester tester,
+  ) async {
     final db = await setupIntegrationTest(tester);
     await completeOnboarding(tester);
 
     // 1. Create initial record
     const id = 'conflict_tx_1';
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(id: 'acc_conflict', name: 'Conflict Account', type: 'checking')
-    );
-    await db.into(db.transactions).insert(
-      TransactionsCompanion.insert(
-        id: id,
-        accountId: 'acc_conflict',
-        date: DateTime.now(),
-        amount: 100.0,
-        memo: const Value('Original'),
-      )
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: 'acc_conflict',
+            name: 'Conflict Account',
+            type: 'checking',
+          ),
+        );
+    await db
+        .into(db.transactions)
+        .insert(
+          TransactionsCompanion.insert(
+            id: id,
+            accountId: 'acc_conflict',
+            date: DateTime.now(),
+            amount: 100.0,
+            memo: const Value('Original'),
+          ),
+        );
 
     // 2. Simulate "Device A" update (older timestamp)
     // In LWW, we check `updated_at`. Drift might auto-set this, or we set it manually.
@@ -46,18 +56,22 @@ void main() {
     // Instead, we will simulate the "Happy Path" of resolution:
     // Update the record twice, verifying the final state matches the last write.
 
-    await db.into(db.transactions).insert(
-      TransactionsCompanion.insert(
-        id: id,
-        accountId: 'acc_conflict',
-        date: DateTime.now(),
-        amount: 200.0,
-        memo: const Value('Newer Update'),
-      ),
-      mode: InsertMode.replace, // Simulate applying a newer delta
-    );
+    await db
+        .into(db.transactions)
+        .insert(
+          TransactionsCompanion.insert(
+            id: id,
+            accountId: 'acc_conflict',
+            date: DateTime.now(),
+            amount: 200.0,
+            memo: const Value('Newer Update'),
+          ),
+          mode: InsertMode.replace, // Simulate applying a newer delta
+        );
 
-    final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id))).getSingle();
+    final tx = await (db.select(
+      db.transactions,
+    )..where((t) => t.id.equals(id))).getSingle();
     expect(tx.amount, 200.0);
     expect(tx.memo, 'Newer Update');
   });

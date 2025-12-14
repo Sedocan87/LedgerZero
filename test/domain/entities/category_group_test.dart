@@ -19,10 +19,7 @@ void main() {
     });
 
     test('should use default values', () {
-      const categoryGroup = CategoryGroup(
-        id: '2',
-        name: 'Everyday Expenses',
-      );
+      const categoryGroup = CategoryGroup(id: '2', name: 'Everyday Expenses');
 
       expect(categoryGroup.id, '2');
       expect(categoryGroup.name, 'Everyday Expenses');
@@ -53,10 +50,7 @@ void main() {
     });
 
     test('should handle missing optional fields during serialization', () {
-      final json = {
-        'id': '1',
-        'name': 'Monthly Bills',
-      };
+      final json = {'id': '1', 'name': 'Monthly Bills'};
 
       final categoryGroup = CategoryGroup.fromJson(json);
       expect(categoryGroup.id, '1');
@@ -81,10 +75,7 @@ void main() {
         createdAt: now,
       );
 
-      const categoryGroup3 = CategoryGroup(
-        id: '2',
-        name: 'Everyday Expenses',
-      );
+      const categoryGroup3 = CategoryGroup(id: '2', name: 'Everyday Expenses');
 
       // Reflexive
       expect(categoryGroup1, equals(categoryGroup1));

@@ -28,10 +28,7 @@ void main() {
     // We intentionally do this in a loop to test repository overhead per call.
     // In real app, we would batch, but we want to measure the repo method cost.
     for (int i = 0; i < 1000; i++) {
-      final account = createTestAccount(
-        id: 'acc_$i',
-        name: 'Account $i',
-      );
+      final account = createTestAccount(id: 'acc_$i', name: 'Account $i');
       await accountRepository.createAccount(account);
     }
 
@@ -47,10 +44,7 @@ void main() {
   test('Benchmark: Read 1000 Accounts', () async {
     // Seed
     for (int i = 0; i < 1000; i++) {
-      final account = createTestAccount(
-        id: 'acc_$i',
-        name: 'Account $i',
-      );
+      final account = createTestAccount(id: 'acc_$i', name: 'Account $i');
       await accountRepository.createAccount(account);
     }
 
@@ -68,11 +62,8 @@ void main() {
 
   test('Benchmark: Update 1000 Accounts', () async {
     // Seed
-     for (int i = 0; i < 1000; i++) {
-      final account = createTestAccount(
-        id: 'acc_$i',
-        name: 'Account $i',
-      );
+    for (int i = 0; i < 1000; i++) {
+      final account = createTestAccount(id: 'acc_$i', name: 'Account $i');
       await accountRepository.createAccount(account);
     }
 
@@ -91,6 +82,9 @@ void main() {
     // ignore: avoid_print
     // print('Benchmark - Update 1000 Accounts: ${stopwatch.elapsedMilliseconds}ms');
 
-    expect(stopwatch.elapsedMilliseconds, lessThan(3000)); // Updates can be slightly slower
+    expect(
+      stopwatch.elapsedMilliseconds,
+      lessThan(3000),
+    ); // Updates can be slightly slower
   });
 }

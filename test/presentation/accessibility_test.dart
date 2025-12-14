@@ -28,10 +28,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-             hasAccountsProvider.overrideWith((ref) => Future.value(true)),
-             backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
-             syncControllerProvider.overrideWith((ref) => MockSyncController()),
-             recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
+            hasAccountsProvider.overrideWith((ref) => Future.value(true)),
+            backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
+            syncControllerProvider.overrideWith((ref) => MockSyncController()),
+            recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

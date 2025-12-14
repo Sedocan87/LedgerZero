@@ -99,8 +99,8 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     for (var header in headers) {
       final h = header.toLowerCase();
       if (_columnMapping['Date'] == null && (h.contains('date') || h == 'dt')) {
-      _columnMapping['Date'] = header;
-    } else if (_columnMapping['Amount'] == null &&
+        _columnMapping['Date'] = header;
+      } else if (_columnMapping['Amount'] == null &&
           (h.contains('amount') || h.contains('value') || h == 'amt')) {
         _columnMapping['Amount'] = header;
       } else if (_columnMapping['Payee'] == null &&
@@ -134,19 +134,19 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     // Check first few non-empty rows
     for (var row in _csvData!.rows.take(5)) {
       if (row.length <= dateIndex) {
-      continue;
-    }
+        continue;
+      }
       final val = row[dateIndex].toString();
       // Try formats
       for (var fmt in _dateFormats) {
-          try {
-            DateFormat(fmt).parse(val);
-            setState(() => _dateFormat = fmt);
-            return;
-          } catch (e) {
-            // Ignore
-          }
+        try {
+          DateFormat(fmt).parse(val);
+          setState(() => _dateFormat = fmt);
+          return;
+        } catch (e) {
+          // Ignore
         }
+      }
     }
   }
 
@@ -193,9 +193,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
       await ref.read(importProfileRepositoryProvider).createProfile(profile);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.profileSaved)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
       }
     }
   }
@@ -208,21 +208,26 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
       // Apply mappings if headers exist in current CSV
       if (_csvData != null) {
-        if (profile.dateColumn != null && _csvData!.headers.contains(profile.dateColumn)) {
-      _columnMapping['Date'] = profile.dateColumn;
-    }
-        if (profile.amountColumn != null && _csvData!.headers.contains(profile.amountColumn)) {
-      _columnMapping['Amount'] = profile.amountColumn;
-    }
-        if (profile.payeeColumn != null && _csvData!.headers.contains(profile.payeeColumn)) {
-      _columnMapping['Payee'] = profile.payeeColumn;
-    }
-        if (profile.memoColumn != null && _csvData!.headers.contains(profile.memoColumn)) {
-      _columnMapping['Memo'] = profile.memoColumn;
-    }
-        if (profile.categoryColumn != null && _csvData!.headers.contains(profile.categoryColumn)) {
-      _columnMapping['Category'] = profile.categoryColumn;
-    }
+        if (profile.dateColumn != null &&
+            _csvData!.headers.contains(profile.dateColumn)) {
+          _columnMapping['Date'] = profile.dateColumn;
+        }
+        if (profile.amountColumn != null &&
+            _csvData!.headers.contains(profile.amountColumn)) {
+          _columnMapping['Amount'] = profile.amountColumn;
+        }
+        if (profile.payeeColumn != null &&
+            _csvData!.headers.contains(profile.payeeColumn)) {
+          _columnMapping['Payee'] = profile.payeeColumn;
+        }
+        if (profile.memoColumn != null &&
+            _csvData!.headers.contains(profile.memoColumn)) {
+          _columnMapping['Memo'] = profile.memoColumn;
+        }
+        if (profile.categoryColumn != null &&
+            _csvData!.headers.contains(profile.categoryColumn)) {
+          _columnMapping['Category'] = profile.categoryColumn;
+        }
       }
     });
   }
@@ -242,8 +247,8 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 return profilesAsync.when(
                   data: (profiles) {
                     if (profiles.isEmpty) {
-      return Center(child: Text(l10n.noTemplates));
-    }
+                      return Center(child: Text(l10n.noTemplates));
+                    }
                     return ListView.builder(
                       shrinkWrap: true,
                       itemCount: profiles.length,
@@ -251,7 +256,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                         final profile = profiles[index];
                         return ListTile(
                           title: Text(profile.name),
-                          subtitle: Text(DateFormat.yMMMd().format(profile.createdAt)),
+                          subtitle: Text(
+                            DateFormat.yMMMd().format(profile.createdAt),
+                          ),
                           onTap: () {
                             _loadProfile(profile);
                             Navigator.pop(context);
@@ -266,26 +273,31 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                                   content: Text(l10n.deleteProfileConfirmation),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
                                       child: Text(l10n.cancel),
                                     ),
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context, true),
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
                                       child: Text(l10n.delete),
                                     ),
                                   ],
                                 ),
                               );
                               if (confirm == true) {
-      await ref.read(importProfileRepositoryProvider).deleteProfile(profile.id);
-    }
+                                await ref
+                                    .read(importProfileRepositoryProvider)
+                                    .deleteProfile(profile.id);
+                              }
                             },
                           ),
                         );
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, s) => Text(l10n.error),
                 );
               },
@@ -312,9 +324,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         title: Text(l10n.importCsv),
         actions: [
           IconButton(
-             icon: const Icon(Icons.file_upload),
-             onPressed: _showLoadProfileDialog,
-             tooltip: l10n.loadImportProfile,
+            icon: const Icon(Icons.file_upload),
+            onPressed: _showLoadProfileDialog,
+            tooltip: l10n.loadImportProfile,
           ),
           if (_csvData != null)
             IconButton(
@@ -382,10 +394,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             ] else ...[
               const Icon(Icons.upload_file, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
-              Text(
-                l10n.selectFileToImport,
-                style: theme.textTheme.titleMedium,
-              ),
+              Text(l10n.selectFileToImport, style: theme.textTheme.titleMedium),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _pickFile,
@@ -415,14 +424,18 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                   child: DropdownButtonFormField<String>(
                     decoration: InputDecoration(labelText: l10n.dateFormat),
                     initialValue: _dateFormat,
-                    items: _dateFormats.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                    items: _dateFormats
+                        .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                        .toList(),
                     onChanged: (v) => setState(() => _dateFormat = v!),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    decoration: InputDecoration(labelText: l10n.decimalSeparator),
+                    decoration: InputDecoration(
+                      labelText: l10n.decimalSeparator,
+                    ),
                     initialValue: _decimalSeparator,
                     items: [
                       DropdownMenuItem(value: '.', child: Text(l10n.dot)),
@@ -460,20 +473,20 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
               // Localize field names
               String localizedField = field;
               if (field == 'Date') {
-      localizedField = l10n.date;
-    }
+                localizedField = l10n.date;
+              }
               if (field == 'Amount') {
-      localizedField = l10n.amount;
-    }
+                localizedField = l10n.amount;
+              }
               if (field == 'Payee') {
-      localizedField = l10n.payee;
-    }
+                localizedField = l10n.payee;
+              }
               if (field == 'Memo') {
-      localizedField = l10n.memo;
-    }
+                localizedField = l10n.memo;
+              }
               if (field == 'Category') {
-      localizedField = l10n.category;
-    }
+                localizedField = l10n.category;
+              }
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
@@ -484,8 +497,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                       child: Text(
                         localizedField,
                         style: TextStyle(
-                          fontWeight: ['Date', 'Amount'].contains(field) ? FontWeight.bold : FontWeight.normal,
-                          color: ['Date', 'Amount'].contains(field) ? theme.colorScheme.primary : null,
+                          fontWeight: ['Date', 'Amount'].contains(field)
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: ['Date', 'Amount'].contains(field)
+                              ? theme.colorScheme.primary
+                              : null,
                         ),
                       ),
                     ),
@@ -496,15 +513,20 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                         hint: Text(l10n.selectColumn),
                         value: _columnMapping[field],
                         items: [
-                          DropdownMenuItem<String>(value: null, child: Text(l10n.ignore)),
-                          ..._csvData!.headers.map((h) => DropdownMenuItem(value: h, child: Text(h))),
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: Text(l10n.ignore),
+                          ),
+                          ..._csvData!.headers.map(
+                            (h) => DropdownMenuItem(value: h, child: Text(h)),
+                          ),
                         ],
                         onChanged: (v) => setState(() {
-                            _columnMapping[field] = v;
-                            if (field == 'Date') {
-      _autoDetectDateFormat();
-    }
-                          }),
+                          _columnMapping[field] = v;
+                          if (field == 'Date') {
+                            _autoDetectDateFormat();
+                          }
+                        }),
                       ),
                     ),
                   ],
@@ -535,10 +557,14 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                columns: _csvData!.headers.map((h) => DataColumn(label: Text(h))).toList(),
+                columns: _csvData!.headers
+                    .map((h) => DataColumn(label: Text(h)))
+                    .toList(),
                 rows: previewRows.map((row) {
                   return DataRow(
-                    cells: row.map((cell) => DataCell(Text(cell.toString()))).toList(),
+                    cells: row
+                        .map((cell) => DataCell(Text(cell.toString())))
+                        .toList(),
                   );
                 }).toList(),
               ),
@@ -581,7 +607,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       );
     } else if (result.warnings.isNotEmpty) {
       // Show warnings (cancellable)
-       showDialog(
+      showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(l10n.warning),
@@ -595,7 +621,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
               onPressed: () => Navigator.pop(context),
               child: Text(l10n.cancel),
             ),
-             FilledButton(
+            FilledButton(
               onPressed: () {
                 Navigator.pop(context);
                 _proceedToImport();
@@ -611,64 +637,71 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   }
 
   Future<void> _proceedToImport() async {
-      setState(() => _isLoading = true);
-      final l10n = AppLocalizations.of(context)!;
-      final service = ref.read(csvImportServiceProvider);
-      final repo = ref.read(transactionRepositoryProvider);
-      final payeeRepo = ref.read(payeeRepositoryProvider);
+    setState(() => _isLoading = true);
+    final l10n = AppLocalizations.of(context)!;
+    final service = ref.read(csvImportServiceProvider);
+    final repo = ref.read(transactionRepositoryProvider);
+    final payeeRepo = ref.read(payeeRepositoryProvider);
 
-      try {
-        final transactions = service.convertCsvToTransactions(
-          data: _csvData!,
-          columnMapping: _columnMapping,
-          dateFormat: _dateFormat,
-          decimalSeparator: _decimalSeparator,
-          outflowIsNegative: _outflowIsNegative,
+    try {
+      final transactions = service.convertCsvToTransactions(
+        data: _csvData!,
+        columnMapping: _columnMapping,
+        dateFormat: _dateFormat,
+        decimalSeparator: _decimalSeparator,
+        outflowIsNegative: _outflowIsNegative,
+      );
+
+      if (transactions.isNotEmpty) {
+        final minDate = transactions
+            .map((t) => t.date)
+            .reduce((a, b) => a.isBefore(b) ? a : b);
+        final maxDate = transactions
+            .map((t) => t.date)
+            .reduce((a, b) => a.isAfter(b) ? a : b);
+
+        final existing = await repo.getTransactions(
+          filter: TransactionFilter(
+            startDate: minDate.subtract(const Duration(days: 1)),
+            endDate: maxDate.add(const Duration(days: 1)),
+          ),
         );
 
-        if (transactions.isNotEmpty) {
-          final minDate = transactions.map((t) => t.date).reduce((a, b) => a.isBefore(b) ? a : b);
-          final maxDate = transactions.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
+        final payees = await payeeRepo.getAllPayees();
+        final payeeMap = {for (var p in payees) p.id: p.name};
 
-          final existing = await repo.getTransactions(
-            filter: TransactionFilter(
-              startDate: minDate.subtract(const Duration(days: 1)),
-              endDate: maxDate.add(const Duration(days: 1)),
-            ),
-          );
+        service.checkForDuplicates(
+          imported: transactions,
+          existing: existing,
+          payeeMap: payeeMap,
+        );
 
-          final payees = await payeeRepo.getAllPayees();
-          final payeeMap = {for (var p in payees) p.id: p.name};
-
-          service.checkForDuplicates(
-            imported: transactions,
-            existing: existing,
-            payeeMap: payeeMap,
-          );
-
-          if (transactions.any((t) => t.isDuplicate)) {
-             if (mounted) {
-               ScaffoldMessenger.of(context).showSnackBar(
-                 SnackBar(content: Text(l10n.deduplicationComplete(transactions.where((t) => t.isDuplicate).length))),
-               );
-             }
+        if (transactions.any((t) => t.isDuplicate)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  l10n.deduplicationComplete(
+                    transactions.where((t) => t.isDuplicate).length,
+                  ),
+                ),
+              ),
+            );
           }
         }
-
-        if (mounted) {
-          await context.pushNamed(
-            'import-confirm',
-            extra: transactions,
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-      _showError(l10n.failedToParseCsv(e.toString()));
-    }
-      } finally {
-        if (mounted) {
-      setState(() => _isLoading = false);
-    }
       }
+
+      if (mounted) {
+        await context.pushNamed('import-confirm', extra: transactions);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError(l10n.failedToParseCsv(e.toString()));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

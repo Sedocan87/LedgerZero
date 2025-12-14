@@ -41,15 +41,30 @@ extension ScheduledTransactionExtensions on ScheduledTransaction {
 
         // Handle month overflow (e.g., Jan 31 + 1 month = Feb 31 -> Mar 3)
         // We want to clamp to the last day of the expected month.
-        final expectedMonth = (currentNextDate.month + recurrenceInterval - 1) % 12 + 1;
-        final expectedYear = currentNextDate.year + (currentNextDate.month + recurrenceInterval - 1) ~/ 12;
+        final expectedMonth =
+            (currentNextDate.month + recurrenceInterval - 1) % 12 + 1;
+        final expectedYear =
+            currentNextDate.year +
+            (currentNextDate.month + recurrenceInterval - 1) ~/ 12;
 
         if (newDate.month != expectedMonth) {
           // We overshot (e.g., Feb 31 -> Mar 3), so go back to last day of previous month (which is the expected month)
           if (currentNextDate.isUtc) {
-            newDate = DateTime.utc(expectedYear, expectedMonth + 1, 0, currentNextDate.hour, currentNextDate.minute);
+            newDate = DateTime.utc(
+              expectedYear,
+              expectedMonth + 1,
+              0,
+              currentNextDate.hour,
+              currentNextDate.minute,
+            );
           } else {
-            newDate = DateTime(expectedYear, expectedMonth + 1, 0, currentNextDate.hour, currentNextDate.minute);
+            newDate = DateTime(
+              expectedYear,
+              expectedMonth + 1,
+              0,
+              currentNextDate.hour,
+              currentNextDate.minute,
+            );
           }
         }
         break;
@@ -75,11 +90,25 @@ extension ScheduledTransactionExtensions on ScheduledTransaction {
         // If originally Feb 29, and new year is not leap year, Dart DateTime might make it Mar 1.
         // Usually we prefer Feb 28.
         // Dart: DateTime(2023, 2, 29) -> Mar 1, 2023.
-        if (currentNextDate.month == 2 && currentNextDate.day == 29 && newDate.month == 3) {
+        if (currentNextDate.month == 2 &&
+            currentNextDate.day == 29 &&
+            newDate.month == 3) {
           if (currentNextDate.isUtc) {
-            newDate = DateTime.utc(newDate.year, 2, 28, newDate.hour, newDate.minute);
+            newDate = DateTime.utc(
+              newDate.year,
+              2,
+              28,
+              newDate.hour,
+              newDate.minute,
+            );
           } else {
-            newDate = DateTime(newDate.year, 2, 28, newDate.hour, newDate.minute);
+            newDate = DateTime(
+              newDate.year,
+              2,
+              28,
+              newDate.hour,
+              newDate.minute,
+            );
           }
         }
         break;

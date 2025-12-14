@@ -25,10 +25,13 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<void> updateTransferTransaction(
-      Transaction source, Transaction destination) async {
+    Transaction source,
+    Transaction destination,
+  ) async {
     return DatabaseErrorHandler.execute(() async {
       Logger.debug(
-          'Updating transfer between ${source.accountId} and ${destination.accountId}');
+        'Updating transfer between ${source.accountId} and ${destination.accountId}',
+      );
       await _transactionsDao.db.transaction(() async {
         await _transactionsDao.updateTransaction(_mapToCompanion(source));
         await _transactionsDao.updateTransaction(_mapToCompanion(destination));
@@ -61,7 +64,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
     try {
       Logger.debug('Batch creating ${transactions.length} transactions');
       await _transactionsDao.batchCreateTransactions(
-          transactions.map(_mapToCompanion).toList());
+        transactions.map(_mapToCompanion).toList(),
+      );
       Logger.info('Batch creation successful');
     } catch (e, stackTrace) {
       Logger.error('Failed to batch create transactions', e, stackTrace);
@@ -76,8 +80,15 @@ class TransactionRepositoryImpl implements TransactionRepository {
       await _transactionsDao.updateTransaction(_mapToCompanion(transaction));
       Logger.info('Transaction updated successfully: ${transaction.id}');
     } catch (e, stackTrace) {
-      Logger.error('Failed to update transaction ${transaction.id}', e, stackTrace);
-      throw DatabaseException('Failed to update transaction ${transaction.id}', e);
+      Logger.error(
+        'Failed to update transaction ${transaction.id}',
+        e,
+        stackTrace,
+      );
+      throw DatabaseException(
+        'Failed to update transaction ${transaction.id}',
+        e,
+      );
     }
   }
 
@@ -86,7 +97,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
     try {
       Logger.debug('Batch updating ${transactions.length} transactions');
       await _transactionsDao.batchUpdateTransactions(
-          transactions.map(_mapToCompanion).toList());
+        transactions.map(_mapToCompanion).toList(),
+      );
       Logger.info('Batch update successful');
     } catch (e, stackTrace) {
       Logger.error('Failed to batch update transactions', e, stackTrace);
@@ -120,53 +132,84 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Stream<List<Transaction>> watchAllTransactions() {
-    return _transactionsDao.watchAllTransactions().map(
-      (transactions) {
-        return transactions.map(_mapToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchAllTransactions stream', error, stackTrace);
-      throw DatabaseException('Error watching transactions', error);
-    });
+    return _transactionsDao
+        .watchAllTransactions()
+        .map((transactions) {
+          return transactions.map(_mapToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error(
+            'Error in watchAllTransactions stream',
+            error,
+            stackTrace,
+          );
+          throw DatabaseException('Error watching transactions', error);
+        });
   }
 
   @override
   Future<List<Transaction>> getTransactionsByAccount(String accountId) async {
     try {
       Logger.debug('Fetching transactions for account: $accountId');
-      final transactions =
-          await _transactionsDao.getTransactionsByAccount(accountId);
-      Logger.debug('Fetched ${transactions.length} transactions for account $accountId');
+      final transactions = await _transactionsDao.getTransactionsByAccount(
+        accountId,
+      );
+      Logger.debug(
+        'Fetched ${transactions.length} transactions for account $accountId',
+      );
       return transactions.map(_mapToDomain).toList();
     } catch (e, stackTrace) {
-      Logger.error('Failed to fetch transactions for account $accountId', e, stackTrace);
-      throw DatabaseException('Failed to fetch transactions for account $accountId', e);
+      Logger.error(
+        'Failed to fetch transactions for account $accountId',
+        e,
+        stackTrace,
+      );
+      throw DatabaseException(
+        'Failed to fetch transactions for account $accountId',
+        e,
+      );
     }
   }
 
   @override
   Stream<List<Transaction>> watchTransactionsByAccount(String accountId) {
-    return _transactionsDao.watchTransactionsByAccount(accountId).map(
-      (transactions) {
-        return transactions.map(_mapToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchTransactionsByAccount stream for account $accountId', error, stackTrace);
-      throw DatabaseException('Error watching transactions for account $accountId', error);
-    });
+    return _transactionsDao
+        .watchTransactionsByAccount(accountId)
+        .map((transactions) {
+          return transactions.map(_mapToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error(
+            'Error in watchTransactionsByAccount stream for account $accountId',
+            error,
+            stackTrace,
+          );
+          throw DatabaseException(
+            'Error watching transactions for account $accountId',
+            error,
+          );
+        });
   }
 
   @override
   Future<List<Transaction>> getTransactionsByDateRange(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
       Logger.debug('Fetching transactions between $start and $end');
-      final transactions =
-          await _transactionsDao.getTransactionsByDateRange(start, end);
+      final transactions = await _transactionsDao.getTransactionsByDateRange(
+        start,
+        end,
+      );
       Logger.debug('Fetched ${transactions.length} transactions in range');
       return transactions.map(_mapToDomain).toList();
     } catch (e, stackTrace) {
-      Logger.error('Failed to fetch transactions in range $start - $end', e, stackTrace);
+      Logger.error(
+        'Failed to fetch transactions in range $start - $end',
+        e,
+        stackTrace,
+      );
       throw DatabaseException('Failed to fetch transactions in range', e);
     }
   }
@@ -183,20 +226,31 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<double> getExpenseSumByCategoryAndDateRange(
-      String categoryId, DateTime start, DateTime end) async {
+    String categoryId,
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
       return await _transactionsDao.getExpenseSumByCategoryAndDateRange(
-          categoryId, start, end);
+        categoryId,
+        start,
+        end,
+      );
     } catch (e, stackTrace) {
       Logger.error(
-          'Failed to calculate expense sum for category $categoryId', e, stackTrace);
+        'Failed to calculate expense sum for category $categoryId',
+        e,
+        stackTrace,
+      );
       throw DatabaseException('Failed to calculate expense sum', e);
     }
   }
 
   @override
   Future<Map<String, double>> getExpenseSumsByDateRange(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
       return await _transactionsDao.getExpenseSumsByDateRange(start, end);
     } catch (e, stackTrace) {
@@ -207,10 +261,13 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<void> createTransferTransaction(
-      Transaction source, Transaction destination) async {
+    Transaction source,
+    Transaction destination,
+  ) async {
     try {
       Logger.debug(
-          'Creating transfer between ${source.accountId} and ${destination.accountId}');
+        'Creating transfer between ${source.accountId} and ${destination.accountId}',
+      );
       await _transactionsDao.db.transaction(() async {
         await _transactionsDao.insertTransaction(_mapToCompanion(source));
         await _transactionsDao.insertTransaction(_mapToCompanion(destination));
@@ -237,8 +294,9 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
         // If transfer, delete counterpart
         if (transaction.transferTransactionId != null) {
-          await _transactionsDao
-              .softDeleteTransaction(transaction.transferTransactionId!);
+          await _transactionsDao.softDeleteTransaction(
+            transaction.transferTransactionId!,
+          );
         }
 
         // If parent of split, delete children
@@ -256,7 +314,9 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<void> createSplitTransaction(
-      Transaction parent, List<Transaction> children) async {
+    Transaction parent,
+    List<Transaction> children,
+  ) async {
     try {
       Logger.debug('Creating split transaction parent: ${parent.id}');
       await _transactionsDao.db.transaction(() async {
@@ -274,13 +334,17 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<void> updateSplitTransaction(
-      Transaction parent, List<Transaction> children) async {
+    Transaction parent,
+    List<Transaction> children,
+  ) async {
     try {
       Logger.debug('Updating split transaction parent: ${parent.id}');
       await _transactionsDao.db.transaction(() async {
         await _transactionsDao.updateTransaction(_mapToCompanion(parent));
 
-        final existingChildren = await _transactionsDao.getSplitTransactions(parent.id);
+        final existingChildren = await _transactionsDao.getSplitTransactions(
+          parent.id,
+        );
         final existingIds = existingChildren.map((t) => t.id).toList();
         await _transactionsDao.batchSoftDeleteTransactions(existingIds);
 
@@ -299,21 +363,34 @@ class TransactionRepositoryImpl implements TransactionRepository {
   Future<List<Transaction>> getSplitTransactions(String parentId) async {
     try {
       Logger.debug('Fetching split transactions for parent: $parentId');
-      final transactions = await _transactionsDao.getSplitTransactions(parentId);
+      final transactions = await _transactionsDao.getSplitTransactions(
+        parentId,
+      );
       Logger.debug('Fetched ${transactions.length} split transactions');
       return transactions.map(_mapToDomain).toList();
     } catch (e, stackTrace) {
-      Logger.error('Failed to fetch split transactions for $parentId', e, stackTrace);
+      Logger.error(
+        'Failed to fetch split transactions for $parentId',
+        e,
+        stackTrace,
+      );
       throw DatabaseException('Failed to fetch split transactions', e);
     }
   }
 
   @override
-  Future<List<Transaction>> getTransactions(
-      {TransactionFilter? filter, TransactionSort? sort, int? limit}) async {
+  Future<List<Transaction>> getTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+    int? limit,
+  }) async {
     try {
       Logger.debug('Fetching transactions with filter and sort');
-      final transactions = await _transactionsDao.getTransactions(filter: filter, sort: sort, limit: limit);
+      final transactions = await _transactionsDao.getTransactions(
+        filter: filter,
+        sort: sort,
+        limit: limit,
+      );
       Logger.debug('Fetched ${transactions.length} transactions');
       return transactions.map(_mapToDomain).toList();
     } catch (e, stackTrace) {
@@ -323,16 +400,20 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
-  Stream<List<Transaction>> watchTransactions(
-      {TransactionFilter? filter, TransactionSort? sort, int? limit}) {
-    return _transactionsDao.watchTransactions(filter: filter, sort: sort, limit: limit).map(
-      (transactions) {
-        return transactions.map(_mapToDomain).toList();
-      },
-    ).handleError((error, stackTrace) {
-      Logger.error('Error in watchTransactions stream', error, stackTrace);
-      throw DatabaseException('Error watching transactions', error);
-    });
+  Stream<List<Transaction>> watchTransactions({
+    TransactionFilter? filter,
+    TransactionSort? sort,
+    int? limit,
+  }) {
+    return _transactionsDao
+        .watchTransactions(filter: filter, sort: sort, limit: limit)
+        .map((transactions) {
+          return transactions.map(_mapToDomain).toList();
+        })
+        .handleError((error, stackTrace) {
+          Logger.error('Error in watchTransactions stream', error, stackTrace);
+          throw DatabaseException('Error watching transactions', error);
+        });
   }
 
   Transaction _mapToDomain(db.Transaction t) {
