@@ -103,7 +103,19 @@ LedgerZero is a cross-platform personal finance application built with Flutter t
 - No plain-text file system storage
 - Device-specific encryption prevents database file copying
 
-### Synchronization: File-Based Delta Log System
+### Synchronization: Hybrid Architecture
+
+**1. File-Based Cloud Sync (Async)**
+- Uses user's existing cloud storage (Google Drive, iCloud)
+- Best for multi-device sync across distances
+- Delta-based log system
+
+**2. Local Network Sync (Real-Time P2P)**
+- **Technology**: Bonsoir (Zeroconf/mDNS) + WebSockets
+- **Functionality**: Devices discover each other on LAN
+- **Performance**: Instant sync when devices are on same WiFi
+- **Privacy**: Data never leaves the local network
+
 
 **Architecture:**
 - No central server required
@@ -243,10 +255,13 @@ User types: "Dinner 45.50 at Mario's next friday"
 - One-time future transactions
 - Auto-entry on due date
 
-**Goals:**
-- Target balance by date
-- Monthly funding target
-- Debt payoff calculators
+  - Debt payoff calculators
+
+**Income & Salary Management:**
+- Dedicated settings for recurring salary/income
+- Auto-approvals for predictable deposits
+- Integration with "To Be Budgeted"
+
 
 **Widgets (iOS/Android):**
 - Quick budget overview on home screen
@@ -263,7 +278,6 @@ dependencies:
   
   # Database & Persistence
   drift: ^2.18.0
-  sqlite3_flutter_libs: ^0.5.24
   sqlcipher_flutter_libs: ^0.6.1
   flutter_secure_storage: ^9.2.2
   
@@ -271,6 +285,8 @@ dependencies:
   googleapis: ^13.2.0
   googleapis_auth: ^1.6.0
   icloud_storage: ^1.0.0  # Or equivalent
+  bonsoir: ^6.0.1 # Local P2P Discovery
+
   
   # Natural Language Processing
   chrono_dart: ^2.0.1
@@ -280,7 +296,7 @@ dependencies:
   go_router: ^14.2.7
   
   # Utilities
-  intl: ^0.19.0  # Internationalization & date formatting
+  intl: ^0.20.2  # Internationalization & date formatting
   uuid: ^4.5.0
   csv: ^6.0.0
   path_provider: ^2.1.4
@@ -405,6 +421,49 @@ It allows you to switch languages instantly and handles date formats automatical
 - record_id (TEXT)
 - applied_at (TEXT)
 - device_uuid (TEXT)
+
+
+**rules**
+- id (TEXT, PRIMARY KEY)
+- payee_id (TEXT, FOREIGN KEY)
+- keywords (TEXT) // Comma separated
+- category_id (TEXT, FOREIGN KEY)
+- amount_min (REAL)
+- amount_max (REAL)
+- created_at (TEXT)
+
+**budget_templates**
+- id (TEXT, PRIMARY KEY)
+- name (TEXT, NOT NULL)
+- data (TEXT, NOT NULL) // JSON representation
+- created_at (TEXT)
+
+**import_profiles**
+- id (TEXT, PRIMARY KEY)
+- name (TEXT, NOT NULL)
+- source (TEXT) // 'csv', 'ynab', etc.
+- mapping_config (TEXT) // JSON
+- created_at (TEXT)
+
+**report_notes**
+- id (TEXT, PRIMARY KEY)
+- date (TEXT, NOT NULL)
+- note (TEXT, NOT NULL)
+- created_at (TEXT)
+- updated_at (TEXT)
+
+**parsing_rules**
+- id (TEXT, PRIMARY KEY)
+- pattern (TEXT, NOT NULL)
+- field (TEXT, NOT NULL)
+- operation (TEXT, NOT NULL)
+- value (TEXT)
+
+**parsing_history**
+- id (TEXT, PRIMARY KEY)
+- raw_text (TEXT)
+- parsed_data (TEXT)
+- created_at (TEXT)
 
 ### Indexes
 
