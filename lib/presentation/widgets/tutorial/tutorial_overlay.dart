@@ -35,10 +35,10 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
 
     Rect? targetRect;
     if (targetContext != null) {
-      final renderBox = targetContext.findRenderObject() as RenderBox?;
-      if (renderBox != null) {
-        final offset = renderBox.localToGlobal(Offset.zero);
-        final size = renderBox.size;
+      final renderObject = targetContext.findRenderObject();
+      if (renderObject is RenderBox) {
+        final offset = renderObject.localToGlobal(Offset.zero);
+        final size = renderObject.size;
         targetRect = Rect.fromLTWH(
           offset.dx,
           offset.dy,

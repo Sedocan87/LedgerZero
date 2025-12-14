@@ -220,7 +220,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
                   ],
                 ),
               ),
-              BudgetCategoryList(key: categoryListKey),
+              BudgetCategoryList(headerKey: categoryListKey),
             ],
           ),
         ),

@@ -9,7 +9,9 @@ import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class BudgetCategoryList extends ConsumerWidget {
-  const BudgetCategoryList({super.key});
+  final Key? headerKey;
+
+  const BudgetCategoryList({super.key, this.headerKey});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,7 +52,7 @@ class BudgetCategoryList extends ConsumerWidget {
             (context, index) {
               // Header
               if (index == 0) {
-                return const BudgetListHeader();
+                return BudgetListHeader(key: headerKey);
               }
 
               // Footer
