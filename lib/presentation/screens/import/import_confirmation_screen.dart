@@ -7,6 +7,10 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/payee.dart';
+import 'package:ledger_zero/domain/entities/rule.dart';
+import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
+import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:uuid/uuid.dart';
 
 class ImportConfirmationScreen extends ConsumerStatefulWidget {
@@ -258,31 +262,110 @@ class _ImportConfirmationScreenState
     String accountId,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final repo = ref.read(transactionRepositoryProvider);
+    final transactionRepo = ref.read(transactionRepositoryProvider);
+    final payeeRepo = ref.read(payeeRepositoryProvider);
+    final ruleRepo = ref.read(ruleRepositoryProvider);
 
     setState(() => _isImporting = true);
 
     try {
-      // Batch create
-      final entities = transactions
-          .map(
-            (t) => Transaction(
-              id: const Uuid().v4(),
-              accountId: accountId,
-              date: t.date,
-              amount: t.amount,
-              payeeId: null,
-              memo: t.payeeName != null
-                  ? '${t.payeeName} - ${t.memo ?? ""}'
-                  : t.memo,
-              categoryId: null,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
-          )
-          .toList();
+      // 1. Fetch relevant data
+      final allPayees = await payeeRepo.getAllPayees();
+      final allRules = await ruleRepo.getRules();
+      final activeRules = allRules.where((r) => r.isActive).toList()
+        ..sort((a, b) => b.priority.compareTo(a.priority));
 
-      await repo.batchCreateTransactions(entities);
+      // Map for quick payee lookup: lowercase name -> Payee
+      final payeeMap = {for (var p in allPayees) p.name.toLowerCase(): p};
+
+      final entities = <Transaction>[];
+
+      for (final t in transactions) {
+        // 2. Payee Matching
+        String? payeeId;
+        String? categoryId;
+        String? memo = t.memo;
+
+        // Try to match Payee by name from import
+        if (t.payeeName != null && t.payeeName!.isNotEmpty) {
+          final normalizedName = t.payeeName!.trim().toLowerCase();
+          if (payeeMap.containsKey(normalizedName)) {
+            payeeId = payeeMap[normalizedName]!.id;
+            // Also inherit default category from Payee if available
+            categoryId = payeeMap[normalizedName]!.autoCategoryId;
+          } else {
+            // Create new Payee
+            final newPayee = Payee(
+              id: const Uuid().v4(),
+              name: t.payeeName!.trim(),
+              createdAt: DateTime.now(),
+            );
+            await payeeRepo.createPayee(newPayee);
+            payeeMap[normalizedName] = newPayee; // Update local cache
+            payeeId = newPayee.id;
+          }
+        }
+
+        // 3. Rule Application
+        // Prepare context for rule matching
+        final payeeNameForRules = t.payeeName ?? '';
+        final description = t.originalDescription ?? '';
+        final amount = t.amount;
+
+        for (final rule in activeRules) {
+          bool isMatch = false;
+
+          // Check conditions
+          if (rule.matchLogic == RuleMatchLogic.and) {
+            isMatch = rule.conditions.every(
+              (c) => _checkCondition(c, payeeNameForRules, description, amount),
+            );
+          } else {
+            isMatch = rule.conditions.any(
+              (c) => _checkCondition(c, payeeNameForRules, description, amount),
+            );
+          }
+
+          if (isMatch) {
+            // Apply actions
+            for (final action in rule.actions) {
+              switch (action.type) {
+                case RuleActionType.setCategory:
+                  categoryId = action.value;
+                  break;
+                case RuleActionType.setPayee:
+                  break;
+                case RuleActionType.setMemo:
+                  memo = action.value;
+                  break;
+                default:
+                  break;
+              }
+            }
+            // First matching rule wins (since we sorted by priority)?
+            // Or apply all? Usually, first match wins for conflicting actions is safer.
+            // Let's break after first match for simplicity/priority adherence.
+            break;
+          }
+        }
+
+        entities.add(
+          Transaction(
+            id: const Uuid().v4(),
+            accountId: accountId,
+            date: t.date,
+            amount: t.amount,
+            payeeId: payeeId,
+            categoryId: categoryId,
+            memo: memo,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            cleared: TransactionClearStatus.cleared,
+          ),
+        );
+      }
+
+      await transactionRepo.batchCreateTransactions(entities);
 
       if (mounted) {
         await showDialog(
@@ -297,7 +380,7 @@ class _ImportConfirmationScreenState
                   Navigator.pop(context); // Close dialog
                   context.go('/transactions');
                 },
-                child: Text(l10n.transactions), // "Transactions"
+                child: Text(l10n.transactions),
               ),
             ],
           ),
@@ -313,6 +396,61 @@ class _ImportConfirmationScreenState
       if (mounted) {
         setState(() => _isImporting = false);
       }
+    }
+  }
+
+  bool _checkCondition(
+    RuleCondition condition,
+    String payeeName,
+    String description,
+    double amount,
+  ) {
+    String valueToCheck;
+    switch (condition.type) {
+      case RuleConditionType.payee:
+        valueToCheck = payeeName;
+        break;
+      case RuleConditionType.description:
+        valueToCheck = description;
+        break;
+      case RuleConditionType.amount:
+        valueToCheck = amount
+            .toString(); // Numeric comparison handled differently ideal
+        break;
+      default:
+        return false;
+    }
+
+    final targetValue = condition.value.toLowerCase();
+    final checkValue = valueToCheck.toLowerCase();
+
+    // Special handling for amounts
+    if (condition.type == RuleConditionType.amount) {
+      final numCheck = double.tryParse(valueToCheck) ?? 0;
+      final numTarget = double.tryParse(condition.value) ?? 0;
+      switch (condition.operator) {
+        case RuleConditionOperator.equals:
+          return (numCheck - numTarget).abs() < 0.001;
+        case RuleConditionOperator.greaterThan:
+          return numCheck > numTarget;
+        case RuleConditionOperator.lessThan:
+          return numCheck < numTarget;
+        default:
+          return false;
+      }
+    }
+
+    switch (condition.operator) {
+      case RuleConditionOperator.equals:
+        return checkValue == targetValue;
+      case RuleConditionOperator.contains:
+        return checkValue.contains(targetValue);
+      case RuleConditionOperator.startsWith:
+        return checkValue.startsWith(targetValue);
+      case RuleConditionOperator.endsWith:
+        return checkValue.endsWith(targetValue);
+      default:
+        return false;
     }
   }
 }

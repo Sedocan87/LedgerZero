@@ -93,12 +93,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/add-transaction'),
-        tooltip: l10n.addTransaction,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.addTransaction),
-      ),
+      floatingActionButton: hasAccountsAsync.valueOrNull == true
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push('/add-transaction'),
+              tooltip: l10n.addTransaction,
+              icon: const Icon(Icons.add),
+              label: Text(l10n.addTransaction),
+            )
+          : null,
     );
   }
 }

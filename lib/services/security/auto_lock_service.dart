@@ -11,9 +11,19 @@ class AutoLockService {
   final Ref _ref;
   DateTime? _pausedTime;
 
+  /// Set this to true before opening file picker or similar operations
+  /// that temporarily background the app but shouldn't trigger re-lock.
+  bool bypassNextPause = false;
+
   AutoLockService(this._ref);
 
   void onAppPaused() {
+    // If bypass is set, skip this pause cycle
+    if (bypassNextPause) {
+      bypassNextPause = false;
+      return;
+    }
+
     _pausedTime = DateTime.now();
 
     // If immediate lock (duration == 0), lock now.

@@ -64,7 +64,7 @@
 	<dict>
 		<key>iCloud.com.ledgerzero.app</key>
 		<dict>
-			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+		<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
 			<string>LedgerZero</string>
@@ -72,5 +72,12 @@
 			<string>Any</string>
 		</dict>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>LedgerZero needs to access your local network to sync data with other devices nearby.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_bonsoir._tcp</string>
+		<string>_bonsoir._udp</string>
+	</array>
 </dict>
 </plist>

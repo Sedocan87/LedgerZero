@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/services/csv/pdf_import_service.dart';
 
 class CsvImportData {
   final List<String> headers;
@@ -41,6 +42,9 @@ class ImportException implements Exception {
 
 class CsvImportService {
   Future<CsvImportData> parseCsvFile(PlatformFile file) async {
+    if (file.extension == 'pdf') {
+      return _parsePdfFile(file);
+    }
     String content;
     try {
       if (file.bytes != null) {
@@ -66,6 +70,23 @@ class CsvImportService {
     }
 
     return compute(_parseCsvInternal, content);
+  }
+
+  Future<CsvImportData> _parsePdfFile(PlatformFile file) async {
+    if (kIsWeb) {
+      throw ImportException('PDF import is not supported on web.');
+    }
+
+    if (file.path == null) {
+      throw ImportException('File path not available for PDF import.');
+    }
+
+    final pdfService = PdfImportService();
+    try {
+      return await pdfService.extractFromPdf(file.path!);
+    } finally {
+      pdfService.dispose();
+    }
   }
 
   static CsvImportData _parseCsvInternal(String content) {
@@ -172,6 +193,7 @@ class CsvImportService {
 
     int invalidDateCount = 0;
     int invalidAmountCount = 0;
+    final validDates = <DateTime>[];
 
     for (int i = 0; i < data.rows.length; i++) {
       final row = data.rows[i];
@@ -180,7 +202,8 @@ class CsvImportService {
       if (row.length > dateIndex) {
         final dateStr = row[dateIndex].toString();
         try {
-          DateFormat(dateFormat).parseStrict(dateStr);
+          final parsedDate = DateFormat(dateFormat).parseStrict(dateStr);
+          validDates.add(parsedDate);
         } catch (e) {
           invalidDateCount++;
         }
@@ -218,7 +241,31 @@ class CsvImportService {
     }
 
     if (invalidAmountCount > 0) {
-      errors.add('$invalidAmountCount rows have invalid amounts.');
+      warnings.add(
+        '$invalidAmountCount rows have invalid amounts and will be skipped.',
+      );
+    }
+
+    // Check for date outliers (dates that seem wrong, e.g., months apart from others)
+    if (validDates.length >= 5) {
+      validDates.sort();
+      final medianDate = validDates[validDates.length ~/ 2];
+      int outlierCount = 0;
+
+      for (final date in validDates) {
+        final diff = date.difference(medianDate).inDays.abs();
+        // If date is more than 60 days from median, it's likely an OCR error
+        if (diff > 60) {
+          outlierCount++;
+        }
+      }
+
+      if (outlierCount > 0) {
+        warnings.add(
+          '$outlierCount dates appear to be outliers (may be OCR errors). '
+          'Please review dates that seem incorrect.',
+        );
+      }
     }
 
     return CsvValidationResult(
@@ -275,7 +322,11 @@ class CsvImportService {
         }
         normalizedAmount = normalizedAmount.replaceAll(RegExp(r'[^\d.-]'), '');
 
-        double amount = double.tryParse(normalizedAmount) ?? 0.0;
+        double? parsedAmount = double.tryParse(normalizedAmount);
+        if (parsedAmount == null) {
+          continue; // Skip rows with invalid amounts
+        }
+        double amount = parsedAmount;
         if (!outflowIsNegative && amount > 0) {
           amount = -amount;
         }

@@ -9,6 +9,7 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/domain/entities/import_profile.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
+import 'package:ledger_zero/services/security/auto_lock_service.dart';
 import 'package:uuid/uuid.dart';
 
 final importProfilesProvider = StreamProvider<List<ImportProfile>>((ref) {
@@ -51,10 +52,14 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
   Future<void> _pickFile() async {
     final l10n = AppLocalizations.of(context)!;
+
+    // Prevent auto-lock during file picker operations
+    ref.read(autoLockServiceProvider).bypassNextPause = true;
+
     try {
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['csv', 'txt'],
+        allowedExtensions: ['csv', 'txt', 'pdf'],
       );
 
       if (result != null) {

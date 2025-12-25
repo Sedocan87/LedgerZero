@@ -128,8 +128,8 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
       // Navigate in the next frame to avoid router state conflicts
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          debugPrint('Security Setup: Now navigating to account-setup');
-          context.goNamed('account-setup');
+          debugPrint('Security Setup: Now navigating to budget-setup');
+          context.goNamed('budget-setup');
         }
       });
     }

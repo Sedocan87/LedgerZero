@@ -41,7 +41,7 @@ import 'package:ledger_zero/presentation/screens/settings/faq_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/user_guide_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/widget_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
-import 'package:ledger_zero/presentation/screens/onboarding/account_setup_screen.dart';
+
 import 'package:ledger_zero/presentation/screens/onboarding/budget_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/completion_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
@@ -103,11 +103,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'security-setup',
             builder: (context, state) => const SecuritySetupScreen(),
           ),
-          GoRoute(
-            path: 'account-setup',
-            name: 'account-setup',
-            builder: (context, state) => const AccountSetupScreen(),
-          ),
+
           GoRoute(
             path: 'budget-setup',
             name: 'budget-setup',

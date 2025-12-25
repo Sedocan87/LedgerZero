@@ -20,6 +20,7 @@ import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transaction_tutorial_manager.dart';
+import 'package:ledger_zero/services/rules/auto_categorize_service.dart';
 import 'package:uuid/uuid.dart';
 
 final accountsProvider = StreamProvider.autoDispose<List<Account>>((ref) {
@@ -593,6 +594,16 @@ class _AddEditTransactionScreenState
         }
       } else {
         await repo.createTransaction(transaction);
+      }
+
+      // Auto-learn: Create a rule for this payee->category mapping
+      if (_selectedPayee != null && _selectedCategory != null) {
+        await ref
+            .read(autoCategorizeServiceProvider)
+            .learnFromTransaction(
+              payee: _selectedPayee!,
+              categoryId: _selectedCategory!.id,
+            );
       }
 
       if (mounted) {

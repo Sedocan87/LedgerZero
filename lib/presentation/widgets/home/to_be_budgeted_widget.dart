@@ -16,13 +16,8 @@ final tbbProvider = FutureProvider.autoDispose.family<double, DateTime>((
   ref.watch(transactionUpdateTriggerProvider);
 
   // Watch for budget changes (budgeting affects TBB)
-  final budgetRepo = ref.watch(budgetRepositoryProvider);
   final monthStr = '${month.year}-${month.month.toString().padLeft(2, '0')}';
-  ref.watch(
-    StreamProvider.autoDispose(
-      (ref) => budgetRepo.watchBudgetsForMonth(monthStr),
-    ),
-  );
+  ref.watch(budgetUpdateTriggerProvider(monthStr));
 
   final budgetingService = ref.watch(budgetingServiceProvider);
   return budgetingService.calculateTBB(month);

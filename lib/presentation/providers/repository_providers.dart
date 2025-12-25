@@ -97,3 +97,9 @@ final importProfileRepositoryProvider = Provider<ImportProfileRepository>((
 final transactionUpdateTriggerProvider = StreamProvider<void>((ref) {
   return ref.watch(transactionRepositoryProvider).watchAllTransactions();
 });
+
+/// Watches for budget changes for a specific month.
+final budgetUpdateTriggerProvider = StreamProvider.autoDispose
+    .family<void, String>((ref, monthStr) {
+      return ref.watch(budgetRepositoryProvider).watchBudgetsForMonth(monthStr);
+    });

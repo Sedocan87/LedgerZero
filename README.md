@@ -116,6 +116,12 @@ LedgerZero is a cross-platform personal finance application built with Flutter t
 - **Performance**: Instant sync when devices are on same WiFi
 - **Privacy**: Data never leaves the local network
 
+**3. Manual Backup & Restore (Offline)**
+- **Export**: Generates a standard JSON file containing all data
+- **Sharing**: Can be sent via AirDrop, Email, or File Sharing
+- **Use Case**: Moving data between devices without valid sync permissions or internet
+
+
 
 **Architecture:**
 - No central server required
