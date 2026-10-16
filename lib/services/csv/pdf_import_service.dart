@@ -5,7 +5,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
 
-import 'csv_import_service.dart';
+import 'package:ledger_zero/services/csv/csv_import_service.dart';
 
 /// Represents a text line with its vertical position for sorting.
 class _PositionedLine {
@@ -59,16 +59,14 @@ class PdfImportService {
         for (final block in recognizedText.blocks) {
           for (final line in block.lines) {
             final boundingBox = line.boundingBox;
-            if (boundingBox != null) {
-              // Add page offset so multi-page PDFs sort correctly
-              allLines.add(
-                _PositionedLine(
-                  line.text,
-                  boundingBox.top + pageOffset,
-                  boundingBox.left,
-                ),
-              );
-            }
+            // Add page offset so multi-page PDFs sort correctly
+            allLines.add(
+              _PositionedLine(
+                line.text,
+                boundingBox.top + pageOffset,
+                boundingBox.left,
+              ),
+            );
           }
         }
 

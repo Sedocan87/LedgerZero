@@ -108,7 +108,7 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> {
     return jsonEncode(data);
   }
 
-  void _showQrScanner() async {
+  Future<void> _showQrScanner() async {
     final status = await Permission.camera.request();
     if (!status.isGranted) {
       if (mounted) {

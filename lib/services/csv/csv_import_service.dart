@@ -322,7 +322,7 @@ class CsvImportService {
         }
         normalizedAmount = normalizedAmount.replaceAll(RegExp(r'[^\d.-]'), '');
 
-        double? parsedAmount = double.tryParse(normalizedAmount);
+        final double? parsedAmount = double.tryParse(normalizedAmount);
         if (parsedAmount == null) {
           continue; // Skip rows with invalid amounts
         }
