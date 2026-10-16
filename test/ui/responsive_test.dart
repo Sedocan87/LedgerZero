@@ -1,3 +1,4 @@
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
@@ -5,6 +6,7 @@ import 'package:ledger_zero/presentation/widgets/home/to_be_budgeted_widget.dart
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
@@ -12,6 +14,7 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:mockito/mockito.dart';
 import '../widget_test_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 
 // Create a mock for BackupScheduler
 class MockBackupScheduler extends Mock implements BackupScheduler {
@@ -43,6 +46,10 @@ class MockSyncController extends StateNotifier<SyncState>
 
   @override
   Future<void> setWifiOnly(bool enabled) async {}
+
+  // Members the layout tests never call.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
@@ -68,12 +75,16 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
-          hasAccountsProvider.overrideWith((ref) => Future.value(true)),
-          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
-          tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith(
-            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
           ),
+          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
+          tbbProvider(currentMonth).overrideWith((ref) => Future.value(100000)),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 500000, 'spending': 200000}),
+          ),
+          accountsProvider.overrideWith((ref) => Stream.value([])),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],
@@ -100,12 +111,16 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
-          hasAccountsProvider.overrideWith((ref) => Future.value(true)),
-          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
-          tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith(
-            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
           ),
+          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
+          tbbProvider(currentMonth).overrideWith((ref) => Future.value(100000)),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 500000, 'spending': 200000}),
+          ),
+          accountsProvider.overrideWith((ref) => Stream.value([])),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],
@@ -130,12 +145,16 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
-          hasAccountsProvider.overrideWith((ref) => Future.value(true)),
-          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
-          tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith(
-            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
           ),
+          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
+          tbbProvider(currentMonth).overrideWith((ref) => Future.value(100000)),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 500000, 'spending': 200000}),
+          ),
+          accountsProvider.overrideWith((ref) => Stream.value([])),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],
@@ -161,12 +180,16 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
-          hasAccountsProvider.overrideWith((ref) => Future.value(true)),
-          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
-          tbbProvider(currentMonth).overrideWith((ref) => Future.value(1000.0)),
-          monthlyStatsProvider(currentMonth).overrideWith(
-            (ref) => Future.value({'income': 5000.0, 'spending': 2000.0}),
+          hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
           ),
+          backupSchedulerProvider.overrideWithValue(mockBackupScheduler),
+          tbbProvider(currentMonth).overrideWith((ref) => Future.value(100000)),
+          monthlyStatsProvider(currentMonth).overrideWith(
+            (ref) => Future.value({'income': 500000, 'spending': 200000}),
+          ),
+          accountsProvider.overrideWith((ref) => Stream.value([])),
           recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
           syncControllerProvider.overrideWith((ref) => mockSyncController),
         ],

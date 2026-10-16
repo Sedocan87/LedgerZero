@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/core/money/currency.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_state.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_view_model.dart';
 
@@ -11,17 +14,19 @@ class YnabImportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(ynabImportViewModelProvider);
     final viewModel = ref.read(ynabImportViewModelProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     return PopScope(
       canPop: !state.isImporting,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('YNAB Migration'),
+          title: Text(l10n.ynabImportTitle),
           leading:
               state.currentStep != YnabImportStep.selectMethod &&
                   state.currentStep != YnabImportStep.success
               ? IconButton(
                   icon: const Icon(Icons.arrow_back),
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   onPressed: state.isImporting ? null : viewModel.goBack,
                 )
               : null,
@@ -33,7 +38,7 @@ class YnabImportScreen extends ConsumerWidget {
                   viewModel.cancel();
                   context.pop();
                 },
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
           ],
         ),
@@ -42,12 +47,14 @@ class YnabImportScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                Expanded(child: _buildStepContent(context, state, viewModel)),
+                Expanded(
+                  child: _buildStepContent(context, l10n, state, viewModel),
+                ),
                 if (state.error != null)
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Text(
-                      state.error!,
+                      _errorText(l10n, state),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -62,41 +69,79 @@ class YnabImportScreen extends ConsumerWidget {
     );
   }
 
+  static String _errorText(AppLocalizations l10n, YnabImportState state) {
+    switch (state.error!) {
+      case YnabImportError.filePickFailed:
+        return l10n.ynabImportErrorFilePick;
+      case YnabImportError.folderPickFailed:
+        return l10n.ynabImportErrorFolderPick;
+      case YnabImportError.filesMissing:
+        return l10n.ynabImportErrorFilesMissing;
+      case YnabImportError.folderMissing:
+        return l10n.ynabImportErrorFolderMissing;
+      case YnabImportError.missingColumns:
+        return l10n.ynabImportErrorMissingColumns(state.errorDetail ?? '');
+      case YnabImportError.invalidYnab4Folder:
+        return l10n.ynabImportErrorInvalidYnab4;
+      case YnabImportError.invalidDates:
+        return l10n.ynabImportErrorInvalidDates(state.errorDetail ?? '');
+      case YnabImportError.unreadableFiles:
+        return l10n.ynabImportErrorUnreadable;
+      case YnabImportError.importFailed:
+        return l10n.ynabImportErrorImportFailed;
+    }
+  }
+
+  static String _accountTypeLabel(AppLocalizations l10n, AccountType type) {
+    switch (type) {
+      case AccountType.checking:
+        return l10n.ynabImportAccountTypeChecking;
+      case AccountType.savings:
+        return l10n.ynabImportAccountTypeSavings;
+      case AccountType.credit:
+        return l10n.ynabImportAccountTypeCredit;
+      case AccountType.cash:
+        return l10n.ynabImportAccountTypeCash;
+    }
+  }
+
   Widget _buildStepContent(
     BuildContext context,
+    AppLocalizations l10n,
     YnabImportState state,
     YnabImportViewModel viewModel,
   ) {
     switch (state.currentStep) {
       case YnabImportStep.selectMethod:
-        return _buildMethodSelection(context, viewModel);
+        return _buildMethodSelection(context, l10n, viewModel);
       case YnabImportStep.selectFiles:
-        return _buildFileSelection(context, state, viewModel);
+        return _buildFileSelection(context, l10n, state, viewModel);
       case YnabImportStep.preview:
-        return _buildPreview(context, state, viewModel);
+        return _buildPreview(context, l10n, state, viewModel);
       case YnabImportStep.importing:
-        return _buildImporting(context);
+        return _buildImporting(context, l10n);
       case YnabImportStep.success:
-        return _buildSuccess(context, state);
+        return _buildSuccess(context, l10n, state);
     }
   }
 
   Widget _buildMethodSelection(
     BuildContext context,
+    AppLocalizations l10n,
     YnabImportViewModel viewModel,
   ) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'Select your YNAB version',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          l10n.ynabImportSelectVersion,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 32),
         ElevatedButton.icon(
           onPressed: () => viewModel.setMethod(YnabImportMethod.nynabCsv),
           icon: const Icon(Icons.table_chart),
-          label: const Text('nYNAB (CSV Export)'),
+          label: Text(l10n.ynabImportMethodCsv),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 50),
           ),
@@ -105,17 +150,18 @@ class YnabImportScreen extends ConsumerWidget {
         ElevatedButton.icon(
           onPressed: () => viewModel.setMethod(YnabImportMethod.ynab4),
           icon: const Icon(Icons.folder),
-          label: const Text('YNAB 4 (Classic)'),
+          label: Text(l10n.ynabImportMethodYnab4),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 50),
           ),
         ),
         const SizedBox(height: 32),
-        const Text(
-          'For nYNAB: Export your budget as CSV from the web app.\n'
-          'For YNAB 4: Select your budget folder (ending in .ynab4).',
+        Text(
+          l10n.ynabImportMethodHint,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -123,6 +169,7 @@ class YnabImportScreen extends ConsumerWidget {
 
   Widget _buildFileSelection(
     BuildContext context,
+    AppLocalizations l10n,
     YnabImportState state,
     YnabImportViewModel viewModel,
   ) {
@@ -130,14 +177,16 @@ class YnabImportScreen extends ConsumerWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Upload CSV Files',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            l10n.ynabImportUploadCsvTitle,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           ListTile(
             title: const Text('Register.csv'),
-            subtitle: Text(state.registerFile?.name ?? 'Not selected'),
+            subtitle: Text(
+              state.registerFile?.name ?? l10n.ynabImportNotSelected,
+            ),
             leading: const Icon(Icons.receipt_long),
             trailing: const Icon(Icons.upload_file),
             onTap: viewModel.pickRegisterFile,
@@ -149,7 +198,9 @@ class YnabImportScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           ListTile(
             title: const Text('Budget.csv'),
-            subtitle: Text(state.budgetFile?.name ?? 'Not selected'),
+            subtitle: Text(
+              state.budgetFile?.name ?? l10n.ynabImportNotSelected,
+            ),
             leading: const Icon(Icons.pie_chart),
             trailing: const Icon(Icons.upload_file),
             onTap: viewModel.pickBudgetFile,
@@ -167,7 +218,7 @@ class YnabImportScreen extends ConsumerWidget {
                   (state.registerFile != null && state.budgetFile != null)
                   ? viewModel.validateAndParse
                   : null,
-              child: const Text('Next: Preview'),
+              child: Text(l10n.ynabImportNextPreview),
             ),
         ],
       );
@@ -175,14 +226,14 @@ class YnabImportScreen extends ConsumerWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Select YNAB4 Folder',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            l10n.ynabImportSelectFolderTitle,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           ListTile(
-            title: const Text('Budget Folder'),
-            subtitle: Text(state.ynab4FolderPath ?? 'Not selected'),
+            title: Text(l10n.ynabImportBudgetFolder),
+            subtitle: Text(state.ynab4FolderPath ?? l10n.ynabImportNotSelected),
             leading: const Icon(Icons.folder_open),
             trailing: const Icon(Icons.folder),
             onTap: viewModel.pickYnab4Folder,
@@ -199,7 +250,7 @@ class YnabImportScreen extends ConsumerWidget {
               onPressed: state.ynab4FolderPath != null
                   ? viewModel.validateAndParse
                   : null,
-              child: const Text('Next: Preview'),
+              child: Text(l10n.ynabImportNextPreview),
             ),
         ],
       );
@@ -208,6 +259,7 @@ class YnabImportScreen extends ConsumerWidget {
 
   Widget _buildPreview(
     BuildContext context,
+    AppLocalizations l10n,
     YnabImportState state,
     YnabImportViewModel viewModel,
   ) {
@@ -215,14 +267,16 @@ class YnabImportScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Import Preview',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          l10n.ynabImportPreviewTitle,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Review the data found in your import files.',
-          style: TextStyle(color: Colors.grey),
+        Text(
+          l10n.ynabImportPreviewSubtitle,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 16),
         Expanded(
@@ -230,10 +284,10 @@ class YnabImportScreen extends ConsumerWidget {
             length: 2,
             child: Column(
               children: [
-                const TabBar(
+                TabBar(
                   tabs: [
-                    Tab(text: 'Accounts'),
-                    Tab(text: 'Categories'),
+                    Tab(text: l10n.accounts),
+                    Tab(text: l10n.categories),
                   ],
                 ),
                 Expanded(
@@ -248,7 +302,14 @@ class YnabImportScreen extends ConsumerWidget {
                             leading: const Icon(Icons.account_balance_wallet),
                             title: Text(acc.name),
                             subtitle: Text(
-                              '${acc.type.name.toUpperCase()} • ${acc.isClosed ? 'Closed' : 'Active'}',
+                              acc.onBudget
+                                  ? l10n.ynabImportAccountSubtitle(
+                                      _accountTypeLabel(l10n, acc.type),
+                                      acc.isClosed
+                                          ? l10n.ynabImportAccountClosed
+                                          : l10n.ynabImportAccountActive,
+                                    )
+                                  : l10n.ynabImportTrackingAccount,
                             ),
                           );
                         },
@@ -268,7 +329,9 @@ class YnabImportScreen extends ConsumerWidget {
 
                           return ExpansionTile(
                             title: Text(group.name),
-                            subtitle: Text('${cats.length} categories'),
+                            subtitle: Text(
+                              l10n.ynabImportCategoryCount(cats.length),
+                            ),
                             children: cats
                                 .map(
                                   (c) => ListTile(
@@ -292,6 +355,22 @@ class YnabImportScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          key: const Key('ynab_import_currency'),
+          initialValue: state.currency,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: l10n.ynabImportCurrency),
+          items: [
+            for (final code in {...supportedCurrencyCodes, state.currency})
+              DropdownMenuItem(value: code, child: Text(code)),
+          ],
+          onChanged: (code) {
+            if (code != null) {
+              viewModel.setCurrency(code);
+            }
+          },
+        ),
+        const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -302,18 +381,18 @@ class YnabImportScreen extends ConsumerWidget {
             children: [
               _buildStatRow(
                 context,
-                'Total Transactions',
+                l10n.ynabImportTotalTransactions,
                 data.transactions.length,
               ),
               _buildStatRow(
                 context,
-                'Budget Entries',
+                l10n.ynabImportBudgetEntries,
                 data.budgetEntries.length,
               ),
               if (data.scheduledTransactions.isNotEmpty)
                 _buildStatRow(
                   context,
-                  'Scheduled Txns',
+                  l10n.ynabImportScheduledTransactions,
                   data.scheduledTransactions.length,
                 ),
             ],
@@ -329,7 +408,7 @@ class YnabImportScreen extends ConsumerWidget {
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: const Text('Confirm & Import'),
+            child: Text(l10n.ynabImportConfirm),
           ),
         ),
       ],
@@ -343,45 +422,59 @@ class YnabImportScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          Text('$count', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            AppLocalizations.of(context)!.integerValue(count),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildImporting(BuildContext context) {
-    return const Column(
+  Widget _buildImporting(BuildContext context, AppLocalizations l10n) {
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(
+        const SizedBox(
           width: 64,
           height: 64,
           child: CircularProgressIndicator(strokeWidth: 6),
         ),
-        SizedBox(height: 32),
+        const SizedBox(height: 32),
         Text(
-          'Migrating your budget...',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 16),
-        Text(
-          'This may take a moment depending on the size of your history.',
+          l10n.ynabImportInProgressTitle,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey, fontSize: 16),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 48),
-        Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 32),
-        SizedBox(height: 8),
+        const SizedBox(height: 16),
         Text(
-          'Please do not close the app or switch screens.',
-          style: TextStyle(color: Colors.grey),
+          l10n.ynabImportInProgressBody,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 48),
+        const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 32),
+        const SizedBox(height: 8),
+        Text(
+          l10n.ynabImportDoNotClose,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildSuccess(BuildContext context, YnabImportState state) {
-    final data = state.parsedData;
+  Widget _buildSuccess(
+    BuildContext context,
+    AppLocalizations l10n,
+    YnabImportState state,
+  ) {
+    final summary = state.summary;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -399,14 +492,19 @@ class YnabImportScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Welcome Home!',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          Text(
+            l10n.ynabImportSuccessTitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Your YNAB data has been successfully migrated.',
-            style: TextStyle(color: Colors.grey, fontSize: 16),
+          Text(
+            l10n.ynabImportSuccessBody,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(height: 32),
           Container(
@@ -422,26 +520,39 @@ class YnabImportScreen extends ConsumerWidget {
                 _buildSuccessStat(
                   context,
                   Icons.account_balance,
-                  '${data?.accounts.length ?? 0}',
-                  'Accounts',
+                  l10n.integerValue(summary?.accounts ?? 0),
+                  l10n.accounts,
                 ),
                 const Divider(height: 24),
                 _buildSuccessStat(
                   context,
                   Icons.category,
-                  '${data?.categories.length ?? 0}',
-                  'Categories',
+                  l10n.integerValue(summary?.categories ?? 0),
+                  l10n.categories,
                 ),
                 const Divider(height: 24),
                 _buildSuccessStat(
                   context,
                   Icons.receipt_long,
-                  '${data?.transactions.length ?? 0}',
-                  'Transactions',
+                  l10n.integerValue(summary?.transactions ?? 0),
+                  l10n.transactions,
                 ),
               ],
             ),
           ),
+          if ((summary?.trackingAccountsSkipped ?? 0) > 0) ...[
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Text(
+                l10n.ynabImportTrackingSkipped(
+                  summary!.trackingAccountsSkipped,
+                ),
+                key: const Key('ynab_tracking_skipped'),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
           const SizedBox(height: 40),
           ElevatedButton(
             onPressed: () {
@@ -451,9 +562,9 @@ class YnabImportScreen extends ConsumerWidget {
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(200, 50),
               backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
-            child: const Text('Start Budgeting'),
+            child: Text(l10n.ynabImportStartBudgeting),
           ),
         ],
       ),
@@ -484,7 +595,12 @@ class YnabImportScreen extends ConsumerWidget {
               count,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            Text(label, style: const TextStyle(color: Colors.grey)),
+            Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ],

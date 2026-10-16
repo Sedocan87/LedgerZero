@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class WelcomeSlide extends StatelessWidget {
   const WelcomeSlide({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(32.0),
       child: Column(
@@ -24,13 +26,13 @@ class WelcomeSlide extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'A Sovereign Personal Finance Application',
+            l10n.onbWelcomeTagline,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 24),
           Text(
-            'Take control of your finances with a private, local-first budgeting app.',
+            l10n.onbWelcomeBody,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(
@@ -49,13 +51,14 @@ class BenefitsSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(32.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Why LedgerZero?',
+            l10n.onbBenefitsTitle,
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -64,24 +67,22 @@ class BenefitsSlide extends StatelessWidget {
           _buildBenefitItem(
             context,
             icon: Icons.attach_money,
-            title: 'Economic Sovereignty',
-            description: 'One-time purchase. No recurring subscription fees.',
+            title: l10n.onbBenefitPriceTitle,
+            description: l10n.onbBenefitPriceBody,
           ),
           const SizedBox(height: 24),
           _buildBenefitItem(
             context,
             icon: Icons.storage,
-            title: 'Data Sovereignty',
-            description:
-                'Your data stays on your device. Encrypted and secure.',
+            title: l10n.onbBenefitDataTitle,
+            description: l10n.onbBenefitDataBody,
           ),
           const SizedBox(height: 24),
           _buildBenefitItem(
             context,
             icon: Icons.offline_bolt,
-            title: 'Operational Sovereignty',
-            description:
-                'Works fully offline. Zero latency. No server dependencies.',
+            title: l10n.onbBenefitOfflineTitle,
+            description: l10n.onbBenefitOfflineBody,
           ),
         ],
       ),
@@ -124,6 +125,7 @@ class PrivacySlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(32.0),
       child: Column(
@@ -136,35 +138,34 @@ class PrivacySlide extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            'Your Data, Your Device',
+            l10n.onbPrivacyTitle,
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'We believe in privacy by default. That means:',
+          Text(
+            l10n.onbPrivacyIntro,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 32),
           _buildPrivacyItem(
             context,
             icon: Icons.no_accounts,
-            text: 'No tracking, analytics, or telemetry.',
+            text: l10n.onbPrivacyNoTracking,
           ),
           const SizedBox(height: 16),
           _buildPrivacyItem(
             context,
             icon: Icons.security,
-            text: 'All data is AES-256 encrypted on your device.',
+            text: l10n.onbPrivacyEncrypted,
           ),
           const SizedBox(height: 16),
           _buildPrivacyItem(
             context,
             icon: Icons.cloud_off,
-            text:
-                'We never see your financial data. Sync happens via YOUR cloud (Google Drive, iCloud).',
+            text: l10n.onbPrivacyOwnCloud,
           ),
         ],
       ),

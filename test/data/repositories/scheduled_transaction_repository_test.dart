@@ -1,175 +1,209 @@
+// ScheduledTransactionRepositoryImpl on a real in-memory database.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ledger_zero/data/database/database.dart' as db;
-import 'package:ledger_zero/data/repositories/scheduled_transaction_repository_impl.dart';
+import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart'
     as domain;
-import 'package:mockito/mockito.dart';
+import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 
-import 'repository_test_helpers.mocks.dart';
+import '../../helpers/test_database.dart';
 
 void main() {
-  late ScheduledTransactionRepositoryImpl repository;
-  late MockScheduledTransactionsDao mockDao;
+  group('mapping and due query (real database)', () {
+    late TestDatabase t;
 
-  setUp(() {
-    mockDao = MockScheduledTransactionsDao();
-    repository = ScheduledTransactionRepositoryImpl(mockDao);
-  });
+    setUp(() async {
+      t = TestDatabase();
+      await t.addAccount(id: 'acc1');
+      await t.payees.createPayee(
+        Payee(id: 'payee1', name: 'Landlord', createdAt: DateTime.utc(2024)),
+      );
+    });
+    tearDown(() => t.close());
 
-  final tDate = DateTime.parse('2023-01-01T00:00:00Z');
+    test('every field survives a create/update round trip', () async {
+      final groceries = await t.categoryId('Groceries');
+      final schedule = domain.ScheduledTransaction(
+        id: 'st1',
+        accountId: 'acc1',
+        payeeId: 'payee1',
+        categoryId: groceries,
+        amount: 10000,
+        frequency: domain.RecurrenceFrequency.monthly,
+        interval: 2,
+        occurrenceCount: 5,
+        nextDate: DateTime.utc(2024, 1, 1),
+        endDate: DateTime.utc(2024, 12, 31),
+        autoApprove: true,
+      );
+      final repo = t.scheduledTransactions;
+      await repo.createScheduledTransaction(schedule);
+      var loaded = (await repo.getScheduledTransactionById('st1'))!;
+      expect(loaded.accountId, 'acc1');
+      expect(loaded.payeeId, 'payee1');
+      expect(loaded.categoryId, groceries);
+      expect(loaded.amount, 10000);
+      expect(loaded.frequency, domain.RecurrenceFrequency.monthly);
+      expect(loaded.interval, 2);
+      expect(loaded.occurrenceCount, 5);
+      expect(loaded.nextDate, DateTime.utc(2024, 1, 1));
+      expect(loaded.endDate, DateTime.utc(2024, 12, 31));
+      expect(loaded.autoApprove, isTrue);
 
-  final tDriftScheduledTransaction = db.ScheduledTransaction(
-    id: 'st1',
-    accountId: 'acc1',
-    payeeId: 'payee1',
-    categoryId: 'cat1',
-    amount: 100.0,
-    frequency: 'monthly',
-    interval: 2,
-    occurrenceCount: 5,
-    nextDate: tDate,
-    endDate: tDate.add(const Duration(days: 365)),
-    autoApprove: true,
-    createdAt: tDate,
-  );
+      await repo.updateScheduledTransaction(
+        loaded.copyWith(amount: 12000, autoApprove: false),
+      );
+      loaded = (await repo.getScheduledTransactionById('st1'))!;
+      expect(loaded.amount, 12000);
+      expect(loaded.autoApprove, isFalse);
+      expect(await repo.getAllScheduledTransactions(), hasLength(1));
+    });
 
-  final tDomainScheduledTransaction = domain.ScheduledTransaction(
-    id: 'st1',
-    accountId: 'acc1',
-    payeeId: 'payee1',
-    categoryId: 'cat1',
-    amount: 100.0,
-    frequency: domain.RecurrenceFrequency.monthly,
-    interval: 2,
-    occurrenceCount: 5,
-    nextDate: tDate,
-    endDate: tDate.add(const Duration(days: 365)),
-    autoApprove: true,
-    createdAt: tDate,
-  );
-
-  group('getAllScheduledTransactions', () {
-    test(
-      'should return list of scheduled transactions from dao with correct mapping',
-      () async {
-        // arrange
-        when(
-          mockDao.getAllScheduledTransactions(),
-        ).thenAnswer((_) async => [tDriftScheduledTransaction]);
-        // act
-        final result = await repository.getAllScheduledTransactions();
-        // assert
-        expect(result, equals([tDomainScheduledTransaction]));
-        verify(mockDao.getAllScheduledTransactions()).called(1);
-      },
-    );
-  });
-
-  group('getDueScheduledTransactions', () {
-    test('should return list of due scheduled transactions from dao', () async {
-      // arrange
-      final date = DateTime.now();
-      when(
-        mockDao.getDueScheduledTransactions(date),
-      ).thenAnswer((_) async => [tDriftScheduledTransaction]);
-      // act
-      final result = await repository.getDueScheduledTransactions(date);
-      // assert
-      expect(result, equals([tDomainScheduledTransaction]));
-      verify(mockDao.getDueScheduledTransactions(date)).called(1);
+    test('due query returns schedules due on or before the date', () async {
+      final repo = t.scheduledTransactions;
+      for (final (id, day) in [('due', 1), ('today', 15), ('later', 20)]) {
+        await repo.createScheduledTransaction(
+          domain.ScheduledTransaction(
+            id: id,
+            accountId: 'acc1',
+            amount: -100,
+            frequency: domain.RecurrenceFrequency.monthly,
+            nextDate: DateTime.utc(2024, 3, day),
+          ),
+        );
+      }
+      final due = await repo.getDueScheduledTransactions(
+        DateTime.utc(2024, 3, 15),
+      );
+      expect(due.map((s) => s.id).toSet(), {'due', 'today'});
     });
   });
 
-  group('createScheduledTransaction', () {
-    test(
-      'should call insertScheduledTransaction on dao with correct fields',
-      () async {
-        // arrange
-        when(
-          mockDao.insertScheduledTransaction(any),
-        ).thenAnswer((_) async => 1);
-        // act
-        await repository.createScheduledTransaction(
-          tDomainScheduledTransaction,
-        );
-        // assert
-        final captured = verify(
-          mockDao.insertScheduledTransaction(captureAny),
-        ).captured;
-        final companion = captured.first as db.ScheduledTransactionsCompanion;
+  group('skipScheduledTransaction (real database)', () {
+    late TestDatabase t;
+    late ScheduledTransactionRepository repo;
 
-        expect(companion.id.value, equals(tDomainScheduledTransaction.id));
-        expect(companion.autoApprove.value, equals(true));
-        expect(companion.interval.value, equals(2));
-        expect(companion.occurrenceCount.value, equals(5));
+    setUp(() {
+      t = TestDatabase();
+      repo = t.scheduledTransactions;
+    });
+
+    tearDown(() => t.close());
+
+    Future<domain.ScheduledTransaction> skip(
+      domain.ScheduledTransaction schedule,
+    ) async {
+      await repo.createScheduledTransaction(schedule);
+      await repo.skipScheduledTransaction(schedule.id);
+      return (await repo.getScheduledTransactionById(schedule.id))!;
+    }
+
+    test('moves to the next date and decrements the count', () async {
+      final result = await skip(
+        domain.ScheduledTransaction(
+          id: 'st1',
+          amount: 10000,
+          frequency: domain.RecurrenceFrequency.monthly,
+          interval: 2,
+          occurrenceCount: 5,
+          nextDate: DateTime.utc(2023, 1, 1),
+        ),
+      );
+      expect(result.nextDate, DateTime.utc(2023, 3, 1));
+      expect(result.occurrenceCount, 4);
+    });
+
+    test(
+      'skipping the last counted occurrence finishes the schedule',
+      () async {
+        final result = await skip(
+          domain.ScheduledTransaction(
+            id: 'st1',
+            amount: 10000,
+            frequency: domain.RecurrenceFrequency.monthly,
+            occurrenceCount: 1,
+            nextDate: DateTime.utc(2023, 1, 1),
+          ),
+        );
+        expect(result.nextDate, isNull);
+        expect(result.occurrenceCount, 0);
       },
     );
+
+    test('skipping past the end date finishes the schedule', () async {
+      final result = await skip(
+        domain.ScheduledTransaction(
+          id: 'st1',
+          amount: 10000,
+          frequency: domain.RecurrenceFrequency.weekly,
+          nextDate: DateTime.utc(2023, 1, 1),
+          endDate: DateTime.utc(2023, 1, 7),
+        ),
+      );
+      expect(result.nextDate, isNull);
+      expect(result.occurrenceCount, isNull);
+    });
+
+    test('skipping keeps the month-end anchor', () async {
+      await repo.createScheduledTransaction(
+        domain.ScheduledTransaction(
+          id: 'st1',
+          amount: 10000,
+          frequency: domain.RecurrenceFrequency.monthly,
+          nextDate: DateTime.utc(2024, 1, 31),
+        ),
+      );
+      final dates = <DateTime?>[];
+      for (var i = 0; i < 3; i++) {
+        await repo.skipScheduledTransaction('st1');
+        dates.add((await repo.getScheduledTransactionById('st1'))!.nextDate);
+      }
+      expect(dates, [
+        DateTime.utc(2024, 2, 29),
+        DateTime.utc(2024, 3, 31),
+        DateTime.utc(2024, 4, 30),
+      ]);
+      expect((await repo.getScheduledTransactionById('st1'))!.anchorDay, 31);
+    });
+
+    test('a finished schedule stays finished', () async {
+      const finished = domain.ScheduledTransaction(
+        id: 'st1',
+        amount: 10000,
+        frequency: domain.RecurrenceFrequency.monthly,
+        occurrenceCount: 0,
+      );
+      final result = await skip(finished);
+      expect(result.nextDate, isNull);
+      expect(result.occurrenceCount, 0);
+    });
+
+    test('does nothing if the schedule does not exist', () async {
+      await repo.skipScheduledTransaction('missing');
+      expect(await repo.getAllScheduledTransactions(), isEmpty);
+    });
   });
 
-  group('updateScheduledTransaction', () {
-    test(
-      'should call updateScheduledTransaction on dao with correct fields',
-      () async {
-        // arrange
-        when(
-          mockDao.updateScheduledTransaction(any),
-        ).thenAnswer((_) async => true);
-        // act
-        await repository.updateScheduledTransaction(
-          tDomainScheduledTransaction,
-        );
-        // assert
-        final captured = verify(
-          mockDao.updateScheduledTransaction(captureAny),
-        ).captured;
-        final companion = captured.first as db.ScheduledTransactionsCompanion;
+  group('memo and anchor day mapping (real database)', () {
+    late TestDatabase t;
 
-        expect(companion.id.value, equals(tDomainScheduledTransaction.id));
-        expect(companion.autoApprove.value, equals(true));
-        expect(companion.interval.value, equals(2));
-        expect(companion.occurrenceCount.value, equals(5));
-      },
-    );
-  });
+    setUp(() => t = TestDatabase());
+    tearDown(() => t.close());
 
-  group('skipScheduledTransaction', () {
-    test(
-      'should update transaction with next date and decremented occurrence count',
-      () async {
-        // arrange
-        when(
-          mockDao.getScheduledTransactionById('st1'),
-        ).thenAnswer((_) async => tDriftScheduledTransaction);
-        when(
-          mockDao.updateScheduledTransaction(any),
-        ).thenAnswer((_) async => true);
-
-        // act
-        await repository.skipScheduledTransaction('st1');
-
-        // assert
-        final captured = verify(
-          mockDao.updateScheduledTransaction(captureAny),
-        ).captured;
-        final companion = captured.first as db.ScheduledTransactionsCompanion;
-
-        // Original nextDate was 2023-01-01, interval 2 months
-        // Expected: 2023-03-01
-        final expectedDate = DateTime.parse('2023-03-01T00:00:00Z');
-        expect(companion.nextDate.value, equals(expectedDate));
-        expect(companion.occurrenceCount.value, equals(4)); // 5 - 1
-      },
-    );
-
-    test('should do nothing if transaction not found', () async {
-      // arrange
-      when(
-        mockDao.getScheduledTransactionById('st1'),
-      ).thenAnswer((_) async => null);
-      // act
-      await repository.skipScheduledTransaction('st1');
-      // assert
-      verifyNever(mockDao.updateScheduledTransaction(any));
+    test('round-trips memo and anchorDay', () async {
+      final schedule = domain.ScheduledTransaction(
+        id: 'st1',
+        amount: -5000,
+        frequency: domain.RecurrenceFrequency.monthly,
+        nextDate: DateTime.utc(2024, 2, 29),
+        memo: 'Rent',
+        anchorDay: 31,
+      );
+      await t.scheduledTransactions.createScheduledTransaction(schedule);
+      final loaded = (await t.scheduledTransactions.getScheduledTransactionById(
+        'st1',
+      ))!;
+      expect(loaded.memo, 'Rent');
+      expect(loaded.anchorDay, 31);
     });
   });
 }

@@ -1,70 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class FaqScreen extends StatelessWidget {
   const FaqScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final entries = [
+      (l10n.faqBudgetingQ, l10n.faqBudgetingA),
+      (l10n.faqSafeQ, l10n.faqSafeA),
+      (l10n.faqSyncQ, l10n.faqSyncA),
+      (l10n.faqOfflineQ, l10n.faqOfflineA),
+      (l10n.faqPasswordQ, l10n.faqPasswordA),
+      (l10n.faqBackupQ, l10n.faqBackupA),
+      (l10n.faqImportQ, l10n.faqImportA),
+    ];
     return Scaffold(
-      appBar: AppBar(title: const Text('FAQ')),
+      appBar: AppBar(title: Text(l10n.faq)),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          ExpansionTile(
-            title: Text('How does the envelope budgeting work?'),
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Envelope budgeting involves assigning every dollar you earn to a specific category or "envelope". You only spend what is available in that envelope. If you overspend, you must move money from another envelope to cover it.',
+        children: [
+          for (final (question, answer) in entries)
+            ExpansionTile(
+              title: Text(question),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(answer),
                 ),
-              ),
-            ],
-          ),
-          ExpansionTile(
-            title: Text('Is my data safe?'),
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Yes. LedgerZero is a local-first application. Your data is stored encrypted on your device and only leaves your device if you enable synchronization to your own cloud storage.',
-                ),
-              ),
-            ],
-          ),
-          ExpansionTile(
-            title: Text('How do I sync my data?'),
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Go to Settings > Sync Settings to enable synchronization via Google Drive or iCloud. You will need to sign in to your cloud provider.',
-                ),
-              ),
-            ],
-          ),
-          ExpansionTile(
-            title: Text('Can I use this app offline?'),
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Absolutely. LedgerZero is designed to be fully functional offline. Synchronization will occur automatically when you reconnect to the internet.',
-                ),
-              ),
-            ],
-          ),
-          ExpansionTile(
-            title: Text('What happens if I lose my password?'),
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'If you set up a Recovery Key, you can use it to reset your password. Otherwise, since we do not store your data on our servers, we cannot recover your data for you.',
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

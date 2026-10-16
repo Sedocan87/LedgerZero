@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_card.dart';
 
 final monthlyStatsProvider = FutureProvider.autoDispose
-    .family<Map<String, double>, DateTime>((ref, month) async {
-      // Re-fetch when transactions change
-      ref.watch(transactionUpdateTriggerProvider);
+    .family<Map<String, int>, DateTime>((ref, month) async {
+      ref.watch(ledgerChangesProvider);
 
       final budgetingService = ref.watch(budgetingServiceProvider);
       final income = await budgetingService.calculateTotalIncomeForMonth(month);
@@ -20,10 +20,9 @@ final monthlyStatsProvider = FutureProvider.autoDispose
       return {'income': income, 'spending': spending};
     });
 
-/// Provider for the selected month on home screen
+/// The month shown on the home screen (first day, UTC midnight).
 final selectedHomeMonthProvider = StateProvider<DateTime>((ref) {
-  final now = DateTime.now();
-  return DateTime(now.year, now.month);
+  return CalendarDate.startOfMonthUtc(CalendarDate.today());
 });
 
 class DashboardStatsWidget extends ConsumerWidget {
@@ -34,7 +33,7 @@ class DashboardStatsWidget extends ConsumerWidget {
     final selectedMonth = ref.watch(selectedHomeMonthProvider);
     final statsAsync = ref.watch(monthlyStatsProvider(selectedMonth));
     final l10n = AppLocalizations.of(context)!;
-    final currency = ref.watch(settingsProvider).currency;
+    final fmt = ref.watch(appFormatterProvider);
     final theme = Theme.of(context);
 
     return Column(
@@ -45,47 +44,47 @@ class DashboardStatsWidget extends ConsumerWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.chevron_left),
+              tooltip: AppLocalizations.of(context)!.previousMonth,
               onPressed: () {
-                ref.read(selectedHomeMonthProvider.notifier).state = DateTime(
-                  selectedMonth.year,
-                  selectedMonth.month - 1,
-                );
+                ref.read(selectedHomeMonthProvider.notifier).state =
+                    DateTime.utc(selectedMonth.year, selectedMonth.month - 1);
               },
             ),
-            TextButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedMonth,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                  initialDatePickerMode: DatePickerMode.year,
-                );
-                if (picked != null) {
-                  ref.read(selectedHomeMonthProvider.notifier).state = DateTime(
-                    picked.year,
-                    picked.month,
+            Flexible(
+              child: TextButton(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: CalendarDate.toLocalDay(selectedMonth),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    initialDatePickerMode: DatePickerMode.year,
                   );
-                }
-              },
-              child: Text(
-                DateFormat.yMMMM().format(selectedMonth),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  if (picked != null) {
+                    ref.read(selectedHomeMonthProvider.notifier).state =
+                        DateTime.utc(picked.year, picked.month);
+                  }
+                },
+                child: Text(
+                  fmt.formatMonthYear(selectedMonth),
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right),
+              tooltip: AppLocalizations.of(context)!.nextMonth,
               onPressed: () {
-                final now = DateTime.now();
-                final currentMonth = DateTime(now.year, now.month);
+                final currentMonth = CalendarDate.startOfMonthUtc(
+                  CalendarDate.today(),
+                );
                 // Don't allow navigating past current month
                 if (selectedMonth.isBefore(currentMonth)) {
-                  ref.read(selectedHomeMonthProvider.notifier).state = DateTime(
-                    selectedMonth.year,
-                    selectedMonth.month + 1,
-                  );
+                  ref.read(selectedHomeMonthProvider.notifier).state =
+                      DateTime.utc(selectedMonth.year, selectedMonth.month + 1);
                 }
               },
             ),
@@ -103,7 +102,6 @@ class DashboardStatsWidget extends ConsumerWidget {
                   icon: Icons.arrow_downward,
                   iconColor: Colors.green,
                   amountColor: Colors.green,
-                  currencyCode: currency,
                 ),
                 const SizedBox(width: 16),
                 DashboardStatsCard(
@@ -112,14 +110,13 @@ class DashboardStatsWidget extends ConsumerWidget {
                   icon: Icons.arrow_upward,
                   iconColor: Colors.red,
                   amountColor: Colors.red,
-                  currencyCode: currency,
                 ),
               ],
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) =>
-              Text('Error', style: TextStyle(color: theme.colorScheme.error)),
+              LoadErrorView(error: err, stackTrace: stack, compact: true),
         ),
       ],
     );

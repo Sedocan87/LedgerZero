@@ -1,61 +1,89 @@
 # Scheduled Transactions
 
-LedgerZero supports scheduled transactions to automate recurring expenses and income.
+Recurring income and expenses that the app turns into real transactions
+when they are due. Managed under Settings > Scheduled Transactions
+(`/settings/scheduled-transactions`).
 
-## Recurrence Rules
+Code: `ScheduledTransactionService`
+(`lib/domain/services/scheduled_transaction_service.dart`), recurrence maths
+in `lib/domain/extensions/scheduled_transaction_extensions.dart`
+(`RecurrenceMath`, `ScheduledTransaction.advanced()`).
 
-Scheduled transactions can be configured with the following recurrence frequencies:
-- **Daily**: Repeats every N days.
-- **Weekly**: Repeats every N weeks.
-- **Monthly**: Repeats every N months.
-- **Yearly**: Repeats every N years.
+## What a schedule holds
 
-The `interval` field determines the N value (e.g., every 2 weeks).
+Table `scheduled_transactions` (all columns except `id` and `auto_approve`
+are nullable):
 
-## Month-End Handling
+| Column | Meaning |
+| --- | --- |
+| `account_id`, `payee_id`, `category_id` | Copied to each occurrence. Schedules cannot be transfers or splits. |
+| `amount` | Minor units, signed (negative = outflow). Never 0 or empty: the form and `ScheduledTransactionService.saveScheduledTransaction` reject it (`ValidationException`, `TransactionValidationError.zeroAmount`, as for transactions). |
+| `memo` | Copied to each occurrence. |
+| `frequency` | `daily`, `weekly`, `monthly`, `yearly` (default monthly). |
+| `interval` | Every N periods (default 1). |
+| `next_date` | Calendar day (UTC midnight) of the next occurrence; `NULL` = finished. |
+| `end_date` | Optional last allowed date. |
+| `occurrence_count` | Optional number of remaining occurrences. |
+| `anchor_day` | Day of month (1-31) monthly/yearly schedules aim for. |
+| `auto_approve` | Whether occurrences are created approved (default false). |
 
-When scheduling monthly transactions, the system handles month-end overflows intelligently:
-- If a transaction is scheduled for the 31st, and the next month only has 30 days (or 28/29 for February), the system automatically adjusts the date to the last day of that month.
-- Example: Jan 31 + 1 month -> Feb 28 (or 29).
+## Recurrence
 
-## Processing Logic
+* Daily and weekly add `N` or `7 * N` days on the calendar
+  (`DateTime.utc(y, m, d + n)`), so daylight saving never shifts a day.
+* Monthly and yearly aim for `anchor_day` and clamp it to the month length:
+  an anchor of 31 gives Jan 31, Feb 28/29, Mar 31, Apr 30. A yearly Feb 29
+  gives Feb 28 in common years. The anchor is pinned on the first advance,
+  so a short month does not lose the original day.
+* `advanced()` moves `next_date` to the next occurrence and decrements
+  `occurrence_count` if set. The schedule finishes (`next_date = NULL`) when
+  the count reaches 0 or the next date would be after `end_date`.
 
-The `ScheduledTransactionService` runs periodically (typically on app startup) to process due transactions.
+## Processing due occurrences
 
-### Catch-Up Logic
-If the application is not opened for a period of time, the service "catches up" on all missed occurrences.
-- It calculates every occurrence date from the last processed date up to the current date.
-- It creates a real transaction for each missed occurrence.
-- This ensures that account balances remain accurate even if the app wasn't used for months.
+`processDueTransactions` runs after every unlock (`_initializeServices` in
+`lib/app/app.dart`). For each schedule with `next_date <= today` (the user's
+local calendar day):
 
-### Optimization
-To ensure performance, the service:
-1. Queries only transactions that are due (on or before today).
-2. Calculates all necessary catch-up transactions in memory.
-3. Inserts all new transactions in a single batch operation.
-4. Updates the scheduled transaction record only once with the final state (next future date).
+1. In one unit of work per schedule: re-read the schedule, then for every
+   due date create an occurrence and advance the schedule, and store the
+   advanced schedule. A failing schedule is rolled back and logged; the
+   others still run. A stored schedule with amount 0 or none (e.g. written
+   by an older version) fails validation here and creates nothing.
+2. Each occurrence has the deterministic id
+   `DeterministicId.scheduledOccurrence(scheduleId, date)` (UUIDv5) and is
+   inserted with insert-or-ignore. A second run, a crash in between or a
+   second device processing the same schedule never duplicates an
+   occurrence, and an occurrence the user deleted is not recreated.
+3. Occurrences are `uncleared`, `approved = auto_approve`, and have the
+   schedule's memo. Active rules run in automatic mode (see
+   [RULES.md](RULES.md)). If the result has neither memo nor payee, a
+   localised "Scheduled transaction" memo is used.
 
-## Auto-Approval
+Missed occurrences are caught up: a monthly schedule not processed for
+three months creates three transactions on their original dates.
 
-Scheduled transactions have an `autoApprove` flag.
-- **True**: Created transactions are marked as `approved: true`. They immediately affect the budget and account balance.
-- **False**: Created transactions are marked as `approved: false`. They appear in the transaction list but require user review before fully affecting the budget (depending on configuration, though typically unapproved transactions still affect balance but are flagged).
+`approved` does not affect balances or budget numbers; unapproved
+occurrences count immediately and are only marked in the list.
 
-## Notifications
+## Skip
 
-The system schedules a local notification to alert the user 1 day before a scheduled transaction is due (at 9:00 AM).
-- If the next occurrence is in the future, a notification is scheduled.
-- If the schedule is finished, any pending notification is cancelled.
+The list item menu offers Skip (`ScheduledTransactionService.skipOccurrence`):
+the repository advances the schedule by one occurrence (same `advanced()`
+step) without creating a transaction. The pending reminder is then
+cancelled and re-scheduled for the new next occurrence, or only cancelled
+when skipping finished the schedule.
 
-## Database Schema
+## Reminders
 
-`scheduled_transactions` table:
-- `id`: Unique identifier.
-- `account_id`, `payee_id`, `category_id`: Foreign keys.
-- `amount`: Transaction amount.
-- `frequency`: Enum (daily, weekly, monthly, yearly).
-- `interval`: Integer.
-- `next_date`: The date of the next occurrence.
-- `end_date`: Optional end date.
-- `occurrence_count`: Optional number of remaining occurrences.
-- `auto_approve`: Boolean.
+* One local notification per schedule, the day before `next_date` at 9:00
+  local time, if that moment is still in the future. Its id is derived from
+  the schedule id, so re-scheduling replaces it.
+* Off when Settings > Notification Settings > Scheduled Transactions is off.
+* The text shows no amount unless the user enabled amounts in notifications
+  (Settings > Security Settings).
+* After processing, reminders are re-scheduled for every schedule
+  (`rescheduleReminders`); saving a schedule (both the schedule form and
+  the recurring-income form go through `saveScheduledTransaction`) and
+  skipping an occurrence update its reminder; deleting a schedule cancels
+  it.

@@ -22,8 +22,8 @@ class Category {
   /// The type of goal for this category.
   final GoalType? goalType;
 
-  /// The target amount for the goal.
-  final double? targetAmount;
+  /// The target amount for the goal, in minor units.
+  final int? targetAmount;
 
   /// The target date for the goal.
   final DateTime? targetDate;
@@ -60,7 +60,7 @@ class Category {
     bool? isHidden,
     int? sortOrder,
     GoalType? goalType,
-    double? targetAmount,
+    int? targetAmount,
     DateTime? targetDate,
     int? color,
     String? icon,
@@ -90,7 +90,7 @@ class Category {
       isHidden: json['is_hidden'] as bool? ?? false,
       sortOrder: json['sort_order'] as int?,
       goalType: GoalType.fromName(json['goal_type'] as String?),
-      targetAmount: (json['target_amount'] as num?)?.toDouble(),
+      targetAmount: (json['target_amount'] as num?)?.toInt(),
       targetDate: json['target_date'] != null
           ? DateTime.parse(json['target_date'] as String)
           : null,

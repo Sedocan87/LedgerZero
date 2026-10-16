@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 
 class ErrorView extends StatelessWidget {
@@ -47,7 +48,7 @@ class ErrorView extends StatelessWidget {
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.lg),
               AppButton.primary(
-                label: retryLabel ?? 'Retry',
+                label: retryLabel ?? AppLocalizations.of(context)?.retry ?? '',
                 onPressed: onRetry,
               ),
             ],

@@ -1,8 +1,9 @@
-// ignore_for_file: avoid_print
 import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/data/database/database.dart';
+import 'package:ledger_zero/data/database/drift_unit_of_work.dart';
+import 'package:ledger_zero/data/repositories/account_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_template_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/category_repository_impl.dart';
@@ -29,6 +30,8 @@ void main() {
       budgetRepository: budgetRepository,
       categoryRepository: categoryRepository,
       budgetTemplateRepository: budgetTemplateRepository,
+      accountRepository: AccountRepositoryImpl(database.accountsDao),
+      unitOfWork: DriftUnitOfWork(database),
     );
   });
 
@@ -54,12 +57,12 @@ void main() {
     // Both start at the same time.
     final future1 = budgetingService.setCategoryBudgetedAmount(
       'cat_1',
-      100.0,
+      10000,
       month,
     );
     final future2 = budgetingService.setCategoryBudgetedAmount(
       'cat_1',
-      200.0,
+      20000,
       month,
     );
 
@@ -69,7 +72,6 @@ void main() {
     // Check final state
     final budgets = await database.budgetsDao.getBudgetsForMonth('2025-01');
     expect(budgets.length, 1);
-
-    print('Final budgeted amount: ${budgets.first.budgeted}');
+    expect(budgets.single.budgeted, anyOf(10000, 20000));
   });
 }

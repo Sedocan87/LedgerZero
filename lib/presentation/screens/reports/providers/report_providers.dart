@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/report_note.dart';
 import 'package:ledger_zero/domain/extensions/transaction_extensions.dart';
+import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
-import 'package:ledger_zero/app/theme.dart';
+import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 
+/// Budgeted vs. spent amounts (minor units) of one category.
 class BudgetVsActualItem {
   final String categoryName;
-  final double budgeted;
-  final double actual;
+  final int budgeted;
+  final int actual;
 
   BudgetVsActualItem({
     required this.categoryName,
@@ -19,13 +21,25 @@ class BudgetVsActualItem {
   });
 }
 
+/// Half-open UTC query bounds `[start, endExclusive)` for a report range
+/// whose `start` and `end` are inclusive calendar days.
+({DateTime start, DateTime endExclusive}) reportQueryBounds(
+  DateTimeRange range,
+) => (
+  start: CalendarDate.fromLocalPick(range.start),
+  endExclusive: CalendarDate.endOfDayUtc(range.end),
+);
+
 /// Provider for the selected date range in reports.
+///
+/// `start` and `end` are inclusive calendar days (UTC midnight).
 /// Defaults to the current year.
 final reportDateRangeProvider = StateProvider<DateTimeRange>((ref) {
-  final now = DateTime.now();
-  final start = DateTime(now.year, 1, 1);
-  final end = DateTime(now.year, 12, 31, 23, 59, 59);
-  return DateTimeRange(start: start, end: end);
+  final year = CalendarDate.today().year;
+  return DateTimeRange(
+    start: DateTime.utc(year, 1, 1),
+    end: DateTime.utc(year, 12, 31),
+  );
 });
 
 /// Provider for the selected categories filter in reports.
@@ -33,193 +47,178 @@ final reportDateRangeProvider = StateProvider<DateTimeRange>((ref) {
 final reportCategoryFilterProvider = StateProvider<Set<String>>((ref) => {});
 
 /// Provider for Spending by Category data.
-/// Returns a Map of Category Name -> Amount.
-final spendingByCategoryProvider = FutureProvider<Map<String, double>>((
-  ref,
-) async {
-  final range = ref.watch(reportDateRangeProvider);
-  final categoryFilter = ref.watch(reportCategoryFilterProvider);
-  final transactionRepo = ref.watch(transactionRepositoryProvider);
-  final categoryRepo = ref.watch(categoryRepositoryProvider);
+/// Returns a Map of Category Name -> spent amount (positive minor units).
+final spendingByCategoryProvider = FutureProvider.autoDispose<Map<String, int>>(
+  (ref) async {
+    ref.watch(ledgerChangesProvider);
+    final range = ref.watch(reportDateRangeProvider);
+    final categoryFilter = ref.watch(reportCategoryFilterProvider);
+    final transactionRepo = ref.watch(transactionRepositoryProvider);
+    final categoryRepo = ref.watch(categoryRepositoryProvider);
+    final l10n = ref.watch(appLocalizationsProvider);
+    final bounds = reportQueryBounds(range);
 
-  // Get expenses by category ID
-  final expenseMap = await transactionRepo.getExpenseSumsByDateRange(
-    range.start,
-    range.end,
-  );
+    // Get expenses by category ID
+    final expenseMap = await transactionRepo.getCategoryActivitySums(
+      bounds.start,
+      bounds.endExclusive,
+    );
 
-  // Get all categories to map IDs to Names
-  final categories = await categoryRepo.getAllCategories();
-  final categoryNameMap = {for (var c in categories) c.id: c.name};
+    // Get all categories to map IDs to Names
+    final categories = await categoryRepo.getAllCategories();
+    final categoryNameMap = {for (var c in categories) c.id: c.name};
 
-  final result = <String, double>{};
-  for (var entry in expenseMap.entries) {
-    // Apply filter
-    if (categoryFilter.isNotEmpty && !categoryFilter.contains(entry.key)) {
-      continue;
+    final result = <String, int>{};
+    for (var entry in expenseMap.entries) {
+      // Apply filter
+      if (categoryFilter.isNotEmpty && !categoryFilter.contains(entry.key)) {
+        continue;
+      }
+
+      final name = categoryNameMap[entry.key] ?? l10n.unknown;
+      // Expense sums are sums of signed amounts (negative for outflow).
+      // We take absolute value for the chart.
+      final amount = entry.value.abs();
+
+      if (amount > 0) {
+        result[name] = (result[name] ?? 0) + amount;
+      }
     }
 
-    final name = categoryNameMap[entry.key] ?? 'Unknown';
-    // Expense sums are sums of signed amounts (negative for outflow).
-    // We take absolute value for the chart.
-    final amount = entry.value.abs();
-
-    if (amount > 0) {
-      result[name] = (result[name] ?? 0) + amount;
-    }
-  }
-
-  return result;
-});
+    return result;
+  },
+);
 
 /// Provider for Income vs Expense History.
-/// Returns a list of ChartSeries (Income, Expense).
-final incomeVsExpenseHistoryProvider = FutureProvider<List<ChartSeries>>((
+/// Returns a list of ChartSeries (Income, Expense) with one point per month.
+final incomeVsExpenseHistoryProvider =
+    FutureProvider.autoDispose<List<ChartSeries>>((ref) async {
+      ref.watch(ledgerChangesProvider);
+      final range = ref.watch(reportDateRangeProvider);
+      final transactionRepo = ref.watch(transactionRepositoryProvider);
+      final l10n = ref.watch(appLocalizationsProvider);
+      final bounds = reportQueryBounds(range);
+
+      // A split counts through its children (categories), never twice.
+      final transactions = await transactionRepo.getTransactionsByDateRange(
+        bounds.start,
+        bounds.endExclusive,
+        excludeSplitParents: true,
+      );
+
+      // Group by month (minor units)
+      final incomePoints = <DateTime, int>{};
+      final expensePoints = <DateTime, int>{};
+
+      for (var t in transactions) {
+        if (t.isTransfer) {
+          continue; // Skip transfers
+        }
+
+        final monthDate = CalendarDate.startOfMonthUtc(t.date);
+
+        // Income: uncategorised inflows (they flow into To Be Budgeted).
+        final isIncome = t.amount > 0 && t.categoryId == null;
+
+        if (isIncome) {
+          incomePoints[monthDate] = (incomePoints[monthDate] ?? 0) + t.amount;
+        } else {
+          expensePoints[monthDate] = (expensePoints[monthDate] ?? 0) + t.amount;
+        }
+      }
+
+      // Convert to sorted lists
+      final sortedDates = {...incomePoints.keys, ...expensePoints.keys}.toList()
+        ..sort();
+
+      final incomeSeriesPoints = <TimeSeriesPoint>[];
+      final expenseSeriesPoints = <TimeSeriesPoint>[];
+
+      for (var date in sortedDates) {
+        incomeSeriesPoints.add(TimeSeriesPoint(date, incomePoints[date] ?? 0));
+        final netExpense = -(expensePoints[date] ?? 0);
+        expenseSeriesPoints.add(
+          TimeSeriesPoint(date, netExpense < 0 ? 0 : netExpense),
+        );
+      }
+
+      return [
+        ChartSeries(
+          name: l10n.reportIncomeSeries,
+          kind: ChartSeriesKind.income,
+          points: incomeSeriesPoints,
+        ),
+        ChartSeries(
+          name: l10n.reportExpenseSeries,
+          kind: ChartSeriesKind.expense,
+          points: expenseSeriesPoints,
+        ),
+      ];
+    });
+
+/// Net worth (sum of all account balances) over the range: one point at
+/// the range start, then one at the end of every month (the last one at the
+/// range end). Computed from one balance sum and one grouped-by-month SQL
+/// query, so no transaction rows are loaded into memory.
+final netWorthHistoryProvider = FutureProvider.autoDispose<List<ChartSeries>>((
   ref,
 ) async {
-  final range = ref.watch(reportDateRangeProvider);
-  final transactionRepo = ref.watch(transactionRepositoryProvider);
-
-  final transactions = await transactionRepo.getTransactionsByDateRange(
-    range.start,
-    range.end,
-  );
-
-  // Group by Month
-  final incomePoints = <DateTime, double>{};
-  final expensePoints = <DateTime, double>{};
-
-  // Helper to normalize date to month start
-  DateTime toMonthStart(DateTime date) => DateTime(date.year, date.month, 1);
-
-  for (var t in transactions) {
-    if (t.isTransfer) {
-      continue; // Skip transfers
-    }
-
-    final monthDate = toMonthStart(t.date);
-
-    // Income is defined as positive amount with no category (To Be Budgeted)
-    final isIncome = t.amount > 0 && t.categoryId == null;
-
-    if (isIncome) {
-      incomePoints[monthDate] = (incomePoints[monthDate] ?? 0) + t.amount;
-    } else {
-      expensePoints[monthDate] = (expensePoints[monthDate] ?? 0) + t.amount;
-    }
-  }
-
-  // Convert to sorted lists
-  final sortedDates = {...incomePoints.keys, ...expensePoints.keys}.toList()
-    ..sort();
-
-  final incomeSeriesPoints = <TimeSeriesPoint>[];
-  final expenseSeriesPoints = <TimeSeriesPoint>[];
-
-  for (var date in sortedDates) {
-    incomeSeriesPoints.add(TimeSeriesPoint(date, incomePoints[date] ?? 0));
-    final netExpense = -(expensePoints[date] ?? 0);
-    expenseSeriesPoints.add(
-      TimeSeriesPoint(date, netExpense < 0 ? 0 : netExpense),
-    );
-  }
-
-  return [
-    ChartSeries(
-      name: 'Income',
-      color: AppColors.primaryLight,
-      points: incomeSeriesPoints,
-    ),
-    ChartSeries(
-      name: 'Expenses',
-      color: AppColors.errorLight,
-      points: expenseSeriesPoints,
-    ),
-  ];
-});
-
-/// Provider for Net Worth History.
-final netWorthHistoryProvider = FutureProvider<List<ChartSeries>>((ref) async {
+  ref.watch(ledgerChangesProvider);
   final range = ref.watch(reportDateRangeProvider);
   final accountRepo = ref.watch(accountRepositoryProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
+  final l10n = ref.watch(appLocalizationsProvider);
+  final bounds = reportQueryBounds(range);
 
   final accounts = await accountRepo.getAllAccounts();
-  final allTransactions = await transactionRepo.getAllTransactions();
-
-  // Sort transactions by date
-  allTransactions.sort((a, b) => a.date.compareTo(b.date));
-
-  // Calculate total starting balance
-  double currentBalance = accounts.fold(
-    0.0,
-    (sum, a) => sum + a.startingBalance,
+  var balance = accounts.fold<int>(0, (sum, a) => sum + a.startingBalance);
+  balance += await transactionRepo.getBalanceChangeSum(bounds.start);
+  final monthly = await transactionRepo.getMonthlyBalanceChanges(
+    bounds.start,
+    bounds.endExclusive,
   );
 
-  final points = <TimeSeriesPoint>[];
-
-  // Apply transactions before range start
-  final transactionsBefore = allTransactions.where(
-    (t) => t.date.isBefore(range.start),
-  );
-  for (var t in transactionsBefore) {
-    currentBalance += t.amount;
-  }
-
-  // Initial point at start of range
-  points.add(TimeSeriesPoint(range.start, currentBalance));
-
-  final transactionsInRange = allTransactions
-      .where((t) => !t.date.isBefore(range.start) && !t.date.isAfter(range.end))
-      .toList();
-
-  DateTime? lastDate;
-
-  for (var t in transactionsInRange) {
-    currentBalance += t.amount;
-
-    // Only add one point per day
-    final date = DateTime(t.date.year, t.date.month, t.date.day);
-    if (lastDate != date) {
-      points.add(TimeSeriesPoint(date, currentBalance));
-      lastDate = date;
-    } else {
-      points.removeLast();
-      points.add(TimeSeriesPoint(date, currentBalance));
-    }
-  }
-
-  if (points.isNotEmpty && points.last.date.isBefore(range.end)) {
-    points.add(TimeSeriesPoint(range.end, currentBalance));
-  } else if (points.isEmpty) {
-    points.add(TimeSeriesPoint(range.end, currentBalance));
+  final rangeEnd = CalendarDate.normalize(range.end);
+  final points = <TimeSeriesPoint>[TimeSeriesPoint(bounds.start, balance)];
+  var month = CalendarDate.startOfMonthUtc(bounds.start);
+  while (!month.isAfter(rangeEnd)) {
+    balance += monthly[CalendarDate.monthKey(month)] ?? 0;
+    final lastDay = CalendarDate.endOfMonthUtc(
+      month,
+    ).subtract(const Duration(days: 1));
+    points.add(
+      TimeSeriesPoint(lastDay.isAfter(rangeEnd) ? rangeEnd : lastDay, balance),
+    );
+    month = CalendarDate.endOfMonthUtc(month);
   }
 
   return [
     ChartSeries(
-      name: 'Net Worth',
-      color: AppColors.tertiaryLight,
+      name: l10n.netWorth,
+      kind: ChartSeriesKind.netWorth,
       points: points,
     ),
   ];
 });
 
 /// Provider for Spending Trends (Monthly Spending Totals).
-/// Returns a Map of Month Start Date -> Total Expense Amount.
-final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((
+/// Returns a Map of month start (UTC) -> total spent (positive minor units).
+final spendingTrendsProvider = FutureProvider.autoDispose<Map<DateTime, int>>((
   ref,
 ) async {
+  ref.watch(ledgerChangesProvider);
   final range = ref.watch(reportDateRangeProvider);
   final categoryFilter = ref.watch(reportCategoryFilterProvider);
   final transactionRepo = ref.watch(transactionRepositoryProvider);
+  final bounds = reportQueryBounds(range);
 
+  // A split counts through its children (categories), never twice.
   final transactions = await transactionRepo.getTransactionsByDateRange(
-    range.start,
-    range.end,
+    bounds.start,
+    bounds.endExclusive,
+    excludeSplitParents: true,
   );
-  final trends = <DateTime, double>{};
-
-  DateTime toMonthStart(DateTime date) => DateTime(date.year, date.month, 1);
+  final trends = <DateTime, int>{};
 
   for (var t in transactions) {
     if (t.isTransfer) {
@@ -233,112 +232,105 @@ final spendingTrendsProvider = FutureProvider<Map<DateTime, double>>((
 
     final isIncome = t.amount > 0 && t.categoryId == null;
     if (!isIncome) {
-      final monthDate = toMonthStart(t.date);
+      final monthDate = CalendarDate.startOfMonthUtc(t.date);
       trends[monthDate] = (trends[monthDate] ?? 0) + t.amount;
     }
   }
 
-  final result = <DateTime, double>{};
-  for (var entry in trends.entries) {
-    if (entry.value < 0) {
-      result[entry.key] = entry.value.abs();
-    } else {
-      result[entry.key] = 0.0;
-    }
-  }
-  return result;
+  return {
+    for (final entry in trends.entries)
+      entry.key: entry.value < 0 ? -entry.value : 0,
+  };
 });
 
 /// Provider for Budget vs Actual data.
-final budgetVsActualProvider = FutureProvider<List<BudgetVsActualItem>>((
-  ref,
-) async {
-  final range = ref.watch(reportDateRangeProvider);
-  final categoryFilter = ref.watch(reportCategoryFilterProvider);
-  final budgetRepo = ref.watch(budgetRepositoryProvider);
-  final transactionRepo = ref.watch(transactionRepositoryProvider);
-  final categoryRepo = ref.watch(categoryRepositoryProvider);
+final budgetVsActualProvider =
+    FutureProvider.autoDispose<List<BudgetVsActualItem>>((ref) async {
+      ref.watch(ledgerChangesProvider);
+      final range = ref.watch(reportDateRangeProvider);
+      final categoryFilter = ref.watch(reportCategoryFilterProvider);
+      final budgetRepo = ref.watch(budgetRepositoryProvider);
+      final transactionRepo = ref.watch(transactionRepositoryProvider);
+      final categoryRepo = ref.watch(categoryRepositoryProvider);
+      final l10n = ref.watch(appLocalizationsProvider);
+      final bounds = reportQueryBounds(range);
 
-  // Since budgets are stored monthly, we iterate through months in the range
-  final startMonth = DateTime(range.start.year, range.start.month);
-  final endMonth = DateTime(range.end.year, range.end.month);
+      // Since budgets are stored monthly, we iterate through months in the range
+      final endMonth = CalendarDate.startOfMonthUtc(range.end);
 
-  final budgetedMap = <String, double>{}; // CategoryId -> Total Budgeted
+      final budgetedMap = <String, int>{}; // CategoryId -> Total Budgeted
 
-  DateTime current = startMonth;
-  while (!current.isAfter(endMonth)) {
-    final monthStr = DateFormat('yyyy-MM').format(current);
-    final budgets = await budgetRepo.getBudgetsForMonth(monthStr);
+      var current = CalendarDate.startOfMonthUtc(range.start);
+      while (!current.isAfter(endMonth)) {
+        final budgets = await budgetRepo.getBudgetsForMonth(
+          CalendarDate.monthKey(current),
+        );
 
-    for (var b in budgets) {
-      if (b.categoryId != null) {
-        budgetedMap[b.categoryId!] =
-            (budgetedMap[b.categoryId!] ?? 0) + b.budgeted;
+        for (var b in budgets) {
+          if (b.categoryId != null) {
+            budgetedMap[b.categoryId!] =
+                (budgetedMap[b.categoryId!] ?? 0) + b.budgeted;
+          }
+        }
+
+        current = CalendarDate.endOfMonthUtc(current);
       }
-    }
 
-    current = DateTime(current.year, current.month + 1);
-  }
-
-  // Actual spending (Expenses)
-  final expenseMap = await transactionRepo.getExpenseSumsByDateRange(
-    range.start,
-    range.end,
-  );
-
-  final categories = await categoryRepo.getAllCategories();
-  final categoryNameMap = {for (var c in categories) c.id: c.name};
-
-  final allCategoryIds = {...budgetedMap.keys, ...expenseMap.keys};
-  final items = <BudgetVsActualItem>[];
-
-  for (var catId in allCategoryIds) {
-    if (categoryFilter.isNotEmpty && !categoryFilter.contains(catId)) {
-      continue;
-    }
-
-    final budgeted = budgetedMap[catId] ?? 0.0;
-    final actual = (expenseMap[catId] ?? 0.0).abs(); // Spending is negative
-
-    if (budgeted > 0 || actual > 0) {
-      items.add(
-        BudgetVsActualItem(
-          categoryName: categoryNameMap[catId] ?? 'Unknown',
-          budgeted: budgeted,
-          actual: actual,
-        ),
+      // Actual spending (Expenses)
+      final expenseMap = await transactionRepo.getCategoryActivitySums(
+        bounds.start,
+        bounds.endExclusive,
       );
-    }
-  }
 
-  // Sort by highest budgeted
-  items.sort((a, b) => b.budgeted.compareTo(a.budgeted));
+      final categories = await categoryRepo.getAllCategories();
+      final categoryNameMap = {for (var c in categories) c.id: c.name};
 
-  return items;
-});
+      final allCategoryIds = {...budgetedMap.keys, ...expenseMap.keys};
+      final items = <BudgetVsActualItem>[];
+
+      for (var catId in allCategoryIds) {
+        if (categoryFilter.isNotEmpty && !categoryFilter.contains(catId)) {
+          continue;
+        }
+
+        final budgeted = budgetedMap[catId] ?? 0;
+        final actual = (expenseMap[catId] ?? 0).abs(); // Spending is negative
+
+        if (budgeted > 0 || actual > 0) {
+          items.add(
+            BudgetVsActualItem(
+              categoryName: categoryNameMap[catId] ?? l10n.unknown,
+              budgeted: budgeted,
+              actual: actual,
+            ),
+          );
+        }
+      }
+
+      // Sort by highest budgeted
+      items.sort((a, b) => b.budgeted.compareTo(a.budgeted));
+
+      return items;
+    });
 
 /// Provider for Report Notes in the selected range.
-final reportNotesListProvider = FutureProvider<List<ReportNote>>((ref) async {
+final reportNotesListProvider = FutureProvider.autoDispose<List<ReportNote>>((
+  ref,
+) async {
   final range = ref.watch(reportDateRangeProvider);
   final noteRepo = ref.watch(reportNoteRepositoryProvider);
 
   final allNotes = await noteRepo
       .getAllNotes(); // Optimized query would be better but get all is fine for now
 
-  final startMonth = DateTime(range.start.year, range.start.month);
-  final endMonth = DateTime(range.end.year, range.end.month);
+  final startKey = CalendarDate.monthKey(range.start);
+  final endKey = CalendarDate.monthKey(range.end);
 
-  // Filter notes by date string YYYY-MM
+  // Filter notes by month key yyyy-MM (keys compare lexicographically)
   return allNotes.where((note) {
     try {
-      final parts = note.date.split('-');
-      if (parts.length == 2) {
-        final year = int.parse(parts[0]);
-        final month = int.parse(parts[1]);
-        final noteDate = DateTime(year, month);
-        return !noteDate.isBefore(startMonth) && !noteDate.isAfter(endMonth);
-      }
-      return false;
+      final key = CalendarDate.monthKey(CalendarDate.parseMonthKey(note.date));
+      return key.compareTo(startKey) >= 0 && key.compareTo(endKey) <= 0;
     } catch (_) {
       return false;
     }
@@ -346,39 +338,44 @@ final reportNotesListProvider = FutureProvider<List<ReportNote>>((ref) async {
 });
 
 /// Provider for Top Payees.
-/// Returns list of (Payee Name, Amount).
-final topPayeesProvider = FutureProvider<List<MapEntry<String, double>>>((
-  ref,
-) async {
-  final range = ref.watch(reportDateRangeProvider);
-  final transactionRepo = ref.watch(transactionRepositoryProvider);
-  final payeeRepo = ref.watch(payeeRepositoryProvider);
+/// Returns list of (Payee Name, spent amount in positive minor units).
+final topPayeesProvider =
+    FutureProvider.autoDispose<List<MapEntry<String, int>>>((ref) async {
+      ref.watch(ledgerChangesProvider);
+      final range = ref.watch(reportDateRangeProvider);
+      final transactionRepo = ref.watch(transactionRepositoryProvider);
+      final payeeRepo = ref.watch(payeeRepositoryProvider);
+      final l10n = ref.watch(appLocalizationsProvider);
+      final bounds = reportQueryBounds(range);
 
-  final transactions = await transactionRepo.getTransactionsByDateRange(
-    range.start,
-    range.end,
-  );
-  final payees = await payeeRepo.getAllPayees();
-  final payeeNameMap = {for (var p in payees) p.id: p.name};
+      // A split counts through its children (categories), never twice.
+      final transactions = await transactionRepo.getTransactionsByDateRange(
+        bounds.start,
+        bounds.endExclusive,
+        excludeSplitParents: true,
+      );
+      final payees = await payeeRepo.getAllPayees();
+      final payeeNameMap = {for (var p in payees) p.id: p.name};
 
-  final payeeTotals = <String, double>{};
+      final payeeTotals = <String, int>{};
 
-  for (var t in transactions) {
-    if (t.isTransfer) {
-      continue;
-    }
+      for (var t in transactions) {
+        if (t.isTransfer) {
+          continue;
+        }
 
-    // Only count outflows (spending)
-    if (t.amount < 0) {
-      final payeeName = t.payeeId != null
-          ? (payeeNameMap[t.payeeId!] ?? 'Unknown')
-          : 'No Payee';
-      payeeTotals[payeeName] = (payeeTotals[payeeName] ?? 0) + t.amount.abs();
-    }
-  }
+        // Only count outflows (spending)
+        if (t.amount < 0) {
+          final payeeName = t.payeeId != null
+              ? (payeeNameMap[t.payeeId!] ?? l10n.unknown)
+              : l10n.transactionNoPayee;
+          payeeTotals[payeeName] =
+              (payeeTotals[payeeName] ?? 0) + t.amount.abs();
+        }
+      }
 
-  final sortedList = payeeTotals.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
+      final sortedList = payeeTotals.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
 
-  return sortedList.take(10).toList();
-});
+      return sortedList.take(10).toList();
+    });

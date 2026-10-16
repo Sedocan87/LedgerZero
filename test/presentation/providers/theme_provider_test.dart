@@ -6,47 +6,61 @@ import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  late SharedPreferences sharedPreferences;
-
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    sharedPreferences = await SharedPreferences.getInstance();
-  });
+  Future<ProviderContainer> container([
+    Map<String, Object> saved = const {},
+  ]) async {
+    SharedPreferences.setMockInitialValues(saved);
+    final prefs = await SharedPreferences.getInstance();
+    final c = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    );
+    addTearDown(c.dispose);
+    return c;
+  }
 
   test(
-    'ThemeNotifier initializes with system theme when no preference saved',
-    () {
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-        ],
-      );
-
-      expect(container.read(themeProvider), ThemeMode.system);
+    'defaults: follow the system, no high contrast, animations on',
+    () async {
+      final state = (await container()).read(themeProvider);
+      expect(state.mode, ThemeMode.system);
+      expect(state.isHighContrast, isFalse);
+      expect(state.reducedMotion, isFalse);
     },
   );
 
-  test('ThemeNotifier initializes with saved theme', () async {
-    await sharedPreferences.setString('theme_mode', 'ThemeMode.dark');
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
-    );
-
-    expect(container.read(themeProvider), ThemeMode.dark);
+  test('restores the saved settings', () async {
+    final state = (await container({
+      'theme_mode': 'ThemeMode.dark',
+      'high_contrast_mode': true,
+      'reduced_motion_mode': true,
+    })).read(themeProvider);
+    expect(state.mode, ThemeMode.dark);
+    expect(state.isHighContrast, isTrue);
+    expect(state.reducedMotion, isTrue);
   });
 
-  test('ThemeNotifier updates theme and saves to preferences', () {
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
+  test('an unknown saved value falls back to the system mode', () async {
+    final c = await container({'theme_mode': 'purple'});
+    expect(c.read(themeProvider).mode, ThemeMode.system);
+  });
+
+  test('changes are applied and survive a restart', () async {
+    final c = await container();
+    c.read(themeProvider.notifier)
+      ..setTheme(ThemeMode.light)
+      ..toggleHighContrast(true)
+      ..toggleReducedMotion(true);
+    expect(c.read(themeProvider).mode, ThemeMode.light);
+
+    // A new container reads what was persisted.
+    final prefs = c.read(sharedPreferencesProvider);
+    final restarted = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
     );
-
-    container.read(themeProvider.notifier).setTheme(ThemeMode.light);
-
-    expect(container.read(themeProvider), ThemeMode.light);
-    expect(sharedPreferences.getString('theme_mode'), 'ThemeMode.light');
+    addTearDown(restarted.dispose);
+    final state = restarted.read(themeProvider);
+    expect(state.mode, ThemeMode.light);
+    expect(state.isHighContrast, isTrue);
+    expect(state.reducedMotion, isTrue);
   });
 }

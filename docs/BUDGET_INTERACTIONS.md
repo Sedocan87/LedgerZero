@@ -1,88 +1,94 @@
-# Budget Interaction Patterns
+# Budget Screen Interactions
 
-This document outlines the interaction patterns and data flow for the Budget Screen in LedgerZero.
+What the user can do on the Budget tab (`BudgetScreen`,
+`lib/presentation/screens/budget/`) and which code runs. For how the numbers
+are defined see [BUDGETING_RULES.md](BUDGETING_RULES.md); for how they are
+computed see [ALGORITHMS.md](ALGORITHMS.md).
 
-## Core Concepts
+## Layout
 
-*   **TBB (To Be Budgeted):** The pool of money available to be assigned to categories. Calculated as `Total Income - Total Budgeted`.
-*   **Budgeted:** The amount assigned to a category for a specific month.
-*   **Activity:** The sum of all transactions (spending/income) for a category in the month.
-*   **Available:** The amount available to spend. Calculated as `Budgeted + Activity + Rollover`.
+* Month selector (previous/next month); the month is held in
+  `selectedBudgetMonthProvider`.
+* To Be Budgeted banner (`ToBeBudgetedBanner`), from `tbbProvider(month)`.
+* Category groups and rows (`BudgetGroupRow`, `BudgetCategoryRow`) from
+  `budgetViewModelProvider`.
+* App bar: search (filters categories by name), view mode toggle, manage
+  categories (`/budget/categories`), and a menu with save as template, apply
+  template, copy from previous month and reset budget.
 
-## Interaction Flows
+View modes (`BudgetViewMode`):
 
-### 1. Assigning Money to a Category
+* **standard**: Budgeted, Activity and Available columns.
+* **comparison**: a "spent of budgeted" progress bar per category.
 
-**User Action:**
-*   User taps on the "Budgeted" amount cell in a category row.
-*   User enters a new amount (e.g., 500.00).
+## Assigning money to a category
 
-**System Behavior:**
-1.  **Input:** The new amount is validated (must be numeric).
-2.  **Update:** `BudgetingService.setCategoryBudgetedAmount` is called.
-3.  **Persistence:** The app checks if a `Budget` record exists for this category/month.
-    *   If yes, it updates the `budgeted` field.
-    *   If no, it creates a new `Budget` record.
-4.  **Recalculation:**
-    *   **Available:** Recalculated immediately (`Budgeted + Activity`).
-    *   **TBB:** Recalculated immediately (`Income - Sum(Budgeted)`).
-5.  **Visual Feedback:** The "Budgeted" and "Available" cells update. TBB banner updates.
+1. In standard mode, tap the Budgeted cell. A calculator bottom sheet
+   (`BudgetCalculator`) opens with the current value; it accepts an amount
+   or an arithmetic expression.
+2. On submit, `BudgetingService.setCategoryBudgetedAmount` writes the
+   month's budget row (created with its deterministic id if missing).
+3. A `BudgetChangeAction` is pushed on the undo stack and a snackbar offers
+   Undo.
 
-### 2. Moving Money (Covering Overspending)
+## Quick actions (long-press a category row)
 
-**User Action:**
-*   User notices a negative "Available" amount (Red pill).
-*   User taps the red pill or long-presses the category row and selects "Move Money".
-*   User selects a source category (or TBB) and a destination category.
+* **Budget previous month**: auto-assign `lastMonthBudgeted`.
+* **Budget last month's spending**: auto-assign `lastMonthSpent` (what the
+  category spent in the previous month).
+* **Average spent**: auto-assign `averageSpent` (3 previous months).
+* **Zero out**: sets the budget to 0.
+* **Move money**: opens `MoveMoneyModal` with this category as source.
 
-**System Behavior:**
-1.  **Validation:** Ensure source has enough funds (optional, sometimes users can move from negative).
-2.  **Execution:** `BudgetingService.moveMoney` is called.
-    *   Decrements `budgeted` of Source.
-    *   Increments `budgeted` of Destination.
-3.  **Recalculation:** TBB remains constant (sum of budgeted didn't change, unless TBB was source).
-4.  **Visual Feedback:** Both categories update their "Available" amounts.
+The first four record an undo action like a manual edit. The goal-based
+`underfunded` rule is not offered: goals cannot be set in the app yet.
 
-### 3. Drag and Drop from TBB
+## Moving money
 
-**User Action:**
-*   User drags the "To Be Budgeted" banner.
-*   User drops it onto a Category row.
+`MoveMoneyModal` asks for source category, target category and a positive
+amount; source and target must differ. `BudgetingService.moveMoney`
+decrements the source's and increments the target's budget for the selected
+month in one unit of work, so TBB does not change. The source may go
+negative. A `MoveMoneyAction` is pushed on the undo stack and a snackbar
+("Money moved") offers Undo. Undo moves the same amount back and redo moves
+it again, each as one `moveMoney` call, so both categories always change
+together.
 
-**System Behavior:**
-1.  **Prompt:** A dialog appears asking how much to assign to this category.
-2.  **Defaults:** Auto-fills with `Goal Target` or remaining TBB.
-3.  **Execution:** `BudgetingService.setCategoryBudgetedAmount` updates the category.
+## Drag from To Be Budgeted
 
-### 4. Viewing Activity Details
+When TBB is positive, long-press the TBB amount and drop it on a category
+row. A dialog asks how much to assign, pre-filled with the whole TBB. The
+entered amount is added to the category's current budget (with undo).
 
-**User Action:**
-*   User taps the "Activity" cell.
+## Viewing activity
 
-**System Behavior:**
-1.  **Navigation:** Navigates to `TransactionsScreen`.
-2.  **Filtering:** Pre-filters transactions by:
-    *   Category: The selected category.
-    *   Date Range: The selected month.
-3.  **Return:** When returning, any changes to transactions (edits, deletions) trigger a budget refresh.
+Tap the Activity cell. A filtered transaction list
+(`filtered-transactions` route) opens with the category and the selected
+month as a fixed filter; it does not change the Transactions tab's own
+filter.
 
-### 5. Goal Target Alerts
+## Goals (not available yet)
 
-**User Action:**
-*   User sees a yellow/orange indicator on the category row.
+Goals cannot be set in the app yet: the category form has no goal fields
+and the YNAB import does not import goals (a goals UI is planned, see
+ROADMAP.md). The budget row has code to show a warning icon (labelled
+"underfunded" for screen readers) when a category's budgeted amount is
+below its goal target, but since no category can have a goal, it never
+appears.
 
-**System Behavior:**
-1.  **Calculation:** `BudgetingService.calculateGoalTarget` determines the needed amount.
-2.  **Comparison:** If `Budgeted < Target`, the alert is shown.
-3.  **Resolution:** User can "Auto-Assign" (long press -> Underfunded) to match the target.
+## Month menu
 
-## Data Consistency
+* **Save as template / Apply template**: stores or applies the positive
+  budgets of a month.
+* **Copy from previous month**: copies the positive budgets of the previous
+  month.
+* **Reset budget**: sets all of the month's budgets to 0.
 
-*   **Real-time Updates:** Changes to transactions (income/expense) update TBB and Available amounts immediately via reactive streams.
-*   **Rollover:** Positive or negative Available amounts automatically roll over to the next month's "Starting Balance" (implicit in the `Available` calculation which sums all history).
-*   **Zero-Based:** The system encourages `TBB = 0`. Positive TBB means money is sitting idle. Negative TBB means you have budgeted more than you have.
+## Updates
 
-## Edge Cases
-
-*   **Concurrent Edits:** If a budget is updated from another device (Sync) or process, the UI updates automatically.
-*   **Offline:** All interactions work offline. Changes are queued for sync.
+All numbers are recomputed when anything relevant is written: the budget
+providers watch `ledgerChangesProvider`, which fires after every committed
+write to transactions, accounts, budgets, categories, category groups or
+payees (local edits, scheduled-transaction catch-up, imports and changes
+applied by sync alike). Everything works offline; cloud sync is described in
+[SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md).

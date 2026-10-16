@@ -23,10 +23,10 @@ class Transaction {
   /// The date of the transaction.
   final DateTime date;
 
-  /// The amount of the transaction.
+  /// The amount of the transaction in minor units (hundredths).
   ///
   /// Negative values indicate outflows (spending), positive values indicate inflows (income).
-  final double amount;
+  final int amount;
 
   /// The unique identifier of the payee associated with this transaction.
   final String? payeeId;
@@ -85,7 +85,7 @@ class Transaction {
     String? id,
     String? accountId,
     DateTime? date,
-    double? amount,
+    int? amount,
     String? payeeId,
     String? categoryId,
     String? memo,
@@ -124,7 +124,7 @@ class Transaction {
       id: json['id'] as String,
       accountId: json['account_id'] as String,
       date: DateTime.parse(json['date'] as String),
-      amount: (json['amount'] as num).toDouble(),
+      amount: (json['amount'] as num).toInt(),
       payeeId: json['payee_id'] as String?,
       categoryId: json['category_id'] as String?,
       memo: json['memo'] as String?,
@@ -221,7 +221,7 @@ class Transaction {
   /// Returns a list of error messages. If the list is empty, the entity is valid.
   List<String> validate() {
     final errors = <String>[];
-    if (amount == 0.0) {
+    if (amount == 0) {
       errors.add('Transaction amount cannot be zero');
     }
     return errors;

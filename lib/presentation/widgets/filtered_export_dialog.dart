@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/backup_providers.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
-import 'package:intl/intl.dart';
 
+/// Exports the transactions matching a date range, accounts and categories
+/// to CSV (Backup & Export screen).
 class FilteredExportDialog extends ConsumerStatefulWidget {
   const FilteredExportDialog({super.key});
 
@@ -16,51 +22,78 @@ class FilteredExportDialog extends ConsumerStatefulWidget {
 }
 
 class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
+  /// Inclusive calendar days (UTC midnight).
   DateTime? _startDate;
   DateTime? _endDate;
-  final List<String> _selectedAccountIds = [];
-  final List<String> _selectedCategoryIds = [];
+  final Set<String> _selectedAccountIds = {};
+  final Set<String> _selectedCategoryIds = {};
   bool _isLoading = false;
+
+  Future<DateTime?> _pickDate(DateTime? current) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: CalendarDate.toLocalDay(current ?? CalendarDate.today()),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    return picked == null ? null : CalendarDate.fromLocalPick(picked);
+  }
+
+  Widget _chips(
+    Map<String, String> options,
+    Set<String> selected, {
+    required String emptyText,
+  }) {
+    if (options.isEmpty) {
+      return Text(emptyText);
+    }
+    return Wrap(
+      spacing: 8,
+      children: [
+        for (final entry in options.entries)
+          FilterChip(
+            label: Text(entry.value),
+            selected: selected.contains(entry.key),
+            onSelected: (value) => setState(
+              () =>
+                  value ? selected.add(entry.key) : selected.remove(entry.key),
+            ),
+          ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final accountsAsync = ref
-        .watch(accountRepositoryProvider)
-        .watchAllAccounts();
-    final categoriesAsync = ref
-        .watch(categoryRepositoryProvider)
-        .watchAllCategories();
+    final fmt = ref.watch(appFormatterProvider);
+    final accountsAsync = ref.watch(accountMapProvider);
+    final categoriesAsync = ref.watch(categoryMapProvider);
+    final labelStyle = Theme.of(context).textTheme.labelLarge;
 
     return AlertDialog(
-      title: const Text('Export Filtered Transactions'),
+      title: Text(l10n.exportFilteredCsv),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date Range
-            Text(l10n.dateRange, style: Theme.of(context).textTheme.labelLarge),
+            Text(l10n.dateRange, style: labelStyle),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _startDate ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
+                      final picked = await _pickDate(_startDate);
+                      if (picked != null && mounted) {
                         setState(() => _startDate = picked);
                       }
                     },
                     child: Text(
                       _startDate != null
-                          ? DateFormat.yMd().format(_startDate!)
-                          : 'Start Date',
+                          ? fmt.formatDate(_startDate!)
+                          : l10n.startDate,
                     ),
                   ),
                 ),
@@ -68,19 +101,14 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _endDate ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
+                      final picked = await _pickDate(_endDate);
+                      if (picked != null && mounted) {
                         setState(() => _endDate = picked);
                       }
                     },
                     child: Text(
                       _endDate != null
-                          ? DateFormat.yMd().format(_endDate!)
+                          ? fmt.formatDate(_endDate!)
                           : l10n.endDate,
                     ),
                   ),
@@ -88,95 +116,31 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Accounts
-            Text(l10n.accounts, style: Theme.of(context).textTheme.labelLarge),
-            StreamBuilder(
-              stream: accountsAsync,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const AppLoadingIndicator();
-                }
-                final accounts = snapshot.data!;
-                return Wrap(
-                  spacing: 8,
-                  children: accounts.map((account) {
-                    final isSelected = _selectedAccountIds.contains(account.id);
-                    return FilterChip(
-                      label: Text(account.name),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedAccountIds.add(account.id);
-                          } else {
-                            _selectedAccountIds.remove(account.id);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                );
-              },
+            Text(l10n.accounts, style: labelStyle),
+            accountsAsync.when(
+              data: (accounts) => _chips(
+                accounts,
+                _selectedAccountIds,
+                emptyText: l10n.exportFilterAll,
+              ),
+              loading: () => const AppLoadingIndicator(),
+              error: (_, _) => Text(l10n.errorOccurred),
             ),
             const SizedBox(height: 16),
-
-            // Categories
-            Text(
-              l10n.categories,
-              style: Theme.of(context).textTheme.labelLarge,
+            Text(l10n.categories, style: labelStyle),
+            categoriesAsync.when(
+              data: (categories) => _chips(
+                categories,
+                _selectedCategoryIds,
+                emptyText: l10n.exportFilterAll,
+              ),
+              loading: () => const AppLoadingIndicator(),
+              error: (_, _) => Text(l10n.errorOccurred),
             ),
-            StreamBuilder(
-              stream: categoriesAsync,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const AppLoadingIndicator();
-                }
-                final categories = snapshot.data!;
-                // Just show a count or simplified selector if too many
-                if (categories.length > 10) {
-                  return OutlinedButton(
-                    onPressed: () {
-                      // Show full category picker dialog
-                      // Simplified for this MVP: Just toggle "All" or "None"
-                      setState(() {
-                        if (_selectedCategoryIds.isEmpty) {
-                          _selectedCategoryIds.addAll(
-                            categories.map((c) => c.id),
-                          );
-                        } else {
-                          _selectedCategoryIds.clear();
-                        }
-                      });
-                    },
-                    child: Text(
-                      _selectedCategoryIds.isEmpty
-                          ? 'Select All Categories'
-                          : '${_selectedCategoryIds.length} Categories Selected',
-                    ),
-                  );
-                }
-
-                return Wrap(
-                  spacing: 8,
-                  children: categories.map((cat) {
-                    final isSelected = _selectedCategoryIds.contains(cat.id);
-                    return FilterChip(
-                      label: Text(cat.name),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedCategoryIds.add(cat.id);
-                          } else {
-                            _selectedCategoryIds.remove(cat.id);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                );
-              },
+            const SizedBox(height: 8),
+            Text(
+              l10n.exportFilterHint,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -201,21 +165,25 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
   }
 
   Future<void> _export() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final shareText = AppLocalizations.of(context)!.transactionsShareText;
     setState(() => _isLoading = true);
     try {
       final filter = TransactionFilter(
         startDate: _startDate,
         endDate: _endDate,
-        accountIds: _selectedAccountIds.isNotEmpty ? _selectedAccountIds : null,
-        categoryIds: _selectedCategoryIds.isNotEmpty
-            ? _selectedCategoryIds
-            : null,
+        accountIds: _selectedAccountIds.isEmpty
+            ? null
+            : _selectedAccountIds.toList(),
+        categoryIds: _selectedCategoryIds.isEmpty
+            ? null
+            : _selectedCategoryIds.toList(),
       );
-
       final transactions = await ref
           .read(transactionRepositoryProvider)
           .getTransactions(filter: filter);
-
       final payees = await ref.read(payeeRepositoryProvider).getAllPayees();
       final categories = await ref
           .read(categoryRepositoryProvider)
@@ -224,26 +192,22 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
           .read(accountRepositoryProvider)
           .getAllAccounts();
 
-      await TransactionExportService().exportTransactionsToCsv(
+      await TransactionExportService(
+        files: ref.read(exportFileServiceProvider),
+      ).exportTransactionsToCsv(
         transactions: transactions,
-        payeeNames: {for (var p in payees) p.id: p.name},
-        categoryNames: {for (var c in categories) c.id: c.name},
-        accountNames: {for (var a in accounts) a.id: a.name},
+        payeeNames: {for (final p in payees) p.id: p.name},
+        categoryNames: {for (final c in categories) c.id: c.name},
+        accountNames: {for (final a in accounts) a.id: a.name},
         filenamePrefix: 'filtered_transactions',
+        shareText: shareText,
       );
-
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.exportSuccess)),
-        );
+        navigator.pop();
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
-      }
+    } catch (e, st) {
+      Logger.error('Filtered export failed', e, st);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.exportFailedGeneric)));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

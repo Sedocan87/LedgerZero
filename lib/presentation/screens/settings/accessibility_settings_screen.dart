@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
 
@@ -10,15 +11,16 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeState = ref.watch(themeProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Accessibility')),
+      appBar: AppBar(title: Text(l10n.accessibility)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          const Text(
-            'Visual Settings',
-            style: TextStyle(
+          Text(
+            l10n.accessibilityVisualSection,
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
@@ -29,10 +31,8 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 SwitchListTile(
-                  title: const Text('High Contrast Mode'),
-                  subtitle: const Text(
-                    'Increase contrast of colors and borders',
-                  ),
+                  title: Text(l10n.highContrastTitle),
+                  subtitle: Text(l10n.highContrastSubtitle),
                   value: themeState.isHighContrast,
                   onChanged: (value) {
                     ref.read(themeProvider.notifier).toggleHighContrast(value);

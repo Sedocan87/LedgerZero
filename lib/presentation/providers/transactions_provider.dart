@@ -3,8 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 
 // State class for the Transactions Screen
@@ -27,7 +29,7 @@ class TransactionsState {
     this.searchQuery = '',
     this.isMultiSelectMode = false,
     this.selectedTransactionIds = const {},
-    this.limit = 50,
+    this.limit = TransactionsNotifier.pageSize,
   });
 
   TransactionsState copyWith({
@@ -52,111 +54,181 @@ class TransactionsState {
   }
 }
 
+/// A transaction list opened with a fixed filter (e.g. "activity of this
+/// category this month" from the budget). It is never persisted, so the
+/// Transactions tab keeps its own filter.
+class FilteredTransactionsArgs {
+  const FilteredTransactionsArgs({required this.filter, required this.title});
+
+  final TransactionFilter filter;
+  final String title;
+}
+
+/// The transaction list behind the Transactions screen.
+///
+/// Holds exactly one database subscription at a time; it is replaced when
+/// the query (filter, sort, search, page size) changes and cancelled on
+/// dispose. Search input is debounced ([searchDebounce]) so typing does not
+/// re-query on every keystroke, and [loadMore] requests the next page only
+/// after the previous page has arrived and was full.
 class TransactionsNotifier extends StateNotifier<TransactionsState> {
   final Ref ref;
-  StreamSubscription<List<Transaction>>? _subscription;
 
-  TransactionsNotifier(this.ref) : super(const TransactionsState()) {
-    _loadPrefs();
-    _initStream();
+  /// Whether filter and sort are saved to and restored from preferences
+  /// (only the Transactions tab does this).
+  final bool persist;
+
+  static const int pageSize = 50;
+  static const Duration searchDebounce = Duration(milliseconds: 300);
+
+  StreamSubscription<List<Transaction>>? _subscription;
+  Timer? _searchTimer;
+
+  /// A larger page was requested and has not arrived yet.
+  bool _pageRequested = false;
+
+  /// The main Transactions tab: filter and sort persist across restarts.
+  TransactionsNotifier(this.ref) : persist = true, super(_restoredState(ref)) {
+    _subscribe();
   }
 
-  Future<void> _loadPrefs() async {
-    final prefs = ref.read(sharedPreferencesProvider);
+  /// A list with a fixed initial [filter] that is never persisted.
+  TransactionsNotifier.fixed(this.ref, TransactionFilter filter)
+    : persist = false,
+      super(TransactionsState(filter: filter)) {
+    _subscribe();
+  }
 
-    // Load Sort
+  /// The saved filter and sort (SharedPreferences is synchronous, so the
+  /// first subscription already uses them).
+  static TransactionsState _restoredState(Ref ref) {
+    final prefs = ref.read(sharedPreferencesProvider);
+    var restored = const TransactionsState();
+
     final sortFieldIdx = prefs.getInt('tx_sort_field');
     final sortAsc = prefs.getBool('tx_sort_asc');
-    TransactionSort? loadedSort;
-    if (sortFieldIdx != null && sortAsc != null) {
-      if (sortFieldIdx >= 0 &&
-          sortFieldIdx < TransactionSortField.values.length) {
-        loadedSort = TransactionSort(
+    if (sortFieldIdx != null &&
+        sortAsc != null &&
+        sortFieldIdx >= 0 &&
+        sortFieldIdx < TransactionSortField.values.length) {
+      restored = restored.copyWith(
+        sort: TransactionSort(
           field: TransactionSortField.values[sortFieldIdx],
           ascending: sortAsc,
-        );
-      }
+        ),
+      );
     }
 
-    // Load Filter
-    TransactionFilter? loadedFilter;
     final filterJson = prefs.getString('tx_filter');
     if (filterJson != null) {
       try {
-        final filterMap = jsonDecode(filterJson) as Map<String, dynamic>;
-        loadedFilter = TransactionFilter.fromJson(filterMap);
+        restored = restored.copyWith(
+          filter: TransactionFilter.fromJson(
+            jsonDecode(filterJson) as Map<String, dynamic>,
+          ),
+        );
       } catch (e) {
-        // Ignore error
+        Logger.warning('Ignoring unreadable saved transaction filter');
       }
     }
-
-    if (loadedSort != null || loadedFilter != null) {
-      state = state.copyWith(
-        sort: loadedSort ?? state.sort,
-        filter: loadedFilter ?? state.filter,
-      );
-      _initStream();
-    }
+    return restored;
   }
 
-  void _initStream() {
+  /// Replaces the database subscription with one for the current query.
+  void _subscribe() {
     _subscription?.cancel();
-    // Don't set loading here to avoid flicker on minor updates if desired,
-    // but for filter changes it might be good.
-    // For now, only set loading if we don't have data or if it's a major change?
-    // Let's keep it simple.
-    // state = state.copyWith(transactions: const AsyncLoading());
 
-    TransactionFilter currentFilter = state.filter;
-    if (state.searchQuery.isNotEmpty) {
-      currentFilter = currentFilter.copyWith(memoSearch: state.searchQuery);
+    // Splits are listed once, by their parent (its lines show up when
+    // filtering by category).
+    var currentFilter = state.filter.copyWith(excludeSplitChildren: true);
+    final query = state.searchQuery.trim();
+    if (query.isNotEmpty) {
+      // The query matches memo, payee and category names, and the amount
+      // when it parses as money in the user's number format.
+      final amount = ref.read(appFormatterProvider).parseAmount(query);
+      currentFilter = currentFilter.withSearch(query, amount?.abs());
     }
 
-    final stream = ref
+    _subscription = ref
         .read(transactionRepositoryProvider)
         .watchTransactions(
           filter: currentFilter,
           sort: state.sort,
           limit: state.limit,
+        )
+        .listen(
+          (data) {
+            _pageRequested = false;
+            state = state.copyWith(transactions: AsyncData(data));
+          },
+          onError: (Object e, StackTrace st) {
+            _pageRequested = false;
+            state = state.copyWith(transactions: AsyncError(e, st));
+          },
         );
-
-    _subscription = stream.listen(
-      (data) {
-        state = state.copyWith(transactions: AsyncData(data));
-      },
-      onError: (e, st) {
-        state = state.copyWith(transactions: AsyncError(e, st));
-      },
-    );
   }
 
+  /// A new query starts again from the first page.
+  void _requery() {
+    _searchTimer?.cancel();
+    _pageRequested = false;
+    state = state.copyWith(limit: pageSize);
+    _subscribe();
+  }
+
+  /// Whether more rows may exist beyond the loaded page.
+  bool get hasMore {
+    final loaded = state.transactions.valueOrNull;
+    return loaded != null && loaded.length >= state.limit;
+  }
+
+  /// Requests the next page. Ignored while a requested page has not
+  /// arrived yet, and when the last page was not full (nothing more).
   void loadMore() {
-    state = state.copyWith(limit: state.limit + 50);
-    _initStream();
+    if (_pageRequested || !hasMore) {
+      return;
+    }
+    _pageRequested = true;
+    state = state.copyWith(limit: state.limit + pageSize);
+    _subscribe();
   }
 
   void updateFilter(TransactionFilter filter) {
     state = state.copyWith(filter: filter);
 
-    final prefs = ref.read(sharedPreferencesProvider);
-    prefs.setString('tx_filter', jsonEncode(filter.toJson()));
+    if (persist) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      unawaited(prefs.setString('tx_filter', jsonEncode(filter.toJson())));
+    }
 
-    _initStream();
+    _requery();
   }
 
   void updateSort(TransactionSort sort) {
     state = state.copyWith(sort: sort);
 
-    final prefs = ref.read(sharedPreferencesProvider);
-    prefs.setInt('tx_sort_field', sort.field.index);
-    prefs.setBool('tx_sort_asc', sort.ascending);
+    if (persist) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      unawaited(prefs.setInt('tx_sort_field', sort.field.index));
+      unawaited(prefs.setBool('tx_sort_asc', sort.ascending));
+    }
 
-    _initStream();
+    _requery();
   }
 
+  /// Updates the query text at once and re-queries after [searchDebounce]
+  /// without further input. Clearing the search applies immediately.
   void updateSearchQuery(String query) {
+    if (query == state.searchQuery) {
+      return;
+    }
     state = state.copyWith(searchQuery: query);
-    _initStream();
+    _searchTimer?.cancel();
+    if (query.trim().isEmpty) {
+      _requery();
+      return;
+    }
+    _searchTimer = Timer(searchDebounce, _requery);
   }
 
   void toggleMultiSelectMode() {
@@ -180,19 +252,13 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
     state = state.copyWith(selectedTransactionIds: Set.from(ids));
   }
 
-  void clearSelection() {
-    state = state.copyWith(selectedTransactionIds: {});
-  }
-
-  Future<void> refresh() async {
-    // Just re-init stream to ensure fresh fetch if needed,
-    // although watchTransactions should handle DB updates.
-    // This might be useful if something outside DB changed or forced reload.
-    _initStream();
-  }
+  /// Pull-to-refresh: re-runs the query (the list also follows the
+  /// database on its own).
+  Future<void> refresh() async => _subscribe();
 
   @override
   void dispose() {
+    _searchTimer?.cancel();
     _subscription?.cancel();
     super.dispose();
   }
@@ -205,28 +271,9 @@ final transactionsProvider =
       return TransactionsNotifier(ref);
     });
 
-// Helper providers for name lookups
-final categoryMapProvider = StreamProvider.autoDispose<Map<String, String>>((
-  ref,
-) {
-  return ref
-      .watch(categoryRepositoryProvider)
-      .watchAllCategories()
-      .map((list) => {for (var item in list) item.id: item.name});
-});
-
-final payeeMapProvider = StreamProvider.autoDispose<Map<String, String>>((ref) {
-  return ref
-      .watch(payeeRepositoryProvider)
-      .watchAllPayees()
-      .map((list) => {for (var item in list) item.id: item.name});
-});
-
-final accountMapProvider = StreamProvider.autoDispose<Map<String, String>>((
-  ref,
-) {
-  return ref
-      .watch(accountRepositoryProvider)
-      .watchAllAccounts()
-      .map((list) => {for (var item in list) item.id: item.name});
-});
+/// A non-persisted list for [FilteredTransactionsArgs] (keyed by the
+/// args instance passed to the route).
+final filteredTransactionsProvider = StateNotifierProvider.autoDispose
+    .family<TransactionsNotifier, TransactionsState, FilteredTransactionsArgs>(
+      (ref, args) => TransactionsNotifier.fixed(ref, args.filter),
+    );

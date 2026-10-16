@@ -1,54 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
-
-class AccountCard extends ConsumerWidget {
+class AccountCard extends StatelessWidget {
   final Account account;
   final VoidCallback? onTap;
 
   const AccountCard({super.key, required this.account, this.onTap});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // If account has currency, use it. Otherwise use system setting?
-    // User request implies system setting wins or isn't being used.
-    // If account.currency matches system setting (or is default), we want to use the formatted defined by system?
-    // Actually, account.currency probably IS the code (e.g. 'USD').
-    // If user changes setting to 'EUR', but account is 'USD'.
-    // AccountCard currently uses `account.currency`.
-    // Valid behavior for Account Card is to show the account's actual currency style.
-    // BUT if the user's issue is "I chose Euro and app still shows Dollar", maybe they expect EVERYTHING to change?
-    // If they have only one account, created with default USD, and they change settings to EUR, they expect the account to show EUR?
-    // To be safe and solve the user's problem, I will prioritize the settings currency overriding the account currency display
-    // OR, I should check if I should update the account currency itself? No, that's a data change.
-    // I will use settings.currency for display.
-    final currency = ref.watch(settingsProvider).currency;
-    final currencyFormatter = NumberFormat.simpleCurrency(name: currency);
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
-    // Determine icon based on account type
-    IconData icon;
-    switch (account.type) {
-      case AccountType.checking:
-        icon = Icons.account_balance;
-        break;
-      case AccountType.savings:
-        icon = Icons.savings;
-        break;
-      case AccountType.credit:
-        icon = Icons.credit_card;
-        break;
-      case AccountType.cash:
-        icon = Icons.money;
-        break;
-    }
+    // Icon and name of the account type
+    final (IconData icon, String? typeName) = switch (account.type) {
+      AccountType.checking => (
+        Icons.account_balance,
+        l10n?.accountTypeChecking,
+      ),
+      AccountType.savings => (Icons.savings, l10n?.accountTypeSavings),
+      AccountType.credit => (Icons.credit_card, l10n?.accountTypeCredit),
+      AccountType.cash => (Icons.money, l10n?.accountTypeCash),
+    };
 
     // Determine color for balance (red for negative, default for positive)
-    final balanceColor = account.currentBalance < 0
+    final balanceColor = account.balance < 0
         ? theme.colorScheme.error
         : theme.colorScheme.onSurface;
 
@@ -67,7 +46,7 @@ class AccountCard extends ConsumerWidget {
               children: [
                 Text(account.name, style: theme.textTheme.titleMedium),
                 Text(
-                  account.type.name.toUpperCase(),
+                  (typeName ?? account.type.name).toUpperCase(),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -75,8 +54,11 @@ class AccountCard extends ConsumerWidget {
               ],
             ),
           ),
-          Text(
-            currencyFormatter.format(account.currentBalance),
+          // Amounts are shown in the account's own currency.
+          AmountText(
+            account.balance,
+            currencyCode: account.currency,
+            amountContext: AmountContext.balance,
             style: theme.textTheme.titleMedium?.copyWith(
               color: balanceColor,
               fontWeight: FontWeight.bold,

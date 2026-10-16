@@ -1,164 +1,170 @@
-# Widget Testing Guide
+# Testing
 
-This document outlines the testing patterns and best practices used in the LedgerZero project for verifying UI components.
+LedgerZero has three test layers. The first two run on the host in about a
+minute; the third needs an iOS Simulator or an Android emulator.
 
-## 1. Testing Loading States
+| Layer | Where | Runs on | Command |
+|-------|-------|---------|---------|
+| Unit and real-database tests | `test/` (domain, data, database, services, core) | host | `flutter test` |
+| Widget tests | `test/` (presentation, app, accessibility, l10n, ui) | host | `flutter test` |
+| Performance guards (tag `perf`) | `test/performance/` | host | `flutter test --tags perf --run-skipped` |
+| On-device integration tests | `integration_test/` | simulator / emulator | see below |
 
-To test loading states, we mock the providers to return an asynchronous state that hasn't completed yet (or simulate a delay).
+`bash tool/check.sh` is the local quality gate: it checks that the generated
+localisations are up to date with no untranslated messages, runs
+`flutter analyze`, runs `flutter test` (perf tests skipped) and prints a
+summary. `bash tool/check.sh --perf` also runs the perf guards. The host
+suite currently has about 939 unit and widget tests.
 
-**Pattern:**
-```dart
-testWidgets('Screen shows loading indicator', (tester) async {
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-         // Override with a future that doesn't complete immediately
-         myProvider.overrideWith((ref) => Future.delayed(const Duration(seconds: 1), () => data)),
-         // Or explicitly mock AsyncValue
-         // myProvider.overrideWith((ref) => AsyncValue.loading()),
-      ],
-      child: MaterialApp(home: MyScreen()),
-    ),
-  );
+## Device rule
 
-  // Verify loading indicator is present
-  expect(find.byType(CircularProgressIndicator), findsOneWidget);
+Integration tests install the app and **wipe its data** (preferences,
+Keychain/Keystore entries, the database file). Run them only on an iOS
+Simulator or an Android emulator, and always name the device with `-d`.
+Never run them on a physical phone that holds real data.
 
-  // Wait for it to settle if needed
-  await tester.pumpAndSettle(const Duration(seconds: 1));
-});
+## Unit, real-database and widget tests
+
+```bash
+flutter test                                   # everything except perf
+flutter test test/domain/undo/                 # one folder
+flutter test test/database/migration_test.dart # one file
 ```
 
-## 2. Testing Error States
+Principles:
 
-To test error states, override the provider to throw an error or return `AsyncValue.error`.
+- **Real database over mocks.** Anything that touches data runs against an
+  in-memory drift database (`test/helpers/test_database.dart`,
+  `TestDatabase`), which seeds the default categories and exposes the real
+  repositories and services. Mocks (`test/mocks/`, generated with
+  `@GenerateNiceMocks`) are kept for widget tests that only need a few canned
+  answers and for platform boundaries (connectivity, Google sign-in).
+- **The budget invariant.** `expectLedgerInvariant` in
+  `test/domain/services/ledger_test_helpers.dart` asserts
+  `SUM(category available) + To Be Budgeted == SUM(account balances)` for a
+  month. Tests that change the ledger call it (undo/redo, deletions,
+  migrations, imports, backup/restore). `seedSampleLedger` writes a small
+  but complete ledger (income, transfer, split, credit card, budgets) and
+  `ledgerFingerprint` captures what a user sees of it (balances, available,
+  TBB) for before/after comparisons.
+- **Fast crypto.** Production key derivation (Argon2id) is too slow for unit
+  tests. Code that derives keys takes injectable KDF parameters; tests pass
+  `fastKdf()` from `test/helpers/security_fakes.dart`, together with
+  `InMemorySecureStore` and `FakeBiometricKeyStore`.
+- **No wall-clock waits.** Widget tests use fake time (`tester.pump`). Drift
+  stream queries start a zero-length timer when their last listener goes
+  away, and `AppDatabase.close()` waits for it: unmount the widget tree and
+  pump once *before* closing the database, or the test hangs until it times
+  out (see `dbTestWidgets` in the screen tests and `unmount` in
+  `test/presentation/router/app_router_test.dart`).
 
-**Pattern:**
-```dart
-testWidgets('Screen shows error message', (tester) async {
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-         myProvider.overrideWith((ref) => Future.error('Network Error')),
-      ],
-      child: MaterialApp(home: MyScreen()),
-    ),
-  );
+What is covered where (main areas):
 
-  // Allow the future to complete (with error)
-  await tester.pumpAndSettle();
+| Area | Tests |
+|------|-------|
+| Budget maths, goals, auto-assign, templates | `test/domain/services/budgeting_*_test.dart`, `budget_invariant_test.dart` |
+| Transactions, transfers, splits, reconcile | `test/domain/services/transaction_service*_test.dart` |
+| Undo/redo of every recorded action | `test/domain/undo/undo_round_trip_test.dart` |
+| Deleting categories, groups, accounts, payees with dependants | `test/domain/services/{category,account,payee}_service_test.dart` |
+| Schema migrations v1, v14, v15, v16, v17 -> v18 (structure and data) | `test/database/migration_test.dart` |
+| Encrypted database, key vault, unlock, password change | `test/data/database/`, `test/services/security/` |
+| Backup format, backup -> restore round trip | `test/services/backup/` |
+| CSV export -> import round trip, bank formats, YNAB import | `test/services/csv/`, `test/services/import/` |
+| Sync format v2, conflict resolution, multi-device simulation | `test/services/sync/` |
+| Router gates (onboarding, lock, deep links) and app boot | `test/presentation/router/`, `test/app/` |
+| Screens and widgets | `test/presentation/` |
+| Localisation completeness, German layout, hard-coded text | `test/l10n/` |
 
-  expect(find.textContaining('Network Error'), findsOneWidget);
-});
+### Schema migration tests
+
+The schema dumps live in `drift_schemas/`; the helpers in
+`test/database/generated_migrations/` are generated from them. After a schema
+change:
+
+```bash
+dart run drift_dev schema dump lib/data/database/database.dart drift_schemas/
+dart run drift_dev schema generate drift_schemas/ test/database/generated_migrations/
 ```
 
-## 3. Responsive Layout Testing
+then add the new version to the migration tests (see the header of
+`test/database/migration_test.dart` for one manual rename the generator
+needs).
 
-We verify responsiveness by manipulating `tester.view.physicalSize`.
+### Mocks
 
-**Pattern:**
-```dart
-testWidgets('Adapts to large screens', (tester) async {
-  // Set window size to desktop resolution
-  tester.view.physicalSize = const Size(1920, 1080);
-  tester.view.devicePixelRatio = 1.0;
-  addTearDown(tester.view.resetPhysicalSize);
+Mocks are generated by mockito. After changing a `@GenerateNiceMocks`
+annotation (shared ones are in `test/mocks/`):
 
-  await tester.pumpWidget(...);
-
-  // Verify layout specific to large screens (e.g. ConstrainedBox max width)
-  final constrainedBox = tester.widget<ConstrainedBox>(find.byType(ConstrainedBox));
-  expect(constrainedBox.constraints.maxWidth, 800.0);
-});
+```bash
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-## 4. Interaction Testing
+### Performance guards
 
-Use `tester.tap`, `tester.drag`, and `tester.longPress` to simulate user interactions.
+The `perf` tag (configured in `dart_test.yaml`) marks a few tests that check
+generous time budgets on large data sets (10,000 transactions: budget
+calculation, encrypted backup, transaction list rendering). They are skipped
+by default so the normal suite stays fast and deterministic. They catch an
+accidental N+1 query or full-table loop; they are not benchmarks.
 
-**Pattern:**
-```dart
-testWidgets('Swipe to delete', (tester) async {
-  await tester.pumpWidget(...);
-
-  // Find the dismissible item
-  final item = find.byType(Dismissible);
-
-  // Swipe
-  await tester.drag(item, const Offset(500.0, 0.0));
-  await tester.pumpAndSettle();
-
-  // Verify action (e.g. snackbar or callback)
-  expect(find.text('Deleted'), findsOneWidget);
-});
+```bash
+flutter test --tags perf --run-skipped
 ```
 
-## 5. Animation Testing
+## Integration tests (on a simulator or emulator)
 
-For animations, use `tester.pump(duration)` to advance time incrementally. Note that some animations might be disabled in test environments by default.
+The on-device set is deliberately small; everything that can run on the host
+does. Each test exercises something the host cannot: the real Keychain /
+Keystore, the SQLCipher build that ships in the app, real file paths and
+the full app widget.
 
-**Pattern:**
-```dart
-testWidgets('Animation updates', (tester) async {
-  await tester.pumpWidget(MyAnimatedWidget(value: 0));
+| File | What it covers |
+|------|----------------|
+| `integration_test/app_flow_test.dart` | First launch: onboarding with master password and recovery key, first account, a transaction, money assigned in the budget. Relaunch: the app starts locked, a wrong password is rejected, the right one unlocks the same data, a CSV file is imported through the import screens, "Lock now" returns to the login screen. |
+| `integration_test/backup_restore_test.dart` | Encrypted backup and restore into a keyed SQLCipher database on the device. |
+| `integration_test/schema_upgrade_test.dart` | An encrypted schema-v14 database file (before integer money) is opened, migrated and converted by the current app. |
 
-  // Update widget
-  await tester.pumpWidget(MyAnimatedWidget(value: 100));
+`integration_test/helpers.dart` starts the real `MyApp` with real storage and
+wipes the app's data before and after the flow. Biometric unlock cannot be
+driven on a simulator or emulator; the tests replace it with "not
+available", so biometrics are covered only by unit tests
+(`FakeBiometricKeyStore`) and manual testing on a phone.
 
-  // Advance animation halfway
-  await tester.pump(const Duration(milliseconds: 250));
+### iOS Simulator
 
-  // Verify intermediate state if possible, or just final state
-  await tester.pumpAndSettle();
-  expect(find.text('100'), findsOneWidget);
-});
+```bash
+xcrun simctl list devices available        # pick an iPhone, e.g. iPhone 17 Pro
+xcrun simctl boot <simulator-id>
+flutter test integration_test/app_flow_test.dart \
+  integration_test/backup_restore_test.dart \
+  integration_test/schema_upgrade_test.dart -d <simulator-id>
 ```
 
-## 6. Accessibility Testing
+### Android emulator
 
-Use `meetsGuideline` matchers provided by `flutter_test`.
+The Android app has product flavors, so the flavor is required:
 
-**Pattern:**
-```dart
-testWidgets('Meets accessibility guidelines', (tester) async {
-  final handle = tester.ensureSemantics();
-  await tester.pumpWidget(...);
-
-  await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-  await expectLater(tester, meetsGuideline(textContrastGuideline));
-
-  handle.dispose();
-});
+```bash
+export JAVA_HOME="/path/to/Android Studio.app/Contents/jbr/Contents/Home"
+export ANDROID_HOME=/path/to/Android/sdk
+$ANDROID_HOME/emulator/emulator -avd <avd-name> -no-snapshot-save &
+flutter devices                            # note the emulator-55xx id
+flutter test integration_test/app_flow_test.dart \
+  integration_test/backup_restore_test.dart \
+  integration_test/schema_upgrade_test.dart \
+  --flavor development -d emulator-5554
 ```
 
-## 7. Performance Testing
+Each file is built and installed separately (about 20-60 s per file). The
+Android build needs Java 17 (the JetBrains Runtime bundled with Android
+Studio works).
 
-While `integration_test` is better for real performance metrics, `flutter_test` can catch major regressions in render time using `Stopwatch`.
+Last verified: all three files passed on an iOS Simulator and on an Android
+emulator (AVD `Medium_Phone_API_36.1`, `--flavor development`).
 
-**Pattern:**
-```dart
-testWidgets('Renders efficiently', (tester) async {
-  final stopwatch = Stopwatch()..start();
-  await tester.pumpWidget(...);
-  stopwatch.stop();
+## Coverage
 
-  debugPrint('Render time: ${stopwatch.elapsedMilliseconds}ms');
-  expect(stopwatch.elapsedMilliseconds, lessThan(500));
-});
+```bash
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
 ```
-
-## 8. Mocking Dependencies
-
-We use `mockito` and `riverpod` overrides to isolate widgets.
-
-**Tips:**
-- When mocking Riverpod providers, use `.overrideWith((ref) => ...)`
-- For Stream providers, return `Stream.value(data)`.
-- Be aware that `StateNotifier` constructors might trigger initial loads; ensure mocks are set up to handle those calls or override the notifier state directly if possible.
-
-## 9. Custom Widget Testing
-
-For custom painters or complex widgets:
-- Use `find.bySemanticsLabel` if the widget provides semantics (recommended).
-- Verify `shouldRepaint` logic in unit tests for Painters.
-- Test edge cases like empty data or null inputs.

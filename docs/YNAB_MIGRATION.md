@@ -1,78 +1,109 @@
 # YNAB Migration Guide
 
-LedgerZero makes it easy to migrate your financial history from You Need A Budget (YNAB). We support importing from both the modern web-based YNAB (nYNAB) and the classic YNAB 4 desktop application.
+LedgerZero imports a budget from the current YNAB web app (CSV export) or
+from YNAB 4 (classic desktop app). Format details:
+[YNAB_EXPORT_SPEC.md](YNAB_EXPORT_SPEC.md).
 
-## Prerequisites
+## Prepare the files
 
-- **nYNAB**: You need to export your budget data from the YNAB web interface.
-  - Go to **My Budget** -> **Export Budget**.
-  - This will download a zip file containing `Register.csv` and `Budget.csv`. Extract these files.
-- **YNAB 4**: You need access to your `.ynab4` data folder (e.g., inside your Dropbox or local documents).
+- **nYNAB (web app)**: use YNAB's budget export. It downloads a ZIP with two
+  CSV files, `... - Register.csv` (transactions) and `... - Budget.csv`
+  (monthly budgeted amounts). Unzip it and put both files where the phone's
+  file picker can reach them (e.g. Files / iCloud Drive / Google Drive /
+  Downloads). Do not open and re-save them in a spreadsheet app.
+- **YNAB 4**: copy the budget folder (name ending in `.ynab4`) to a location
+  the phone can open as a folder.
 
-## Step-by-Step Migration
+## Steps
 
-1. **Navigate to Migration Tool**:
-   - Open LedgerZero.
-   - Go to **Settings** -> **Import Data** -> **YNAB Migration**.
+1. Open **Settings** (gear icon on Home) > **Manage data** > **YNAB
+   Migration**.
+2. Under **Select your YNAB version** choose **nYNAB (CSV Export)** or
+   **YNAB 4 (Classic)**.
+3. Pick the files:
+   - nYNAB: select the Register file and the Budget file (both are
+     required).
+   - YNAB 4: select the budget folder.
+4. Tap **Next: Preview**. The **Import Preview** shows the accounts (with
+   type and open/closed), the categories per group, and the number of
+   transactions, budget entries and (YNAB 4 only) scheduled transactions.
+5. Tap **Confirm & Import** and keep the app open until it finishes.
+6. On the success screen tap **Start Budgeting** to open the Budget tab.
 
-2. **Select YNAB Version**:
-   - Choose **nYNAB (CSV Export)** if you are coming from the subscription-based YNAB.
-   - Choose **YNAB 4 (Classic)** if you are using the older desktop version.
+If the import fails, nothing is written ("The import failed. No data was
+changed; please try again.").
 
-3. **Select Files**:
-   - **For nYNAB**:
-     - Tap "Select Register.csv" and pick the file from your extracted export.
-     - Tap "Select Budget.csv" and pick the file.
-   - **For YNAB 4**:
-     - Tap "Select Budget Folder" and choose your `.ynab4` directory.
+## What is imported
 
-4. **Preview Data**:
-   - LedgerZero will parse your files and display a summary.
-   - **Accounts**: Review the list of accounts that will be created or merged.
-   - **Categories**: Review the category groups and categories.
-   - **Stats**: Check the total number of transactions and budget entries.
+| Data | nYNAB CSV | YNAB 4 |
+|---|---|---|
+| Accounts | yes (type guessed from the name, all open) | yes (type and closed state); tracking accounts are skipped, see below |
+| Category groups and categories | yes | yes, hidden ones as hidden categories |
+| Transactions, cleared/reconciled state | yes | yes |
+| Split transactions | yes | yes |
+| Transfers between accounts | yes, as linked transfers when both legs are found | yes |
+| Payees | yes | yes |
+| Monthly budgeted amounts | yes | yes |
+| Scheduled transactions | no (not in the export) | yes |
+| Goals, flags | no | no |
 
-5. **Import**:
-   - Tap **Confirm & Import**.
-   - The app will process your data. This may take a few moments for large budgets.
-   - **Do not close the app** during this process.
+## After the import
 
-6. **Success**:
-   - Once complete, you will see a success screen with a summary of imported items.
-   - Click **Start Budgeting** to view your migrated data.
+- **Currency**: YNAB exports contain no currency. The import preview has a
+  **Currency of the imported accounts** field, preset to your default
+  currency from Settings; all accounts the import creates get that
+  currency. Change it per account afterwards if your accounts use different
+  currencies.
+- **Account types**: for nYNAB the type is guessed from the account name;
+  check it on each account.
+- **Credit card payment categories**: LedgerZero has none. Payments to a
+  credit card are plain transfers.
+- **Ready to Assign**: income assigned to YNAB's "Ready to Assign" / "To be
+  Budgeted" is imported without a category and counts towards To Be
+  Budgeted.
+- **Tracking (off-budget) accounts** (YNAB 4): LedgerZero has no off-budget
+  accounts, and every account counts towards To Be Budgeted. Tracking
+  accounts and their own transactions are therefore not imported; the
+  preview marks them "Tracking account – not imported" and the result
+  screen says how many were left out. A transfer between a budget account
+  and a tracking account is how money leaves or enters the budget, so its
+  budget-side leg is imported as a normal outflow or inflow of the budget
+  account: with YNAB's category if it had one, otherwise uncategorised (so
+  it counts towards To Be Budgeted). Its memo names the transfer
+  (`Transfer : House`). nYNAB CSV exports do not say which accounts are
+  tracking accounts, so all of their accounts are imported.
+- **Hidden categories** (YNAB 4): imported as hidden categories, so their
+  transactions keep their category. LedgerZero cannot hide a whole group;
+  every category of a hidden YNAB group is hidden instead.
 
-## What gets imported?
+## FAQ
 
-- **Accounts**: All open and closed accounts. Types are mapped to LedgerZero equivalents (e.g., Checking, Savings, Credit Card).
-- **Categories**: Category Groups and Categories. Hidden categories are imported but marked hidden.
-- **Transactions**: All transactions, including splits and transfers.
-- **Payees**: Payees are created and linked to transactions.
-- **Scheduled Transactions**: Recurring transactions are imported.
-- **Budget History**: Historical budgeted amounts are imported for nYNAB. (Note: Goal import is currently limited).
+**Will importing twice duplicate data?**
+Accounts, categories and payees are matched by name and reused. Budgeted
+amounts are overwritten per category and month. Transactions are always
+added, so a second import of the same file duplicates them. There is no undo;
+create a backup (**Settings > Backup & Export**) before importing into a
+budget that already has data.
 
-## FAQ (Task 550)
+**How are splits handled?**
+As a split transaction: a parent with one line per category. In the nYNAB
+CSV, split lines are recognised by YNAB's `Split (i/n)` memo prefix.
 
-**Q: Will this duplicate my data if I run it twice?**
-A: LedgerZero attempts to match existing accounts and categories by name. However, transactions are imported as new. Running the import multiple times on the same file may result in duplicate transactions. It is recommended to start with a fresh LedgerZero database or use the "Undo" feature if something goes wrong immediately.
+**Why are some transactions uncategorised?**
+They were in YNAB's inflow category, were an uncategorised transfer to or
+from a tracking account, or were a transfer line inside a split.
 
-**Q: My "Credit Card Payment" categories are missing.**
-A: LedgerZero handles credit cards differently than YNAB. We do not use special payment categories. Transfers to credit card accounts are treated as simple transfers.
+## Error messages
 
-**Q: How are split transactions handled?**
-A: Split transactions are fully supported. They appear as a parent transaction with multiple splits in your ledger.
+| Message | What to do |
+|---|---|
+| "Please select both Register.csv and Budget.csv." | Pick both files. |
+| "Register.csv is missing required columns: ..." | Pick the Register file (not Budget) from an unmodified YNAB export. |
+| "The selected files could not be read. Please check that they are unmodified YNAB exports." | Export again from YNAB and do not edit the files. |
+| "This folder is not a valid YNAB 4 budget. Please select the folder ending in .ynab4." | Select the `.ynab4` folder itself, not its parent or the `data` folder. |
+| "The dates in Register.csv do not fit one date format (...). First unreadable date: ..." | The Date column mixes formats or contains a value that is not a date. Export again from YNAB, or fix the value shown. |
+| "The file could not be opened." / "The folder could not be opened." | Pick the file or folder again. |
 
-**Q: What happens to my Goals?**
-A: Currently, YNAB Goals are not imported directly. You will need to set up goals in LedgerZero manually.
-
-**Q: Why do I see "Uncategorized" transactions?**
-A: If a category was deleted or hidden in YNAB but still has transactions, they might appear as Uncategorized. You can reassign them in LedgerZero.
-
-**Q: Does it support multi-currency?**
-A: LedgerZero supports multi-currency accounts, but the YNAB import assumes the currency of the export file. If you have a multi-budget setup in YNAB, import each budget separately into separate LedgerZero profiles (if supported) or carefully manage them.
-
-## Troubleshooting
-
-- **"Invalid CSV Format"**: Ensure you are using the official export from YNAB. Do not open and save the CSV in Excel before importing, as it may change the date formats.
-- **Missing Data**: Check if you selected the correct files. The `Register.csv` contains transactions, and `Budget.csv` contains budget allocations. Both are required for nYNAB.
-
-For further assistance, contact support@ledgerzero.app.
+Register rows are never skipped silently because of their date: one date
+format must fit every row, otherwise the import stops with the error above.
+See the supported date formats in [YNAB_EXPORT_SPEC.md](YNAB_EXPORT_SPEC.md).

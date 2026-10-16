@@ -1,5 +1,13 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
 
 // Development Team ID
 // You can set this via environment variable or uncomment and set it here to configure code signing.
 // DEVELOPMENT_TEAM = YOUR_TEAM_ID
+
+// Google Sign-In (Drive sync). Empty by default: Drive is then disabled on
+// iOS. Put the real values in ios/Flutter/GoogleSignIn.xcconfig (git-ignored),
+// see docs/GOOGLE_DRIVE_SETUP.md.
+GOOGLE_IOS_CLIENT_ID =
+GOOGLE_IOS_REVERSED_CLIENT_ID = com.ledgerzero.google-sign-in-not-configured
+#include? "GoogleSignIn.xcconfig"

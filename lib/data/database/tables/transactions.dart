@@ -14,7 +14,9 @@ class Transactions extends Table {
   TextColumn get accountId => text().references(Accounts, #id)();
 
   DateTimeColumn get date => dateTime()();
-  RealColumn get amount => real()();
+
+  /// Amount in minor units (hundredths); negative = outflow.
+  IntColumn get amount => integer()();
   TextColumn get payeeId => text().nullable().references(Payees, #id)();
   TextColumn get categoryId => text().nullable().references(Categories, #id)();
   TextColumn get memo => text().nullable()();

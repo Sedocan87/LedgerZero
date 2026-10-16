@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/memory_platform_file.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 
 void main() {
@@ -20,9 +21,8 @@ void main() {
       }
       final csvContent = sb.toString();
       final bytes = utf8.encode(csvContent);
-      final file = PlatformFile(
+      final file = MemoryPlatformFile(
         name: 'large.csv',
-        size: bytes.length,
         bytes: Uint8List.fromList(bytes),
       );
 

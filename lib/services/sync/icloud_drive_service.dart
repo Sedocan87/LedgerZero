@@ -1,250 +1,245 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:icloud_storage/icloud_storage.dart';
+import 'package:icloud_storage/icloud_storage_platform_interface.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
-import 'package:ledger_zero/services/sync/sync_status.dart';
+import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
+/// iCloud Drive sync folder: the root of the app's ubiquity container
+/// (backups go to `Backups/`).
+///
+/// `icloud_storage` completes `upload`/`download` before the transfer is
+/// done; completion is only signalled by the end of the progress stream. This transport therefore always listens to that stream
+/// and waits for it to finish (with a timeout), and verifies the size of
+/// every download.
 class ICloudDriveService implements SyncTransport {
   final String containerId;
-  ICloudStorage? _iCloudStorage;
-  final StreamController<SyncState> _statusController =
-      StreamController<SyncState>.broadcast();
+  final ICloudStoragePlatform? _platform;
+  final Future<Directory> Function() _tempDir;
+  final Duration downloadTimeout;
+  final Duration uploadTimeout;
 
   @override
   String get name => 'icloud';
 
-  @override
-  String get displayName => 'iCloud Drive';
-
   ICloudDriveService({
     this.containerId = 'iCloud.com.ledgerzero.app',
-    ICloudStorage? storage,
-  }) : _iCloudStorage = storage;
-
-  Stream<SyncState> get status => _statusController.stream;
-
-  @override
-  Future<void> initialize() async {
-    await _getStorage();
-  }
+    this._platform,
+    Future<Directory> Function()? tempDir,
+    this.downloadTimeout = const Duration(minutes: 2),
+    this.uploadTimeout = const Duration(seconds: 45),
+  }) : _tempDir = tempDir ?? getTemporaryDirectory;
 
   @override
-  Future<void> dispose() async {
-    await _statusController.close();
-  }
+  Future<void> dispose() async {}
 
-  /// Initializes and returns the [ICloudStorage] instance.
-  Future<ICloudStorage> _getStorage() async {
-    if (_iCloudStorage != null) {
-      return _iCloudStorage!;
-    }
-    try {
-      _iCloudStorage = await ICloudStorage.getInstance(containerId);
-      return _iCloudStorage!;
-    } catch (e) {
-      throw _handleError(e, 'Failed to initialize iCloud Storage');
-    }
-  }
+  /// The plugin's platform implementation (injectable for tests).
+  ICloudStoragePlatform get _storage =>
+      _platform ?? ICloudStoragePlatform.instance;
+
+  Future<List<ICloudFile>> _gather() =>
+      _storage.gather(containerId: containerId);
 
   /// Verifies access to the iCloud container.
   Future<void> verifyContainerAccess() async {
     try {
-      final storage = await _getStorage();
-      // List files to ensure we have access.
-      await storage.gatherFiles();
+      await _gather();
     } catch (e) {
-      throw _handleError(e, 'Failed to access iCloud container');
+      throw _toSyncException(e, 'Failed to access iCloud container');
     }
   }
 
   @override
-  Future<String?> uploadDelta(File localFile, String filename) async {
-    _updateStatus(
-      SyncStatus.syncing,
-      message: 'Uploading $filename',
-      progress: 0,
-    );
+  Future<List<RemoteFile>> listFiles() async {
     try {
-      final storage = await _getStorage();
-      await storage.startUpload(
-        filePath: localFile.path,
-        destinationRelativePath: filename,
-        onProgress: (stream) {
-          stream.listen(
-            (progress) {
-              _updateStatus(
-                SyncStatus.syncing,
-                message: 'Uploading $filename',
-                progress: progress,
-              );
-            },
-            onError: (e) {
-              // Handle stream error if needed, but startUpload exception handles main errors.
-            },
-            cancelOnError: true,
-          );
-        },
-      );
-      Logger.info('Uploaded delta to iCloud: $filename');
-      _updateStatus(SyncStatus.idle);
-      return filename; // iCloud doesn't give back an ID like Google Drive
+      final files = await _gather();
+      return [
+        for (final f in files)
+          if (!f.relativePath.contains('/'))
+            RemoteFile(
+              f.relativePath,
+              f.relativePath,
+              size: f.sizeInBytes,
+              modifiedTime: f.contentChangeDate.toUtc(),
+            ),
+      ];
     } catch (e) {
-      _updateStatus(SyncStatus.error, message: 'Upload failed');
-      throw _handleError(e, 'Failed to upload delta to iCloud');
-    }
-  }
-
-  /// Uploads a backup file to iCloud Drive.
-  Future<void> uploadBackup(File localFile, String filename) async {
-    _updateStatus(
-      SyncStatus.syncing,
-      message: 'Uploading backup $filename',
-      progress: 0,
-    );
-    try {
-      final storage = await _getStorage();
-      await storage.startUpload(
-        filePath: localFile.path,
-        destinationRelativePath: 'Backups/$filename',
-        onProgress: (stream) {
-          stream.listen(
-            (progress) {
-              _updateStatus(
-                SyncStatus.syncing,
-                message: 'Uploading backup $filename',
-                progress: progress,
-              );
-            },
-            onError: (e) {},
-            cancelOnError: true,
-          );
-        },
-      );
-      Logger.info('Uploaded backup to iCloud: $filename');
-      _updateStatus(SyncStatus.idle);
-    } catch (e) {
-      _updateStatus(SyncStatus.error, message: 'Backup upload failed');
-      throw _handleError(e, 'Failed to upload backup to iCloud');
+      throw _toSyncException(e, 'Failed to list the iCloud sync folder');
     }
   }
 
   @override
-  Future<File> downloadDelta(RemoteFile remoteFile, String savePath) async {
-    _updateStatus(
-      SyncStatus.syncing,
-      message: 'Downloading ${remoteFile.name}',
-      progress: 0,
-    );
+  Future<Uint8List> download(RemoteFile file) async {
+    final temp = await _tempFile('download');
     try {
-      final storage = await _getStorage();
-      await storage.startDownload(
-        relativePath: remoteFile.name, // Use name as relative path
-        destinationFilePath: savePath,
-        onProgress: (stream) {
-          stream.listen(
-            (progress) {
-              _updateStatus(
-                SyncStatus.syncing,
-                message: 'Downloading ${remoteFile.name}',
-                progress: progress,
-              );
-            },
-            onError: (e) {},
-            cancelOnError: true,
-          );
-        },
+      final done = Completer<void>();
+      await _storage.download(
+        containerId: containerId,
+        relativePath: file.id,
+        destinationFilePath: temp.path,
+        onProgress: (stream) => _completeOnDone(stream, done),
       );
-      _updateStatus(SyncStatus.idle);
-      return File(savePath);
-    } catch (e) {
-      _updateStatus(SyncStatus.error, message: 'Download failed');
-      throw _handleError(e, 'Failed to download delta from iCloud');
-    }
-  }
-
-  @override
-  Future<List<RemoteFile>> listDeltas() async {
-    try {
-      final storage = await _getStorage();
-      final files = await storage.gatherFiles();
-      return files
-          .where((f) => f.relativePath.endsWith('.json.gz'))
-          .map((f) => RemoteFile(f.relativePath, f.relativePath))
-          .toList();
-    } catch (e) {
-      throw _handleError(e, 'Failed to list deltas from iCloud');
-    }
-  }
-
-  /// Watches for changes in delta files in the iCloud container.
-  /// Returns a stream of file names.
-  Stream<List<String>> watchDeltas() async* {
-    try {
-      final storage = await _getStorage();
-      // ignore: deprecated_member_use
-      final stream = await storage.watchFiles();
-      yield* stream.map((files) {
-        return files.where((name) => name.endsWith('.json.gz')).toList();
-      });
-    } catch (e) {
-      throw _handleError(e, 'Failed to watch deltas from iCloud');
-    }
-  }
-
-  void _updateStatus(SyncStatus status, {String? message, double? progress}) {
-    if (!_statusController.isClosed) {
-      _statusController.add(
-        SyncState(status: status, message: message, progress: progress),
-      );
-    }
-  }
-
-  SyncException _handleError(Object error, String defaultMessage) {
-    if (error is PlatformException) {
-      if (error.code == 'cloud_disabled') {
-        return SyncException(
-          'iCloud is disabled',
-          originalError: error,
-          retryable: false,
+      await done.future.timeout(downloadTimeout);
+      if (!await temp.exists()) {
+        throw SyncException(
+          'iCloud did not deliver ${file.name}',
+          retryable: true,
         );
       }
-      // Check for quota/storage issues
-      if (error.message?.toLowerCase().contains('quota') == true ||
-          error.message?.toLowerCase().contains('full') == true) {
+      final bytes = await temp.readAsBytes();
+      if (file.size != null && bytes.length != file.size) {
+        throw SyncException(
+          'Incomplete iCloud download of ${file.name}',
+          retryable: true,
+        );
+      }
+      return bytes;
+    } catch (e) {
+      throw _toSyncException(e, 'Failed to download ${file.name} from iCloud');
+    } finally {
+      await _deleteQuietly(temp);
+    }
+  }
+
+  @override
+  Future<void> upload(String fileName, Uint8List bytes) async {
+    final temp = await _tempFile('upload');
+    try {
+      await temp.writeAsBytes(bytes, flush: true);
+      await _upload(temp, fileName);
+    } finally {
+      await _deleteQuietly(temp);
+    }
+  }
+
+  /// Uploads a backup archive to `Backups/` in the container.
+  Future<void> uploadBackup(File localFile, String filename) async {
+    await _upload(localFile, 'Backups/$filename');
+    Logger.info('Uploaded backup to iCloud: $filename');
+  }
+
+  Future<void> _upload(File local, String relativePath) async {
+    try {
+      final done = Completer<void>();
+      // The plugin copies the file into the container before returning;
+      // iCloud then uploads it in the background.
+      await _storage.upload(
+        containerId: containerId,
+        filePath: local.path,
+        destinationRelativePath: relativePath,
+        onProgress: (stream) => _completeOnDone(stream, done),
+      );
+      try {
+        await done.future.timeout(uploadTimeout);
+      } on TimeoutException {
+        // The file is in the ubiquity container; iCloud keeps uploading it
+        // after we return (e.g. while offline). Nothing is lost.
+        Logger.info('iCloud: $relativePath still uploading in the background');
+      }
+    } catch (e) {
+      throw _toSyncException(e, 'Failed to upload $relativePath to iCloud');
+    }
+  }
+
+  @override
+  Future<void> delete(RemoteFile file) async {
+    try {
+      await _storage.delete(containerId: containerId, relativePath: file.id);
+    } on PlatformException catch (e) {
+      if (e.code == PlatformExceptionCode.fileNotFound) {
+        return;
+      }
+      throw _toSyncException(e, 'Failed to delete ${file.name} from iCloud');
+    } catch (e) {
+      throw _toSyncException(e, 'Failed to delete ${file.name} from iCloud');
+    }
+  }
+
+  static void _completeOnDone(Stream<double> stream, Completer<void> done) {
+    stream.listen(
+      (_) {},
+      onError: (Object e) {
+        if (!done.isCompleted) {
+          done.completeError(e);
+        }
+      },
+      onDone: () {
+        if (!done.isCompleted) {
+          done.complete();
+        }
+      },
+      cancelOnError: true,
+    );
+  }
+
+  Future<File> _tempFile(String purpose) async {
+    final dir = Directory(p.join((await _tempDir()).path, 'icloud_sync'));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    final random = secureRandomBytes(
+      8,
+    ).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return File(p.join(dir.path, '$purpose-$random.tmp'));
+  }
+
+  static Future<void> _deleteQuietly(File file) async {
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
+  }
+
+  /// Whether an error is worth retrying: missing container / not signed in /
+  /// invalid arguments / missing file are permanent; native, network,
+  /// timeout and file-system errors are transient.
+  static SyncException _toSyncException(Object error, String message) {
+    if (error is SyncException) {
+      return error;
+    }
+    if (error is PlatformException) {
+      final code = error.code;
+      final text = (error.message ?? '').toLowerCase();
+      if (code == PlatformExceptionCode.iCloudConnectionOrPermission) {
+        return SyncException(
+          'iCloud is not available (not signed in or iCloud Drive off)',
+          originalError: error,
+          kind: SyncErrorKind.iCloudUnavailable,
+        );
+      }
+      if (text.contains('quota') || text.contains('full')) {
         return SyncException(
           'iCloud storage is full',
           originalError: error,
-          retryable: false,
+          kind: SyncErrorKind.storageFull,
         );
       }
-      // Network issues on iCloud are often handled by OS but if we see timeouts
-      // we can mark them retryable.
-      // Default to retryable for unknown platform exceptions as they might be transient.
+      if (code == PlatformExceptionCode.fileNotFound || code == 'E_ARG') {
+        return SyncException(message, originalError: error);
+      }
+      return SyncException(message, originalError: error, retryable: true);
+    }
+    if (error is InvalidArgumentException || error is ArgumentError) {
+      return SyncException(message, originalError: error);
+    }
+    if (error is SocketException || error is TimeoutException) {
       return SyncException(
-        error.message ?? defaultMessage,
+        message,
         originalError: error,
         retryable: true,
+        kind: SyncErrorKind.network,
       );
     }
-    return SyncException(
-      defaultMessage,
-      originalError: error,
-      retryable: false,
-    );
-  }
-
-  @override
-  Future<void> deleteFile(String fileId) async {
-    try {
-      final storage = await _getStorage();
-      await storage.delete(fileId);
-      Logger.info('Deleted file from iCloud: $fileId');
-    } catch (e) {
-      Logger.error('Failed to delete file $fileId: $e');
-      rethrow;
+    if (error is FileSystemException) {
+      return SyncException(message, originalError: error, retryable: true);
     }
+    return SyncException(message, originalError: error, retryable: true);
   }
 }

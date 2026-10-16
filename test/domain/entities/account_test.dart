@@ -9,8 +9,7 @@ void main() {
       name: 'Checking',
       type: AccountType.checking,
       currency: 'USD',
-      startingBalance: 100.0,
-      currentBalance: 200.0,
+      startingBalance: 10000,
       isClosed: false,
       color: 0xFF000000,
       icon: 'bank',
@@ -24,8 +23,7 @@ void main() {
       name: 'Checking',
       type: AccountType.checking,
       currency: 'USD',
-      startingBalance: 100.0,
-      currentBalance: 200.0,
+      startingBalance: 10000,
       isClosed: false,
       color: 0xFF000000,
       icon: 'bank',
@@ -40,8 +38,7 @@ void main() {
         name: 'Checking',
         type: AccountType.checking,
         currency: 'USD',
-        startingBalance: 100.0,
-        currentBalance: 200.0,
+        startingBalance: 10000,
         isClosed: false,
         color: 0xFF000000,
         icon: 'bank',
@@ -54,8 +51,7 @@ void main() {
         name: 'Checking',
         type: AccountType.checking,
         currency: 'USD',
-        startingBalance: 100.0,
-        currentBalance: 200.0,
+        startingBalance: 10000,
         isClosed: false,
         color: 0xFF000000,
         icon: 'bank',
@@ -71,11 +67,11 @@ void main() {
     test('copyWith returns new instance with updated fields', () {
       final updatedAccount = accountWithDates.copyWith(
         name: 'Savings',
-        currentBalance: 300.0,
+        balance: 30000,
       );
 
       expect(updatedAccount.name, equals('Savings'));
-      expect(updatedAccount.currentBalance, equals(300.0));
+      expect(updatedAccount.balance, equals(30000));
       expect(updatedAccount.id, equals(accountWithDates.id));
       expect(updatedAccount.type, equals(accountWithDates.type));
     });
@@ -86,8 +82,8 @@ void main() {
         'name': 'Checking',
         'type': 'checking',
         'currency': 'USD',
-        'starting_balance': 100.0,
-        'current_balance': 200.0,
+        'starting_balance': 10000,
+        'balance': 0,
         'is_closed': false,
         'color': 0xFF000000,
         'icon': 'bank',
@@ -107,8 +103,8 @@ void main() {
         'name': 'Checking',
         'type': 'checking',
         'currency': 'USD',
-        'starting_balance': 100.0,
-        'current_balance': 200.0,
+        'starting_balance': 10000,
+        'balance': 0,
         'is_closed': false,
         'color': 0xFF000000,
         'icon': 'bank',
@@ -138,8 +134,8 @@ void main() {
         type: AccountType.cash,
       );
       expect(defaultAccount.currency, 'USD');
-      expect(defaultAccount.startingBalance, 0.0);
-      expect(defaultAccount.currentBalance, 0.0);
+      expect(defaultAccount.startingBalance, 0);
+      expect(defaultAccount.balance, 0);
       expect(defaultAccount.isClosed, false);
     });
   });

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/report_note.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:uuid/uuid.dart';
 
 class ReportNotesSection extends ConsumerWidget {
@@ -24,6 +26,7 @@ class ReportNotesSection extends ConsumerWidget {
             Text(l10n.notes, style: Theme.of(context).textTheme.titleLarge),
             IconButton(
               icon: const Icon(Icons.add),
+              tooltip: l10n.addNote,
               onPressed: () => _showAddNoteDialog(context, ref),
             ),
           ],
@@ -39,7 +42,8 @@ class ReportNotesSection extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => Text('${l10n.error}: $e'),
+          error: (e, st) =>
+              LoadErrorView(error: e, stackTrace: st, compact: true),
         ),
       ],
     );
@@ -60,13 +64,21 @@ class _NoteCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final fmt = ref.watch(appFormatterProvider);
+    String title;
+    try {
+      title = fmt.formatMonthYear(CalendarDate.parseMonthKey(note.date));
+    } catch (_) {
+      title = note.date;
+    }
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        title: Text(note.date), // Should format this nicely
+        title: Text(title),
         subtitle: Text(note.note),
         trailing: IconButton(
           icon: const Icon(Icons.edit),
+          tooltip: AppLocalizations.of(context)!.editNote,
           onPressed: () {
             showDialog(
               context: context,
@@ -90,6 +102,8 @@ class _AddEditNoteDialog extends ConsumerStatefulWidget {
 
 class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
   late TextEditingController _noteController;
+
+  /// First day of the selected month (local, for the date picker).
   late DateTime _selectedDate;
   final _formKey = GlobalKey<FormState>();
 
@@ -99,21 +113,29 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
     _noteController = TextEditingController(text: widget.note?.note ?? '');
     if (widget.note != null) {
       try {
-        final parts = widget.note!.date.split('-');
-        _selectedDate = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+        final month = CalendarDate.parseMonthKey(widget.note!.date);
+        _selectedDate = DateTime(month.year, month.month);
       } catch (_) {
-        _selectedDate = DateTime.now();
+        final now = DateTime.now();
+        _selectedDate = DateTime(now.year, now.month);
       }
     } else {
       // Default to start of current report range if available, else now
       final range = ref.read(reportDateRangeProvider);
-      _selectedDate = range.start;
+      _selectedDate = DateTime(range.start.year, range.start.month);
     }
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final fmt = ref.watch(appFormatterProvider);
     final isEditing = widget.note != null;
 
     return AlertDialog(
@@ -136,7 +158,7 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
                 );
                 // Note: Standard DatePicker isn't great for selecting just Month/Year.
                 // But it's sufficient if we just ignore the day.
-                if (picked != null) {
+                if (picked != null && mounted) {
                   setState(() {
                     _selectedDate = DateTime(picked.year, picked.month);
                   });
@@ -147,7 +169,7 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
                   labelText: l10n.month,
                   border: const OutlineInputBorder(),
                 ),
-                child: Text(DateFormat('yyyy-MM').format(_selectedDate)),
+                child: Text(fmt.formatMonthYear(_selectedDate)),
               ),
             ),
             const SizedBox(height: 16),
@@ -187,19 +209,23 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
               );
 
               if (confirm == true && context.mounted) {
+                final messenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
                 await ref
                     .read(reportNoteRepositoryProvider)
                     .deleteNote(widget.note!.id);
-                if (context.mounted) {
+                if (mounted) {
                   ref.invalidate(reportNotesListProvider);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(l10n.noteDeleted)));
+                  navigator.pop();
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.noteDeleted)),
+                  );
                 }
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: Text(l10n.delete),
           ),
         TextButton(
@@ -210,7 +236,7 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
               final repo = ref.read(reportNoteRepositoryProvider);
-              final dateStr = DateFormat('yyyy-MM').format(_selectedDate);
+              final dateStr = CalendarDate.monthKey(_selectedDate);
 
               final note = ReportNote(
                 id: widget.note?.id ?? const Uuid().v4(),
@@ -218,13 +244,13 @@ class _AddEditNoteDialogState extends ConsumerState<_AddEditNoteDialog> {
                 note: _noteController.text,
               );
 
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
               await repo.saveNote(note);
-              if (context.mounted) {
+              if (mounted) {
                 ref.invalidate(reportNotesListProvider);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(l10n.noteSaved)));
+                navigator.pop();
+                messenger.showSnackBar(SnackBar(content: Text(l10n.noteSaved)));
               }
             }
           },

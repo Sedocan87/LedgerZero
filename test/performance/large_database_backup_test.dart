@@ -1,8 +1,16 @@
+// Encrypted backup of a 10,000-transaction database within a generous time
+// budget (KDF at test cost). Tagged `perf`.
+@Tags(['perf'])
+library;
+
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/services/backup/backup_service.dart';
+import 'package:ledger_zero/services/export/export_file_service.dart';
+
+import '../helpers/security_fakes.dart';
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as p;
@@ -53,7 +61,7 @@ void main() {
             accountId: 'acc_1',
             date:
                 DateTime.now(), // Drift automatically converts to string if column is Text
-            amount: (i % 100).toDouble(),
+            amount: (i % 100) * 100,
             memo: Value('Transaction $i'),
           ),
         );
@@ -68,16 +76,21 @@ void main() {
           return tempDir.path;
         });
 
-    backupService = BackupService(db);
+    backupService = BackupService(
+      db,
+      files: ExportFileService(
+        baseDirectory: () async => tempDir,
+        deferDeletion: false,
+      ),
+      // Measures snapshot + compression + encryption, not the KDF.
+      kdf: fastKdf,
+    );
 
     final stopwatch = Stopwatch()..start();
-    final backupFile = await backupService.createBackup();
+    final backupFile = await backupService.createBackup(password: 'perf pw');
     stopwatch.stop();
 
     final size = await backupFile.length();
-
-    // print('Backup of 10k transactions took ${stopwatch.elapsedMilliseconds}ms');
-    // print('Backup file size: ${size / 1024} KB');
 
     expect(backupFile.existsSync(), true);
     expect(size, greaterThan(0));

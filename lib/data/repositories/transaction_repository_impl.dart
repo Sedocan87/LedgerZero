@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
@@ -194,15 +195,17 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<List<Transaction>> getTransactionsByDateRange(
     DateTime start,
-    DateTime end,
-  ) async {
+    DateTime end, {
+    bool excludeSplitParents = false,
+    bool excludeSplitChildren = false,
+  }) async {
     try {
-      Logger.debug('Fetching transactions between $start and $end');
       final transactions = await _transactionsDao.getTransactionsByDateRange(
         start,
         end,
+        excludeSplitParents: excludeSplitParents,
+        excludeSplitChildren: excludeSplitChildren,
       );
-      Logger.debug('Fetched ${transactions.length} transactions in range');
       return transactions.map(_mapToDomain).toList();
     } catch (e, stackTrace) {
       Logger.error(
@@ -214,49 +217,133 @@ class TransactionRepositoryImpl implements TransactionRepository {
     }
   }
 
-  @override
-  Future<double> getIncomeSumByDateRange(DateTime start, DateTime end) async {
+  Future<T> _sum<T>(String what, Future<T> Function() query) async {
     try {
-      return await _transactionsDao.getIncomeSumByDateRange(start, end);
+      return await query();
     } catch (e, stackTrace) {
-      Logger.error('Failed to calculate income sum', e, stackTrace);
-      throw DatabaseException('Failed to calculate income sum', e);
+      Logger.error('Failed to calculate $what', e, stackTrace);
+      throw DatabaseException('Failed to calculate $what', e);
     }
   }
 
   @override
-  Future<double> getExpenseSumByCategoryAndDateRange(
+  Future<int> getReadyToAssignSum(DateTime start, DateTime end) => _sum(
+    'ready-to-assign sum',
+    () => _transactionsDao.getReadyToAssignSum(start, end),
+  );
+
+  @override
+  Future<int> getIncomeSum(DateTime start, DateTime end) =>
+      _sum('income sum', () => _transactionsDao.getIncomeSum(start, end));
+
+  @override
+  Future<int> getBalanceChangeSum(DateTime endExclusive) => _sum(
+    'balance change sum',
+    () => _transactionsDao.getBalanceChangeSum(endExclusive),
+  );
+
+  @override
+  Future<Map<String, int>> getMonthlyBalanceChanges(
+    DateTime start,
+    DateTime endExclusive,
+  ) async {
+    try {
+      return await _transactionsDao.getMonthlyBalanceChanges(
+        start,
+        endExclusive,
+      );
+    } catch (e, st) {
+      Logger.error('Error loading monthly balance changes', e, st);
+      throw DatabaseException('Error loading monthly balance changes', e);
+    }
+  }
+
+  @override
+  Future<int> getOutflowSum(DateTime start, DateTime end) =>
+      _sum('outflow sum', () => _transactionsDao.getOutflowSum(start, end));
+
+  @override
+  Future<int> getCategoryActivitySum(
     String categoryId,
     DateTime start,
     DateTime end,
-  ) async {
-    try {
-      return await _transactionsDao.getExpenseSumByCategoryAndDateRange(
-        categoryId,
-        start,
-        end,
-      );
-    } catch (e, stackTrace) {
-      Logger.error(
-        'Failed to calculate expense sum for category $categoryId',
-        e,
-        stackTrace,
-      );
-      throw DatabaseException('Failed to calculate expense sum', e);
-    }
+  ) => _sum(
+    'activity of category $categoryId',
+    () => _transactionsDao.getCategoryActivitySum(categoryId, start, end),
+  );
+
+  @override
+  Future<Map<String, int>> getCategoryActivitySums(
+    DateTime start,
+    DateTime end,
+  ) => _sum(
+    'category activity sums',
+    () => _transactionsDao.getCategoryActivitySums(start, end),
+  );
+
+  @override
+  Future<Transaction?> getTransactionByIdIncludingDeleted(String id) async {
+    return DatabaseErrorHandler.execute(() async {
+      final row = await _transactionsDao.getTransactionByIdIncludingDeleted(id);
+      return row == null ? null : _mapToDomain(row);
+    }, context: 'getTransactionByIdIncludingDeleted');
   }
 
   @override
-  Future<Map<String, double>> getExpenseSumsByDateRange(
-    DateTime start,
-    DateTime end,
+  Future<List<Transaction>> getTransactionsByIdsIncludingDeleted(
+    List<String> ids,
   ) async {
-    try {
-      return await _transactionsDao.getExpenseSumsByDateRange(start, end);
-    } catch (e, stackTrace) {
-      Logger.error('Failed to calculate expense sums', e, stackTrace);
-      throw DatabaseException('Failed to calculate expense sums', e);
-    }
+    return DatabaseErrorHandler.execute(() async {
+      final rows = await _transactionsDao.getTransactionsByIdsIncludingDeleted(
+        ids,
+      );
+      return rows.map(_mapToDomain).toList();
+    }, context: 'getTransactionsByIdsIncludingDeleted');
+  }
+
+  @override
+  Future<void> upsertTransactions(List<Transaction> transactions) async {
+    return DatabaseErrorHandler.execute(() async {
+      await _transactionsDao.upsertTransactions(
+        transactions.map(_mapToCompanion).toList(),
+      );
+    }, context: 'upsertTransactions');
+  }
+
+  @override
+  Future<bool> insertTransactionOrIgnore(Transaction transaction) async {
+    return DatabaseErrorHandler.execute(
+      () => _transactionsDao.insertTransactionOrIgnore(
+        _mapToCompanion(transaction),
+      ),
+      context: 'insertTransactionOrIgnore',
+    );
+  }
+
+  @override
+  Future<bool> isSplitParent(String id) async {
+    return DatabaseErrorHandler.execute(
+      () => _transactionsDao.isSplitParent(id),
+      context: 'isSplitParent',
+    );
+  }
+
+  @override
+  Stream<Set<String>> watchSplitParentIds() =>
+      _transactionsDao.watchSplitParentIds();
+
+  @override
+  Future<List<String>> markClearedAsReconciled(
+    String accountId,
+    DateTime upTo,
+  ) async {
+    return DatabaseErrorHandler.execute(
+      () => _transactionsDao.markClearedAsReconciled(
+        accountId,
+        CalendarDate.normalize(upTo),
+      ),
+      context: 'markClearedAsReconciled',
+    );
   }
 
   @override
@@ -345,12 +432,18 @@ class TransactionRepositoryImpl implements TransactionRepository {
         final existingChildren = await _transactionsDao.getSplitTransactions(
           parent.id,
         );
-        final existingIds = existingChildren.map((t) => t.id).toList();
-        await _transactionsDao.batchSoftDeleteTransactions(existingIds);
+        final keptIds = children.map((c) => c.id).toSet();
+        final removedIds = existingChildren
+            .map((t) => t.id)
+            .where((id) => !keptIds.contains(id))
+            .toList();
+        await _transactionsDao.batchSoftDeleteTransactions(removedIds);
 
-        for (var child in children) {
-          await _transactionsDao.insertTransaction(_mapToCompanion(child));
-        }
+        // Upsert by id: existing children are updated in place, new ones
+        // inserted.
+        await _transactionsDao.upsertTransactions(
+          children.map(_mapToCompanion).toList(),
+        );
       });
       Logger.info('Split transaction updated successfully');
     } catch (e, stackTrace) {
@@ -436,11 +529,14 @@ class TransactionRepositoryImpl implements TransactionRepository {
     );
   }
 
+  /// Dates are stored as UTC midnight of the calendar day; timestamps as
+  /// UTC. `updatedAt` is always set to now.
   db.TransactionsCompanion _mapToCompanion(Transaction t) {
+    final now = DateTime.now().toUtc();
     return db.TransactionsCompanion(
       id: Value(t.id),
       accountId: Value(t.accountId),
-      date: Value(t.date),
+      date: Value(CalendarDate.normalize(t.date)),
       amount: Value(t.amount),
       payeeId: Value(t.payeeId),
       categoryId: Value(t.categoryId),
@@ -451,8 +547,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
       transferAccountId: Value(t.transferAccountId),
       transferTransactionId: Value(t.transferTransactionId),
       parentTransactionId: Value(t.parentTransactionId),
-      createdAt: Value(t.createdAt),
-      updatedAt: Value(t.updatedAt),
+      createdAt: Value(t.createdAt?.toUtc() ?? now),
+      updatedAt: Value(now),
     );
   }
 }

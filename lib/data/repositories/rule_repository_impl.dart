@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/rules_dao.dart';
 import 'package:ledger_zero/data/database/database.dart';
@@ -15,9 +16,9 @@ class RuleRepositoryImpl implements RuleRepository {
     try {
       final rules = await _rulesDao.getAllRules();
       return rules.map(_mapToDomain).toList();
-    } catch (e) {
-      Logger.error('Failed to get rules', e);
-      throw Exception('Failed to get rules');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get rules', e, stackTrace);
+      throw DatabaseException('Failed to get rules', e);
     }
   }
 
@@ -33,9 +34,9 @@ class RuleRepositoryImpl implements RuleRepository {
     try {
       final rule = await _rulesDao.getRuleById(id);
       return rule != null ? _mapToDomain(rule) : null;
-    } catch (e) {
-      Logger.error('Failed to get rule', e);
-      throw Exception('Failed to get rule');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to get rule', e, stackTrace);
+      throw DatabaseException('Failed to get rule', e);
     }
   }
 
@@ -43,9 +44,9 @@ class RuleRepositoryImpl implements RuleRepository {
   Future<void> createRule(domain.Rule rule) async {
     try {
       await _rulesDao.createRule(_mapToCompanion(rule));
-    } catch (e) {
-      Logger.error('Failed to create rule', e);
-      throw Exception('Failed to create rule');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to create rule', e, stackTrace);
+      throw DatabaseException('Failed to create rule', e);
     }
   }
 
@@ -53,9 +54,9 @@ class RuleRepositoryImpl implements RuleRepository {
   Future<void> updateRule(domain.Rule rule) async {
     try {
       await _rulesDao.updateRule(_mapToCompanion(rule));
-    } catch (e) {
-      Logger.error('Failed to update rule', e);
-      throw Exception('Failed to update rule');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to update rule', e, stackTrace);
+      throw DatabaseException('Failed to update rule', e);
     }
   }
 
@@ -63,9 +64,9 @@ class RuleRepositoryImpl implements RuleRepository {
   Future<void> deleteRule(String id) async {
     try {
       await _rulesDao.deleteRule(id);
-    } catch (e) {
-      Logger.error('Failed to delete rule', e);
-      throw Exception('Failed to delete rule');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to delete rule', e, stackTrace);
+      throw DatabaseException('Failed to delete rule', e);
     }
   }
 
@@ -79,9 +80,9 @@ class RuleRepositoryImpl implements RuleRepository {
 
       final dbRules = rules.map(_mapToRow).toList();
       await _rulesDao.reorderRules(dbRules);
-    } catch (e) {
-      Logger.error('Failed to reorder rules', e);
-      throw Exception('Failed to reorder rules');
+    } catch (e, stackTrace) {
+      Logger.error('Failed to reorder rules', e, stackTrace);
+      throw DatabaseException('Failed to reorder rules', e);
     }
   }
 
@@ -111,9 +112,9 @@ class RuleRepositoryImpl implements RuleRepository {
       conditions: Value(rule.conditions),
       actions: Value(rule.actions),
       createdAt: Value(
-        DateTime.now().toIso8601String(),
+        DateTime.now().toUtc().toIso8601String(),
       ), // Should preserve if exists? usually handled by service/usecase
-      updatedAt: Value(DateTime.now().toIso8601String()),
+      updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
     );
   }
 
@@ -127,8 +128,8 @@ class RuleRepositoryImpl implements RuleRepository {
       matchLogic: rule.matchLogic,
       conditions: rule.conditions,
       actions: rule.actions,
-      createdAt: DateTime.now().toIso8601String(), // placeholder
-      updatedAt: DateTime.now().toIso8601String(), // placeholder
+      createdAt: DateTime.now().toUtc().toIso8601String(), // placeholder
+      updatedAt: DateTime.now().toUtc().toIso8601String(), // placeholder
     );
   }
 }

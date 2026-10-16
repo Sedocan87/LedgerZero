@@ -9,11 +9,14 @@ class Categories extends Table {
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().nullable()();
   TextColumn get goalType => text().nullable()();
-  RealColumn get targetAmount => real().nullable()();
+
+  /// Goal target in minor units.
+  IntColumn get targetAmount => integer().nullable()();
   DateTimeColumn get targetDate => dateTime().nullable()();
   IntColumn get color => integer().nullable()();
   TextColumn get icon => text().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

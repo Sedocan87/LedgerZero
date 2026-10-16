@@ -1,81 +1,50 @@
-# Budget Screen Video Tutorial Script
+# Video Tutorial Script: The Budget Screen
 
-**Title:** Mastering Your Budget in LedgerZero
-**Duration:** Approx. 2-3 minutes
-**Format:** Screen recording with voiceover
+**Duration**: about 2 minutes
+**Format**: phone screen recording with voiceover
+Reference: [BUDGETING_RULES.md](../BUDGETING_RULES.md)
 
----
+## Scene 1: To Be Budgeted (0:00 - 0:25)
+**Visual**: Tap the **Budget** tab. Highlight the **To Be Budgeted** banner.
+**Action**: Tap the help icon next to it to show the tooltip.
+**Audio**: "To Be Budgeted is money you have not assigned to a category yet.
+The goal is to assign it until this number reaches zero."
 
-## Scene 1: Introduction (0:00 - 0:30)
+## Scene 2: Assigning money (0:25 - 0:55)
+**Visual**: A category row (e.g. Groceries), Budgeted column at 0.00.
+**Action**: Tap the Budgeted amount, enter 500 in the calculator, confirm.
+Show To Be Budgeted going down and Available going up.
+**Audio**: "Tap the budgeted amount of a category and enter what you plan to
+spend this month. To Be Budgeted goes down and the category's Available
+amount goes up. An Undo button appears if you made a mistake."
+**Optional**: long-press the To Be Budgeted amount and drag it onto a
+category to assign part of it.
 
-**Visual:**
-*   Start on the Home Screen, then tap "Budget" tab.
-*   Highlight the "To Be Budgeted" (TBB) banner at the top.
+## Scene 3: Quick actions (0:55 - 1:20)
+**Visual**: A category with the orange warning icon (below its goal target).
+**Action**: Long-press the row. The **Quick Actions** sheet shows **Budget
+Previous Month**, **Budget Average Spent**, **Zero Out** and **Move Money**.
+Choose **Budget Previous Month**.
+**Audio**: "The orange icon means a category is below its goal target.
+Long-press a category for quick actions: copy last month's amount, budget
+your average spending, or set it to zero."
 
-**Audio:**
-"Welcome to LedgerZero. Today, we'll master the Budget Screen, the heart of your financial control. At the top, you see 'To Be Budgeted'. This is your available income waiting to be given a job. In zero-based budgeting, our goal is to bring this number to zero."
+## Scene 4: Covering overspending (1:20 - 1:45)
+**Visual**: A category whose Available amount is red (negative).
+**Action**: Long-press a category with money left (e.g. Dining Out), tap
+**Move Money** (it opens with that category as the source), choose the
+overspent category as the target, enter the amount, confirm. Both rows
+update.
+**Audio**: "A red Available amount means you spent more than you budgeted.
+Long-press a category that has money left, choose Move Money and move the
+amount to the overspent one."
 
-**Action:**
-*   Tap the TBB banner to show the tooltip explaining the concept.
+## Scene 5: Months and views (1:45 - 2:00)
+**Action**: Use the arrows of the month selector to go to next month. Tap
+the **View Mode** icon in the app bar to switch to the comparison view with
+progress bars, and back.
+**Audio**: "Use the arrows to plan the next month, and switch the view mode
+to see spending against your budget as progress bars."
 
-## Scene 2: Assigning Money (0:30 - 1:00)
-
-**Visual:**
-*   Scroll to a category group (e.g., "Monthly Bills").
-*   Focus on a category like "Rent" or "Groceries".
-*   Tap the "Budgeted" column (currently 0.00).
-
-**Audio:**
-"Let's give your money a job. Tap the 'Budgeted' column for any category. Enter the amount you plan to spend this month. Notice how your 'To Be Budgeted' drops, and the 'Available' amount for that category turns green."
-
-**Action:**
-*   Enter "500" into the calculator/input pad.
-*   Confirm. Show TBB decreasing and Category Available increasing.
-
-## Scene 3: Handling Goals & Auto-Assign (1:00 - 1:40)
-
-**Visual:**
-*   Show a category with a yellow alert icon (Goal Target not met).
-*   Long-press the category row.
-*   Select "Underfunded" from the menu.
-
-**Audio:**
-"If you've set goals for your categories, LedgerZero helps you stay on track. A yellow alert means you haven't budgeted enough to meet your goal. Simply long-press the category and select 'Underfunded' to automatically assign the exact amount needed."
-
-**Action:**
-*   Demonstrate the long-press and auto-fill.
-*   Show the alert disappearing.
-
-## Scene 4: Dealing with Overspending (1:40 - 2:10)
-
-**Visual:**
-*   Show a category with a RED "Available" bubble (negative balance).
-*   Tap the red bubble.
-*   Select "Cover this overspending with..." modal.
-
-**Audio:**
-"Life happens. If you overspend, the category turns red. Don't worry! Just tap the red bubble. You can choose to cover this overspending from 'To Be Budgeted' or move money from another category like 'Dining Out'. This keeps your budget honest."
-
-**Action:**
-*   Move money from "Dining Out" to cover the overspending.
-*   Show both categories updating instantly.
-
-## Scene 5: Navigation & Views (2:10 - 2:30)
-
-**Visual:**
-*   Swipe left/right to change months.
-*   Tap the View Mode icon in the app bar (toggle between List and Comparison view).
-
-**Audio:**
-"You can plan ahead by swiping to next month. And if you want to see how you're doing compared to your plan, toggle the View Mode to see progress bars. Happy budgeting with LedgerZero!"
-
-**Action:**
-*   Swipe to next month.
-*   Toggle view mode.
-*   Fade to black with LedgerZero logo.
-
----
-**Production Notes:**
-*   Ensure "Demo Mode" or a clean database is used.
-*   Use Dark Mode for better visual appeal.
-*   Enable "Show Taps" in developer options for clarity.
+**Production notes**: use a demo database with a few categories, one goal
+and one overspent category. Enable "Show taps" on the device.

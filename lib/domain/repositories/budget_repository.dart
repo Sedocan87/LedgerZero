@@ -26,16 +26,16 @@ abstract class BudgetRepository {
   /// Watches all budgets for a specific month.
   Stream<List<Budget>> watchBudgetsForMonth(String month);
 
-  /// Calculates total budgeted amount across all categories up to (and including) [endMonth].
-  Future<double> getTotalBudgetedByMonthRange(String endMonth);
+  /// Calculates total budgeted amount (minor units) across all categories up to (and including) [endMonth].
+  Future<int> getTotalBudgetedByMonthRange(String endMonth);
 
-  /// Calculates total budgeted amount for a specific category up to (and including) [endMonth].
-  Future<double> getTotalBudgetedByCategoryAndMonthRange(
+  /// Calculates total budgeted amount (minor units) for a specific category up to (and including) [endMonth].
+  Future<int> getTotalBudgetedByCategoryAndMonthRange(
     String categoryId,
     String endMonth,
   );
 
-  /// Calculates total budgeted amount for all categories up to (and including) [endMonth].
+  /// Calculates total budgeted amount (minor units) for all categories up to (and including) [endMonth].
   /// Returns a map where key is categoryId and value is the sum.
-  Future<Map<String, double>> getAllTimeBudgetedSumsUpToMonth(String endMonth);
+  Future<Map<String, int>> getAllTimeBudgetedSumsUpToMonth(String endMonth);
 }

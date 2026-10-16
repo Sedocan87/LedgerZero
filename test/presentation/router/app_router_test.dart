@@ -1,153 +1,182 @@
-import 'package:drift/native.dart';
+// The app router's gates (onboarding, lock) and deep links while locked,
+// with the real routes and screens on an in-memory database.
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ledger_zero/data/database/database.dart';
-import 'package:ledger_zero/presentation/providers/auth_provider.dart';
-import 'package:ledger_zero/presentation/providers/database_provider.dart';
-import 'package:ledger_zero/app/app.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/core/config/app_config.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/backup_providers.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/router/app_router.dart';
+import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
+import 'package:ledger_zero/presentation/screens/home_screen.dart';
+import 'package:ledger_zero/presentation/screens/login_screen.dart';
+import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
+import 'package:ledger_zero/services/backup/backup_scheduler.dart';
+import 'package:ledger_zero/services/security/key_vault.dart';
+import 'package:mockito/mockito.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/security_fakes.dart';
+import '../../helpers/test_database.dart';
+
+class _NoBackupReminder extends Mock implements BackupScheduler {
+  @override
+  Future<void> checkBackupDue() async {}
+}
 
 void main() {
-  setUpAll(() {
-    // Initialize AppConfig for the test suite
-    try {
-      AppConfig(environment: AppEnvironment.development, appTitle: 'Test App');
-    } catch (_) {
-      // Already initialized
+  late TestDatabase t;
+
+  setUp(() => t = TestDatabase());
+  tearDown(() => t.close());
+
+  /// Pumps the real router. [onboarded] is what the app persisted; the app
+  /// always starts locked.
+  Future<ProviderContainer> pumpRouter(
+    WidgetTester tester, {
+    required bool onboarded,
+  }) async {
+    SharedPreferences.setMockInitialValues({'user_onboarded': onboarded});
+    final prefs = await SharedPreferences.getInstance();
+    final store = InMemorySecureStore();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        databaseProvider.overrideWithValue(t.db),
+        secureStoreProvider.overrideWithValue(store),
+        legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
+        keyVaultProvider.overrideWithValue(
+          KeyVault(store, newKdfParams: fastKdf),
+        ),
+        biometricKeyStoreProvider.overrideWithValue(
+          FakeBiometricKeyStore(available: false),
+        ),
+        backupSchedulerProvider.overrideWithValue(_NoBackupReminder()),
+      ],
+    );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: Consumer(
+          builder: (context, ref, _) => MaterialApp.router(
+            routerConfig: ref.watch(routerProvider),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return container;
+  }
+
+  /// Unmounts the app and lets drift's stream cleanup timers fire before
+  /// the database closes (otherwise the test fails on pending timers).
+  Future<void> unmount(WidgetTester tester, ProviderContainer c) async {
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+    await tester.pump(const Duration(seconds: 1));
+  }
+
+  String location(ProviderContainer c) =>
+      c.read(routerProvider).routerDelegate.currentConfiguration.uri.toString();
+
+  void unlock(ProviderContainer c) =>
+      c.read(sessionProvider.notifier).unlock(Uint8List(32));
+
+  testWidgets('not onboarded: every location goes to onboarding', (
+    tester,
+  ) async {
+    final c = await pumpRouter(tester, onboarded: false);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(location(c), '/onboarding');
+
+    for (final target in ['/', '/login', '/accounts', '/settings']) {
+      c.read(routerProvider).go(target);
+      await tester.pumpAndSettle();
+      expect(location(c), '/onboarding', reason: target);
     }
+    // The steps after the password need the unlocked database.
+    c.read(routerProvider).go('/onboarding/budget-setup');
+    await tester.pumpAndSettle();
+    expect(location(c), '/onboarding');
+    expect(c.read(pendingLocationProvider).value, isNull);
+    await unmount(tester, c);
   });
 
-  testWidgets('Initial route is Home when onboarded and authenticated', (
+  testWidgets('onboarded and locked: the app starts at the login screen', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
-    final sharedPreferences = await SharedPreferences.getInstance();
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          authProvider.overrideWith(
-            (ref) => AuthNotifier(sharedPreferences)
-              ..setOnboarded(true)
-              ..setAuthenticated(true),
-          ),
-          databaseProvider.overrideWithValue(db),
-        ],
-        child: const MyApp(),
-      ),
-    );
-
-    // Initial pump
-    await tester.pumpAndSettle();
-
-    expect(find.text('Home'), findsWidgets);
+    final c = await pumpRouter(tester, onboarded: true);
+    expect(location(c), '/login');
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
+    await unmount(tester, c);
   });
 
-  testWidgets('Redirects to Onboarding when not onboarded', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final sharedPreferences = await SharedPreferences.getInstance();
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          authProvider.overrideWith(
-            (ref) => AuthNotifier(sharedPreferences)..setOnboarded(false),
-          ),
-          databaseProvider.overrideWithValue(db),
-        ],
-        child: const MyApp(),
-      ),
-    );
-
-    await tester.pumpAndSettle();
-
-    expect(find.text('Onboarding Screen'), findsOneWidget);
-  });
-
-  testWidgets('Redirects to Login when onboarded but not authenticated', (
+  testWidgets('unlocking opens Home; the tabs work; locking returns to login', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
-    final sharedPreferences = await SharedPreferences.getInstance();
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          authProvider.overrideWith(
-            (ref) => AuthNotifier(sharedPreferences)
-              ..setOnboarded(true)
-              ..setAuthenticated(false),
-          ),
-          databaseProvider.overrideWithValue(db),
-        ],
-        child: const MyApp(),
-      ),
-    );
-
+    final c = await pumpRouter(tester, onboarded: true);
+    unlock(c);
     await tester.pumpAndSettle();
+    expect(location(c), '/');
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
 
-    expect(find.text('Login Screen'), findsOneWidget);
+    // Login and onboarding are not reachable while unlocked.
+    c.read(routerProvider).go('/login');
+    await tester.pumpAndSettle();
+    expect(location(c), '/');
+    c.read(routerProvider).go('/onboarding');
+    await tester.pumpAndSettle();
+    expect(location(c), '/');
+
+    await tester.tap(find.text('Accounts').last);
+    await tester.pumpAndSettle();
+    expect(location(c), '/accounts');
+    expect(find.byType(AccountsScreen), findsOneWidget);
+
+    // Locking (auto-lock or "Lock now") drops the protected screens.
+    c.read(authProvider.notifier).setAuthenticated(false);
+    await tester.pumpAndSettle();
+    expect(location(c), '/login');
+    expect(find.byType(AccountsScreen), findsNothing);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    await unmount(tester, c);
   });
 
-  testWidgets('Can navigate between tabs', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final sharedPreferences = await SharedPreferences.getInstance();
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          authProvider.overrideWith(
-            (ref) => AuthNotifier(sharedPreferences)
-              ..setOnboarded(true)
-              ..setAuthenticated(true),
-          ),
-          databaseProvider.overrideWithValue(db),
-        ],
-        child: const MyApp(),
-      ),
+  testWidgets('a deep link while locked shows login, then opens after unlock', (
+    tester,
+  ) async {
+    final c = await pumpRouter(tester, onboarded: true);
+    c.read(routerProvider).go('/settings/scheduled-transactions');
+    await tester.pumpAndSettle();
+    expect(location(c), '/login');
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(
+      c.read(pendingLocationProvider).value,
+      '/settings/scheduled-transactions',
     );
 
+    unlock(c);
     await tester.pumpAndSettle();
+    expect(location(c), '/settings/scheduled-transactions');
+    expect(c.read(pendingLocationProvider).value, isNull);
 
-    // Verify Home
-    expect(find.text('Home'), findsWidgets);
-
-    // Tap Budget tab
-    await tester.tap(find.text('Budget'));
+    // Opened once: the next lock/unlock starts at Home again.
+    c.read(authProvider.notifier).setAuthenticated(false);
     await tester.pumpAndSettle();
-
-    expect(find.text('Budget'), findsWidgets);
-
-    // Tap Accounts tab
-    await tester.tap(find.text('Accounts'));
+    unlock(c);
     await tester.pumpAndSettle();
-
-    expect(find.text('Accounts'), findsWidgets);
-
-    // Tap Transactions tab
-    await tester.tap(find.text('Transactions'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Transactions'), findsWidgets);
-
-    // Tap Reports tab
-    await tester.tap(find.text('Reports'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Reports'), findsWidgets);
+    expect(location(c), '/');
+    await unmount(tester, c);
   });
 }

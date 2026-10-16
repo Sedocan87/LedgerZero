@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
+import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import 'dart:async';
-import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/data/database/database.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -44,11 +45,12 @@ class SettingsScreen extends ConsumerWidget {
             context,
           ).showSnackBar(SnackBar(content: Text(l10n.cacheCleared)));
         }
-      } catch (e) {
+      } catch (e, st) {
+        Logger.error('Clearing the cache failed', e, st);
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Error clearing cache: $e')));
+          ).showSnackBar(SnackBar(content: Text(l10n.clearCacheFailed)));
         }
       }
     }
@@ -65,7 +67,9 @@ class SettingsScreen extends ConsumerWidget {
               child: Text(l10n.cancel),
             ),
             TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
               onPressed: () => Navigator.pop(context, true),
               child: Text(l10n.factoryReset),
             ),
@@ -74,26 +78,13 @@ class SettingsScreen extends ConsumerWidget {
       );
 
       if (confirmed == true) {
-        // Close database connection
-        await AppDatabase.instance.close();
-
-        // Delete database file
-        final dbFolder = await getApplicationDocumentsDirectory();
-        final file = File('${dbFolder.path}/db.sqlite');
-        if (await file.exists()) {
-          await file.delete();
-        }
-
-        // Clear shared preferences
-        final prefs = ref.read(sharedPreferencesProvider);
-        await prefs.clear();
+        await ref.read(factoryResetServiceProvider).reset();
 
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(l10n.factoryResetSuccess)));
-          // Force app restart or navigate to onboarding would be ideal here
-          // For now, we'll navigate to initial route if possible, or just let the user restart
+          context.go('/onboarding');
         }
       }
     }
@@ -116,15 +107,9 @@ class SettingsScreen extends ConsumerWidget {
                     context: context,
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.currency),
-                      children: [
-                        'USD',
-                        'EUR',
-                        'GBP',
-                        'JPY',
-                        'CHF',
-                        'CAD',
-                        'AUD',
-                      ].map((c) => buildOption(context, c, c)).toList(),
+                      children: supportedCurrencyCodes
+                          .map((c) => buildOption(context, c, c))
+                          .toList(),
                     ),
                   );
                   if (selected != null) {
@@ -162,17 +147,22 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.numbers),
                 title: Text(l10n.numberFormat),
-                subtitle: Text(
-                  settings.numberFormat == AppNumberFormat.dot
-                      ? l10n.dot
-                      : l10n.comma,
-                ),
+                subtitle: Text(switch (settings.numberFormat) {
+                  AppNumberFormat.system => l10n.numberFormatSystem,
+                  AppNumberFormat.dot => l10n.dot,
+                  AppNumberFormat.comma => l10n.comma,
+                }),
                 onTap: () async {
                   final selected = await showDialog<AppNumberFormat>(
                     context: context,
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.numberFormat),
                       children: [
+                        buildOption(
+                          context,
+                          l10n.numberFormatSystem,
+                          AppNumberFormat.system,
+                        ),
                         buildOption(context, l10n.dot, AppNumberFormat.dot),
                         buildOption(context, l10n.comma, AppNumberFormat.comma),
                       ],
@@ -285,9 +275,10 @@ class SettingsScreen extends ConsumerWidget {
                 leading: const Icon(Icons.language),
                 title: Text(l10n.language),
                 subtitle: Text(
-                  settings.language?.languageCode == 'de'
-                      ? 'Deutsch'
-                      : 'English',
+                  kLanguageEndonyms[Localizations.localeOf(
+                        context,
+                      ).languageCode] ??
+                      Localizations.localeOf(context).languageCode,
                 ),
                 onTap: () async {
                   final selected = await showDialog<Locale>(
@@ -295,8 +286,8 @@ class SettingsScreen extends ConsumerWidget {
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.language),
                       children: [
-                        buildOption(context, 'English', const Locale('en')),
-                        buildOption(context, 'Deutsch', const Locale('de')),
+                        for (final entry in kLanguageEndonyms.entries)
+                          buildOption(context, entry.value, Locale(entry.key)),
                       ],
                     ),
                   );
@@ -370,7 +361,7 @@ class SettingsScreen extends ConsumerWidget {
                       },
                     ),
                     loading: () => ListTile(title: Text(l10n.loadingAccounts)),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   );
                 },
               ),
@@ -437,7 +428,7 @@ class SettingsScreen extends ConsumerWidget {
                       },
                     ),
                     loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   );
                 },
               ),
@@ -505,16 +496,16 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.backup),
-                title: Text(l10n.backupAndRestore),
+                title: Text(l10n.backupAndExport),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/backup'),
               ),
             ],
           ),
 
-          // Management
+          // Data management
           SettingsSection(
-            title: l10n.manageCategories,
+            title: l10n.settingsManageSection,
             children: [
               ListTile(
                 leading: const Icon(Icons.upload_file),
@@ -523,10 +514,19 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.push('/settings/import-csv'),
               ),
               ListTile(
-                leading: const Icon(Icons.import_export),
-                title: Text(l10n.importFromMint),
+                key: const Key('settings.importYnab'),
+                leading: const Icon(Icons.move_down),
+                title: Text(l10n.ynabImportTitle),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/import-mint'),
+                onTap: () => context.push('/settings/import-ynab'),
+              ),
+              ListTile(
+                key: const Key('settings.rules'),
+                leading: const Icon(Icons.rule),
+                title: Text(l10n.rules),
+                subtitle: Text(l10n.rulesSettingsSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/rules'),
               ),
               ListTile(
                 leading: const Icon(Icons.people),
@@ -553,30 +553,19 @@ class SettingsScreen extends ConsumerWidget {
           SettingsSection(
             title: l10n.advancedSettings,
             children: [
-              SwitchListTile(
-                secondary: const Icon(Icons.developer_mode),
-                title: Text(l10n.developerMode),
-                value: settings.developerMode,
-                onChanged: (value) =>
-                    ref.read(settingsProvider.notifier).setDeveloperMode(value),
-              ),
-              if (settings.developerMode)
-                ListTile(
-                  leading: const Icon(Icons.data_usage),
-                  title: Text(l10n.databaseStatistics),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/settings/database-stats'),
-                ),
               ListTile(
                 leading: const Icon(Icons.cleaning_services),
                 title: Text(l10n.clearCache),
                 onTap: () => clearCache(context),
               ),
               ListTile(
-                leading: const Icon(Icons.delete_forever, color: Colors.red),
+                leading: Icon(
+                  Icons.delete_forever,
+                  color: Theme.of(context).colorScheme.error,
+                ),
                 title: Text(
                   l10n.factoryReset,
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () => factoryReset(context, ref),
               ),

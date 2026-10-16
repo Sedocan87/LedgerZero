@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/domain/undo/budget_undo_actions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
-import 'package:ledger_zero/presentation/providers/categories_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class MoveMoneyModal extends ConsumerStatefulWidget {
   final String? initialFromCategoryId;
@@ -52,8 +56,8 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
     // Prevent moving to same category
     if (_fromCategoryId == _toCategoryId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Source and destination categories must be different'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.moveMoneySameCategory),
         ),
       );
       return;
@@ -64,8 +68,12 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
     });
 
     try {
-      final amount =
-          double.tryParse(_amountController.text.replaceAll(',', '.')) ?? 0.0;
+      final amount = ref
+          .read(appFormatterProvider)
+          .parseAmount(_amountController.text);
+      if (amount == null || amount <= 0) {
+        return;
+      }
       final month = ref.read(selectedBudgetMonthProvider);
       final budgetingService = ref.read(budgetingServiceProvider);
 
@@ -76,18 +84,46 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
         month,
       );
 
-      // Refresh providers
-      ref.invalidate(budgetViewModelProvider);
-      ref.invalidate(tbbProvider);
+      // Undoable like every other budget edit (undo moves the money back
+      // in one unit of work).
+      final undoService = ref.read(undoServiceProvider);
+      final action = MoveMoneyAction(
+        budgetingService: budgetingService,
+        fromCategoryId: _fromCategoryId!,
+        toCategoryId: _toCategoryId!,
+        amount: amount,
+        month: month,
+      );
+      undoService.addAction(action);
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        // The modal closes; show the snack bar on the screen below it.
+        final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(l10n.moveMoneyDone),
+              action: SnackBarAction(
+                label: l10n.undo,
+                onPressed: () => undoService
+                    .undo(action)
+                    .catchError(
+                      (Object e, StackTrace st) =>
+                          Logger.error('Undoing move money failed', e, st),
+                    ),
+              ),
+            ),
+          );
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
       }
     } finally {
       if (mounted) {
@@ -125,6 +161,8 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                 DropdownButtonFormField<String>(
                   key: ValueKey(_fromCategoryId),
                   initialValue: _fromCategoryId,
+                  // Long "Group: Category" names ellipsize on phones.
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: AppLocalizations.of(context)!.moveMoneyFrom,
                     border: const OutlineInputBorder(),
@@ -133,7 +171,10 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                     return group.categories.map((category) {
                       return DropdownMenuItem<String>(
                         value: category.id,
-                        child: Text('${group.group.name}: ${category.name}'),
+                        child: Text(
+                          '${group.group.name}: ${category.name}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     });
                   }).toList(),
@@ -142,13 +183,16 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                       _fromCategoryId = value;
                     });
                   },
-                  validator: (value) =>
-                      value == null ? 'Please select a category' : null,
+                  validator: (value) => value == null
+                      ? AppLocalizations.of(context)!.selectCategoryRequired
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   key: ValueKey(_toCategoryId),
                   initialValue: _toCategoryId,
+                  // Long "Group: Category" names ellipsize on phones.
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: AppLocalizations.of(context)!.moveMoneyTo,
                     border: const OutlineInputBorder(),
@@ -157,7 +201,10 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                     return group.categories.map((category) {
                       return DropdownMenuItem<String>(
                         value: category.id,
-                        child: Text('${group.group.name}: ${category.name}'),
+                        child: Text(
+                          '${group.group.name}: ${category.name}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     });
                   }).toList(),
@@ -166,8 +213,9 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                       _toCategoryId = value;
                     });
                   },
-                  validator: (value) =>
-                      value == null ? 'Please select a category' : null,
+                  validator: (value) => value == null
+                      ? AppLocalizations.of(context)!.selectCategoryRequired
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
@@ -177,10 +225,9 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                     decimal: true,
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return AppLocalizations.of(context)!.invalidAmount;
-                    }
-                    final amount = double.tryParse(value.replaceAll(',', '.'));
+                    final amount = ref
+                        .read(appFormatterProvider)
+                        .parseAmount(value);
                     if (amount == null || amount <= 0) {
                       return AppLocalizations.of(context)!.invalidAmount;
                     }
@@ -199,7 +246,8 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) =>
+            LoadErrorView(error: err, stackTrace: stack, compact: true),
       ),
     );
   }

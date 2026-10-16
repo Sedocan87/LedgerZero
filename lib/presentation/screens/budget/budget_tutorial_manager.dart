@@ -1,41 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/widgets/tutorial/tutorial_controller.dart';
 import 'package:ledger_zero/presentation/widgets/tutorial/tutorial_data.dart';
 
-final tbbKey = GlobalKey();
-final monthSelectorKey = GlobalKey();
-final categoryListKey = GlobalKey();
+/// The widgets the budget tutorial points at. Owned by the budget screen's
+/// state (one set per screen instance, so keys are never shared).
+class BudgetTutorialKeys {
+  final tbb = GlobalKey();
+  final monthSelector = GlobalKey();
+  final categoryList = GlobalKey();
+}
 
 class BudgetTutorialManager {
-  static void showTutorial(BuildContext context, WidgetRef ref) {
+  static void showTutorial(
+    BuildContext context,
+    WidgetRef ref,
+    BudgetTutorialKeys keys,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
     TutorialController(ref).showTutorial(
       context: context,
       tutorialId: 'budget_screen_intro',
       steps: [
         TutorialStep(
-          title: 'Welcome to your Budget',
-          description: 'This is where you plan your spending.',
+          title: l10n.tutBudgetWelcomeTitle,
+          description: l10n.tutBudgetWelcomeBody,
         ),
         TutorialStep(
-          title: 'Select Month',
-          description:
-              'Navigate between months to plan ahead or review past budgets.',
-          targetKey: monthSelectorKey,
+          title: l10n.tutBudgetMonthTitle,
+          description: l10n.tutBudgetMonthBody,
+          targetKey: keys.monthSelector,
           position: TutorialPosition.bottom,
         ),
         TutorialStep(
-          title: 'To Be Budgeted',
-          description:
-              'This is your available money. Assign it to categories until it reaches zero.',
-          targetKey: tbbKey,
+          title: l10n.tutBudgetTbbTitle,
+          description: l10n.tutBudgetTbbBody,
+          targetKey: keys.tbb,
           position: TutorialPosition.bottom,
         ),
         TutorialStep(
-          title: 'Budget Categories',
-          description:
-              'Tap on a category to assign money. You can also move money between categories.',
-          targetKey: categoryListKey,
+          title: l10n.tutBudgetCategoriesTitle,
+          description: l10n.tutBudgetCategoriesBody,
+          targetKey: keys.categoryList,
           position: TutorialPosition.top,
         ),
       ],

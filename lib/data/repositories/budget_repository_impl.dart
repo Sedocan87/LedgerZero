@@ -130,7 +130,7 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
-  Future<double> getTotalBudgetedByMonthRange(String endMonth) async {
+  Future<int> getTotalBudgetedByMonthRange(String endMonth) async {
     try {
       return await _budgetsDao.getTotalBudgetedByMonthRange(endMonth);
     } catch (e, stackTrace) {
@@ -140,7 +140,7 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
-  Future<double> getTotalBudgetedByCategoryAndMonthRange(
+  Future<int> getTotalBudgetedByCategoryAndMonthRange(
     String categoryId,
     String endMonth,
   ) async {
@@ -160,7 +160,7 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
-  Future<Map<String, double>> getAllTimeBudgetedSumsUpToMonth(
+  Future<Map<String, int>> getAllTimeBudgetedSumsUpToMonth(
     String endMonth,
   ) async {
     try {
@@ -177,8 +177,6 @@ class BudgetRepositoryImpl implements BudgetRepository {
       categoryId: b.categoryId,
       month: b.month,
       budgeted: b.budgeted,
-      activity: b.activity,
-      available: b.available,
       createdAt: b.createdAt,
       updatedAt: b.updatedAt,
     );
@@ -188,15 +186,14 @@ class BudgetRepositoryImpl implements BudgetRepository {
     if (b.categoryId == null) {
       throw ArgumentError('Budget categoryId cannot be null for persistence');
     }
+    final now = DateTime.now().toUtc();
     return db.BudgetsCompanion(
       id: Value(b.id),
       categoryId: Value(b.categoryId!),
       month: Value(b.month),
       budgeted: Value(b.budgeted),
-      activity: Value(b.activity),
-      available: Value(b.available),
-      createdAt: Value(b.createdAt),
-      updatedAt: Value(b.updatedAt),
+      createdAt: Value(b.createdAt?.toUtc() ?? now),
+      updatedAt: Value(now),
     );
   }
 }

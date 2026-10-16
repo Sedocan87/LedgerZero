@@ -1,86 +1,124 @@
-YNAB Export Format Specification
+# YNAB Import: Supported Formats
 
-The YNAB (You Need A Budget) web application ("nYNAB") provides an export feature that produces a ZIP file containing two CSV files:
-1.  `[Budget Name] as of [Date] - Budget.csv`
-2.  `[Budget Name] as of [Date] - Register.csv`
+What the YNAB importer reads and how it maps the data. User guide:
+[YNAB_MIGRATION.md](YNAB_MIGRATION.md).
 
-### 1. Register.csv (Transactions)
+Code: `lib/services/import/ynab_import_service.dart` (parsing into
+`YnabImportData`, `lib/services/import/models/ynab_import_data.dart`),
+`lib/services/import/ynab_data_mapper.dart` (writing to the database),
+UI in `lib/presentation/screens/settings/import/ynab/`.
 
-This file contains the transaction history for all accounts (or selected ones).
+Two sources are supported:
 
-**Standard Columns:**
-*   `Account`: Name of the account (e.g., "Checking", "Citi Visa").
-*   `Flag`: Color flag (e.g., "Red", "Blue", or empty).
-*   `Date`: Transaction date (format varies by locale, commonly YYYY-MM-DD or MM/DD/YYYY).
-*   `Payee`: Name of the payee.
-    *   For transfers: `Transfer : [Account Name]`
-*   `Category Group`: The master category group name.
-    *   For transfers: empty or `Payment`?
-    *   For splits: `Split (Multiple Categories)`?
-*   `Category`: The sub-category name.
-    *   For splits: `Split (Multiple Categories)` on the parent row?
-*   `Memo`: Notes.
-    *   For splits: Often contains the split details if not expanded, or separate rows.
-*   `Outflow`: Amount leaving the budget (positive number).
-*   `Inflow`: Amount entering the budget (positive number).
-*   `Cleared`: Status (`C` for cleared, `U` for uncleared, `R` for reconciled).
+1. **nYNAB CSV export** (current YNAB web app): the `Register` and `Budget`
+   CSV files from YNAB's export ZIP, picked separately (any file name).
+2. **YNAB 4 budget folder** (`*.ynab4`, legacy desktop app).
 
-**Split Transactions:**
-*   **Parent Row**:
-    *   `Payee`: The actual payee.
-    *   `Category Group`: `Inflow: To be Budgeted` (if income) or empty? Or just `Split`.
-    *   `Category`: `Split (Multiple Categories)`.
-    *   `Memo`: Total amount details or user memo.
-    *   `Outflow`/`Inflow`: Total amount.
-*   **Child Rows** (Sub-transactions):
-    *   Often NOT included in the main export in some versions, OR included as separate rows.
-    *   *Wait*: YNAB's export behavior for splits is tricky.
-    *   According to user reports: YNAB exports split transactions as *separate rows* for each split part, PLUS a row for the parent? Or just the split parts?
-    *   Actually, YNAB export typically "flattens" splits into individual rows, but keeping the same Payee and Date. But how do we know they belong together?
-    *   *Correction*: In the official export:
-        *   Splits are exported as *multiple rows*.
-        *   There is NO unique ID linking them in the CSV.
-        *   However, they share: `Account`, `Date`, `Payee`.
-        *   The `Memo` might differ (`(Split 1/3) ...`?).
-        *   Actually, YNAB does *not* export the parent row in the Register export usually; it exports the splits as individual transactions.
-        *   *Wait, this is critical.* If it exports splits as individual transactions, they look like separate transactions. But they are part of one "event".
-        *   Let's check if there's a parent row. Some sources say YNAB exports the parent row with `Split (Multiple Categories)` in the Category column, and then *also* the sub-rows? No, that would double-count.
-        *   Most likely: It exports *only* the split parts (sub-transactions).
-        *   *Issue*: If I import them as separate transactions, they lose their "split" nature (i.e. one bank transaction).
-        *   *Resolution*: For MVP import, importing them as separate transactions is acceptable, though not ideal. However, if I can detect they are splits (e.g. same Account, Date, Payee, and consecutive), I might merge them. But YNAB allows same-day same-payee separate transactions.
-        *   *Actually*: YNAB export *does* include a "Memo" which might help.
-        *   Let's assume for now we treat them as individual transactions unless we find a clear "Split" marker.
-        *   *Wait*: If YNAB exports them as individual rows with their respective categories, they are functionally correct for budgeting. The only loss is the "link" that they were one swipe.
+The YNAB API is not used.
 
-### 2. Budget.csv (Allocations)
+## 1. nYNAB Register CSV
 
-This file contains the monthly budget values.
+Header names are matched exactly. Required: `Account`, `Date`, `Payee`,
+`Outflow`, `Inflow` (missing ones are listed in the error). Optional:
+`Category Group`, `Category`, `Memo`, `Cleared`. Other columns (e.g. `Flag`)
+are ignored. Rows shorter than the header are skipped.
 
-**Standard Columns:**
-*   `Month`: The budget month (e.g., "Jan 2023", "01/01/2023").
-*   `Category Group`: Master category.
-*   `Category`: Sub-category.
-*   `Budgeted`: Amount assigned.
-*   `Activity`: Amount spent (calculated).
-*   `Available`: Remaining (calculated).
+- **Date**: one format for the whole file, detected once: the first of
+  `MM/dd/yyyy`, `dd/MM/yyyy`, `yyyy-MM-dd`, `dd.MM.yyyy` that parses
+  *every* row strictly (no roll-over: `13/05/2025` never becomes a date in
+  2026). A file whose days never exceed 12 is read as `MM/dd/yyyy` (YNAB's
+  US default). If no format fits every row, the import stops with a
+  localised error naming the first value the best-fitting format rejects
+  (`YnabImportFailure.invalidDates`). Stored as UTC midnight of the
+  calendar day.
+- **Amount**: `Inflow - Outflow`, each cell parsed by `MoneyParser`
+  (currency symbols and either decimal style accepted; empty = 0), stored in
+  minor units.
+- **Cleared**: values starting with `R` are reconciled, `C` cleared,
+  anything else uncleared.
+- **Accounts**: one per distinct `Account` name. The type is guessed from the
+  name (`checking`, `saving`, `credit`/`card`, `cash`; default checking).
+  The CSV has no closed flag; all accounts are imported as open.
+- **Categories**: every distinct `Category Group` / `Category` pair.
+- **Splits**: nYNAB writes one row per split line with the memo prefixed
+  `Split (i/n)`. Consecutive rows of the same account and date with the same
+  `n` and distinct `i` are grouped into one split transaction (marker removed
+  from the memo, amount = sum of the lines). A lone split row is imported as
+  a normal row.
+- **Transfers**: a payee `Transfer : <Account Name>` marks a transfer.
 
-**Parsing Logic:**
-*   Iterate through rows.
-*   Find or create Category Group.
-*   Find or create Category.
-*   Parse Month.
-*   Create `Budget` entry in `Budgets` table for that `(Category, Month)`.
-*   Set `budgeted` amount.
-*   Ignore `Activity` and `Available` as they are re-calculated by LedgerZero based on imported transactions.
+## 2. nYNAB Budget CSV
 
-### 3. YNAB4 (.ynab4) Format (Legacy)
+Optional for parsing but required by the UI. Uses `Month`, `Category Group`,
+`Category`, `Budgeted` (all four must exist, otherwise the file is ignored).
+`Activity` and `Available` are ignored; LedgerZero recalculates them from
+the transactions.
 
-*   This is a directory bundle.
-*   Data is in JSON format.
-*   `Budget.ymeta`: Version info.
-*   `data/Budget.yfull`: Full budget data (Accounts, Payees, Transactions, Subtransactions, MasterCategories, SubCategories, MonthlyBudgets).
-*   This is much richer and allows perfect reconstruction (including splits).
+- **Month**: `MMM yyyy` / `MMMM yyyy` with English month names (e.g.
+  `Jan 2024`; parsed with the `en_US` locale whatever the app language),
+  or one of the register date formats. Rows with an unreadable month are
+  skipped (logged).
+- Rows with `Budgeted` = 0 are skipped.
 
-**Plan:**
-1.  Prioritize **CSV Export** (nYNAB) as it's the current standard.
-2.  YNAB4 support is Task 533.
+## 3. YNAB 4 folder
+
+The folder must contain `Budget.ymeta` and a `data*` subfolder with a device
+folder holding `Budget.yfull` (JSON). Tombstoned entities are skipped.
+
+Read from `Budget.yfull`: `accounts` (name, type, `hidden` = closed,
+`onBudget`), `payees`, `masterCategories` (groups, `isHidden`),
+`subCategories` (`isHidden`), `transactions`,
+`subTransactions` (split lines), `scheduledTransactions`, `monthlyBudgets`.
+Amounts are major-unit numbers, converted to minor units.
+
+- Account types: `Checking`, `Savings`, `CreditCard`/`LineOfCredit` (credit),
+  `Cash`/`MerchantAccount`/`PayPal` (cash); everything else checking.
+- Transfers use `targetAccountId`.
+- Scheduled frequencies map to LedgerZero recurrence (`Never` = one
+  occurrence, `EveryOtherWeek` = every 2 weeks, `TwiceAMonth` = every 2 weeks
+  as the closest match, `EveryOtherMonth`, `TwiceAYear`, `Yearly`,
+  `EveryOtherYear`, `Daily`, `Weekly`, `Monthly`).
+- `onBudget: false` marks a tracking account (see section 4).
+- A subcategory whose master category is not listed (YNAB 4 keeps hidden
+  categories under a hidden "Hidden Categories" master) gets a hidden group
+  of that name.
+
+## 4. Writing the data
+
+The whole import runs in one unit of work: all or nothing.
+
+- **Categories**: groups and categories are matched by name (group +
+  category) and created if missing. YNAB's `Internal Master Category`,
+  `Inflow` group, `Uncategorized` and the "Ready to Assign" / "To be
+  Budgeted" inflow category are not created; transactions in them get no
+  category and count towards To Be Budgeted. Hidden YNAB 4 groups and
+  categories are created too; their categories are hidden (LedgerZero
+  groups have no hidden flag), and their transactions keep the category.
+- **Accounts**: matched by name or created with starting balance 0 and the
+  currency chosen on the import preview (default: the app's default
+  currency from Settings). Closed accounts are imported as closed, with
+  their transactions. Tracking accounts (`onBudget: false`) are not
+  imported, nor are their own transactions; the result screen reports how
+  many were skipped (`YnabImportSummary.trackingAccountsSkipped`). YNAB's "Starting Balance" row is imported as an
+  uncategorised transaction.
+- **Payees**: matched by name (case-insensitive) or created. Transfer payees
+  never become payees.
+- **Transfers**: rows that pair up (same day, opposite amounts, accounts
+  pointing at each other, no category, not split) become two linked legs.
+  Unpaired transfer rows are imported as normal rows with `Transfer : X` in
+  the memo. This includes the budget-side leg of a transfer to or from a
+  tracking account: it becomes an outflow/inflow of the budget account,
+  keeping YNAB's category when it has one (YNAB requires one for outflows
+  to tracking accounts), otherwise uncategorised and counted towards To Be
+  Budgeted. The budget invariant (available + To Be Budgeted = account
+  balances) holds because only budget accounts exist.
+- **Splits**: a parent (account-side amount, no category) plus one child per
+  line; any difference to the parent goes into an uncategorised child. A split line
+  that is a transfer becomes an uncategorised child with `Transfer : X` in
+  the memo (the link to the other account is lost; balances stay correct).
+- **Scheduled transactions** (YNAB 4 only): scheduled transfers become
+  normal scheduled transactions of the source account with `Transfer : X` in
+  the memo.
+- **Budgets**: one row per category and month with a deterministic id;
+  existing rows for the same category and month are overwritten.
+- **Not imported**: goals, flags, account notes, tracking accounts.

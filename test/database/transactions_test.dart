@@ -27,7 +27,7 @@ void main() {
       id: const Value('tx_1'),
       accountId: const Value('acc_1'),
       date: Value(DateTime(2025, 1, 15)),
-      amount: const Value(-45.50),
+      amount: const Value(-4550),
       memo: const Value('Lunch'),
       createdAt: Value(DateTime.now()),
     );
@@ -38,7 +38,7 @@ void main() {
 
     expect(result.length, 1);
     expect(result.first.id, 'tx_1');
-    expect(result.first.amount, -45.50);
+    expect(result.first.amount, -4550);
     expect(result.first.memo, 'Lunch');
     expect(result.first.date, DateTime(2025, 1, 15));
     expect(result.first.cleared, 0); // default

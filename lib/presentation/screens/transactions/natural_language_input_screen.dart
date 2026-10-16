@@ -1,26 +1,23 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
-import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
-import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/transaction_draft.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/services/nlp/transaction_parser.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:uuid/uuid.dart';
-
-final _allAccountsProvider = StreamProvider.autoDispose<List<Account>>((ref) {
-  return ref.watch(accountRepositoryProvider).watchAllAccounts();
-});
 
 class NaturalLanguageInputScreen extends ConsumerStatefulWidget {
   const NaturalLanguageInputScreen({super.key});
@@ -72,48 +69,45 @@ class _NaturalLanguageInputScreenState
     }
 
     final tx = _parsedTransaction!;
+    final service = ref.read(transactionServiceProvider);
+    final amount = tx.isIncome ? tx.amount! : -tx.amount!;
+    final memo = tx.note ?? _controller.text;
 
-    // 1. Handle Payee
-    String? payeeId = tx.payeeId;
-    if (payeeId == null && tx.payeeName != null) {
-      // Create new payee
-      final newPayee = Payee(
-        id: const Uuid().v4(),
-        name: tx.payeeName!,
-        createdAt: DateTime.now(),
-      );
-      await ref.read(payeeRepositoryProvider).createPayee(newPayee);
-      payeeId = newPayee.id;
-    }
-
-    // 2. Create Transaction
-    final transaction = Transaction(
-      id: const Uuid().v4(),
-      accountId: _selectedAccount!.id,
-      date: tx.date ?? DateTime.now(),
-      amount: tx.isIncome ? tx.amount! : -tx.amount!,
-      payeeId: payeeId,
-      categoryId: tx.categoryId,
-      memo:
-          tx.note ??
-          _controller
-              .text, // Use original text as memo if no note extracted? Or maybe extracting note is better.
-      cleared: TransactionClearStatus.uncleared,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+    // Fill what the parser could not find from the user's rules (never
+    // overriding what was parsed).
+    final suggested = await service.suggestWithRules(
+      Transaction(
+        id: 'quick-add',
+        accountId: _selectedAccount!.id,
+        date: _calendarDay(tx.date),
+        amount: amount,
+        payeeId: tx.payeeId,
+        categoryId: tx.categoryId,
+        memo: memo,
+      ),
+      payeeName: tx.payeeName,
     );
 
-    await ref
-        .read(transactionRepositoryProvider)
-        .createTransaction(transaction);
+    final result = await service.save(
+      TransactionInput(
+        accountId: _selectedAccount!.id,
+        date: _calendarDay(tx.date),
+        amount: amount,
+        payeeId: suggested.payeeId,
+        newPayeeName: suggested.payeeId == null ? tx.payeeName : null,
+        categoryId: suggested.categoryId,
+        memo: suggested.memo,
+      ),
+    );
 
-    // Task 494: Save Parsing History
-    // We only save if we successfully created the transaction.
-    // We save the original input and the final IDs.
+    // Save parsing history (only after a successful save).
     try {
+      final saved = await ref
+          .read(transactionRepositoryProvider)
+          .getTransactionById(result.id);
       await ref
           .read(parsingHistoryRepositoryProvider)
-          .addHistory(_controller.text, payeeId, tx.categoryId);
+          .addHistory(_controller.text, saved?.payeeId, saved?.categoryId);
     } catch (_) {
       // Ignore history save errors
     }
@@ -126,33 +120,47 @@ class _NaturalLanguageInputScreenState
     }
   }
 
-  Future<void> _editDetails() async {
-    if (_parsedTransaction == null) {
+  /// Hands the parsed values to the full editor and replaces this screen,
+  /// so going back from the editor does not return to stale quick-add text.
+  void _editDetails() {
+    final parsed = _parsedTransaction;
+    if (parsed == null) {
       return;
     }
+    final amount = parsed.amount;
+    context.pushReplacementNamed(
+      'add-transaction',
+      extra: TransactionDraft(
+        amountText: amount == null
+            ? ''
+            : ref.read(appFormatterProvider).formatAmountForInput(amount),
+        memo: parsed.note ?? _controller.text,
+        date: _calendarDay(parsed.date),
+        accountId: _selectedAccount?.id,
+        payeeId: parsed.payeeId,
+        payeeName: parsed.payeeName,
+        categoryId: parsed.categoryId,
+        formType: parsed.isIncome
+            ? TransactionFormType.income
+            : TransactionFormType.expense,
+      ),
+    );
+  }
 
-    // Save as draft to be picked up by AddEditTransactionScreen
-    final prefs = ref.read(sharedPreferencesProvider);
-    const key = 'draft_transaction_new';
+  /// The calendar day (UTC midnight) of a parsed local date, or today.
+  DateTime _calendarDay(DateTime? parsed) => parsed == null
+      ? CalendarDate.today()
+      : CalendarDate.fromLocalPick(parsed);
 
-    final draft = {
-      'amount': _parsedTransaction!.amount?.toString() ?? '',
-      'memo': _controller.text, // Pass full text as memo if no specific note
-      'date': (_parsedTransaction!.date ?? DateTime.now()).toIso8601String(),
-      'accountId': _selectedAccount?.id,
-      'payeeId': _parsedTransaction!.payeeId,
-      'payeeName': _parsedTransaction!.payeeName,
-      'categoryId': _parsedTransaction!.categoryId,
-      'formType': _parsedTransaction!.isIncome ? 1 : 0, // 0: expense, 1: income
+  /// ISO code for a currency symbol typed in the input, if unambiguous
+  /// enough to display; otherwise `null` (falls back to the account).
+  static String? _currencyCodeForSymbol(String? symbol) {
+    return switch (symbol) {
+      '€' => 'EUR',
+      '£' => 'GBP',
+      '\$' => 'USD',
+      _ => null,
     };
-
-    await prefs.setString(key, jsonEncode(draft));
-
-    if (mounted) {
-      await context.pushNamed(
-        'add-transaction',
-      ); // This opens the screen which restores the draft
-    }
   }
 
   @override
@@ -166,7 +174,7 @@ class _NaturalLanguageInputScreenState
     final l10n = AppLocalizations.of(context)!;
 
     // Initialize account selection
-    final accountsAsync = ref.watch(_allAccountsProvider);
+    final accountsAsync = ref.watch(accountsProvider);
 
     accountsAsync.whenData((accounts) {
       if (!_accountInitialized && accounts.isNotEmpty) {
@@ -194,6 +202,7 @@ class _NaturalLanguageInputScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline),
+            tooltip: l10n.quickAddTipsTooltip,
             onPressed: () => _showCheatSheet(context),
           ),
         ],
@@ -208,7 +217,7 @@ class _NaturalLanguageInputScreenState
               onChanged: _onTextChanged,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'e.g., "Lunch at Mario\'s \$15"',
+                hintText: l10n.quickAddHint,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
@@ -234,6 +243,7 @@ class _NaturalLanguageInputScreenState
             accountsAsync.when(
               data: (accounts) => DropdownButtonFormField<Account>(
                 initialValue: _selectedAccount,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: l10n.account,
                   border: OutlineInputBorder(
@@ -248,7 +258,10 @@ class _NaturalLanguageInputScreenState
                     .map(
                       (account) => DropdownMenuItem(
                         value: account,
-                        child: Text(account.name),
+                        child: Text(
+                          account.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     )
                     .toList(),
@@ -259,7 +272,8 @@ class _NaturalLanguageInputScreenState
                 },
               ),
               loading: () => const LinearProgressIndicator(),
-              error: (_, __) => const Text('Error loading accounts'),
+              error: (e, st) =>
+                  LoadErrorView(error: e, stackTrace: st, compact: true),
             ),
 
             const SizedBox(height: AppSpacing.md),
@@ -299,7 +313,11 @@ class _NaturalLanguageInputScreenState
 
   Widget _buildPreviewCard(ParsedTransaction transaction) {
     final l10n = AppLocalizations.of(context)!;
+    final fmt = ref.watch(appFormatterProvider);
     final hasAmount = transaction.amount != null;
+    final currencyCode =
+        _currencyCodeForSymbol(transaction.currency) ??
+        _selectedAccount?.currency;
     final hasPayee = transaction.payeeName != null;
     final hasCategory = transaction.categoryName != null;
 
@@ -332,7 +350,9 @@ class _NaturalLanguageInputScreenState
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
-                    '${(transaction.confidence * 100).toInt()}% ${l10n.confidence}',
+                    l10n.quickAddConfidence(
+                      (transaction.confidence * 100).toInt(),
+                    ),
                     style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),
@@ -354,7 +374,7 @@ class _NaturalLanguageInputScreenState
                     const SizedBox(width: AppSpacing.xs),
                     Text(
                       hasAmount
-                          ? '$amountPrefix${NumberFormat.simpleCurrency(name: transaction.currency ?? '').format(transaction.amount).substring(1)}' // simplistic formatting
+                          ? '$amountPrefix${fmt.formatMoney(transaction.amount!, currencyCode: currencyCode)}'
                           : l10n.noAmount,
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
@@ -367,7 +387,7 @@ class _NaturalLanguageInputScreenState
                 if (transaction.date != null)
                   Chip(
                     avatar: const Icon(Icons.calendar_today, size: 16),
-                    label: Text(DateFormat.yMMMd().format(transaction.date!)),
+                    label: Text(fmt.formatDate(_calendarDay(transaction.date))),
                   ),
               ],
             ),
@@ -424,24 +444,30 @@ class _NaturalLanguageInputScreenState
               Text(l10n.parsingTipsDescription),
               const SizedBox(height: 16),
               Text(
-                '${l10n.examples}:',
+                l10n.quickAddExamplesHeading,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text('• "Lunch 15"'),
-              const Text('• "Coffee \$5 at Starbucks"'),
-              const Text('• "Uber 25 tomorrow"'),
-              const Text('• "Salary 3000" (Income)'),
+              for (final example in [
+                l10n.quickAddExample1,
+                l10n.quickAddExample2,
+                l10n.quickAddExample3,
+                l10n.quickAddExample4,
+              ])
+                Text(l10n.bulletItem(example)),
               const SizedBox(height: 16),
               Text(
-                '${l10n.appDetects}:',
+                l10n.quickAddDetectsHeading,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text('• ${l10n.amount}'),
-              Text('• ${l10n.payee}'),
-              Text('• ${l10n.category}'),
-              Text('• ${l10n.date}'),
+              for (final item in [
+                l10n.amount,
+                l10n.payee,
+                l10n.category,
+                l10n.date,
+              ])
+                Text(l10n.bulletItem(item)),
             ],
           ),
         ),

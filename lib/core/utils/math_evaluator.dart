@@ -1,95 +1,102 @@
+import 'package:ledger_zero/core/money/money.dart';
+
+/// Evaluates simple arithmetic typed into amount fields ("50 + 20",
+/// "12,50*3", "100/3") exactly and returns minor units.
+///
+/// Operands are parsed with [MoneyParser] (either decimal style); `*` and
+/// `/` treat the right operand as a plain factor. Intermediate results are
+/// exact fractions; only the final result is rounded half away from zero to
+/// minor units, so `0.1 + 0.2` is exactly `30`.
 class MathEvaluator {
-  /// Evaluates a simple mathematical expression string (e.g., "50 + 20").
-  /// Supports +, -, *, /.
-  /// Returns the result as a double.
-  /// Throws FormatException if the expression is invalid.
-  static double evaluate(String expression) {
+  /// Evaluates [expression] and returns the result in minor units.
+  /// An empty expression is `0`. Throws [FormatException] when invalid.
+  static int evaluate(String expression, {String decimalSeparator = '.'}) {
     if (expression.trim().isEmpty) {
-      return 0.0;
+      return 0;
     }
-
-    // Remove all whitespace
-    final cleanExpr = expression.replaceAll(' ', '');
-
-    // Allow negative numbers at the start
-    // We will parse strictly left-to-right for simplicity, or handle operator precedence if needed.
-    // Given the task is for "budget entry", simple left-to-right or simple binary operations are usually enough.
-    // However, let's support standard precedence (*, / before +, -).
-
-    // For a robust implementation without external libraries, we can use a recursive descent parser or shunting-yard.
-    // But for "budget entry", usually users enter something like "100+50" or "50-10".
-    // Let's implement a basic parser that handles +, -, *, /.
-
+    final parser = MoneyParser(decimalSeparator: decimalSeparator);
+    final cleanExpr = expression.replaceAll(RegExp(r'\s'), '');
     try {
-      return _parseExpression(cleanExpr);
+      return _parseExpression(cleanExpr, parser).roundToMinor();
     } catch (e) {
       throw FormatException('Invalid expression: $expression');
     }
   }
 
-  static double _parseExpression(String expr) {
-    // 1. Tokenize
+  static _Fraction _parseExpression(String expr, MoneyParser parser) {
     final tokens = _tokenize(expr);
     if (tokens.isEmpty) {
-      return 0.0;
+      return _Fraction.zero;
     }
 
-    // 2. Handle multiplication and division first
-    final complexTokens = <String>[];
-    for (int i = 0; i < tokens.length; i++) {
+    _Fraction operand(String token) {
+      if ('+-*/'.contains(token)) {
+        throw const FormatException('Unexpected operator');
+      }
+      // Minor units, i.e. hundredths of the typed number.
+      return _Fraction(BigInt.from(parser.parse(token)), BigInt.from(100));
+    }
+
+    // Multiplication and division first.
+    final terms = <Object>[]; // _Fraction or operator String
+    for (var i = 0; i < tokens.length; i++) {
       final token = tokens[i];
       if (token == '*' || token == '/') {
-        if (complexTokens.isEmpty) {
+        if (terms.isEmpty || terms.last is! _Fraction) {
           throw const FormatException('Unexpected operator');
         }
-        final prevVal = double.parse(complexTokens.removeLast());
         if (i + 1 >= tokens.length) {
           throw const FormatException('Missing operand');
         }
-        final nextVal = double.parse(tokens[++i]);
-
+        final left = terms.removeLast() as _Fraction;
+        final right = operand(tokens[++i]);
         if (token == '*') {
-          complexTokens.add((prevVal * nextVal).toString());
+          terms.add(left * right);
         } else {
-          if (nextVal == 0) {
+          if (right.isZero) {
             throw const FormatException('Division by zero');
           }
-          complexTokens.add((prevVal / nextVal).toString());
+          terms.add(left / right);
         }
+      } else if (token == '+' || token == '-') {
+        terms.add(token);
       } else {
-        complexTokens.add(token);
+        terms.add(operand(token));
       }
     }
 
-    // 3. Handle addition and subtraction
-    double result = double.parse(complexTokens[0]);
-    for (int i = 1; i < complexTokens.length; i += 2) {
-      final op = complexTokens[i];
-      final val = double.parse(complexTokens[i + 1]);
-
+    if (terms.isEmpty || terms.first is! _Fraction) {
+      throw const FormatException('Expression must start with a number');
+    }
+    var result = terms.first as _Fraction;
+    for (var i = 1; i < terms.length; i += 2) {
+      final op = terms[i];
+      if (i + 1 >= terms.length || terms[i + 1] is! _Fraction) {
+        throw const FormatException('Missing operand');
+      }
+      final value = terms[i + 1] as _Fraction;
       if (op == '+') {
-        result += val;
+        result = result + value;
       } else if (op == '-') {
-        result -= val;
+        result = result - value;
       } else {
         throw FormatException('Unknown operator: $op');
       }
     }
-
     return result;
   }
 
   static List<String> _tokenize(String expr) {
     final tokens = <String>[];
-    String buffer = '';
+    var buffer = '';
 
-    for (int i = 0; i < expr.length; i++) {
+    for (var i = 0; i < expr.length; i++) {
       final char = expr[i];
       if ('+-*/'.contains(char)) {
-        // Handle negative numbers at start or after another operator
+        // Negative numbers at the start or after another operator.
         if (char == '-' &&
-            (buffer.isEmpty &&
-                (tokens.isEmpty || '+-*/'.contains(tokens.last)))) {
+            buffer.isEmpty &&
+            (tokens.isEmpty || '+-*/'.contains(tokens.last))) {
           buffer += char;
         } else {
           if (buffer.isNotEmpty) {
@@ -108,5 +115,50 @@ class MathEvaluator {
     }
 
     return tokens;
+  }
+}
+
+/// Exact rational number in major units.
+class _Fraction {
+  final BigInt numerator;
+  final BigInt denominator;
+
+  _Fraction(BigInt numerator, BigInt denominator)
+    : numerator = denominator.isNegative ? -numerator : numerator,
+      denominator = denominator.abs();
+
+  static final _Fraction zero = _Fraction(BigInt.zero, BigInt.one);
+
+  bool get isZero => numerator == BigInt.zero;
+
+  _Fraction operator +(_Fraction o) => _Fraction(
+    numerator * o.denominator + o.numerator * denominator,
+    denominator * o.denominator,
+  );
+
+  _Fraction operator -(_Fraction o) => _Fraction(
+    numerator * o.denominator - o.numerator * denominator,
+    denominator * o.denominator,
+  );
+
+  _Fraction operator *(_Fraction o) =>
+      _Fraction(numerator * o.numerator, denominator * o.denominator);
+
+  _Fraction operator /(_Fraction o) =>
+      _Fraction(numerator * o.denominator, denominator * o.numerator);
+
+  /// Rounds to minor units (hundredths), half away from zero.
+  int roundToMinor() {
+    final scaled = numerator.abs() * BigInt.from(100);
+    var q = scaled ~/ denominator;
+    final r = scaled - q * denominator;
+    if (r * BigInt.two >= denominator) {
+      q += BigInt.one;
+    }
+    final value = numerator.isNegative ? -q : q;
+    if (!value.isValidInt) {
+      throw const FormatException('Result out of range');
+    }
+    return value.toInt();
   }
 }

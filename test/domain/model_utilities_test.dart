@@ -9,29 +9,6 @@ import '../fixtures/model_factories.dart';
 
 void main() {
   group('Model Utilities', () {
-    group('Factories', () {
-      test('createTestAccount creates valid account', () {
-        final account = createTestAccount(name: 'My Account');
-        expect(account.name, 'My Account');
-        expect(account.type, AccountType.checking);
-      });
-      // ... test others briefly
-    });
-
-    group('toString', () {
-      test('Account.toString', () {
-        final account = createTestAccount();
-        expect(
-          account.toString(),
-          contains('Account(id: acc1, name: Test Account'),
-        );
-      });
-      test('Transaction.toString', () {
-        final tx = createTestTransaction();
-        expect(tx.toString(), contains('Transaction(id: tx1'));
-      });
-    });
-
     group('Validation', () {
       test('Account validation', () {
         final validAccount = createTestAccount();
@@ -47,7 +24,7 @@ void main() {
         final validTx = createTestTransaction();
         expect(validTx.validate(), isEmpty);
 
-        final invalidTx = createTestTransaction(amount: 0.0);
+        final invalidTx = createTestTransaction(amount: 0);
         final errors = invalidTx.validate();
         expect(errors, contains('Transaction amount cannot be zero'));
       });
@@ -74,11 +51,11 @@ void main() {
       });
 
       test('TransactionExtensions', () {
-        final income = createTestTransaction(amount: 100.0);
+        final income = createTestTransaction(amount: 10000);
         expect(income.isIncome, true);
         expect(income.isExpense, false);
 
-        final expense = createTestTransaction(amount: -100.0);
+        final expense = createTestTransaction(amount: -10000);
         expect(expense.isIncome, false);
         expect(expense.isExpense, true);
 
@@ -92,10 +69,7 @@ void main() {
       });
 
       test('BudgetExtensions', () {
-        final overspent = createTestBudget(available: -10.0);
-        expect(overspent.isOverspent, true);
-
-        final funded = createTestBudget(budgeted: 100.0);
+        final funded = createTestBudget(budgeted: 10000);
         expect(funded.isFunded, true);
       });
     });

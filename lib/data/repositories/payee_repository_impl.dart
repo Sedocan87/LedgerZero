@@ -40,7 +40,7 @@ class PayeeRepositoryImpl implements PayeeRepository {
   @override
   Future<void> createPayee(Payee payee) async {
     try {
-      Logger.debug('Creating payee: ${payee.name}');
+      Logger.debug('Creating payee');
       await _payeesDao.insertPayee(_mapToCompanion(payee));
       Logger.info('Payee created successfully: ${payee.id}');
     } catch (e, stackTrace) {
@@ -118,12 +118,14 @@ class PayeeRepositoryImpl implements PayeeRepository {
   }
 
   db.PayeesCompanion _mapToCompanion(Payee p) {
+    final now = DateTime.now().toUtc();
     return db.PayeesCompanion(
       id: Value(p.id),
       name: Value(p.name),
       autoCategoryId: Value(p.autoCategoryId),
       defaultAccountId: Value(p.defaultAccountId),
-      createdAt: Value(p.createdAt),
+      createdAt: Value(p.createdAt?.toUtc() ?? now),
+      updatedAt: Value(now),
       icon: Value(p.icon),
       color: Value(p.color),
       notes: Value(p.notes),

@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ledger_zero/data/database/database.dart';
-import 'package:ledger_zero/presentation/providers/auth_provider.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/services/encryption/security_manager.dart';
+import 'package:ledger_zero/data/database/connection.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/widgets/security/password_strength_meter.dart';
+import 'package:ledger_zero/presentation/widgets/security/recovery_key_view.dart';
+import 'package:ledger_zero/services/security/biometric_key_store.dart';
+import 'package:ledger_zero/services/security/crypto/secure_random.dart';
+import 'package:ledger_zero/services/security/external_ui_guard.dart';
+import 'package:ledger_zero/services/security/key_vault.dart';
 
+/// Onboarding step 1: master password, then the recovery key.
+///
+/// Nothing is written until the user confirms the recovery key is saved:
+/// then the key vault is stored, any half-created database from an earlier
+/// attempt is removed, and the session is unlocked with the new data key.
 class SecuritySetupScreen extends ConsumerStatefulWidget {
   const SecuritySetupScreen({super.key});
 
@@ -22,7 +32,8 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
   bool _isBiometricsAvailable = false;
   bool _useBiometrics = false;
   bool _isLoading = false;
-  bool _isPasswordVisible = false;
+  bool _recoveryKeySaved = false;
+  PendingVault? _pending;
 
   @override
   void initState() {
@@ -31,12 +42,11 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
   }
 
   Future<void> _checkBiometrics() async {
-    final securityManager = ref.read(securityManagerProvider);
-    final available = await securityManager.isBiometricsAvailable;
+    final available = await ref.read(biometricKeyStoreProvider).isAvailable();
     if (mounted) {
       setState(() {
         _isBiometricsAvailable = available;
-        _useBiometrics = available; // Default to true if available
+        _useBiometrics = available;
       });
     }
   }
@@ -45,198 +55,210 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    final pending = _pending;
+    if (pending != null) {
+      zeroBytes(pending.dek);
+      pending.recoveryKey.destroy();
+    }
     super.dispose();
   }
 
-  Future<void> _save() async {
+  Future<void> _buildVault() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
     setState(() => _isLoading = true);
-
-    final securityManager = ref.read(securityManagerProvider);
-    final password = _passwordController.text;
-    String? key;
-    String? salt;
-
     try {
-      // 1. Generate Salt
-      salt = securityManager.generateSecureKey();
-
-      // 2. Derive Key (now async, runs in isolate)
-      key = await securityManager.deriveKeyFromPassword(password, salt);
-
-      // 3. Store Salt and Verifier
-      await securityManager.storeSalt(salt);
-      await securityManager.storeVerifier(key);
-    } catch (e, stack) {
-      debugPrint('Security Setup ERROR (salt/verifier): $e');
-      debugPrint('Stack: $stack');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error setting up security: $e')),
-        );
-        setState(() => _isLoading = false);
+      final pending = await ref
+          .read(keyVaultProvider)
+          .build(_passwordController.text);
+      if (!mounted) {
+        return;
       }
+      setState(() {
+        _pending = pending;
+        _isLoading = false;
+      });
+    } catch (_) {
+      _fail();
+    }
+  }
+
+  Future<void> _commit() async {
+    final pending = _pending;
+    if (pending == null || !_recoveryKeySaved) {
       return;
     }
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(sessionProvider.notifier).lock();
+      // A database left by an abandoned earlier onboarding is keyed with a
+      // key that no longer exists.
+      await deleteDatabaseFiles();
+      await ref.read(keyVaultProvider).save(pending.record);
+      await ref.read(legacyKeyMaterialProvider).deleteAll();
+      final biometrics = ref.read(biometricKeyStoreProvider);
+      await biometrics.delete();
+      ref.read(sessionProvider.notifier).unlock(pending.dek);
 
-    // 4. Store Key if Biometrics enabled (optional, non-fatal)
-    if (_useBiometrics) {
-      try {
-        final authenticated = await securityManager
-            .authenticateWithBiometrics();
-        if (authenticated) {
-          await securityManager.storeKey(key);
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Biometric auth failed. Key not stored.'),
+      if (_useBiometrics) {
+        try {
+          await ExternalUiGuard.run(
+            () => biometrics.store(
+              pending.dek,
+              BiometricPromptTexts(
+                title: l10n.biometricPromptEnableTitle,
+                subtitle: l10n.biometricPromptSubtitle,
+                cancel: l10n.cancel,
               ),
-            );
-          }
+            ),
+          );
+        } on BiometricException {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.biometricsEnableFailed)),
+          );
         }
-      } catch (e) {
-        debugPrint('Biometric key storage failed (non-fatal): $e');
-        // Continue anyway - biometrics is optional
       }
-    } else {
-      try {
-        await securityManager.clearKey();
-      } catch (e) {
-        debugPrint('Clear key failed (non-fatal): $e');
+    } catch (_) {
+      // Start over from the password step with fresh keys.
+      _pending = null;
+      _recoveryKeySaved = false;
+      _fail();
+      return;
+    } finally {
+      zeroBytes(pending.dek);
+      pending.recoveryKey.destroy();
+    }
+    _pending = null;
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isLoading = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.goNamed('budget-setup');
       }
+    });
+  }
+
+  void _fail() {
+    if (!mounted) {
+      return;
     }
-
-    // Set session key for immediate DB access
-    SecurityManager.setSessionKey(key);
-
-    // Reset database instance so it gets created with the new encryption key
-    AppDatabase.resetInstance();
-
-    debugPrint('Security Setup: Key derived and stored. Session key set.');
-
-    // 5. Proceed to next step
-    if (mounted) {
-      debugPrint('Security Setup: Setting authenticated=true');
-      ref.read(authProvider.notifier).setAuthenticated(true);
-      debugPrint('Security Setup: Scheduling navigation to account-setup');
-      setState(() => _isLoading = false);
-
-      // Navigate in the next frame to avoid router state conflicts
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          debugPrint('Security Setup: Now navigating to budget-setup');
-          context.goNamed('budget-setup');
-        }
-      });
-    }
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.setupFailed)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final pending = _pending;
     return Scaffold(
-      appBar: AppBar(title: const Text('Protect Your Data')),
+      appBar: AppBar(title: Text(l10n.setupProtectTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Set a Master Password',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'This password will be used to encrypt your financial data. '
-                  'If you lose this password, your data cannot be recovered unless you have a backup.',
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
-                        });
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 8) {
-                      return 'Password must be at least 8 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: !_isPasswordVisible,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm Password',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                if (_isBiometricsAvailable) ...[
-                  SwitchListTile(
-                    title: const Text('Use Biometrics'),
-                    subtitle: const Text(
-                      'Unlock the app with Face ID / Fingerprint',
-                    ),
-                    value: _useBiometrics,
-                    onChanged: (value) {
-                      setState(() => _useBiometrics = value);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                ],
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Save & Continue',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                ),
-              ],
-            ),
-          ),
+          child: pending == null
+              ? _buildPasswordStep(l10n)
+              : _buildRecoveryStep(l10n, pending),
         ),
       ),
+    );
+  }
+
+  Widget _buildPasswordStep(AppLocalizations l10n) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.setupPasswordHeading,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 16),
+          Text(l10n.setupPasswordExplanation),
+          const SizedBox(height: 32),
+          NewPasswordFields(
+            controller: _passwordController,
+            confirmController: _confirmPasswordController,
+            label: l10n.masterPasswordLabel,
+            onSubmitted: _isLoading ? null : _buildVault,
+          ),
+          const SizedBox(height: 24),
+          if (_isBiometricsAvailable) ...[
+            SwitchListTile(
+              title: Text(l10n.setupUseBiometrics),
+              subtitle: Text(l10n.setupUseBiometricsSubtitle),
+              value: _useBiometrics,
+              onChanged: (value) => setState(() => _useBiometrics = value),
+            ),
+            const SizedBox(height: 24),
+          ],
+          ElevatedButton(
+            onPressed: _isLoading ? null : _buildVault,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: _isLoading
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(l10n.setupPreparing),
+                    ],
+                  )
+                : Text(l10n.continueAction),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecoveryStep(AppLocalizations l10n, PendingVault pending) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.recoveryKeyHeading,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 16),
+        Text(l10n.recoveryKeyExplanation),
+        const SizedBox(height: 24),
+        RecoveryKeyView(formattedKey: pending.recoveryKey.format()),
+        const SizedBox(height: 24),
+        CheckboxListTile(
+          value: _recoveryKeySaved,
+          onChanged: (value) =>
+              setState(() => _recoveryKeySaved = value ?? false),
+          title: Text(l10n.recoveryKeyConfirmSaved),
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _isLoading || !_recoveryKeySaved ? null : _commit,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.continueAction),
+        ),
+      ],
     );
   }
 }

@@ -51,16 +51,37 @@ For advanced matching, use the `Regex` operator. LedgerZero uses Dart's `RegExp`
 
 ## Conflicts & Priority
 
-Rules are applied sequentially based on their priority (order in the list).
--   **Top rules run first.**
--   Later rules can overwrite changes made by earlier rules.
--   If Rule A sets Category to "Food" and Rule B (lower priority) sets Category to "Groceries", the final result is "Groceries".
+Rules are ordered by their priority number; the top of the Rules screen is
+priority 0, the highest priority.
+-   **The highest-priority matching rule wins for each field.** All matching
+    rules are applied, but a lower rule can only set fields that no higher
+    rule already set.
+-   If Rule A (top) sets Category to "Food" and Rule B (below) sets Category
+    to "Groceries" and Memo to "Weekly shop", the result is Category "Food"
+    and Memo "Weekly shop".
 
-Use the "Conflicts" warning in the Rules screen to identify rules that might be fighting each other.
+### When rules run
+
+-   **Manual entry and quick-add**: rules only *suggest* values for empty
+    fields (category, payee, memo) before you save; they never override what
+    you chose and never change the account, cleared or approved status.
+-   **CSV import and scheduled transactions**: rules fill empty category,
+    payee and memo and apply "mark cleared" / "mark approved"; they never move
+    a transaction to another account. For imports, a matching rule's category
+    beats the payee's remembered default category.
+-   **"Apply rules to all transactions"** (Rules screen menu): every action is applied
+    and overwrites existing values, except that transfer legs, split lines
+    and split parents keep their account, transfer legs and split parents
+    never get a category, and reconciled transactions keep their status.
+-   Saving a transaction with a payee and a category only remembers that
+    category as the payee's default; it never creates a rule and never
+    changes other transactions.
+
+Use the "Rule conflicts" warning in the Rules screen to identify rules that might be fighting each other.
 
 ## Best Practices
 
 1.  **Keep it Simple**: Use "Contains" or "Equals" whenever possible.
-2.  **Order Matters**: Place specific rules (e.g., "Amazon AWS") *below* generic rules (e.g., "Amazon") if you want the specific one to take precedence. Wait, actually, if you want specific to override generic, it should be *after* (lower in list) or the generic one should exclude the specific case. LedgerZero applies all matching rules in sequence.
-3.  **Test**: Use the "Apply to All" feature with caution. Backup your data first (Export Rules/Data).
+2.  **Order Matters**: Place specific rules (e.g., "Amazon AWS") *above* generic rules (e.g., "Amazon") so the specific one wins.
+3.  **Test**: Use "Apply rules to all transactions" with caution. Create a backup first (Settings > Backup & Export); "Export rules" in the Rules screen menu saves your rules.
 4.  **Performance**: Avoid having hundreds of complex Regex rules. Simple text matching is very fast.

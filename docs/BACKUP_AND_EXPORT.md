@@ -4,30 +4,48 @@ LedgerZero prioritizes data sovereignty. This means you have full control over y
 
 ## 1. Full Database Backup
 
-A full backup creates a snapshot of your entire database, including all accounts, transactions, budgets, and settings. This is the recommended method for securing your data against loss.
+A full backup is a snapshot of your entire database (accounts, transactions,
+budgets, rules, settings stored in the database). It is the recommended way
+to protect your data against loss.
 
 ### How to Create a Backup
 1. Navigate to **Settings > Backup & Export**.
-2. Tap **Create Full Backup**.
-3. If you have enabled encryption (recommended), the backup file will be encrypted with your master password.
-4. The backup file (ending in `.lzbk` for encrypted or `.sqlite` for unencrypted) is saved to your device's document storage.
-5. We strongly recommend uploading this file to a secure cloud storage provider or transferring it to another device.
+2. Under **Create backup**, choose a **backup password** (at least 10
+   characters) and confirm it.
+3. Optionally turn on **Also upload to your sync storage** (only available
+   when Google Drive or iCloud sync is set up). A failed upload is reported;
+   the backup is still created.
+4. Tap **Export backup** and use the share sheet to save the `.lzbk` file
+   (e.g. to Files, a computer or a USB drive). The temporary copy inside the
+   app is deleted afterwards.
 
 ### Encryption
-Encrypted backups use **AES-GCM (256-bit)** encryption. The key is derived from your master password using **PBKDF2** with a unique salt for each backup.
-**Important:** If you lose your master password, you cannot restore an encrypted backup.
+Backups are **always** encrypted: AES-256-GCM with a key derived from the
+backup password by Argon2id (fresh random salt per backup). There is no
+unencrypted backup option. If you need a readable copy, use the JSON or CSV
+export below. Details: [BACKUP_FORMAT.md](BACKUP_FORMAT.md).
+
+**Important:** without the backup password the backup cannot be restored.
 
 ### Compression
-Backups are automatically compressed using GZIP before encryption to minimize file size.
+Backups are compressed with gzip before encryption.
 
 ## 2. Restore
 
 ### How to Restore
 1. Navigate to **Settings > Backup & Export**.
-2. Tap **Restore Backup**.
-3. Select the backup file (`.lzbk` or `.sqlite`) from your file system.
-4. If the backup is encrypted, you will be prompted to enter the password used when the backup was created.
-5. **Warning:** Restoring a backup will overwrite your current database. Ensure you have backed up your current data if you wish to save it.
+2. Under **Restore backup**, tap **Restore from file** and pick a `.lzbk` file.
+3. Confirm that all data on this device will be replaced, then enter the
+   backup password.
+4. The backup is checked, upgraded if it comes from an older version, and
+   re-encrypted with this device's key. The app reopens the data directly;
+   no restart is needed. If anything fails, your current data is kept.
+5. If you use sync, the device resynchronises after a restore: changes made
+   on your other devices after the backup was created will sync back in.
+
+**Merge transactions from a backup (date range)** copies the transactions of
+a date range (and any missing accounts, categories and payees) into the
+current data without replacing it.
 
 ## 3. Data Portability (JSON Export)
 
@@ -35,36 +53,44 @@ For interoperability with other software or for your own analysis, you can expor
 
 ### How to Export to JSON
 1. Navigate to **Settings > Backup & Export**.
-2. Tap **Export All Data (JSON)**.
+2. Under **Export**, tap **All data (JSON)**.
 3. Use the share sheet to save the file or send it to another app.
 
-The JSON file contains arrays for:
+The JSON file contains a `metadata` object (`version` `2.0`,
+`amount_unit` `minor`: every amount is an integer of minor units, dates are
+UTC ISO-8601) and arrays for:
 - `accounts`
 - `transactions`
 - `categories`
+- `category_groups`
 - `payees`
 - `budgets`
 - `scheduled_transactions`
+
+JSON and CSV exports are **not** encrypted.
 
 ## 4. Transaction Export (CSV)
 
 You can export transactions to CSV for use in spreadsheet applications like Excel, Google Sheets, or LibreOffice Calc.
 
 ### How to Export Transactions
-1. **Global Export:** Go to **Settings > Backup & Export** and tap **Export Transactions (CSV)**. This exports all transactions from all accounts.
+1. **Global Export:** Go to **Settings > Backup & Export** and tap **All transactions (CSV)**. This exports all transactions from all accounts.
 2. **Account Specific:** Go to an Account's detail screen, tap the menu (three dots), and select **Export to CSV**.
-3. **Filtered Export:** (Coming soon) From the Transactions list, filter your view and export only visible transactions.
+3. **Filtered Export:** In **Settings > Backup & Export**, tap **Filtered transactions (CSV)** and choose dates, accounts and categories.
 
 ### CSV Format
 The CSV file includes the following columns:
-- Date (YYYY-MM-DD)
-- Account Name
-- Payee Name
-- Category Name
-- Memo
-- Amount
-- Cleared Status
-- Approved Status
+- `Date` (YYYY-MM-DD)
+- `Account`
+- `Payee`
+- `Category`
+- `Memo`
+- `Amount` (plain decimal in major units, e.g. `-12.50`)
+- `Cleared`
+- `Approved` (`Yes`/`No`)
+
+Header names stay English in every app language. A split transaction is
+exported as its lines (the parent row is left out).
 
 ## 5. Report Exports
 
@@ -85,7 +111,8 @@ LedgerZero can remind you to backup your data regularly.
 
 ### Configure Reminders
 1. Navigate to **Settings > Backup & Export**.
-2. Tap **Backup Frequency**.
-3. Select your preferred frequency: Daily, Weekly, Monthly, or Never.
+2. Tap **Backup reminder**.
+3. Select your preferred frequency: Daily, Weekly, Monthly, or Never
+   (default: Weekly).
 
 Note: LedgerZero does not currently perform background backups automatically due to OS restrictions on accessing user file storage without interaction. The reminder notification will prompt you to open the app and initiate a backup.

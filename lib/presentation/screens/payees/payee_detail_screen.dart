@@ -1,24 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/constants/category_constants.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/categories_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/payee_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
-import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
-
-// Local provider for accounts
-final _accountsStreamProvider = StreamProvider.autoDispose<List<Account>>((
-  ref,
-) {
-  return ref.watch(accountRepositoryProvider).watchAllAccounts();
-});
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class PayeeDetailScreen extends ConsumerStatefulWidget {
   final String payeeId;
@@ -54,20 +47,27 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
 
   void _onNotesFocusChange() {
     if (!_notesFocusNode.hasFocus && _notesDirty) {
-      final payee = ref.read(payeeProvider(widget.payeeId)).value;
-      if (payee != null) {
-        _updatePayee(payee.copyWith(notes: _notesController.text));
-        _notesDirty = false;
-      }
+      _notesDirty = false;
+      _saveNotes(_notesController.text);
     }
   }
 
-  Future<void> _updatePayee(Payee payee) async {
-    await ref.read(payeeControllerProvider).updatePayee(payee);
-    ref.invalidate(payeeProvider(widget.payeeId));
+  /// Reads the current row (not a possibly stale stream value) and saves
+  /// the notes on it.
+  Future<void> _saveNotes(String notes) async {
+    final payee = await ref
+        .read(payeeRepositoryProvider)
+        .getPayeeById(widget.payeeId);
+    if (payee != null) {
+      await _updatePayee(payee.copyWith(notes: notes));
+    }
   }
 
-  void _deletePayee(BuildContext context, int transactionCount) {
+  /// The detail providers follow the database, so no refresh is needed.
+  Future<void> _updatePayee(Payee payee) =>
+      ref.read(payeeControllerProvider).updatePayee(payee);
+
+  void _deletePayee(BuildContext context, Payee payee) {
     final l10n = AppLocalizations.of(context)!;
 
     // Always show dialog for safety
@@ -75,11 +75,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.deletePayeeConfirmation),
-        content: Text(
-          l10n.deletePayeeWarning(
-            ref.read(payeeProvider(widget.payeeId)).value!.name,
-          ),
-        ),
+        content: Text(l10n.deletePayeeWarning(payee.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -87,15 +83,30 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
           ),
           TextButton(
             onPressed: () async {
-              await ref
-                  .read(payeeControllerProvider)
-                  .deletePayee(widget.payeeId);
+              try {
+                await ref
+                    .read(payeeControllerProvider)
+                    .deletePayee(widget.payeeId);
+              } catch (e, st) {
+                Logger.error('Deleting payee ${widget.payeeId} failed', e, st);
+                if (context.mounted) {
+                  final messenger = ScaffoldMessenger.of(context);
+                  Navigator.pop(context); // Dialog
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.deletePayeeFailed)),
+                  );
+                }
+                return;
+              }
               if (context.mounted) {
                 Navigator.pop(context); // Dialog
                 Navigator.pop(context); // Screen
               }
             },
-            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+            child: Text(
+              l10n.delete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),
@@ -232,12 +243,16 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
     final transactionsAsync = ref.watch(
       payeeTransactionsProvider(widget.payeeId),
     );
-    final categoriesAsync = ref.watch(categoriesStreamProvider);
-    final accountsAsync = ref.watch(_accountsStreamProvider);
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final accountsAsync = ref.watch(accountsProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    final categoriesMap = ref.watch(categoryMapProvider).value ?? {};
-    final accountsMap = ref.watch(accountMapProvider).value ?? {};
+    final categoriesMap = ref.watch(categoryMapProvider).valueOrNull ?? {};
+    final accountsMap = ref.watch(accountMapProvider).valueOrNull ?? {};
+    final accountCurrencies = {
+      for (final a in accountsAsync.valueOrNull ?? const <Account>[])
+        a.id: a.currency,
+    };
 
     return payeeAsync.when(
       data: (payee) {
@@ -259,9 +274,14 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
           appBar: AppBar(
             title: _isEditing
                 ? TextField(
-                    controller: _nameController..text = payee.name,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(border: InputBorder.none),
+                    controller: _nameController,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: l10n.payeeName,
+                    ),
                     autofocus: true,
                   )
                 : Text(payee.name),
@@ -279,13 +299,12 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                 IconButton(
                   icon: const Icon(Icons.check),
                   onPressed: () async {
-                    if (_nameController.text.isNotEmpty) {
-                      await _updatePayee(
-                        payee.copyWith(name: _nameController.text),
-                      );
-                      setState(() {
-                        _isEditing = false;
-                      });
+                    final name = _nameController.text.trim();
+                    if (name.isNotEmpty) {
+                      await _updatePayee(payee.copyWith(name: name));
+                      if (mounted) {
+                        setState(() => _isEditing = false);
+                      }
                     }
                   },
                 )
@@ -293,15 +312,12 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'edit') {
-                      setState(() {
-                        _isEditing = true;
-                      });
+                      _nameController.text = payee.name;
+                      setState(() => _isEditing = true);
                     } else if (value == 'merge') {
                       _showMergeDialog(context, payee);
                     } else if (value == 'delete') {
-                      transactionsAsync.whenData((txs) {
-                        _deletePayee(context, txs.length);
-                      });
+                      _deletePayee(context, payee);
                     }
                   },
                   itemBuilder: (context) => [
@@ -311,7 +327,9 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                       value: 'delete',
                       child: Text(
                         l10n.delete,
-                        style: const TextStyle(color: Colors.red),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
                   ],
@@ -326,11 +344,25 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                   // Stats & Settings
                   transactionsAsync.when(
                     data: (transactions) {
-                      final count = transactions.length;
-                      final totalSpent = transactions.fold<double>(
-                        0.0,
-                        (sum, t) => sum + (t.amount < 0 ? t.amount.abs() : 0),
+                      // A split counts once, through its parent; its
+                      // children would otherwise be counted twice.
+                      final counted = transactions
+                          .where((t) => t.parentTransactionId == null)
+                          .toList();
+                      final count = counted.length;
+                      final fmt = ref.watch(appFormatterProvider);
+                      final totalSpent = counted.fold<int>(
+                        0,
+                        (sum, t) => sum + (t.amount < 0 ? -t.amount : 0),
                       );
+                      // Show the account currency when every transaction
+                      // uses the same one.
+                      final currencies = counted
+                          .map((t) => accountCurrencies[t.accountId])
+                          .toSet();
+                      final totalCurrency = currencies.length == 1
+                          ? currencies.single
+                          : null;
                       final lastUsed = transactions.isNotEmpty
                           ? transactions.first.date
                           : null;
@@ -357,14 +389,15 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                   ),
                                   _StatItem(
                                     label: l10n.totalSpent,
-                                    value: NumberFormat.simpleCurrency().format(
+                                    value: fmt.formatMoney(
                                       totalSpent,
+                                      currencyCode: totalCurrency,
                                     ),
                                   ),
                                   _StatItem(
                                     label: l10n.lastUsed,
                                     value: lastUsed != null
-                                        ? DateFormat.yMMMd().format(lastUsed)
+                                        ? fmt.formatDate(lastUsed)
                                         : '-',
                                   ),
                                 ],
@@ -412,7 +445,8 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                                   ).textTheme.bodySmall,
                                                 ),
                                                 Text(
-                                                  payee.icon ?? 'Default',
+                                                  payee.icon ??
+                                                      l10n.defaultLabel,
                                                   style: Theme.of(
                                                     context,
                                                   ).textTheme.bodyMedium,
@@ -509,7 +543,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                       },
                                     ),
                                 loading: () => const LinearProgressIndicator(),
-                                error: (_, __) => const SizedBox(),
+                                error: (_, _) => const SizedBox(),
                               ),
                               const SizedBox(height: 8),
 
@@ -551,7 +585,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                       },
                                     ),
                                 loading: () => const LinearProgressIndicator(),
-                                error: (_, __) => const SizedBox(),
+                                error: (_, _) => const SizedBox(),
                               ),
                               const SizedBox(height: 8),
 
@@ -573,7 +607,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                       );
                     },
                     loading: () => const LinearProgressIndicator(),
-                    error: (_, __) => const SizedBox(),
+                    error: (_, _) => const SizedBox(),
                   ),
 
                   Expanded(
@@ -591,6 +625,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                               payeeName: payee.name,
                               categoryName: categoriesMap[tx.categoryId],
                               accountName: accountsMap[tx.accountId],
+                              currencyCode: accountCurrencies[tx.accountId],
                               onTap: () {
                                 context.push('/edit-transaction/${tx.id}');
                               },
@@ -600,8 +635,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                       },
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
-                      error: (e, s) =>
-                          ErrorView(title: l10n.error, message: e.toString()),
+                      error: (e, s) => LoadErrorView(error: e, stackTrace: s),
                     ),
                   ),
                 ],
@@ -613,7 +647,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, stack) => Scaffold(
-        body: ErrorView(title: l10n.error, message: err.toString()),
+        body: LoadErrorView(error: err, stackTrace: stack),
       ),
     );
   }
@@ -692,7 +726,7 @@ class _MergePayeeDialogState extends ConsumerState<MergePayeeDialog> {
               );
             },
             loading: () => const CircularProgressIndicator(),
-            error: (e, s) => Text(e.toString()),
+            error: (e, s) => Text(l10n.error),
           ),
           const SizedBox(height: 8),
           if (_selectedTargetId != null)
@@ -703,7 +737,10 @@ class _MergePayeeDialogState extends ConsumerState<MergePayeeDialog> {
                     .name;
                 return Text(
                   l10n.mergeWarning(targetName),
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
                 );
               },
               orElse: () => const SizedBox.shrink(),
@@ -719,9 +756,25 @@ class _MergePayeeDialogState extends ConsumerState<MergePayeeDialog> {
           onPressed: _selectedTargetId == null
               ? null
               : () async {
-                  await ref
-                      .read(payeeControllerProvider)
-                      .mergePayees(widget.sourcePayee.id, _selectedTargetId!);
+                  try {
+                    await ref
+                        .read(payeeControllerProvider)
+                        .mergePayees(widget.sourcePayee.id, _selectedTargetId!);
+                  } catch (e, st) {
+                    Logger.error(
+                      'Merging payee ${widget.sourcePayee.id} failed',
+                      e,
+                      st,
+                    );
+                    if (context.mounted) {
+                      final messenger = ScaffoldMessenger.of(context);
+                      Navigator.pop(context); // Close dialog
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(l10n.mergePayeeFailed)),
+                      );
+                    }
+                    return;
+                  }
                   if (context.mounted) {
                     Navigator.pop(context); // Close dialog
                     Navigator.pop(context); // Close detail screen

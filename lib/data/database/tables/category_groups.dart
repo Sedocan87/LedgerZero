@@ -5,6 +5,7 @@ class CategoryGroups extends Table {
   TextColumn get name => text()();
   IntColumn get sortOrder => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

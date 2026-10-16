@@ -3,17 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
-import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
 import 'package:ledger_zero/presentation/widgets/home/home_empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
 import 'package:ledger_zero/presentation/widgets/home/to_be_budgeted_widget.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 
-final hasAccountsProvider = FutureProvider.autoDispose<bool>((ref) async {
-  final accounts = await ref.watch(accountRepositoryProvider).getAllAccounts();
-  return accounts.isNotEmpty;
+/// Whether any account exists (Home shows its empty state otherwise).
+final hasAccountsProvider = Provider<AsyncValue<bool>>((ref) {
+  return ref
+      .watch(accountsProvider)
+      .whenData((accounts) => accounts.isNotEmpty);
 });
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -34,13 +39,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _refreshHome() async {
-    final now = DateTime.now();
-    final currentMonth = DateTime(now.year, now.month);
+    final currentMonth = CalendarDate.startOfMonthUtc(CalendarDate.today());
+    final selectedMonth = ref.read(selectedHomeMonthProvider);
 
     // Trigger sync alongside data refresh
     await Future.wait([
       ref.refresh(tbbProvider(currentMonth).future),
-      ref.refresh(monthlyStatsProvider(currentMonth).future),
+      ref.refresh(monthlyStatsProvider(selectedMonth).future),
       ref.refresh(recentTransactionsProvider.future),
       ref.read(syncControllerProvider.notifier).syncNow(),
     ]);
@@ -91,10 +96,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => LoadErrorView(error: err, stackTrace: stack),
       ),
       floatingActionButton: hasAccountsAsync.valueOrNull == true
           ? FloatingActionButton.extended(
+              heroTag: 'home-fab',
               onPressed: () => context.push('/add-transaction'),
               tooltip: l10n.addTransaction,
               icon: const Icon(Icons.add),

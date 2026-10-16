@@ -1,17 +1,20 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:ledger_zero/presentation/widgets/common/platform_widget.dart';
 
-class AppLoadingIndicator extends PlatformWidget {
+/// The platform's activity indicator (Cupertino on iOS), centred.
+class AppLoadingIndicator extends StatelessWidget {
   const AppLoadingIndicator({super.key});
 
   @override
-  Widget buildCupertinoWidget(BuildContext context) {
-    return const Center(child: CupertinoActivityIndicator());
-  }
-
-  @override
-  Widget buildMaterialWidget(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+  Widget build(BuildContext context) {
+    final isCupertino = switch (Theme.of(context).platform) {
+      TargetPlatform.iOS || TargetPlatform.macOS => true,
+      _ => false,
+    };
+    return Center(
+      child: isCupertino
+          ? const CupertinoActivityIndicator()
+          : const CircularProgressIndicator(),
+    );
   }
 }

@@ -4,6 +4,7 @@ import 'package:ledger_zero/app/app.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/error_tracker.dart';
+import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -17,6 +18,9 @@ Future<void> main() async {
     enableLogging: true,
   );
 
+  // Crash reports are opt-in (Settings > Security > Privacy).
+  LocalErrorReportingService.crashReportsEnabled =
+      sharedPreferences.getBool(kCrashReportsEnabledKey) ?? false;
   ErrorTracker.init();
 
   runApp(

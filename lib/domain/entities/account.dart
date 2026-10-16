@@ -29,11 +29,15 @@ class Account {
   /// The currency code of the account (e.g., 'USD').
   final String currency;
 
-  /// The starting balance of the account.
-  final double startingBalance;
+  /// The opening balance of the account in minor units (hundredths).
+  final int startingBalance;
 
-  /// The current balance of the account.
-  final double currentBalance;
+  /// The current balance in minor units.
+  ///
+  /// Computed by the repository as starting balance + SUM(amount) of the
+  /// account's non-deleted transactions that are not split children. It is
+  /// never persisted; values set here are ignored when saving.
+  final int balance;
 
   /// Whether the account is closed.
   final bool isClosed;
@@ -59,8 +63,8 @@ class Account {
     required this.name,
     required this.type,
     this.currency = 'USD',
-    this.startingBalance = 0.0,
-    this.currentBalance = 0.0,
+    this.startingBalance = 0,
+    this.balance = 0,
     this.isClosed = false,
     this.color,
     this.icon,
@@ -75,8 +79,8 @@ class Account {
     String? name,
     AccountType? type,
     String? currency,
-    double? startingBalance,
-    double? currentBalance,
+    int? startingBalance,
+    int? balance,
     bool? isClosed,
     int? color,
     String? icon,
@@ -90,7 +94,7 @@ class Account {
       type: type ?? this.type,
       currency: currency ?? this.currency,
       startingBalance: startingBalance ?? this.startingBalance,
-      currentBalance: currentBalance ?? this.currentBalance,
+      balance: balance ?? this.balance,
       isClosed: isClosed ?? this.isClosed,
       color: color ?? this.color,
       icon: icon ?? this.icon,
@@ -107,8 +111,8 @@ class Account {
       name: json['name'] as String,
       type: AccountType.values.firstWhere((e) => e.name == json['type']),
       currency: json['currency'] as String? ?? 'USD',
-      startingBalance: (json['starting_balance'] as num?)?.toDouble() ?? 0.0,
-      currentBalance: (json['current_balance'] as num?)?.toDouble() ?? 0.0,
+      startingBalance: (json['starting_balance'] as num?)?.toInt() ?? 0,
+      balance: (json['balance'] as num?)?.toInt() ?? 0,
       isClosed: json['is_closed'] as bool? ?? false,
       color: json['color'] as int?,
       icon: json['icon'] as String?,
@@ -130,7 +134,7 @@ class Account {
       'type': type.name,
       'currency': currency,
       'starting_balance': startingBalance,
-      'current_balance': currentBalance,
+      'balance': balance,
       'is_closed': isClosed,
       'color': color,
       'icon': icon,
@@ -152,7 +156,7 @@ class Account {
         other.type == type &&
         other.currency == currency &&
         other.startingBalance == startingBalance &&
-        other.currentBalance == currentBalance &&
+        other.balance == balance &&
         other.isClosed == isClosed &&
         other.color == color &&
         other.icon == icon &&
@@ -169,7 +173,7 @@ class Account {
       type,
       currency,
       startingBalance,
-      currentBalance,
+      balance,
       isClosed,
       color,
       icon,
@@ -181,7 +185,7 @@ class Account {
 
   @override
   String toString() {
-    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, currentBalance: $currentBalance, isClosed: $isClosed, color: $color, icon: $icon, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, balance: $balance, isClosed: $isClosed, color: $color, icon: $icon, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   /// Validates the [Account] entity.

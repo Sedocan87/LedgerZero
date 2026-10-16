@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class AccountSelector extends ConsumerWidget {
   final ValueChanged<Account> onSelected;
@@ -11,6 +14,7 @@ class AccountSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -25,7 +29,7 @@ class AccountSelector extends ConsumerWidget {
             final account = accounts[index];
             return ListTile(
               title: Text(account.name),
-              subtitle: Text(account.type.name.toUpperCase()),
+              subtitle: Text(account.type.label(l10n)),
               leading: const Icon(Icons.account_balance),
               onTap: () {
                 onSelected(account);
@@ -35,7 +39,8 @@ class AccountSelector extends ConsumerWidget {
           },
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) =>
+            LoadErrorView(error: err, stackTrace: stack, compact: true),
       ),
     );
   }

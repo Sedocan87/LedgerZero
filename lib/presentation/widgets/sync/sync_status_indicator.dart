@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 
@@ -10,6 +11,8 @@ class SyncStatusIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(syncControllerProvider);
+    final fmt = ref.watch(appFormatterProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     IconData icon;
     Color color;
@@ -20,24 +23,28 @@ class SyncStatusIndicator extends ConsumerWidget {
       case SyncStatus.idle:
         icon = Icons.cloud_done;
         color = Colors.green;
-        statusText = state.accountEmail != null
-            ? 'Connected as ${state.accountEmail}'
-            : 'Connected';
+        statusText = state.paused
+            ? l10n.syncStatusPaused
+            : state.accountEmail != null
+            ? l10n.syncStatusConnectedAs(state.accountEmail!)
+            : l10n.syncStatusConnected;
         break;
       case SyncStatus.disconnected:
         icon = Icons.cloud_off;
         color = Colors.grey;
-        statusText = 'Disconnected';
+        statusText = l10n.syncStatusDisconnected;
         break;
       case SyncStatus.syncing:
         icon = Icons.sync;
         color = Colors.blue;
-        statusText = 'Syncing...';
+        statusText = l10n.syncStatusSyncing;
         break;
       case SyncStatus.error:
         icon = Icons.error_outline;
         color = Colors.red;
-        statusText = state.errorMessage ?? 'Unknown Error';
+        // The cause (localised by kind) is shown below the card; the
+        // exception's own message is technical and English.
+        statusText = l10n.syncError;
         break;
     }
 
@@ -67,7 +74,9 @@ class SyncStatusIndicator extends ConsumerWidget {
                       ),
                       if (state.lastSyncTime != null)
                         Text(
-                          'Last synced: ${DateFormat.yMMMd().add_jm().format(state.lastSyncTime!)}',
+                          l10n.lastSynced(
+                            fmt.formatDateTime(state.lastSyncTime!),
+                          ),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                     ],

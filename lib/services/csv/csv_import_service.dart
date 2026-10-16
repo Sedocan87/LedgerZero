@@ -1,13 +1,16 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/core/utils/picked_file.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
-import 'package:ledger_zero/services/csv/pdf_import_service.dart';
 
 class CsvImportData {
   final List<String> headers;
@@ -21,10 +24,41 @@ class CsvImportData {
   });
 }
 
+/// A problem found while validating a CSV import. The UI turns it into a
+/// localised message; [toString] is for logs.
+enum CsvIssueKind {
+  dateColumnNotMapped,
+  amountColumnNotMapped,
+  mappedColumnsMissing,
+
+  /// [CsvIssue.count] rows have dates that do not match
+  /// [CsvIssue.dateFormat].
+  invalidDates,
+
+  /// [CsvIssue.count] rows have unreadable amounts and are skipped.
+  invalidAmounts,
+
+  /// [CsvIssue.count] dates are more than 60 days from the median date
+  /// (often a wrong date format or a typo in the file).
+  dateOutliers,
+}
+
+class CsvIssue {
+  final CsvIssueKind kind;
+  final int count;
+  final String? dateFormat;
+
+  const CsvIssue(this.kind, {this.count = 0, this.dateFormat});
+
+  @override
+  String toString() =>
+      'CsvIssue(${kind.name}, count: $count, dateFormat: $dateFormat)';
+}
+
 class CsvValidationResult {
   final bool isValid;
-  final List<String> errors;
-  final List<String> warnings;
+  final List<CsvIssue> errors;
+  final List<CsvIssue> warnings;
 
   CsvValidationResult({
     required this.isValid,
@@ -33,65 +67,39 @@ class CsvValidationResult {
   });
 }
 
+/// Why a CSV file could not be read; shown localised by the UI.
+enum ImportFailure { unreadable, empty, malformed }
+
 class ImportException implements Exception {
+  final ImportFailure failure;
+
+  /// Technical detail for logs (never shown to users).
   final String message;
-  ImportException(this.message);
+  ImportException(this.failure, this.message);
   @override
-  String toString() => message;
+  String toString() => 'ImportException(${failure.name}): $message';
 }
 
 class CsvImportService {
   Future<CsvImportData> parseCsvFile(PlatformFile file) async {
-    if (file.extension == 'pdf') {
-      return _parsePdfFile(file);
-    }
     String content;
     try {
-      if (file.bytes != null) {
-        try {
-          content = utf8.decode(file.bytes!);
-        } catch (e) {
-          // Fallback to Latin-1
-          content = latin1.decode(file.bytes!);
-        }
-      } else if (file.path != null) {
-        try {
-          content = await File(file.path!).readAsString();
-        } catch (e) {
-          // Fallback to Latin-1
-          final bytes = await File(file.path!).readAsBytes();
-          content = latin1.decode(bytes);
-        }
-      } else {
-        throw ImportException('File content not available');
-      }
+      // Bank exports that are not UTF-8 are almost always Windows-1252
+      // (a superset of Latin-1 with the euro sign at 0x80).
+      content = await file.readAsText(windows1252Fallback: true);
     } catch (e) {
-      throw ImportException('Failed to read file: ${e.toString()}');
+      throw ImportException(
+        ImportFailure.unreadable,
+        'Failed to read file: $e',
+      );
     }
 
     return compute(_parseCsvInternal, content);
   }
 
-  Future<CsvImportData> _parsePdfFile(PlatformFile file) async {
-    if (kIsWeb) {
-      throw ImportException('PDF import is not supported on web.');
-    }
-
-    if (file.path == null) {
-      throw ImportException('File path not available for PDF import.');
-    }
-
-    final pdfService = PdfImportService();
-    try {
-      return await pdfService.extractFromPdf(file.path!);
-    } finally {
-      pdfService.dispose();
-    }
-  }
-
   static CsvImportData _parseCsvInternal(String content) {
     if (content.trim().isEmpty) {
-      throw ImportException('The CSV file is empty.');
+      throw ImportException(ImportFailure.empty, 'The CSV file is empty');
     }
 
     String delimiter = ',';
@@ -123,11 +131,14 @@ class CsvImportService {
         shouldParseNumbers: false,
       );
     } catch (e) {
-      throw ImportException('Failed to parse CSV format: ${e.toString()}');
+      throw ImportException(
+        ImportFailure.malformed,
+        'Failed to parse CSV format: $e',
+      );
     }
 
     if (rawRows.isEmpty) {
-      throw ImportException('No data found in the CSV file.');
+      throw ImportException(ImportFailure.empty, 'No rows in the CSV file');
     }
 
     // Assume first row is header
@@ -158,17 +169,17 @@ class CsvImportService {
     required String dateFormat,
     required String decimalSeparator,
   }) {
-    final errors = <String>[];
-    final warnings = <String>[];
+    final errors = <CsvIssue>[];
+    final warnings = <CsvIssue>[];
 
     final dateCol = columnMapping['Date'];
     final amountCol = columnMapping['Amount'];
 
     if (dateCol == null) {
-      errors.add('Date column is not mapped.');
+      errors.add(const CsvIssue(CsvIssueKind.dateColumnNotMapped));
     }
     if (amountCol == null) {
-      errors.add('Amount column is not mapped.');
+      errors.add(const CsvIssue(CsvIssueKind.amountColumnNotMapped));
     }
 
     if (errors.isNotEmpty) {
@@ -183,7 +194,7 @@ class CsvImportService {
     final amountIndex = data.headers.indexOf(amountCol!);
 
     if (dateIndex == -1 || amountIndex == -1) {
-      errors.add('Mapped columns not found in CSV headers.');
+      errors.add(const CsvIssue(CsvIssueKind.mappedColumnsMissing));
       return CsvValidationResult(
         isValid: false,
         errors: errors,
@@ -193,6 +204,9 @@ class CsvImportService {
 
     int invalidDateCount = 0;
     int invalidAmountCount = 0;
+    final amountParser = MoneyParser(
+      decimalSeparator: decimalSeparator == ',' ? ',' : '.',
+    );
     final validDates = <DateTime>[];
 
     for (int i = 0; i < data.rows.length; i++) {
@@ -214,19 +228,7 @@ class CsvImportService {
       // Validate Amount
       if (row.length > amountIndex) {
         final amountStr = row[amountIndex].toString();
-        // Handle decimal separator
-        String normalizedAmount = amountStr;
-        if (decimalSeparator == ',') {
-          normalizedAmount = normalizedAmount
-              .replaceAll('.', '')
-              .replaceAll(',', '.');
-        } else {
-          normalizedAmount = normalizedAmount.replaceAll(',', '');
-        }
-        // Remove currency symbols and spaces
-        normalizedAmount = normalizedAmount.replaceAll(RegExp(r'[^\d.-]'), '');
-
-        if (double.tryParse(normalizedAmount) == null) {
+        if (amountParser.tryParse(amountStr) == null) {
           invalidAmountCount++;
         }
       } else {
@@ -236,17 +238,22 @@ class CsvImportService {
 
     if (invalidDateCount > 0) {
       errors.add(
-        '$invalidDateCount rows have invalid dates (format: $dateFormat).',
+        CsvIssue(
+          CsvIssueKind.invalidDates,
+          count: invalidDateCount,
+          dateFormat: dateFormat,
+        ),
       );
     }
 
     if (invalidAmountCount > 0) {
       warnings.add(
-        '$invalidAmountCount rows have invalid amounts and will be skipped.',
+        CsvIssue(CsvIssueKind.invalidAmounts, count: invalidAmountCount),
       );
     }
 
-    // Check for date outliers (dates that seem wrong, e.g., months apart from others)
+    // Date outliers: dates far from the others usually mean the wrong date
+    // format was chosen (day and month swapped) or the file has a typo.
     if (validDates.length >= 5) {
       validDates.sort();
       final medianDate = validDates[validDates.length ~/ 2];
@@ -254,17 +261,14 @@ class CsvImportService {
 
       for (final date in validDates) {
         final diff = date.difference(medianDate).inDays.abs();
-        // If date is more than 60 days from median, it's likely an OCR error
+        // More than 60 days from the median: probably misread.
         if (diff > 60) {
           outlierCount++;
         }
       }
 
       if (outlierCount > 0) {
-        warnings.add(
-          '$outlierCount dates appear to be outliers (may be OCR errors). '
-          'Please review dates that seem incorrect.',
-        );
+        warnings.add(CsvIssue(CsvIssueKind.dateOutliers, count: outlierCount));
       }
     }
 
@@ -292,8 +296,14 @@ class CsvImportService {
     final memoIndex = columnMapping['Memo'] != null
         ? data.headers.indexOf(columnMapping['Memo']!)
         : -1;
+    final categoryIndex = columnMapping['Category'] != null
+        ? data.headers.indexOf(columnMapping['Category']!)
+        : -1;
 
     final dateFmt = DateFormat(dateFormat);
+    final amountParser = MoneyParser(
+      decimalSeparator: decimalSeparator == ',' ? ',' : '.',
+    );
 
     for (final row in data.rows) {
       try {
@@ -306,30 +316,22 @@ class CsvImportService {
 
         DateTime date;
         try {
-          date = dateFmt.parse(dateStr);
+          // Bank dates are calendar days: store as UTC midnight.
+          date = CalendarDate.fromLocalPick(dateFmt.parse(dateStr));
         } catch (_) {
           continue; // Skip invalid rows (should be caught by validation)
         }
 
-        // Parse amount
-        String normalizedAmount = amountStr;
-        if (decimalSeparator == ',') {
-          normalizedAmount = normalizedAmount
-              .replaceAll('.', '')
-              .replaceAll(',', '.');
-        } else {
-          normalizedAmount = normalizedAmount.replaceAll(',', '');
-        }
-        normalizedAmount = normalizedAmount.replaceAll(RegExp(r'[^\d.-]'), '');
-
-        final double? parsedAmount = double.tryParse(normalizedAmount);
+        // Parse amount into minor units (both decimal styles accepted;
+        // the profile's separator resolves "1.234" / "1,234").
+        final parsedAmount = amountParser.tryParse(amountStr);
         if (parsedAmount == null) {
           continue; // Skip rows with invalid amounts
         }
-        double amount = parsedAmount;
-        if (!outflowIsNegative && amount > 0) {
-          amount = -amount;
-        }
+        // Off: the file shows outflows as positive numbers (credit card
+        // statements), so every sign is flipped: charges become negative
+        // and refunds/payments (negative in the file) become inflows.
+        final amount = outflowIsNegative ? parsedAmount : -parsedAmount;
 
         String? payeeName;
         if (payeeIndex != -1 && row.length > payeeIndex) {
@@ -341,6 +343,12 @@ class CsvImportService {
           memo = row[memoIndex].toString();
         }
 
+        String? categoryName;
+        if (categoryIndex != -1 && row.length > categoryIndex) {
+          final text = row[categoryIndex].toString().trim();
+          categoryName = text.isEmpty ? null : text;
+        }
+
         transactions.add(
           ImportTransaction(
             date: date,
@@ -348,6 +356,7 @@ class CsvImportService {
             payeeName: payeeName,
             memo: memo,
             originalDescription: payeeName,
+            categoryName: categoryName,
           ),
         );
       } catch (e) {
@@ -360,6 +369,53 @@ class CsvImportService {
     return transactions;
   }
 
+  /// Sets [ImportTransaction.categoryId] of every row whose file category
+  /// ([ImportTransaction.categoryName]) names an existing category.
+  ///
+  /// Matching ignores case and surrounding / repeated whitespace. A cell
+  /// matches a category by its name alone ("Groceries") or qualified by
+  /// its group ("Food: Groceries", as YNAB and many spreadsheets write
+  /// it). A bare name that exists in more than one group is ambiguous and
+  /// only matches in the qualified form. Categories are never created:
+  /// rows whose category is not found stay unassigned
+  /// ([ImportTransaction.hasUnmatchedCategory]).
+  void assignCategories({
+    required List<ImportTransaction> imported,
+    required List<Category> categories,
+    required List<CategoryGroup> groups,
+  }) {
+    final groupNames = {for (final g in groups) g.id: g.name};
+    final byName = <String, String?>{};
+    final byQualified = <String, String>{};
+    for (final c in categories) {
+      final key = _categoryKey(c.name);
+      byName[key] = byName.containsKey(key) ? null : c.id;
+      final group = groupNames[c.categoryGroupId];
+      if (group != null) {
+        byQualified['${_categoryKey(group)}:$key'] = c.id;
+      }
+    }
+    for (final row in imported) {
+      final name = row.categoryName;
+      if (name == null || name.trim().isEmpty) {
+        continue;
+      }
+      final key = _categoryKey(name);
+      String? id = byName[key];
+      if (id == null && key.contains(':')) {
+        final colon = key.indexOf(':');
+        final qualified =
+            '${key.substring(0, colon).trim()}:'
+            '${key.substring(colon + 1).trim()}';
+        id = byQualified[qualified];
+      }
+      row.categoryId = id;
+    }
+  }
+
+  static String _categoryKey(String text) =>
+      text.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+
   void checkForDuplicates({
     required List<ImportTransaction> imported,
     required List<Transaction> existing,
@@ -369,7 +425,7 @@ class CsvImportService {
 
     for (final tx in existing) {
       final dateStr = DateFormat('yyyy-MM-dd').format(tx.date);
-      final amountStr = tx.amount.toStringAsFixed(2);
+      final amountStr = tx.amount.toString(); // minor units
       final payeeName = tx.payeeId != null ? (payeeMap[tx.payeeId] ?? '') : '';
 
       final raw = '$dateStr|$amountStr|$payeeName';
@@ -379,7 +435,7 @@ class CsvImportService {
 
     for (final tx in imported) {
       final dateStr = DateFormat('yyyy-MM-dd').format(tx.date);
-      final amountStr = tx.amount.toStringAsFixed(2);
+      final amountStr = tx.amount.toString(); // minor units
       final payeeName = tx.payeeName ?? '';
 
       final raw = '$dateStr|$amountStr|$payeeName';

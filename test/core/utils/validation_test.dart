@@ -9,7 +9,7 @@ void main() {
         id: const Uuid().v4(),
         accountId: 'acc1',
         date: DateTime.now(),
-        amount: 0.0,
+        amount: 0,
       );
 
       final errors = transaction.validate();
@@ -21,7 +21,7 @@ void main() {
         id: const Uuid().v4(),
         accountId: 'acc1',
         date: DateTime.now(),
-        amount: 100.0,
+        amount: 10000,
       );
 
       final errors = transaction.validate();

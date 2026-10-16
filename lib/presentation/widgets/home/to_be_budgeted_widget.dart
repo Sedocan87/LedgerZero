@@ -1,45 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
-
-final tbbProvider = FutureProvider.autoDispose.family<double, DateTime>((
-  ref,
-  month,
-) {
-  // Watch for transaction changes (income affects TBB)
-  ref.watch(transactionUpdateTriggerProvider);
-
-  // Watch for budget changes (budgeting affects TBB)
-  final monthStr = '${month.year}-${month.month.toString().padLeft(2, '0')}';
-  ref.watch(budgetUpdateTriggerProvider(monthStr));
-
-  final budgetingService = ref.watch(budgetingServiceProvider);
-  return budgetingService.calculateTBB(month);
-});
+import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class ToBeBudgetedWidget extends ConsumerWidget {
   const ToBeBudgetedWidget({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final currentMonth = DateTime(now.year, now.month);
+    final currentMonth = CalendarDate.startOfMonthUtc(CalendarDate.today());
     final tbbAsync = ref.watch(tbbProvider(currentMonth));
     final l10n = AppLocalizations.of(context)!;
-    final currency = ref.watch(settingsProvider).currency;
     final theme = Theme.of(context);
 
     return tbbAsync.when(
       data: (tbb) {
-        final currencyFormat = NumberFormat.simpleCurrency(name: currency);
-
-        // Determine Gradient Colors
+        // Determine Gradient Colors. White text on the fixed green / red
+        // gradients, the theme's text colour on the neutral one.
         List<Color> gradientColors;
         Color textColor = Colors.white;
 
@@ -82,17 +64,21 @@ class ToBeBudgetedWidget extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: [
-              Text(
-                l10n.toBeBudgeted.toUpperCase(),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: textColor.withValues(alpha: 0.8),
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.bold,
+              ExcludeSemantics(
+                // The amount's label already says "to be budgeted".
+                child: Text(
+                  l10n.toBeBudgeted.toUpperCase(),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: textColor.withValues(alpha: 0.8),
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              Text(
-                currencyFormat.format(tbb),
+              AmountText(
+                tbb,
+                amountContext: AmountContext.toBeBudgeted,
                 style: theme.textTheme.displaySmall?.copyWith(
                   // Large amount text
                   color: textColor,
@@ -111,17 +97,8 @@ class ToBeBudgetedWidget extends ConsumerWidget {
         ),
         child: const Center(child: CircularProgressIndicator()),
       ),
-      error: (err, stack) => Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        child: Text(
-          'Error loading budget',
-          style: TextStyle(color: theme.colorScheme.onErrorContainer),
-        ),
-      ),
+      error: (err, stack) =>
+          LoadErrorView(error: err, stackTrace: stack, compact: true),
     );
   }
 }

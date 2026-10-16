@@ -1,16 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
+import 'package:ledger_zero/domain/services/transaction_service.dart';
+import 'package:ledger_zero/domain/undo/transaction_undo_actions.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/transaction_dialogs.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/pickers.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_filter_sheet.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 
+/// Ids of all split parents (labelled "Split" in lists).
+final splitParentIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {
+  return ref.watch(transactionRepositoryProvider).watchSplitParentIds();
+});
+
+/// The transaction list: the Transactions tab (persisted filter and sort),
+/// or a list with a [fixedFilter] (e.g. a category's activity from the
+/// budget) that never touches the tab's saved filter.
+///
+/// Every write goes through [TransactionService]: deleting a row deletes
+/// its transfer counterpart or whole split after a confirmation, and Undo
+/// restores everything that was deleted.
 class TransactionsScreen extends ConsumerStatefulWidget {
-  const TransactionsScreen({super.key});
+  const TransactionsScreen({super.key, this.fixedFilter});
+
+  final FilteredTransactionsArgs? fixedFilter;
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -20,6 +44,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   bool _isSearchMode = false;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  AutoDisposeStateNotifierProvider<TransactionsNotifier, TransactionsState>
+  get _provider => widget.fixedFilter == null
+      ? transactionsProvider
+      : filteredTransactionsProvider(widget.fixedFilter!);
+
+  TransactionService get _service => ref.read(transactionServiceProvider);
 
   @override
   void initState() {
@@ -34,133 +65,227 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     super.dispose();
   }
 
+  /// Near the end of the list: ask for the next page (the notifier ignores
+  /// this while a page is on its way or when there is nothing more).
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 500) {
-      final state = ref.read(transactionsProvider);
-      final transactions = state.transactions.valueOrNull;
-      if (transactions != null && transactions.length >= state.limit) {
-        // Debounce or check if already loading?
-        // The notifier updates limit immediately, so subsequent calls might just increment it again.
-        // Ideally we check if we are already at the new limit or if data matches limit.
-        // A simple way is to check if the current scroll position suggests we need more.
-        // But ref.read(transactionsProvider.notifier).loadMore() is cheap if it just updates state.
-        // However, we should avoid calling it 60 times a second.
-        // The TransactionsNotifier doesn't have an "isLoadingMore" flag exposed easily for the scroll listener.
-        // We'll rely on a simple threshold and maybe a throttle if needed, but for now direct call.
-        // To avoid spamming, we can check if the limit was recently updated?
-        // Actually, let's just call it. The provider should handle it or we accept some redundant calls.
-        // Better: check if we can load more.
-        ref.read(transactionsProvider.notifier).loadMore();
+      ref.read(_provider.notifier).loadMore();
+    }
+  }
+
+  void _showMessage(String text, {SnackBarAction? action}) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(text), action: action));
+  }
+
+  /// Runs a service call; a reconciled row needs the user's confirmation.
+  Future<T?> _guarded<T>(
+    Future<T> Function(bool allowReconciledChange) call,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      try {
+        return await call(false);
+      } on ReconciledTransactionException {
+        if (!mounted || !await confirmReconciledChange(context)) {
+          return null;
+        }
+        return await call(true);
+      }
+    } catch (e, stackTrace) {
+      Logger.error('Transaction action failed', e, stackTrace);
+      if (mounted) {
+        _showMessage(l10n.txActionFailed);
+      }
+      return null;
+    }
+  }
+
+  /// Confirms and deletes [ids] with everything linked to them; offers Undo.
+  Future<void> _delete(List<String> ids) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final preview = await _service.previewDeletion(ids);
+      if (!mounted || preview.rowCount == 0) {
+        return;
+      }
+      final confirmed = await confirmTransactionDeletion(
+        context,
+        selectedCount: ids.length,
+        preview: preview,
+      );
+      if (!confirmed || !mounted) {
+        return;
+      }
+      final action = await _service.deleteMany(
+        ids,
+        // The dialog already warned about reconciled rows.
+        allowReconciledChange: true,
+      );
+      if (action == null || !mounted) {
+        return;
+      }
+      _showMessage(
+        l10n.txDeletedCount(ids.length),
+        action: SnackBarAction(
+          label: l10n.undo,
+          onPressed: () => _undo(action),
+        ),
+      );
+    } catch (e, stackTrace) {
+      Logger.error('Deleting transactions failed', e, stackTrace);
+      if (mounted) {
+        _showMessage(l10n.txActionFailed);
+      }
+    }
+  }
+
+  Future<void> _undo(TransactionChangeSetAction action) async {
+    try {
+      await ref.read(undoServiceProvider).undo(action);
+    } catch (e, stackTrace) {
+      Logger.error('Undo failed', e, stackTrace);
+      if (mounted) {
+        _showMessage(AppLocalizations.of(context)!.txActionFailed);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(transactionsProvider);
-
-    // Lookups for names
-    final categories = ref.watch(categoryMapProvider).value ?? {};
-    final payees = ref.watch(payeeMapProvider).value ?? {};
-    final accounts = ref.watch(accountMapProvider).value ?? {};
+    final l10n = AppLocalizations.of(context)!;
+    final state = ref.watch(_provider);
+    final lookups = TransactionLookups(
+      categories: ref.watch(categoryMapProvider).valueOrNull ?? {},
+      payees: ref.watch(payeeMapProvider).valueOrNull ?? {},
+      accounts: {
+        for (final a
+            in ref.watch(accountsProvider).valueOrNull ?? const <Account>[])
+          a.id: a,
+      },
+      splitParents: ref.watch(splitParentIdsProvider).valueOrNull ?? const {},
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: _buildAppBarTitle(state),
+        title: _buildAppBarTitle(state, l10n),
         leading: _buildAppBarLeading(state),
         actions: _buildAppBarActions(state, state.transactions.asData?.value),
       ),
-      // Task 215: Pull-to-refresh
       body: RefreshIndicator(
-        onRefresh: () => ref.read(transactionsProvider.notifier).refresh(),
+        onRefresh: () => ref.read(_provider.notifier).refresh(),
         child: FocusTraversalGroup(
           policy: OrderedTraversalPolicy(),
           child: state.transactions.when(
             data: (transactions) {
               if (transactions.isEmpty) {
-                return _buildEmptyState(context); // Task 209
+                final filtered =
+                    state.searchQuery.trim().isNotEmpty ||
+                    (widget.fixedFilter == null && state.filter.isActive);
+                return TransactionsEmptyState(
+                  filtered: filtered,
+                  onAdd: widget.fixedFilter == null
+                      ? () => context.pushNamed('add-transaction')
+                      : null,
+                  onClearFilters: _clearSearchAndFilter,
+                );
               }
-
-              final grouped = _groupTransactions(transactions);
-              final flattened = _buildFlattenedList(grouped);
-
-              // Task 219: ListView.builder for performance (Flattened)
+              final flattened = flattenByDay(transactions);
               return ListView.builder(
                 controller: _scrollController,
-                itemCount: flattened.length + 1, // +1 for loading indicator
+                itemCount: flattened.length + 1,
                 itemBuilder: (context, index) {
                   if (index == flattened.length) {
-                    // Only show loading if we might have more transactions
-                    if (transactions.length >= state.limit) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    } else {
-                      return const SizedBox.shrink();
-                    }
+                    return ref.read(_provider.notifier).hasMore
+                        ? const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        : const SizedBox.shrink();
                   }
-
                   final item = flattened[index];
                   if (item is DateTime) {
-                    return _buildDateHeader(context, item);
-                  } else if (item is Transaction) {
-                    return _buildTransactionItem(
-                      context,
-                      item,
-                      payees,
-                      categories,
-                      accounts,
-                      state,
-                    );
+                    return TransactionDateHeader(date: item);
                   }
-                  return const SizedBox.shrink();
+                  return _buildTransactionItem(
+                    item as Transaction,
+                    lookups,
+                    state,
+                    l10n,
+                  );
                 },
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Center(child: Text('Error: $e')),
+            error: (e, st) => LoadErrorView(
+              error: e,
+              stackTrace: st,
+              onRetry: () => ref.read(_provider.notifier).refresh(),
+            ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Add Transaction',
-        onPressed: () {
-          context.pushNamed('add-transaction');
-        },
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: widget.fixedFilter != null
+          ? null
+          : FloatingActionButton(
+              heroTag: 'transactions-fab',
+              tooltip: l10n.addTransaction,
+              onPressed: () => context.pushNamed('add-transaction'),
+              child: const Icon(Icons.add),
+            ),
     );
   }
 
   Widget _buildTransactionItem(
-    BuildContext context,
     Transaction tx,
-    Map<String, String> payees,
-    Map<String, String> categories,
-    Map<String, String> accounts,
+    TransactionLookups lookups,
     TransactionsState state,
+    AppLocalizations l10n,
   ) {
-    // Task 216: Swipe actions
+    final otherAccount = lookups.accounts[tx.transferAccountId]?.name ?? '';
+    final payeeName = tx.transferAccountId != null
+        ? (tx.amount < 0
+              ? l10n.transferToAccount(otherAccount)
+              : l10n.transferFromAccount(otherAccount))
+        : lookups.payees[tx.payeeId];
+    final categoryName = tx.transferAccountId != null
+        ? l10n.transfer
+        : lookups.splitParents.contains(tx.id)
+        ? l10n.split
+        : lookups.categories[tx.categoryId];
+    final item = TransactionListItem(
+      transaction: tx,
+      payeeName: payeeName,
+      categoryName: categoryName,
+      accountName: lookups.accounts[tx.accountId]?.name,
+      currencyCode: lookups.accounts[tx.accountId]?.currency,
+      isSelectionMode: state.isMultiSelectMode,
+      isSelected: state.selectedTransactionIds.contains(tx.id),
+      onTap: state.isMultiSelectMode
+          ? () => ref.read(_provider.notifier).toggleSelection(tx.id)
+          : () => context.pushNamed(
+              'edit-transaction',
+              pathParameters: {'id': tx.id},
+            ),
+      onLongPress: state.isMultiSelectMode
+          ? null
+          : () {
+              ref.read(_provider.notifier).toggleMultiSelectMode();
+              ref.read(_provider.notifier).toggleSelection(tx.id);
+            },
+      onClearStatusChanged: (status) => _guarded(
+        (allow) => _service.updateClearingStatus(
+          tx.id,
+          status,
+          allowReconciledChange: allow,
+        ),
+      ),
+    );
     if (state.isMultiSelectMode) {
-      // Disable dismissible in multi-select mode
-      return TransactionListItem(
-        transaction: tx,
-        payeeName: payees[tx.payeeId],
-        categoryName: categories[tx.categoryId],
-        accountName: accounts[tx.accountId],
-        isSelectionMode: true,
-        isSelected: state.selectedTransactionIds.contains(tx.id),
-        onTap: () {
-          ref.read(transactionsProvider.notifier).toggleSelection(tx.id);
-        },
-        onLongPress: () {
-          // Already in mode
-        },
-      );
+      return item;
     }
-
     return Dismissible(
       key: Key(tx.id),
       background: Container(
@@ -175,112 +300,58 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         padding: const EdgeInsets.only(right: 20.0),
         child: const Icon(Icons.check, color: Colors.white),
       ),
+      // The row is never removed by the Dismissible itself: the list
+      // updates from the database once the service has written.
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
-          // Delete
-          return true;
+          await _delete([tx.id]);
         } else {
-          // Approve
-          await ref
-              .read(transactionRepositoryProvider)
-              .updateTransaction(tx.copyWith(approved: true));
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Transaction approved')),
-            );
-          }
-          return false; // Don't remove from list
+          await _guarded((_) => _service.approveTransaction(tx.id));
         }
+        return false;
       },
-      onDismissed: (direction) {
-        if (direction == DismissDirection.startToEnd) {
-          ref.read(transactionRepositoryProvider).deleteTransaction(tx.id);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Transaction deleted'),
-              action: SnackBarAction(
-                label: 'Undo',
-                onPressed: () async {
-                  await ref
-                      .read(transactionRepositoryProvider)
-                      .updateTransaction(tx.copyWith(isDeleted: false));
-                },
-              ),
-            ),
-          );
-        }
-      },
-      child: Focus(
-        child: TransactionListItem(
-          transaction: tx,
-          payeeName: payees[tx.payeeId],
-          categoryName: categories[tx.categoryId],
-          accountName: accounts[tx.accountId],
-          isSelectionMode: false,
-          isSelected: false,
-          onTap: () {
-            context.pushNamed(
-              'edit-transaction',
-              pathParameters: {'id': tx.id},
-            );
-          },
-          onLongPress: () {
-            ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-            ref.read(transactionsProvider.notifier).toggleSelection(tx.id);
-          },
-          onClearStatusChanged: (status) async {
-            final updated = tx.copyWith(cleared: status);
-            await ref
-                .read(transactionRepositoryProvider)
-                .updateTransaction(updated);
-          },
-        ),
-      ),
+      child: Focus(child: item),
     );
   }
 
-  Widget _buildAppBarTitle(TransactionsState state) {
+  Widget _buildAppBarTitle(TransactionsState state, AppLocalizations l10n) {
     if (state.isMultiSelectMode) {
-      return Text('${state.selectedTransactionIds.length} Selected');
+      return Text(l10n.selectedCount(state.selectedTransactionIds.length));
     }
     if (_isSearchMode) {
       return TextField(
         controller: _searchController,
         autofocus: true,
-        decoration: const InputDecoration(
-          hintText: 'Search transactions...',
+        decoration: InputDecoration(
+          hintText: l10n.txSearchHint,
           border: InputBorder.none,
-          hintStyle: TextStyle(color: Colors.white70),
         ),
-        style: const TextStyle(color: Colors.white),
-        onChanged: (value) {
-          ref.read(transactionsProvider.notifier).updateSearchQuery(value);
-        },
+        onChanged: (value) =>
+            ref.read(_provider.notifier).updateSearchQuery(value),
       );
     }
-    return const Text('Transactions');
+    return Text(widget.fixedFilter?.title ?? l10n.transactions);
   }
 
   Widget? _buildAppBarLeading(TransactionsState state) {
+    final l10n = AppLocalizations.of(context)!;
     if (state.isMultiSelectMode) {
       return IconButton(
         icon: const Icon(Icons.close),
-        tooltip: 'Close selection',
-        onPressed: () {
-          ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-        },
+        tooltip: l10n.closeSelection,
+        onPressed: () => ref.read(_provider.notifier).toggleMultiSelectMode(),
       );
     }
     if (_isSearchMode) {
       return IconButton(
         icon: const Icon(Icons.arrow_back),
-        tooltip: 'Back',
+        tooltip: l10n.back,
         onPressed: () {
           setState(() {
             _isSearchMode = false;
             _searchController.clear();
-            ref.read(transactionsProvider.notifier).updateSearchQuery('');
           });
+          ref.read(_provider.notifier).updateSearchQuery('');
         },
       );
     }
@@ -291,66 +362,48 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     TransactionsState state,
     List<Transaction>? allTransactions,
   ) {
+    final notifier = ref.read(_provider.notifier);
+    final l10n = AppLocalizations.of(context)!;
     if (state.isMultiSelectMode) {
+      final ids = state.selectedTransactionIds.toList();
       return [
         IconButton(
           icon: const Icon(Icons.delete),
-          tooltip: 'Delete selected',
-          onPressed: () {
-            // Task 218: Bulk delete
-            final ids = state.selectedTransactionIds.toList();
-            if (ids.isNotEmpty) {
-              ref
-                  .read(transactionRepositoryProvider)
-                  .batchDeleteTransactions(ids);
-              ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${ids.length} transactions deleted')),
-              );
-            }
-          },
+          tooltip: l10n.deleteSelected,
+          onPressed: ids.isEmpty
+              ? null
+              : () async {
+                  await _delete(ids);
+                  if (mounted) {
+                    notifier.toggleMultiSelectMode();
+                  }
+                },
         ),
         IconButton(
           icon: const Icon(Icons.check),
-          tooltip: 'Approve selected',
-          onPressed: () {
-            // Task 218: Bulk approve
-            final ids = state.selectedTransactionIds;
-            if (ids.isNotEmpty && allTransactions != null) {
-              final txsToApprove = allTransactions
-                  .where((t) => ids.contains(t.id))
-                  .map((t) => t.copyWith(approved: true))
-                  .toList();
-              if (txsToApprove.isNotEmpty) {
-                ref
-                    .read(transactionRepositoryProvider)
-                    .batchUpdateTransactions(txsToApprove);
-              }
-              ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${ids.length} transactions approved')),
-              );
-            }
-          },
+          tooltip: l10n.approveSelected,
+          onPressed: ids.isEmpty
+              ? null
+              : () async {
+                  await _guarded((_) => _service.bulkApprove(ids));
+                  if (mounted) {
+                    notifier.toggleMultiSelectMode();
+                  }
+                },
         ),
         IconButton(
           icon: const Icon(Icons.folder),
-          tooltip: 'Categorize selected',
-          onPressed: () {
-            // Task 218: Bulk categorize
-            _showBulkCategorizeDialog(context, state);
-          },
+          tooltip: l10n.categorizeSelected,
+          onPressed: ids.isEmpty ? null : () => _showBulkCategorizeDialog(ids),
         ),
         IconButton(
           icon: const Icon(Icons.select_all),
-          tooltip: 'Select all',
-          onPressed: () {
-            if (allTransactions != null) {
-              ref
-                  .read(transactionsProvider.notifier)
-                  .selectAll(allTransactions.map((t) => t.id).toList());
-            }
-          },
+          tooltip: l10n.selectAll,
+          onPressed: allTransactions == null
+              ? null
+              : () => notifier.selectAll(
+                  allTransactions.map((t) => t.id).toList(),
+                ),
         ),
       ];
     }
@@ -358,10 +411,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       return [
         IconButton(
           icon: const Icon(Icons.clear),
-          tooltip: 'Clear search',
+          tooltip: l10n.clearSearch,
           onPressed: () {
             _searchController.clear();
-            ref.read(transactionsProvider.notifier).updateSearchQuery('');
+            notifier.updateSearchQuery('');
           },
         ),
       ];
@@ -369,184 +422,80 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return [
       IconButton(
         icon: const Icon(Icons.search),
-        tooltip: 'Search',
-        onPressed: () {
-          setState(() {
-            _isSearchMode = true;
-          });
-        },
+        tooltip: l10n.search,
+        onPressed: () => setState(() => _isSearchMode = true),
       ),
-      // Task 491: Quick Add (Natural Language)
-      IconButton(
-        icon: const Icon(Icons.flash_on),
-        tooltip: 'Quick Add',
-        onPressed: () {
-          context.pushNamed('quick-add');
-        },
-      ),
-      // Task 211: Filtering
+      if (widget.fixedFilter == null)
+        IconButton(
+          icon: const Icon(Icons.flash_on),
+          tooltip: l10n.quickAdd,
+          onPressed: () => context.pushNamed('quick-add'),
+        ),
       IconButton(
         icon: const Icon(Icons.filter_list),
-        tooltip: 'Filter',
-        onPressed: () {
-          _showFilterDialog(context, state);
-        },
+        tooltip: l10n.filter,
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => TransactionFilterSheet(
+            initialFilter: state.filter,
+            onApply: notifier.updateFilter,
+          ),
+        ),
       ),
-      // Task 214: Sorting
       PopupMenuButton<TransactionSortField>(
         icon: const Icon(Icons.sort),
-        tooltip: 'Sort',
+        tooltip: l10n.sort,
         onSelected: (field) {
-          final currentSort = state.sort;
-          final newAscending = currentSort.field == field
-              ? !currentSort.ascending
-              : true;
-          ref
-              .read(transactionsProvider.notifier)
-              .updateSort(
-                TransactionSort(field: field, ascending: newAscending),
-              );
+          final current = state.sort;
+          notifier.updateSort(
+            TransactionSort(
+              field: field,
+              ascending: current.field == field ? !current.ascending : true,
+            ),
+          );
         },
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: TransactionSortField.date,
-            child: Text('Date'),
-          ),
-          const PopupMenuItem(
-            value: TransactionSortField.amount,
-            child: Text('Amount'),
-          ),
-          const PopupMenuItem(
-            value: TransactionSortField.payeeName,
-            child: Text('Payee'),
-          ),
-        ],
+        itemBuilder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return [
+            PopupMenuItem(
+              value: TransactionSortField.date,
+              child: Text(l10n.date),
+            ),
+            PopupMenuItem(
+              value: TransactionSortField.amount,
+              child: Text(l10n.amount),
+            ),
+            PopupMenuItem(
+              value: TransactionSortField.payeeName,
+              child: Text(l10n.payee),
+            ),
+          ];
+        },
       ),
     ];
   }
 
-  void _showFilterDialog(BuildContext context, TransactionsState state) {
-    // Task 211 & 212: Filter UI
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => const TransactionFilterSheet(),
-    );
-  }
-
-  void _showBulkCategorizeDialog(
-    BuildContext context,
-    TransactionsState state,
-  ) {
-    final categories = ref.read(categoryMapProvider).value ?? {};
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Categorize Selected'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: categories.isEmpty
-                ? const Text('No categories found')
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: categories.length,
-                    itemBuilder: (context, index) {
-                      final catId = categories.keys.elementAt(index);
-                      final catName = categories[catId]!;
-                      return ListTile(
-                        title: Text(catName),
-                        onTap: () {
-                          _bulkCategorize(state.selectedTransactionIds, catId);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _bulkCategorize(Set<String> ids, String categoryId) {
-    final allTxs =
-        ref.read(transactionsProvider).transactions.asData?.value ?? [];
-    final txsToUpdate = allTxs
-        .where((t) => ids.contains(t.id))
-        .map((t) => t.copyWith(categoryId: categoryId))
-        .toList();
-
-    if (txsToUpdate.isNotEmpty) {
-      ref
-          .read(transactionRepositoryProvider)
-          .batchUpdateTransactions(txsToUpdate);
-      ref.read(transactionsProvider.notifier).toggleMultiSelectMode();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Transactions categorized')));
+  /// Clears the search text and (on the Transactions tab) the filter.
+  void _clearSearchAndFilter() {
+    final notifier = ref.read(_provider.notifier);
+    _searchController.clear();
+    setState(() => _isSearchMode = false);
+    notifier.updateSearchQuery('');
+    if (widget.fixedFilter == null) {
+      notifier.updateFilter(const TransactionFilter());
     }
   }
 
-  Map<DateTime, List<Transaction>> _groupTransactions(
-    List<Transaction> transactions,
-  ) {
-    final groups = <DateTime, List<Transaction>>{};
-    for (var tx in transactions) {
-      final date = DateTime(tx.date.year, tx.date.month, tx.date.day);
-      if (!groups.containsKey(date)) {
-        groups[date] = [];
-      }
-      groups[date]!.add(tx);
+  /// Picks a category with the searchable picker and assigns it to [ids].
+  Future<void> _showBulkCategorizeDialog(List<String> ids) async {
+    final category = await showCategoryPicker(context);
+    if (category == null || !mounted) {
+      return;
     }
-    return groups;
-  }
-
-  List<dynamic> _buildFlattenedList(Map<DateTime, List<Transaction>> grouped) {
-    final list = <dynamic>[];
-    final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-    for (var date in sortedKeys) {
-      list.add(date);
-      list.addAll(grouped[date]!);
+    await _guarded((_) => _service.bulkCategorize(ids, category.id));
+    if (mounted) {
+      ref.read(_provider.notifier).toggleMultiSelectMode();
     }
-    return list;
-  }
-
-  Widget _buildDateHeader(BuildContext context, DateTime date) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      width: double.infinity,
-      child: Text(
-        DateFormat.yMMMEd().format(date),
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 64,
-            color: Theme.of(context).disabledColor,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No transactions found',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ],
-      ),
-    );
   }
 }

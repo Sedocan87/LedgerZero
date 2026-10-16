@@ -1,6 +1,10 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:ledger_zero/core/money/currency.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/core/utils/picked_file.dart';
+import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
+import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_state.dart';
@@ -15,6 +19,7 @@ final ynabImportViewModelProvider =
       return YnabImportViewModel(
         importService: ref.watch(ynabImportServiceProvider),
         dataMapper: ref.watch(ynabDataMapperProvider),
+        defaultCurrency: ref.read(settingsProvider).currency,
       );
     });
 
@@ -30,6 +35,7 @@ final ynabDataMapperProvider = Provider<YnabDataMapper>((ref) {
     transactionRepo: ref.watch(transactionRepositoryProvider),
     budgetRepo: ref.watch(budgetRepositoryProvider),
     scheduledTransactionRepo: ref.watch(scheduledTransactionRepositoryProvider),
+    unitOfWork: ref.watch(unitOfWorkProvider),
   );
 });
 
@@ -38,11 +44,15 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
   final YnabDataMapper _dataMapper;
 
   YnabImportViewModel({
-    required YnabImportService importService,
-    required YnabDataMapper dataMapper,
-  }) : _importService = importService,
-       _dataMapper = dataMapper,
-       super(const YnabImportState());
+    required this._importService,
+    required this._dataMapper,
+    String defaultCurrency = defaultCurrencyCode,
+  }) : super(YnabImportState(currency: defaultCurrency));
+
+  /// Currency of the accounts the import creates (one for the import).
+  void setCurrency(String currency) {
+    state = state.copyWith(currency: currency, error: null);
+  }
 
   void setMethod(YnabImportMethod method) {
     state = state.copyWith(
@@ -62,104 +72,138 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
       state = state.copyWith(
         currentStep: YnabImportStep.selectFiles,
         error: null,
-        parsedData: null,
+        clearParsedData: true,
       );
     }
   }
 
   void cancel() {
-    // Reset state completely
-    state = const YnabImportState();
+    // Reset state completely (the chosen currency is kept).
+    state = YnabImportState(currency: state.currency);
   }
 
   Future<void> pickRegisterFile() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-      );
-      if (result != null) {
-        state = state.copyWith(registerFile: result.files.first, error: null);
-      }
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to pick file: $e');
+    final file = await _pickCsv();
+    if (file != null) {
+      state = state.copyWith(registerFile: file, error: null);
     }
   }
 
   Future<void> pickBudgetFile() async {
+    final file = await _pickCsv();
+    if (file != null) {
+      state = state.copyWith(budgetFile: file, error: null);
+    }
+  }
+
+  Future<PlatformFile?> _pickCsv() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
+      final result = await ExternalUiGuard.run(
+        () => FilePicker.pickFile(
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+        ),
       );
-      if (result != null) {
-        state = state.copyWith(budgetFile: result.files.first, error: null);
+      return result;
+    } catch (e, stackTrace) {
+      Logger.error('YNAB import: picking a CSV file failed', e, stackTrace);
+      if (mounted) {
+        state = state.copyWith(error: YnabImportError.filePickFailed);
       }
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to pick file: $e');
+      return null;
     }
   }
 
   Future<void> pickYnab4Folder() async {
     try {
-      final path = await FilePicker.platform.getDirectoryPath();
-      if (path != null) {
+      final path = await ExternalUiGuard.run(FilePicker.getDirectoryPath);
+      if (path != null && mounted) {
         state = state.copyWith(ynab4FolderPath: path, error: null);
       }
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to pick folder: $e');
+    } catch (e, stackTrace) {
+      Logger.error(
+        'YNAB import: picking the YNAB4 folder failed',
+        e,
+        stackTrace,
+      );
+      if (mounted) {
+        state = state.copyWith(error: YnabImportError.folderPickFailed);
+      }
     }
   }
 
   Future<void> validateAndParse() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
+      final YnabImportData data;
       if (state.method == YnabImportMethod.nynabCsv) {
         if (state.registerFile == null || state.budgetFile == null) {
-          throw Exception(
-            'Please select both Register.csv and Budget.csv files.',
+          state = state.copyWith(
+            isLoading: false,
+            error: YnabImportError.filesMissing,
           );
+          return;
         }
 
         final registerContent = await _readFileContent(state.registerFile!);
         final budgetContent = await _readFileContent(state.budgetFile!);
 
-        final data = await _importService.parseCsvExport(
+        data = await _importService.parseCsvExport(
           registerCsvContent: registerContent,
           budgetCsvContent: budgetContent,
         );
-
-        state = state.copyWith(
-          parsedData: data,
-          currentStep: YnabImportStep.preview,
-        );
       } else {
         if (state.ynab4FolderPath == null) {
-          throw Exception('Please select the YNAB4 data folder.');
+          state = state.copyWith(
+            isLoading: false,
+            error: YnabImportError.folderMissing,
+          );
+          return;
         }
 
-        final data = await _importService.parseYnab4(state.ynab4FolderPath!);
+        data = await _importService.parseYnab4(state.ynab4FolderPath!);
+      }
+      if (!mounted) {
+        return;
+      }
+      state = state.copyWith(
+        parsedData: data,
+        currentStep: YnabImportStep.preview,
+        isLoading: false,
+      );
+    } on YnabImportException catch (e, stackTrace) {
+      Logger.error('YNAB import: invalid export', e, stackTrace);
+      if (!mounted) {
+        return;
+      }
+      state = switch (e.failure) {
+        YnabImportFailure.missingRegisterColumns => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.missingColumns,
+          errorDetail: e.detail,
+        ),
+        YnabImportFailure.invalidYnab4Folder => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.invalidYnab4Folder,
+        ),
+        YnabImportFailure.invalidDates => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.invalidDates,
+          errorDetail: e.detail,
+        ),
+      };
+    } catch (e, stackTrace) {
+      Logger.error('YNAB import: reading the export failed', e, stackTrace);
+      if (mounted) {
         state = state.copyWith(
-          parsedData: data,
-          currentStep: YnabImportStep.preview,
+          isLoading: false,
+          error: YnabImportError.unreadableFiles,
         );
       }
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
-    } finally {
-      state = state.copyWith(isLoading: false);
     }
   }
 
-  Future<String> _readFileContent(PlatformFile file) async {
-    if (file.bytes != null) {
-      return utf8.decode(file.bytes!);
-    }
-    if (file.path != null) {
-      return File(file.path!).readAsString();
-    }
-    throw Exception('Cannot read file content');
-  }
+  Future<String> _readFileContent(PlatformFile file) => file.readAsText();
 
   Future<void> startImport() async {
     if (state.parsedData == null) {
@@ -173,17 +217,27 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     );
 
     try {
-      await _dataMapper.importData(state.parsedData!);
-      state = state.copyWith(
-        currentStep: YnabImportStep.success,
-        isImporting: false,
+      final summary = await _dataMapper.importData(
+        state.parsedData!,
+        currency: state.currency,
       );
-    } catch (e) {
-      state = state.copyWith(
-        currentStep: YnabImportStep.preview, // Go back to preview on error
-        isImporting: false,
-        error: 'Import failed: $e',
-      );
+      if (mounted) {
+        state = state.copyWith(
+          currentStep: YnabImportStep.success,
+          isImporting: false,
+          summary: summary,
+        );
+      }
+    } catch (e, stackTrace) {
+      // The import runs in one unit of work: nothing was written.
+      Logger.error('YNAB import failed', e, stackTrace);
+      if (mounted) {
+        state = state.copyWith(
+          currentStep: YnabImportStep.preview, // Go back to preview on error
+          isImporting: false,
+          error: YnabImportError.importFailed,
+        );
+      }
     }
   }
 }

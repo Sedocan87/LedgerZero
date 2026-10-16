@@ -1,48 +1,41 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
-import 'package:ledger_zero/presentation/providers/categories_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 
-/// State for the selected month in the budget screen.
-/// Defaults to the current month.
+/// State for the selected month in the budget screen, as the first day of
+/// the month at UTC midnight. Defaults to the current month.
 final selectedBudgetMonthProvider = StateProvider<DateTime>((ref) {
-  final now = DateTime.now();
-  return DateTime(now.year, now.month);
+  return CalendarDate.startOfMonthUtc(CalendarDate.today());
 });
 
 /// Provider for budget screen search query.
 final budgetSearchQueryProvider = StateProvider<String>((ref) => '');
 
-/// Provider that emits when transactions change. Used to trigger rebuilds of budget view.
-final budgetTransactionUpdateProvider = StreamProvider.autoDispose<void>((ref) {
-  return ref
-      .watch(transactionRepositoryProvider)
-      .watchTransactions(limit: 1)
-      .map((_) {});
-});
-
-/// Provider for "To Be Budgeted" amount for the selected month.
-final tbbProvider = FutureProvider.autoDispose<double>((ref) async {
-  final month = ref.watch(selectedBudgetMonthProvider);
-  final budgetingService = ref.watch(budgetingServiceProvider);
-
-  // Watch for transaction updates to trigger recalculation
-  ref.watch(budgetTransactionUpdateProvider);
-
-  // Calculate TBB
-  return budgetingService.calculateTBB(month);
+/// "To Be Budgeted" (minor units) of [month] (first day of the month, UTC).
+///
+/// Recomputed whenever the ledger changes (transactions, budgets, accounts),
+/// so no screen has to invalidate it by hand.
+final tbbProvider = FutureProvider.autoDispose.family<int, DateTime>((
+  ref,
+  month,
+) {
+  ref.watch(ledgerChangesProvider);
+  return ref.watch(budgetingServiceProvider).calculateTBB(month);
 });
 
 /// ViewModel for a single category row in the budget screen.
+///
+/// All amounts are minor units.
 class BudgetCategoryViewModel {
   final Category category;
-  final double budgeted;
-  final double activity;
-  final double available;
-  final double goalTarget;
+  final int budgeted;
+  final int activity;
+  final int available;
+  final int goalTarget;
 
   const BudgetCategoryViewModel({
     required this.category,
@@ -67,19 +60,18 @@ final budgetViewModelProvider =
       final month = ref.watch(selectedBudgetMonthProvider);
       final searchQuery = ref.watch(budgetSearchQueryProvider).toLowerCase();
 
-      // Watch for transaction updates to trigger recalculation
-      ref.watch(budgetTransactionUpdateProvider);
+      // Recompute after every ledger write (transactions, budgets, moves,
+      // category changes).
+      ref.watch(ledgerChangesProvider);
 
-      // Wait for category data streams to load.
-      // This ensures the provider stays in 'loading' state until data is ready,
-      // preventing UI flash of empty state.
-      final groups = await ref.watch(categoryGroupsStreamProvider.future);
-      final categories = await ref.watch(categoriesStreamProvider.future);
+      // Stays loading until the category streams have data (no flash of
+      // an empty budget).
+      final groups = await ref.watch(categoryGroupsProvider.future);
+      final categories = await ref.watch(categoriesProvider.future);
 
       final budgetingService = ref.watch(budgetingServiceProvider);
       final budgetRepository = ref.watch(budgetRepositoryProvider);
-      final dateFormat = DateFormat('yyyy-MM');
-      final monthString = dateFormat.format(month);
+      final monthString = CalendarDate.monthKey(month);
 
       // Batch fetch budgets for the month to avoid N+1 queries
       final budgets = await budgetRepository.getBudgetsForMonth(monthString);
@@ -125,15 +117,15 @@ final budgetViewModelProvider =
         final categoryViewModels = groupCategories.map((category) {
           // Get budgeted amount from batch fetched map
           final budget = budgetMap[category.id];
-          final budgeted = budget?.budgeted ?? 0.0;
+          final budgeted = budget?.budgeted ?? 0;
 
           // Get calculated activity and available from batch data
           final catPerf = performanceData[category.id];
-          final activity = catPerf?['activity'] ?? 0.0;
-          final available = catPerf?['available'] ?? 0.0;
+          final activity = catPerf?['activity'] ?? 0;
+          final available = catPerf?['available'] ?? 0;
 
           // Get calculated goal target
-          final goalTarget = goalTargets[category.id] ?? 0.0;
+          final goalTarget = goalTargets[category.id] ?? 0;
 
           return BudgetCategoryViewModel(
             category: category,
@@ -150,14 +142,4 @@ final budgetViewModelProvider =
       }
 
       return result;
-    });
-
-/// Provider that returns a flat list of category IDs in the order they appear in the budget screen.
-/// Used for keyboard navigation.
-final budgetOrderedCategoriesProvider =
-    FutureProvider.autoDispose<List<String>>((ref) async {
-      final viewModels = await ref.watch(budgetViewModelProvider.future);
-      return viewModels
-          .expand((group) => group.categories.map((c) => c.category.id))
-          .toList();
     });

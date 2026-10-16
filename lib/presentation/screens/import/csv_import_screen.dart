@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/domain/entities/import_profile.dart';
-import 'package:ledger_zero/domain/entities/transaction_filter.dart';
-import 'package:ledger_zero/services/security/auto_lock_service.dart';
+import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:uuid/uuid.dart';
 
 final importProfilesProvider = StreamProvider<List<ImportProfile>>((ref) {
@@ -53,19 +54,19 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   Future<void> _pickFile() async {
     final l10n = AppLocalizations.of(context)!;
 
-    // Prevent auto-lock during file picker operations
-    ref.read(autoLockServiceProvider).bypassNextPause = true;
-
     try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv', 'txt', 'pdf'],
+      // The picker is our own OS screen: do not auto-lock for it.
+      final picked = await ExternalUiGuard.run(
+        () => FilePicker.pickFile(
+          type: FileType.custom,
+          allowedExtensions: ['csv', 'txt'],
+        ),
       );
 
-      if (result != null) {
+      if (picked != null) {
         setState(() {
           _isLoading = true;
-          _selectedFile = result.files.first;
+          _selectedFile = picked;
         });
 
         final service = ref.read(csvImportServiceProvider);
@@ -77,16 +78,27 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             _autoMapColumns(data.headers);
           });
         } on ImportException catch (e) {
+          Logger.warning('Reading the CSV failed: $e');
           setState(() => _isLoading = false);
-          _showError(e.message);
-        } catch (e) {
-          setState(() => _isLoading = false);
-          _showError(l10n.failedToParseCsv(e.toString()));
+          _showError(switch (e.failure) {
+            ImportFailure.empty => l10n.csvFileEmpty,
+            ImportFailure.unreadable => l10n.filePickFailedGeneric,
+            ImportFailure.malformed => l10n.csvParseFailedGeneric,
+          });
+        } catch (e, st) {
+          Logger.error('Parsing the CSV failed', e, st);
+          if (mounted) {
+            setState(() => _isLoading = false);
+          }
+          _showError(l10n.csvParseFailedGeneric);
         }
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showError(l10n.errorPickingFile(e.toString()));
+    } catch (e, st) {
+      Logger.error('Picking the CSV failed', e, st);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      _showError(l10n.filePickFailedGeneric);
     }
   }
 
@@ -98,28 +110,43 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     }
   }
 
+  /// Header keywords per field, English and German bank exports
+  /// (e.g. Sparkasse, DKB, ING: "Buchungstag", "Betrag",
+  /// "Beguenstigter/Zahlungspflichtiger", "Verwendungszweck").
+  static const _headerKeywords = {
+    'Date': ['date', 'datum', 'buchungstag', 'valuta', 'wertstellung'],
+    'Amount': ['amount', 'value', 'betrag', 'umsatz'],
+    'Payee': [
+      'payee',
+      'description',
+      'merchant',
+      'desc',
+      'empfänger',
+      'empfaenger',
+      'begünstigter',
+      'beguenstigter',
+      'auftraggeber',
+      'zahlungspflichtiger',
+      'name',
+    ],
+    'Memo': ['memo', 'note', 'remark', 'verwendungszweck', 'notiz', 'vermerk'],
+    'Category': ['category', 'cat', 'kategorie'],
+  };
+
   void _autoMapColumns(List<String> headers) {
     _columnMapping.updateAll((key, value) => null);
 
     for (var header in headers) {
       final h = header.toLowerCase();
-      if (_columnMapping['Date'] == null && (h.contains('date') || h == 'dt')) {
-        _columnMapping['Date'] = header;
-      } else if (_columnMapping['Amount'] == null &&
-          (h.contains('amount') || h.contains('value') || h == 'amt')) {
-        _columnMapping['Amount'] = header;
-      } else if (_columnMapping['Payee'] == null &&
-          (h.contains('payee') ||
-              h.contains('description') ||
-              h.contains('merchant') ||
-              h.contains('desc'))) {
-        _columnMapping['Payee'] = header;
-      } else if (_columnMapping['Memo'] == null &&
-          (h.contains('memo') || h.contains('note') || h.contains('remark'))) {
-        _columnMapping['Memo'] = header;
-      } else if (_columnMapping['Category'] == null &&
-          (h.contains('category') || h.contains('cat'))) {
-        _columnMapping['Category'] = header;
+      if (h == 'dt' || h == 'amt') {
+        _columnMapping[h == 'dt' ? 'Date' : 'Amount'] ??= header;
+        continue;
+      }
+      for (final entry in _headerKeywords.entries) {
+        if (_columnMapping[entry.key] == null && entry.value.any(h.contains)) {
+          _columnMapping[entry.key] = header;
+          break;
+        }
       }
     }
     _autoDetectDateFormat();
@@ -193,7 +220,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         payeeColumn: _columnMapping['Payee'],
         memoColumn: _columnMapping['Memo'],
         categoryColumn: _columnMapping['Category'],
-        createdAt: DateTime.now(),
+        createdAt: DateTime.now().toUtc(),
       );
 
       await ref.read(importProfileRepositoryProvider).createProfile(profile);
@@ -262,7 +289,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                         return ListTile(
                           title: Text(profile.name),
                           subtitle: Text(
-                            DateFormat.yMMMd().format(profile.createdAt),
+                            ref
+                                .watch(appFormatterProvider)
+                                .formatDate(profile.createdAt.toLocal()),
                           ),
                           onTap: () {
                             _loadProfile(profile);
@@ -387,7 +416,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${(_selectedFile!.size / 1024).toStringAsFixed(1)} KB',
+                l10n.fileSizeKb((_selectedFile!.lengthSync() ?? 0) / 1024),
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
@@ -427,6 +456,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    // Fills the half-width column; long values ellipsize
+                    // instead of overflowing on narrow phones.
+                    isExpanded: true,
                     decoration: InputDecoration(labelText: l10n.dateFormat),
                     initialValue: _dateFormat,
                     items: _dateFormats
@@ -438,6 +470,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.decimalSeparator,
                     ),
@@ -580,6 +613,19 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     );
   }
 
+  String _issueText(AppLocalizations l10n, CsvIssue issue) =>
+      switch (issue.kind) {
+        CsvIssueKind.dateColumnNotMapped => l10n.csvIssueDateNotMapped,
+        CsvIssueKind.amountColumnNotMapped => l10n.csvIssueAmountNotMapped,
+        CsvIssueKind.mappedColumnsMissing => l10n.csvIssueColumnsMissing,
+        CsvIssueKind.invalidDates => l10n.csvIssueInvalidDates(
+          issue.count,
+          issue.dateFormat ?? _dateFormat,
+        ),
+        CsvIssueKind.invalidAmounts => l10n.csvIssueInvalidAmounts(issue.count),
+        CsvIssueKind.dateOutliers => l10n.csvIssueDateOutliers(issue.count),
+      };
+
   void _validateAndImport() {
     final l10n = AppLocalizations.of(context)!;
     final service = ref.read(csvImportServiceProvider);
@@ -600,7 +646,10 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: result.errors.map((e) => Text('• $e')).toList(),
+            children: [
+              for (final issue in result.errors)
+                Text(l10n.bulletItem(_issueText(l10n, issue))),
+            ],
           ),
           actions: [
             TextButton(
@@ -619,7 +668,10 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: result.warnings.map((e) => Text('• $e')).toList(),
+            children: [
+              for (final issue in result.warnings)
+                Text(l10n.bulletItem(_issueText(l10n, issue))),
+            ],
           ),
           actions: [
             TextButton(
@@ -645,8 +697,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     setState(() => _isLoading = true);
     final l10n = AppLocalizations.of(context)!;
     final service = ref.read(csvImportServiceProvider);
-    final repo = ref.read(transactionRepositoryProvider);
-    final payeeRepo = ref.read(payeeRepositoryProvider);
+    final categoryRepo = ref.read(categoryRepositoryProvider);
 
     try {
       final transactions = service.convertCsvToTransactions(
@@ -657,51 +708,24 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         outflowIsNegative: _outflowIsNegative,
       );
 
-      if (transactions.isNotEmpty) {
-        final minDate = transactions
-            .map((t) => t.date)
-            .reduce((a, b) => a.isBefore(b) ? a : b);
-        final maxDate = transactions
-            .map((t) => t.date)
-            .reduce((a, b) => a.isAfter(b) ? a : b);
-
-        final existing = await repo.getTransactions(
-          filter: TransactionFilter(
-            startDate: minDate.subtract(const Duration(days: 1)),
-            endDate: maxDate.add(const Duration(days: 1)),
-          ),
-        );
-
-        final payees = await payeeRepo.getAllPayees();
-        final payeeMap = {for (var p in payees) p.id: p.name};
-
-        service.checkForDuplicates(
+      // The file's Category column is matched to existing categories.
+      // Duplicates are checked on the review screen, against the account
+      // the user picks there.
+      if (_columnMapping['Category'] != null) {
+        service.assignCategories(
           imported: transactions,
-          existing: existing,
-          payeeMap: payeeMap,
+          categories: await categoryRepo.getAllCategories(),
+          groups: await categoryRepo.getAllCategoryGroups(),
         );
-
-        if (transactions.any((t) => t.isDuplicate)) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  l10n.deduplicationComplete(
-                    transactions.where((t) => t.isDuplicate).length,
-                  ),
-                ),
-              ),
-            );
-          }
-        }
       }
 
       if (mounted) {
         await context.pushNamed('import-confirm', extra: transactions);
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Preparing the CSV import failed', e, st);
       if (mounted) {
-        _showError(l10n.failedToParseCsv(e.toString()));
+        _showError(l10n.csvParseFailedGeneric);
       }
     } finally {
       if (mounted) {

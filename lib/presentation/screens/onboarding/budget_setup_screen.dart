@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class BudgetSetupScreen extends StatelessWidget {
   const BudgetSetupScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Budgeting Basics'),
+        title: Text(l10n.budgetBasicsTitle),
         actions: [
           TextButton(
             onPressed: () => context.goNamed('completion'),
-            child: const Text('Skip'),
+            child: Text(l10n.skip),
           ),
         ],
       ),
@@ -33,39 +35,34 @@ class BudgetSetupScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
                       Text(
-                        'Give Every Dollar a Job',
+                        l10n.budgetBasicsHeadline,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
-                      const Text(
-                        'LedgerZero uses the "Envelope Budgeting" method. '
-                        'Imagine you have envelopes for Rent, Groceries, and Fun. '
-                        'When you get paid, you put cash into these envelopes.',
-                        style: TextStyle(fontSize: 16),
+                      Text(
+                        l10n.budgetBasicsBody1,
+                        style: const TextStyle(fontSize: 16),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'If an envelope runs empty, you stop spending in that category '
-                        'or move money from another envelope.',
-                        style: TextStyle(fontSize: 16),
+                      Text(
+                        l10n.budgetBasicsBody2,
+                        style: const TextStyle(fontSize: 16),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 32),
                       _buildTip(
                         context,
-                        title: 'Zero-Based',
-                        description:
-                            'Assign money until your "To Be Budgeted" is zero.',
+                        title: l10n.budgetBasicsTipZeroTitle,
+                        description: l10n.budgetBasicsTipZeroBody,
                       ),
                       const SizedBox(height: 16),
                       _buildTip(
                         context,
-                        title: 'Roll with the Punches',
-                        description:
-                            'Overspent? No problem. Just move money from another category.',
+                        title: l10n.budgetBasicsTipFlexTitle,
+                        description: l10n.budgetBasicsTipFlexBody,
                       ),
                     ],
                   ),
@@ -77,9 +74,9 @@ class BudgetSetupScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text(
-                  'I\'m Ready!',
-                  style: TextStyle(fontSize: 18),
+                child: Text(
+                  l10n.budgetBasicsReady,
+                  style: const TextStyle(fontSize: 18),
                 ),
               ),
             ],

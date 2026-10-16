@@ -14,10 +14,10 @@ class HomeEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.account_balance_wallet,
               size: 64,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.outline,
             ),
             const SizedBox(height: 16),
             Text(
@@ -33,7 +33,7 @@ class HomeEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () => context.push('/accounts/add'),
+              onPressed: () => context.push('/accounts/add?first=1'),
               icon: const Icon(Icons.add),
               label: Text(l10n.createAccount),
             ),

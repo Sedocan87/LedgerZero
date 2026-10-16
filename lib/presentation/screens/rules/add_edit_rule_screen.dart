@@ -8,6 +8,9 @@ import 'package:ledger_zero/domain/services/rule_template_service.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
@@ -16,6 +19,7 @@ import 'package:ledger_zero/presentation/widgets/pickers/account_selector.dart';
 import 'package:ledger_zero/presentation/widgets/pickers/category_selector.dart';
 import 'package:ledger_zero/presentation/widgets/pickers/payee_selector.dart';
 import 'package:uuid/uuid.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 
 class AddEditRuleScreen extends ConsumerStatefulWidget {
   final String? ruleId;
@@ -77,7 +81,14 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
   }
 
   void _applyTemplate(RuleTemplate template) {
-    final rule = template.createRule();
+    final l10n = AppLocalizations.of(context)!;
+    final name = template.kind.title(l10n);
+    final rule = template.kind == RuleTemplateKind.keywordCategorization
+        ? template.createRule(
+            name: name,
+            keyword: l10n.ruleTemplateKeywordExample,
+          )
+        : template.createRule(name: name);
     setState(() {
       _nameController.text = rule.name;
       _matchLogic = rule.matchLogic;
@@ -88,10 +99,11 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
   }
 
   void _showTemplatesDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose a Template'),
+        title: Text(l10n.ruleChooseTemplate),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -100,8 +112,8 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
             itemBuilder: (context, index) {
               final template = RuleTemplateService.templates[index];
               return ListTile(
-                title: Text(template.name),
-                subtitle: Text(template.description),
+                title: Text(template.kind.title(l10n)),
+                subtitle: Text(template.kind.description(l10n)),
                 onTap: () {
                   _applyTemplate(template);
                   Navigator.pop(context);
@@ -113,7 +125,7 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
         ],
       ),
@@ -124,16 +136,17 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+    final l10n = AppLocalizations.of(context)!;
     if (_conditions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one condition')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.ruleNeedsCondition)));
       return;
     }
     if (_actions.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Add at least one action')));
+      ).showSnackBar(SnackBar(content: Text(l10n.ruleNeedsAction)));
       return;
     }
 
@@ -156,11 +169,12 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
       if (mounted) {
         context.pop();
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving rule: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
       }
     }
   }
@@ -170,19 +184,20 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Rule'),
-        content: const Text('Are you sure you want to delete this rule?'),
+        title: Text(l10n.ruleDeleteTitle),
+        content: Text(l10n.ruleDeleteMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -201,19 +216,26 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.ruleId != null ? 'Edit Rule' : 'New Rule'),
+        title: Text(
+          widget.ruleId != null ? l10n.ruleEditTitle : l10n.ruleNewTitle,
+        ),
         actions: [
           if (widget.ruleId == null)
             IconButton(
               icon: const Icon(Icons.auto_awesome),
-              tooltip: 'Use Template',
+              tooltip: l10n.ruleUseTemplate,
               onPressed: _showTemplatesDialog,
             ),
           if (widget.ruleId != null)
-            IconButton(icon: const Icon(Icons.delete), onPressed: _delete),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              tooltip: l10n.ruleDeleteTitle,
+              onPressed: _delete,
+            ),
         ],
       ),
       body: Form(
@@ -223,37 +245,44 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
           children: [
             AppTextField(
               controller: _nameController,
-              label: 'Rule Name',
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              label: l10n.ruleNameLabel,
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? l10n.fieldRequired : null,
             ),
             const SizedBox(height: 16),
             SwitchListTile(
-              title: const Text('Active'),
+              title: Text(l10n.ruleActive),
               value: _isActive,
               onChanged: (v) => setState(() => _isActive = v),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Conditions',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Text(
+              l10n.ruleConditionsHeading,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                const Text('Match: '),
-                DropdownButton<RuleMatchLogic>(
-                  value: _matchLogic,
-                  onChanged: (v) => setState(() => _matchLogic = v!),
-                  items: RuleMatchLogic.values
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e.name.toUpperCase()),
-                        ),
-                      )
-                      .toList(),
+                Text(l10n.ruleMatchLabel),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButton<RuleMatchLogic>(
+                    isExpanded: true,
+                    value: _matchLogic,
+                    onChanged: (v) => setState(() => _matchLogic = v!),
+                    items: RuleMatchLogic.values
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(
+                              e.label(l10n),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 ),
-                const Text(' of the following conditions:'),
               ],
             ),
             ..._conditions.asMap().entries.map((entry) {
@@ -267,6 +296,7 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                       Expanded(child: _ConditionDisplay(condition: condition)),
                       IconButton(
                         icon: const Icon(Icons.delete),
+                        tooltip: l10n.delete,
                         onPressed: () =>
                             setState(() => _conditions.removeAt(index)),
                       ),
@@ -276,13 +306,13 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
               );
             }),
             AppButton.secondary(
-              label: 'Add Condition',
+              label: l10n.ruleAddCondition,
               onPressed: _showAddConditionDialog,
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Actions',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Text(
+              l10n.ruleActionsHeading,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
             ..._actions.asMap().entries.map((entry) {
@@ -296,6 +326,7 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                       Expanded(child: _ActionDisplay(action: action)),
                       IconButton(
                         icon: const Icon(Icons.delete),
+                        tooltip: l10n.delete,
                         onPressed: () =>
                             setState(() => _actions.removeAt(index)),
                       ),
@@ -305,11 +336,11 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
               );
             }),
             AppButton.secondary(
-              label: 'Add Action',
+              label: l10n.ruleAddAction,
               onPressed: _showAddActionDialog,
             ),
             const SizedBox(height: 32),
-            AppButton.primary(label: 'Save Rule', onPressed: _save),
+            AppButton.primary(label: l10n.ruleSave, onPressed: _save),
           ],
         ),
       ),
@@ -320,28 +351,48 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     RuleConditionType type = RuleConditionType.description;
     RuleConditionOperator op = RuleConditionOperator.contains;
     final valueController = TextEditingController();
+    String? valueError;
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Add Condition'),
+          title: Text(l10n.ruleAddCondition),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<RuleConditionType>(
                 initialValue: type,
-                decoration: const InputDecoration(labelText: 'Field'),
+                isExpanded: true,
+                decoration: InputDecoration(labelText: l10n.ruleFieldLabel),
                 items: RuleConditionType.values
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
+                    .map(
+                      (e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(
+                          e.label(l10n),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) => setDialogState(() => type = v!),
               ),
               DropdownButtonFormField<RuleConditionOperator>(
                 initialValue: op,
-                decoration: const InputDecoration(labelText: 'Operator'),
+                isExpanded: true,
+                decoration: InputDecoration(labelText: l10n.ruleOperatorLabel),
                 items: RuleConditionOperator.values
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e.name)))
+                    .map(
+                      (e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(
+                          e.label(l10n),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) => setDialogState(() => op = v!),
               ),
@@ -349,9 +400,9 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                 TextField(
                   controller: valueController,
                   readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Payee',
-                    suffixIcon: Icon(Icons.arrow_drop_down),
+                  decoration: InputDecoration(
+                    labelText: l10n.pickerSelectPayee,
+                    suffixIcon: const Icon(Icons.arrow_drop_down),
                   ),
                   onTap: () {
                     PayeeSelector.show(context, (payee) {
@@ -360,34 +411,57 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                     });
                   },
                 )
+              else if (type == RuleConditionType.amount)
+                TextField(
+                  controller: valueController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: l10n.ruleValueLabel,
+                    errorText: valueError,
+                  ),
+                )
               else
                 TextField(
                   controller: valueController,
-                  decoration: const InputDecoration(labelText: 'Value'),
+                  decoration: InputDecoration(labelText: l10n.ruleValueLabel),
                 ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () {
-                if (valueController.text.isNotEmpty) {
-                  setState(() {
-                    _conditions.add(
-                      RuleCondition(
-                        type: type,
-                        operator: op,
-                        value: valueController.text,
-                      ),
-                    );
-                  });
-                  Navigator.pop(ctx);
+                if (valueController.text.isEmpty) {
+                  return;
                 }
+                final RuleCondition condition;
+                if (type == RuleConditionType.amount) {
+                  // Amount conditions store minor units.
+                  final minor = ref
+                      .read(appFormatterProvider)
+                      .parseAmount(valueController.text);
+                  if (minor == null) {
+                    setDialogState(() => valueError = l10n.invalidAmount);
+                    return;
+                  }
+                  condition = RuleCondition.amount(operator: op, minor: minor);
+                } else {
+                  condition = RuleCondition(
+                    type: type,
+                    operator: op,
+                    value: valueController.text,
+                  );
+                }
+                setState(() => _conditions.add(condition));
+                Navigator.pop(ctx);
               },
-              child: const Text('Add'),
+              child: Text(l10n.add),
             ),
           ],
         ),
@@ -400,22 +474,30 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     final valueController = TextEditingController();
     // Store readable name for display in dialog before save, but ID in valueController
     String displayValue = '';
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: const Text('Add Action'),
+            title: Text(l10n.ruleAddAction),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<RuleActionType>(
                   initialValue: type,
-                  decoration: const InputDecoration(labelText: 'Action'),
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: l10n.ruleActionLabel),
                   items: RuleActionType.values
                       .map(
-                        (e) => DropdownMenuItem(value: e, child: Text(e.name)),
+                        (e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(
+                            e.label(l10n),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       )
                       .toList(),
                   onChanged: (v) {
@@ -443,7 +525,7 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () {
@@ -456,7 +538,7 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                     Navigator.pop(ctx);
                   }
                 },
-                child: const Text('Add'),
+                child: Text(l10n.add),
               ),
             ],
           );
@@ -472,6 +554,10 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     String displayValue,
     Function(String, String) onUpdate,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+    final selection = Text(
+      displayValue.isEmpty ? l10n.tapToSelect : displayValue,
+    );
     if (type == RuleActionType.setCategory) {
       return InkWell(
         onTap: () {
@@ -481,12 +567,12 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
           });
         },
         child: InputDecorator(
-          decoration: const InputDecoration(
-            labelText: 'Select Category',
-            border: OutlineInputBorder(),
-            suffixIcon: Icon(Icons.arrow_drop_down),
+          decoration: InputDecoration(
+            labelText: l10n.pickerSelectCategory,
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.arrow_drop_down),
           ),
-          child: Text(displayValue.isEmpty ? 'Tap to select' : displayValue),
+          child: selection,
         ),
       );
     } else if (type == RuleActionType.setPayee) {
@@ -498,12 +584,12 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
           });
         },
         child: InputDecorator(
-          decoration: const InputDecoration(
-            labelText: 'Select Payee',
-            border: OutlineInputBorder(),
-            suffixIcon: Icon(Icons.arrow_drop_down),
+          decoration: InputDecoration(
+            labelText: l10n.pickerSelectPayee,
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.arrow_drop_down),
           ),
-          child: Text(displayValue.isEmpty ? 'Tap to select' : displayValue),
+          child: selection,
         ),
       );
     } else if (type == RuleActionType.setAccount) {
@@ -515,55 +601,57 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
           });
         },
         child: InputDecorator(
-          decoration: const InputDecoration(
-            labelText: 'Select Account',
-            border: OutlineInputBorder(),
-            suffixIcon: Icon(Icons.arrow_drop_down),
+          decoration: InputDecoration(
+            labelText: l10n.pickerSelectAccount,
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.arrow_drop_down),
           ),
-          child: Text(displayValue.isEmpty ? 'Tap to select' : displayValue),
+          child: selection,
         ),
       );
     } else if (type == RuleActionType.markCleared ||
         type == RuleActionType.markApproved) {
       return DropdownButtonFormField<String>(
         initialValue: controller.text.isEmpty ? 'true' : controller.text,
-        items: const [
-          DropdownMenuItem(value: 'true', child: Text('Yes')),
-          DropdownMenuItem(value: 'false', child: Text('No')),
+        items: [
+          DropdownMenuItem(value: 'true', child: Text(l10n.yes)),
+          DropdownMenuItem(value: 'false', child: Text(l10n.no)),
         ],
         onChanged: (v) {
           controller.text = v!;
-          onUpdate(v, v == 'true' ? 'Yes' : 'No');
+          onUpdate(v, v == 'true' ? l10n.yes : l10n.no);
         },
-        decoration: const InputDecoration(labelText: 'Value'),
+        decoration: InputDecoration(labelText: l10n.ruleValueLabel),
       );
     } else {
       return TextField(
         controller: controller,
-        decoration: const InputDecoration(labelText: 'Value'),
+        decoration: InputDecoration(labelText: l10n.ruleValueLabel),
         onChanged: (v) => onUpdate(v, v),
       );
     }
   }
 }
 
-class _ConditionDisplay extends StatelessWidget {
+class _ConditionDisplay extends ConsumerWidget {
   final RuleCondition condition;
 
   const _ConditionDisplay({required this.condition});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final amountMinor = condition.amountMinor;
+    final valueText = amountMinor != null
+        ? ref.watch(appFormatterProvider).formatMoney(amountMinor)
+        : condition.value;
+    final l10n = AppLocalizations.of(context)!;
     return Wrap(
       spacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Chip(label: Text(condition.type.name)),
-        Text(condition.operator.name),
-        Text(
-          condition.value,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        Chip(label: Text(condition.type.label(l10n))),
+        Text(condition.operator.label(l10n)),
+        Text(valueText, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -576,6 +664,7 @@ class _ActionDisplay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     String description = '';
 
     switch (action.type) {
@@ -587,16 +676,16 @@ class _ActionDisplay extends ConsumerWidget {
                 (c) => c.id == action.value,
                 orElse: () => Category(
                   id: '',
-                  name: 'Unknown',
+                  name: l10n.unknown,
                   color: 0,
                   icon: '0',
                   createdAt: DateTime.now(),
                 ),
               )
               .name,
-          orElse: () => 'Loading...',
+          orElse: () => l10n.loading,
         );
-        description = 'Set Category to "$name"';
+        description = l10n.ruleActionSummarySetCategory(name);
         break;
       case RuleActionType.setPayee:
         final payeesAsync = ref.watch(payeesProvider);
@@ -604,13 +693,16 @@ class _ActionDisplay extends ConsumerWidget {
           data: (list) => list
               .firstWhere(
                 (p) => p.id == action.value,
-                orElse: () =>
-                    Payee(id: '', name: 'Unknown', createdAt: DateTime.now()),
+                orElse: () => Payee(
+                  id: '',
+                  name: l10n.unknown,
+                  createdAt: DateTime.now(),
+                ),
               )
               .name,
-          orElse: () => 'Loading...',
+          orElse: () => l10n.loading,
         );
-        description = 'Set Payee to "$name"';
+        description = l10n.ruleActionSummarySetPayee(name);
         break;
       case RuleActionType.setAccount:
         final accountsAsync = ref.watch(accountsProvider);
@@ -618,25 +710,31 @@ class _ActionDisplay extends ConsumerWidget {
           data: (list) => list
               .firstWhere(
                 (a) => a.id == action.value,
-                orElse: () => const Account(
+                orElse: () => Account(
                   id: '',
-                  name: 'Unknown',
+                  name: l10n.unknown,
                   type: AccountType.checking,
                 ),
               )
               .name,
-          orElse: () => 'Loading...',
+          orElse: () => l10n.loading,
         );
-        description = 'Set Account to "$name"';
+        description = l10n.ruleActionSummarySetAccount(name);
         break;
       case RuleActionType.setMemo:
-        description = 'Set Memo to "${action.value}"';
+        description = l10n.ruleActionSummarySetMemo(action.value);
         break;
       case RuleActionType.markCleared:
-        description = 'Mark Cleared: ${action.value == 'true' ? 'Yes' : 'No'}';
+        description = l10n.ruleActionSummaryFlag(
+          action.type.label(l10n),
+          action.value == 'true' ? l10n.yes : l10n.no,
+        );
         break;
       case RuleActionType.markApproved:
-        description = 'Mark Approved: ${action.value == 'true' ? 'Yes' : 'No'}';
+        description = l10n.ruleActionSummaryFlag(
+          action.type.label(l10n),
+          action.value == 'true' ? l10n.yes : l10n.no,
+        );
         break;
     }
 

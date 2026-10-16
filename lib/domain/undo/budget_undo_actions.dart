@@ -5,16 +5,16 @@ class BudgetChangeAction implements ReversibleAction {
   final BudgetingService _budgetingService;
   final String categoryId;
   final DateTime month;
-  final double oldAmount;
-  final double newAmount;
+  final int oldAmount;
+  final int newAmount;
 
   BudgetChangeAction({
-    required BudgetingService budgetingService,
+    required this._budgetingService,
     required this.categoryId,
     required this.month,
     required this.oldAmount,
     required this.newAmount,
-  }) : _budgetingService = budgetingService;
+  });
 
   @override
   Future<void> undo() async {
@@ -33,4 +33,32 @@ class BudgetChangeAction implements ReversibleAction {
       month,
     );
   }
+}
+
+/// Moving [amount] (minor units) of budgeted money from one category to
+/// another in [month]. Undo moves it back and redo moves it again; each
+/// direction is one [BudgetingService.moveMoney] call, so both categories
+/// change in the same unit of work (never only one of them).
+class MoveMoneyAction implements ReversibleAction {
+  final BudgetingService _budgetingService;
+  final String fromCategoryId;
+  final String toCategoryId;
+  final int amount;
+  final DateTime month;
+
+  MoveMoneyAction({
+    required this._budgetingService,
+    required this.fromCategoryId,
+    required this.toCategoryId,
+    required this.amount,
+    required this.month,
+  });
+
+  @override
+  Future<void> undo() =>
+      _budgetingService.moveMoney(toCategoryId, fromCategoryId, amount, month);
+
+  @override
+  Future<void> redo() =>
+      _budgetingService.moveMoney(fromCategoryId, toCategoryId, amount, month);
 }

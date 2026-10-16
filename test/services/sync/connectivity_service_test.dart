@@ -8,7 +8,7 @@ import 'package:mockito/mockito.dart';
 
 import 'connectivity_service_test.mocks.dart';
 
-@GenerateMocks([Connectivity])
+@GenerateNiceMocks([MockSpec<Connectivity>()])
 void main() {
   late MockConnectivity mockConnectivity;
   late ConnectivityService service;

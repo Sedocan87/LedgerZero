@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
@@ -85,42 +86,16 @@ class ScheduledTransactionRepositoryImpl
   @override
   Future<void> skipScheduledTransaction(String id) async {
     try {
-      final transaction = await getScheduledTransactionById(id);
-      if (transaction == null || transaction.nextDate == null) {
-        return;
-      }
-
-      final newDate = transaction.calculateNextOccurrenceDate();
-
-      int? newOccurrenceCount = transaction.occurrenceCount;
-      if (newOccurrenceCount != null && newOccurrenceCount > 0) {
-        newOccurrenceCount--;
-      }
-
-      ScheduledTransaction updated;
-      if (newDate == null) {
-        updated = ScheduledTransaction(
-          id: transaction.id,
-          accountId: transaction.accountId,
-          payeeId: transaction.payeeId,
-          categoryId: transaction.categoryId,
-          amount: transaction.amount,
-          frequency: transaction.frequency,
-          interval: transaction.interval,
-          occurrenceCount: newOccurrenceCount,
-          nextDate: null,
-          endDate: transaction.endDate,
-          autoApprove: transaction.autoApprove,
-          createdAt: transaction.createdAt,
-        );
-      } else {
-        updated = transaction.copyWith(
-          nextDate: newDate,
-          occurrenceCount: newOccurrenceCount,
-        );
-      }
-
-      await updateScheduledTransaction(updated);
+      await _dao.transaction(() async {
+        final row = await _dao.getScheduledTransactionById(id);
+        if (row == null || row.nextDate == null) {
+          return;
+        }
+        // Same advance step as catch-up processing: skipping the last
+        // occurrence finishes the schedule.
+        final updated = _mapToDomain(row).advanced();
+        await _dao.updateScheduledTransaction(_mapToCompanion(updated));
+      });
     } catch (e, stack) {
       Logger.error('Failed to skip scheduled transaction $id', e, stack);
       throw DatabaseException('Failed to skip scheduled transaction $id', e);
@@ -153,10 +128,13 @@ class ScheduledTransactionRepositoryImpl
       endDate: row.endDate,
       autoApprove: row.autoApprove,
       createdAt: row.createdAt,
+      memo: row.memo,
+      anchorDay: row.anchorDay,
     );
   }
 
   db.ScheduledTransactionsCompanion _mapToCompanion(ScheduledTransaction t) {
+    final now = DateTime.now().toUtc();
     return db.ScheduledTransactionsCompanion(
       id: Value(t.id),
       accountId: Value(t.accountId),
@@ -166,10 +144,17 @@ class ScheduledTransactionRepositoryImpl
       frequency: Value(t.frequency?.name),
       interval: Value(t.interval),
       occurrenceCount: Value(t.occurrenceCount),
-      nextDate: Value(t.nextDate),
-      endDate: Value(t.endDate),
+      nextDate: Value(
+        t.nextDate == null ? null : CalendarDate.normalize(t.nextDate!),
+      ),
+      endDate: Value(
+        t.endDate == null ? null : CalendarDate.normalize(t.endDate!),
+      ),
       autoApprove: Value(t.autoApprove),
-      createdAt: Value(t.createdAt),
+      memo: Value(t.memo),
+      anchorDay: Value(t.anchorDay),
+      createdAt: Value(t.createdAt?.toUtc() ?? now),
+      updatedAt: Value(now),
     );
   }
 }

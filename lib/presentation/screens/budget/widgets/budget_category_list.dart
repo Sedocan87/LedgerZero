@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_row.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_group_row.dart';
 import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
@@ -17,10 +17,17 @@ class BudgetCategoryList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetViewModelAsync = ref.watch(budgetViewModelProvider);
-    final currency = ref.watch(settingsProvider).currency;
 
     return budgetViewModelAsync.when(
       data: (groups) {
+        if (groups.isEmpty && ref.watch(budgetSearchQueryProvider).isNotEmpty) {
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Text(AppLocalizations.of(context)!.noMatchingCategories),
+            ),
+          );
+        }
         if (groups.isEmpty) {
           return SliverFillRemaining(
             hasScrollBody: false,
@@ -37,9 +44,9 @@ class BudgetCategoryList extends ConsumerWidget {
         }
 
         // Calculate totals
-        double totalBudgeted = 0;
-        double totalActivity = 0;
-        double totalAvailable = 0;
+        var totalBudgeted = 0;
+        var totalActivity = 0;
+        var totalAvailable = 0;
 
         for (final group in groups) {
           for (final cat in group.categories) {
@@ -63,7 +70,6 @@ class BudgetCategoryList extends ConsumerWidget {
                   totalBudgeted: totalBudgeted,
                   totalActivity: totalActivity,
                   totalAvailable: totalAvailable,
-                  currencyCode: currency,
                 );
               }
 
@@ -88,8 +94,13 @@ class BudgetCategoryList extends ConsumerWidget {
       loading: () => const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (err, stack) =>
-          SliverFillRemaining(child: Center(child: Text('Error: $err'))),
+      error: (err, stack) => SliverFillRemaining(
+        child: LoadErrorView(
+          error: err,
+          stackTrace: stack,
+          onRetry: () => ref.invalidate(budgetViewModelProvider),
+        ),
+      ),
     );
   }
 }
@@ -158,26 +169,22 @@ class BudgetListHeader extends StatelessWidget {
   }
 }
 
-class BudgetSummaryFooter extends StatelessWidget {
-  final double totalBudgeted;
-  final double totalActivity;
-  final double totalAvailable;
-  final String currencyCode;
+/// Totals row of the budget list. Amounts are minor units.
+class BudgetSummaryFooter extends ConsumerWidget {
+  final int totalBudgeted;
+  final int totalActivity;
+  final int totalAvailable;
 
   const BudgetSummaryFooter({
     super.key,
     required this.totalBudgeted,
     required this.totalActivity,
     required this.totalAvailable,
-    required this.currencyCode,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final currency = NumberFormat.simpleCurrency(
-      decimalDigits: 2,
-      name: currencyCode,
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fmt = ref.watch(appFormatterProvider);
 
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -196,7 +203,7 @@ class BudgetSummaryFooter extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              currency.format(totalBudgeted),
+              fmt.formatMoney(totalBudgeted),
               textAlign: TextAlign.right,
               style: Theme.of(
                 context,
@@ -206,7 +213,7 @@ class BudgetSummaryFooter extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              currency.format(totalActivity),
+              fmt.formatMoney(totalActivity),
               textAlign: TextAlign.right,
               style: Theme.of(
                 context,
@@ -216,7 +223,7 @@ class BudgetSummaryFooter extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              currency.format(totalAvailable),
+              fmt.formatMoney(totalAvailable),
               textAlign: TextAlign.right,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,

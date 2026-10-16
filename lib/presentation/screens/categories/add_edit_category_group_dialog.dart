@@ -5,6 +5,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:uuid/uuid.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 
 class AddEditCategoryGroupDialog extends ConsumerStatefulWidget {
   final CategoryGroup? group;
@@ -60,11 +61,12 @@ class _AddEditCategoryGroupDialogState
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
       }
     } finally {
       if (mounted) {
@@ -86,7 +88,7 @@ class _AddEditCategoryGroupDialogState
           controller: _nameController,
           label: l10n.groupName,
           validator: (val) =>
-              val == null || val.trim().isEmpty ? 'Required' : null,
+              val == null || val.trim().isEmpty ? l10n.fieldRequired : null,
         ),
       ),
       actions: [

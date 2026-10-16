@@ -1,92 +1,157 @@
-import 'dart:convert';
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:ledger_zero/core/constants/app_constants.dart';
-import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/data/database/database.dart';
+import 'package:ledger_zero/data/database/sqlcipher.dart';
+import 'package:ledger_zero/services/backup/backup_format.dart';
+import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pointycastle/export.dart';
-import 'package:archive/archive.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
+export 'package:ledger_zero/services/backup/backup_format.dart'
+    show
+        BackupException,
+        BackupAuthenticationException,
+        BackupFormatException,
+        BackupTooNewException;
+
+/// Closes and reopens the app's database connection around a file swap.
+abstract class DatabaseLifecycle {
+  /// Closes the current connection (no-op if none is open).
+  Future<void> close();
+
+  /// Opens the database file again and returns the new connection.
+  Future<AppDatabase> reopen();
+}
+
+/// Restores `.lzbk` backups (format v2, and v1 for old files).
+///
+/// Full restore:
+/// 1. decrypt into a temporary plain file (app temp directory);
+/// 2. validate it: `integrity_check`, required tables, schema version
+///    between 1 and [AppDatabase.schemaVersion]; older schemas are migrated
+///    by opening the file through [AppDatabase];
+/// 3. empty `pending_sync_changes` (see [SyncRebootstrap]);
+/// 4. build a new database encrypted with the current data key
+///    (`ATTACH ... KEY` + `sqlcipher_export`) next to the live file and
+///    check it opens with that key;
+/// 5. close the connection, move the live file to `<db>.previous`, move the
+///    new file into place, reopen through [DatabaseLifecycle] and run a
+///    query; on failure the previous file is moved back and reopened, on
+///    success it is deleted (only one previous copy ever exists);
+/// 6. delete the temporary plain file (always), mark sync for re-bootstrap.
 class RestoreService {
-  final AppDatabase _db;
+  final AppDatabase Function() _currentDb;
+  final DatabaseLifecycle? _lifecycle;
+  final Future<File> Function()? _databaseFile;
+  final Uint8List Function()? _dataKey;
+  final SyncRebootstrap? _rebootstrap;
+  final Future<Directory> Function() _tempDirectory;
 
-  RestoreService(this._db);
+  RestoreService(
+    this._currentDb, {
+    this._lifecycle,
+    this._databaseFile,
+    this._dataKey,
+    this._rebootstrap,
+    Future<Directory> Function()? tempDirectory,
+  }) : _tempDirectory = tempDirectory ?? getTemporaryDirectory;
 
-  /// Restores the database from a backup file.
-  ///
-  /// [backupFile] can be a `.sqlite` (plaintext) or `.lzbk` (encrypted) file.
-  /// If encrypted, [password] must be provided.
-  Future<void> restoreBackup(File backupFile, {String? password}) async {
-    final tempDir = await getTemporaryDirectory();
-    final tempDbPath = p.join(
-      tempDir.path,
-      'restored_temp_${DateTime.now().millisecondsSinceEpoch}.sqlite',
-    );
-    final File tempDbFile = File(tempDbPath);
+  static const Set<String> requiredTables = {
+    'accounts',
+    'transactions',
+    'categories',
+    'category_groups',
+    'budgets',
+    'payees',
+  };
 
+  /// Replaces the whole database with the backup in [backupFile].
+  Future<void> restoreBackup(
+    File backupFile, {
+    required String password,
+  }) async {
+    final lifecycle = _lifecycle;
+    final databaseFile = _databaseFile;
+    final dataKey = _dataKey;
+    if (lifecycle == null || databaseFile == null || dataKey == null) {
+      throw StateError('RestoreService is not configured for full restores');
+    }
+    final work = await _workDirectory('restore');
+    final dbFile = await databaseFile();
+    final staged = File('${dbFile.path}.restore-new');
     try {
-      if (backupFile.path.endsWith('.lzbk')) {
-        if (password == null || password.isEmpty) {
-          throw const BackupException('Password required for encrypted backup');
-        }
-        await _decryptBackup(backupFile, tempDbFile, password);
-      } else {
-        // Assume plaintext sqlite
-        await backupFile.copy(tempDbPath);
-      }
-
-      // Validate the restored database (Task 597)
-      await _validateDatabase(tempDbFile);
-
-      // Replace the current database
-      await _replaceDatabase(tempDbFile);
+      final plain = File(p.join(work.path, 'restored.sqlite'));
+      await BackupFormat.decryptFile(
+        input: backupFile,
+        output: plain,
+        password: password,
+      );
+      await prepareRestoredDatabase(plain);
+      await _deleteDatabaseFiles(staged);
+      _buildEncryptedCopy(plain, staged, RawSqlCipherKey(dataKey()));
+      await _swapIn(staged, dbFile, lifecycle);
+      await _rebootstrap?.markRequired();
     } catch (e) {
-      Logger.error('Restore failed', e);
+      Logger.error('Restore failed', e.runtimeType);
       rethrow;
     } finally {
-      if (await tempDbFile.exists()) {
-        await tempDbFile.delete();
-      }
+      await _deleteDatabaseFiles(staged);
+      await _deleteDirectory(work);
     }
   }
 
-  /// Selectively restores transactions from a backup within a date range.
-  ///
-  /// This merges transactions from the backup into the current database.
+  /// Validates the decrypted plain database [plain], migrates an older
+  /// schema and clears its sync queue. Returns the schema version.
+  Future<int> prepareRestoredDatabase(File plain) async {
+    var version = _validate(plain);
+    if (version < _currentSchemaVersion) {
+      final migrating = AppDatabase(NativeDatabase(plain));
+      try {
+        await migrating.customSelect('SELECT 1').get();
+      } finally {
+        await migrating.close();
+      }
+      version = _validate(plain);
+      if (version != _currentSchemaVersion) {
+        throw const BackupFormatException('Backup could not be upgraded');
+      }
+    }
+    final db = sqlite.sqlite3.open(plain.path);
+    try {
+      db.execute('DELETE FROM pending_sync_changes');
+      db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+    } on sqlite.SqliteException {
+      // Table absent in very old schemas.
+    } finally {
+      db.close();
+    }
+    return version;
+  }
+
+  /// Merges transactions in [start]..[end] from a backup into the current
+  /// database (missing accounts, categories, groups and payees are copied).
   Future<void> selectiveRestore(
     File backupFile,
     DateTime start,
     DateTime end, {
-    String? password,
+    required String password,
   }) async {
-    final tempDir = await getTemporaryDirectory();
-    final tempDbPath = p.join(
-      tempDir.path,
-      'selective_temp_${DateTime.now().millisecondsSinceEpoch}.sqlite',
-    );
-    final File tempDbFile = File(tempDbPath);
-
+    final work = await _workDirectory('selective');
     try {
-      // 1. Decrypt/Copy to temp
-      if (backupFile.path.endsWith('.lzbk')) {
-        if (password == null || password.isEmpty) {
-          throw const BackupException('Password required for encrypted backup');
-        }
-        await _decryptBackup(backupFile, tempDbFile, password);
-      } else {
-        await backupFile.copy(tempDbPath);
-      }
-
-      // 2. Open Temp DB as a Drift Database
-      final tempDb = AppDatabase(NativeDatabase(tempDbFile));
-
+      final plain = File(p.join(work.path, 'selective.sqlite'));
+      await BackupFormat.decryptFile(
+        input: backupFile,
+        output: plain,
+        password: password,
+      );
+      await prepareRestoredDatabase(plain);
+      final tempDb = AppDatabase(NativeDatabase(plain));
+      final db = _currentDb();
       try {
-        // 3. Query Transactions in range
-        // Note: Drift stores dates as text if configured, or int. Project uses Text.
         final transactionsToImport = await (tempDb.select(
           tempDb.transactions,
         )..where((t) => t.date.isBetweenValues(start, end))).get();
@@ -95,77 +160,176 @@ class RestoreService {
           'Found ${transactionsToImport.length} transactions to merge',
         );
 
-        // 4. Import into Main DB
-        // We need to be careful about Payees, Categories, Accounts.
-        // Simplified approach: Create missing dependencies if IDs don't exist?
-        // Or check by name? ID collision is likely if it's the same DB backup.
-        // We assume IDs are UUIDs.
-
-        await _db.transaction(() async {
+        await db.transaction(() async {
           for (final tx in transactionsToImport) {
-            // Check if transaction exists
-            final exists = await (_db.select(
-              _db.transactions,
+            final exists = await (db.select(
+              db.transactions,
             )..where((t) => t.id.equals(tx.id))).getSingleOrNull();
             if (exists != null) {
-              // Skip or Update? Let's Skip for "Restore".
               continue;
             }
-
-            // Ensure dependencies exist (blind insert might fail FK)
-            // We should check Account, Payee, Category.
-            // If they don't exist in main DB, we should copy them from temp DB.
-            await _ensureDependenciesExist(tempDb, tx);
-
-            // Insert Transaction
-            await _db.into(_db.transactions).insert(tx);
+            await _ensureDependenciesExist(db, tempDb, tx);
+            await db.into(db.transactions).insert(tx);
           }
         });
       } finally {
         await tempDb.close();
       }
     } catch (e) {
-      Logger.error('Selective restore failed', e);
+      Logger.error('Selective restore failed', e.runtimeType);
       rethrow;
     } finally {
-      if (await tempDbFile.exists()) {
-        await tempDbFile.delete();
+      await _deleteDirectory(work);
+    }
+  }
+
+  int get _currentSchemaVersion => AppDatabase.currentSchemaVersion;
+
+  int _validate(File plain) {
+    final db = sqlite.sqlite3.open(plain.path);
+    try {
+      final List<sqlite.Row> integrity;
+      try {
+        integrity = db.select('PRAGMA integrity_check');
+      } on sqlite.SqliteException {
+        throw const BackupFormatException('Backup is not a database');
+      }
+      if (integrity.isEmpty || integrity.first.values.first != 'ok') {
+        throw const BackupFormatException('Database integrity check failed');
+      }
+      final tables = db
+          .select("SELECT name FROM sqlite_master WHERE type='table'")
+          .map((row) => row['name'] as String)
+          .toSet();
+      if (!requiredTables.every(tables.contains)) {
+        throw const BackupFormatException('Backup is missing required tables');
+      }
+      final version =
+          db.select('PRAGMA user_version').first.values.first as int;
+      if (version < 1) {
+        throw const BackupFormatException('Backup has no schema version');
+      }
+      if (version > _currentSchemaVersion) {
+        throw const BackupTooNewException();
+      }
+      return version;
+    } finally {
+      db.close();
+    }
+  }
+
+  static void _buildEncryptedCopy(
+    File plain,
+    File target,
+    RawSqlCipherKey key,
+  ) {
+    final db = sqlite.sqlite3.open(plain.path);
+    try {
+      SqlCipher.exportTo(db, target, key);
+    } finally {
+      db.close();
+    }
+    final check = sqlite.sqlite3.open(target.path);
+    try {
+      SqlCipher.applyKey(check, key);
+      final integrity = check.select('PRAGMA integrity_check');
+      if (integrity.isEmpty || integrity.first.values.first != 'ok') {
+        throw const BackupException('Restored database failed its check');
+      }
+    } finally {
+      check.close();
+    }
+  }
+
+  static Future<void> _swapIn(
+    File staged,
+    File dbFile,
+    DatabaseLifecycle lifecycle,
+  ) async {
+    final previous = File('${dbFile.path}.previous');
+    await lifecycle.close();
+    await _deleteDatabaseFiles(previous);
+    await _moveDatabaseFiles(dbFile, previous);
+    try {
+      await staged.rename(dbFile.path);
+      final reopened = await lifecycle.reopen();
+      await reopened.customSelect('SELECT count(*) FROM accounts').get();
+    } catch (e) {
+      await lifecycle.close();
+      await _deleteDatabaseFiles(dbFile);
+      await _moveDatabaseFiles(previous, dbFile);
+      await lifecycle.reopen();
+      rethrow;
+    }
+    await _deleteDatabaseFiles(previous);
+  }
+
+  Future<Directory> _workDirectory(String name) async {
+    final base = await _tempDirectory();
+    final dir = Directory(
+      p.join(base.path, '${name}_${DateTime.now().microsecondsSinceEpoch}'),
+    );
+    await dir.create(recursive: true);
+    return dir;
+  }
+
+  static Future<void> _moveDatabaseFiles(File from, File to) async {
+    for (final suffix in const ['', '-wal', '-shm']) {
+      final f = File('${from.path}$suffix');
+      if (await f.exists()) {
+        await f.rename('${to.path}$suffix');
       }
     }
   }
 
+  static Future<void> _deleteDatabaseFiles(File file) async {
+    for (final suffix in const ['', '-wal', '-shm', '-journal']) {
+      final f = File('${file.path}$suffix');
+      try {
+        if (await f.exists()) {
+          await f.delete();
+        }
+      } catch (_) {}
+    }
+  }
+
+  static Future<void> _deleteDirectory(Directory dir) async {
+    try {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _ensureDependenciesExist(
+    AppDatabase db,
     AppDatabase tempDb,
     Transaction tx,
   ) async {
-    // 1. Account
-    // accountId is usually not null
-    final accountExists = await (_db.select(
-      _db.accounts,
+    final accountExists = await (db.select(
+      db.accounts,
     )..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
     if (accountExists == null) {
       final account = await (tempDb.select(
         tempDb.accounts,
       )..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
       if (account != null) {
-        await _db.into(_db.accounts).insert(account);
+        await db.into(db.accounts).insert(account);
       }
     }
 
-    // 2. Category
     if (tx.categoryId != null) {
-      final catExists = await (_db.select(
-        _db.categories,
+      final catExists = await (db.select(
+        db.categories,
       )..where((c) => c.id.equals(tx.categoryId!))).getSingleOrNull();
       if (catExists == null) {
         final cat = await (tempDb.select(
           tempDb.categories,
         )..where((c) => c.id.equals(tx.categoryId!))).getSingleOrNull();
         if (cat != null) {
-          // Also need CategoryGroup!
           if (cat.categoryGroupId != null) {
             final groupExists =
-                await (_db.select(_db.categoryGroups)
+                await (db.select(db.categoryGroups)
                       ..where((g) => g.id.equals(cat.categoryGroupId!)))
                     .getSingleOrNull();
             if (groupExists == null) {
@@ -174,128 +338,27 @@ class RestoreService {
                         ..where((g) => g.id.equals(cat.categoryGroupId!)))
                       .getSingleOrNull();
               if (group != null) {
-                await _db.into(_db.categoryGroups).insert(group);
+                await db.into(db.categoryGroups).insert(group);
               }
             }
           }
-          await _db.into(_db.categories).insert(cat);
+          await db.into(db.categories).insert(cat);
         }
       }
     }
 
-    // 3. Payee
     if (tx.payeeId != null) {
-      final payeeExists = await (_db.select(
-        _db.payees,
+      final payeeExists = await (db.select(
+        db.payees,
       )..where((p) => p.id.equals(tx.payeeId!))).getSingleOrNull();
       if (payeeExists == null) {
         final payee = await (tempDb.select(
           tempDb.payees,
         )..where((p) => p.id.equals(tx.payeeId!))).getSingleOrNull();
         if (payee != null) {
-          await _db.into(_db.payees).insert(payee);
+          await db.into(db.payees).insert(payee);
         }
       }
     }
   }
-
-  Future<void> _decryptBackup(
-    File inputFile,
-    File outputFile,
-    String password,
-  ) async {
-    final inputBytes = await inputFile.readAsBytes();
-
-    // Check minimum length: Salt (32) + IV (12)
-    if (inputBytes.length < 44) {
-      throw const BackupException('Invalid backup file format');
-    }
-
-    final salt = inputBytes.sublist(0, 32);
-    final iv = inputBytes.sublist(32, 44);
-    final ciphertext = inputBytes.sublist(44);
-
-    final key = _deriveKey(password, salt);
-
-    final cipher = GCMBlockCipher(AESEngine())
-      ..init(
-        false, // Decrypt
-        AEADParameters(KeyParameter(key), 128, iv, Uint8List(0)),
-      );
-
-    try {
-      final compressedPlaintext = cipher.process(ciphertext);
-
-      // Decompress (GZIP)
-      final plaintext = const GZipDecoder().decodeBytes(compressedPlaintext);
-
-      await outputFile.writeAsBytes(plaintext);
-    } catch (e) {
-      throw const BackupException(
-        'Decryption or decompression failed. Incorrect password?',
-      );
-    }
-  }
-
-  Uint8List _deriveKey(String password, Uint8List salt) {
-    final pkcs = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64));
-    pkcs.init(Pbkdf2Parameters(salt, 100000, 32));
-    return pkcs.process(Uint8List.fromList(utf8.encode(password)));
-  }
-
-  Future<void> _validateDatabase(File dbFile) async {
-    try {
-      final db = sqlite.sqlite3.open(dbFile.path);
-      try {
-        final result = db.select('PRAGMA integrity_check');
-        if (result.isEmpty || result.first['integrity_check'] != 'ok') {
-          throw const BackupException('Database integrity check failed');
-        }
-
-        final tables = db.select(
-          "SELECT name FROM sqlite_master WHERE type='table'",
-        );
-        final tableNames = tables.map((row) => row['name'] as String).toSet();
-
-        const requiredTables = {'accounts', 'transactions', 'categories'};
-        if (!requiredTables.every((t) => tableNames.contains(t))) {
-          throw const BackupException('Backup is missing required tables');
-        }
-      } finally {
-        db.dispose();
-      }
-    } catch (e) {
-      throw BackupException('Invalid database file: $e');
-    }
-  }
-
-  Future<void> _replaceDatabase(File newDbFile) async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(dbFolder.path, AppConstants.databaseFilename);
-    final dbFile = File(dbPath);
-
-    await _db.close();
-
-    if (await dbFile.exists()) {
-      await dbFile.rename('$dbPath.bak');
-    }
-
-    await newDbFile.copy(dbPath);
-
-    final walFile = File('$dbPath-wal');
-    final shmFile = File('$dbPath-shm');
-    if (await walFile.exists()) {
-      await walFile.delete();
-    }
-    if (await shmFile.exists()) {
-      await shmFile.delete();
-    }
-  }
-}
-
-class BackupException implements Exception {
-  final String message;
-  const BackupException(this.message);
-  @override
-  String toString() => message;
 }

@@ -1,8 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/utils/math_evaluator.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 
-class BudgetCalculator extends StatefulWidget {
+/// Parses what the user typed into a budget amount field or the budget
+/// calculator into minor units.
+///
+/// Plain amounts go through [AppFormatter.parseAmount] (locale-aware decimal
+/// comma); arithmetic such as `50+12,50` goes through [MathEvaluator] with
+/// the same decimal separator. An empty input is `0`. Returns `null` when the
+/// input is not a valid amount or expression.
+int? parseBudgetInput(String text, AppFormatter fmt) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) {
+    return 0;
+  }
+  // An operator after the first character means arithmetic; a leading sign
+  // alone is a plain (negative) amount.
+  if (trimmed.substring(1).contains(RegExp(r'[+\-*/]'))) {
+    try {
+      return MathEvaluator.evaluate(
+        trimmed,
+        decimalSeparator: fmt.decimalSeparator,
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+  return fmt.parseAmount(trimmed);
+}
+
+class BudgetCalculator extends ConsumerStatefulWidget {
   final String initialValue;
   final ValueChanged<String> onValueChanged;
   final VoidCallback onSubmitted;
@@ -15,11 +45,15 @@ class BudgetCalculator extends StatefulWidget {
   });
 
   @override
-  State<BudgetCalculator> createState() => _BudgetCalculatorState();
+  ConsumerState<BudgetCalculator> createState() => _BudgetCalculatorState();
 }
 
-class _BudgetCalculatorState extends State<BudgetCalculator> {
+class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
   late TextEditingController _controller;
+
+  /// The pre-filled value is replaced (not appended to) by the first digit
+  /// or decimal key, like a selected text field.
+  bool _replaceOnInput = true;
 
   @override
   void initState() {
@@ -38,6 +72,11 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
   }
 
   void _onKeyPress(String key) {
+    final fmt = ref.read(appFormatterProvider);
+    final separator = fmt.decimalSeparator;
+    final replace = _replaceOnInput;
+    _replaceOnInput = false;
+
     if (key == 'C') {
       _controller.clear();
     } else if (key == 'DEL') {
@@ -49,56 +88,49 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
       }
     } else if (key == '=') {
       try {
-        final result = MathEvaluator.evaluate(_controller.text);
-        // format result to remove trailing .0 if integer
-        String resultStr = result.toString();
-        if (resultStr.endsWith('.0')) {
-          resultStr = resultStr.substring(0, resultStr.length - 2);
+        final result = MathEvaluator.evaluate(
+          _controller.text,
+          decimalSeparator: separator,
+        );
+        // Drop a zero fraction so further typing extends the whole number.
+        var resultStr = fmt.formatAmountForInput(result);
+        final zeroFraction = '${separator}00';
+        if (resultStr.endsWith(zeroFraction)) {
+          resultStr = resultStr.substring(
+            0,
+            resultStr.length - zeroFraction.length,
+          );
         }
         _controller.text = resultStr;
-      } catch (e) {
-        // ignore error or show feedback
+        _replaceOnInput = true;
+      } on FormatException {
+        // Invalid expression: keep the text so the user can correct it.
       }
+    } else if (['+', '-', '*', '/'].contains(key)) {
+      _controller.text += key;
     } else {
-      // If text is "0" or "0.00" and input is a number (not operator or dot handling which might differ),
-      // we usually want to replace it.
-      // Ops are handled above or passed as key?
-      // Keys passed here: '0'-'9', '.', '+', '-', '*', '/'.
-      // Oh wait, _buildKey calls this with label.
-      // Labels: '7', '8', '9', '/', '4', '5', '6', '*', '1', '2', '3', '-', '.', '0', 'DEL'.
-      // So operators ARE passed here.
-
-      // Check if key is operator
-      if (['+', '-', '*', '/'].contains(key)) {
-        _controller.text += key;
-        return;
-      }
-
-      // Check for decimal
-      if (key == '.') {
-        if (_controller.text.isEmpty) {
-          _controller.text = '0.';
-        } else if (!_controller.text.contains('.')) {
-          // Allow dot if no dot yet?
-          // Logic: if we have "0.00", typing "." might be weird.
-          // If we treat "0.00" as initial value to be wiped, then typing "." should probably make it "0."?
-          if (_controller.text == '0.00' || _controller.text == '0') {
-            _controller.text = '0.';
-          } else {
-            _controller.text += key;
-          }
+      final text = replace || _isZero(_controller.text, separator)
+          ? ''
+          : _controller.text;
+      if (key == separator) {
+        // Only one decimal separator in the current operand.
+        final operand = text.split(RegExp(r'[+\-*/]')).last;
+        if (operand.contains(separator)) {
+          _controller.text = text;
+        } else {
+          _controller.text = operand.isEmpty
+              ? '${text}0$separator'
+              : '$text$separator';
         }
-        return;
-      }
-
-      // Digits 0-9
-      if (_controller.text == '0' || _controller.text == '0.00') {
-        _controller.text = key;
       } else {
-        _controller.text += key;
+        // Digits 0-9
+        _controller.text = text + key;
       }
     }
   }
+
+  static bool _isZero(String text, String separator) =>
+      text == '0' || text == '0${separator}00';
 
   Widget _buildKey(
     String label, {
@@ -127,13 +159,22 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: textColor ?? Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: label == 'DEL'
+                ? Icon(
+                    Icons.backspace_outlined,
+                    color: textColor ?? Theme.of(context).colorScheme.onSurface,
+                    semanticLabel: AppLocalizations.of(
+                      context,
+                    )!.calculatorBackspace,
+                  )
+                : Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color:
+                          textColor ?? Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -205,7 +246,9 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _buildKey('.'),
+                            _buildKey(
+                              ref.watch(appFormatterProvider).decimalSeparator,
+                            ),
                             _buildKey('0'),
                             _buildKey(
                               'DEL',
@@ -317,7 +360,7 @@ class _BudgetCalculatorState extends State<BudgetCalculator> {
             height: 50,
             width: double.infinity,
             child: AppButton.primary(
-              label: 'OK',
+              label: AppLocalizations.of(context)!.ok,
               onPressed: widget.onSubmitted,
             ),
           ),

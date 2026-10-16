@@ -48,16 +48,10 @@ class BackupScheduler {
     }
   }
 
-  Future<void> _showBackupNotification() async {
-    // We add a new method to NotificationService to expose generic show functionality
-    // or use existing one if suitable.
-    // Since NotificationService has showSyncFailureNotification, we can add showBackupNotification.
-    // For now, I will use reflection/dynamic or just assume I can add it to the service class later.
-    // I'll update NotificationService in the next step to support generic notifications.
-
-    // Actually, NotificationService doesn't expose the plugin, so I must add a method to it.
-    await _notificationService.showBackupReminderNotification();
-  }
+  /// Localised, generic text (no financial data); a tap opens the Backup
+  /// screen (payload `backup`).
+  Future<void> _showBackupNotification() =>
+      _notificationService.showBackupReminderNotification();
 
   Future<void> recordBackupSuccess() async {
     await _prefs.setInt(_lastBackupKey, DateTime.now().millisecondsSinceEpoch);

@@ -3,11 +3,12 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
-    id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Release signing: android/key.properties (git-ignored, never committed) with
+// storeFile, storePassword, keyAlias and keyPassword. See README.md.
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -25,19 +26,17 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.ledgerzero.app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    buildFeatures {
+        // AGP 9 disables resValue by default; the flavors set app_name with it.
+        resValues = true
     }
 
     flavorDimensions += "env"
@@ -74,12 +73,25 @@ android {
 
     buildTypes {
         release {
+            // Without android/key.properties (local and CI builds) release
+            // builds fall back to the debug key so that `flutter build apk
+            // --release` works. Such APKs are for testing only and cannot be
+            // uploaded to Play.
             val releaseConfig = signingConfigs.findByName("release")
+            if (releaseConfig == null) {
+                logger.warn("key.properties not found: signing the release build with the DEBUG key.")
+            }
             signingConfig = releaseConfig ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
@@ -89,4 +101,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // BiometricPrompt + CryptoObject for the biometric key store
+    // (BiometricKeyChannel.kt).
+    implementation("androidx.biometric:biometric:1.1.0")
 }

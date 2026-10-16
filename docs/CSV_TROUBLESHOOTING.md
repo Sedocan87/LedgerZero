@@ -1,43 +1,70 @@
-# CSV Import Troubleshooting Guide
+# CSV Import Troubleshooting
 
-If you are encountering issues importing your CSV file into LedgerZero, please review the common problems and solutions below.
+Problems with **Settings > Manage data > Import CSV**. The file format is
+described in [CSV_FORMAT.md](CSV_FORMAT.md).
 
-## Common Error Messages
+## Messages when opening the file
 
-### "File content not available"
-- **Cause**: The file might be corrupted or inaccessible by the operating system.
-- **Solution**: Try opening the file in a text editor or spreadsheet app to verify it is valid. Re-download it from your bank.
+| Message | Cause | What to do |
+|---|---|---|
+| "The file could not be opened." | The file could not be read from the picker. | Download the export again and pick the local copy. |
+| "The CSV file contains no data." | The file is empty. | Check the export in a text editor. |
+| "This file could not be read as CSV. Please check its format." | The file is not parseable CSV. | Make sure it is a CSV/TXT export with comma or semicolon separators, not an Excel or PDF file. |
 
-### "No data found in the CSV file"
-- **Cause**: The file is empty or contains only a header row.
-- **Solution**: Verify the file has transaction data.
+## Validation messages
 
-### "Mapped columns not found in CSV headers"
-- **Cause**: The column names you selected in the mapping screen do not match the headers in your file.
-- **Solution**: Re-check your column mapping. Note that column names are case-sensitive.
+Shown when you continue from the mapping screen.
 
-### "Rows have invalid dates"
-- **Cause**: The date format in the file does not match the format selected in LedgerZero (e.g., file has `MM/dd/yyyy` but you selected `dd.MM.yyyy`).
-- **Solution**: Check the file content and select the matching format in the import settings.
+| Message | Cause | What to do |
+|---|---|---|
+| "Choose the column that contains the date." / "...the amount." | Date or Amount is set to *Ignore*. | Map both on the Column Mapping card. |
+| "The selected columns are not in this file." | A loaded profile refers to headers this file does not have. | Map the columns again (header names must match exactly, including case). |
+| "N rows have dates that do not match the format ..." | Wrong **Date Format**. | Pick the format that matches the file (e.g. `dd.MM.yyyy` for German banks). |
+| "N rows have unreadable amounts and will be skipped." (warning) | The amount cell is empty or not a number. | Check the Amount mapping and the **Decimal Separator**. You can continue; those rows are left out. |
+| "N dates are far from the others..." (warning) | Some dates are more than 60 days from the median, e.g. a wrong day/month order or a file covering several months. | Check the dates on the review screen. |
 
-### "Rows have invalid amounts"
-- **Cause**: The amount column contains non-numeric characters that couldn't be cleaned, or the decimal separator is incorrect (e.g., using comma for decimals when dot is expected).
-- **Solution**: Ensure you selected the correct decimal separator (Dot vs Comma).
+## Wrong numbers or signs
 
-## Encoding Issues (Garbage Characters)
-- **Symptoms**: Special characters (like accents or currency symbols) appear as random symbols (e.g., `Ã©` instead of `é`).
-- **Cause**: The file is encoded in a format other than UTF-8 (commonly ISO-8859-1 or Windows-1252).
-- **Solution**: LedgerZero automatically attempts to detect Latin-1 encoding. If issues persist, try saving the file as "CSV (UTF-8)" in Excel or a text editor before importing.
+- **Amounts 100 times too large or small, or thousands read as decimals**:
+  set **Decimal Separator** to match the file (German banks: Comma).
+- **Spending imported as income**: the file lists spending as positive
+  numbers. Turn off **Negative values are outflows**.
+- **Separate debit/credit columns**: not supported. Combine them into one
+  signed Amount column in a spreadsheet first.
 
-## Duplicate Transactions
-- **Issue**: Transactions you've already imported appear again.
-- **Solution**: LedgerZero automatically flags duplicates based on Date, Amount, and Payee. Ensure these fields match exactly. If a bank changes the Payee name slightly (e.g., "UBER *TRIP" vs "Uber Trip"), it may be seen as a new transaction. You can manually uncheck duplicates before confirming the import.
+## Header is not the first line
 
-## Bank-Specific Notes
+Some bank exports start with account details or a title before the column
+headers. LedgerZero always uses the first row as the header. Delete the lines
+above the header in a text editor or spreadsheet and save as CSV.
 
-- **Chase**: Select `MM/dd/yyyy` date format. Map 'Posting Date' to Date, 'Amount' to Amount, and 'Description' to Payee.
-- **Wells Fargo**: Often has 5 columns. Map the 5th column to Payee/Description.
-- **Citibank**: Might split Debit and Credit into separate columns. Currently, LedgerZero requires a single Amount column (negative for outflow). You may need to merge them in a spreadsheet first.
+## Garbled characters
 
-## Need More Help?
-If you continue to have issues, please contact support with a sample of your CSV file (remove sensitive account numbers first).
+Text that is not valid UTF-8 is read as Windows-1252, which covers most
+German bank exports (umlauts and the `€` sign). Files in other encodings
+(e.g. UTF-16, or Mac Roman) still show wrong characters: save the file as
+"CSV UTF-8" and import it again.
+
+## Duplicates
+
+Rows with the same date, amount and payee name as an existing transaction
+are marked as possible duplicates and unchecked on the review screen. The
+comparison covers the transactions of the account chosen at the top of the
+review screen in the file's date range, and runs again when you pick another
+account. A
+payee spelled differently by the bank (e.g. `UBER *TRIP` vs `Uber Trip`) is
+not detected; uncheck such rows by hand.
+
+## Category not found
+
+A row shows "Category "…" not found – unassigned" when the file's Category
+cell names no existing category (the import never creates categories).
+Create the category, or rename it to match, and import again; or import the
+row without a category and categorize it later. Rules and the payee's
+default category still apply to such rows. A category name used in several
+groups must be written as `Group: Category`.
+
+## No account to import into
+
+The import needs an existing account ("Create your first account to get
+started with budgeting."). Create one under **Accounts** first.

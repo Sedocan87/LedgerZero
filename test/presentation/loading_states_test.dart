@@ -1,3 +1,4 @@
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,9 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
+import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 
 // Mocks would be here if we needed complex repository mocks,
 // but for loading states we can often just override the provider to return AsyncValue.loading()
@@ -32,15 +36,28 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            hasAccountsProvider.overrideWith(
-              (ref) =>
-                  Future<bool>.delayed(const Duration(seconds: 1), () => true),
-            ),
             // Mock backup scheduler to avoid NPE or timer issues
             backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
             // Mock sync controller to avoid background tasks
             syncControllerProvider.overrideWith((ref) => MockSyncController()),
+            accountsProvider.overrideWith(
+              (ref) => Stream.fromFuture(
+                Future.delayed(const Duration(seconds: 1), () => const []),
+              ),
+            ),
             recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
+            tbbProvider.overrideWith((ref, month) => Future.value(10000)),
+            monthlyStatsProvider.overrideWith(
+              (ref, month) =>
+                  Future.value({'income': 200000, 'spending': -50000}),
+            ),
+            appFormatterProvider.overrideWithValue(
+              AppFormatter(
+                locale: 'en',
+                currency: 'USD',
+                decimalSeparator: '.',
+              ),
+            ),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

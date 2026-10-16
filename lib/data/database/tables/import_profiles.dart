@@ -12,6 +12,7 @@ class ImportProfiles extends Table {
   TextColumn get memoColumn => text().nullable().named('memo_column')();
   TextColumn get categoryColumn => text().nullable().named('category_column')();
   TextColumn get createdAt => text().named('created_at')();
+  DateTimeColumn get updatedAt => dateTime().nullable().named('updated_at')();
 
   @override
   Set<Column> get primaryKey => {id};

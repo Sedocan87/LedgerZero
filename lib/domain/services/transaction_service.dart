@@ -1,408 +1,689 @@
+import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/services/transaction_service_types.dart';
+import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
+import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
+import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/domain/undo/transaction_undo_actions.dart';
+import 'package:ledger_zero/services/rules/rule_matching_service.dart';
+import 'package:uuid/uuid.dart';
 
-/// Service responsible for managing transactions.
+export 'package:ledger_zero/domain/services/transaction_service_types.dart';
+
+/// Runs after a transaction save committed (see [TransactionService.save]).
+typedef TransactionSavedHook =
+    Future<void> Function(TransactionChangeSetAction change);
+
+/// The single entry point for writing transactions (decision D4).
 ///
-/// This service handles the business logic for creating, updating, and deleting
-/// transactions, including validation and state management.
+/// Screens never write transaction rows through repositories directly; they
+/// call this service, which keeps the ledger consistent:
+///
+/// * Transfers are two rows linked both ways (`transferTransactionId` on
+///   each, `transferAccountId` pointing at the other account). The
+///   counterpart is always derived from the edited leg (`-amount`, the
+///   other account), so editing either leg keeps its direction.
+///   Converting a normal transaction into a transfer creates the
+///   counterpart; converting back deletes it.
+/// * A split is a parent (account-side amount, no category) plus children
+///   (categories) whose amounts add up to the parent. Children are diffed
+///   by id on edit (their cleared/reconciled state and ids survive).
+/// * Transfer legs and split parents never carry a category.
+/// * Deleting any row of a transfer or split deletes the whole group;
+///   undo restores the whole group.
+/// * Changing or deleting a reconciled row requires
+///   `allowReconciledChange: true` (the UI asks the user first), otherwise
+///   [ReconciledTransactionException] is thrown.
+/// * Every write runs in one [UnitOfWork] and records one undo action.
 class TransactionService {
+  TransactionService({
+    required this._transactionRepository,
+    required this._payeeRepository,
+    required this._undoService,
+    required this._unitOfWork,
+    this._ruleMatchingService,
+    this._uuid = const Uuid(),
+    this._onSaved,
+  });
+
   final TransactionRepository _transactionRepository;
+  final PayeeRepository _payeeRepository;
   final UndoService _undoService;
+  final UnitOfWork _unitOfWork;
+  final RuleMatchingService? _ruleMatchingService;
+  final Uuid _uuid;
 
-  TransactionService(this._transactionRepository, this._undoService);
+  /// Called after every successful [save] with the recorded change (e.g.
+  /// the budget alert check). Its errors are logged and never fail the
+  /// save.
+  final TransactionSavedHook? _onSaved;
 
-  /// Creates a new transaction.
-  ///
-  /// This method validates the transaction and persists it to the repository.
-  /// If [transaction.createdAt] is not set, it defaults to the current time.
-  Future<void> createTransaction(Transaction transaction) async {
+  // ---------------------------------------------------------------------
+  // Create / update
+  // ---------------------------------------------------------------------
+
+  /// Creates or updates a normal, transfer or split transaction.
+  Future<TransactionSaveResult> save(
+    TransactionInput input, {
+    bool allowReconciledChange = false,
+  }) async {
+    _validate(input);
     try {
-      final validationErrors = transaction.validate();
-      if (validationErrors.isNotEmpty) {
-        throw ValidationException(validationErrors.join(', '));
-      }
-
-      final transactionToCreate = transaction.copyWith(
-        createdAt: transaction.createdAt ?? DateTime.now(),
-        updatedAt: transaction.updatedAt ?? DateTime.now(),
-        isDeleted: false,
+      final result = await _unitOfWork.run(
+        () => _save(input, allowReconciledChange: allowReconciledChange),
       );
-
-      await _transactionRepository.createTransaction(transactionToCreate);
-      _undoService.addAction(
-        CreateTransactionAction(_transactionRepository, transactionToCreate),
-      );
-      Logger.info('Transaction created: ${transactionToCreate.id}');
+      _undoService.addAction(result.action);
+      Logger.info('Transaction saved: ${result.id}');
+      await _runSavedHook(result.action);
+      return result;
     } catch (e, stackTrace) {
-      Logger.error('Failed to create transaction', e, stackTrace);
+      if (e is! ReconciledTransactionException) {
+        Logger.error('Failed to save transaction', e, stackTrace);
+      }
       rethrow;
     }
   }
 
-  /// Updates an existing transaction.
-  ///
-  /// This method validates the transaction and persists changes to the repository.
-  /// It automatically updates the [updatedAt] field.
-  Future<void> updateTransaction(Transaction transaction) async {
+  Future<void> _runSavedHook(TransactionChangeSetAction change) async {
+    final hook = _onSaved;
+    if (hook == null) {
+      return;
+    }
     try {
-      final validationErrors = transaction.validate();
-      if (validationErrors.isNotEmpty) {
-        throw ValidationException(validationErrors.join(', '));
-      }
-
-      final oldTransaction = await _transactionRepository.getTransactionById(
-        transaction.id,
-      );
-
-      final transactionToUpdate = transaction.copyWith(
-        updatedAt: DateTime.now(),
-      );
-
-      await _transactionRepository.updateTransaction(transactionToUpdate);
-
-      if (oldTransaction != null) {
-        _undoService.addAction(
-          UpdateTransactionAction(
-            _transactionRepository,
-            oldTransaction,
-            transactionToUpdate,
-          ),
-        );
-      }
-      Logger.info('Transaction updated: ${transactionToUpdate.id}');
+      await hook(change);
     } catch (e, stackTrace) {
-      Logger.error('Failed to update transaction', e, stackTrace);
-      rethrow;
+      Logger.error('Post-save hook failed', e, stackTrace);
     }
   }
 
-  /// Soft-deletes a transaction by its ID.
-  ///
-  /// This method marks the transaction as deleted without removing it from the database.
-  /// If the transaction is linked (transfer or split), counterparts are also deleted.
-  Future<void> deleteTransaction(String id) async {
-    try {
-      final transaction = await _transactionRepository.getTransactionById(id);
-      if (transaction == null) {
-        return;
-      }
-
-      Transaction? related;
-      List<Transaction> children = [];
-
-      if (transaction.transferTransactionId != null) {
-        related = await _transactionRepository.getTransactionById(
-          transaction.transferTransactionId!,
-        );
-      } else {
-        children = await _transactionRepository.getSplitTransactions(id);
-      }
-
-      await _transactionRepository.deleteLinkedTransaction(id);
-
-      _undoService.addAction(
-        DeleteLinkedTransactionAction(
-          _transactionRepository,
-          transaction,
-          relatedTransaction: related,
-          children: children,
-        ),
+  void _validate(TransactionInput input) {
+    if (input.amount == 0) {
+      throw ValidationException(
+        'Transaction amount cannot be zero',
+        TransactionValidationError.zeroAmount,
       );
-      Logger.info('Transaction deleted: $id');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to delete transaction', e, stackTrace);
-      rethrow;
     }
-  }
-
-  /// Creates a transfer consisting of two linked transactions.
-  Future<void> createTransferTransaction(
-    Transaction source,
-    Transaction destination,
-  ) async {
-    try {
-      final sourceErrors = source.validate();
-      final destErrors = destination.validate();
-      if (sourceErrors.isNotEmpty || destErrors.isNotEmpty) {
-        throw ValidationException([...sourceErrors, ...destErrors].join(', '));
-      }
-
-      final now = DateTime.now();
-      final sourceToCreate = source.copyWith(
-        transferTransactionId: destination.id,
-        transferAccountId: destination.accountId,
-        createdAt: source.createdAt ?? now,
-        updatedAt: source.updatedAt ?? now,
-        isDeleted: false,
-      );
-      final destToCreate = destination.copyWith(
-        transferTransactionId: source.id,
-        transferAccountId: source.accountId,
-        createdAt: destination.createdAt ?? now,
-        updatedAt: destination.updatedAt ?? now,
-        isDeleted: false,
-      );
-
-      await _transactionRepository.createTransferTransaction(
-        sourceToCreate,
-        destToCreate,
-      );
-      _undoService.addAction(
-        CreateTransferAction(
-          _transactionRepository,
-          sourceToCreate,
-          destToCreate,
-        ),
-      );
-      Logger.info('Transfer created: ${source.id} -> ${destination.id}');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to create transfer', e, stackTrace);
-      rethrow;
-    }
-  }
-
-  /// Creates a split transaction consisting of a parent and multiple children.
-  Future<void> createSplitTransaction(
-    Transaction parent,
-    List<Transaction> children,
-  ) async {
-    try {
-      final parentErrors = parent.validate();
-      if (parentErrors.isNotEmpty) {
-        throw ValidationException(parentErrors.join(', '));
-      }
-
-      final childrenSum = children.fold<double>(
-        0.0,
-        (sum, t) => sum + t.amount,
-      );
-      if ((childrenSum - parent.amount).abs() > 0.001) {
+    if (input.isTransfer) {
+      if (input.transferAccountId == input.accountId) {
         throw ValidationException(
-          'Split transactions sum $childrenSum does not match parent amount ${parent.amount}',
+          'Source and destination accounts must be different',
+          TransactionValidationError.sameTransferAccount,
         );
       }
-
-      final now = DateTime.now();
-      final parentToCreate = parent.copyWith(
-        createdAt: parent.createdAt ?? now,
-        updatedAt: parent.updatedAt ?? now,
-        isDeleted: false,
-      );
-      final childrenToCreate = children.map((c) {
-        return c.copyWith(
-          parentTransactionId: parent.id,
-          accountId: parent.accountId, // Children belong to same account
-          date: parent.date, // Children share date
-          payeeId: parent.payeeId, // Children share payee (usually)
-          createdAt: c.createdAt ?? now,
-          updatedAt: c.updatedAt ?? now,
-          isDeleted: false,
+      if (input.isSplit) {
+        throw ValidationException(
+          'A transfer cannot be split',
+          TransactionValidationError.splitTransfer,
         );
-      }).toList();
-
-      await _transactionRepository.createSplitTransaction(
-        parentToCreate,
-        childrenToCreate,
-      );
-      _undoService.addAction(
-        CreateSplitTransactionAction(
-          _transactionRepository,
-          parentToCreate,
-          childrenToCreate,
-        ),
-      );
-      Logger.info('Split transaction created: ${parent.id}');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to create split transaction', e, stackTrace);
-      rethrow;
+      }
+    }
+    if (input.isSplit) {
+      if (input.splits.any((s) => s.amount == 0)) {
+        throw ValidationException(
+          'Split lines cannot be zero',
+          TransactionValidationError.splitLineZero,
+        );
+      }
+      final sum = Money.sum(input.splits.map((s) => s.amount));
+      if (sum != input.amount) {
+        throw ValidationException(
+          'Split transactions sum $sum does not match parent amount '
+          '${input.amount}',
+          TransactionValidationError.splitSumMismatch,
+        );
+      }
     }
   }
+
+  Future<TransactionSaveResult> _save(
+    TransactionInput input, {
+    required bool allowReconciledChange,
+  }) async {
+    final now = DateTime.now().toUtc();
+    final date = CalendarDate.normalize(input.date);
+
+    // Existing state (for updates).
+    Transaction? existing;
+    Transaction? counterpart;
+    var children = const <Transaction>[];
+    if (input.id != null) {
+      existing = await _transactionRepository.getTransactionById(input.id!);
+      if (existing == null) {
+        throw ValidationException(
+          'Transaction ${input.id} not found',
+          TransactionValidationError.notFound,
+        );
+      }
+      if (existing.transferTransactionId != null) {
+        counterpart = await _transactionRepository.getTransactionById(
+          existing.transferTransactionId!,
+        );
+      }
+      children = await _transactionRepository.getSplitTransactions(existing.id);
+    }
+    final before = <String, Transaction?>{
+      ?existing?.id: existing,
+      ?counterpart?.id: counterpart,
+      for (final c in children) c.id: c,
+    };
+    if (!allowReconciledChange) {
+      final reconciled = before.values
+          .whereType<Transaction>()
+          .where((t) => t.cleared == TransactionClearStatus.reconciled)
+          .map((t) => t.id)
+          .toList();
+      if (reconciled.isNotEmpty) {
+        throw ReconciledTransactionException(reconciled);
+      }
+    }
+
+    final payeeId = input.isTransfer ? null : await _resolvePayee(input);
+    final primaryId = existing?.id ?? _uuid.v4();
+    final written = <Transaction>[];
+
+    // Transfer counterpart.
+    String? counterpartId;
+    if (input.isTransfer) {
+      counterpartId = counterpart?.id ?? _uuid.v4();
+      final sameAccount = counterpart?.accountId == input.transferAccountId;
+      written.add(
+        Transaction(
+          id: counterpartId,
+          accountId: input.transferAccountId!,
+          date: date,
+          amount: -input.amount,
+          memo: input.memo,
+          // The cleared state belongs to the counterpart's own account.
+          cleared: sameAccount
+              ? counterpart!.cleared
+              : TransactionClearStatus.uncleared,
+          approved: input.approved,
+          transferAccountId: input.accountId,
+          transferTransactionId: primaryId,
+          createdAt: counterpart?.createdAt ?? now,
+          updatedAt: now,
+        ),
+      );
+    } else if (counterpart != null) {
+      written.add(_deleted(counterpart, now));
+    }
+
+    final primary = Transaction(
+      id: primaryId,
+      accountId: input.accountId,
+      date: date,
+      amount: input.amount,
+      payeeId: payeeId,
+      categoryId: (input.isTransfer || input.isSplit) ? null : input.categoryId,
+      memo: input.memo,
+      cleared: input.cleared,
+      approved: input.approved,
+      transferAccountId: input.isTransfer ? input.transferAccountId : null,
+      transferTransactionId: counterpartId,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    );
+    written.insert(0, primary);
+
+    // Split children, diffed by id.
+    final existingChildren = {for (final c in children) c.id: c};
+    final keptIds = <String>{};
+    for (final line in input.splits) {
+      final old = line.id == null ? null : existingChildren[line.id];
+      final id = old?.id ?? _uuid.v4();
+      keptIds.add(id);
+      written.add(
+        Transaction(
+          id: id,
+          accountId: input.accountId,
+          date: date,
+          amount: line.amount,
+          payeeId: payeeId,
+          categoryId: line.categoryId,
+          memo: line.memo,
+          cleared: input.cleared,
+          approved: input.approved,
+          parentTransactionId: primaryId,
+          createdAt: old?.createdAt ?? now,
+          updatedAt: now,
+        ),
+      );
+    }
+    for (final child in children) {
+      if (!keptIds.contains(child.id)) {
+        written.add(_deleted(child, now));
+      }
+    }
+
+    await _transactionRepository.upsertTransactions(written);
+
+    // Learning: the payee remembers the last category used with it. Rules
+    // are never created implicitly and history is never rewritten.
+    if (payeeId != null && primary.categoryId != null) {
+      await _learnPayeeCategory(payeeId, primary.categoryId!);
+    }
+
+    final action = TransactionChangeSetAction(
+      _transactionRepository,
+      _unitOfWork,
+      before: before,
+      after: {for (final t in written) t.id: t},
+    );
+    return TransactionSaveResult(primaryId, action);
+  }
+
+  Transaction _deleted(Transaction t, DateTime now) =>
+      t.copyWith(isDeleted: true, updatedAt: now);
+
+  Future<String?> _resolvePayee(TransactionInput input) =>
+      resolvePayee(payeeId: input.payeeId, name: input.newPayeeName);
+
+  /// [payeeId] if set; otherwise the id of the payee called [name]
+  /// (case-insensitive), creating it when it does not exist yet; `null`
+  /// when both are empty.
+  Future<String?> resolvePayee({String? payeeId, String? name}) async {
+    if (payeeId != null) {
+      return payeeId;
+    }
+    final trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final payees = await _payeeRepository.getAllPayees();
+    final existing = payees
+        .where((p) => p.name.toLowerCase() == trimmed.toLowerCase())
+        .firstOrNull;
+    if (existing != null) {
+      return existing.id;
+    }
+    final payee = Payee(
+      id: _uuid.v4(),
+      name: trimmed,
+      createdAt: DateTime.now().toUtc(),
+    );
+    await _payeeRepository.createPayee(payee);
+    return payee.id;
+  }
+
+  Future<void> _learnPayeeCategory(String payeeId, String categoryId) async {
+    final payee = await _payeeRepository.getPayeeById(payeeId);
+    if (payee != null && payee.autoCategoryId != categoryId) {
+      await _payeeRepository.updatePayee(
+        payee.copyWith(autoCategoryId: categoryId),
+      );
+    }
+  }
+
+  /// Fills empty fields of [draft] from the user's rules
+  /// ([RuleApplyMode.suggest]): category, payee and memo, never anything
+  /// the user already set. Used to pre-fill the form and by quick-add.
+  Future<Transaction> suggestWithRules(
+    Transaction draft, {
+    String? payeeName,
+  }) async {
+    final rules = _ruleMatchingService;
+    if (rules == null) {
+      return draft;
+    }
+    final active = await rules.loadActiveRules();
+    if (active.isEmpty) {
+      return draft;
+    }
+    return rules.apply(
+      draft,
+      active,
+      mode: RuleApplyMode.suggest,
+      payeeName: payeeName,
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Delete
+  // ---------------------------------------------------------------------
+
+  /// All rows that belong together with [t]: the transfer counterpart, the
+  /// split parent and all its children.
+  Future<List<Transaction>> _linkedGroup(Transaction t) async {
+    var root = t;
+    if (t.parentTransactionId != null) {
+      root =
+          await _transactionRepository.getTransactionById(
+            t.parentTransactionId!,
+          ) ??
+          t;
+    }
+    final group = <String, Transaction>{root.id: root, t.id: t};
+    if (root.transferTransactionId != null) {
+      final other = await _transactionRepository.getTransactionById(
+        root.transferTransactionId!,
+      );
+      if (other != null) {
+        group[other.id] = other;
+      }
+    }
+    for (final child in await _transactionRepository.getSplitTransactions(
+      root.id,
+    )) {
+      group[child.id] = child;
+    }
+    return group.values.toList();
+  }
+
+  Future<List<Transaction>> _groupsOf(Iterable<String> ids) async {
+    final rows = <String, Transaction>{};
+    for (final id in ids.toSet()) {
+      if (rows.containsKey(id)) {
+        continue;
+      }
+      final t = await _transactionRepository.getTransactionById(id);
+      if (t == null) {
+        continue;
+      }
+      for (final row in await _linkedGroup(t)) {
+        rows[row.id] = row;
+      }
+    }
+    return rows.values.toList();
+  }
+
+  /// Describes what deleting [ids] would delete.
+  Future<DeletionPreview> previewDeletion(Iterable<String> ids) async {
+    final rows = await _groupsOf(ids);
+    return DeletionPreview(
+      rowCount: rows.length,
+      includesTransfer: rows.any((t) => t.transferTransactionId != null),
+      includesSplit: rows.any((t) => t.parentTransactionId != null),
+      includesReconciled: rows.any(
+        (t) => t.cleared == TransactionClearStatus.reconciled,
+      ),
+    );
+  }
+
+  /// Soft-deletes a transaction together with its transfer counterpart or
+  /// its whole split (deleting one split line deletes the split: a split
+  /// whose lines do not add up to the parent would corrupt the balances).
+  ///
+  /// Returns the undo action (also pushed on the undo stack), or `null` if
+  /// nothing was deleted.
+  Future<TransactionChangeSetAction?> deleteTransaction(
+    String id, {
+    bool allowReconciledChange = false,
+  }) => deleteMany([id], allowReconciledChange: allowReconciledChange);
+
+  /// Soft-deletes several transactions and everything linked to them in
+  /// one unit of work with one undo action.
+  Future<TransactionChangeSetAction?> deleteMany(
+    Iterable<String> ids, {
+    bool allowReconciledChange = false,
+  }) async {
+    final action = await _unitOfWork.run(() async {
+      final rows = await _groupsOf(ids);
+      if (rows.isEmpty) {
+        return null;
+      }
+      if (!allowReconciledChange) {
+        final reconciled = rows
+            .where((t) => t.cleared == TransactionClearStatus.reconciled)
+            .map((t) => t.id)
+            .toList();
+        if (reconciled.isNotEmpty) {
+          throw ReconciledTransactionException(reconciled);
+        }
+      }
+      final now = DateTime.now().toUtc();
+      final deleted = [for (final t in rows) _deleted(t, now)];
+      await _transactionRepository.upsertTransactions(deleted);
+      return TransactionChangeSetAction(
+        _transactionRepository,
+        _unitOfWork,
+        before: {for (final t in rows) t.id: t},
+        after: {for (final t in deleted) t.id: t},
+      );
+    });
+    if (action != null) {
+      _undoService.addAction(action);
+      Logger.info('Transactions deleted: ${action.ids.length}');
+    }
+    return action;
+  }
+
+  /// Kept for older callers: deletes several transactions with their
+  /// linked rows.
+  Future<void> bulkDelete(List<String> ids) => deleteMany(ids);
+
+  // ---------------------------------------------------------------------
+  // Field updates
+  // ---------------------------------------------------------------------
+
+  Future<TransactionChangeSetAction?> _updateRows(
+    Iterable<String> ids,
+    Transaction? Function(Transaction t) change, {
+    bool allowReconciledChange = false,
+    bool includeSplitChildren = false,
+  }) async {
+    final action = await _unitOfWork.run(() async {
+      final before = <String, Transaction>{};
+      final after = <String, Transaction>{};
+      final now = DateTime.now().toUtc();
+      for (final id in ids.toSet()) {
+        final t = await _transactionRepository.getTransactionById(id);
+        if (t == null) {
+          continue;
+        }
+        final targets = [
+          t,
+          if (includeSplitChildren)
+            ...await _transactionRepository.getSplitTransactions(t.id),
+        ];
+        for (final row in targets) {
+          final updated = change(row);
+          if (updated == null || updated == row) {
+            continue;
+          }
+          before[row.id] = row;
+          after[row.id] = updated.copyWith(updatedAt: now);
+        }
+      }
+      if (after.isEmpty) {
+        return null;
+      }
+      if (!allowReconciledChange) {
+        final reconciled = before.values
+            .where((t) => t.cleared == TransactionClearStatus.reconciled)
+            .map((t) => t.id)
+            .toList();
+        if (reconciled.isNotEmpty) {
+          throw ReconciledTransactionException(reconciled);
+        }
+      }
+      await _transactionRepository.upsertTransactions(after.values.toList());
+      return TransactionChangeSetAction(
+        _transactionRepository,
+        _unitOfWork,
+        before: before,
+        after: after,
+      );
+    });
+    if (action != null) {
+      _undoService.addAction(action);
+    }
+    return action;
+  }
+
+  /// Sets the cleared status of one row (a split's children follow their
+  /// parent). Leaving `reconciled` needs [allowReconciledChange].
+  Future<TransactionChangeSetAction?> updateClearingStatus(
+    String id,
+    TransactionClearStatus status, {
+    bool allowReconciledChange = false,
+  }) => _updateRows(
+    [id],
+    (t) => t.copyWith(cleared: status),
+    allowReconciledChange: allowReconciledChange,
+    includeSplitChildren: true,
+  );
 
   /// Approves a transaction.
-  Future<void> approveTransaction(String id) async {
-    try {
-      final t = await _transactionRepository.getTransactionById(id);
-      if (t != null) {
-        final updated = t.copyWith(approved: true);
-        await _transactionRepository.updateTransaction(updated);
-        _undoService.addAction(
-          UpdateTransactionAction(_transactionRepository, t, updated),
-        );
-        Logger.info('Transaction approved: $id');
-      }
-    } catch (e, stackTrace) {
-      Logger.error('Failed to approve transaction $id', e, stackTrace);
-      rethrow;
-    }
-  }
+  Future<void> approveTransaction(String id) => bulkApprove([id]);
 
   /// Rejects a transaction (marks as unapproved).
-  Future<void> rejectTransaction(String id) async {
-    try {
-      final t = await _transactionRepository.getTransactionById(id);
-      if (t != null) {
-        final updated = t.copyWith(approved: false);
-        await _transactionRepository.updateTransaction(updated);
-        _undoService.addAction(
-          UpdateTransactionAction(_transactionRepository, t, updated),
-        );
-        Logger.info('Transaction rejected: $id');
-      }
-    } catch (e, stackTrace) {
-      Logger.error('Failed to reject transaction $id', e, stackTrace);
-      rethrow;
-    }
-  }
+  Future<void> rejectTransaction(String id) => bulkReject([id]);
 
-  /// Updates the clearing status of a transaction.
-  Future<void> updateClearingStatus(
-    String id,
-    TransactionClearStatus status,
+  /// Approves multiple transactions.
+  Future<TransactionChangeSetAction?> bulkApprove(List<String> ids) =>
+      _updateRows(
+        ids,
+        (t) => t.copyWith(approved: true),
+        allowReconciledChange: true,
+      );
+
+  /// Rejects (unapproves) multiple transactions.
+  Future<TransactionChangeSetAction?> bulkReject(List<String> ids) =>
+      _updateRows(
+        ids,
+        (t) => t.copyWith(approved: false),
+        allowReconciledChange: true,
+      );
+
+  /// Sets the category of the given rows. Transfer legs and split parents
+  /// are skipped (they never carry a category).
+  Future<TransactionChangeSetAction?> bulkCategorize(
+    List<String> ids,
+    String categoryId,
   ) async {
-    try {
+    final eligible = <String>[];
+    for (final id in ids) {
       final t = await _transactionRepository.getTransactionById(id);
-      if (t != null) {
-        final updated = t.copyWith(cleared: status);
-        await _transactionRepository.updateTransaction(updated);
-        _undoService.addAction(
-          UpdateTransactionAction(_transactionRepository, t, updated),
-        );
-        Logger.info('Transaction clearing status updated: $id -> $status');
+      if (t == null || t.transferAccountId != null) {
+        continue;
       }
-    } catch (e, stackTrace) {
-      Logger.error('Failed to update clearing status for $id', e, stackTrace);
-      rethrow;
+      if (await _transactionRepository.isSplitParent(id)) {
+        continue;
+      }
+      eligible.add(id);
     }
+    return _updateRows(
+      eligible,
+      (t) => t.copyWith(categoryId: categoryId),
+      allowReconciledChange: true,
+    );
   }
 
   /// Marks a list of transactions as reconciled.
-  Future<void> markAsReconciled(List<String> ids) async {
-    try {
-      final transactions = await _transactionRepository.getTransactions(
-        filter: TransactionFilter(ids: ids),
+  Future<TransactionChangeSetAction?> markAsReconciled(List<String> ids) =>
+      _updateRows(
+        ids,
+        (t) => t.copyWith(cleared: TransactionClearStatus.reconciled),
+        allowReconciledChange: true,
+        includeSplitChildren: true,
       );
 
-      final updatedTransactions = transactions.map((t) {
-        return t.copyWith(
+  /// Whether the row or anything linked to it is reconciled.
+  Future<bool> isReconciled(String id) async {
+    final t = await _transactionRepository.getTransactionById(id);
+    if (t == null) {
+      return false;
+    }
+    final group = await _linkedGroup(t);
+    return group.any((r) => r.cleared == TransactionClearStatus.reconciled);
+  }
+
+  // ---------------------------------------------------------------------
+  // Reconciliation
+  // ---------------------------------------------------------------------
+
+  /// Reconciles [accountId] against a bank statement, in one unit of work:
+  ///
+  /// 1. every `cleared` transaction dated on or before [statementDate] is
+  ///    marked `reconciled`;
+  /// 2. the cleared balance up to [statementDate] (starting balance + all
+  ///    cleared/reconciled rows up to that day) is compared with
+  ///    [statementBalance];
+  /// 3. if they differ, an uncategorised, reconciled adjustment with
+  ///    [adjustmentMemo] is added on [statementDate] (it flows into To Be
+  ///    Budgeted like any uncategorised row).
+  ///
+  /// [clearedBalanceUpTo] reads the cleared balance (the account
+  /// repository's `getClearedBalance(id, upTo: ...)`).
+  Future<ReconcileResult> reconcile({
+    required String accountId,
+    required DateTime statementDate,
+    required int statementBalance,
+    required String adjustmentMemo,
+    required Future<int> Function(String accountId, DateTime upTo)
+    clearedBalanceUpTo,
+  }) async {
+    final day = CalendarDate.normalize(statementDate);
+    final result = await _unitOfWork.run(() async {
+      final candidates = await _transactionRepository.getTransactions(
+        filter: TransactionFilter(
+          accountIds: [accountId],
+          endDate: day,
+          clearedStatuses: const [TransactionClearStatus.cleared],
+        ),
+      );
+      final before = {for (final t in candidates) t.id: t};
+      await _transactionRepository.markClearedAsReconciled(accountId, day);
+      final after = <String, Transaction?>{
+        for (final t in candidates)
+          t.id: t.copyWith(cleared: TransactionClearStatus.reconciled),
+      };
+
+      final cleared = await clearedBalanceUpTo(accountId, day);
+      final difference = statementBalance - cleared;
+      String? adjustmentId;
+      if (difference != 0) {
+        final now = DateTime.now().toUtc();
+        final adjustment = Transaction(
+          id: _uuid.v4(),
+          accountId: accountId,
+          date: day,
+          amount: difference,
+          memo: adjustmentMemo,
           cleared: TransactionClearStatus.reconciled,
-          updatedAt: DateTime.now(),
+          createdAt: now,
+          updatedAt: now,
         );
-      }).toList();
-
-      await _transactionRepository.batchUpdateTransactions(updatedTransactions);
-      _undoService.addAction(
-        BatchUpdateTransactionsAction(
-          _transactionRepository,
-          transactions,
-          updatedTransactions,
-        ),
-      );
-      Logger.info('Transactions reconciled: ${ids.length}');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to reconcile transactions', e, stackTrace);
-      rethrow;
-    }
-  }
-
-  /// Approves multiple transactions.
-  Future<void> bulkApprove(List<String> ids) async {
-    try {
-      final transactions = await _transactionRepository.getTransactions(
-        filter: TransactionFilter(ids: ids),
-      );
-
-      final updatedTransactions = transactions.map((t) {
-        return t.copyWith(approved: true, updatedAt: DateTime.now());
-      }).toList();
-
-      await _transactionRepository.batchUpdateTransactions(updatedTransactions);
-      _undoService.addAction(
-        BatchUpdateTransactionsAction(
-          _transactionRepository,
-          transactions,
-          updatedTransactions,
-        ),
-      );
-      Logger.info('Transactions approved: ${ids.length}');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to approve transactions', e, stackTrace);
-      rethrow;
-    }
-  }
-
-  /// Rejects (unapproves) multiple transactions.
-  Future<void> bulkReject(List<String> ids) async {
-    try {
-      final transactions = await _transactionRepository.getTransactions(
-        filter: TransactionFilter(ids: ids),
-      );
-
-      final updatedTransactions = transactions.map((t) {
-        return t.copyWith(approved: false, updatedAt: DateTime.now());
-      }).toList();
-
-      await _transactionRepository.batchUpdateTransactions(updatedTransactions);
-      _undoService.addAction(
-        BatchUpdateTransactionsAction(
-          _transactionRepository,
-          transactions,
-          updatedTransactions,
-        ),
-      );
-      Logger.info('Transactions rejected: ${ids.length}');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to reject transactions', e, stackTrace);
-      rethrow;
-    }
-  }
-
-  /// Soft-deletes multiple transactions.
-  Future<void> bulkDelete(List<String> ids) async {
-    try {
-      final transactions = await _transactionRepository.getTransactions(
-        filter: TransactionFilter(ids: ids),
-      );
-      await _transactionRepository.batchDeleteTransactions(ids);
-
-      if (transactions.isNotEmpty) {
-        _undoService.addAction(
-          BatchDeleteTransactionsAction(_transactionRepository, transactions),
-        );
+        await _transactionRepository.upsertTransactions([adjustment]);
+        adjustmentId = adjustment.id;
+        after[adjustment.id] = adjustment;
       }
-      Logger.info('Transactions deleted: ${ids.length}');
-    } catch (e, stackTrace) {
-      Logger.error('Failed to delete transactions', e, stackTrace);
-      rethrow;
-    }
+      return ReconcileResult(
+        reconciledCount: candidates.length,
+        difference: difference,
+        adjustmentId: adjustmentId,
+        action: TransactionChangeSetAction(
+          _transactionRepository,
+          _unitOfWork,
+          before: before,
+          after: after,
+        ),
+      );
+    });
+    _undoService.addAction(result.action);
+    return result;
   }
+
+  // ---------------------------------------------------------------------
+  // Queries
+  // ---------------------------------------------------------------------
 
   /// Searches and filters transactions based on criteria.
   Future<List<Transaction>> searchTransactions({
     TransactionFilter? filter,
     TransactionSort? sort,
-  }) async {
-    try {
-      return await _transactionRepository.getTransactions(
-        filter: filter,
-        sort: sort,
-      );
-    } catch (e, stackTrace) {
-      Logger.error('Failed to search transactions', e, stackTrace);
-      rethrow;
-    }
-  }
+  }) => _transactionRepository.getTransactions(filter: filter, sort: sort);
 
   /// Watches transactions based on criteria.
   Stream<List<Transaction>> watchTransactions({
     TransactionFilter? filter,
     TransactionSort? sort,
-  }) {
-    return _transactionRepository.watchTransactions(filter: filter, sort: sort);
-  }
+  }) => _transactionRepository.watchTransactions(filter: filter, sort: sort);
 
   /// Finds potential duplicates for a given transaction.
   ///
@@ -414,33 +695,16 @@ class TransactionService {
   Future<List<Transaction>> findPotentialDuplicates(
     Transaction transaction,
   ) async {
-    try {
-      final filter = TransactionFilter(
+    final day = CalendarDate.normalize(transaction.date);
+    final candidates = await _transactionRepository.getTransactions(
+      filter: TransactionFilter(
         minAmount: transaction.amount,
         maxAmount: transaction.amount,
-        startDate: transaction.date.subtract(const Duration(days: 3)),
-        endDate: transaction.date.add(const Duration(days: 3)),
+        startDate: DateTime.utc(day.year, day.month, day.day - 3),
+        endDate: DateTime.utc(day.year, day.month, day.day + 3),
         payeeIds: transaction.payeeId != null ? [transaction.payeeId!] : null,
-      );
-
-      final candidates = await _transactionRepository.getTransactions(
-        filter: filter,
-      );
-
-      return candidates.where((t) => t.id != transaction.id).toList();
-    } catch (e, stackTrace) {
-      Logger.error('Failed to find potential duplicates', e, stackTrace);
-      rethrow;
-    }
+      ),
+    );
+    return candidates.where((t) => t.id != transaction.id).toList();
   }
-}
-
-/// Exception thrown when transaction validation fails.
-class ValidationException implements Exception {
-  final String message;
-
-  ValidationException(this.message);
-
-  @override
-  String toString() => 'ValidationException: $message';
 }

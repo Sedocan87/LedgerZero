@@ -28,7 +28,8 @@ class PayeesDao extends DatabaseAccessor<AppDatabase> with _$PayeesDaoMixin {
     return customSelect(
       'SELECT p.* '
       'FROM payees p '
-      'LEFT JOIN transactions t ON p.id = t.payee_id '
+      // Soft-deleted transactions do not make a payee more relevant.
+      'LEFT JOIN transactions t ON p.id = t.payee_id AND t.is_deleted = 0 '
       'GROUP BY p.id '
       'ORDER BY p.is_favorite DESC, COUNT(t.id) DESC, MAX(t.date) DESC, p.name ASC',
       readsFrom: {payees, transactions},

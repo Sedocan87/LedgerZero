@@ -32,6 +32,10 @@ void main() {
       ).thenAnswer((_) => Stream.value([]));
 
       when(
+        mockTransactionRepository.watchSplitParentIds(),
+      ).thenAnswer((_) => Stream.value(const {}));
+
+      when(
         mockCategoryRepository.watchAllCategories(),
       ).thenAnswer((_) => Stream.value([]));
       when(
@@ -60,7 +64,7 @@ void main() {
       );
 
       // Verify empty state is shown
-      expect(find.text('No transactions found'), findsOneWidget);
+      expect(find.text('No transactions'), findsOneWidget);
     });
   });
 }

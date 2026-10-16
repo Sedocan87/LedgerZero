@@ -3,40 +3,60 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 enum ConnectionStatus { online, offline }
 
+/// Network reachability. Subscribes to the platform only while someone
+/// listens to [connectionStatusStream]; [dispose] releases it.
 class ConnectivityService {
   final Connectivity _connectivity;
-  final _connectionStatusController =
-      StreamController<ConnectionStatus>.broadcast();
+  StreamSubscription<List<ConnectivityResult>>? _subscription;
+  late final StreamController<ConnectionStatus> _controller =
+      StreamController<ConnectionStatus>.broadcast(
+        onListen: _start,
+        onCancel: _stop,
+      );
 
   ConnectivityService({Connectivity? connectivity})
-    : _connectivity = connectivity ?? Connectivity() {
-    _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
-    _checkInitialStatus();
+    : _connectivity = connectivity ?? Connectivity();
+
+  /// Current status first, then every change.
+  Stream<ConnectionStatus> get connectionStatusStream => _controller.stream;
+
+  void _start() {
+    _subscription ??= _connectivity.onConnectivityChanged.listen(
+      _emit,
+      onError: (Object _) {},
+    );
+    _connectivity.checkConnectivity().then(_emit, onError: (Object _) {});
   }
 
-  Stream<ConnectionStatus> get connectionStatusStream =>
-      _connectionStatusController.stream;
-
-  Future<void> _checkInitialStatus() async {
-    final result = await _connectivity.checkConnectivity();
-    _updateConnectionStatus(result);
+  void _stop() {
+    _subscription?.cancel();
+    _subscription = null;
   }
 
-  void _updateConnectionStatus(List<ConnectivityResult> results) {
-    if (results.contains(ConnectivityResult.none) && results.length == 1) {
-      _connectionStatusController.add(ConnectionStatus.offline);
-    } else {
-      _connectionStatusController.add(ConnectionStatus.online);
+  void _emit(List<ConnectivityResult> results) {
+    if (_controller.isClosed) {
+      return;
     }
+    _controller.add(_statusOf(results));
   }
 
-  Future<bool> get isConnected async {
-    final result = await _connectivity.checkConnectivity();
-    return !result.contains(ConnectivityResult.none);
-  }
+  static ConnectionStatus _statusOf(List<ConnectivityResult> results) =>
+      results.isEmpty || results.every((r) => r == ConnectivityResult.none)
+      ? ConnectionStatus.offline
+      : ConnectionStatus.online;
+
+  Future<bool> get isConnected async =>
+      _statusOf(await _connectivity.checkConnectivity()) ==
+      ConnectionStatus.online;
 
   Future<bool> get isWifi async {
     final result = await _connectivity.checkConnectivity();
-    return result.contains(ConnectivityResult.wifi);
+    return result.contains(ConnectivityResult.wifi) ||
+        result.contains(ConnectivityResult.ethernet);
+  }
+
+  Future<void> dispose() async {
+    _stop();
+    await _controller.close();
   }
 }

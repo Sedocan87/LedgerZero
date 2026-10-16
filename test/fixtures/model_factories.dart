@@ -6,14 +6,14 @@ import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 
-/// Creates a test [Account] with default values.
+/// Creates a test [Account] with default values. Amounts are minor units.
 Account createTestAccount({
   String id = 'acc1',
   String name = 'Test Account',
   AccountType type = AccountType.checking,
   String currency = 'USD',
-  double startingBalance = 0.0,
-  double currentBalance = 0.0,
+  int startingBalance = 0,
+  int balance = 0,
   bool isClosed = false,
   DateTime? createdAt,
   DateTime? updatedAt,
@@ -24,7 +24,7 @@ Account createTestAccount({
     type: type,
     currency: currency,
     startingBalance: startingBalance,
-    currentBalance: currentBalance,
+    balance: balance,
     isClosed: isClosed,
     createdAt: createdAt ?? DateTime.now(),
     updatedAt: updatedAt ?? DateTime.now(),
@@ -36,9 +36,7 @@ Budget createTestBudget({
   String id = 'budget1',
   String? categoryId,
   String month = '2023-10',
-  double budgeted = 0.0,
-  double activity = 0.0,
-  double available = 0.0,
+  int budgeted = 0,
   DateTime? createdAt,
   DateTime? updatedAt,
 }) {
@@ -47,8 +45,6 @@ Budget createTestBudget({
     categoryId: categoryId,
     month: month,
     budgeted: budgeted,
-    activity: activity,
-    available: available,
     createdAt: createdAt ?? DateTime.now(),
     updatedAt: updatedAt ?? DateTime.now(),
   );
@@ -111,7 +107,7 @@ ScheduledTransaction createTestScheduledTransaction({
   String? accountId,
   String? payeeId,
   String? categoryId,
-  double? amount,
+  int? amount,
   RecurrenceFrequency? frequency,
   int? interval,
   int? occurrenceCount,
@@ -139,7 +135,7 @@ Transaction createTestTransaction({
   String id = 'tx1',
   String accountId = 'acc1',
   DateTime? date,
-  double amount = -10.0,
+  int amount = -1000,
   String? payeeId,
   String? categoryId,
   String? memo,

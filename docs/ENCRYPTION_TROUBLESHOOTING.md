@@ -1,70 +1,84 @@
 # Encryption Troubleshooting Guide
 
-## Overview
-LedgerZero uses SQLCipher (AES-256) to encrypt your local database. This ensures your financial data remains private even if your device is compromised.
+LedgerZero encrypts its database with SQLCipher (AES-256) using a random
+data key. Your master password, your recovery key and (optionally)
+biometrics each unlock that data key. See [ENCRYPTION.md](ENCRYPTION.md).
 
-## Common Issues
+## "Incorrect Password"
 
-### 1. Database Locked / Invalid Password
-**Symptom:** App asks for password but says "Invalid Password" even if you believe it is correct.
-**Possible Causes:**
-- Typo in password.
-- Caps Lock is on.
-- Password was changed on another device (if manually synced database file).
+The password did not unlock the data key.
 
-**Solution:**
-- Try typing the password slowly and checking for visibility toggle.
-- If you have your **Recovery Key**, use the "Use Recovery Key" option on the login screen.
+* Check Caps Lock and the keyboard layout; use the eye icon to see what you
+  typed.
+* If you changed the password, use the new one. The database itself never
+  changes when you change the password.
+* If you forgot it, tap **Use recovery key** on the login screen.
 
-### 2. Biometrics Not Working
-**Symptom:** "Biometric setup failed" or prompt doesn't appear.
-**Possible Causes:**
-- Device biometric settings changed (e.g., new fingerprint added).
-- App permissions for FaceID/Fingerprint revoked.
-- Hardware unavailable.
+## Recovery key
 
-**Solution:**
-- Go to device settings and verify Biometric permissions for LedgerZero.
-- Use your Master Password to login, then toggle Biometrics OFF and ON again in Settings > Security.
+* Unlocking with the recovery key asks you to set a new master password
+  before the app opens. The recovery key keeps working afterwards.
+* It has 32 characters in groups of four. Case, spaces and dashes do not
+  matter; `O` is read as `0`, `I` and `L` as `1`.
+* "This recovery key is not correct": check each group. If you created a new
+  recovery key in Settings, only the newest one works.
+* After updating from a version before the new key design, the app shows a
+  **new** recovery key once. Keys saved before that update no longer work.
+* "An update is still being completed": unlock once with your password; the
+  recovery key works afterwards.
 
-### 3. "File is not a database" Error
-**Symptom:** App crashes or shows error `file is not a database`.
-**Cause:**
-- The database file is encrypted but the app is trying to open it without the key (or with wrong key).
-- This can happen if the `sqlcipher` library is not loaded correctly on Desktop (Linux/Windows).
+## Biometrics
 
-**Solution:**
-- **Linux:** Ensure `libsqlcipher` is installed (`sudo apt install sqlcipher`).
-- **Restart App:** Force close and restart to ensure clean state.
+* "Biometric unlock was turned off because the biometrics on this device
+  changed": adding or removing a fingerprint or face invalidates the
+  hardware key on purpose. Unlock with your password and turn biometrics on
+  again in Settings > Security Settings.
+* Biometric unlock needs a device passcode/PIN and an enrolled strong
+  biometric (Android Class 3; Face ID / Touch ID on iOS).
+* After updating from an older version, biometrics are turned off once and
+  must be enabled again.
 
-### 4. Performance Issues
-**Symptom:** App is slow to unlock or save transactions.
-**Cause:**
-- Encryption adds overhead (decryption/encryption on every disk IO).
-- Key derivation (PBKDF2) takes time to prevent brute-force attacks.
+## "Your key is correct, but the database file could not be opened"
 
-**Solution:**
-- This is generally normal behavior for secure apps.
-- If it becomes unusable, check if other background processes are consuming CPU.
+The data key was unlocked but does not match the database file, for example
+after copying a database file from another device or a damaged file.
+Restore a backup (`.lzbk`) instead of copying database files.
 
-## Advanced Recovery
+## "The key data of this app is missing"
 
-### Using the Recovery Key
-If you have lost your Master Password, you MUST have your **Recovery Key** (a long alphanumeric string) that you backed up during setup.
+The secure storage that holds the wrapped data key is empty, e.g. after
+restoring an iPhone backup to a new device (keychain items are
+device-only) or clearing app storage on Android. The database cannot be
+unlocked without it, not even with the recovery key (it unwraps the key
+stored there).
 
-1. On the Login Screen, tap **Use Recovery Key**.
-2. Paste your Recovery Key.
-3. Tap **Unlock**.
-4. Immediately go to **Settings > Change Password** to set a new Master Password.
+The login screen shows this message after an unlock attempt, together with
+a **Reset app** button. It asks you to type a confirmation word (`RESET`;
+German `ZURÜCKSETZEN`) and then runs the same factory reset as **Settings >
+Factory Reset**: it deletes the database with its `-wal`/`-shm` files, the
+key vault, legacy and biometric key entries, exported files, local crash
+reports and all preferences, and opens onboarding. Set the app up again and
+restore a backup in **Settings > Backup & Export**. (Deleting and
+reinstalling the app, or clearing its storage on Android, has the same
+effect.)
 
-### Data Restoration from Backup
-If you cannot unlock your database at all:
-1. Uninstall and Reinstall the app (Warning: This deletes local data!).
-2. If you have a CSV export or Backup file, you can import it.
-3. If you have a synced database file on Cloud, ensure you know the password associated with *that* file.
+## Settings shows "The database file is NOT encrypted"
 
-## Contact Support
-If issues persist and you believe it's a bug, check logs (if enabled) or contact support with:
-- App Version
-- Platform (iOS, Android, Linux, etc.)
-- Error Message Screenshot
+This should never happen in a release build: the app refuses to open a
+database without SQLCipher. If you see it, the build was made without
+`hooks.user_defines.sqlite3.source: sqlcipher` in `pubspec.yaml`; please
+report it.
+
+## Backups
+
+* Backups always need the backup password chosen when the backup was made
+  (not necessarily your master password).
+* "This backup was made by a newer version": update the app first.
+* Old backups (before format v2) made by an encrypted install cannot be
+  restored; see [BACKUP_FORMAT.md](BACKUP_FORMAT.md).
+
+## Performance
+
+Unlocking takes up to about a second on a mid-range phone: that is the
+deliberate cost of Argon2id key derivation, which makes guessing passwords
+expensive. Day-to-day database access is not affected.

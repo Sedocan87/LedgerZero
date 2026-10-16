@@ -13,7 +13,7 @@ import 'package:mockito/mockito.dart';
 
 import 'offline_functionality_test.mocks.dart';
 
-@GenerateMocks([ConnectivityService])
+@GenerateNiceMocks([MockSpec<ConnectivityService>()])
 void main() {
   late MockConnectivityService mockConnectivityService;
   late StreamController<ConnectionStatus> statusController;

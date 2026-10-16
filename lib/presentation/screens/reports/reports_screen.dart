@@ -1,21 +1,27 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/budget_vs_actual_chart.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/report_category_filter.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/report_date_selector.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/report_notes_section.dart';
+import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
 import 'package:ledger_zero/presentation/widgets/charts/multi_line_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/pie_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/simple_bar_chart.dart';
-import 'package:ledger_zero/app/theme.dart';
+import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
+import 'package:ledger_zero/services/export/csv_sanitizer.dart';
 import 'package:ledger_zero/services/reports/report_export_service.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 enum ReportType {
   spendingTrends,
@@ -28,6 +34,10 @@ enum ReportType {
 }
 
 enum ExportFormat { csv, pdf, image }
+
+/// `yyyy-MM-dd` of a calendar day, for machine readable exports.
+String _isoDay(DateTime day) =>
+    '${CalendarDate.monthKey(day)}-${day.day.toString().padLeft(2, '0')}';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -86,33 +96,33 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       dynamic data;
       switch (type) {
         case ReportType.spendingTrends:
-          data = ref.read(spendingTrendsProvider).valueOrNull;
+          data = await _readOnce(spendingTrendsProvider);
           break;
         case ReportType.spendingByCategory:
-          data = ref.read(spendingByCategoryProvider).valueOrNull;
+          data = await _readOnce(spendingByCategoryProvider);
           break;
         case ReportType.categoryBreakdown:
-          data = ref.read(spendingByCategoryProvider).valueOrNull;
+          data = await _readOnce(spendingByCategoryProvider);
           break;
         case ReportType.incomeVsExpense:
-          data = ref.read(incomeVsExpenseHistoryProvider).valueOrNull;
+          data = await _readOnce(incomeVsExpenseHistoryProvider);
           break;
         case ReportType.netWorth:
-          data = ref.read(netWorthHistoryProvider).valueOrNull;
+          data = await _readOnce(netWorthHistoryProvider);
           break;
         case ReportType.topPayees:
-          data = ref.read(topPayeesProvider).valueOrNull;
+          data = await _readOnce(topPayeesProvider);
           break;
         case ReportType.budgetVsActual:
-          data = ref.read(budgetVsActualProvider).valueOrNull;
+          data = await _readOnce(budgetVsActualProvider);
           break;
       }
 
       if (data == null && format == ExportFormat.csv) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.exportFailed('No data available'))),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.reportNoDataToExport)));
         }
         return;
       }
@@ -146,31 +156,31 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         // PDF Export
         List<String> headers = [];
         List<List<String>> rows = [];
-        final currency = ref.read(settingsProvider).currency;
-        final currencyFormat = NumberFormat.simpleCurrency(name: currency);
-        final dateFormat = DateFormat.yMMMd();
+        final fmt = ref.read(appFormatterProvider);
 
         // Convert data to table format
-        if (data is Map<String, double>) {
+        if (data is Map<String, int>) {
           headers = [l10n.category, l10n.amount];
           rows = data.entries
-              .map((e) => [e.key, currencyFormat.format(e.value)])
+              .map((e) => [e.key, fmt.formatMoney(e.value)])
               .toList();
-        } else if (data is Map<DateTime, double>) {
+        } else if (data is Map<DateTime, int>) {
           headers = [l10n.date, l10n.amount];
           rows = data.entries
               .map(
-                (e) => [
-                  dateFormat.format(e.key),
-                  currencyFormat.format(e.value),
-                ],
+                (e) => [fmt.formatMonthYear(e.key), fmt.formatMoney(e.value)],
               )
               .toList();
-        } else if (data is List<MapEntry<String, double>>) {
+        } else if (data is List<MapEntry<String, int>>) {
           headers = [l10n.payee, l10n.amount];
-          rows = data
-              .map((e) => [e.key, currencyFormat.format(e.value)])
-              .toList();
+          rows = data.map((e) => [e.key, fmt.formatMoney(e.value)]).toList();
+        } else if (data is List<ChartSeries>) {
+          headers = [l10n.series, l10n.date, l10n.amount];
+          rows = [
+            for (final series in data)
+              for (final p in series.points)
+                [series.name, fmt.formatDate(p.date), fmt.formatMoney(p.value)],
+          ];
         } else if (type == ReportType.budgetVsActual &&
             data is List<BudgetVsActualItem>) {
           headers = [l10n.category, l10n.budgeted, l10n.activity];
@@ -178,14 +188,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               .map(
                 (e) => [
                   e.categoryName,
-                  currencyFormat.format(e.budgeted),
-                  currencyFormat.format(e.actual),
+                  fmt.formatMoney(e.budgeted),
+                  fmt.formatMoney(e.actual),
                 ],
               )
               .toList();
         } else {
           // Fallback for types not explicitly handled or complex types
-          headers = ['Data'];
+          headers = [l10n.reportPdfDataColumn];
           rows = [
             [data.toString()],
           ];
@@ -196,36 +206,87 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           headers: headers,
           data: rows,
           filename: '${type.name}_export',
+          labels: ReportPdfLabels(
+            createdOn: l10n.reportPdfCreatedOn(
+              fmt.formatDate(CalendarDate.today()),
+            ),
+            footer: l10n.reportPdfFooter,
+            pageOf: l10n.reportPdfPageOf,
+            shareText: l10n.reportShareText(title),
+          ),
         );
       } else if (format == ExportFormat.image && imageBytes != null) {
-        await service.shareImage(imageBytes, '${type.name}_chart');
+        await service.shareImage(
+          imageBytes,
+          '${type.name}_chart',
+          shareText: l10n.reportShareText(title),
+        );
       } else if (format == ExportFormat.csv && csvHeaders != null) {
-        // CSV Export Logic (existing)
+        // CSV: machine readable amounts (major units, '.' separator).
         final List<List<dynamic>> rows = [csvHeaders];
-        if (data is Map<String, double>) {
-          rows.addAll(data.entries.map((e) => [e.key, e.value]));
-        } else if (data is Map<DateTime, double>) {
+        if (data is Map<String, int>) {
           rows.addAll(
-            data.entries.map((e) => [e.key.toIso8601String(), e.value]),
+            data.entries.map(
+              (e) => [e.key, CsvLiteral(Money.toDecimalString(e.value))],
+            ),
           );
-        } else if (data is List<MapEntry<String, double>>) {
-          rows.addAll(data.map((e) => [e.key, e.value]));
+        } else if (data is Map<DateTime, int>) {
+          rows.addAll(
+            data.entries.map(
+              (e) => [
+                CsvLiteral(_isoDay(e.key)),
+                CsvLiteral(Money.toDecimalString(e.value)),
+              ],
+            ),
+          );
+        } else if (data is List<MapEntry<String, int>>) {
+          rows.addAll(
+            data.map(
+              (e) => [e.key, CsvLiteral(Money.toDecimalString(e.value))],
+            ),
+          );
+        } else if (data is List<ChartSeries>) {
+          for (final series in data) {
+            rows.addAll(
+              series.points.map(
+                (p) => [
+                  series.name,
+                  CsvLiteral(_isoDay(p.date)),
+                  CsvLiteral(Money.toDecimalString(p.value)),
+                ],
+              ),
+            );
+          }
+        } else if (data is List<BudgetVsActualItem>) {
+          rows.addAll(
+            data.map(
+              (e) => [
+                e.categoryName,
+                CsvLiteral(Money.toDecimalString(e.budgeted)),
+                CsvLiteral(Money.toDecimalString(e.actual)),
+              ],
+            ),
+          );
         }
-        // ... Add other CSV conversions ...
 
-        await service.shareCsv(rows, '${type.name}_export');
+        await service.shareCsv(
+          rows,
+          '${type.name}_export',
+          shareText: l10n.reportShareText(title),
+        );
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         // Share plugin handles the feedback usually, but we can show success
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Exporting the report failed', e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.exportFailedGeneric)));
       }
     }
   }
@@ -237,11 +298,31 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
+  /// The current value of a report [provider], computing it if needed and
+  /// keeping it alive until it is read.
+  Future<T> _readOnce<T>(ProviderListenable<AsyncValue<T>> provider) async {
+    final completer = Completer<T>();
+    final subscription = ref.listenManual<AsyncValue<T>>(provider, (_, next) {
+      if (!completer.isCompleted && !next.isLoading) {
+        next.when(
+          data: completer.complete,
+          error: completer.completeError,
+          loading: () {},
+        );
+      }
+    }, fireImmediately: true);
+    try {
+      return await completer.future;
+    } finally {
+      subscription.close();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final dateRange = ref.watch(reportDateRangeProvider);
-    final dateFormat = DateFormat.yMMMd();
+    final fmt = ref.watch(appFormatterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -264,7 +345,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             children: [
               // Date Range Display
               Text(
-                '${dateFormat.format(dateRange.start)} - ${dateFormat.format(dateRange.end)}',
+                '${fmt.formatDate(dateRange.start)} - ${fmt.formatDate(dateRange.end)}',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -274,10 +355,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Spending Trends (Compare Months)
-              Text(
-                l10n.spendingTrends,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _SectionTitle(l10n.spendingTrends),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.spendingTrends],
@@ -291,10 +369,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Spending by Category (Bar Chart)
-              Text(
-                l10n.spendingByCategory,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _SectionTitle(l10n.spendingByCategory),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.spendingByCategory],
@@ -306,10 +381,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Category Breakdown (Pie Chart)
-              Text(
-                l10n.categoryBreakdown,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _SectionTitle(l10n.categoryBreakdown),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.categoryBreakdown],
@@ -321,10 +393,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Income vs Expense
-              Text(
-                l10n.incomeVsExpense,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _SectionTitle(l10n.incomeVsExpense),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.incomeVsExpense],
@@ -336,10 +405,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Net Worth
-              Text(
-                l10n.netWorth,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _SectionTitle(l10n.netWorth),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.netWorth],
@@ -351,10 +417,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Top Payees
-              Text(
-                l10n.topPayees,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _SectionTitle(l10n.topPayees),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.topPayees],
@@ -366,10 +429,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 32),
 
               // Budget vs Actual
-              Text(
-                'Budget vs Actual',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              _SectionTitle(l10n.budgetVsActual),
               const SizedBox(height: 16),
               RepaintBoundary(
                 key: _chartKeys[ReportType.budgetVsActual],
@@ -495,11 +555,26 @@ class _ExportDialogState extends State<_ExportDialog> {
   }
 }
 
-// ... existing chart widgets ...
+/// A report section heading, announced as a header by screen readers.
+class _SectionTitle extends StatelessWidget {
+  final String title;
+
+  const _SectionTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      header: true,
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+    );
+  }
+}
+
 class _SpendingTrendsChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trendsAsync = ref.watch(spendingTrendsProvider);
+    final fmt = ref.watch(appFormatterProvider);
 
     return trendsAsync.when(
       data: (data) {
@@ -513,23 +588,21 @@ class _SpendingTrendsChart extends ConsumerWidget {
         }
 
         final sortedKeys = data.keys.toList()..sort();
-        final chartData = <String, double>{};
+        final chartData = <String, int>{};
 
         // If range spans multiple years, show year in label
-        final multiYear =
-            data.keys.isNotEmpty &&
-            (data.keys.first.year != data.keys.last.year);
+        final multiYear = sortedKeys.first.year != sortedKeys.last.year;
 
         for (var date in sortedKeys) {
           final label = multiYear
-              ? DateFormat.yMMM().format(date)
-              : DateFormat.MMM().format(date);
+              ? fmt.formatMonthYearShort(date)
+              : fmt.formatMonthShort(date);
           chartData[label] = data[date]!;
         }
 
         return SimpleBarChart(
           data: chartData,
-          barColor: AppColors.secondaryLight,
+          barColor: ChartPalette.of(context).secondaryBar,
           labelColor: Theme.of(context).colorScheme.onSurface,
           preserveOrder: true,
         );
@@ -538,8 +611,10 @@ class _SpendingTrendsChart extends ConsumerWidget {
         height: 200,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, st) =>
-          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      error: (e, st) => SizedBox(
+        height: 200,
+        child: LoadErrorView(error: e, stackTrace: st, compact: true),
+      ),
     );
   }
 }
@@ -552,15 +627,17 @@ class _SpendingChart extends ConsumerWidget {
     return spendingAsync.when(
       data: (data) => SimpleBarChart(
         data: data,
-        barColor: AppColors.primaryLight,
+        barColor: ChartPalette.of(context).bar,
         labelColor: Theme.of(context).colorScheme.onSurface,
       ),
       loading: () => const SizedBox(
         height: 200,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, st) =>
-          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      error: (e, st) => SizedBox(
+        height: 200,
+        child: LoadErrorView(error: e, stackTrace: st, compact: true),
+      ),
     );
   }
 }
@@ -579,8 +656,10 @@ class _CategoryPieChart extends ConsumerWidget {
         height: 300,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, st) =>
-          SizedBox(height: 300, child: Center(child: Text('Error: $e'))),
+      error: (e, st) => SizedBox(
+        height: 300,
+        child: LoadErrorView(error: e, stackTrace: st, compact: true),
+      ),
     );
   }
 }
@@ -600,8 +679,10 @@ class _IncomeExpenseChart extends ConsumerWidget {
         height: 200,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, st) =>
-          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      error: (e, st) => SizedBox(
+        height: 200,
+        child: LoadErrorView(error: e, stackTrace: st, compact: true),
+      ),
     );
   }
 }
@@ -621,8 +702,10 @@ class _NetWorthChart extends ConsumerWidget {
         height: 200,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, st) =>
-          SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
+      error: (e, st) => SizedBox(
+        height: 200,
+        child: LoadErrorView(error: e, stackTrace: st, compact: true),
+      ),
     );
   }
 }
@@ -631,11 +714,7 @@ class _TopPayeesList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final payeesAsync = ref.watch(topPayeesProvider);
-    final currency = ref.watch(settingsProvider).currency;
-    final currencyFormat = NumberFormat.simpleCurrency(
-      decimalDigits: 0,
-      name: currency,
-    );
+    final fmt = ref.watch(appFormatterProvider);
 
     return payeesAsync.when(
       data: (data) {
@@ -654,7 +733,7 @@ class _TopPayeesList extends ConsumerWidget {
               return ListTile(
                 title: Text(entry.key),
                 trailing: Text(
-                  currencyFormat.format(entry.value),
+                  fmt.formatMoney(entry.value),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -670,8 +749,10 @@ class _TopPayeesList extends ConsumerWidget {
         height: 100,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, st) =>
-          SizedBox(height: 100, child: Center(child: Text('Error: $e'))),
+      error: (e, st) => SizedBox(
+        height: 100,
+        child: LoadErrorView(error: e, stackTrace: st, compact: true),
+      ),
     );
   }
 }

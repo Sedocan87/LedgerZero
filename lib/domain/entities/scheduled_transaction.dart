@@ -29,8 +29,8 @@ class ScheduledTransaction {
   /// The unique identifier of the category associated with this scheduled transaction.
   final String? categoryId;
 
-  /// The amount of the scheduled transaction.
-  final double? amount;
+  /// The amount of the scheduled transaction in minor units.
+  final int? amount;
 
   /// The frequency of recurrence.
   final RecurrenceFrequency? frequency;
@@ -53,6 +53,14 @@ class ScheduledTransaction {
   /// The date and time when the scheduled transaction was created.
   final DateTime? createdAt;
 
+  /// Memo copied to every generated transaction.
+  final String? memo;
+
+  /// Day of month (1-31) that monthly and yearly occurrences aim for. A
+  /// short month clamps one occurrence (Jan 31 -> Feb 28) but the next one
+  /// returns to the anchor (-> Mar 31). `null` means the day of [nextDate].
+  final int? anchorDay;
+
   /// Creates a new [ScheduledTransaction] instance.
   const ScheduledTransaction({
     required this.id,
@@ -67,6 +75,8 @@ class ScheduledTransaction {
     this.endDate,
     this.autoApprove = false,
     this.createdAt,
+    this.memo,
+    this.anchorDay,
   });
 
   /// Creates a copy of this [ScheduledTransaction] but with the given fields replaced with the new values.
@@ -75,7 +85,7 @@ class ScheduledTransaction {
     String? accountId,
     String? payeeId,
     String? categoryId,
-    double? amount,
+    int? amount,
     RecurrenceFrequency? frequency,
     int? interval,
     int? occurrenceCount,
@@ -83,6 +93,9 @@ class ScheduledTransaction {
     DateTime? endDate,
     bool? autoApprove,
     DateTime? createdAt,
+    String? memo,
+    int? anchorDay,
+    bool clearNextDate = false,
   }) {
     return ScheduledTransaction(
       id: id ?? this.id,
@@ -93,10 +106,12 @@ class ScheduledTransaction {
       frequency: frequency ?? this.frequency,
       interval: interval ?? this.interval,
       occurrenceCount: occurrenceCount ?? this.occurrenceCount,
-      nextDate: nextDate ?? this.nextDate,
+      nextDate: clearNextDate ? null : (nextDate ?? this.nextDate),
       endDate: endDate ?? this.endDate,
       autoApprove: autoApprove ?? this.autoApprove,
       createdAt: createdAt ?? this.createdAt,
+      memo: memo ?? this.memo,
+      anchorDay: anchorDay ?? this.anchorDay,
     );
   }
 
@@ -107,7 +122,7 @@ class ScheduledTransaction {
       accountId: json['account_id'] as String?,
       payeeId: json['payee_id'] as String?,
       categoryId: json['category_id'] as String?,
-      amount: (json['amount'] as num?)?.toDouble(),
+      amount: (json['amount'] as num?)?.toInt(),
       frequency: json['frequency'] != null
           ? RecurrenceFrequency.values.firstWhere(
               (e) => e.name == json['frequency'],
@@ -125,6 +140,8 @@ class ScheduledTransaction {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
+      memo: json['memo'] as String?,
+      anchorDay: (json['anchor_day'] as num?)?.toInt(),
     );
   }
 
@@ -143,6 +160,8 @@ class ScheduledTransaction {
       'end_date': endDate?.toIso8601String(),
       'auto_approve': autoApprove,
       'created_at': createdAt?.toIso8601String(),
+      'memo': memo,
+      'anchor_day': anchorDay,
     };
   }
 
@@ -164,7 +183,9 @@ class ScheduledTransaction {
         other.nextDate == nextDate &&
         other.endDate == endDate &&
         other.autoApprove == autoApprove &&
-        other.createdAt == createdAt;
+        other.createdAt == createdAt &&
+        other.memo == memo &&
+        other.anchorDay == anchorDay;
   }
 
   @override
@@ -182,12 +203,14 @@ class ScheduledTransaction {
       endDate,
       autoApprove,
       createdAt,
+      memo,
+      anchorDay,
     );
   }
 
   @override
   String toString() {
-    return 'ScheduledTransaction(id: $id, accountId: $accountId, payeeId: $payeeId, categoryId: $categoryId, amount: $amount, frequency: $frequency, interval: $interval, occurrenceCount: $occurrenceCount, nextDate: $nextDate, endDate: $endDate, autoApprove: $autoApprove, createdAt: $createdAt)';
+    return 'ScheduledTransaction(id: $id, accountId: $accountId, payeeId: $payeeId, categoryId: $categoryId, amount: $amount, frequency: $frequency, interval: $interval, occurrenceCount: $occurrenceCount, nextDate: $nextDate, endDate: $endDate, autoApprove: $autoApprove, createdAt: $createdAt, memo: $memo, anchorDay: $anchorDay)';
   }
 
   /// Validates the [ScheduledTransaction] entity.
@@ -195,7 +218,7 @@ class ScheduledTransaction {
   /// Returns a list of error messages. If the list is empty, the entity is valid.
   List<String> validate() {
     final errors = <String>[];
-    if (amount != null && amount == 0.0) {
+    if (amount != null && amount == 0) {
       errors.add('Scheduled transaction amount cannot be zero');
     }
     if (nextDate != null && endDate != null && endDate!.isBefore(nextDate!)) {
@@ -203,6 +226,9 @@ class ScheduledTransaction {
     }
     if (interval != null && interval! < 1) {
       errors.add('Interval must be at least 1');
+    }
+    if (anchorDay != null && (anchorDay! < 1 || anchorDay! > 31)) {
+      errors.add('Anchor day must be between 1 and 31');
     }
     if (occurrenceCount != null && occurrenceCount! < 1) {
       errors.add('Occurrence count must be at least 1');

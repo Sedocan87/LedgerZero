@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class ToBeBudgetedBanner extends ConsumerWidget {
   const ToBeBudgetedBanner({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tbbAsync = ref.watch(tbbProvider);
-    final currency = ref.watch(settingsProvider).currency;
+    final tbbAsync = ref.watch(
+      tbbProvider(ref.watch(selectedBudgetMonthProvider)),
+    );
+    final fmt = ref.watch(appFormatterProvider);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -33,24 +36,27 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                 Tooltip(
                   message: AppLocalizations.of(context)!.tbbTooltip,
                   triggerMode: TooltipTriggerMode.tap,
-                  child: Icon(
-                    Icons.help_outline,
-                    size: 16,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+                  // 16 px icon, 48 x 48 tap target.
+                  child: SizedBox.square(
+                    dimension: kMinInteractiveDimension,
+                    child: Icon(
+                      Icons.help_outline,
+                      size: 16,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             tbbAsync.when(
               data: (tbb) {
-                final textWidget = Text(
-                  NumberFormat.simpleCurrency(
-                    decimalDigits: 2,
-                    name: currency,
-                  ).format(tbb),
+                final formatted = fmt.formatMoney(tbb);
+                final textWidget = AmountText(
+                  tbb,
+                  amountContext: AmountContext.toBeBudgeted,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: tbb >= 0
                         ? Colors.green.shade700
@@ -63,7 +69,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                   return textWidget;
                 }
 
-                return LongPressDraggable<double>(
+                return LongPressDraggable<int>(
                   data: tbb,
                   feedback: Material(
                     color: Colors.transparent,
@@ -81,10 +87,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                         ],
                       ),
                       child: Text(
-                        NumberFormat.simpleCurrency(
-                          decimalDigits: 2,
-                          name: currency,
-                        ).format(tbb),
+                        formatted,
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                     ),
@@ -98,10 +101,8 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                 width: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              error: (err, stack) => Text(
-                'Error',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+              error: (err, stack) =>
+                  LoadErrorView(error: err, stackTrace: stack, compact: true),
             ),
           ],
         ),

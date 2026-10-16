@@ -15,8 +15,7 @@ class PerformanceMonitor {
       return;
     }
 
-    // ignore: avoid_print
-    print('Starting Performance Monitor...');
+    Logger.debug('Starting performance monitor');
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
     _isMonitoring = true;
   }

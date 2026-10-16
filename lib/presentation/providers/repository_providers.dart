@@ -1,23 +1,26 @@
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/data/database/drift_unit_of_work.dart';
 import 'package:ledger_zero/data/repositories/account_repository_impl.dart';
+import 'package:ledger_zero/data/repositories/reference_maintenance_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/budget_template_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/category_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/import_profile_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/payee_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/parsing_history_repository_impl.dart';
-import 'package:ledger_zero/data/repositories/parsing_rules_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/report_note_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/rule_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/scheduled_transaction_repository_impl.dart';
 import 'package:ledger_zero/data/repositories/transaction_repository_impl.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
+import 'package:ledger_zero/domain/repositories/reference_maintenance_repository.dart';
+import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/import_profile_repository.dart';
 import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
-import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/report_note_repository.dart';
 import 'package:ledger_zero/domain/repositories/rule_repository.dart';
@@ -82,24 +85,42 @@ final parsingHistoryRepositoryProvider = Provider<ParsingHistoryRepository>((
   return ParsingHistoryRepositoryImpl(ref.watch(parsingHistoryDaoProvider));
 });
 
-/// Provides the [ParsingRulesRepository].
-final parsingRulesRepositoryProvider = Provider<ParsingRulesRepository>((ref) {
-  return ParsingRulesRepositoryImpl(ref.watch(parsingRulesDaoProvider));
+/// Provides the [UnitOfWork] that makes multi-step domain writes atomic.
+final unitOfWorkProvider = Provider<UnitOfWork>((ref) {
+  return DriftUnitOfWork(ref.watch(databaseProvider));
 });
+
+/// Provides the [ReferenceMaintenanceRepository] (bulk reference cleanup for
+/// deletes and merges).
+final referenceMaintenanceRepositoryProvider =
+    Provider<ReferenceMaintenanceRepository>((ref) {
+      return ReferenceMaintenanceRepositoryImpl(ref.watch(databaseProvider));
+    });
 
 final importProfileRepositoryProvider = Provider<ImportProfileRepository>((
   ref,
 ) {
-  return ImportProfileRepositoryImpl(ref.read(databaseProvider));
+  return ImportProfileRepositoryImpl(ref.watch(databaseProvider));
 });
 
-/// Watches for any changes in the transactions table.
-final transactionUpdateTriggerProvider = StreamProvider<void>((ref) {
-  return ref.watch(transactionRepositoryProvider).watchAllTransactions();
+/// A cheap "the ledger changed" signal: emits an increasing revision after
+/// every committed write to the tables budget numbers and reports are
+/// computed from (transactions, accounts, budgets, categories, category
+/// groups, payees). It carries no rows; providers that compute derived
+/// numbers `ref.watch` it to recompute. Not emitted initially.
+final ledgerChangesProvider = StreamProvider<int>((ref) {
+  final db = ref.watch(databaseProvider);
+  var revision = 0;
+  return db
+      .tableUpdates(
+        TableUpdateQuery.onAllTables([
+          db.transactions,
+          db.accounts,
+          db.budgets,
+          db.categories,
+          db.categoryGroups,
+          db.payees,
+        ]),
+      )
+      .map((_) => ++revision);
 });
-
-/// Watches for budget changes for a specific month.
-final budgetUpdateTriggerProvider = StreamProvider.autoDispose
-    .family<void, String>((ref, monthStr) {
-      return ref.watch(budgetRepositoryProvider).watchBudgetsForMonth(monthStr);
-    });

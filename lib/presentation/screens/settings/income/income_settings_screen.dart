@@ -1,43 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
-import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/providers/scheduled_transaction_provider.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/picker_field.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/pickers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/presentation/widgets/recurrence/recurrence_selector.dart';
 import 'package:uuid/uuid.dart';
 
+/// Colour of inflow amounts on this screen.
+const _incomeColor = Colors.green;
+
+/// Lists every recurring inflow (scheduled transactions with a positive
+/// amount), whether it goes to Ready to Assign or to a category.
 class IncomeSettingsScreen extends ConsumerWidget {
   const IncomeSettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduledTransactionsAsync = ref.watch(scheduledTransactionsProvider);
-    final payeeMapAsync = ref.watch(payeeMapProvider);
     final l10n = AppLocalizations.of(context)!;
-    final currency = ref.watch(settingsProvider).currency;
+    final fmt = ref.watch(appFormatterProvider);
+    final accountCurrencies = {
+      for (final a
+          in ref.watch(accountsProvider).valueOrNull ?? const <Account>[])
+        a.id: a.currency,
+    };
+    final payeeNames = {
+      for (final p in ref.watch(payeesProvider).valueOrNull ?? const <Payee>[])
+        p.id: p.name,
+    };
+    final categoryNames = {
+      for (final c
+          in ref.watch(categoriesProvider).valueOrNull ?? const <Category>[])
+        c.id: c.name,
+    };
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.incomeAndSalaries)),
       body: scheduledTransactionsAsync.when(
         data: (transactions) {
-          // Filter for Income: Amount > 0 and (Category is NULL)
-          // Assumption: Recurring income usually doesn't have a category (goes to TBB)
-          // or we can allow users to select "Inflow" categories later.
-          // For now, strict filter for Null Category + Positive Amount to capture "TBB" income.
-          final incomeTransactions = transactions.where((t) {
-            final isPositive = (t.amount ?? 0) > 0;
-            final isUncategorized = t.categoryId == null;
-            return isPositive && isUncategorized;
-          }).toList();
+          final incomeTransactions = transactions
+              .where((t) => (t.amount ?? 0) > 0)
+              .toList();
 
           if (incomeTransactions.isEmpty) {
             return Center(
@@ -51,13 +68,13 @@ class IncomeSettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No recurring income set up',
+                    l10n.incomeEmpty,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed: () => _showAddIncomeSheet(context, ref),
-                    child: const Text('Add Salary / Income'),
+                    onPressed: () => _showAddIncomeSheet(context),
+                    child: Text(l10n.incomeAddTitle),
                   ),
                 ],
               ),
@@ -69,58 +86,88 @@ class IncomeSettingsScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final transaction = incomeTransactions[index];
               final payeeName =
-                  payeeMapAsync.value?[transaction.payeeId] ?? 'Unknown Source';
+                  payeeNames[transaction.payeeId] ?? l10n.incomeUnknownSource;
+              final categoryName = categoryNames[transaction.categoryId];
+              final recurrence = _formatRecurrence(transaction, fmt, l10n);
 
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.green.withValues(alpha: 0.1),
-                  child: const Icon(Icons.arrow_downward, color: Colors.green),
+                  backgroundColor: _incomeColor.withValues(alpha: 0.1),
+                  child: const Icon(Icons.arrow_downward, color: _incomeColor),
                 ),
                 title: Text(payeeName),
-                subtitle: Text(_formatRecurrence(transaction, l10n)),
+                subtitle: Text(
+                  categoryName == null
+                      ? recurrence
+                      : '$categoryName · $recurrence',
+                ),
                 trailing: Text(
-                  NumberFormat.simpleCurrency(
-                    name: currency,
-                  ).format(transaction.amount),
+                  fmt.formatMoney(
+                    transaction.amount ?? 0,
+                    currencyCode: accountCurrencies[transaction.accountId],
+                  ),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.green,
+                    color: _incomeColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                onTap: () {
-                  // For now, just allow deleting or basic editing?
-                  // Linking to full edit might be safer:
-                  // context.pushNamed('edit-scheduled-transaction', pathParameters: {'id': transaction.id});
-                  // Or show our simplified sheet for editing.
-                  _showAddIncomeSheet(context, ref, transaction: transaction);
-                },
+                onTap: () =>
+                    _showAddIncomeSheet(context, transaction: transaction),
               );
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) {
+          Logger.error('Failed to load recurring income', err, stack);
+          return Center(child: Text(l10n.errorOccurred));
+        },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddIncomeSheet(context, ref),
+        heroTag: 'income-settings-fab',
+        onPressed: () => _showAddIncomeSheet(context),
         icon: const Icon(Icons.add),
-        label: const Text('Add Income'),
+        label: Text(l10n.incomeAddButton),
       ),
     );
   }
 
-  String _formatRecurrence(ScheduledTransaction t, AppLocalizations l10n) {
-    // Simple formatter, can be improved
-    final freq = t.frequency?.name ?? 'Unknown';
-    return '$freq - Next: ${DateFormat.MMMd().format(t.nextDate ?? DateTime.now())}';
+  String _formatRecurrence(
+    ScheduledTransaction t,
+    AppFormatter fmt,
+    AppLocalizations l10n,
+  ) {
+    final frequency = t.frequency ?? RecurrenceFrequency.monthly;
+    final interval = t.interval ?? 1;
+    final String every;
+    if (interval <= 1) {
+      every = switch (frequency) {
+        RecurrenceFrequency.daily => l10n.daily,
+        RecurrenceFrequency.weekly => l10n.weekly,
+        RecurrenceFrequency.monthly => l10n.monthly,
+        RecurrenceFrequency.yearly => l10n.yearly,
+      };
+    } else {
+      final unit = switch (frequency) {
+        RecurrenceFrequency.daily => l10n.unitDays(interval),
+        RecurrenceFrequency.weekly => l10n.unitWeeks(interval),
+        RecurrenceFrequency.monthly => l10n.unitMonths(interval),
+        RecurrenceFrequency.yearly => l10n.unitYears(interval),
+      };
+      every = l10n.recurrenceEvery(interval, unit);
+    }
+    final next = t.nextDate;
+    if (next == null) {
+      return every;
+    }
+    return '$every · ${l10n.labelValue(l10n.nextDate, fmt.formatDate(next))}';
   }
 
   void _showAddIncomeSheet(
-    BuildContext context,
-    WidgetRef ref, {
+    BuildContext context, {
     ScheduledTransaction? transaction,
   }) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -154,12 +201,14 @@ class AddIncomeSheet extends ConsumerStatefulWidget {
 
 class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _amountController;
+  final _nameController = TextEditingController();
+  final _amountController = TextEditingController();
 
   String? _selectedAccountId;
   RecurrenceFrequency _frequency = RecurrenceFrequency.monthly;
-  DateTime _nextDate = DateTime.now();
+
+  /// Next occurrence (calendar day, UTC midnight).
+  DateTime _nextDate = CalendarDate.today();
   int _interval = 1;
   DateTime? _endDate;
   int? _occurrenceCount;
@@ -169,38 +218,47 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController();
-    _amountController = TextEditingController();
-
-    // Initialize if editing
-    if (widget.transaction != null) {
-      _amountController.text = (widget.transaction!.amount ?? 0).toString();
-      _frequency = widget.transaction!.frequency ?? RecurrenceFrequency.monthly;
-      _nextDate = widget.transaction!.nextDate ?? DateTime.now();
-      _selectedAccountId = widget.transaction!.accountId;
-      _interval = widget.transaction!.interval ?? 1;
-      _endDate = widget.transaction!.endDate;
-      _occurrenceCount = widget.transaction!.occurrenceCount;
+    final existing = widget.transaction;
+    if (existing != null) {
+      _amountController.text = ref
+          .read(appFormatterProvider)
+          .formatAmountForInput(existing.amount ?? 0);
+      _frequency = existing.frequency ?? RecurrenceFrequency.monthly;
+      _nextDate = existing.nextDate != null
+          ? CalendarDate.normalize(existing.nextDate!)
+          : CalendarDate.today();
+      _selectedAccountId = existing.accountId;
+      _interval = existing.interval ?? 1;
+      _endDate = existing.endDate;
+      _occurrenceCount = existing.occurrenceCount;
     }
+    _loadDefaults();
   }
 
-  // ... (didChangeDependencies logic stays same if valid, but let's just replace the build block mostly)
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.transaction != null && _nameController.text.isEmpty) {
-      final payeeMap = ref.read(payeeMapProvider).value;
-      if (payeeMap != null && widget.transaction!.payeeId != null) {
-        _nameController.text = payeeMap[widget.transaction!.payeeId!] ?? '';
+  /// Fills the source name of an existing schedule and preselects the first
+  /// open account for a new one.
+  Future<void> _loadDefaults() async {
+    try {
+      final payeeId = widget.transaction?.payeeId;
+      if (payeeId != null) {
+        final payee = await ref
+            .read(payeeRepositoryProvider)
+            .getPayeeById(payeeId);
+        if (mounted && payee != null && _nameController.text.isEmpty) {
+          _nameController.text = payee.name;
+        }
       }
-    }
-
-    if (_selectedAccountId == null) {
-      final accounts = ref.read(accountMapProvider).value;
-      if (accounts != null && accounts.isNotEmpty) {
-        _selectedAccountId = accounts.keys.first;
+      if (_selectedAccountId == null) {
+        final accounts = await ref
+            .read(accountRepositoryProvider)
+            .getAllAccounts();
+        final first = accounts.where((a) => !a.isClosed).firstOrNull;
+        if (mounted && first != null && _selectedAccountId == null) {
+          setState(() => _selectedAccountId = first.id);
+        }
       }
+    } catch (e, stack) {
+      Logger.error('Failed to load income defaults', e, stack);
     }
   }
 
@@ -220,61 +278,63 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
 
     try {
       final payeeRepo = ref.read(payeeRepositoryProvider);
-      final transactionRepo = ref.read(scheduledTransactionRepositoryProvider);
+      final amount = ref
+          .read(appFormatterProvider)
+          .parseAmount(_amountController.text);
 
-      // 1. Handle Payee (Create or Find)
-      String? payeeId = widget.transaction?.payeeId;
+      // Link to an existing payee with the same name, else create one.
       final name = _nameController.text.trim();
-
-      // Simple logic: if name is different or new, checking existing.
-      // This might link to an existing payee even if user intended a new one with same name (which is good).
       final existingPayees = await payeeRepo.getAllPayees();
       final match = existingPayees
           .where((p) => p.name.toLowerCase() == name.toLowerCase())
           .firstOrNull;
-
+      final String payeeId;
       if (match != null) {
         payeeId = match.id;
       } else {
-        // Create new
         payeeId = const Uuid().v4();
         await payeeRepo.createPayee(
-          Payee(id: payeeId, name: name, createdAt: DateTime.now()),
+          Payee(id: payeeId, name: name, createdAt: DateTime.now().toUtc()),
         );
       }
 
-      // 2. Create/Update Scheduled Transaction
+      final existing = widget.transaction;
       final t = ScheduledTransaction(
-        id: widget.transaction?.id ?? const Uuid().v4(),
+        id: existing?.id ?? const Uuid().v4(),
         accountId: _selectedAccountId,
         payeeId: payeeId,
-        categoryId: null, // Income / Ready to Assign
-        amount: double.parse(_amountController.text),
+        // New income goes to Ready to Assign; an edited schedule keeps its
+        // category.
+        categoryId: existing?.categoryId,
+        amount: amount,
         frequency: _frequency,
         interval: _interval,
         occurrenceCount: _occurrenceCount,
         nextDate: _nextDate,
         endDate: _endDate,
-        autoApprove: true, // Auto-approve salaries usually desired
-        createdAt: widget.transaction?.createdAt ?? DateTime.now(),
+        // Salaries are usually wanted without manual approval.
+        autoApprove: existing?.autoApprove ?? true,
+        memo: existing?.memo,
+        anchorDay: existing?.anchorDay ?? _nextDate.day,
+        createdAt: existing?.createdAt ?? DateTime.now().toUtc(),
       );
 
-      if (widget.transaction != null) {
-        await transactionRepo.updateScheduledTransaction(t);
-      } else {
-        await transactionRepo.createScheduledTransaction(t);
-      }
-
-      ref.invalidate(scheduledTransactionsProvider);
+      // Validates the amount, stores the schedule and its reminder.
+      await ref
+          .read(scheduledTransactionServiceProvider)
+          .saveScheduledTransaction(t, isNew: existing == null);
 
       if (mounted) {
-        context.pop();
+        Navigator.of(context).pop();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      Logger.error('Failed to save recurring income', e, stack);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.incomeSaveFailed),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -285,7 +345,13 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final accountMap = ref.watch(accountMapProvider).value ?? {};
+    final accountNames = {
+      for (final a
+          in ref.watch(accountsProvider).valueOrNull ?? const <Account>[])
+        a.id: a.name,
+    };
+    final fmt = ref.watch(appFormatterProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return ListView(
       controller: widget.scrollController,
@@ -294,14 +360,17 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              widget.transaction == null
-                  ? 'Add Salary / Income'
-                  : 'Edit Income',
-              style: Theme.of(context).textTheme.headlineSmall,
+            Expanded(
+              child: Text(
+                widget.transaction == null
+                    ? l10n.incomeAddTitle
+                    : l10n.incomeEditTitle,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
             ),
             IconButton(
-              onPressed: () => context.pop(),
+              onPressed: () => Navigator.of(context).pop(),
+              tooltip: l10n.cancel,
               icon: const Icon(Icons.close),
             ),
           ],
@@ -313,33 +382,37 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
             children: [
               AppTextField(
                 controller: _nameController,
-                label: 'Source Name (e.g. My Salary)',
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                label: l10n.incomeSourceName,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? l10n.incomeNameRequired
+                    : null,
               ),
               const SizedBox(height: 16),
               AppTextField(
                 controller: _amountController,
-                label: 'Amount',
+                label: l10n.amount,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (v) => v == null || double.tryParse(v) == null
-                    ? 'Invalid Amount'
-                    : null,
+                validator: (v) {
+                  final amount = fmt.parseAmount(v);
+                  return amount == null || amount <= 0
+                      ? l10n.invalidAmount
+                      : null;
+                },
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                key: ValueKey(_selectedAccountId),
-                initialValue: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Deposit Account'),
-                items: accountMap.entries
-                    .map(
-                      (e) =>
-                          DropdownMenuItem(value: e.key, child: Text(e.value)),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
-                validator: (v) => v == null ? 'Required' : null,
+              PickerField(
+                label: l10n.incomeDepositAccount,
+                text: accountNames[_selectedAccountId] ?? '',
+                validator: (_) =>
+                    _selectedAccountId == null ? l10n.selectAccount : null,
+                onTap: () async {
+                  final picked = await showAccountPicker(context);
+                  if (picked != null && mounted) {
+                    setState(() => _selectedAccountId = picked.id);
+                  }
+                },
               ),
               const SizedBox(height: 16),
               RecurrenceSelector(
@@ -358,7 +431,7 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
               SizedBox(
                 width: double.infinity,
                 child: AppButton.primary(
-                  label: 'Save Income',
+                  label: l10n.incomeSaveButton,
                   onPressed: _isLoading ? null : _save,
                 ),
               ),

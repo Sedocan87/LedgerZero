@@ -60,7 +60,7 @@
     "description": "Button label to create an account"
   },
   "accountDetails": "Account Details",
-  "loading": "Loading...",
+  "loading": "Loading…",
   "error": "Error",
   "warning": "Warning",
   "accountNotFound": "Account not found",
@@ -73,41 +73,21 @@
   "reopenAccount": "Reopen Account",
   "reconcileAccount": "Reconcile Account",
   "exportToCsv": "Export to CSV",
-  "deleteAccountConfirmation": "Are you sure you want to delete this account? This cannot be undone.",
   "cancel": "Cancel",
   "delete": "Delete",
-  "exportedTo": "Exported to {path}",
-  "@exportedTo": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "currentBalance": "Current Balance: {balance}",
-  "@currentBalance": {
-      "placeholders": {
-          "balance": {
-              "type": "double",
-              "format": "currency"
-          }
-      }
-  },
   "enterActualBalance": "Enter Actual Balance",
   "discrepancyFound": "Discrepancy Found",
   "discrepancyMessage": "There is a difference of {diff}. Create an adjustment transaction?",
   "@discrepancyMessage": {
-      "placeholders": {
-          "diff": {
-              "type": "String"
-          }
+    "placeholders": {
+      "diff": {
+        "type": "String"
       }
+    }
   },
   "yes": "Yes",
   "no": "No",
   "reconcile": "Reconcile",
-  "accountReconciled": "Account Reconciled!",
-  "adjustmentCreated": "Adjustment created and account reconciled.",
   "amount": "Amount",
   "inflow": "Inflow",
   "outflow": "Outflow",
@@ -143,26 +123,15 @@
   "createCategory": "Create Category",
   "editCategoryGroup": "Edit Category Group",
   "deleteCategoryGroup": "Delete Category Group",
-  "newCategoryGroup": "New Category Group",
   "addCategoryGroup": "Add Category Group",
   "groupName": "Group Name",
   "hideCategory": "Hide Category",
-  "showCategory": "Show Category",
   "hidden": "Hidden",
   "reorderGroups": "Reorder Groups",
   "reorderCategories": "Reorder Categories",
   "color": "Color",
   "icon": "Icon",
-  "categoryHasTransactions": "This category has {count} transactions. Select a new category for them.",
-  "@categoryHasTransactions": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "merge": "Merge",
-  "reassign": "Reassign",
   "search": "Search",
   "export": "Export",
   "import": "Import",
@@ -174,36 +143,14 @@
   "decimalSeparator": "Decimal Separator",
   "dot": "Dot (.)",
   "comma": "Comma (,)",
+  "previousMonth": "Previous month",
+  "nextMonth": "Next month",
+  "numberFormatSystem": "Follow language",
   "negativeValuesAreOutflows": "Negative values are outflows",
   "columnMapping": "Column Mapping",
   "selectColumn": "Select Column",
   "ignore": "Ignore",
   "continueToReview": "Continue to Review",
-  "failedToParseCsv": "Failed to parse CSV: {error}",
-  "@failedToParseCsv": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "errorPickingFile": "Error picking file: {error}",
-  "@errorPickingFile": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "validationPassed": "Validation passed (Simulated)",
-  "pleaseMapColumn": "Please map the \"{column}\" column",
-  "@pleaseMapColumn": {
-    "placeholders": {
-      "column": {
-        "type": "String"
-      }
-    }
-  },
   "budgeted": "Budgeted",
   "activity": "Activity",
   "available": "Available",
@@ -221,10 +168,10 @@
   "budgetTutorialDescription": "Tap on amounts to budget. Use quick actions for auto-assignment.",
   "gotIt": "Got it",
   "total": "Total",
-  "tbbTooltip": "Income minus budgeted amount. This is what you have left to assign.",
+  "tbbTooltip": "Money you have not assigned to a category yet. Budget it until this reaches zero.",
   "budgetedTooltip": "The amount you've assigned to this category for this month.",
-  "activityTooltip": "The sum of all transactions (spending) in this category for this month.",
-  "availableTooltip": "The amount available to spend. Calculated as Budgeted - Activity + Rollover.",
+  "activityTooltip": "The sum of this month's transactions in this category.",
+  "availableTooltip": "What you can still spend: budgeted plus activity plus what carried over from last month.",
   "categoryTooltip": "Name of the category.",
   "assignTo": "Assign to {name}",
   "@assignTo": {
@@ -246,8 +193,6 @@
   "@undo": {
     "description": "Label for undo action"
   },
-  "variance": "Variance",
-  "remaining": "Remaining",
   "overspent": "Overspent",
   "underfunded": "Underfunded",
   "goalTarget": "Goal Target",
@@ -302,16 +247,7 @@
   "pdf": "PDF",
   "image": "Image",
   "share": "Share",
-  "exporting": "Exporting...",
-  "exportSuccess": "Report exported successfully",
-  "exportFailed": "Export failed: {error}",
-  "@exportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "exporting": "Exporting…",
   "budgetVsActual": "Budget vs Actual",
   "filterCategories": "Filter Categories",
   "clear": "Clear",
@@ -329,8 +265,6 @@
   "settings": "Settings",
   "payees": "Payees",
   "payeeName": "Payee Name",
-  "payeeDefaultCategory": "Default Category",
-  "editPayee": "Edit Payee",
   "mergePayee": "Merge Payee",
   "mergePayeeInto": "Merge into {name}",
   "@mergePayeeInto": {
@@ -421,7 +355,6 @@
   "afterOccurrences": "After",
   "occurrences": "Occurrences",
   "recoveryKey": "Recovery Key",
-  "backupRecoveryKey": "Backup Recovery Key",
   "revealRecoveryKey": "Reveal Recovery Key",
   "autoLock": "Auto-lock Timer",
   "autoLockImmediate": "Immediate",
@@ -437,35 +370,28 @@
   "changePassword": "Change Password",
   "currentPassword": "Current Password",
   "newPassword": "New Password",
-  "confirmNewPassword": "Confirm New Password",
-  "passwordChangedSuccess": "Password changed successfully",
   "incorrectPassword": "Incorrect Password",
   "passwordsDoNotMatch": "Passwords do not match",
-  "passwordTooShort": "Password must be at least 8 characters",
   "biometrics": "Biometric Authentication",
   "useBiometricsDescription": "Use Face ID / Fingerprint to unlock",
   "biometricsSetupFailed": "Biometric setup failed",
   "encryptionStatus": "Encryption Status",
   "encrypted": "Encrypted",
-  "notEncrypted": "Not Encrypted",
   "secure": "Secure",
   "securitySettings": "Security Settings",
   "securityAndData": "Security & Data",
   "syncSettings": "Sync Settings",
   "connectToGoogleDrive": "Connect to Google Drive",
-  "disconnectFromGoogleDrive": "Disconnect",
   "syncNow": "Sync Now",
   "googleDriveSync": "Google Drive Sync",
   "lastSynced": "Last Synced: {time}",
   "@lastSynced": {
-      "placeholders": {
-          "time": {
-              "type": "String"
-          }
+    "placeholders": {
+      "time": {
+        "type": "String"
       }
+    }
   },
-  "syncSuccess": "Sync completed successfully",
-  "syncFailed": "Sync failed",
   "iCloudDriveSync": "iCloud Drive Sync",
   "syncProvider": "Sync Provider",
   "connectToICloud": "Connect to iCloud",
@@ -491,8 +417,6 @@
   "create": "Create",
   "parsingTips": "Parsing Tips",
   "parsingTipsDescription": "Type naturally to create transactions.",
-  "examples": "Examples",
-  "appDetects": "The app detects",
   "saveImportProfile": "Save Import Profile",
   "profileName": "Profile Name",
   "profileSaved": "Import profile saved",
@@ -500,7 +424,7 @@
   "deleteProfileConfirmation": "Are you sure you want to delete this profile?",
   "confirmImport": "Confirm Import",
   "confirmImportDescription": "Review and confirm transactions to import.",
-  "importedTransactions": "Imported {count} Transactions",
+  "importedTransactions": "{count, plural, =1{Imported 1 transaction} other{Imported {count} transactions}}",
   "@importedTransactions": {
     "placeholders": {
       "count": {
@@ -509,9 +433,8 @@
     }
   },
   "importSuccess": "Import Successful",
-  "potentialDuplicates": "Potential Duplicates",
   "duplicateWarning": "Warning: This transaction might be a duplicate.",
-  "deduplicationComplete": "Deduplication complete. {count} duplicates found.",
+  "deduplicationComplete": "{count, plural, =0{Duplicate check complete. No duplicates found.} =1{Duplicate check complete. 1 duplicate found.} other{Duplicate check complete. {count} duplicates found.}}",
   "@deduplicationComplete": {
     "placeholders": {
       "count": {
@@ -519,7 +442,6 @@
       }
     }
   },
-  "importCancelled": "Import Cancelled",
   "generalSettings": "General Settings",
   "currency": "Currency",
   "firstDayOfWeek": "First Day of Week",
@@ -530,41 +452,26 @@
   "lightTheme": "Light",
   "darkTheme": "Dark",
   "monday": "Monday",
-  "tuesday": "Tuesday",
-  "wednesday": "Wednesday",
-  "thursday": "Thursday",
-  "friday": "Friday",
   "saturday": "Saturday",
   "sunday": "Sunday",
   "numberFormat": "Number Format",
-  "syncAndBackup": "Sync & Backup",
-  "importFromMint": "Import from Mint",
-  "loadingAccounts": "Loading accounts...",
-  "backupAndRestore": "Backup & Restore",
+  "loadingAccounts": "Loading accounts…",
   "notificationSettings": "Notification Settings",
   "scheduledTransactionNotifications": "Scheduled Transactions",
   "budgetAlertNotifications": "Budget Alerts",
   "syncStatusNotifications": "Sync Status",
   "advancedSettings": "Advanced Settings",
-  "developerMode": "Developer Mode",
-  "databaseStatistics": "Database Statistics",
   "clearCache": "Clear Cache",
   "cacheCleared": "Cache cleared successfully",
   "factoryReset": "Factory Reset",
   "factoryResetConfirmation": "Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone.",
   "factoryResetTitle": "Factory Reset?",
   "factoryResetSuccess": "Factory reset complete. Please restart the app.",
-  "databaseSize": "Database Size",
-  "tableRowCounts": "Table Row Counts",
-  "walSize": "WAL Size",
-  "totalRows": "Total Rows",
   "helpAndSupport": "Help & Support",
   "faq": "FAQ",
   "faqSubtitle": "Frequently asked questions",
   "userGuide": "User Guide",
-  "userGuideSubtitle": "Comprehensive documentation",
-  "videoTutorials": "Video Tutorials",
-  "videoTutorialsSubtitle": "Learn by watching on YouTube",
+  "userGuideSubtitle": "How LedgerZero works",
   "contactSupport": "Contact Support",
   "contactSupportSubtitle": "support@ledgerzero.app",
   "errorOccurred": "An error occurred",
@@ -572,29 +479,2336 @@
   "cacheError": "Failed to load cached data",
   "databaseError": "Database operation failed",
   "syncError": "Synchronization failed",
-  "unknownError": "An unknown error occurred",
   "retry": "Retry",
   "ok": "OK",
   "dismiss": "Dismiss",
-  "errorLogs": "Error Logs",
-  "noLogs": "No logs found",
-  "exportLogs": "Export Logs",
-  "logsExported": "Logs exported successfully",
-  "logsExportFailed": "Failed to export logs: {error}",
-  "@logsExportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "logLevelDebug": "DEBUG",
-  "logLevelInfo": "INFO",
-  "logLevelWarning": "WARNING",
-  "logLevelError": "ERROR",
   "incomeAndSalaries": "Income & Salaries",
   "accessibility": "Accessibility",
   "reducedMotion": "Reduced Motion",
   "exportCsv": "Export CSV",
-  "addSplit": "Add Split"
+  "addSplit": "Add Split",
+  "scheduledTransactionDefaultMemo": "Scheduled transaction",
+  "@scheduledTransactionDefaultMemo": {
+    "description": "Memo of a transaction generated from a schedule that has neither a memo nor a payee."
+  },
+  "deleteNamedTitle": "Delete \"{name}\"?",
+  "@deleteNamedTitle": {
+    "description": "Title of a delete confirmation for a named item (category, group).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteCategoryTransactionCount": "{count, plural, =0{This category has no transactions.} =1{This category has 1 transaction.} other{This category has {count} transactions.}}",
+  "@deleteCategoryTransactionCount": {
+    "description": "Number of transactions in a category that is about to be deleted.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteCategoryMoveOption": "Move everything to another category",
+  "@deleteCategoryMoveOption": {
+    "description": "Option when deleting a category: move its data to a target category."
+  },
+  "deleteCategoryMoveExplanation": "Transactions, budgeted amounts, rules, scheduled transactions and payee defaults move to the selected category. To Be Budgeted does not change.",
+  "@deleteCategoryMoveExplanation": {
+    "description": "Explains what happens when a category is deleted with a target."
+  },
+  "deleteCategoryNoTargetOption": "Delete without replacement",
+  "@deleteCategoryNoTargetOption": {
+    "description": "Option when deleting a category: no target category."
+  },
+  "deleteCategoryNoTargetExplanation": "The money budgeted in this category goes back to To Be Budgeted. Its transactions become uncategorized and also count towards To Be Budgeted. Rules, scheduled transactions and payee defaults that use it are cleared.",
+  "@deleteCategoryNoTargetExplanation": {
+    "description": "Explains what happens when a category is deleted without a target."
+  },
+  "deleteCategoryTargetLabel": "Target category",
+  "@deleteCategoryTargetLabel": {
+    "description": "Label of the target category picker when deleting a category."
+  },
+  "deleteCategoryNoOtherCategories": "There is no other category to move to.",
+  "@deleteCategoryNoOtherCategories": {
+    "description": "Shown when no target category is available."
+  },
+  "deleteCategoryFailed": "The category could not be deleted. Please try again.",
+  "@deleteCategoryFailed": {
+    "description": "Error when deleting a category fails."
+  },
+  "categoryDeletedMessage": "Category deleted",
+  "@categoryDeletedMessage": {
+    "description": "Snackbar after a category was deleted."
+  },
+  "deleteGroupEmptyConfirmation": "This group contains no categories. Delete it?",
+  "@deleteGroupEmptyConfirmation": {
+    "description": "Confirmation for deleting an empty category group."
+  },
+  "deleteGroupMoveExplanation": "{count, plural, =1{This group contains 1 category.} other{This group contains {count} categories.}} Choose a group to move them to. Their budgets and transactions move with them.",
+  "@deleteGroupMoveExplanation": {
+    "description": "Shown when deleting a non-empty category group.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteGroupTargetLabel": "Move categories to",
+  "@deleteGroupTargetLabel": {
+    "description": "Label of the target group picker."
+  },
+  "deleteGroupNoOtherGroup": "This group contains categories and there is no other group to move them to. Create another group or delete its categories first.",
+  "@deleteGroupNoOtherGroup": {
+    "description": "Shown when a non-empty group cannot be deleted."
+  },
+  "deleteGroupFailed": "The group could not be deleted. Please try again.",
+  "@deleteGroupFailed": {
+    "description": "Error when deleting a category group fails."
+  },
+  "deleteAccountCloseRecommendation": "Recommended: close the account instead. A closed account is hidden from everyday use but keeps all transactions and history.",
+  "@deleteAccountCloseRecommendation": {
+    "description": "Delete account dialog: recommend closing instead."
+  },
+  "deleteAccountPermanentWarning": "Deleting permanently removes all of this account's transactions and scheduled transactions. This cannot be undone.",
+  "@deleteAccountPermanentWarning": {
+    "description": "Delete account dialog: what deletion removes."
+  },
+  "deleteAccountTransfersWarning": "Transfers to or from other accounts stay in those accounts as normal uncategorized transactions, which changes To Be Budgeted.",
+  "@deleteAccountTransfersWarning": {
+    "description": "Delete account dialog: what happens to transfers."
+  },
+  "closeAccountInstead": "Close account instead",
+  "@closeAccountInstead": {
+    "description": "Button in the delete account dialog."
+  },
+  "deletePermanently": "Delete permanently",
+  "@deletePermanently": {
+    "description": "Button for a permanent deletion."
+  },
+  "accountClosedMessage": "Account closed",
+  "@accountClosedMessage": {
+    "description": "Snackbar after an account was closed."
+  },
+  "accountDeletedMessage": "{count, plural, =0{Account deleted.} =1{Account deleted. 1 transfer in another account is now a normal transaction.} other{Account deleted. {count} transfers in other accounts are now normal transactions.}}",
+  "@accountDeletedMessage": {
+    "description": "Snackbar after an account was deleted; count = converted transfer legs.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteAccountFailed": "The account could not be deleted. Please try again.",
+  "@deleteAccountFailed": {
+    "description": "Error when deleting an account fails."
+  },
+  "accountUpdateFailed": "The account could not be updated. Please try again.",
+  "@accountUpdateFailed": {
+    "description": "Error when closing/reopening an account fails."
+  },
+  "transferToAccount": "Transfer to {account}",
+  "@transferToAccount": {
+    "description": "Title of an outgoing transfer leg.",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "transferFromAccount": "Transfer from {account}",
+  "@transferFromAccount": {
+    "description": "Title of an incoming transfer leg.",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePayeeFailed": "The payee could not be deleted. Please try again.",
+  "@deletePayeeFailed": {
+    "description": "Error when deleting a payee fails."
+  },
+  "mergePayeeFailed": "The payees could not be merged. Please try again.",
+  "@mergePayeeFailed": {
+    "description": "Error when merging payees fails."
+  },
+  "reconcileAdjustmentMemo": "Reconciliation balance adjustment",
+  "@reconcileAdjustmentMemo": {
+    "description": "Memo of the adjustment transaction created by reconciliation."
+  },
+  "reconcileWorkingBalance": "Working balance",
+  "@reconcileWorkingBalance": {
+    "description": "Account balance including uncleared transactions."
+  },
+  "reconcileClearedBalance": "Cleared balance",
+  "@reconcileClearedBalance": {
+    "description": "Balance of cleared and reconciled transactions."
+  },
+  "reconcileClearedUpToDate": "Cleared balance up to the statement date",
+  "@reconcileClearedUpToDate": {
+    "description": "Cleared balance up to the chosen statement date."
+  },
+  "reconcileStatementDate": "Statement date",
+  "@reconcileStatementDate": {
+    "description": "Date of the bank statement."
+  },
+  "reconcileStatementBalance": "Statement balance",
+  "@reconcileStatementBalance": {
+    "description": "Balance shown on the bank statement."
+  },
+  "reconcileDifference": "Difference",
+  "@reconcileDifference": {
+    "description": "Statement balance minus cleared balance."
+  },
+  "reconcileExplanation": "All cleared transactions up to the statement date will be marked as reconciled. If the cleared balance differs from the statement, an uncategorized adjustment is created; it counts towards To Be Budgeted.",
+  "@reconcileExplanation": {
+    "description": "Explains what reconciling does."
+  },
+  "reconcileResultMatched": "{count, plural, =0{No transactions to reconcile. The balance matches the statement.} =1{1 transaction reconciled. The balance matches the statement.} other{{count} transactions reconciled. The balance matches the statement.}}",
+  "@reconcileResultMatched": {
+    "description": "Result of a reconciliation without adjustment.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reconcileResultAdjusted": "{count, plural, =0{No transactions reconciled.} =1{1 transaction reconciled.} other{{count} transactions reconciled.}} An adjustment of {amount} was created.",
+  "@reconcileResultAdjusted": {
+    "description": "Result of a reconciliation that created an adjustment.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "reconcileFailed": "The account could not be reconciled. Please try again.",
+  "@reconcileFailed": {
+    "description": "Error when reconciling fails."
+  },
+  "fromAccount": "From Account",
+  "@fromAccount": {
+    "description": "Label of the source account field of a transfer"
+  },
+  "txSplitSumMismatch": "The split amounts must add up to the total amount.",
+  "@txSplitSumMismatch": {
+    "description": "Validation error of the split editor"
+  },
+  "txSplitLineZero": "Every split line needs an amount.",
+  "@txSplitLineZero": {
+    "description": "Validation error of the split editor"
+  },
+  "txTransferSameAccount": "Source and destination accounts must be different.",
+  "@txTransferSameAccount": {
+    "description": "Validation error for transfers"
+  },
+  "txTransferNoSplit": "A transfer cannot be split.",
+  "@txTransferNoSplit": {
+    "description": "Validation error for split transfers"
+  },
+  "txRecurringSplitUnsupported": "Recurring split transactions are not supported yet.",
+  "@txRecurringSplitUnsupported": {
+    "description": "Shown when saving a recurring split"
+  },
+  "txRecurringTransferUnsupported": "Recurring transfers are not supported yet.",
+  "@txRecurringTransferUnsupported": {
+    "description": "Shown when saving a recurring transfer"
+  },
+  "txScheduledCreated": "Scheduled transaction created",
+  "@txScheduledCreated": {
+    "description": "Snackbar after creating a recurring transaction"
+  },
+  "txSaveFailed": "The transaction could not be saved.",
+  "@txSaveFailed": {
+    "description": "Generic save error"
+  },
+  "txReconciledChangeTitle": "Change a reconciled transaction?",
+  "@txReconciledChangeTitle": {
+    "description": "Title of the confirmation before changing a reconciled transaction"
+  },
+  "txReconciledChangeMessage": "This transaction is already reconciled with a bank statement. If you change it, your reconciled balance no longer matches that statement.",
+  "@txReconciledChangeMessage": {
+    "description": "Body of the confirmation before changing a reconciled transaction"
+  },
+  "txReconciledDeleteMessage": "This includes transactions already reconciled with a bank statement. If you delete them, your reconciled balance no longer matches that statement.",
+  "@txReconciledDeleteMessage": {
+    "description": "Extra note in the delete confirmation"
+  },
+  "txChangeAnyway": "Change anyway",
+  "@txChangeAnyway": {
+    "description": "Confirm button for changing a reconciled transaction"
+  },
+  "txDeleteTitle": "Delete transaction?",
+  "@txDeleteTitle": {
+    "description": "Title of the delete confirmation for one transaction"
+  },
+  "txDeleteManyTitle": "Delete {count} transactions?",
+  "@txDeleteManyTitle": {
+    "description": "Title of the bulk delete confirmation",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "txDeleteMessage": "You can undo this right after deleting.",
+  "@txDeleteMessage": {
+    "description": "Body of the delete confirmation"
+  },
+  "txDeleteTransferNote": "The other side of the transfer is deleted too.",
+  "@txDeleteTransferNote": {
+    "description": "Note in the delete confirmation when a transfer is involved"
+  },
+  "txDeleteSplitNote": "The whole split transaction with all of its lines is deleted.",
+  "@txDeleteSplitNote": {
+    "description": "Note in the delete confirmation when a split is involved"
+  },
+  "txDeletedCount": "{count, plural, =1{Transaction deleted} other{{count} transactions deleted}}",
+  "@txDeletedCount": {
+    "description": "Snackbar after deleting transactions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "txActionFailed": "That did not work. Please try again.",
+  "@txActionFailed": {
+    "description": "Generic error for a failed transaction action"
+  },
+  "txSearchHint": "Search payee, category, memo or amount",
+  "@txSearchHint": {
+    "description": "Hint of the transaction search field"
+  },
+  "txFilterPayees": "Payees",
+  "@txFilterPayees": {
+    "description": "Section title of the payee filter"
+  },
+  "txFilterAmountFrom": "Amount from",
+  "@txFilterAmountFrom": {
+    "description": "Lower bound of the amount filter (absolute amount)"
+  },
+  "txFilterAmountTo": "Amount to",
+  "@txFilterAmountTo": {
+    "description": "Upper bound of the amount filter (absolute amount)"
+  },
+  "txCategoryActivityTitle": "{category}: {month}",
+  "@txCategoryActivityTitle": {
+    "description": "Title of the category activity list opened from the budget",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "continueAction": "Continue",
+  "confirmAction": "Confirm",
+  "masterPasswordLabel": "Master password",
+  "confirmPasswordLabel": "Confirm password",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "enterPasswordPrompt": "Please enter your password",
+  "passwordMinLength": "Use at least {count} characters",
+  "@passwordMinLength": {
+    "description": "Password rule shown under a new password field",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordTooCommon": "This password is too common. Please choose another one.",
+  "passwordHint": "A long passphrase of several words is easiest to remember.",
+  "passwordStrengthTitle": "Password strength: {label}",
+  "@passwordStrengthTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "passwordStrengthTooShort": "too short",
+  "passwordStrengthCommon": "too common",
+  "passwordStrengthWeak": "weak",
+  "passwordStrengthFair": "fair",
+  "passwordStrengthGood": "good",
+  "passwordStrengthStrong": "strong",
+  "setupProtectTitle": "Protect your data",
+  "setupPasswordHeading": "Set a master password",
+  "setupPasswordExplanation": "Your data is encrypted on this device with a random key. Your master password unlocks that key. If you forget the password, only your recovery key can unlock the data.",
+  "setupUseBiometrics": "Unlock with biometrics",
+  "setupUseBiometricsSubtitle": "Face ID or fingerprint, protected by this device's security hardware",
+  "setupPreparing": "Preparing encryption…",
+  "setupFailed": "Security setup failed. Please try again.",
+  "recoveryKeyHeading": "Your recovery key",
+  "recoveryKeyExplanation": "If you forget your password, this key is the only way to unlock your data. Write it down on paper and keep it somewhere safe. Anyone who has this key can unlock your data on this device.",
+  "recoveryKeyNoCopyNote": "The key cannot be copied to the clipboard on purpose: other apps could read it there.",
+  "recoveryKeyConfirmSaved": "I have written down my recovery key and stored it safely",
+  "biometricsEnableFailed": "Biometric unlock could not be turned on. You can try again in Settings.",
+  "biometricPromptTitle": "Unlock LedgerZero",
+  "biometricPromptEnableTitle": "Turn on biometric unlock",
+  "biometricPromptSubtitle": "Confirm it is you to unlock your data",
+  "loginTitle": "Welcome back",
+  "loginUnlock": "Unlock",
+  "loginUseBiometrics": "Use biometrics",
+  "loginUseRecoveryKey": "Use recovery key",
+  "loginVaultMissing": "The key data of this app is missing, so your data cannot be unlocked. You can reset the app and restore a backup.",
+  "loginDatabaseKeyMismatch": "Your key is correct, but the database file could not be opened with it.",
+  "loginFailed": "Unlocking failed. Please try again.",
+  "biometricsInvalidated": "Biometric unlock was turned off because the biometrics on this device changed. Unlock with your password and turn it on again in Settings.",
+  "biometricsUnlockFailed": "Biometric unlock failed. Please use your password.",
+  "recoveryKeyEnterTitle": "Enter your recovery key",
+  "recoveryKeyEnterHint": "32 characters; spaces and dashes are optional",
+  "recoveryKeyInvalid": "This recovery key is not correct.",
+  "recoveryKeyNeedsPassword": "An update is still being completed. Please unlock once with your password.",
+  "setNewPasswordTitle": "Set a new password",
+  "setNewPasswordExplanation": "You unlocked with your recovery key. Please choose a new master password. Your recovery key stays valid.",
+  "migrationRecoveryKeyExplanation": "LedgerZero now protects your data with a new key scheme. This is your new recovery key. Recovery keys you saved before no longer work.",
+  "migrationBiometricsReset": "Biometric unlock was turned off during the update. You can turn it on again in Settings.",
+  "passwordChangedRecoveryStillValid": "Password changed. Your recovery key still works.",
+  "changePasswordFailed": "The password could not be changed. Please try again.",
+  "recoveryKeyScreenExplanation": "Your recovery key unlocks your data if you forget your password. Confirm your password to show it or to create a new one.",
+  "recoveryKeyRegenerate": "Create a new recovery key",
+  "recoveryKeyRegenerateConfirm": "Your current recovery key will stop working. Continue?",
+  "recoveryKeyRegenerated": "New recovery key saved. The old one no longer works.",
+  "confirmPasswordTitle": "Confirm your password",
+  "encryptionStatusEncrypted": "Encrypted with SQLCipher (AES-256)",
+  "encryptionStatusPlaintext": "The database file is NOT encrypted",
+  "encryptionStatusUnknown": "Not checked yet",
+  "lockNow": "Lock now",
+  "privacySection": "Privacy",
+  "crashReportsTitle": "Save crash reports",
+  "crashReportsSubtitle": "Off by default. When on, errors are recorded on this device only, with amounts, e-mail addresses and database values removed. Nothing is sent unless you share the log yourself.",
+  "notificationAmountsTitle": "Show amounts in notifications",
+  "notificationAmountsSubtitle": "When off, reminders only say that a transaction is due, so no financial details appear on the lock screen.",
+  "diagnosticsTitle": "Diagnostic log",
+  "diagnosticsSubtitle": "Review and share saved crash reports",
+  "diagnosticsEmpty": "No diagnostic data saved.",
+  "diagnosticsShareExplanation": "This is exactly what will be shared. Please review it before sending it to anyone.",
+  "diagnosticsShare": "Share diagnostic log",
+  "diagnosticsDelete": "Delete diagnostic data",
+  "diagnosticsDeleted": "Diagnostic data deleted",
+  "notificationScheduledTitle": "Upcoming transaction",
+  "notificationScheduledBodyGeneric": "A scheduled transaction is due tomorrow.",
+  "notificationScheduledBodyAmount": "A scheduled transaction of {amount} is due tomorrow.",
+  "@notificationScheduledBodyAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCreateTitle": "Create backup",
+  "backupCreateExplanation": "A full copy of your data, always encrypted with a backup password you choose. Keep this password: without it the backup cannot be opened. For a readable copy, use the JSON or CSV export instead.",
+  "backupPasswordLabel": "Backup password",
+  "backupUploadToCloud": "Also upload to your sync storage",
+  "backupUploadNotConfigured": "Set up Google Drive or iCloud sync first",
+  "backupExport": "Export backup",
+  "backupCreating": "Creating backup…",
+  "backupUploaded": "Backup uploaded",
+  "backupUploadFailed": "Upload failed. The backup was still created and can be shared.",
+  "backupFailed": "The backup failed. Please try again.",
+  "backupShareSubject": "LedgerZero backup",
+  "restoreTitle": "Restore backup",
+  "restoreExplanation": "Replace all data on this device with a backup file (.lzbk).",
+  "restoreFromFile": "Restore from file",
+  "restoreSelective": "Merge transactions from a backup (date range)",
+  "restorePasswordTitle": "Enter the backup password",
+  "restoreConfirmTitle": "Replace all data?",
+  "restoreConfirmMessage": "Everything on this device will be replaced by the backup. If you use sync, changes made on your other devices after this backup was created will sync back in.",
+  "restoreAction": "Restore",
+  "restoreSuccessTitle": "Restore complete",
+  "restoreSuccessMessage": "Your data was restored. If you use sync, this device will resynchronise and newer changes from your other devices will come back in.",
+  "restoreWrongPassword": "Wrong backup password, or the file is damaged.",
+  "restoreInvalidFile": "This file is not a LedgerZero backup that can be restored.",
+  "restoreNewerVersion": "This backup was made by a newer version of LedgerZero. Please update the app first.",
+  "restoreFailed": "The restore failed. Your data was not changed.",
+  "selectiveRestoreSuccess": "Transactions merged.",
+  "syncPassphraseSetTitle": "Set a sync passphrase",
+  "syncPassphraseSetExplanation": "Your data is encrypted before it leaves this device. Choose a sync passphrase: you need to enter it on every device you want to sync. It cannot be recovered, not even by the developer, so keep it somewhere safe.",
+  "syncPassphraseEnterTitle": "Enter your sync passphrase",
+  "syncPassphraseEnterExplanation": "This sync folder is already used by another device. Enter the sync passphrase you set there.",
+  "syncPassphraseLabel": "Sync passphrase",
+  "syncPassphraseConfirmLabel": "Confirm sync passphrase",
+  "syncPassphraseSetButton": "Set passphrase",
+  "syncPassphraseEnterButton": "Enter passphrase",
+  "syncPassphraseWrong": "Wrong sync passphrase.",
+  "syncPassphraseFolderExists": "Another device has just set up sync. Enter the passphrase set there.",
+  "syncPassphraseFailed": "The sync passphrase could not be saved. Please try again.",
+  "syncPendingChanges": "{count, plural, =0{All changes uploaded} =1{1 change waiting to upload} other{{count} changes waiting to upload}}",
+  "@syncPendingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncUpdateAppRequired": "Another device uses a newer version of LedgerZero. Update the app to sync its changes.",
+  "syncLegacyFolderFound": "The sync folder still contains files from an older LedgerZero version (ending in .json.gz). They are no longer used and can be deleted.",
+  "syncQuarantineTitle": "{count, plural, =1{1 change file could not be applied} other{{count} change files could not be applied}}",
+  "@syncQuarantineTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncQuarantineExplanation": "Changes from the affected device wait until the file can be applied. Other devices keep syncing.",
+  "syncQuarantineRetry": "Retry",
+  "syncQuarantineShare": "Share diagnostics",
+  "syncQuarantineSkip": "Skip file",
+  "syncQuarantineSkipConfirm": "The changes in this file will not be applied on this device. Skip it?",
+  "syncConflictsTitle": "Sync conflicts",
+  "syncConflictsCount": "{count, plural, =0{No conflicts} =1{1 change was replaced by a newer one} other{{count} changes were replaced by newer ones}}",
+  "@syncConflictsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncConflictsExplanation": "These edits made on this device lost against newer edits made on another device. Keep yours to apply them again on all devices.",
+  "syncConflictsEmpty": "No sync conflicts.",
+  "syncConflictKeepMine": "Keep mine",
+  "syncConflictDismiss": "Dismiss",
+  "syncConflictKeepFailed": "Your version could not be restored because it refers to data that was deleted.",
+  "syncConflictMine": "This device",
+  "syncConflictTheirs": "Other device",
+  "syncConflictDeleted": "Deleted",
+  "syncConflictResolvedAt": "Replaced on {time}",
+  "@syncConflictResolvedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncTableAccounts": "Account",
+  "syncTableCategories": "Category",
+  "syncTableCategoryGroups": "Category group",
+  "syncTableTransactions": "Transaction",
+  "syncTablePayees": "Payee",
+  "syncTableBudgets": "Budget",
+  "syncTableScheduledTransactions": "Scheduled transaction",
+  "syncTableBudgetTemplates": "Budget template",
+  "syncTableReportNotes": "Report note",
+  "syncTableImportProfiles": "Import profile",
+  "syncTableRules": "Rule",
+  "syncStatusConnectedAs": "Connected as {email}",
+  "@syncStatusConnectedAs": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncStatusConnected": "Connected",
+  "syncStatusDisconnected": "Disconnected",
+  "syncStatusSyncing": "Syncing…",
+  "syncStatusPaused": "Paused while the app is locked",
+  "pickerNoMatches": "No matches",
+  "scheduledDeleteConfirmation": "Delete this scheduled transaction? Transactions it has already created are kept.",
+  "scheduledSaveFailed": "The scheduled transaction could not be saved. Please try again.",
+  "scheduledLoadFailed": "The scheduled transaction could not be loaded.",
+  "scheduledActionFailed": "The scheduled transaction could not be updated. Please try again.",
+  "incomeEmpty": "No recurring income set up",
+  "incomeAddTitle": "Add Salary / Income",
+  "incomeAddButton": "Add Income",
+  "incomeEditTitle": "Edit Income",
+  "incomeUnknownSource": "Unknown source",
+  "incomeSourceName": "Source name (e.g. My Salary)",
+  "incomeNameRequired": "Please enter a name",
+  "incomeDepositAccount": "Deposit account",
+  "incomeSaveButton": "Save Income",
+  "incomeSaveFailed": "The income could not be saved. Please try again.",
+  "recurrenceEvery": "Every {count} {unit}",
+  "@recurrenceEvery": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "ynabImportTitle": "YNAB Migration",
+  "ynabImportSelectVersion": "Select your YNAB version",
+  "ynabImportMethodCsv": "nYNAB (CSV Export)",
+  "ynabImportMethodYnab4": "YNAB 4 (Classic)",
+  "ynabImportMethodHint": "For nYNAB: Export your budget as CSV from the web app.\nFor YNAB 4: Select your budget folder (ending in .ynab4).",
+  "ynabImportUploadCsvTitle": "Upload CSV Files",
+  "ynabImportNotSelected": "Not selected",
+  "ynabImportNextPreview": "Next: Preview",
+  "ynabImportSelectFolderTitle": "Select YNAB4 Folder",
+  "ynabImportBudgetFolder": "Budget Folder",
+  "ynabImportPreviewTitle": "Import Preview",
+  "ynabImportPreviewSubtitle": "Review the data found in your import files.",
+  "ynabImportAccountClosed": "Closed",
+  "ynabImportAccountActive": "Active",
+  "ynabImportAccountTypeChecking": "Checking",
+  "ynabImportAccountTypeSavings": "Savings",
+  "ynabImportAccountTypeCredit": "Credit card",
+  "ynabImportAccountTypeCash": "Cash",
+  "ynabImportAccountSubtitle": "{type} • {status}",
+  "@ynabImportAccountSubtitle": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "ynabImportCategoryCount": "{count, plural, =1{1 category} other{{count} categories}}",
+  "@ynabImportCategoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ynabImportTotalTransactions": "Total Transactions",
+  "ynabImportBudgetEntries": "Budget Entries",
+  "ynabImportScheduledTransactions": "Scheduled Transactions",
+  "ynabImportConfirm": "Confirm & Import",
+  "ynabImportInProgressTitle": "Migrating your budget…",
+  "ynabImportInProgressBody": "This may take a moment depending on the size of your history.",
+  "ynabImportDoNotClose": "Please do not close the app or switch screens.",
+  "ynabImportSuccessTitle": "Welcome to LedgerZero!",
+  "ynabImportSuccessBody": "Your YNAB data has been successfully migrated.",
+  "ynabImportStartBudgeting": "Start Budgeting",
+  "ynabImportErrorFilePick": "The file could not be opened. Please try again.",
+  "ynabImportErrorFolderPick": "The folder could not be opened. Please try again.",
+  "ynabImportErrorFilesMissing": "Please select both Register.csv and Budget.csv.",
+  "ynabImportErrorFolderMissing": "Please select the YNAB 4 budget folder.",
+  "ynabImportErrorMissingColumns": "Register.csv is missing required columns: {columns}. Please export the register again from YNAB.",
+  "@ynabImportErrorMissingColumns": {
+    "placeholders": {
+      "columns": {
+        "type": "String"
+      }
+    }
+  },
+  "ynabImportErrorInvalidYnab4": "This folder is not a valid YNAB 4 budget. Please select the folder ending in .ynab4.",
+  "ynabImportErrorUnreadable": "The selected files could not be read. Please check that they are unmodified YNAB exports.",
+  "ynabImportErrorImportFailed": "The import failed. No data was changed; please try again.",
+  "exportFailedGeneric": "Export failed. Please try again.",
+  "emptyAccountTransactionsMessage": "Transactions you add to this account appear here.",
+  "noMatchingTransactions": "No matching transactions",
+  "noMatchingTransactionsMessage": "Try a different search or clear the filters.",
+  "emptyTransactionsMessage": "Record your first transaction to see it here.",
+  "clearFilters": "Clear filters",
+  "rules": "Rules",
+  "rulesSettingsSubtitle": "Categorize new and imported transactions automatically",
+  "settingsManageSection": "Manage data",
+  "importFailedGeneric": "Import failed. Please check the file and try again.",
+  "clearCacheFailed": "Could not clear the cache.",
+  "backupAndExport": "Backup & Export",
+  "exportPlaintextWarning": "Exports are not encrypted: anyone who gets the file can read it.",
+  "exportAllCsv": "All transactions (CSV)",
+  "exportAllCsvSubtitle": "A spreadsheet of every transaction",
+  "exportFilteredCsv": "Filtered transactions (CSV)",
+  "exportFilteredCsvSubtitle": "Choose dates, accounts and categories",
+  "exportAllJson": "All data (JSON)",
+  "exportAllJsonSubtitle": "Everything in a format other apps can read",
+  "backupReminderFrequency": "Backup reminder",
+  "startDate": "Start date",
+  "exportFilterAll": "None yet",
+  "exportFilterHint": "Nothing selected means everything is included.",
+  "importSelectedCount": "{count, plural, =1{1 transaction} other{{count} transactions}}",
+  "@importSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoriesImported": "{count, plural, =0{No new categories} =1{1 new category imported} other{{count} new categories imported}}",
+  "@categoriesImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryImportInvalidFile": "This file is not a category list. Expected the columns Group, Category (and optionally Hidden).",
+  "help": "Help",
+  "noMatchingCategories": "No matching categories",
+  "noCategoriesYet": "No categories yet. Add a category group to get started.",
+  "notificationChannelScheduledName": "Scheduled transactions",
+  "notificationChannelScheduledDescription": "Reminders for upcoming scheduled transactions",
+  "notificationChannelBackupName": "Backup reminders",
+  "notificationChannelBackupDescription": "Reminders to back up your data",
+  "notificationChannelSyncName": "Sync status",
+  "notificationChannelSyncDescription": "Notifications when a sync fails",
+  "notificationChannelBudgetName": "Budget alerts",
+  "notificationChannelBudgetDescription": "Alerts when a category is overspent",
+  "notificationOpenAction": "Open",
+  "notificationBackupTitle": "Backup reminder",
+  "notificationBackupBody": "It has been a while since your last backup. Tap to back up your data.",
+  "notificationSyncFailedTitle": "Sync failed",
+  "notificationSyncFailedBody": "Your data could not be synced. Tap to open the sync settings.",
+  "notificationBudgetAlertTitle": "Category overspent",
+  "notificationBudgetAlertBodyGeneric": "A budget category is overspent this month. Tap to review your budget.",
+  "notificationBudgetAlertBodyAmount": "{category} is overspent by {amount} this month.",
+  "@notificationBudgetAlertBodyAmount": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingCompleteTitle": "You're all set!",
+  "onboardingCompleteMessage": "Next, add the account you pay from, such as your checking account. Its balance becomes the money you can budget.",
+  "onboardingCreateFirstAccount": "Create your first account",
+  "onboardingSkipForNow": "Skip for now",
+  "firstAccountTitle": "Start with one account",
+  "firstAccountExplanation": "Enter the current balance of an account you use every day. That amount becomes To Be Budgeted, ready to assign to your categories. You can add more accounts later.",
+  "budgetNoAccountsMessage": "Add an account first: its balance is the money you assign to your categories.",
+  "noAccountsYet": "No accounts yet",
+  "noMatchingAccounts": "No matching accounts",
+  "csvParseFailedGeneric": "This file could not be read as CSV. Please check its format.",
+  "filePickFailedGeneric": "The file could not be opened.",
+  "reportNoDataToExport": "There is no data to export for this report.",
+  "amountSemanticsAvailable": "{amount} available",
+  "@amountSemanticsAvailable": {
+    "description": "Screen reader label for a category's available amount.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsOverspent": "{amount} overspent",
+  "@amountSemanticsOverspent": {
+    "description": "Screen reader label for a negative available amount (amount without sign).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsBudgeted": "{amount} budgeted",
+  "@amountSemanticsBudgeted": {
+    "description": "Screen reader label for a category's budgeted amount.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsActivity": "Activity {amount}",
+  "@amountSemanticsActivity": {
+    "description": "Screen reader label for a category's activity.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsBalance": "Balance {amount}",
+  "@amountSemanticsBalance": {
+    "description": "Screen reader label for an account balance.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsToBeBudgeted": "{amount} to be budgeted",
+  "@amountSemanticsToBeBudgeted": {
+    "description": "Screen reader label for a positive or zero To Be Budgeted amount.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsOverbudgeted": "{amount} overbudgeted",
+  "@amountSemanticsOverbudgeted": {
+    "description": "Screen reader label for a negative To Be Budgeted amount (amount without sign).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsInflow": "Inflow {amount}",
+  "@amountSemanticsInflow": {
+    "description": "Screen reader label for a positive transaction amount (amount without sign).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsOutflow": "Outflow {amount}",
+  "@amountSemanticsOutflow": {
+    "description": "Screen reader label for a negative transaction amount (amount without sign).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "amountSemanticsSpentOfBudgeted": "{spent} spent of {budgeted} budgeted",
+  "@amountSemanticsSpentOfBudgeted": {
+    "description": "Screen reader label for the budget progress view.",
+    "placeholders": {
+      "spent": {
+        "type": "String"
+      },
+      "budgeted": {
+        "type": "String"
+      }
+    }
+  },
+  "chartBarSemantics": "Bar Chart showing: {items}",
+  "@chartBarSemantics": {
+    "description": "Screen reader summary of a bar chart; items is a comma separated list of 'label: amount'.",
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "chartPieSemantics": "Pie chart: {items}",
+  "@chartPieSemantics": {
+    "description": "Screen reader summary of a pie chart; items is a comma separated list of 'label percent'.",
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "chartLineSemantics": "Line chart. {series}",
+  "@chartLineSemantics": {
+    "description": "Screen reader summary of a line chart; series is one summary per line.",
+    "placeholders": {
+      "series": {
+        "type": "String"
+      }
+    }
+  },
+  "chartLineSeriesSemantics": "{series} from {start} to {end}: lowest {min}, highest {max}, latest {latest}",
+  "@chartLineSeriesSemantics": {
+    "description": "Screen reader summary of one line of a line chart.",
+    "placeholders": {
+      "series": {
+        "type": "String"
+      },
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      },
+      "latest": {
+        "type": "String"
+      }
+    }
+  },
+  "chartBudgetVsActualSemantics": "Budget vs actual: {items}",
+  "@chartBudgetVsActualSemantics": {
+    "description": "Screen reader summary of the budget vs actual chart.",
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "chartBudgetVsActualItemSemantics": "{category}: {budgeted} budgeted, {actual} spent",
+  "@chartBudgetVsActualItemSemantics": {
+    "description": "One category in the budget vs actual chart summary.",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "budgeted": {
+        "type": "String"
+      },
+      "actual": {
+        "type": "String"
+      }
+    }
+  },
+  "chartOthers": "Others",
+  "@chartOthers": {
+    "description": "Chart bucket that groups the smallest categories."
+  },
+  "chartTotalZero": "Total spending is zero",
+  "@chartTotalZero": {
+    "description": "Shown instead of a pie chart when all values are zero."
+  },
+  "tutorialNext": "Next",
+  "@tutorialNext": {
+    "description": "Button that shows the next tutorial step."
+  },
+  "tutorialFinish": "Finish",
+  "@tutorialFinish": {
+    "description": "Button on the last tutorial step."
+  },
+  "transactionNoPayee": "No Payee",
+  "@transactionNoPayee": {
+    "description": "Shown in a transaction row without a payee."
+  },
+  "transactionNotApproved": "Not yet approved",
+  "@transactionNotApproved": {
+    "description": "Screen reader label and tooltip of the icon on unapproved transactions."
+  },
+  "transactionStatusReconciled": "Reconciled",
+  "@transactionStatusReconciled": {
+    "description": "Clear status of a reconciled transaction."
+  },
+  "transactionClearStatusTooltip": "{status}. Tap to change",
+  "@transactionClearStatusTooltip": {
+    "description": "Tooltip of the clear status button in a transaction row.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "accountTypeChecking": "Checking",
+  "@accountTypeChecking": {
+    "description": "Account type."
+  },
+  "accountTypeSavings": "Savings",
+  "@accountTypeSavings": {
+    "description": "Account type."
+  },
+  "accountTypeCredit": "Credit card",
+  "@accountTypeCredit": {
+    "description": "Account type."
+  },
+  "accountTypeCash": "Cash",
+  "@accountTypeCash": {
+    "description": "Account type."
+  },
+  "budgetGoalUnderfunded": "Below goal target",
+  "@budgetGoalUnderfunded": {
+    "description": "Screen reader label of the warning icon on a category budgeted below its goal."
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Generic button: close a dialog"
+  },
+  "add": "Add",
+  "@add": {
+    "description": "Generic button: add the item being edited"
+  },
+  "unknown": "Unknown",
+  "@unknown": {
+    "description": "Name shown when a referenced item (category, payee, account) no longer exists"
+  },
+  "fieldRequired": "Required",
+  "@fieldRequired": {
+    "description": "Validation error for an empty required text field"
+  },
+  "tapToSelect": "Tap to select",
+  "@tapToSelect": {
+    "description": "Placeholder of a picker field with no selection"
+  },
+  "pickerSelectCategory": "Select category",
+  "@pickerSelectCategory": {
+    "description": "Label/title of a category picker"
+  },
+  "pickerSelectPayee": "Select payee",
+  "@pickerSelectPayee": {
+    "description": "Label/title of a payee picker"
+  },
+  "pickerSelectAccount": "Select account",
+  "@pickerSelectAccount": {
+    "description": "Label/title of an account picker"
+  },
+  "ruleChooseTemplate": "Choose a template",
+  "@ruleChooseTemplate": {
+    "description": "Title of the rule template dialog"
+  },
+  "ruleNeedsCondition": "Add at least one condition.",
+  "@ruleNeedsCondition": {
+    "description": "Validation when saving a rule without conditions"
+  },
+  "ruleNeedsAction": "Add at least one action.",
+  "@ruleNeedsAction": {
+    "description": "Validation when saving a rule without actions"
+  },
+  "ruleDeleteTitle": "Delete rule?",
+  "@ruleDeleteTitle": {
+    "description": "Title of the delete-rule confirmation"
+  },
+  "ruleDeleteMessage": "Are you sure you want to delete this rule?",
+  "@ruleDeleteMessage": {
+    "description": "Body of the delete-rule confirmation"
+  },
+  "ruleEditTitle": "Edit Rule",
+  "@ruleEditTitle": {
+    "description": "App bar title when editing a rule"
+  },
+  "ruleNewTitle": "New Rule",
+  "@ruleNewTitle": {
+    "description": "App bar title when creating a rule"
+  },
+  "ruleUseTemplate": "Use template",
+  "@ruleUseTemplate": {
+    "description": "Tooltip of the button that opens rule templates"
+  },
+  "ruleNameLabel": "Rule name",
+  "@ruleNameLabel": {
+    "description": "Label of the rule name field"
+  },
+  "ruleActive": "Active",
+  "@ruleActive": {
+    "description": "Switch: whether the rule is applied"
+  },
+  "ruleConditionsHeading": "Conditions",
+  "@ruleConditionsHeading": {
+    "description": "Section heading in the rule editor"
+  },
+  "ruleActionsHeading": "Actions",
+  "@ruleActionsHeading": {
+    "description": "Section heading in the rule editor"
+  },
+  "ruleMatchLabel": "Applies when",
+  "@ruleMatchLabel": {
+    "description": "Label before the all/any dropdown in the rule editor"
+  },
+  "ruleMatchAll": "all conditions match",
+  "@ruleMatchAll": {
+    "description": "Rule match logic AND; follows 'Applies when'"
+  },
+  "ruleMatchAny": "any condition matches",
+  "@ruleMatchAny": {
+    "description": "Rule match logic OR; follows 'Applies when'"
+  },
+  "ruleAddCondition": "Add condition",
+  "@ruleAddCondition": {
+    "description": "Button/dialog title in the rule editor"
+  },
+  "ruleAddAction": "Add action",
+  "@ruleAddAction": {
+    "description": "Button/dialog title in the rule editor"
+  },
+  "ruleSave": "Save rule",
+  "@ruleSave": {
+    "description": "Save button of the rule editor"
+  },
+  "ruleFieldLabel": "Field",
+  "@ruleFieldLabel": {
+    "description": "Label of the condition field dropdown"
+  },
+  "ruleOperatorLabel": "Comparison",
+  "@ruleOperatorLabel": {
+    "description": "Label of the condition operator dropdown"
+  },
+  "ruleValueLabel": "Value",
+  "@ruleValueLabel": {
+    "description": "Label of the condition/action value field"
+  },
+  "ruleActionLabel": "Action",
+  "@ruleActionLabel": {
+    "description": "Label of the action type dropdown"
+  },
+  "ruleFieldPayee": "Payee",
+  "@ruleFieldPayee": {
+    "description": "Rule condition field"
+  },
+  "ruleFieldAmount": "Amount",
+  "@ruleFieldAmount": {
+    "description": "Rule condition field"
+  },
+  "ruleFieldDescription": "Memo / description",
+  "@ruleFieldDescription": {
+    "description": "Rule condition field: transaction memo or imported bank description"
+  },
+  "ruleOperatorEquals": "is",
+  "@ruleOperatorEquals": {
+    "description": "Rule condition operator"
+  },
+  "ruleOperatorContains": "contains",
+  "@ruleOperatorContains": {
+    "description": "Rule condition operator"
+  },
+  "ruleOperatorStartsWith": "starts with",
+  "@ruleOperatorStartsWith": {
+    "description": "Rule condition operator"
+  },
+  "ruleOperatorEndsWith": "ends with",
+  "@ruleOperatorEndsWith": {
+    "description": "Rule condition operator"
+  },
+  "ruleOperatorGreaterThan": "is greater than",
+  "@ruleOperatorGreaterThan": {
+    "description": "Rule condition operator"
+  },
+  "ruleOperatorLessThan": "is less than",
+  "@ruleOperatorLessThan": {
+    "description": "Rule condition operator"
+  },
+  "ruleOperatorRegex": "matches pattern (regex)",
+  "@ruleOperatorRegex": {
+    "description": "Rule condition operator: regular expression"
+  },
+  "ruleActionSetCategory": "Set category",
+  "@ruleActionSetCategory": {
+    "description": "Rule action type"
+  },
+  "ruleActionSetPayee": "Set payee",
+  "@ruleActionSetPayee": {
+    "description": "Rule action type"
+  },
+  "ruleActionSetAccount": "Set account",
+  "@ruleActionSetAccount": {
+    "description": "Rule action type"
+  },
+  "ruleActionSetMemo": "Set memo",
+  "@ruleActionSetMemo": {
+    "description": "Rule action type"
+  },
+  "ruleActionMarkCleared": "Mark as cleared",
+  "@ruleActionMarkCleared": {
+    "description": "Rule action type"
+  },
+  "ruleActionMarkApproved": "Mark as approved",
+  "@ruleActionMarkApproved": {
+    "description": "Rule action type"
+  },
+  "ruleActionSummarySetCategory": "Set category to “{name}”",
+  "@ruleActionSummarySetCategory": {
+    "description": "Summary of a rule action",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleActionSummarySetPayee": "Set payee to “{name}”",
+  "@ruleActionSummarySetPayee": {
+    "description": "Summary of a rule action",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleActionSummarySetAccount": "Set account to “{name}”",
+  "@ruleActionSummarySetAccount": {
+    "description": "Summary of a rule action",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleActionSummarySetMemo": "Set memo to “{memo}”",
+  "@ruleActionSummarySetMemo": {
+    "description": "Summary of a rule action",
+    "placeholders": {
+      "memo": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleActionSummaryFlag": "{action}: {value}",
+  "@ruleActionSummaryFlag": {
+    "description": "Summary of a yes/no rule action, e.g. 'Mark as cleared: Yes'",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleTemplatePayeeTitle": "Categorize by payee name",
+  "@ruleTemplatePayeeTitle": {
+    "description": "Rule template title; also the name of the created rule"
+  },
+  "ruleTemplatePayeeDescription": "Set a category when the payee name contains a keyword.",
+  "@ruleTemplatePayeeDescription": {
+    "description": "Rule template description"
+  },
+  "ruleTemplateAutoClearTitle": "Auto-clear small amounts",
+  "@ruleTemplateAutoClearTitle": {
+    "description": "Rule template title; also the name of the created rule"
+  },
+  "ruleTemplateAutoClearDescription": "Mark transactions under a set amount as cleared.",
+  "@ruleTemplateAutoClearDescription": {
+    "description": "Rule template description"
+  },
+  "ruleTemplateAutoApproveTitle": "Auto-approve a recurring bill",
+  "@ruleTemplateAutoApproveTitle": {
+    "description": "Rule template title; also the name of the created rule"
+  },
+  "ruleTemplateAutoApproveDescription": "Approve transactions from one payee automatically (e.g. Netflix).",
+  "@ruleTemplateAutoApproveDescription": {
+    "description": "Rule template description"
+  },
+  "ruleTemplateKeywordTitle": "Categorize by keyword",
+  "@ruleTemplateKeywordTitle": {
+    "description": "Rule template title; also the name of the created rule"
+  },
+  "ruleTemplateKeywordDescription": "Set a category based on a keyword in the memo or description.",
+  "@ruleTemplateKeywordDescription": {
+    "description": "Rule template description"
+  },
+  "ruleTemplateKeywordExample": "coffee",
+  "@ruleTemplateKeywordExample": {
+    "description": "Example keyword pre-filled by the keyword rule template"
+  },
+  "rulesImported": "{count, plural, =0{No rules imported} =1{1 rule imported} other{{count} rules imported}}",
+  "@rulesImported": {
+    "description": "Snackbar after importing rules",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rulesNoneToApply": "There are no rules to apply.",
+  "@rulesNoneToApply": {
+    "description": "Snackbar when applying rules but none exist"
+  },
+  "rulesApplyTitle": "Apply rules?",
+  "@rulesApplyTitle": {
+    "description": "Title of the apply-rules confirmation"
+  },
+  "rulesApplyMessage": "All existing transactions are checked and the active rules are applied. This cannot be undone automatically.",
+  "@rulesApplyMessage": {
+    "description": "Body of the apply-rules confirmation"
+  },
+  "rulesApplied": "{count, plural, =0{No transactions changed} =1{1 transaction updated} other{{count} transactions updated}}",
+  "@rulesApplied": {
+    "description": "Snackbar after applying rules to all transactions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rulesMenuImport": "Import rules",
+  "@rulesMenuImport": {
+    "description": "Rules screen menu item"
+  },
+  "rulesMenuExport": "Export rules",
+  "@rulesMenuExport": {
+    "description": "Rules screen menu item"
+  },
+  "rulesMenuApplyAll": "Apply rules to all transactions",
+  "@rulesMenuApplyAll": {
+    "description": "Rules screen menu item"
+  },
+  "rulesMenuSuggest": "Suggest rules from history",
+  "@rulesMenuSuggest": {
+    "description": "Rules screen menu item"
+  },
+  "rulesConflictsFound": "{count, plural, =1{1 rule conflict found} other{{count} rule conflicts found}}",
+  "@rulesConflictsFound": {
+    "description": "Banner on the rules screen",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rulesConflictsTitle": "Rule conflicts",
+  "@rulesConflictsTitle": {
+    "description": "Title of the rule conflicts dialog"
+  },
+  "rulesConflictPair": "{first} vs. {second}",
+  "@rulesConflictPair": {
+    "description": "Two conflicting rule names",
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "second": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesConflictExplanation": "Same conditions, but the actions contradict each other.",
+  "@rulesConflictExplanation": {
+    "description": "Explains a rule conflict"
+  },
+  "view": "View",
+  "@view": {
+    "description": "Generic button: show details"
+  },
+  "rulesEmpty": "No rules yet",
+  "@rulesEmpty": {
+    "description": "Empty state of the rules screen"
+  },
+  "rulesCreate": "Create rule",
+  "@rulesCreate": {
+    "description": "Button on the empty rules screen"
+  },
+  "rulesReorderFailed": "The new order could not be saved.",
+  "@rulesReorderFailed": {
+    "description": "Snackbar when reordering rules fails"
+  },
+  "ruleConditionCount": "{count, plural, =1{1 condition} other{{count} conditions}}",
+  "@ruleConditionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ruleActionCount": "{count, plural, =1{1 action} other{{count} actions}}",
+  "@ruleActionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ruleSummary": "{conditions}, {actions}",
+  "@ruleSummary": {
+    "description": "Rule list subtitle combining ruleConditionCount and ruleActionCount",
+    "placeholders": {
+      "conditions": {
+        "type": "String"
+      },
+      "actions": {
+        "type": "String"
+      }
+    }
+  },
+  "rulesNoSuggestions": "No suggestions found in your transaction history.",
+  "@rulesNoSuggestions": {
+    "description": "Snackbar when rule learning finds nothing"
+  },
+  "rulesSuggestedTitle": "Suggested rules",
+  "@rulesSuggestedTitle": {
+    "description": "Title of the suggested rules dialog"
+  },
+  "ruleAdded": "Rule added",
+  "@ruleAdded": {
+    "description": "Snackbar after adding a suggested rule"
+  },
+  "ruleSuggestionName": "Auto-categorize {payee}",
+  "@ruleSuggestionName": {
+    "description": "Name of a rule suggested from history",
+    "placeholders": {
+      "payee": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleSuggestionDescription": "Transactions from {payee} almost always have the same category.",
+  "@ruleSuggestionDescription": {
+    "description": "Description of a rule suggested from history",
+    "placeholders": {
+      "payee": {
+        "type": "String"
+      }
+    }
+  },
+  "accountSearchHint": "Search accounts",
+  "@accountSearchHint": {
+    "description": "Hint of the account search field"
+  },
+  "clearSearch": "Clear search",
+  "@clearSearch": {
+    "description": "Tooltip: close/clear the search field"
+  },
+  "filter": "Filter",
+  "@filter": {
+    "description": "Tooltip of a filter button"
+  },
+  "sort": "Sort",
+  "@sort": {
+    "description": "Tooltip of a sort button"
+  },
+  "accountShowClosed": "Show closed accounts",
+  "@accountShowClosed": {
+    "description": "Accounts filter menu item"
+  },
+  "accountSortNameAsc": "Name (A–Z)",
+  "@accountSortNameAsc": {
+    "description": "Account sort option"
+  },
+  "accountSortNameDesc": "Name (Z–A)",
+  "@accountSortNameDesc": {
+    "description": "Account sort option"
+  },
+  "accountSortBalanceAsc": "Balance (lowest first)",
+  "@accountSortBalanceAsc": {
+    "description": "Account sort option"
+  },
+  "accountSortBalanceDesc": "Balance (highest first)",
+  "@accountSortBalanceDesc": {
+    "description": "Account sort option"
+  },
+  "accountSortType": "Type",
+  "@accountSortType": {
+    "description": "Account sort option: by account type"
+  },
+  "draftRestored": "Draft restored",
+  "@draftRestored": {
+    "description": "Snackbar when an unsaved form draft is restored"
+  },
+  "accountUpdated": "Account updated",
+  "@accountUpdated": {
+    "description": "Snackbar after saving an account"
+  },
+  "accountCreated": "Account created",
+  "@accountCreated": {
+    "description": "Snackbar after creating an account"
+  },
+  "unsavedChangesTitle": "Discard changes?",
+  "@unsavedChangesTitle": {
+    "description": "Title of the leave-without-saving dialog"
+  },
+  "unsavedChangesMessage": "You have unsaved changes. Do you want to discard them?",
+  "@unsavedChangesMessage": {
+    "description": "Body of the leave-without-saving dialog"
+  },
+  "discard": "Discard",
+  "@discard": {
+    "description": "Button: discard unsaved changes"
+  },
+  "editAccount": "Edit Account",
+  "@editAccount": {
+    "description": "App bar title"
+  },
+  "addAccount": "Add Account",
+  "@addAccount": {
+    "description": "App bar title"
+  },
+  "accountNameLabel": "Account Name",
+  "@accountNameLabel": {
+    "description": "Label of the account name field"
+  },
+  "accountNameHint": "e.g. Checking account",
+  "@accountNameHint": {
+    "description": "Example account name"
+  },
+  "accountNameHelper": "A name you recognise this account by",
+  "@accountNameHelper": {
+    "description": "Helper text of the account name field"
+  },
+  "accountNameRequired": "Please enter an account name",
+  "@accountNameRequired": {
+    "description": "Validation error"
+  },
+  "accountTypeLabel": "Account Type",
+  "@accountTypeLabel": {
+    "description": "Label of the account type dropdown"
+  },
+  "accountTypeHelper": "Select the type of account",
+  "@accountTypeHelper": {
+    "description": "Helper text of the account type dropdown"
+  },
+  "startingBalanceLabel": "Starting Balance",
+  "@startingBalanceLabel": {
+    "description": "Label of the starting balance field"
+  },
+  "startingBalanceHelper": "The current balance of the account",
+  "@startingBalanceHelper": {
+    "description": "Helper text of the starting balance field"
+  },
+  "invalidNumber": "Invalid number",
+  "@invalidNumber": {
+    "description": "Validation error for an amount field"
+  },
+  "colorOption": "Color {index}",
+  "@colorOption": {
+    "description": "Screen reader label of a colour swatch",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "saveChanges": "Save Changes",
+  "@saveChanges": {
+    "description": "Save button when editing"
+  },
+  "accountIconWallet": "Wallet",
+  "@accountIconWallet": {
+    "description": "Account icon name (screen reader)"
+  },
+  "accountIconBank": "Bank",
+  "@accountIconBank": {
+    "description": "Account icon name (screen reader)"
+  },
+  "accountIconCard": "Card",
+  "@accountIconCard": {
+    "description": "Account icon name (screen reader)"
+  },
+  "accountIconCash": "Cash",
+  "@accountIconCash": {
+    "description": "Account icon name (screen reader)"
+  },
+  "accountIconSavings": "Savings",
+  "@accountIconSavings": {
+    "description": "Account icon name (screen reader)"
+  },
+  "accountIconInvestment": "Investment",
+  "@accountIconInvestment": {
+    "description": "Account icon name (screen reader)"
+  },
+  "selectedCount": "{count} selected",
+  "@selectedCount": {
+    "description": "App bar title in multi-select mode",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "closeSelection": "Close selection",
+  "@closeSelection": {
+    "description": "Tooltip: leave multi-select mode"
+  },
+  "back": "Back",
+  "@back": {
+    "description": "Tooltip of a back button"
+  },
+  "deleteSelected": "Delete selected",
+  "@deleteSelected": {
+    "description": "Tooltip in multi-select mode"
+  },
+  "approveSelected": "Approve selected",
+  "@approveSelected": {
+    "description": "Tooltip in multi-select mode"
+  },
+  "categorizeSelected": "Categorize selected",
+  "@categorizeSelected": {
+    "description": "Tooltip in multi-select mode"
+  },
+  "selectAll": "Select all",
+  "@selectAll": {
+    "description": "Tooltip in multi-select mode"
+  },
+  "filters": "Filters",
+  "@filters": {
+    "description": "Title of the transaction filter sheet"
+  },
+  "status": "Status",
+  "@status": {
+    "description": "Filter section: cleared status"
+  },
+  "noAccountsFound": "No accounts found",
+  "@noAccountsFound": {
+    "description": "Empty account list in the filter sheet"
+  },
+  "noCategoriesFound": "No categories found",
+  "@noCategoriesFound": {
+    "description": "Empty category list in the filter sheet"
+  },
+  "selectDateRange": "Select date range",
+  "@selectDateRange": {
+    "description": "Placeholder of the date range filter"
+  },
+  "dateRangeValue": "{start} – {end}",
+  "@dateRangeValue": {
+    "description": "A date range",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "quickAddHint": "e.g. “Lunch at Mario's $15”",
+  "@quickAddHint": {
+    "description": "Hint of the natural-language quick add field"
+  },
+  "quickAddConfidence": "{percent}% match",
+  "@quickAddConfidence": {
+    "description": "Badge: how sure the parser is",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "quickAddExamplesHeading": "Examples:",
+  "@quickAddExamplesHeading": {
+    "description": "Heading in the quick add tips"
+  },
+  "quickAddDetectsHeading": "The app detects:",
+  "@quickAddDetectsHeading": {
+    "description": "Heading in the quick add tips"
+  },
+  "quickAddExample1": "“Lunch 15”",
+  "@quickAddExample1": {
+    "description": "Quick add example input"
+  },
+  "quickAddExample2": "“Coffee $5 at Starbucks”",
+  "@quickAddExample2": {
+    "description": "Quick add example input"
+  },
+  "quickAddExample3": "“Uber 25 tomorrow”",
+  "@quickAddExample3": {
+    "description": "Quick add example input with a relative date the parser understands"
+  },
+  "quickAddExample4": "“Salary 3000” (income)",
+  "@quickAddExample4": {
+    "description": "Quick add example input detected as income"
+  },
+  "bulletItem": "• {text}",
+  "@bulletItem": {
+    "description": "A bullet list item",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "quickAddTipsTooltip": "Tips",
+  "@quickAddTipsTooltip": {
+    "description": "Tooltip of the quick add help button"
+  },
+  "tutTxAmountTitle": "Enter Amount",
+  "@tutTxAmountTitle": {
+    "description": "Transaction tutorial step title"
+  },
+  "tutTxAmountBody": "Start by entering the transaction amount.",
+  "@tutTxAmountBody": {
+    "description": "Transaction tutorial step text"
+  },
+  "tutTxPayeeTitle": "Select Payee",
+  "@tutTxPayeeTitle": {
+    "description": "Transaction tutorial step title"
+  },
+  "tutTxPayeeBody": "Choose who you paid or who paid you. New payees are saved automatically.",
+  "@tutTxPayeeBody": {
+    "description": "Transaction tutorial step text"
+  },
+  "tutTxCategoryTitle": "Assign Category",
+  "@tutTxCategoryTitle": {
+    "description": "Transaction tutorial step title"
+  },
+  "tutTxCategoryBody": "Categorize this transaction to update your budget.",
+  "@tutTxCategoryBody": {
+    "description": "Transaction tutorial step text"
+  },
+  "tutTxSaveTitle": "Save",
+  "@tutTxSaveTitle": {
+    "description": "Transaction tutorial step title"
+  },
+  "tutTxSaveBody": "Tap here to save. “Save & Add Another” keeps the form open for the next one.",
+  "@tutTxSaveBody": {
+    "description": "Transaction tutorial step text; quotes the saveAndAddAnother button"
+  },
+  "tutBudgetWelcomeTitle": "Welcome to your Budget",
+  "@tutBudgetWelcomeTitle": {
+    "description": "Budget tutorial step title"
+  },
+  "tutBudgetWelcomeBody": "This is where you plan your spending.",
+  "@tutBudgetWelcomeBody": {
+    "description": "Budget tutorial step text"
+  },
+  "tutBudgetMonthTitle": "Select Month",
+  "@tutBudgetMonthTitle": {
+    "description": "Budget tutorial step title"
+  },
+  "tutBudgetMonthBody": "Switch months to plan ahead or review past budgets.",
+  "@tutBudgetMonthBody": {
+    "description": "Budget tutorial step text"
+  },
+  "tutBudgetTbbTitle": "To Be Budgeted",
+  "@tutBudgetTbbTitle": {
+    "description": "Budget tutorial step title (same term as toBeBudgeted)"
+  },
+  "tutBudgetTbbBody": "Money you have not assigned yet. Assign it to categories until this reaches zero.",
+  "@tutBudgetTbbBody": {
+    "description": "Budget tutorial step text"
+  },
+  "tutBudgetCategoriesTitle": "Budget Categories",
+  "@tutBudgetCategoriesTitle": {
+    "description": "Budget tutorial step title"
+  },
+  "tutBudgetCategoriesBody": "Tap a category to assign money. You can also move money between categories.",
+  "@tutBudgetCategoriesBody": {
+    "description": "Budget tutorial step text"
+  },
+  "tutSyncProviderTitle": "Choose Provider",
+  "@tutSyncProviderTitle": {
+    "description": "Sync tutorial step title"
+  },
+  "tutSyncProviderBody": "Sync through your own Google Drive or iCloud. Your data is encrypted before it leaves this device.",
+  "@tutSyncProviderBody": {
+    "description": "Sync tutorial step text"
+  },
+  "tutSyncConnectTitle": "Connect",
+  "@tutSyncConnectTitle": {
+    "description": "Sync tutorial step title"
+  },
+  "tutSyncConnectBody": "Sign in, then set a sync passphrase. You enter the same passphrase on each of your devices.",
+  "@tutSyncConnectBody": {
+    "description": "Sync tutorial step text"
+  },
+  "accessibilityVisualSection": "Visual",
+  "@accessibilityVisualSection": {
+    "description": "Section heading in accessibility settings"
+  },
+  "highContrastTitle": "High contrast",
+  "@highContrastTitle": {
+    "description": "Accessibility switch"
+  },
+  "highContrastSubtitle": "Stronger contrast for colours and borders",
+  "@highContrastSubtitle": {
+    "description": "Accessibility switch subtitle"
+  },
+  "faqBudgetingQ": "How does envelope budgeting work?",
+  "@faqBudgetingQ": {
+    "description": "FAQ question"
+  },
+  "faqBudgetingA": "You give all the money you have a job: assign it to categories until To Be Budgeted is zero. You spend from what a category has available. If you overspend, move money from another category to cover it.",
+  "@faqBudgetingA": {
+    "description": "FAQ answer"
+  },
+  "faqSafeQ": "Is my data safe?",
+  "@faqSafeQ": {
+    "description": "FAQ question"
+  },
+  "faqSafeA": "Your data is stored only on your device, in a database encrypted with AES-256 and unlocked with your master password. If you turn on sync, it is encrypted with your sync passphrase before it leaves the device. There are no LedgerZero servers, no tracking and no analytics.",
+  "@faqSafeA": {
+    "description": "FAQ answer"
+  },
+  "faqSyncQ": "How do I sync between devices?",
+  "@faqSyncQ": {
+    "description": "FAQ question"
+  },
+  "faqSyncA": "Open Settings > Sync Settings, choose Google Drive or iCloud (iPhone and iPad only) and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.",
+  "@faqSyncA": {
+    "description": "FAQ answer; menu names must match the settings labels"
+  },
+  "faqOfflineQ": "Can I use the app offline?",
+  "@faqOfflineQ": {
+    "description": "FAQ question"
+  },
+  "faqOfflineA": "Yes. Everything works offline. Sync catches up automatically when you are back online.",
+  "@faqOfflineA": {
+    "description": "FAQ answer"
+  },
+  "faqPasswordQ": "What if I forget my master password?",
+  "@faqPasswordQ": {
+    "description": "FAQ question"
+  },
+  "faqPasswordA": "Unlock with the recovery key you wrote down during setup, then choose a new password. Without the password and the recovery key nobody can unlock your data, not even the developer.",
+  "@faqPasswordA": {
+    "description": "FAQ answer"
+  },
+  "faqBackupQ": "How do backups work?",
+  "@faqBackupQ": {
+    "description": "FAQ question"
+  },
+  "faqBackupA": "Settings > Backup & Export creates a backup file that is always encrypted with a backup password you choose. Without that password the backup cannot be restored. CSV and JSON exports are readable copies and are not encrypted.",
+  "@faqBackupA": {
+    "description": "FAQ answer; menu names must match the settings labels"
+  },
+  "faqImportQ": "Can I import from YNAB or my bank?",
+  "@faqImportQ": {
+    "description": "FAQ question"
+  },
+  "faqImportA": "Yes. Settings > YNAB Migration imports nYNAB CSV exports and YNAB 4 budgets. Settings > Import CSV reads the CSV export of your bank.",
+  "@faqImportA": {
+    "description": "FAQ answer; menu names must match the settings labels"
+  },
+  "guideStartTitle": "1. Getting started",
+  "@guideStartTitle": {
+    "description": "User guide section title"
+  },
+  "guideStartBody": "LedgerZero uses zero-based envelope budgeting: before you spend money, you give it a job by assigning it to a category.",
+  "@guideStartBody": {
+    "description": "User guide section text"
+  },
+  "guideAccountsTitle": "2. Accounts",
+  "@guideAccountsTitle": {
+    "description": "User guide section title"
+  },
+  "guideAccountsBody": "Add the accounts you pay from (checking, savings, credit card, cash) with their current balance. That money is what you can budget: it appears as To Be Budgeted.",
+  "@guideAccountsBody": {
+    "description": "User guide section text"
+  },
+  "guideBudgetTitle": "3. Budgeting",
+  "@guideBudgetTitle": {
+    "description": "User guide section title"
+  },
+  "guideBudgetBody": "On the Budget screen, tap a category's budgeted amount to assign money. Keep going until To Be Budgeted is zero. Income without a category adds to To Be Budgeted.",
+  "@guideBudgetBody": {
+    "description": "User guide section text"
+  },
+  "guideTransactionsTitle": "4. Transactions",
+  "@guideTransactionsTitle": {
+    "description": "User guide section title"
+  },
+  "guideTransactionsBody": "Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, and rules categorise imported transactions automatically.",
+  "@guideTransactionsBody": {
+    "description": "User guide section text"
+  },
+  "guideOverspendingTitle": "5. Overspending",
+  "@guideOverspendingTitle": {
+    "description": "User guide section title"
+  },
+  "guideOverspendingBody": "When a category's available amount turns red, you have spent more than you budgeted. Move money from another category to cover it.",
+  "@guideOverspendingBody": {
+    "description": "User guide section text"
+  },
+  "guideReconcileTitle": "6. Reconciling",
+  "@guideReconcileTitle": {
+    "description": "User guide section title"
+  },
+  "guideReconcileBody": "Now and then, compare an account with your bank statement using Reconcile Account on the account screen. Cleared transactions are marked as reconciled, and any difference is recorded as an adjustment.",
+  "@guideReconcileBody": {
+    "description": "User guide section text"
+  },
+  "guideSyncTitle": "7. Sync and backups",
+  "@guideSyncTitle": {
+    "description": "User guide section title"
+  },
+  "guideSyncBody": "Sync keeps your phones and tablets up to date through your own Google Drive or iCloud, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.",
+  "@guideSyncBody": {
+    "description": "User guide section text"
+  },
+  "next": "Next",
+  "@next": {
+    "description": "Button: next onboarding page"
+  },
+  "getStarted": "Get Started",
+  "@getStarted": {
+    "description": "Button on the last onboarding page"
+  },
+  "onbWelcomeTagline": "Private budgeting that stays on your device",
+  "@onbWelcomeTagline": {
+    "description": "Onboarding welcome slide"
+  },
+  "onbWelcomeBody": "Take control of your money with envelope budgeting: no sign-up, no servers, no tracking.",
+  "@onbWelcomeBody": {
+    "description": "Onboarding welcome slide"
+  },
+  "onbBenefitsTitle": "Why LedgerZero?",
+  "@onbBenefitsTitle": {
+    "description": "Onboarding benefits slide title"
+  },
+  "onbBenefitPriceTitle": "No subscription",
+  "@onbBenefitPriceTitle": {
+    "description": "Onboarding benefit"
+  },
+  "onbBenefitPriceBody": "One-time purchase. No recurring fees.",
+  "@onbBenefitPriceBody": {
+    "description": "Onboarding benefit"
+  },
+  "onbBenefitDataTitle": "Your data stays with you",
+  "@onbBenefitDataTitle": {
+    "description": "Onboarding benefit"
+  },
+  "onbBenefitDataBody": "Stored on your device and encrypted.",
+  "@onbBenefitDataBody": {
+    "description": "Onboarding benefit"
+  },
+  "onbBenefitOfflineTitle": "Works offline",
+  "@onbBenefitOfflineTitle": {
+    "description": "Onboarding benefit"
+  },
+  "onbBenefitOfflineBody": "Everything works without an internet connection. No server needed.",
+  "@onbBenefitOfflineBody": {
+    "description": "Onboarding benefit"
+  },
+  "onbPrivacyTitle": "Your data, your device",
+  "@onbPrivacyTitle": {
+    "description": "Onboarding privacy slide title"
+  },
+  "onbPrivacyIntro": "Privacy by default. That means:",
+  "@onbPrivacyIntro": {
+    "description": "Onboarding privacy slide"
+  },
+  "onbPrivacyNoTracking": "No tracking, analytics or telemetry.",
+  "@onbPrivacyNoTracking": {
+    "description": "Onboarding privacy point"
+  },
+  "onbPrivacyEncrypted": "All data is encrypted on your device with AES-256.",
+  "@onbPrivacyEncrypted": {
+    "description": "Onboarding privacy point"
+  },
+  "onbPrivacyOwnCloud": "We never see your financial data. Sync runs through your own cloud (Google Drive, iCloud), end-to-end encrypted.",
+  "@onbPrivacyOwnCloud": {
+    "description": "Onboarding privacy point"
+  },
+  "budgetBasicsTitle": "Budgeting Basics",
+  "@budgetBasicsTitle": {
+    "description": "App bar title of the onboarding budgeting explanation"
+  },
+  "budgetBasicsHeadline": "Give Every Dollar a Job",
+  "@budgetBasicsHeadline": {
+    "description": "Headline of the budgeting explanation (EN uses the well-known phrase)"
+  },
+  "budgetBasicsBody1": "LedgerZero uses envelope budgeting. Imagine envelopes for rent, groceries and fun: when you get paid, you put money into these envelopes.",
+  "@budgetBasicsBody1": {
+    "description": "Budgeting explanation"
+  },
+  "budgetBasicsBody2": "When an envelope is empty, you stop spending in that category or move money over from another envelope.",
+  "@budgetBasicsBody2": {
+    "description": "Budgeting explanation"
+  },
+  "budgetBasicsTipZeroTitle": "Zero-based",
+  "@budgetBasicsTipZeroTitle": {
+    "description": "Budgeting tip title"
+  },
+  "budgetBasicsTipZeroBody": "Assign money until To Be Budgeted is zero.",
+  "@budgetBasicsTipZeroBody": {
+    "description": "Budgeting tip"
+  },
+  "budgetBasicsTipFlexTitle": "Stay flexible",
+  "@budgetBasicsTipFlexTitle": {
+    "description": "Budgeting tip title"
+  },
+  "budgetBasicsTipFlexBody": "Overspent? No problem: move money from another category.",
+  "@budgetBasicsTipFlexBody": {
+    "description": "Budgeting tip"
+  },
+  "budgetBasicsReady": "I'm ready!",
+  "@budgetBasicsReady": {
+    "description": "Button that finishes the budgeting explanation"
+  },
+  "categoryGroupRequired": "Please select a category group",
+  "@categoryGroupRequired": {
+    "description": "Validation when saving a category without group"
+  },
+  "categoryUsage": "{count, plural, =0{Not used in any transaction} =1{Used in 1 transaction} other{Used in {count} transactions}}",
+  "@categoryUsage": {
+    "description": "How many transactions use a category",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nameRequired": "Name is required",
+  "@nameRequired": {
+    "description": "Validation for an empty name field"
+  },
+  "categoryTipsTitle": "Tips for categories",
+  "@categoryTipsTitle": {
+    "description": "Title of the category tips dialog"
+  },
+  "categoryTipsBody": "• Group similar expenses (e.g. Housing, Food).\n• Hide a category instead of deleting it to keep its history.\n• Use icons or emojis to recognise categories quickly.\n• Keep it simple: start with broad categories and split them later if needed.",
+  "@categoryTipsBody": {
+    "description": "Body of the category tips dialog"
+  },
+  "moveMoneySameCategory": "Source and destination categories must be different",
+  "@moveMoneySameCategory": {
+    "description": "Validation in the move money dialog"
+  },
+  "selectCategoryRequired": "Please select a category",
+  "@selectCategoryRequired": {
+    "description": "Validation of a category dropdown"
+  },
+  "calculatorBackspace": "Delete last digit",
+  "@calculatorBackspace": {
+    "description": "Screen reader label of the calculator backspace key"
+  },
+  "skipToContent": "Skip to content",
+  "@skipToContent": {
+    "description": "Keyboard skip link"
+  },
+  "payeeMatchesSection": "Matches",
+  "@payeeMatchesSection": {
+    "description": "Section in the payee picker"
+  },
+  "payeeSimilarSection": "Similar",
+  "@payeeSimilarSection": {
+    "description": "Section in the payee picker"
+  },
+  "payeeSimilarity": "{percent}% match",
+  "@payeeSimilarity": {
+    "description": "How similar a suggested payee is",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "payeeNoResults": "No payees found for “{query}”",
+  "@payeeNoResults": {
+    "description": "Empty search result in the payee picker",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPdfDataColumn": "Data",
+  "@reportPdfDataColumn": {
+    "description": "Fallback column header in a PDF report"
+  },
+  "reportPdfCreatedOn": "Created on {date}",
+  "@reportPdfCreatedOn": {
+    "description": "PDF report header; date formatted per user settings",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPdfFooter": "Generated by LedgerZero",
+  "@reportPdfFooter": {
+    "description": "PDF report footer"
+  },
+  "reportPdfPageOf": "Page {page} of {pages}",
+  "@reportPdfPageOf": {
+    "description": "PDF report page counter",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "reportShareText": "LedgerZero report: {title}",
+  "@reportShareText": {
+    "description": "Text attached when sharing an exported report",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "reportIncomeSeries": "Income",
+  "@reportIncomeSeries": {
+    "description": "Chart series name in the income vs expense report"
+  },
+  "reportExpenseSeries": "Expenses",
+  "@reportExpenseSeries": {
+    "description": "Chart series name in the income vs expense report"
+  },
+  "csvFileEmpty": "The CSV file contains no data.",
+  "@csvFileEmpty": {
+    "description": "Error when an imported CSV file is empty"
+  },
+  "fileSizeKb": "{size} KB",
+  "@fileSizeKb": {
+    "description": "File size in kilobytes",
+    "placeholders": {
+      "size": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 1
+        }
+      }
+    }
+  },
+  "csvIssueDateNotMapped": "Choose the column that contains the date.",
+  "@csvIssueDateNotMapped": {
+    "description": "CSV import validation error"
+  },
+  "csvIssueAmountNotMapped": "Choose the column that contains the amount.",
+  "@csvIssueAmountNotMapped": {
+    "description": "CSV import validation error"
+  },
+  "csvIssueColumnsMissing": "The selected columns are not in this file.",
+  "@csvIssueColumnsMissing": {
+    "description": "CSV import validation error"
+  },
+  "csvIssueInvalidDates": "{count, plural, =1{1 row has a date that does not match the format {format}.} other{{count} rows have dates that do not match the format {format}.}}",
+  "@csvIssueInvalidDates": {
+    "description": "CSV import validation error; format is a date pattern like dd.MM.yyyy",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "csvIssueInvalidAmounts": "{count, plural, =1{1 row has an unreadable amount and will be skipped.} other{{count} rows have unreadable amounts and will be skipped.}}",
+  "@csvIssueInvalidAmounts": {
+    "description": "CSV import validation warning",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "csvIssueDateOutliers": "{count, plural, =1{1 date is far from the others. Please check it in the review.} other{{count} dates are far from the others. Please check them in the review.}}",
+  "@csvIssueDateOutliers": {
+    "description": "CSV import validation warning",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "labelValue": "{label}: {value}",
+  "@labelValue": {
+    "description": "A label followed by its value, e.g. 'Next date: 1 May'",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "integerValue": "{value}",
+  "@integerValue": {
+    "description": "A whole number formatted for the locale (thousands separators)",
+    "placeholders": {
+      "value": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "syncErrorNetwork": "No connection to the cloud storage. Sync will try again when you are online.",
+  "@syncErrorNetwork": {
+    "description": "Sync error: network or timeout"
+  },
+  "syncErrorNotSignedIn": "You are not signed in. Please connect again.",
+  "@syncErrorNotSignedIn": {
+    "description": "Sync error"
+  },
+  "syncErrorAuthFailed": "The sign-in has expired. Please disconnect and connect again.",
+  "@syncErrorAuthFailed": {
+    "description": "Sync error"
+  },
+  "syncErrorStorageFull": "Your cloud storage is full. Free up space to keep syncing.",
+  "@syncErrorStorageFull": {
+    "description": "Sync error"
+  },
+  "syncErrorICloudUnavailable": "iCloud is not available. Check that you are signed in to iCloud and that iCloud Drive is on for LedgerZero.",
+  "@syncErrorICloudUnavailable": {
+    "description": "Sync error"
+  },
+  "transactionsShareText": "LedgerZero transactions (CSV)",
+  "@transactionsShareText": {
+    "description": "Share sheet text of a transaction CSV export"
+  },
+  "payeesShareText": "LedgerZero payees (CSV)",
+  "@payeesShareText": {
+    "description": "Share sheet text of the payee CSV export"
+  },
+  "dataExportShareText": "LedgerZero data export (JSON)",
+  "@dataExportShareText": {
+    "description": "Share sheet text of the JSON export"
+  },
+  "rulesShareText": "LedgerZero rules",
+  "@rulesShareText": {
+    "description": "Share sheet text of the rules export"
+  },
+  "seedGroupImmediate": "Immediate Obligations",
+  "@seedGroupImmediate": {
+    "description": "Name of a default category/group created for a new budget (English key: Immediate Obligations)"
+  },
+  "seedCatRent": "Rent/Mortgage",
+  "@seedCatRent": {
+    "description": "Name of a default category/group created for a new budget (English key: Rent/Mortgage)"
+  },
+  "seedCatElectric": "Electric",
+  "@seedCatElectric": {
+    "description": "Name of a default category/group created for a new budget (English key: Electric)"
+  },
+  "seedCatWater": "Water",
+  "@seedCatWater": {
+    "description": "Name of a default category/group created for a new budget (English key: Water)"
+  },
+  "seedCatInternet": "Internet",
+  "@seedCatInternet": {
+    "description": "Name of a default category/group created for a new budget (English key: Internet)"
+  },
+  "seedCatGroceries": "Groceries",
+  "@seedCatGroceries": {
+    "description": "Name of a default category/group created for a new budget (English key: Groceries)"
+  },
+  "seedCatTransportation": "Transportation",
+  "@seedCatTransportation": {
+    "description": "Name of a default category/group created for a new budget (English key: Transportation)"
+  },
+  "seedGroupTrueExpenses": "True Expenses",
+  "@seedGroupTrueExpenses": {
+    "description": "Name of a default category/group created for a new budget (English key: True Expenses)"
+  },
+  "seedCatMedical": "Medical",
+  "@seedCatMedical": {
+    "description": "Name of a default category/group created for a new budget (English key: Medical)"
+  },
+  "seedCatAutoMaintenance": "Auto Maintenance",
+  "@seedCatAutoMaintenance": {
+    "description": "Name of a default category/group created for a new budget (English key: Auto Maintenance)"
+  },
+  "seedCatHomeMaintenance": "Home Maintenance",
+  "@seedCatHomeMaintenance": {
+    "description": "Name of a default category/group created for a new budget (English key: Home Maintenance)"
+  },
+  "seedCatInsurance": "Renter's/Home Insurance",
+  "@seedCatInsurance": {
+    "description": "Name of a default category/group created for a new budget (English key: Renter's/Home Insurance)"
+  },
+  "seedCatSubscriptions": "Software Subscriptions",
+  "@seedCatSubscriptions": {
+    "description": "Name of a default category/group created for a new budget (English key: Software Subscriptions)"
+  },
+  "seedGroupDebt": "Debt Payments",
+  "@seedGroupDebt": {
+    "description": "Name of a default category/group created for a new budget (English key: Debt Payments)"
+  },
+  "seedCatStudentLoan": "Student Loan",
+  "@seedCatStudentLoan": {
+    "description": "Name of a default category/group created for a new budget (English key: Student Loan)"
+  },
+  "seedCatCarPayment": "Car Payment",
+  "@seedCatCarPayment": {
+    "description": "Name of a default category/group created for a new budget (English key: Car Payment)"
+  },
+  "seedCatCreditCard": "Credit Card",
+  "@seedCatCreditCard": {
+    "description": "Name of a default category/group created for a new budget (English key: Credit Card)"
+  },
+  "seedGroupQualityOfLife": "Quality of Life",
+  "@seedGroupQualityOfLife": {
+    "description": "Name of a default category/group created for a new budget (English key: Quality of Life)"
+  },
+  "seedCatVacation": "Vacation",
+  "@seedCatVacation": {
+    "description": "Name of a default category/group created for a new budget (English key: Vacation)"
+  },
+  "seedCatFitness": "Fitness",
+  "@seedCatFitness": {
+    "description": "Name of a default category/group created for a new budget (English key: Fitness)"
+  },
+  "seedCatEducation": "Education",
+  "@seedCatEducation": {
+    "description": "Name of a default category/group created for a new budget (English key: Education)"
+  },
+  "seedCatDiningOut": "Dining Out",
+  "@seedCatDiningOut": {
+    "description": "Name of a default category/group created for a new budget (English key: Dining Out)"
+  },
+  "seedCatEntertainment": "Entertainment",
+  "@seedCatEntertainment": {
+    "description": "Name of a default category/group created for a new budget (English key: Entertainment)"
+  },
+  "seedGroupFun": "Just for Fun",
+  "@seedGroupFun": {
+    "description": "Name of a default category/group created for a new budget (English key: Just for Fun)"
+  },
+  "seedCatGaming": "Gaming",
+  "@seedCatGaming": {
+    "description": "Name of a default category/group created for a new budget (English key: Gaming)"
+  },
+  "seedCatMusic": "Music",
+  "@seedCatMusic": {
+    "description": "Name of a default category/group created for a new budget (English key: Music)"
+  },
+  "seedCatFunMoney": "Fun Money",
+  "@seedCatFunMoney": {
+    "description": "Name of a default category/group created for a new budget (English key: Fun Money)"
+  },
+  "syncFieldName": "Name",
+  "@syncFieldName": {
+    "description": "Label of the name field of a synced record in the sync conflict list"
+  },
+  "importUnmatchedCategories": "{count, plural, =1{1 row names a category that does not exist. It will be imported without a category unless a rule or the payee's default category assigns one.} other{{count} rows name a category that does not exist. They will be imported without a category unless a rule or the payee's default category assigns one.}}",
+  "@importUnmatchedCategories": {
+    "description": "Warning on the CSV import review when file categories did not match existing categories",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importCategoryNotFound": "Category “{name}” not found – unassigned",
+  "@importCategoryNotFound": {
+    "description": "Row note on the CSV import review: the file's category does not exist",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ynabImportErrorInvalidDates": "The dates in Register.csv do not fit one date format (MM/dd/yyyy, dd/MM/yyyy, yyyy-MM-dd or dd.MM.yyyy). First unreadable date: “{value}”. Export the budget from YNAB again or correct the Date column.",
+  "@ynabImportErrorInvalidDates": {
+    "description": "YNAB import error when no date format fits every register row",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "ynabImportCurrency": "Currency of the imported accounts",
+  "@ynabImportCurrency": {
+    "description": "Label of the currency picker on the YNAB import preview"
+  },
+  "ynabImportTrackingAccount": "Tracking account – not imported",
+  "@ynabImportTrackingAccount": {
+    "description": "Subtitle of a YNAB tracking (off-budget) account in the import preview"
+  },
+  "ynabImportTrackingSkipped": "{count, plural, =1{1 tracking account was not imported. Transfers between it and your budget accounts were imported as outflows and inflows of the budget accounts.} other{{count} tracking accounts were not imported. Transfers between them and your budget accounts were imported as outflows and inflows of the budget accounts.}}",
+  "@ynabImportTrackingSkipped": {
+    "description": "YNAB import result: tracking (off-budget) accounts were skipped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loginResetApp": "Reset app",
+  "@loginResetApp": {
+    "description": "Login screen button shown when the key vault is missing; deletes all local data"
+  },
+  "loginResetAppTitle": "Reset LedgerZero?",
+  "@loginResetAppTitle": {
+    "description": "Title of the reset confirmation on the login screen"
+  },
+  "loginResetAppBody": "Without the key vault your data cannot be unlocked. Resetting deletes the encrypted database, all keys, settings and exported files on this device and starts the setup again; afterwards you can restore a backup. This cannot be undone. Type {word} to confirm.",
+  "@loginResetAppBody": {
+    "description": "Explanation in the reset confirmation on the login screen",
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "loginResetConfirmWord": "RESET",
+  "@loginResetConfirmWord": {
+    "description": "Word the user must type to confirm the reset from the login screen"
+  },
+  "loginResetConfirmLabel": "Confirmation word",
+  "@loginResetConfirmLabel": {
+    "description": "Label of the field for the reset confirmation word"
+  },
+  "amountMustNotBeZero": "The amount cannot be zero.",
+  "@amountMustNotBeZero": {
+    "description": "Form validation error when an amount of 0 is entered"
+  },
+  "budgetLastMonthSpent": "Budget Last Month's Spending",
+  "@budgetLastMonthSpent": {
+    "description": "Budget row quick action: budget what was spent in the category last month"
+  },
+  "moveMoneyDone": "Money moved",
+  "@moveMoneyDone": {
+    "description": "Snack bar after moving budgeted money between categories (with an Undo action)"
+  }
 }

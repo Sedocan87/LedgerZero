@@ -9,10 +9,85 @@ import 'package:go_router/go_router.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/core/money/currency.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/screens/rules/rules_screen.dart';
 
 class MockGoRouter extends Mock implements GoRouter {}
 
+Widget _app(SharedPreferences prefs) => ProviderScope(
+  overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+  child: const MaterialApp(
+    localizationsDelegates: [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: [Locale('en', 'US')],
+    home: SettingsScreen(),
+  ),
+);
+
 void main() {
+  testWidgets('Number format offers system, dot and comma', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(_app(prefs));
+    await tester.pumpAndSettle();
+
+    // Default is "follow language".
+    expect(find.text('Follow language'), findsOneWidget);
+
+    await tester.tap(find.text('Number Format'));
+    await tester.pumpAndSettle();
+
+    final dialog = find.byType(SimpleDialog);
+    expect(
+      find.descendant(of: dialog, matching: find.text('Follow language')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: dialog, matching: find.text('Dot (.)')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(of: dialog, matching: find.text('Comma (,)')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Comma (,)'), findsOneWidget);
+    expect(find.text('Follow language'), findsNothing);
+    expect(prefs.getInt('settings_number_format'), AppNumberFormat.comma.index);
+  });
+
+  testWidgets('Currency picker lists every supported currency', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(_app(prefs));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Currency'));
+    await tester.pumpAndSettle();
+
+    final dialog = find.byType(SimpleDialog);
+    for (final code in supportedCurrencyCodes) {
+      expect(
+        find.descendant(of: dialog, matching: find.text(code)),
+        findsOneWidget,
+      );
+    }
+    await tester.tap(find.descendant(of: dialog, matching: find.text('CHF')));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SettingsScreen)),
+    );
+    expect(container.read(settingsProvider).currency, 'CHF');
+  });
+
   testWidgets('SettingsScreen shows Scheduled Transactions option', (
     WidgetTester tester,
   ) async {
@@ -45,5 +120,67 @@ void main() {
 
     expect(find.text('Scheduled Transactions'), findsOneWidget);
     expect(find.byIcon(AppIcons.calendar), findsOneWidget);
+  });
+
+  testWidgets('Rules and YNAB import are reachable from Settings', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final router = GoRouter(
+      initialLocation: '/settings',
+      routes: [
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsScreen(),
+          routes: [
+            GoRoute(
+              path: 'rules',
+              builder: (context, state) => const RulesScreen(),
+            ),
+            GoRoute(
+              path: 'import-ynab',
+              builder: (context, state) => const Text('ynab-import-screen'),
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          rulesListProvider.overrideWith((ref) => Stream.value(const [])),
+        ],
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The section is titled for what it holds (not "Manage Categories").
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings.rules')),
+      200,
+    );
+    await tester.ensureVisible(find.byKey(const Key('settings.rules')));
+    await tester.pumpAndSettle();
+    expect(find.text('Manage data'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings.rules')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RulesScreen), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('settings.importYnab')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings.importYnab')));
+    await tester.pumpAndSettle();
+    expect(find.text('ynab-import-screen'), findsOneWidget);
   });
 }

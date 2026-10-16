@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 
 class ScheduledTransactionListItem extends ConsumerWidget {
   final ScheduledTransaction transaction;
   final String? payeeName;
   final String? categoryName;
   final String? accountName;
+
+  /// Currency of the account; `null` uses the Settings currency.
+  final String? currencyCode;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onSkip;
@@ -21,6 +22,7 @@ class ScheduledTransactionListItem extends ConsumerWidget {
     this.payeeName,
     this.categoryName,
     this.accountName,
+    this.currencyCode,
     this.onTap,
     this.onDelete,
     this.onSkip,
@@ -28,7 +30,7 @@ class ScheduledTransactionListItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currency = ref.watch(settingsProvider).currency;
+    final fmt = ref.watch(appFormatterProvider);
     final theme = Theme.of(context);
     final isIncome = (transaction.amount ?? 0) >= 0;
     final amountColor = isIncome
@@ -78,9 +80,10 @@ class ScheduledTransactionListItem extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            NumberFormat.simpleCurrency(
-              name: currency,
-            ).format(transaction.amount ?? 0),
+            fmt.formatMoney(
+              transaction.amount ?? 0,
+              currencyCode: currencyCode,
+            ),
             style: theme.textTheme.bodyLarge?.copyWith(
               color: amountColor,
               fontWeight: FontWeight.bold,
@@ -103,7 +106,10 @@ class ScheduledTransactionListItem extends ConsumerWidget {
               ),
               if (transaction.nextDate != null)
                 Text(
-                  '${l10n.nextDate}: ${DateFormat.yMMMd().format(transaction.nextDate!)}',
+                  l10n.labelValue(
+                    l10n.nextDate,
+                    fmt.formatDate(transaction.nextDate!),
+                  ),
                   style: theme.textTheme.bodySmall,
                 ),
             ],

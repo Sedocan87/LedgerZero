@@ -1,16 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/repositories/account_repository_impl.dart';
 import 'package:ledger_zero/domain/entities/account.dart' as domain;
 import 'package:drift/native.dart';
 
-// Since we are testing Repository Logic wrapping DAO, we can use a real DAO with in-memory DB
-// OR mock the DAO.
-// Given the task is "Test repository implementations", and these implementations mainly wrap DAOs with error handling and mapping,
-// using real DAO + in-memory DB provides a true integration test of the data layer.
-// However, the task says "Set up unit testing framework", so pure unit tests with mocked DAO are also valid.
-// I will use in-memory DB to verify the full stack from Repo -> DAO -> DB works correctly, as this catches more issues.
+// AccountRepositoryImpl on a real in-memory database (mapping, CRUD, streams,
+// error wrapping). Balances: account_balance_test.dart.
 
 void main() {
   late AppDatabase database;
@@ -33,8 +30,7 @@ void main() {
       name: 'Checking',
       type: domain.AccountType.checking,
       currency: 'USD',
-      startingBalance: 100.0,
-      currentBalance: 100.0,
+      startingBalance: 10000,
       isClosed: false,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -70,13 +66,15 @@ void main() {
 
       final updated = testAccount.copyWith(
         name: 'Updated Name',
-        currentBalance: 500.0,
+        startingBalance: 50000,
       );
       await repository.updateAccount(updated);
 
       final retrieved = await repository.getAccountById('1');
       expect(retrieved!.name, equals('Updated Name'));
-      expect(retrieved.currentBalance, equals(500.0));
+      // No transactions: the computed balance is the starting balance.
+      expect(retrieved.startingBalance, equals(50000));
+      expect(retrieved.balance, equals(50000));
     });
 
     test('deleteAccount removes account', () async {
@@ -98,6 +96,14 @@ void main() {
 
       await repository.createAccount(
         testAccount.copyWith(id: '2', name: 'Savings'),
+      );
+    });
+
+    test('database errors surface as DatabaseException', () async {
+      await repository.createAccount(testAccount);
+      await expectLater(
+        repository.createAccount(testAccount),
+        throwsA(isA<DatabaseException>()),
       );
     });
   });

@@ -3,12 +3,9 @@ import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-
-final payeesProvider = StreamProvider<List<Payee>>((ref) {
-  final repository = ref.watch(payeeRepositoryProvider);
-  return repository.watchAllPayees();
-});
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 
 final payeeSearchQueryProvider = StateProvider<String>((ref) => '');
 
@@ -38,21 +35,28 @@ final suggestedPayeesProvider = StreamProvider.autoDispose<List<Payee>>((ref) {
   return repository.watchSuggestedPayees();
 });
 
-final payeeProvider = FutureProvider.family<Payee?, String>((ref, id) {
-  final repository = ref.watch(payeeRepositoryProvider);
-  return repository.getPayeeById(id);
-});
+/// One payee by id (null when it does not exist), following the payees
+/// stream so edits, renames and deletes show immediately.
+final payeeProvider = Provider.autoDispose.family<AsyncValue<Payee?>, String>(
+  (ref, id) => ref
+      .watch(payeesProvider)
+      .whenData((payees) => payees.where((p) => p.id == id).firstOrNull),
+);
 
-final payeeTransactionsProvider =
-    FutureProvider.family<List<Transaction>, String>((ref, payeeId) async {
-      final repo = ref.watch(transactionRepositoryProvider);
-      return repo.getTransactions(
-        filter: TransactionFilter(payeeIds: [payeeId]),
-        sort: const TransactionSort(
-          field: TransactionSortField.date,
-          ascending: false,
-        ),
-      );
+/// The payee's transactions, newest first (split children included so the
+/// list shows each categorised line; stats count a split once). Follows the
+/// database, so new, edited and deleted transactions show immediately.
+final payeeTransactionsProvider = StreamProvider.autoDispose
+    .family<List<Transaction>, String>((ref, payeeId) {
+      return ref
+          .watch(transactionRepositoryProvider)
+          .watchTransactions(
+            filter: TransactionFilter(payeeIds: [payeeId]),
+            sort: const TransactionSort(
+              field: TransactionSortField.date,
+              ascending: false,
+            ),
+          );
     });
 
 class PayeeController {
@@ -64,72 +68,17 @@ class PayeeController {
     await ref.read(payeeRepositoryProvider).updatePayee(payee);
   }
 
+  /// Deletes a payee and clears every reference to it (atomic).
   Future<void> deletePayee(String id) async {
-    final transactionRepo = ref.read(transactionRepositoryProvider);
-    final payeeRepo = ref.read(payeeRepositoryProvider);
-
-    // Fetch transactions for this payee
-    final filter = TransactionFilter(payeeIds: [id]);
-    final transactions = await transactionRepo.getTransactions(filter: filter);
-
-    if (transactions.isNotEmpty) {
-      Logger.info(
-        'Clearing payee from ${transactions.length} transactions before deleting payee $id',
-      );
-      final updatedTransactions = transactions.map((t) {
-        return Transaction(
-          id: t.id,
-          accountId: t.accountId,
-          date: t.date,
-          amount: t.amount,
-          payeeId: null, // Clear payee
-          categoryId: t.categoryId,
-          memo: t.memo,
-          cleared: t.cleared,
-          approved: t.approved,
-          isDeleted: t.isDeleted,
-          transferAccountId: t.transferAccountId,
-          transferTransactionId: t.transferTransactionId,
-          parentTransactionId: t.parentTransactionId,
-          createdAt: t.createdAt,
-          updatedAt: DateTime.now(),
-        );
-      }).toList();
-
-      await transactionRepo.batchUpdateTransactions(updatedTransactions);
-    }
-
-    await payeeRepo.deletePayee(id);
+    Logger.info('Deleting payee $id');
+    await ref.read(payeeServiceProvider).deletePayee(id);
   }
 
+  /// Moves everything from [sourceId] to [targetId] and deletes the source
+  /// (atomic).
   Future<void> mergePayees(String sourceId, String targetId) async {
-    final transactionRepo = ref.read(transactionRepositoryProvider);
-    final payeeRepo = ref.read(payeeRepositoryProvider);
-    final sourcePayee = await payeeRepo.getPayeeById(sourceId);
-
-    if (sourcePayee == null) {
-      return;
-    }
-
-    // 1. Get transactions for source payee
-    final filter = TransactionFilter(payeeIds: [sourceId]);
-    final transactions = await transactionRepo.getTransactions(filter: filter);
-
-    if (transactions.isNotEmpty) {
-      Logger.info(
-        'Merging ${transactions.length} transactions from $sourceId to $targetId',
-      );
-
-      // 2. Update transactions to target payee
-      final updatedTransactions = transactions.map((t) {
-        return t.copyWith(payeeId: targetId);
-      }).toList();
-
-      await transactionRepo.batchUpdateTransactions(updatedTransactions);
-    }
-
-    // 3. Delete source payee
-    await payeeRepo.deletePayee(sourceId);
+    Logger.info('Merging payee $sourceId into $targetId');
+    await ref.read(payeeServiceProvider).mergePayees(sourceId, targetId);
   }
 }
 

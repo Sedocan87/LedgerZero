@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
+import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 
 class AppColors {
   // We use a modern Teal seed color for a financial/safe yet vibrant look.
@@ -10,50 +11,7 @@ class AppColors {
   static const Color expense = Color(0xFFC62828); // Red 800
   static const Color success = Color(0xFF2E7D32); // Same as income/success
   static const Color warning = Color(0xFFF57C00); // Orange 700
-  static const Color info = Color(0xFF0288D1); // Light Blue 700
   static const Color error = Color(0xFFBA1A1A); // M3 Error
-
-  // Legacy/Static Light Colors (Mapped to M3 Teal Seed approx)
-  static const Color primaryLight = Color(0xFF006A60);
-  static const Color onPrimaryLight = Colors.white;
-  static const Color primaryContainerLight = Color(0xFF74F8E5);
-  static const Color onPrimaryContainerLight = Color(0xFF00201C);
-
-  static const Color secondaryLight = Color(0xFF4A635F);
-  static const Color onSecondaryLight = Colors.white;
-  static const Color secondaryContainerLight = Color(0xFFCCE8E2);
-  static const Color onSecondaryContainerLight = Color(0xFF05201C);
-
-  static const Color tertiaryLight = Color(0xFF456179);
-  static const Color onTertiaryLight = Colors.white;
-
-  static const Color errorLight = Color(0xFFBA1A1A);
-  static const Color onErrorLight = Colors.white;
-
-  static const Color backgroundLight = Color(0xFFFBFDFA);
-  static const Color surfaceLight = Color(0xFFFBFDFA);
-  static const Color onSurfaceLight = Color(0xFF191C1B);
-
-  // Legacy/Static Dark Colors
-  static const Color primaryDark = Color(0xFF53DBC9);
-  static const Color onPrimaryDark = Color(0xFF003732);
-  static const Color primaryContainerDark = Color(0xFF005048);
-  static const Color onPrimaryContainerDark = Color(0xFF74F8E5);
-
-  static const Color secondaryDark = Color(0xFFB1CCC6);
-  static const Color onSecondaryDark = Color(0xFF1C3531);
-  static const Color secondaryContainerDark = Color(0xFF334B47);
-  static const Color onSecondaryContainerDark = Color(0xFFCCE8E2);
-
-  static const Color tertiaryDark = Color(0xFFACC9E5);
-  static const Color onTertiaryDark = Color(0xFF133248);
-
-  static const Color errorDark = Color(0xFFFFB4AB);
-  static const Color onErrorDark = Color(0xFF690005);
-
-  static const Color backgroundDark = Color(0xFF191C1B);
-  static const Color surfaceDark = Color(0xFF191C1B);
-  static const Color onSurfaceDark = Color(0xFFE1E3DF);
 }
 
 class AppTextStyles {
@@ -154,6 +112,9 @@ class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
+      extensions: [
+        ChartPalette.fromScheme(colorScheme, highContrast: isHighContrast),
+      ],
 
       // Global Font Family (if we had Google Fonts, we'd apply it here)
       // fontFamily: 'Inter',

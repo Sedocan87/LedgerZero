@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/onboarding_slides.dart';
@@ -59,7 +60,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Page Indicator placeholder (Task 649)
+                  // Page indicator placeholder
                   Row(
                     children: List.generate(
                       _slides.length,
@@ -83,8 +84,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onPressed: _onNext,
                     child: Text(
                       _currentPage == _slides.length - 1
-                          ? 'Get Started'
-                          : 'Next',
+                          ? AppLocalizations.of(context)!.getStarted
+                          : AppLocalizations.of(context)!.next,
                     ),
                   ),
                 ],

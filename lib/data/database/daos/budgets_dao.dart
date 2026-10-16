@@ -38,16 +38,16 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
   Stream<List<Budget>> watchBudgetsForMonth(String month) =>
       (select(budgets)..where((tbl) => tbl.month.equals(month))).watch();
 
-  Future<double> getTotalBudgetedByMonthRange(String endMonth) {
+  Future<int> getTotalBudgetedByMonthRange(String endMonth) {
     final budgeted = budgets.budgeted.sum();
     final query = selectOnly(budgets)
       ..where(budgets.month.isSmallerOrEqualValue(endMonth))
       ..addColumns([budgeted]);
 
-    return query.map((row) => row.read(budgeted) ?? 0.0).getSingle();
+    return query.map((row) => row.read(budgeted) ?? 0).getSingle();
   }
 
-  Future<double> getTotalBudgetedByCategoryAndMonthRange(
+  Future<int> getTotalBudgetedByCategoryAndMonthRange(
     String categoryId,
     String endMonth,
   ) {
@@ -59,12 +59,10 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
       )
       ..addColumns([budgeted]);
 
-    return query.map((row) => row.read(budgeted) ?? 0.0).getSingle();
+    return query.map((row) => row.read(budgeted) ?? 0).getSingle();
   }
 
-  Future<Map<String, double>> getBudgetedSumsByMonthRange(
-    String endMonth,
-  ) async {
+  Future<Map<String, int>> getBudgetedSumsByMonthRange(String endMonth) async {
     final budgeted = budgets.budgeted.sum();
     final query = selectOnly(budgets)
       ..where(budgets.month.isSmallerOrEqualValue(endMonth))
@@ -75,7 +73,7 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
     return {
       for (final row in rows)
         if (row.read(budgets.categoryId) != null)
-          row.read(budgets.categoryId)!: row.read(budgeted) ?? 0.0,
+          row.read(budgets.categoryId)!: row.read(budgeted) ?? 0,
     };
   }
 }

@@ -12,13 +12,8 @@ void main() {
         child: const Scaffold(body: HomeEmptyState()),
       );
 
-      // Verify empty state content
-      // It usually prompts to add an account
+      // The empty state prompts to add an account.
       expect(find.text('Welcome to LedgerZero'), findsOneWidget);
-      // It might be using FilledButton.icon which is still a FilledButton,
-      // but maybe widget test needs to find by type specifically or maybe it's using another button type?
-      // In the source code: FilledButton.icon.
-      // Let's find by icon.
       expect(find.byIcon(Icons.add), findsOneWidget);
     });
   });

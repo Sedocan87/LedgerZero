@@ -1,12 +1,14 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/privacy_settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/biometrics_controller.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
+import 'package:ledger_zero/services/security/biometric_key_store.dart';
 
 class SecuritySettingsScreen extends ConsumerWidget {
   const SecuritySettingsScreen({super.key});
@@ -16,6 +18,8 @@ class SecuritySettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final currentDuration = ref.watch(autoLockDurationProvider);
     final biometricsState = ref.watch(biometricsProvider);
+    final encryption = ref.watch(databaseEncryptionStatusProvider);
+    final privacy = ref.watch(privacySettingsProvider);
 
     String getDurationLabel(int duration) {
       if (duration == 0) {
@@ -37,38 +41,43 @@ class SecuritySettingsScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.secure), // "Secure" or "Security Settings"
+    final status = encryption.valueOrNull ?? DatabaseEncryptionStatus.unknown;
+    final (statusIcon, statusColor, statusText) = switch (status) {
+      DatabaseEncryptionStatus.encrypted => (
+        Icons.lock,
+        Colors.green,
+        l10n.encryptionStatusEncrypted,
       ),
+      DatabaseEncryptionStatus.plaintext => (
+        Icons.lock_open,
+        Colors.red,
+        l10n.encryptionStatusPlaintext,
+      ),
+      DatabaseEncryptionStatus.unknown => (
+        Icons.help_outline,
+        Colors.grey,
+        l10n.encryptionStatusUnknown,
+      ),
+    };
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.securitySettings)),
       body: ListView(
         children: [
           SettingsSection(
             title: l10n.securitySettings,
             children: [
-              FutureBuilder<bool>(
-                future: ref.watch(databaseProvider).isEncrypted,
-                builder: (context, snapshot) {
-                  final isEncrypted = snapshot.data ?? false;
-                  return ListTile(
-                    leading: Icon(
-                      isEncrypted ? Icons.lock : Icons.lock_open,
-                      color: isEncrypted ? Colors.green : Colors.red,
-                    ),
-                    title: Text(l10n.encryptionStatus),
-                    subtitle: Text(
-                      isEncrypted ? l10n.encrypted : l10n.notEncrypted,
-                    ),
-                  );
-                },
+              ListTile(
+                leading: Icon(statusIcon, color: statusColor),
+                title: Text(l10n.encryptionStatus),
+                subtitle: Text(statusText),
               ),
-              if (!kIsWeb)
-                ListTile(
-                  leading: const Icon(Icons.security),
-                  title: Text(l10n.recoveryKey),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/settings/security/recovery-key'),
-                ),
+              ListTile(
+                leading: const Icon(Icons.key),
+                title: Text(l10n.recoveryKey),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/security/recovery-key'),
+              ),
               ListTile(
                 leading: const Icon(Icons.timer),
                 title: Text(l10n.autoLock),
@@ -96,44 +105,81 @@ class SecuritySettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
-              if (!kIsWeb)
-                ListTile(
-                  leading: const Icon(Icons.password),
-                  title: Text(l10n.changePassword),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () =>
-                      context.push('/settings/security/change-password'),
-                ),
-              if (!kIsWeb)
-                biometricsState.when(
-                  data: (state) => SwitchListTile(
-                    secondary: const Icon(Icons.fingerprint),
-                    title: Text(l10n.biometrics),
-                    subtitle: Text(l10n.useBiometricsDescription),
-                    value: state.isEnabled,
-                    onChanged: state.isAvailable
-                        ? (value) async {
-                            final success = await ref
-                                .read(biometricsProvider.notifier)
-                                .toggleBiometrics(value);
-                            if (!success && value) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(l10n.biometricsSetupFailed),
-                                  ),
-                                );
-                              }
-                            }
+              ListTile(
+                leading: const Icon(Icons.lock_clock),
+                title: Text(l10n.lockNow),
+                onTap: () => ref.read(sessionProvider.notifier).lock(),
+              ),
+              ListTile(
+                leading: const Icon(Icons.password),
+                title: Text(l10n.changePassword),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/security/change-password'),
+              ),
+              biometricsState.when(
+                data: (state) => SwitchListTile(
+                  secondary: const Icon(Icons.fingerprint),
+                  title: Text(l10n.biometrics),
+                  subtitle: Text(l10n.useBiometricsDescription),
+                  value: state.isEnabled,
+                  onChanged: state.isAvailable
+                      ? (value) async {
+                          final success = await ref
+                              .read(biometricsProvider.notifier)
+                              .toggleBiometrics(
+                                value,
+                                BiometricPromptTexts(
+                                  title: l10n.biometricPromptEnableTitle,
+                                  subtitle: l10n.biometricPromptSubtitle,
+                                  cancel: l10n.cancel,
+                                ),
+                              );
+                          if (!success && value && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.biometricsSetupFailed),
+                              ),
+                            );
                           }
-                        : null,
-                  ),
-                  loading: () => ListTile(
-                    leading: const Icon(Icons.fingerprint),
-                    title: Text(l10n.loading),
-                  ),
-                  error: (_, __) => const SizedBox.shrink(),
+                        }
+                      : null,
                 ),
+                loading: () => ListTile(
+                  leading: const Icon(Icons.fingerprint),
+                  title: Text(l10n.loading),
+                ),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          SettingsSection(
+            title: l10n.privacySection,
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.notifications_off_outlined),
+                title: Text(l10n.notificationAmountsTitle),
+                subtitle: Text(l10n.notificationAmountsSubtitle),
+                value: privacy.notificationAmounts,
+                onChanged: (value) => ref
+                    .read(privacySettingsProvider.notifier)
+                    .setNotificationAmounts(value),
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.bug_report_outlined),
+                title: Text(l10n.crashReportsTitle),
+                subtitle: Text(l10n.crashReportsSubtitle),
+                value: privacy.crashReports,
+                onChanged: (value) => ref
+                    .read(privacySettingsProvider.notifier)
+                    .setCrashReports(value),
+              ),
+              ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: Text(l10n.diagnosticsTitle),
+                subtitle: Text(l10n.diagnosticsSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/security/diagnostics'),
+              ),
             ],
           ),
         ],

@@ -1,9 +1,11 @@
+import 'dart:developer' as developer;
 import 'dart:convert';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ledger_zero/core/utils/log_level.dart';
 import 'package:ledger_zero/core/utils/stack_trace_formatter.dart';
+import 'package:ledger_zero/services/error/log_scrubber.dart';
 import 'package:ledger_zero/data/models/log_entry.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,7 +13,18 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:synchronized/synchronized.dart';
 
+/// Writes diagnostic logs and crash reports to the app's cache directory
+/// (not included in device backups on iOS or Android, and never uploaded).
+///
+/// Crash reports are opt-in ([crashReportsEnabled], off by default) and all
+/// message text is scrubbed with [LogScrubber] before it is written.
+/// SharedPreferences key of the crash-report opt-in (default off).
+const String kCrashReportsEnabledKey = 'privacy_crash_reports_enabled';
+
 class LocalErrorReportingService {
+  /// Set from the user's privacy setting at start-up and when it changes.
+  static bool crashReportsEnabled = false;
+
   static final LocalErrorReportingService _instance =
       LocalErrorReportingService._internal();
 
@@ -41,36 +54,46 @@ class LocalErrorReportingService {
     if (_documentsDirectory != null) {
       return _documentsDirectory!;
     }
-    final appDocDir = await getApplicationDocumentsDirectory();
-    _documentsDirectory = Directory(path.join(appDocDir.path, _logDirName));
+    final cacheDir = await getApplicationCacheDirectory();
+    _documentsDirectory = Directory(path.join(cacheDir.path, _logDirName));
     return _documentsDirectory!;
   }
 
-  Future<void> log(LogEntry entry) async {
-    await _lock.synchronized(() async {
-      try {
-        final directory = await _directory;
-        if (!await directory.exists()) {
-          await directory.create(recursive: true);
-        }
+  Future<void> log(LogEntry entry) =>
+      _lock.synchronized(() => _writeLog(entry));
 
-        final file = await _getCurrentLogFile(directory);
-
-        final jsonLine = jsonEncode(entry.toJson());
-        await file.writeAsString('$jsonLine\n', mode: FileMode.append);
-
-        if (entry.level == LogLevel.error) {
-          await _incrementErrorCount(entry.message);
-        }
-
-        // Clean up old files
-        await _pruneOldLogs(directory);
-      } catch (e) {
-        if (kDebugMode) {
-          print('Failed to write log: $e');
-        }
+  /// Writes [entry]; the caller holds [_lock] (it is not reentrant).
+  Future<void> _writeLog(LogEntry entry) async {
+    try {
+      final directory = await _directory;
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
       }
-    });
+
+      final file = await _getCurrentLogFile(directory);
+
+      final jsonLine = jsonEncode(
+        LogEntry(
+          timestamp: entry.timestamp,
+          level: entry.level,
+          message: LogScrubber.scrub(entry.message),
+          error: entry.error == null ? null : LogScrubber.scrub(entry.error),
+          stackTrace: entry.stackTrace,
+        ).toJson(),
+      );
+      await file.writeAsString('$jsonLine\n', mode: FileMode.append);
+
+      if (entry.level == LogLevel.error) {
+        await _incrementErrorCount(LogScrubber.scrub(entry.message));
+      }
+
+      // Clean up old files
+      await _pruneOldLogs(directory);
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log('Failed to write log', name: 'Logs', error: e);
+      }
+    }
   }
 
   Future<void> generateCrashReport(
@@ -78,6 +101,9 @@ class LocalErrorReportingService {
     StackTrace? stack, {
     String? userComments,
   }) async {
+    if (!crashReportsEnabled) {
+      return;
+    }
     await _lock.synchronized(() async {
       try {
         final directory = await _directory;
@@ -94,7 +120,7 @@ class LocalErrorReportingService {
         final buffer = StringBuffer();
         buffer.writeln('CRASH REPORT');
         buffer.writeln('============');
-        buffer.writeln('Time: ${DateTime.now()}');
+        buffer.writeln('Time: ${DateTime.now().toUtc().toIso8601String()}');
 
         // App Info
         try {
@@ -117,13 +143,13 @@ class LocalErrorReportingService {
             buffer.writeln('  SDK: ${androidInfo.version.sdkInt}');
           } else if (Platform.isIOS) {
             final iosInfo = await deviceInfo.iosInfo;
+            // Not the device name: it usually contains the owner's name.
             buffer.writeln('  Model: ${iosInfo.model}');
-            buffer.writeln('  Name: ${iosInfo.name}');
             buffer.writeln('  System Name: ${iosInfo.systemName}');
             buffer.writeln('  System Version: ${iosInfo.systemVersion}');
           } else if (Platform.isLinux) {
             final linuxInfo = await deviceInfo.linuxInfo;
-            buffer.writeln('  Name: ${linuxInfo.name}');
+            buffer.writeln('  Distribution: ${linuxInfo.id}');
             buffer.writeln('  Version: ${linuxInfo.version}');
           } else if (Platform.isMacOS) {
             final macOsInfo = await deviceInfo.macOsInfo;
@@ -131,7 +157,7 @@ class LocalErrorReportingService {
             buffer.writeln('  OS Release: ${macOsInfo.osRelease}');
           } else if (Platform.isWindows) {
             final windowsInfo = await deviceInfo.windowsInfo;
-            buffer.writeln('  Computer Name: ${windowsInfo.computerName}');
+            buffer.writeln('  Build: ${windowsInfo.buildNumber}');
           }
         } catch (_) {
           buffer.writeln('  Unavailable');
@@ -139,11 +165,11 @@ class LocalErrorReportingService {
 
         if (userComments != null && userComments.isNotEmpty) {
           buffer.writeln('\nUser Comments:');
-          buffer.writeln(userComments);
+          buffer.writeln(LogScrubber.scrub(userComments));
         }
 
         buffer.writeln('\nError:');
-        buffer.writeln(error.toString());
+        buffer.writeln(LogScrubber.scrub(error.toString()));
 
         if (stack != null) {
           buffer.writeln('\nStack Trace:');
@@ -152,20 +178,24 @@ class LocalErrorReportingService {
 
         await file.writeAsString(buffer.toString());
 
-        // Also log to standard log
-        await log(
+        // Also log to standard log (we already hold the lock).
+        await _writeLog(
           LogEntry(
             timestamp: DateTime.now(),
             level: LogLevel.error,
-            message: 'Crash Report Generated: ${file.path}',
-            error: error.toString(),
+            message: 'Crash report generated',
+            error: error.runtimeType.toString(),
           ),
         );
 
         await _incrementErrorCount('Crash');
       } catch (e) {
         if (kDebugMode) {
-          print('Failed to generate crash report: $e');
+          developer.log(
+            'Failed to generate crash report',
+            name: 'Logs',
+            error: e,
+          );
         }
       }
     });
@@ -201,6 +231,49 @@ class LocalErrorReportingService {
     }
   }
 
+  /// The text a "Share diagnostic log" action shares: saved crash reports
+  /// and recent log entries, already scrubbed when written. Empty when
+  /// nothing is stored.
+  Future<String> buildDiagnosticReport({int maxLogEntries = 200}) async {
+    final buffer = StringBuffer();
+    final directory = await _directory;
+    final crashDir = Directory(path.join(directory.path, _crashDirName));
+    if (await crashDir.exists()) {
+      final reports =
+          (await crashDir.list().toList()).whereType<File>().toList()
+            ..sort((a, b) => a.path.compareTo(b.path));
+      for (final report in reports) {
+        buffer.writeln(await report.readAsString());
+        buffer.writeln('---');
+      }
+    }
+    final logs = await getLogs();
+    for (final log in logs.take(maxLogEntries)) {
+      buffer.writeln(
+        '[${log.timestamp.toUtc().toIso8601String()}] '
+        '${log.level.name.toUpperCase()}: ${LogScrubber.scrub(log.message)}',
+      );
+      if (log.error != null) {
+        buffer.writeln('  ${LogScrubber.scrub(log.error)}');
+      }
+    }
+    return buffer.toString().trim();
+  }
+
+  /// Deletes all logs, crash reports and error counters.
+  Future<void> deleteAll() async {
+    await _lock.synchronized(() async {
+      final directory = await _directory;
+      if (await directory.exists()) {
+        await directory.delete(recursive: true);
+      }
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_errorStatsKey);
+      } catch (_) {}
+    });
+  }
+
   Future<List<LogEntry>> getLogs() async {
     return await _lock.synchronized(() async {
       final List<LogEntry> logs = [];
@@ -226,7 +299,7 @@ class LocalErrorReportingService {
         }
       } catch (e) {
         if (kDebugMode) {
-          print('Failed to read logs: $e');
+          developer.log('Failed to read logs', name: 'Logs', error: e);
         }
       }
 

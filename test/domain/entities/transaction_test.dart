@@ -10,7 +10,7 @@ void main() {
       id: 'tx_1',
       accountId: 'acc_1',
       date: testDate,
-      amount: -50.0,
+      amount: -5000,
       payeeId: 'payee_1',
       categoryId: 'cat_1',
       memo: 'Groceries',
@@ -26,7 +26,7 @@ void main() {
         id: 'tx_1',
         accountId: 'acc_1',
         date: testDate,
-        amount: -50.0,
+        amount: -5000,
         payeeId: 'payee_1',
         categoryId: 'cat_1',
         memo: 'Groceries',
@@ -40,7 +40,7 @@ void main() {
         id: 'tx_1',
         accountId: 'acc_1',
         date: testDate,
-        amount: -50.0,
+        amount: -5000,
         payeeId: 'payee_1',
         categoryId: 'cat_1',
         memo: 'Groceries',
@@ -56,9 +56,9 @@ void main() {
     });
 
     test('copyWith returns new instance with updated fields', () {
-      final updated = transaction.copyWith(amount: -60.0, memo: 'Supermarket');
+      final updated = transaction.copyWith(amount: -6000, memo: 'Supermarket');
 
-      expect(updated.amount, equals(-60.0));
+      expect(updated.amount, equals(-6000));
       expect(updated.memo, equals('Supermarket'));
       expect(updated.id, equals(transaction.id));
       expect(updated.date, equals(transaction.date));
@@ -69,7 +69,7 @@ void main() {
         'id': 'tx_1',
         'account_id': 'acc_1',
         'date': testDate.toIso8601String(),
-        'amount': -50.0,
+        'amount': -5000,
         'payee_id': 'payee_1',
         'category_id': 'cat_1',
         'memo': 'Groceries',
@@ -93,7 +93,7 @@ void main() {
         'id': 'tx_1',
         'account_id': 'acc_1',
         'date': testDate.toIso8601String(),
-        'amount': -50.0,
+        'amount': -5000,
         'payee_id': 'payee_1',
         'category_id': 'cat_1',
         'memo': 'Groceries',
@@ -109,7 +109,7 @@ void main() {
     });
 
     test('validate returns error for zero amount', () {
-      final invalidT = transaction.copyWith(amount: 0.0);
+      final invalidT = transaction.copyWith(amount: 0);
       final errors = invalidT.validate();
       expect(errors, contains('Transaction amount cannot be zero'));
     });
@@ -119,7 +119,7 @@ void main() {
         id: '1',
         accountId: 'a1',
         date: testDate,
-        amount: 10.0,
+        amount: 1000,
       );
       expect(defaultT.cleared, TransactionClearStatus.uncleared);
       expect(defaultT.approved, true);

@@ -58,7 +58,7 @@ void main() {
         id: const Value('t1'),
         accountId: const Value('acc1'),
         date: Value(DateTime(2025, 1, 10)),
-        amount: const Value(-50.0),
+        amount: const Value(-5000),
         payeeId: const Value('p1'), // Walmart
         categoryId: const Value('c1'), // Groceries
         cleared: const Value(1), // cleared
@@ -71,7 +71,7 @@ void main() {
         id: const Value('t2'),
         accountId: const Value('acc1'),
         date: Value(DateTime(2025, 1, 12)),
-        amount: const Value(-100.0),
+        amount: const Value(-10000),
         payeeId: const Value('p2'), // Amazon
         categoryId: const Value('c2'), // Shopping
         cleared: const Value(0), // uncleared
@@ -83,7 +83,7 @@ void main() {
         id: const Value('t3'),
         accountId: const Value('acc2'),
         date: Value(DateTime(2025, 1, 15)),
-        amount: const Value(1000.0), // Income
+        amount: const Value(100000), // Income
         cleared: const Value(1), // cleared
       ),
     );
@@ -112,7 +112,7 @@ void main() {
     });
 
     test('filter by amount', () async {
-      const filter = TransactionFilter(minAmount: -60.0, maxAmount: -40.0);
+      const filter = TransactionFilter(minAmount: -6000, maxAmount: -4000);
       final results = await transactionsDao.getTransactions(filter: filter);
       expect(results.length, 1);
       expect(results.first.id, 't1');
@@ -187,11 +187,7 @@ void main() {
         field: TransactionSortField.payeeName,
         ascending: true,
       );
-      // Remove unused local variable check if just running
-      // final results = await transactionsDao.getTransactions(sort: sort);
-
-      // Actually checking names: "Amazon" < "Walmart".
-      // Let's filter out t3 to be deterministic about names.
+      // "Amazon" < "Walmart"; t3 (other account) is filtered out.
       const filter = TransactionFilter(accountIds: ['acc1']);
       final resultsFiltered = await transactionsDao.getTransactions(
         filter: filter,

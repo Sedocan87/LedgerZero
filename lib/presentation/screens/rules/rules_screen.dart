@@ -1,14 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/services/import/rule_import_export_service.dart';
 import 'package:ledger_zero/services/rules/rule_conflict_service.dart';
 import 'package:ledger_zero/services/rules/rule_learning_service.dart';
-import 'package:ledger_zero/services/rules/rule_matching_service.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
-import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,7 +27,7 @@ final ruleConflictsProvider = Provider<List<RuleConflict>>((ref) {
     data: (rules) =>
         ref.watch(ruleConflictServiceProvider).detectConflicts(rules),
     loading: () => [],
-    error: (_, __) => [],
+    error: (_, _) => [],
   );
 });
 
@@ -35,10 +38,11 @@ class RulesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rulesAsync = ref.watch(rulesListProvider);
     final conflicts = ref.watch(ruleConflictsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rules'),
+        title: Text(l10n.rules),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -46,10 +50,11 @@ class RulesScreen extends ConsumerWidget {
                 try {
                   final service = ref.read(ruleImportExportServiceProvider);
                   await service.exportRules();
-                } catch (e) {
+                } catch (e, st) {
+                  Logger.error('Exporting rules failed', e, st);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Export failed: $e')),
+                      SnackBar(content: Text(l10n.exportFailedGeneric)),
                     );
                   }
                 }
@@ -59,21 +64,25 @@ class RulesScreen extends ConsumerWidget {
                   final count = await service.importRules();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Imported $count rules')),
+                      SnackBar(content: Text(l10n.rulesImported(count))),
                     );
                   }
-                } catch (e) {
+                } catch (e, st) {
+                  Logger.error('Importing rules failed', e, st);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Import failed: $e')),
+                      SnackBar(content: Text(l10n.importFailedGeneric)),
                     );
                   }
                 }
               } else if (value == 'apply') {
-                final rules = ref.read(rulesListProvider).valueOrNull;
-                if (rules == null || rules.isEmpty) {
+                final rules = await ref.read(ruleRepositoryProvider).getRules();
+                if (!context.mounted) {
+                  return;
+                }
+                if (rules.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No rules to apply')),
+                    SnackBar(content: Text(l10n.rulesNoneToApply)),
                   );
                   return;
                 }
@@ -81,18 +90,16 @@ class RulesScreen extends ConsumerWidget {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Apply Rules'),
-                    content: const Text(
-                      'This will scan all existing transactions and apply the active rules. This cannot be undone automatically.',
-                    ),
+                    title: Text(l10n.rulesApplyTitle),
+                    content: Text(l10n.rulesApplyMessage),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel'),
+                        child: Text(l10n.cancel),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Apply'),
+                        child: Text(l10n.apply),
                       ),
                     ],
                   ),
@@ -100,13 +107,14 @@ class RulesScreen extends ConsumerWidget {
 
                 if (confirm == true && context.mounted) {
                   try {
-                    // Show loading indicator
-                    // ignore: unawaited_futures
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) =>
-                          const Center(child: CircularProgressIndicator()),
+                    // Loading indicator, closed below.
+                    unawaited(
+                      showDialog<void>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) =>
+                            const Center(child: CircularProgressIndicator()),
+                      ),
                     );
 
                     final service = ref.read(ruleMatchingServiceProvider);
@@ -118,27 +126,27 @@ class RulesScreen extends ConsumerWidget {
                       Navigator.pop(context); // Close loading
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                            'Updated ${stats.modifiedCount} transactions in ${stats.durationMs}ms',
-                          ),
+                          content: Text(l10n.rulesApplied(stats.modifiedCount)),
                         ),
                       );
                     }
-                  } catch (e) {
+                  } catch (e, st) {
+                    Logger.error('Applying rules failed', e, st);
                     if (context.mounted) {
                       Navigator.pop(context); // Close loading
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.errorOccurred)),
+                      );
                     }
                   }
                 }
               } else if (value == 'suggest') {
-                // ignore: unawaited_futures
-                showDialog(
-                  context: context,
-                  builder: (context) =>
-                      const Center(child: CircularProgressIndicator()),
+                unawaited(
+                  showDialog<void>(
+                    context: context,
+                    builder: (context) =>
+                        const Center(child: CircularProgressIndicator()),
+                  ),
                 );
 
                 try {
@@ -149,26 +157,27 @@ class RulesScreen extends ConsumerWidget {
                     Navigator.pop(context); // close loader
                     _showSuggestionsDialog(context, ref, suggestions);
                   }
-                } catch (e) {
+                } catch (e, st) {
+                  Logger.error('Suggesting rules failed', e, st);
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(
                       context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    ).showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
                   }
                 }
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'import', child: Text('Import Rules')),
-              const PopupMenuItem(value: 'export', child: Text('Export Rules')),
-              const PopupMenuItem(
+              PopupMenuItem(value: 'import', child: Text(l10n.rulesMenuImport)),
+              PopupMenuItem(value: 'export', child: Text(l10n.rulesMenuExport)),
+              PopupMenuItem(
                 value: 'apply',
-                child: Text('Apply Rules to All Transactions'),
+                child: Text(l10n.rulesMenuApplyAll),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'suggest',
-                child: Text('Suggest Rules from History'),
+                child: Text(l10n.rulesMenuSuggest),
               ),
             ],
           ),
@@ -187,7 +196,7 @@ class RulesScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${conflicts.length} rule conflicts detected',
+                      l10n.rulesConflictsFound(conflicts.length),
                       style: const TextStyle(color: Colors.black87),
                     ),
                   ),
@@ -196,7 +205,7 @@ class RulesScreen extends ConsumerWidget {
                       showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Conflicts'),
+                          title: Text(l10n.rulesConflictsTitle),
                           content: SizedBox(
                             width: double.maxFinite,
                             child: ListView.builder(
@@ -204,22 +213,25 @@ class RulesScreen extends ConsumerWidget {
                               itemCount: conflicts.length,
                               itemBuilder: (ctx, i) => ListTile(
                                 title: Text(
-                                  '${conflicts[i].ruleA.name} vs ${conflicts[i].ruleB.name}',
+                                  l10n.rulesConflictPair(
+                                    conflicts[i].ruleA.name,
+                                    conflicts[i].ruleB.name,
+                                  ),
                                 ),
-                                subtitle: Text(conflicts[i].description),
+                                subtitle: Text(l10n.rulesConflictExplanation),
                               ),
                             ),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Close'),
+                              child: Text(l10n.close),
                             ),
                           ],
                         ),
                       );
                     },
-                    child: const Text('VIEW'),
+                    child: Text(l10n.view),
                   ),
                 ],
               ),
@@ -232,10 +244,10 @@ class RulesScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('No rules found'),
+                        Text(l10n.rulesEmpty),
                         const SizedBox(height: 16),
                         AppButton.primary(
-                          label: 'Create Rule',
+                          label: l10n.rulesCreate,
                           onPressed: () => context.push('/settings/rules/add'),
                         ),
                       ],
@@ -244,10 +256,7 @@ class RulesScreen extends ConsumerWidget {
                 }
                 return ReorderableListView.builder(
                   itemCount: rules.length,
-                  onReorder: (oldIndex, newIndex) {
-                    if (oldIndex < newIndex) {
-                      newIndex -= 1;
-                    }
+                  onReorderItem: (oldIndex, newIndex) {
                     final item = rules.removeAt(oldIndex);
                     rules.insert(newIndex, item);
 
@@ -264,9 +273,7 @@ class RulesScreen extends ConsumerWidget {
                           Logger.error('Failed to reorder rules', e);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Failed to reorder rules'),
-                              ),
+                              SnackBar(content: Text(l10n.rulesReorderFailed)),
                             );
                           }
                         });
@@ -277,7 +284,10 @@ class RulesScreen extends ConsumerWidget {
                       key: ValueKey(rule.id),
                       title: Text(rule.name),
                       subtitle: Text(
-                        '${rule.conditions.length} conditions, ${rule.actions.length} actions',
+                        l10n.ruleSummary(
+                          l10n.ruleConditionCount(rule.conditions.length),
+                          l10n.ruleActionCount(rule.actions.length),
+                        ),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -304,16 +314,17 @@ class RulesScreen extends ConsumerWidget {
                 );
               },
               loading: () => const Center(child: AppLoadingIndicator()),
-              error: (err, stack) => ErrorView(
-                title: 'Error',
-                message: err.toString(),
-                onRetry: () => ref.refresh(rulesListProvider),
+              error: (err, stack) => LoadErrorView(
+                error: err,
+                stackTrace: stack,
+                onRetry: () => ref.invalidate(rulesListProvider),
               ),
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'rules-fab',
         onPressed: () => context.push('/settings/rules/add'),
         child: const Icon(Icons.add),
       ),
@@ -325,19 +336,18 @@ class RulesScreen extends ConsumerWidget {
     WidgetRef ref,
     List<Rule> suggestions,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     if (suggestions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No suggestions found based on transaction history.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.rulesNoSuggestions)));
       return;
     }
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Suggested Rules'),
+        title: Text(l10n.rulesSuggestedTitle),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -351,12 +361,13 @@ class RulesScreen extends ConsumerWidget {
                   subtitle: Text(rule.description ?? ''),
                   trailing: IconButton(
                     icon: const Icon(Icons.add),
+                    tooltip: l10n.add,
                     onPressed: () async {
                       try {
                         await ref.read(ruleRepositoryProvider).createRule(rule);
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            const SnackBar(content: Text('Rule added')),
+                            SnackBar(content: Text(l10n.ruleAdded)),
                           );
                           Navigator.pop(
                             ctx,
@@ -375,7 +386,7 @@ class RulesScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
+            child: Text(l10n.close),
           ),
         ],
       ),

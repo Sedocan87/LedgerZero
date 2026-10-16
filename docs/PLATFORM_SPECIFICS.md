@@ -1,60 +1,43 @@
 # Platform-Specific Behaviors and Configurations
 
-This document outlines the platform-specific implementations, configurations, and behaviors for LedgerZero across Android, iOS, and macOS.
+This document outlines the platform-specific implementations, configurations, and behaviors for LedgerZero. The app supports **iOS and Android** only.
 
 ## Responsive Design & Adaptivity
 
 ### Orientation & Layout
-- **Mobile Devices**: The application utilizes `SingleChildScrollView` and `Column` layouts to adapt to both portrait and landscape orientations.
-- **Tablets/Desktop**: Screens such as `BudgetScreen` and `AccountsScreen` enforce a maximum width of **800 logical pixels** (via `ConstrainedBox`) to maintain readability on large screens or in split-screen mode.
-- **Split-Screen**: Verified to work gracefully down to mobile-width constraints.
+- **Phones**: Screens use scrollable layouts (`SingleChildScrollView`, lists) to adapt to portrait and landscape orientations.
+- **Tablets / split screen**: `BudgetScreen`, `AccountsScreen`, `PayeesScreen` and `PayeeDetailScreen` limit their content to a maximum width of **800 logical pixels** (`ConstrainedBox`) to stay readable on wide screens.
 
 ### Adaptive Widgets
-- The application uses a `PlatformWidget` abstraction to render platform-appropriate controls:
-  - **iOS/macOS**: Uses Cupertino widgets (e.g., `CupertinoSwitch`, `CupertinoActivityIndicator`) where appropriate.
-  - **Android/Windows/Linux**: Uses Material Design 3 widgets.
-- **Font Scaling**: The UI is verified to handle dynamic type sizes (up to 200%) without breaking layout integrity, utilizing scrollable containers for text-heavy areas.
+- The app uses Material Design 3 widgets on both platforms. The loading indicator (`AppLoadingIndicator`, `lib/presentation/widgets/common/app_loading_indicator.dart`) shows a `CupertinoActivityIndicator` on iOS.
+- **Font Scaling**: Text-heavy areas use scrollable containers so larger system text sizes do not break the layout. See [ACCESSIBILITY.md](ACCESSIBILITY.md).
 
 ## Permissions & Capabilities
 
 ### Android
-- **Permissions** (`AndroidManifest.xml`):
+- **Permissions** (`android/app/src/main/AndroidManifest.xml`):
   - `INTERNET`: Required for cloud synchronization (Google Drive).
-  - `ACCESS_NETWORK_STATE`: Used to detect Wi-Fi vs. Cellular connections.
-  - `USE_BIOMETRIC`: Required for `local_auth` to access fingerprint/face unlock.
+  - `ACCESS_NETWORK_STATE`: Used to detect Wi-Fi vs. cellular connections.
+  - `USE_BIOMETRIC`: Required for `BiometricPrompt` (biometric unlock).
   - `VIBRATE`: For haptic feedback.
   - `POST_NOTIFICATIONS`: For local notifications (sync alerts, reminders).
-  - `RECEIVE_BOOT_COMPLETED` & `SCHEDULE_EXACT_ALARM`: For scheduling background notifications/backups.
+  - `RECEIVE_BOOT_COMPLETED`: Lets scheduled local notifications survive a reboot.
+- **Deep links**: `ledgerzero://` scheme.
 
 ### iOS
-- **Permissions** (`Info.plist`):
+- **Info.plist**:
   - `NSFaceIDUsageDescription`: "LedgerZero uses Face ID to securely access your financial data."
   - `NSUbiquitousContainers`: Configured for iCloud Drive access (`iCloud.com.ledgerzero.app`).
+- **Entitlements** (`ios/Runner/Runner.entitlements`): iCloud container `iCloud.com.ledgerzero.app`, service `CloudDocuments`. See [ICLOUD_SETUP.md](ICLOUD_SETUP.md).
 - **URL Schemes**:
   - `ledgerzero://`: Registered for deep linking.
-
-### macOS
-- **Entitlements**:
-  - `com.apple.security.app-sandbox`: **Enabled** (Required for App Store).
-  - `com.apple.security.network.client`: **Enabled** (Required for Google Drive API calls).
-  - `com.apple.security.network.server`: Enabled in Debug profile for tooling.
-  - `com.apple.developer.icloud-services`: `CloudDocuments`.
-  - `com.apple.developer.icloud-container-identifiers`: `iCloud.com.ledgerzero.app`.
+  - The reversed Google iOS client ID (from `ios/Flutter/GoogleSignIn.xcconfig`) for Google Sign-In. See [GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md).
 
 ## Biometric Authentication
-- **Implementation**: Uses `local_auth` package.
-- **Android**: `MainActivity.kt` extends `FlutterFragmentActivity` to support the required `FragmentActivity` API for biometric dialogs.
-- **iOS/macOS**: Relies on system-standard Face ID / Touch ID APIs via the plugin.
+- **Implementation**: app-owned platform code behind the `com.ledgerzero.app/biometric_key` method channel (`lib/services/security/biometric_key_store.dart`); see [ENCRYPTION.md](ENCRYPTION.md#biometric-unlock).
+- **Android**: `BiometricKeyChannel.kt` (Keystore key + `BiometricPrompt.CryptoObject`, BIOMETRIC_STRONG, `androidx.biometric`). `MainActivity.kt` extends `FlutterFragmentActivity`, as `BiometricPrompt` requires, and sets `FLAG_SECURE`.
+- **iOS**: Keychain item with `.biometryCurrentSet` in `AppDelegate.swift`; `NSFaceIDUsageDescription` in `Info.plist`. The same file adds the app-switcher privacy cover (UIScene notifications).
 
 ## File System Access
-- **Path Provider**:
-  - **Android/iOS**: Uses application documents directory for storing the database and temporary files.
-  - **macOS**: Sandboxed application support directory.
-- **iCloud Drive**:
-  - Accessible via `icloud_storage` package which interacts with the ubiquitous container.
-  - **Requirement**: User must be signed into iCloud on the device.
-
-## Known Limitations
-- **Google Drive on macOS**: Requires `com.apple.security.network.client` entitlement (added).
-- **Biometrics on Linux**: Not currently supported by `local_auth`.
-- **Window Resizing**: Minimum window size constraints are not explicitly enforced but the responsive layout handles narrow widths effectively.
+- **Path Provider**: The encrypted database (`db.sqlite`) lives in the application documents directory. Exports, backups being built and restores in progress use the temporary/cache directory (not backed up); diagnostic logs use the cache directory.
+- **iCloud Drive** (iOS only): accessed through the `icloud_storage` package (2.2.0), which works with the app's ubiquity container (`ICloudDriveService`, `lib/services/sync/icloud_drive_service.dart`). The user must be signed in to iCloud with iCloud Drive turned on for LedgerZero.

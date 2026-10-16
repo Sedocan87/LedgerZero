@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -27,6 +28,17 @@ class FakeAccountRepository implements AccountRepository {
   Future<List<Account>> getAllAccounts() async => [];
   @override
   Future<void> updateAccount(Account account) async {}
+  @override
+  Future<Map<String, int>> getAccountBalances() async => {};
+  @override
+  Stream<Map<String, int>> watchAccountBalances() => Stream.value({});
+  @override
+  Future<int> getAccountBalance(String id) async => 0;
+  @override
+  Future<int> getClearedBalance(String id, {DateTime? upTo}) async => 0;
+
+  @override
+  Future<int> getTotalStartingBalance() async => 0;
 }
 
 void main() {
@@ -37,7 +49,7 @@ void main() {
       id: '1',
       name: 'Checking',
       type: AccountType.checking,
-      currentBalance: 1000.0,
+      balance: 100000,
       currency: 'USD',
     );
 
@@ -45,7 +57,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [accountRepositoryProvider.overrideWithValue(fakeRepo)],
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(fakeRepo),
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
+          ),
+        ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -65,7 +82,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [accountRepositoryProvider.overrideWithValue(fakeRepo)],
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(fakeRepo),
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
+          ),
+        ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,

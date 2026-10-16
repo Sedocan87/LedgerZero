@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/categories_dao.dart';
@@ -206,6 +207,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   db.CategoriesCompanion _mapCategoryToCompanion(Category c) {
+    final now = DateTime.now().toUtc();
     return db.CategoriesCompanion(
       id: Value(c.id),
       name: Value(c.name),
@@ -214,8 +216,11 @@ class CategoryRepositoryImpl implements CategoryRepository {
       sortOrder: Value(c.sortOrder),
       goalType: Value(c.goalType?.toName()),
       targetAmount: Value(c.targetAmount),
-      targetDate: Value(c.targetDate),
-      createdAt: Value(c.createdAt),
+      targetDate: Value(
+        c.targetDate == null ? null : CalendarDate.normalize(c.targetDate!),
+      ),
+      createdAt: Value(c.createdAt?.toUtc() ?? now),
+      updatedAt: Value(now),
     );
   }
 
@@ -229,11 +234,13 @@ class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   db.CategoryGroupsCompanion _mapGroupToCompanion(CategoryGroup g) {
+    final now = DateTime.now().toUtc();
     return db.CategoryGroupsCompanion(
       id: Value(g.id),
       name: Value(g.name),
       sortOrder: Value(g.sortOrder),
-      createdAt: Value(g.createdAt),
+      createdAt: Value(g.createdAt?.toUtc() ?? now),
+      updatedAt: Value(now),
     );
   }
 }

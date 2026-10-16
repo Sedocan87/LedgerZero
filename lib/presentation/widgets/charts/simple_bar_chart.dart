@@ -1,14 +1,24 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 
-class SimpleBarChart extends StatelessWidget {
-  final Map<String, double> data;
+/// Bar chart of amounts (minor units) per label.
+///
+/// Screen readers get one summary label with every bar's amount.
+class SimpleBarChart extends ConsumerWidget {
+  /// Label -> amount in minor units.
+  final Map<String, int> data;
   final double height;
   final Color barColor;
   final Color labelColor;
   final bool preserveOrder;
+
+  /// Currency of the amounts; defaults to the Settings currency.
+  final String? currencyCode;
 
   const SimpleBarChart({
     super.key,
@@ -17,23 +27,24 @@ class SimpleBarChart extends StatelessWidget {
     required this.barColor,
     required this.labelColor,
     this.preserveOrder = false,
+    this.currencyCode,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     if (data.isEmpty) {
       return SizedBox(
         height: height,
         child: Center(
-          child: Text(
-            AppLocalizations.of(context)?.noTransactions ?? 'No data available',
-            style: TextStyle(color: labelColor),
-          ),
+          child: Text(l10n.noTransactions, style: TextStyle(color: labelColor)),
         ),
       );
     }
 
-    List<MapEntry<String, double>> entries;
+    final fmt = ref.watch(appFormatterProvider);
+
+    List<MapEntry<String, int>> entries;
     if (preserveOrder) {
       entries = data.entries.toList();
     } else {
@@ -43,21 +54,23 @@ class SimpleBarChart extends StatelessWidget {
       // Show top 7 categories + Others
       entries = sortedEntries.take(7).toList();
       if (sortedEntries.length > 7) {
-        final otherSum = sortedEntries
-            .skip(7)
-            .fold(0.0, (sum, item) => sum + item.value);
-        entries.add(MapEntry('Others', otherSum));
+        final otherSum = Money.sum(sortedEntries.skip(7).map((e) => e.value));
+        entries.add(MapEntry(l10n.chartOthers, otherSum));
       }
     }
 
     final semanticDescription = entries
-        .map((e) => '${e.key}: ${e.value.toStringAsFixed(2)}')
+        .map(
+          (e) =>
+              '${e.key}: ${fmt.formatMoney(e.value, currencyCode: currencyCode)}',
+        )
         .join(', ');
 
     return LayoutBuilder(
       builder: (context, constraints) {
         return Semantics(
-          label: 'Bar Chart showing: $semanticDescription',
+          label: l10n.chartBarSemantics(semanticDescription),
+          excludeSemantics: true,
           child: SizedBox(
             height: height,
             width: constraints.maxWidth,
@@ -67,6 +80,8 @@ class SimpleBarChart extends StatelessWidget {
                   data: entries,
                   barColor: barColor,
                   labelColor: labelColor,
+                  formatter: fmt,
+                  currencyCode: currencyCode,
                 ),
               ),
             ),
@@ -78,14 +93,23 @@ class SimpleBarChart extends StatelessWidget {
 }
 
 class BarChartPainter extends CustomPainter {
-  final List<MapEntry<String, double>> data;
+  /// Label -> amount in minor units.
+  final List<MapEntry<String, int>> data;
   final Color barColor;
   final Color labelColor;
+
+  /// Formats the value label drawn above each bar.
+  final AppFormatter formatter;
+
+  /// Currency of the amounts; defaults to the formatter's currency.
+  final String? currencyCode;
 
   BarChartPainter({
     required this.data,
     required this.barColor,
     required this.labelColor,
+    required this.formatter,
+    this.currencyCode,
   });
 
   @override
@@ -105,7 +129,7 @@ class BarChartPainter extends CustomPainter {
     final chartHeight = size.height - bottomMargin - topMargin;
     final maxVal = data.map((e) => e.value).reduce(max);
     // Prevent div by zero
-    final safeMaxVal = maxVal == 0 ? 1.0 : maxVal;
+    final safeMaxVal = maxVal == 0 ? 1 : maxVal;
 
     final barWidth = (size.width / data.length) * 0.6;
     final spacing = (size.width / data.length) * 0.4;
@@ -128,7 +152,10 @@ class BarChartPainter extends CustomPainter {
 
       // Draw Value on top
       final valSpan = TextSpan(
-        text: compactCurrency(entry.value),
+        text: formatter.formatMoneyCompact(
+          entry.value,
+          currencyCode: currencyCode,
+        ),
         style: TextStyle(
           color: labelColor,
           fontSize: 10,
@@ -169,19 +196,16 @@ class BarChartPainter extends CustomPainter {
     }
   }
 
-  String compactCurrency(double value) {
-    if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toStringAsFixed(0);
-  }
-
   @override
   bool shouldRepaint(covariant BarChartPainter oldDelegate) {
     if (oldDelegate.barColor != barColor) {
       return true;
     }
     if (oldDelegate.labelColor != labelColor) {
+      return true;
+    }
+    if (!identical(oldDelegate.formatter, formatter) ||
+        oldDelegate.currencyCode != currencyCode) {
       return true;
     }
     if (oldDelegate.data.length != data.length) {

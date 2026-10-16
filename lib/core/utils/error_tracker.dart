@@ -26,9 +26,10 @@ class ErrorTracker {
     Logger.error(error.toString(), error, stack);
   }
 
+  /// Uncaught errors become local crash reports only when the user turned
+  /// crash reports on (Settings > Security > Privacy); the service checks
+  /// [LocalErrorReportingService.crashReportsEnabled] and scrubs the text.
   static void _reportCrash(Object error, StackTrace? stack) {
-    // We might want to filter what counts as a "Crash" vs just an error log.
-    // For now, let's treat uncaught exceptions as crashes.
     LocalErrorReportingService().generateCrashReport(error, stack);
   }
 }

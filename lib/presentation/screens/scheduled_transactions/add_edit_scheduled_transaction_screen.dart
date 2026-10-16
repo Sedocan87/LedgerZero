@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/picker_field.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/pickers.dart';
 import 'package:ledger_zero/presentation/widgets/recurrence/recurrence_selector.dart';
 import 'package:uuid/uuid.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
+
+/// Keys of the picker fields (for tests).
+const scheduledAccountFieldKey = Key('scheduled_account_field');
+const scheduledPayeeFieldKey = Key('scheduled_payee_field');
+const scheduledCategoryFieldKey = Key('scheduled_category_field');
 
 class AddEditScheduledTransactionScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -28,53 +41,78 @@ class _AddEditScheduledTransactionScreenState
   String? _accountId;
   String? _payeeId;
   String? _categoryId;
-  double _amount = 0.0;
+
+  /// Amount in minor units (signed: negative = outflow).
+  int _amount = 0;
   RecurrenceFrequency _frequency = RecurrenceFrequency.monthly;
   int _interval = 1;
-  DateTime _nextDate = DateTime.now();
+
+  /// Calendar days (UTC midnight).
+  DateTime _nextDate = CalendarDate.today();
   DateTime? _endDate;
   int? _occurrenceCount;
   bool _autoApprove = false;
   DateTime? _createdAt;
+  String? _memo;
 
-  bool _isLoading = false;
-  bool _isInit = true;
+  /// Day of month monthly/yearly occurrences aim for (see
+  /// [ScheduledTransaction.anchorDay]). Kept from the loaded schedule until
+  /// the user picks a new next date; defaults to the next date's day.
+  int? _anchorDay;
+
+  /// True while an existing schedule is loaded.
+  late bool _isLoading = widget.transactionId != null;
+  bool _isSaving = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_isInit) {
-      if (widget.transactionId != null) {
-        _loadTransaction();
-      }
-      _isInit = false;
+  void initState() {
+    super.initState();
+    if (widget.transactionId != null) {
+      _loadTransaction(widget.transactionId!);
     }
   }
 
-  Future<void> _loadTransaction() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadTransaction(String id) async {
     try {
       final repo = ref.read(scheduledTransactionRepositoryProvider);
-      final transaction = await repo.getScheduledTransactionById(
-        widget.transactionId!,
-      );
+      final transaction = await repo.getScheduledTransactionById(id);
+      if (!mounted) {
+        return;
+      }
       if (transaction != null) {
         setState(() {
           _accountId = transaction.accountId;
           _payeeId = transaction.payeeId;
           _categoryId = transaction.categoryId;
-          _amount = transaction.amount ?? 0.0;
+          _amount = transaction.amount ?? 0;
           _frequency = transaction.frequency ?? RecurrenceFrequency.monthly;
           _interval = transaction.interval ?? 1;
-          _nextDate = transaction.nextDate ?? DateTime.now();
-          _endDate = transaction.endDate;
+          _nextDate = transaction.nextDate != null
+              ? CalendarDate.normalize(transaction.nextDate!)
+              : CalendarDate.today();
+          _endDate = transaction.endDate != null
+              ? CalendarDate.normalize(transaction.endDate!)
+              : null;
           _occurrenceCount = transaction.occurrenceCount;
           _autoApprove = transaction.autoApprove;
           _createdAt = transaction.createdAt;
+          _memo = transaction.memo;
+          _anchorDay = transaction.anchorDay;
         });
       }
+    } catch (e, stack) {
+      Logger.error('Failed to load scheduled transaction $id', e, stack);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.scheduledLoadFailed),
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -84,10 +122,8 @@ class _AddEditScheduledTransactionScreenState
     }
     _formKey.currentState!.save();
 
-    setState(() => _isLoading = true);
+    setState(() => _isSaving = true);
     try {
-      final repo = ref.read(scheduledTransactionRepositoryProvider);
-
       final transaction = ScheduledTransaction(
         id: widget.transactionId ?? const Uuid().v4(),
         accountId: _accountId,
@@ -100,27 +136,36 @@ class _AddEditScheduledTransactionScreenState
         nextDate: _nextDate,
         endDate: _endDate,
         autoApprove: _autoApprove,
-        createdAt: widget.transactionId == null ? DateTime.now() : _createdAt,
+        memo: _memo,
+        anchorDay: _anchorDay ?? _nextDate.day,
+        createdAt: widget.transactionId == null
+            ? DateTime.now().toUtc()
+            : _createdAt,
       );
 
-      if (widget.transactionId != null) {
-        await repo.updateScheduledTransaction(transaction);
-      } else {
-        await repo.createScheduledTransaction(transaction);
-      }
+      // Validates the amount, stores the schedule and its reminder.
+      await ref
+          .read(scheduledTransactionServiceProvider)
+          .saveScheduledTransaction(
+            transaction,
+            isNew: widget.transactionId == null,
+          );
 
       if (mounted) {
         context.pop();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      Logger.error('Failed to save scheduled transaction', e, stack);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.scheduledSaveFailed),
+          ),
+        );
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isSaving = false);
       }
     }
   }
@@ -128,9 +173,21 @@ class _AddEditScheduledTransactionScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final accountMap = ref.watch(accountMapProvider).value ?? {};
-    final payeeMap = ref.watch(payeeMapProvider).value ?? {};
-    final categoryMap = ref.watch(categoryMapProvider).value ?? {};
+    final fmt = ref.watch(appFormatterProvider);
+    final accountNames = <String, String>{
+      for (final a
+          in ref.watch(accountsProvider).valueOrNull ?? const <Account>[])
+        a.id: a.name,
+    };
+    final payeeNames = <String, String>{
+      for (final p in ref.watch(payeesProvider).valueOrNull ?? const <Payee>[])
+        p.id: p.name,
+    };
+    final categoryNames = <String, String>{
+      for (final c
+          in ref.watch(categoriesProvider).valueOrNull ?? const <Category>[])
+        c.id: c.name,
+    };
 
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -144,7 +201,11 @@ class _AddEditScheduledTransactionScreenState
               : l10n.createScheduledTransaction,
         ),
         actions: [
-          IconButton(icon: const Icon(AppIcons.save), onPressed: _save),
+          IconButton(
+            icon: const Icon(AppIcons.save),
+            tooltip: l10n.save,
+            onPressed: _isSaving ? null : _save,
+          ),
         ],
       ),
       body: Form(
@@ -154,69 +215,82 @@ class _AddEditScheduledTransactionScreenState
           children: [
             // Amount
             TextFormField(
-              initialValue: _amount.toString(),
+              initialValue: widget.transactionId == null && _amount == 0
+                  ? ''
+                  : fmt.formatAmountForInput(_amount),
               decoration: InputDecoration(labelText: l10n.amount),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
                 signed: true,
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                final amount = fmt.parseAmount(value);
+                if (amount == null) {
                   return l10n.invalidAmount;
                 }
-                if (double.tryParse(value) == null) {
-                  return l10n.invalidAmount;
+                if (amount == 0) {
+                  return l10n.amountMustNotBeZero;
                 }
                 return null;
               },
-              onSaved: (value) => _amount = double.parse(value!),
+              onSaved: (value) => _amount = fmt.parseAmount(value) ?? 0,
             ),
             const SizedBox(height: 16),
 
             // Account
-            DropdownButtonFormField<String>(
-              key: ValueKey(_accountId),
-              initialValue: (accountMap.containsKey(_accountId))
-                  ? _accountId
-                  : null,
-              decoration: InputDecoration(labelText: l10n.account),
-              items: accountMap.entries
-                  .map(
-                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _accountId = value),
-              validator: (value) => value == null ? l10n.selectAccount : null,
+            PickerField(
+              fieldKey: scheduledAccountFieldKey,
+              label: l10n.account,
+              text: accountNames[_accountId] ?? '',
+              validator: (_) => _accountId == null ? l10n.selectAccount : null,
+              onTap: () async {
+                final picked = await showAccountPicker(context);
+                if (picked != null && mounted) {
+                  setState(() => _accountId = picked.id);
+                }
+              },
             ),
             const SizedBox(height: 16),
 
             // Payee
-            DropdownButtonFormField<String>(
-              key: ValueKey(_payeeId),
-              initialValue: (payeeMap.containsKey(_payeeId)) ? _payeeId : null,
-              decoration: InputDecoration(labelText: l10n.payee),
-              items: payeeMap.entries
-                  .map(
-                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _payeeId = value),
+            PickerField(
+              fieldKey: scheduledPayeeFieldKey,
+              label: l10n.payee,
+              text: payeeNames[_payeeId] ?? '',
+              onClear: () => setState(() => _payeeId = null),
+              onTap: () async {
+                final picked = await showPayeePicker(context);
+                if (picked != null && mounted) {
+                  setState(() => _payeeId = picked.id);
+                }
+              },
             ),
             const SizedBox(height: 16),
 
             // Category
-            DropdownButtonFormField<String>(
-              key: ValueKey(_categoryId),
-              initialValue: (categoryMap.containsKey(_categoryId))
-                  ? _categoryId
-                  : null,
-              decoration: InputDecoration(labelText: l10n.category),
-              items: categoryMap.entries
-                  .map(
-                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _categoryId = value),
+            PickerField(
+              fieldKey: scheduledCategoryFieldKey,
+              label: l10n.category,
+              text: categoryNames[_categoryId] ?? '',
+              onClear: () => setState(() => _categoryId = null),
+              onTap: () async {
+                final picked = await showCategoryPicker(context);
+                if (picked != null && mounted) {
+                  setState(() => _categoryId = picked.id);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Memo
+            TextFormField(
+              initialValue: _memo ?? '',
+              decoration: InputDecoration(labelText: l10n.memo),
+              textCapitalization: TextCapitalization.sentences,
+              onSaved: (value) {
+                final memo = value?.trim() ?? '';
+                _memo = memo.isEmpty ? null : memo;
+              },
             ),
             const SizedBox(height: 16),
 
@@ -238,17 +312,30 @@ class _AddEditScheduledTransactionScreenState
             // Next Date
             ListTile(
               title: Text(l10n.nextDate),
-              subtitle: Text(DateFormat.yMMMd().format(_nextDate)),
+              subtitle: Text(fmt.formatDate(_nextDate)),
               trailing: const Icon(AppIcons.calendar),
               onTap: () async {
+                final initial = CalendarDate.toLocalDay(_nextDate);
+                final now = DateTime.now();
+                var first = DateTime(now.year - 1, now.month, now.day);
+                if (initial.isBefore(first)) {
+                  first = initial;
+                }
+                var last = DateTime(now.year + 5, now.month, now.day);
+                if (initial.isAfter(last)) {
+                  last = initial;
+                }
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: _nextDate,
-                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                  lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                  initialDate: initial,
+                  firstDate: first,
+                  lastDate: last,
                 );
-                if (date != null) {
-                  setState(() => _nextDate = date);
+                if (date != null && mounted) {
+                  setState(() {
+                    _nextDate = CalendarDate.fromLocalPick(date);
+                    _anchorDay = _nextDate.day;
+                  });
                 }
               },
             ),

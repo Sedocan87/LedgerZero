@@ -1,37 +1,44 @@
-import 'dart:io';
+import 'dart:typed_data';
 
+/// A file in the remote sync folder.
 class RemoteFile {
+  /// Name as listed by the provider. Untrusted: validate with
+  /// `SyncFileName.tryParse` before using it for anything.
   final String name;
-  final String id;
-  // Optional metadata map for different transports (e.g. 'size', 'modifiedTime', 'url')
-  final Map<String, dynamic>? metadata;
 
-  RemoteFile(this.name, this.id, {this.metadata});
+  /// Provider id (Drive file id; iCloud relative path).
+  final String id;
+  final int? size;
+  final DateTime? modifiedTime;
+
+  const RemoteFile(this.name, this.id, {this.size, this.modifiedTime});
+
+  @override
+  String toString() => 'RemoteFile($name)';
 }
 
+/// Storage for the sync folder (Google Drive, iCloud Drive, a fake in
+/// tests). Implementations retry transient errors themselves and throw a
+/// `SyncException` otherwise.
 abstract class SyncTransport {
-  /// Unique identifier for this transport (e.g., 'google_drive', 'local_network')
+  /// Stable identifier ('google_drive', 'icloud').
   String get name;
 
-  /// User-friendly name
-  String get displayName;
+  /// Every file in the sync folder (all pages).
+  Future<List<RemoteFile>> listFiles();
 
-  /// Initialize any necessary resources (e.g. login, server start)
-  Future<void> initialize();
+  /// The complete content of [file]. Completes only when the whole file is
+  /// available locally.
+  Future<Uint8List> download(RemoteFile file);
 
-  /// Dispose resources
+  /// Stores [bytes] as [name]. Idempotent: retrying after a timeout never
+  /// creates a second file of the same name. If a file of that name exists
+  /// with the same size it is kept; otherwise its content is replaced.
+  Future<void> upload(String name, Uint8List bytes);
+
+  /// Deletes [file]. Deleting a file that no longer exists succeeds.
+  Future<void> delete(RemoteFile file);
+
+  /// Releases cached clients.
   Future<void> dispose();
-
-  /// List available delta files on the remote/peer
-  Future<List<RemoteFile>> listDeltas();
-
-  /// Download a specific delta file
-  Future<File> downloadDelta(RemoteFile remoteFile, String savePath);
-
-  /// Upload a local delta file
-  /// Returns the ID/Path of the uploaded file on success
-  Future<String?> uploadDelta(File localFile, String filename);
-
-  /// Delete a remote file (optional/maintenance)
-  Future<void> deleteFile(String fileId);
 }

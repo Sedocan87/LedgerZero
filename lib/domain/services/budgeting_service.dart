@@ -1,16 +1,23 @@
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/constants/deterministic_id.dart';
+import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
+import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
-import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
 
+/// Quick-fill rules of the budget row's quick actions.
 enum AutoAssignRule {
+  /// Budget what the category's goal still needs. Goals cannot be set in
+  /// the app yet (goals UI is a planned feature), so this rule is not
+  /// offered anywhere in the UI; the code is kept for when goals arrive.
   underfunded,
   averageSpent,
   lastMonthSpent,
@@ -18,112 +25,98 @@ enum AutoAssignRule {
 }
 
 /// Service responsible for core budgeting calculations.
+///
+/// The budget identity (decision D3, see docs/BUDGETING_RULES.md):
+///
+/// * Category activity = SUM(amount) of the category's non-deleted rows
+///   (split children included; split parents and transfer legs never carry
+///   a category).
+/// * Available(category, M) = budgeted up to M + activity up to end of M.
+/// * TBB(M) = SUM(starting balances) + SUM(rows flowing into To Be Budgeted
+///   up to end of M: uncategorised, not a transfer leg, not a split parent,
+///   both signs) - SUM(budgeted up to M).
+/// * Invariant: SUM(available(M)) + TBB(M) == SUM(account balances counting
+///   transactions up to end of M).
 class BudgetingService {
   final TransactionRepository _transactionRepository;
   final BudgetRepository _budgetRepository;
   final CategoryRepository _categoryRepository;
   final BudgetTemplateRepository _budgetTemplateRepository;
+  final AccountRepository _accountRepository;
+  final UnitOfWork _unitOfWork;
 
   BudgetingService({
-    required TransactionRepository transactionRepository,
-    required BudgetRepository budgetRepository,
-    required CategoryRepository categoryRepository,
-    required BudgetTemplateRepository budgetTemplateRepository,
-  }) : _transactionRepository = transactionRepository,
-       _budgetRepository = budgetRepository,
-       _categoryRepository = categoryRepository,
-       _budgetTemplateRepository = budgetTemplateRepository;
+    required this._transactionRepository,
+    required this._budgetRepository,
+    required this._categoryRepository,
+    required this._budgetTemplateRepository,
+    required this._accountRepository,
+    required this._unitOfWork,
+  });
 
-  /// Calculates the "To Be Budgeted" (TBB) amount up to the end of the specified [targetMonth].
+  /// Calculates "To Be Budgeted" (TBB) at the end of [targetMonth]:
   ///
-  /// TBB = Total Income (positive transactions, null category)
-  ///       - Total Budgeted (sum of all budget allocations)
-  ///       (both up to the end of the target month)
-  Future<double> calculateTBB(DateTime targetMonth) async {
-    // 1. Calculate end of the target month for transaction filtering
-    // We want all transactions strictly before the start of the next month
-    final nextMonthStart = DateTime(targetMonth.year, targetMonth.month + 1, 1);
+  /// TBB = SUM(starting balances of all accounts)
+  ///     + SUM(uncategorised, non-transfer, non-split-parent rows up to the
+  ///       end of the month, both signs)
+  ///     - SUM(budgeted up to and including the month).
+  ///
+  /// Uncategorised outflows (and reconciliation adjustments) therefore
+  /// reduce TBB, starting balances are budgetable, and transfers between
+  /// accounts do not change it.
+  Future<int> calculateTBB(DateTime targetMonth) async {
+    final nextMonthStart = CalendarDate.endOfMonthUtc(targetMonth);
 
-    // 2. Fetch all transactions up to the end of the target month
-    // We start from a very old date (Unix epoch) to capture all history
-    final startOfTime = DateTime.fromMillisecondsSinceEpoch(0);
-
-    final totalIncome = await _transactionRepository.getIncomeSumByDateRange(
-      startOfTime,
-      nextMonthStart.subtract(const Duration(milliseconds: 1)),
+    final startingBalances = await _accountRepository.getTotalStartingBalance();
+    final readyToAssign = await _transactionRepository.getReadyToAssignSum(
+      CalendarDate.beginningOfTime,
+      nextMonthStart,
     );
-
-    // 3. Calculate Total Budgeted
-    final targetMonthString = DateFormat('yyyy-MM').format(targetMonth);
     final totalBudgeted = await _budgetRepository.getTotalBudgetedByMonthRange(
-      targetMonthString,
+      CalendarDate.monthKey(targetMonth),
     );
 
-    return totalIncome - totalBudgeted;
+    return startingBalances + readyToAssign - totalBudgeted;
   }
 
-  /// Calculates total income for a specific [month].
-  ///
-  /// Income is defined as transactions with a positive amount and a null categoryId.
-  Future<double> calculateTotalIncomeForMonth(DateTime month) async {
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(
-      month.year,
-      month.month + 1,
-      1,
-    ).subtract(const Duration(milliseconds: 1));
-
-    return await _transactionRepository.getIncomeSumByDateRange(
-      startOfMonth,
-      endOfMonth,
+  /// Total income for [month]: uncategorised inflows that are not transfer
+  /// legs or split parents.
+  Future<int> calculateTotalIncomeForMonth(DateTime month) async {
+    return _transactionRepository.getIncomeSum(
+      CalendarDate.startOfMonthUtc(month),
+      CalendarDate.endOfMonthUtc(month),
     );
   }
 
-  /// Calculates total spending (sum of all negative transactions) for a specific [month].
-  Future<double> calculateTotalSpendingForMonth(DateTime month) async {
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(
-      month.year,
-      month.month + 1,
-      1,
-    ).subtract(const Duration(milliseconds: 1));
-
-    final transactions = await _transactionRepository
-        .getTransactionsByDateRange(startOfMonth, endOfMonth);
-
-    // Sum only negative amounts
-    return transactions
-        .where((t) => t.amount < 0)
-        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
+  /// Total spending (negative) for [month]: outflows that are not transfer
+  /// legs; a split counts through its children, never twice.
+  Future<int> calculateTotalSpendingForMonth(DateTime month) async {
+    return _transactionRepository.getOutflowSum(
+      CalendarDate.startOfMonthUtc(month),
+      CalendarDate.endOfMonthUtc(month),
+    );
   }
 
   /// Calculates total budgeted amount for a specific [month].
-  Future<double> calculateTotalBudgetedForMonth(DateTime month) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
+  Future<int> calculateTotalBudgetedForMonth(DateTime month) async {
+    final monthString = CalendarDate.monthKey(month);
     final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
 
-    return budgets.fold<double>(
-      0.0,
-      (double sum, Budget b) => sum + b.budgeted,
-    );
+    return Money.sum(budgets.map((b) => b.budgeted));
   }
 
   /// Calculates the activity (spending) for a specific [categoryId] in a specific [month].
   ///
   /// Activity is the sum of all transactions for this category in the month.
   /// Usually negative for outflows/spending.
-  Future<double> calculateCategoryActivity(
+  Future<int> calculateCategoryActivity(
     String categoryId,
     DateTime month,
   ) async {
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(
-      month.year,
-      month.month + 1,
-      1,
-    ).subtract(const Duration(milliseconds: 1));
+    final startOfMonth = CalendarDate.startOfMonthUtc(month);
+    final endOfMonth = CalendarDate.endOfMonthUtc(month); // exclusive
 
-    return await _transactionRepository.getExpenseSumByCategoryAndDateRange(
+    return await _transactionRepository.getCategoryActivitySum(
       categoryId,
       startOfMonth,
       endOfMonth,
@@ -134,27 +127,23 @@ class BudgetingService {
   ///
   /// Available = Total Budgeted (all time up to month) + Total Activity (all time up to month).
   /// This automatically handles positive carry-over and negative rollover (overspending).
-  Future<double> calculateCategoryAvailable(
+  Future<int> calculateCategoryAvailable(
     String categoryId,
     DateTime month,
   ) async {
     // 1. Calculate end of the target month
-    final nextMonthStart = DateTime(month.year, month.month + 1, 1);
-    final endOfTargetMonth = nextMonthStart.subtract(
-      const Duration(milliseconds: 1),
-    );
-    final startOfTime = DateTime.fromMillisecondsSinceEpoch(0);
+    final endOfTargetMonth = CalendarDate.endOfMonthUtc(month); // exclusive
+    final startOfTime = CalendarDate.beginningOfTime;
 
     // 2. Fetch all transactions for this category up to end of target month
-    final totalActivity = await _transactionRepository
-        .getExpenseSumByCategoryAndDateRange(
-          categoryId,
-          startOfTime,
-          endOfTargetMonth,
-        );
+    final totalActivity = await _transactionRepository.getCategoryActivitySum(
+      categoryId,
+      startOfTime,
+      endOfTargetMonth,
+    );
 
     // 3. Fetch all budgets
-    final targetMonthString = DateFormat('yyyy-MM').format(month);
+    final targetMonthString = CalendarDate.monthKey(month);
     final totalBudgeted = await _budgetRepository
         .getTotalBudgetedByCategoryAndMonthRange(categoryId, targetMonthString);
 
@@ -163,193 +152,99 @@ class BudgetingService {
 
   /// Assigns a budgeted amount to a specific category for a specific month.
   ///
-  /// If a budget already exists, updates it. Otherwise, creates a new one.
+  /// If a budget already exists, updates it. Otherwise, creates a new one
+  /// with the deterministic id of `budget:<categoryId>:<yyyy-MM>`.
   Future<void> setCategoryBudgetedAmount(
     String categoryId,
-    double amount,
+    int amount,
     DateTime month,
   ) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
-    final existingBudget = await _budgetRepository.getBudgetByCategoryAndMonth(
+    await _unitOfWork.run(() => _writeBudget(categoryId, month, (_) => amount));
+  }
+
+  /// Sets the budget of [categoryId] in [month] to `compute(current)`,
+  /// creating the row (deterministic id) when it does not exist.
+  Future<void> _writeBudget(
+    String categoryId,
+    DateTime month,
+    int Function(int current) compute,
+  ) async {
+    final monthString = CalendarDate.monthKey(month);
+    final now = DateTime.now().toUtc();
+    final existing = await _budgetRepository.getBudgetByCategoryAndMonth(
       categoryId,
       monthString,
     );
-
-    if (existingBudget != null) {
-      final updatedBudget = existingBudget.copyWith(
-        budgeted: amount,
-        updatedAt: DateTime.now(),
+    if (existing != null) {
+      await _budgetRepository.updateBudget(
+        existing.copyWith(budgeted: compute(existing.budgeted), updatedAt: now),
       );
-      await _budgetRepository.updateBudget(updatedBudget);
-    } else {
-      final newBudget = Budget(
-        id: const Uuid().v4(),
-        categoryId: categoryId,
-        month: monthString,
-        budgeted: amount,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+      return;
+    }
+    try {
+      await _budgetRepository.createBudget(
+        Budget(
+          id: DeterministicId.budgetForKey(categoryId, monthString),
+          categoryId: categoryId,
+          month: monthString,
+          budgeted: compute(0),
+          createdAt: now,
+          updatedAt: now,
+        ),
       );
-      try {
-        await _budgetRepository.createBudget(newBudget);
-      } catch (e) {
-        // Handle race condition where budget was created after check
-        // Retry update
-        final retryBudget = await _budgetRepository.getBudgetByCategoryAndMonth(
-          categoryId,
-          monthString,
-        );
-        if (retryBudget != null) {
-          final updatedBudget = retryBudget.copyWith(
-            budgeted: amount,
-            updatedAt: DateTime.now(),
-          );
-          await _budgetRepository.updateBudget(updatedBudget);
-        } else {
-          rethrow; // Something else failed
-        }
+    } catch (e) {
+      // The row was created concurrently (or arrived through sync):
+      // update it instead.
+      final retry = await _budgetRepository.getBudgetByCategoryAndMonth(
+        categoryId,
+        monthString,
+      );
+      if (retry == null) {
+        rethrow;
       }
+      await _budgetRepository.updateBudget(
+        retry.copyWith(budgeted: compute(retry.budgeted), updatedAt: now),
+      );
     }
   }
 
   /// Moves money from one category to another in a specific month.
   ///
-  /// Reduces the budgeted amount in [fromCategoryId] and increases it in [toCategoryId].
-  /// This guarantees that the total budget remains unchanged.
+  /// Reduces the budgeted amount in [fromCategoryId] and increases it in
+  /// [toCategoryId] in one unit of work, so the total budgeted (and TBB)
+  /// never changes, even if a write fails.
   Future<void> moveMoney(
     String fromCategoryId,
     String toCategoryId,
-    double amount,
+    int amount,
     DateTime month,
   ) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
-
-    // Get source budget
-    var fromBudget = await _budgetRepository.getBudgetByCategoryAndMonth(
-      fromCategoryId,
-      monthString,
-    );
-    if (fromBudget == null) {
-      // Create if doesn't exist (assuming 0 budgeted initially)
-      fromBudget = Budget(
-        id: const Uuid().v4(),
-        categoryId: fromCategoryId,
-        month: monthString,
-        budgeted: 0.0,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      await _budgetRepository.createBudget(fromBudget);
-    }
-
-    // Get destination budget
-    var toBudget = await _budgetRepository.getBudgetByCategoryAndMonth(
-      toCategoryId,
-      monthString,
-    );
-    if (toBudget == null) {
-      toBudget = Budget(
-        id: const Uuid().v4(),
-        categoryId: toCategoryId,
-        month: monthString,
-        budgeted: 0.0,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      await _budgetRepository.createBudget(toBudget);
-    }
-
-    // Update amounts
-    final updatedFromBudget = fromBudget.copyWith(
-      budgeted: fromBudget.budgeted - amount,
-      updatedAt: DateTime.now(),
-    );
-    final updatedToBudget = toBudget.copyWith(
-      budgeted: toBudget.budgeted + amount,
-      updatedAt: DateTime.now(),
-    );
-
-    // Save changes
-    await _budgetRepository.updateBudget(updatedFromBudget);
-    await _budgetRepository.updateBudget(updatedToBudget);
+    await _unitOfWork.run(() async {
+      await _writeBudget(fromCategoryId, month, (current) => current - amount);
+      await _writeBudget(toCategoryId, month, (current) => current + amount);
+    });
   }
 
   /// Initializes budget entries for a new month for all active categories.
   ///
   /// Ensures that a Budget entity exists for every category for the given month.
   Future<void> initializeMonthBudgets(DateTime month) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
     final allCategories = await _categoryRepository.getAllCategories();
-
-    for (final category in allCategories) {
-      // Check if budget already exists
-      final existingBudget = await _budgetRepository
-          .getBudgetByCategoryAndMonth(category.id, monthString);
-      if (existingBudget == null) {
-        final newBudget = Budget(
-          id: const Uuid().v4(),
-          categoryId: category.id,
-          month: monthString,
-          budgeted: 0.0,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        await _budgetRepository.createBudget(newBudget);
+    await _unitOfWork.run(() async {
+      for (final category in allCategories) {
+        await _writeBudget(category.id, month, (current) => current);
       }
-    }
-  }
-
-  /// Creates a snapshot of the budget for a specific [month].
-  ///
-  /// Calculates `activity` and `available` for all categories for the given month
-  /// and updates the Budget records in the database.
-  /// This freezes the calculated values into the database for that month.
-  Future<void> createBudgetSnapshot(DateTime month) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
-    final allCategories = await _categoryRepository.getAllCategories();
-
-    await Future.wait(
-      allCategories.map((category) async {
-        final activity = await calculateCategoryActivity(category.id, month);
-        final available = await calculateCategoryAvailable(category.id, month);
-
-        final existingBudget = await _budgetRepository
-            .getBudgetByCategoryAndMonth(category.id, monthString);
-
-        if (existingBudget != null) {
-          final updatedBudget = existingBudget.copyWith(
-            activity: activity,
-            available: available,
-            updatedAt: DateTime.now(),
-          );
-          await _budgetRepository.updateBudget(updatedBudget);
-        } else {
-          // If budget doesn't exist, we create it.
-          // Assuming budgeted is 0 if it didn't exist.
-          final newBudget = Budget(
-            id: const Uuid().v4(),
-            categoryId: category.id,
-            month: monthString,
-            budgeted: 0.0,
-            activity: activity,
-            available: available,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-          await _budgetRepository.createBudget(newBudget);
-        }
-      }),
-    );
+    });
   }
 
   /// Calculates the target amount to budget for a category for the given month based on its goal.
-  Future<double> calculateGoalTarget(Category category, DateTime month) async {
+  Future<int> calculateGoalTarget(Category category, DateTime month) async {
     if (category.goalType == null || category.targetAmount == null) {
-      return 0.0;
+      return 0;
     }
 
     final targetAmount = category.targetAmount!;
-    final prevMonth = DateTime(month.year, month.month - 1, 1);
+    final prevMonth = DateTime.utc(month.year, month.month - 1, 1);
 
     switch (category.goalType!) {
       case GoalType.monthlyFunding:
@@ -361,11 +256,11 @@ class BudgetingService {
           prevMonth,
         );
         final needed = targetAmount - priorAvailable;
-        return needed > 0 ? needed : 0.0;
+        return needed > 0 ? needed : 0;
 
       case GoalType.targetBalanceByDate:
         if (category.targetDate == null) {
-          return 0.0;
+          return 0;
         }
 
         // Calculate months remaining, inclusive of current month and target month
@@ -385,10 +280,10 @@ class BudgetingService {
         final needed = targetAmount - priorAvailable;
 
         if (needed <= 0) {
-          return 0.0;
+          return 0;
         }
 
-        return needed / monthsRemaining;
+        return Money.divideRounded(needed, monthsRemaining);
     }
   }
 
@@ -405,71 +300,75 @@ class BudgetingService {
     }
 
     final target = await calculateGoalTarget(category, month);
-    if (target == 0.0) {
+    if (target == 0) {
       return 1.0; // Goal met or no target needed
     }
 
-    final monthString = DateFormat('yyyy-MM').format(month);
+    final monthString = CalendarDate.monthKey(month);
     final budget = await _budgetRepository.getBudgetByCategoryAndMonth(
       category.id,
       monthString,
     );
-    final budgeted = budget?.budgeted ?? 0.0;
+    final budgeted = budget?.budgeted ?? 0;
 
+    // A ratio for display, not money.
     return budgeted / target;
   }
 
   /// Calculates the average spending for a category over the last [months] count (excluding current month).
-  Future<double> getAverageSpent(
+  Future<int> getAverageSpent(
     String categoryId,
     int months,
     DateTime referenceMonth,
   ) async {
-    final currentMonthStart = DateTime(
-      referenceMonth.year,
-      referenceMonth.month,
-      1,
-    );
-    final endDate = currentMonthStart.subtract(const Duration(milliseconds: 1));
-    final startDate = DateTime(
+    final endDate = CalendarDate.startOfMonthUtc(referenceMonth); // exclusive
+    final startDate = DateTime.utc(
       referenceMonth.year,
       referenceMonth.month - months,
       1,
     );
 
-    final transactions = await _transactionRepository
-        .getTransactionsByDateRange(startDate, endDate);
+    final totalSpent = await _transactionRepository.getCategoryActivitySum(
+      categoryId,
+      startDate,
+      endDate,
+    );
 
-    final totalSpent = transactions
-        .where((t) => t.categoryId == categoryId)
-        .fold<double>(0.0, (double sum, Transaction t) => sum + t.amount);
-
-    return (totalSpent / months).abs();
+    return _netSpending(Money.divideRounded(totalSpent, months));
   }
 
   /// Gets the spending in the previous month.
-  Future<double> getLastMonthSpent(
+  Future<int> getLastMonthSpent(
     String categoryId,
     DateTime currentMonth,
   ) async {
-    final prevMonth = DateTime(currentMonth.year, currentMonth.month - 1, 1);
+    final prevMonth = DateTime.utc(
+      currentMonth.year,
+      currentMonth.month - 1,
+      1,
+    );
     final activity = await calculateCategoryActivity(categoryId, prevMonth);
-    return activity.abs();
+    return _netSpending(activity);
   }
 
+  /// Turns net category activity into an amount to budget: net outflows
+  /// (negative activity) become a positive amount, net inflows (refunds
+  /// exceeding spending) become zero rather than a positive budget.
+  static int _netSpending(int activity) => activity < 0 ? -activity : 0;
+
   /// Gets the budgeted amount in the previous month.
-  Future<double> getLastMonthBudgeted(
+  Future<int> getLastMonthBudgeted(
     String categoryId,
     DateTime currentMonth,
   ) async {
-    final prevMonthString = DateFormat(
-      'yyyy-MM',
-    ).format(DateTime(currentMonth.year, currentMonth.month - 1, 1));
+    final prevMonthString = CalendarDate.monthKey(
+      DateTime.utc(currentMonth.year, currentMonth.month - 1, 1),
+    );
     final budget = await _budgetRepository.getBudgetByCategoryAndMonth(
       categoryId,
       prevMonthString,
     );
-    return budget?.budgeted ?? 0.0;
+    return budget?.budgeted ?? 0;
   }
 
   /// Automatically assigns budget to a category based on a rule.
@@ -478,7 +377,7 @@ class BudgetingService {
     DateTime month,
     AutoAssignRule rule,
   ) async {
-    double amount = 0.0;
+    int amount = 0;
 
     switch (rule) {
       case AutoAssignRule.underfunded:
@@ -508,10 +407,10 @@ class BudgetingService {
   // --- Budget Templates ---
 
   Future<void> saveBudgetTemplate(String name, DateTime month) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
+    final monthString = CalendarDate.monthKey(month);
     final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
 
-    final Map<String, double> data = {};
+    final Map<String, int> data = {};
     for (final budget in budgets) {
       if (budget.categoryId != null && budget.budgeted > 0) {
         data[budget.categoryId!] = budget.budgeted;
@@ -522,7 +421,7 @@ class BudgetingService {
       id: const Uuid().v4(),
       name: name,
       data: data,
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now().toUtc(),
     );
 
     await _budgetTemplateRepository.createTemplate(template);
@@ -536,9 +435,11 @@ class BudgetingService {
       return;
     }
 
-    for (final entry in template.data.entries) {
-      await setCategoryBudgetedAmount(entry.key, entry.value, month);
-    }
+    await _unitOfWork.run(() async {
+      for (final entry in template.data.entries) {
+        await _writeBudget(entry.key, month, (_) => entry.value);
+      }
+    });
   }
 
   Future<List<BudgetTemplate>> getAllTemplates() {
@@ -552,33 +453,33 @@ class BudgetingService {
   // --- Bulk Operations ---
 
   Future<void> copyBudgetFromPreviousMonth(DateTime month) async {
-    final prevMonth = DateTime(month.year, month.month - 1, 1);
-    final prevMonthString = DateFormat('yyyy-MM').format(prevMonth);
+    final prevMonth = DateTime.utc(month.year, month.month - 1, 1);
+    final prevMonthString = CalendarDate.monthKey(prevMonth);
 
     final prevBudgets = await _budgetRepository.getBudgetsForMonth(
       prevMonthString,
     );
 
-    for (final budget in prevBudgets) {
-      if (budget.categoryId != null && budget.budgeted > 0) {
-        await setCategoryBudgetedAmount(
-          budget.categoryId!,
-          budget.budgeted,
-          month,
-        );
+    await _unitOfWork.run(() async {
+      for (final budget in prevBudgets) {
+        if (budget.categoryId != null && budget.budgeted > 0) {
+          await _writeBudget(budget.categoryId!, month, (_) => budget.budgeted);
+        }
       }
-    }
+    });
   }
 
   Future<void> resetBudget(DateTime month) async {
-    final monthString = DateFormat('yyyy-MM').format(month);
+    final monthString = CalendarDate.monthKey(month);
     final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
 
-    for (final budget in budgets) {
-      if (budget.categoryId != null && budget.budgeted != 0) {
-        await setCategoryBudgetedAmount(budget.categoryId!, 0.0, month);
+    await _unitOfWork.run(() async {
+      for (final budget in budgets) {
+        if (budget.categoryId != null && budget.budgeted != 0) {
+          await _writeBudget(budget.categoryId!, month, (_) => 0);
+        }
       }
-    }
+    });
   }
 
   int _monthsDifference(DateTime from, DateTime to) {
@@ -589,33 +490,29 @@ class BudgetingService {
   ///
   /// Returns a map where the key is categoryId and the value is another map with 'activity' and 'available' keys.
   /// This is an optimized batch operation.
-  Future<Map<String, Map<String, double>>> calculateBatchCategoryPerformance(
+  Future<Map<String, Map<String, int>>> calculateBatchCategoryPerformance(
     DateTime month,
   ) async {
     // 1. Current Month Activity
-    final startOfMonth = DateTime(month.year, month.month, 1);
-    final endOfMonth = DateTime(
-      month.year,
-      month.month + 1,
-      1,
-    ).subtract(const Duration(milliseconds: 1));
+    final startOfMonth = CalendarDate.startOfMonthUtc(month);
+    final endOfMonth = CalendarDate.endOfMonthUtc(month); // exclusive
 
     final currentActivityMap = await _transactionRepository
-        .getExpenseSumsByDateRange(startOfMonth, endOfMonth);
+        .getCategoryActivitySums(startOfMonth, endOfMonth);
 
     // 2. All time activity (for Available calculation)
-    final startOfTime = DateTime.fromMillisecondsSinceEpoch(0);
+    final startOfTime = CalendarDate.beginningOfTime;
     // Available includes current month's activity
     final allTimeActivityMap = await _transactionRepository
-        .getExpenseSumsByDateRange(startOfTime, endOfMonth);
+        .getCategoryActivitySums(startOfTime, endOfMonth);
 
     // 3. All time budgeted (for Available calculation)
-    final monthString = DateFormat('yyyy-MM').format(month);
+    final monthString = CalendarDate.monthKey(month);
     final allTimeBudgetedMap = await _budgetRepository
         .getAllTimeBudgetedSumsUpToMonth(monthString);
 
     // Combine results
-    final Map<String, Map<String, double>> result = {};
+    final Map<String, Map<String, int>> result = {};
 
     final allKeys = {
       ...currentActivityMap.keys,
@@ -624,9 +521,9 @@ class BudgetingService {
     };
 
     for (var catId in allKeys) {
-      final activity = currentActivityMap[catId] ?? 0.0;
-      final totalActivity = allTimeActivityMap[catId] ?? 0.0;
-      final totalBudgeted = allTimeBudgetedMap[catId] ?? 0.0;
+      final activity = currentActivityMap[catId] ?? 0;
+      final totalActivity = allTimeActivityMap[catId] ?? 0;
+      final totalBudgeted = allTimeBudgetedMap[catId] ?? 0;
       final available = totalBudgeted + totalActivity;
 
       result[catId] = {'activity': activity, 'available': available};
@@ -638,15 +535,15 @@ class BudgetingService {
   /// Calculates goal targets for a batch of categories for the given month.
   ///
   /// Returns a map where key is categoryId and value is the target amount.
-  Future<Map<String, double>> calculateBatchGoalTargets(
+  Future<Map<String, int>> calculateBatchGoalTargets(
     DateTime month,
     List<Category> categories,
   ) async {
-    final prevMonth = DateTime(month.year, month.month - 1, 1);
+    final prevMonth = DateTime.utc(month.year, month.month - 1, 1);
 
     // We need previous month's available amounts for some goal types
     // Optimization: Only calculate if we have categories that need it
-    Map<String, Map<String, double>>? prevMonthPerformance;
+    Map<String, Map<String, int>>? prevMonthPerformance;
 
     final needsPrevMonthData = categories.any(
       (c) =>
@@ -658,11 +555,11 @@ class BudgetingService {
       prevMonthPerformance = await calculateBatchCategoryPerformance(prevMonth);
     }
 
-    final Map<String, double> results = {};
+    final Map<String, int> results = {};
 
     for (final category in categories) {
       if (category.goalType == null || category.targetAmount == null) {
-        results[category.id] = 0.0;
+        results[category.id] = 0;
         continue;
       }
 
@@ -675,14 +572,14 @@ class BudgetingService {
 
         case GoalType.targetBalance:
           final priorAvailable =
-              prevMonthPerformance?[category.id]?['available'] ?? 0.0;
+              prevMonthPerformance?[category.id]?['available'] ?? 0;
           final needed = targetAmount - priorAvailable;
-          results[category.id] = needed > 0 ? needed : 0.0;
+          results[category.id] = needed > 0 ? needed : 0;
           break;
 
         case GoalType.targetBalanceByDate:
           if (category.targetDate == null) {
-            results[category.id] = 0.0;
+            results[category.id] = 0;
             break;
           }
 
@@ -693,13 +590,13 @@ class BudgetingService {
           }
 
           final priorAvailable =
-              prevMonthPerformance?[category.id]?['available'] ?? 0.0;
+              prevMonthPerformance?[category.id]?['available'] ?? 0;
           final needed = targetAmount - priorAvailable;
 
           if (needed <= 0) {
-            results[category.id] = 0.0;
+            results[category.id] = 0;
           } else {
-            results[category.id] = needed / monthsRemaining;
+            results[category.id] = Money.divideRounded(needed, monthsRemaining);
           }
           break;
       }

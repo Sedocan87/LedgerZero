@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Android (dev)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_development.dart",
+      "args": ["--flavor", "development"]
+    },
+    {
+      "name": "Android (production)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_production.dart",
+      "args": ["--flavor", "production"]
+    },
+    {
+      "name": "iOS (dev)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_development.dart"
+    }
+  ]
+}

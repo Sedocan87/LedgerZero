@@ -1,14 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:ledger_zero/services/export/export_file_service.dart';
 
 class DataPortabilityService {
   final AccountRepository _accountRepository;
@@ -17,6 +15,7 @@ class DataPortabilityService {
   final PayeeRepository _payeeRepository;
   final BudgetRepository _budgetRepository;
   final ScheduledTransactionRepository _scheduledTransactionRepository;
+  final ExportFileService _files;
 
   DataPortabilityService(
     this._accountRepository,
@@ -24,10 +23,13 @@ class DataPortabilityService {
     this._categoryRepository,
     this._payeeRepository,
     this._budgetRepository,
-    this._scheduledTransactionRepository,
-  );
+    this._scheduledTransactionRepository, {
+    ExportFileService? files,
+  }) : _files = files ?? ExportFileService();
 
-  Future<void> exportAllDataToJson() async {
+  /// Shares all data as JSON; [shareText] is the localised share sheet
+  /// text.
+  Future<void> exportAllDataToJson({String? shareText}) async {
     final accounts = await _accountRepository.getAllAccounts();
     final transactions = await _transactionRepository.getAllTransactions();
     final categories = await _categoryRepository.getAllCategories();
@@ -39,8 +41,12 @@ class DataPortabilityService {
 
     final data = {
       'metadata': {
-        'version': '1.0',
-        'exported_at': DateTime.now().toIso8601String(),
+        // 2.0: every amount is an integer of minor units (hundredths),
+        // dates are UTC ISO-8601 (calendar days at UTC midnight), and
+        // accounts carry a computed `balance` instead of `current_balance`.
+        'version': '2.0',
+        'amount_unit': 'minor',
+        'exported_at': DateTime.now().toUtc().toIso8601String(),
         'app': 'LedgerZero',
       },
       'accounts': accounts.map((e) => e.toJson()).toList(),
@@ -56,18 +62,13 @@ class DataPortabilityService {
 
     final jsonString = const JsonEncoder.withIndent('  ').convert(data);
 
-    final dir = await getApplicationDocumentsDirectory();
     final dateStr = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final filename = 'ledger_zero_export_$dateStr.json';
-    final file = File('${dir.path}/$filename');
-
-    await file.writeAsString(jsonString);
-
-    await SharePlus.instance.share(
-      ShareParams(
-        text: 'LedgerZero Data Export (JSON)',
-        files: [XFile(file.path)],
-      ),
+    // Plaintext by design (the portability path); written to the temporary
+    // export directory and deleted after sharing.
+    final file = await _files.writeString(
+      'ledger_zero_export_$dateStr.json',
+      jsonString,
     );
+    await _files.shareAndDelete(file, text: shareText);
   }
 }

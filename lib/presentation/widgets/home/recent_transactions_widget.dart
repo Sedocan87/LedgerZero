@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
+import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 final recentTransactionsProvider =
     StreamProvider.autoDispose<List<Transaction>>((ref) {
       final repository = ref.watch(transactionRepositoryProvider);
       return repository.watchTransactions(
+        // A split is listed once, by its parent.
+        filter: const TransactionFilter(excludeSplitChildren: true),
         sort: const TransactionSort(
           field: TransactionSortField.date,
           ascending: false,
@@ -27,7 +31,14 @@ class RecentTransactionsWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(recentTransactionsProvider);
-    final currency = ref.watch(settingsProvider).currency;
+    final fmt = ref.watch(appFormatterProvider);
+    // Each amount is shown in its account's currency (Settings currency
+    // while accounts are loading).
+    final accountCurrencies = <String, String>{
+      for (final account in ref.watch(accountsProvider).valueOrNull ?? [])
+        account.id: account.currency,
+    };
+    final payeeNames = ref.watch(payeeMapProvider).valueOrNull ?? const {};
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -107,7 +118,9 @@ class RecentTransactionsWidget extends ConsumerWidget {
                       ),
                     ),
                     title: Text(
-                      transaction.memo ?? 'Transaction',
+                      payeeNames[transaction.payeeId] ??
+                          transaction.memo ??
+                          l10n.unknownPayee,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
@@ -115,15 +128,15 @@ class RecentTransactionsWidget extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
-                      DateFormat.yMMMd().format(transaction.date),
+                      fmt.formatDate(transaction.date),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    trailing: Text(
-                      NumberFormat.simpleCurrency(
-                        name: currency,
-                      ).format(transaction.amount),
+                    trailing: AmountText(
+                      transaction.amount,
+                      currencyCode: accountCurrencies[transaction.accountId],
+                      amountContext: AmountContext.transaction,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: color,
                         fontWeight: FontWeight.bold,
@@ -139,13 +152,8 @@ class RecentTransactionsWidget extends ConsumerWidget {
                 child: CircularProgressIndicator(),
               ),
             ),
-            error: (err, stack) => Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                'Error: $err',
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-            ),
+            error: (err, stack) =>
+                LoadErrorView(error: err, stackTrace: stack, compact: true),
           ),
         ],
       ),

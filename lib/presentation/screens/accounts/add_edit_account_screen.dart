@@ -1,21 +1,34 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
+import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:uuid/uuid.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 
 class AddEditAccountScreen extends ConsumerStatefulWidget {
   final String? accountId;
 
-  const AddEditAccountScreen({super.key, this.accountId});
+  /// Opened right after onboarding: explains why an account comes first and
+  /// continues to the budget once it is saved.
+  final bool firstAccount;
+
+  const AddEditAccountScreen({
+    super.key,
+    this.accountId,
+    this.firstAccount = false,
+  });
 
   @override
   ConsumerState<AddEditAccountScreen> createState() =>
@@ -31,24 +44,19 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   final _balanceFocus = FocusNode();
 
   AccountType _selectedType = AccountType.checking;
-  String _selectedCurrency = 'USD';
+  String _selectedCurrency = defaultCurrencyCode;
   int _selectedColor = 0xFF4CAF50; // Default Green
   String _selectedIcon = 'Wallet';
 
   bool _isLoading = false;
-  double _initialStartingBalance = 0.0;
   Account? _existingAccount;
   bool _isFormDirty = false;
 
-  final List<String> _currencies = [
-    'USD',
-    'EUR',
-    'GBP',
-    'JPY',
-    'CAD',
-    'AUD',
-    'CHF',
-    'CNY',
+  /// The supported currencies, plus the selected one if it is not supported
+  /// (e.g. an existing account created with another currency).
+  List<String> get _currencies => [
+    ...supportedCurrencyCodes,
+    if (!supportedCurrencyCodes.contains(_selectedCurrency)) _selectedCurrency,
   ];
 
   final List<Color> _colors = const [
@@ -82,12 +90,25 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     'Investment': Icons.trending_up,
   };
 
+  /// Screen reader names of the icon keys in [_icons] (the keys are stored).
+  String _iconLabel(AppLocalizations l10n, String key) => switch (key) {
+    'Wallet' => l10n.accountIconWallet,
+    'Bank' => l10n.accountIconBank,
+    'Card' => l10n.accountIconCard,
+    'Cash' => l10n.accountIconCash,
+    'Savings' => l10n.accountIconSavings,
+    'Investment' => l10n.accountIconInvestment,
+    _ => key,
+  };
+
   @override
   void initState() {
     super.initState();
     if (widget.accountId != null) {
       _loadAccount(widget.accountId!);
     } else {
+      // New accounts default to the currency chosen in Settings.
+      _selectedCurrency = ref.read(appFormatterProvider).currency;
       // Restore draft if in Add mode
       WidgetsBinding.instance.addPostFrameCallback((_) => _restoreDraft());
     }
@@ -145,9 +166,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Draft restored')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.draftRestored),
+            ),
+          );
         }
       } catch (e) {
         // Ignore corrupt draft
@@ -169,8 +192,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       if (mounted && account != null) {
         _existingAccount = account;
         _nameController.text = account.name;
-        _balanceController.text = account.startingBalance.toString();
-        _initialStartingBalance = account.startingBalance;
+        _balanceController.text = ref
+            .read(appFormatterProvider)
+            .formatAmountForInput(account.startingBalance);
 
         setState(() {
           _selectedType = account.type;
@@ -180,11 +204,12 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           _isFormDirty = false;
         });
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading account: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
       }
     } finally {
       if (mounted) {
@@ -205,22 +230,21 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       final isEditing = widget.accountId != null;
 
       final name = _nameController.text.trim();
-      final startingBalance = double.tryParse(_balanceController.text) ?? 0.0;
+      final startingBalance =
+          ref.read(appFormatterProvider).parseAmount(_balanceController.text) ??
+          0;
 
+      // The current balance is computed by the repository from the starting
+      // balance and the transactions, so only the starting balance is saved.
       if (isEditing && _existingAccount != null) {
-        final balanceDiff = startingBalance - _initialStartingBalance;
-        final newCurrentBalance =
-            _existingAccount!.currentBalance + balanceDiff;
-
         final updatedAccount = _existingAccount!.copyWith(
           name: name,
           type: _selectedType,
           currency: _selectedCurrency,
           startingBalance: startingBalance,
-          currentBalance: newCurrentBalance,
           color: _selectedColor,
           icon: _selectedIcon,
-          updatedAt: DateTime.now(),
+          updatedAt: DateTime.now().toUtc(),
         );
         await repository.updateAccount(updatedAccount);
       } else {
@@ -230,11 +254,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           type: _selectedType,
           currency: _selectedCurrency,
           startingBalance: startingBalance,
-          currentBalance: startingBalance,
           color: _selectedColor,
           icon: _selectedIcon,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
+          createdAt: DateTime.now().toUtc(),
+          updatedAt: DateTime.now().toUtc(),
         );
         await repository.createAccount(newAccount);
         await _clearDraft();
@@ -243,19 +266,29 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       if (mounted) {
         // Clear dirty flag so we can pop
         setState(() => _isFormDirty = false);
-        context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        final l10n = AppLocalizations.of(context)!;
+        if (widget.firstAccount) {
+          // The starting balance is now To Be Budgeted: assign it.
+          context.go('/budget');
+        } else {
+          Navigator.of(context).pop();
+        }
+        messenger.showSnackBar(
           SnackBar(
-            content: Text(isEditing ? 'Account updated' : 'Account created'),
+            content: Text(
+              isEditing ? l10n.accountUpdated : l10n.accountCreated,
+            ),
             backgroundColor: Colors.green,
           ),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving account: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
       }
     } finally {
       if (mounted) {
@@ -265,21 +298,20 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   }
 
   Future<bool> _showExitConfirmation() async {
+    final l10n = AppLocalizations.of(context)!;
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Unsaved Changes'),
-            content: const Text(
-              'You have unsaved changes. Are you sure you want to discard them?',
-            ),
+            title: Text(l10n.unsavedChangesTitle),
+            content: Text(l10n.unsavedChangesMessage),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Discard'),
+                child: Text(l10n.discard),
               ),
             ],
           ),
@@ -299,6 +331,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.accountId != null;
+    final fmt = ref.watch(appFormatterProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return PopScope(
       canPop: !_isFormDirty,
@@ -321,7 +355,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         },
         child: Scaffold(
           appBar: AppBar(
-            title: Text(isEditing ? 'Edit Account' : 'Add Account'),
+            title: Text(isEditing ? l10n.editAccount : l10n.addAccount),
           ),
           body: _isLoading && _existingAccount == null && isEditing
               ? const Center(child: CircularProgressIndicator())
@@ -332,18 +366,54 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (widget.firstAccount) ...[
+                          Card(
+                            key: const Key('firstAccount.explanation'),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.firstAccountTitle,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSecondaryContainer,
+                                        ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    l10n.firstAccountExplanation,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondaryContainer,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
                         AppTextField(
-                          label: 'Account Name',
-                          hint: 'e.g. Chase Checking',
-                          helperText:
-                              'Enter a descriptive name for this account',
+                          label: l10n.accountNameLabel,
+                          hint: l10n.accountNameHint,
+                          helperText: l10n.accountNameHelper,
                           controller: _nameController,
                           focusNode: _nameFocus,
                           textInputAction: TextInputAction.next,
                           onChanged: (_) => _onFieldChange(),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Please enter an account name';
+                              return l10n.accountNameRequired;
                             }
                             return null;
                           },
@@ -351,16 +421,18 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         const SizedBox(height: AppSpacing.md),
 
                         DropdownButtonFormField<AccountType>(
-                          // ignore: deprecated_member_use
-                          value: _selectedType,
-                          decoration: const InputDecoration(
-                            labelText: 'Account Type',
-                            helperText: 'Select the type of account',
+                          // Rebuilt when the value is set from outside
+                          // (loading the account being edited).
+                          key: ValueKey(_selectedType),
+                          initialValue: _selectedType,
+                          decoration: InputDecoration(
+                            labelText: l10n.accountTypeLabel,
+                            helperText: l10n.accountTypeHelper,
                           ),
                           items: AccountType.values.map((type) {
                             return DropdownMenuItem(
                               value: type,
-                              child: Text(type.name.toUpperCase()),
+                              child: Text(type.label(l10n)),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -378,9 +450,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                             Expanded(
                               flex: 2,
                               child: AppTextField(
-                                label: 'Starting Balance',
-                                hint: '0.00',
-                                helperText: 'Current balance of the account',
+                                label: l10n.startingBalanceLabel,
+                                hint: fmt.formatAmountForInput(0),
+                                helperText: l10n.startingBalanceHelper,
                                 controller: _balanceController,
                                 focusNode: _balanceFocus,
                                 keyboardType:
@@ -392,9 +464,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                                 onChanged: (_) => _onFieldChange(),
                                 onFieldSubmitted: (_) => _saveAccount(),
                                 validator: (value) {
-                                  if (value != null && value.isNotEmpty) {
-                                    if (double.tryParse(value) == null) {
-                                      return 'Invalid number';
+                                  if (value != null &&
+                                      value.trim().isNotEmpty) {
+                                    if (fmt.parseAmount(value) == null) {
+                                      return l10n.invalidNumber;
                                     }
                                   }
                                   return null;
@@ -405,10 +478,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                             Expanded(
                               flex: 1,
                               child: DropdownButtonFormField<String>(
-                                // ignore: deprecated_member_use
-                                value: _selectedCurrency,
-                                decoration: const InputDecoration(
-                                  labelText: 'Currency',
+                                key: ValueKey(_selectedCurrency),
+                                initialValue: _selectedCurrency,
+                                decoration: InputDecoration(
+                                  labelText: l10n.currency,
                                 ),
                                 items: _currencies.map((currency) {
                                   return DropdownMenuItem(
@@ -429,7 +502,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         const SizedBox(height: AppSpacing.md),
 
                         Text(
-                          'Color',
+                          l10n.color,
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -439,16 +512,17 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                           children: _colors.asMap().entries.map((entry) {
                             final index = entry.key;
                             final color = entry.value;
-                            // ignore: deprecated_member_use
-                            final isSelected = _selectedColor == color.value;
+                            final isSelected =
+                                _selectedColor == color.toARGB32();
                             return Semantics(
-                              label: 'Color option ${index + 1}',
+                              label: l10n.colorOption(index + 1),
                               selected: isSelected,
                               button: true,
                               child: GestureDetector(
                                 onTap: () {
-                                  // ignore: deprecated_member_use
-                                  setState(() => _selectedColor = color.value);
+                                  setState(
+                                    () => _selectedColor = color.toARGB32(),
+                                  );
                                   _onFieldChange();
                                 },
                                 child: Container(
@@ -486,7 +560,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         const SizedBox(height: AppSpacing.md),
 
                         Text(
-                          'Icon',
+                          l10n.icon,
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -498,7 +572,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                             return ChoiceChip(
                               label: Icon(
                                 entry.value,
-                                semanticLabel: entry.key,
+                                semanticLabel: _iconLabel(l10n, entry.key),
                               ),
                               selected: isSelected,
                               onSelected: (selected) {
@@ -514,7 +588,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         const SizedBox(height: AppSpacing.xl),
 
                         AppButton.primary(
-                          label: isEditing ? 'Save Changes' : 'Create Account',
+                          label: isEditing
+                              ? l10n.saveChanges
+                              : l10n.createAccount,
                           isLoading: _isLoading,
                           onPressed: _saveAccount,
                         ),

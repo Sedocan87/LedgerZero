@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
@@ -15,8 +16,13 @@ void main() {
     final nextMonth = DateTime(now.year, now.month + 1);
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: [
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
+          ),
+        ],
+        child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(body: MonthSelector()),

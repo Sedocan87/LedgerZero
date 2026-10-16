@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/theme_provider.dart';
+import 'package:ledger_zero/presentation/router/app_router.dart';
 
 class CompletionScreen extends ConsumerStatefulWidget {
   const CompletionScreen({super.key});
@@ -36,7 +38,16 @@ class _CompletionScreenState extends ConsumerState<CompletionScreen>
       ),
     );
 
-    _controller.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (ThemeNotifier.shouldAnimate(context, ref)) {
+        _controller.forward();
+      } else {
+        _controller.value = 1;
+      }
+    });
   }
 
   @override
@@ -45,14 +56,20 @@ class _CompletionScreenState extends ConsumerState<CompletionScreen>
     super.dispose();
   }
 
-  void _finishOnboarding() {
+  /// Marks onboarding done and opens [location] (the user is already
+  /// authenticated from the security setup).
+  ///
+  /// Finishing onboarding rebuilds the router (it follows the auth state), so
+  /// the navigation goes to the new router once it is in place.
+  void _finishOnboarding(String location) {
     ref.read(authProvider.notifier).setOnboarded(true);
-    // User is already authenticated from security setup
-    context.go('/');
+    final router = ref.read(routerProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) => router.go(location));
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Center(
         child: Padding(
@@ -81,29 +98,37 @@ class _CompletionScreenState extends ConsumerState<CompletionScreen>
                 child: Column(
                   children: [
                     Text(
-                      'You\'re All Set!',
+                      l10n.onboardingCompleteTitle,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Your financial journey with LedgerZero begins now.',
+                      l10n.onboardingCompleteMessage,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 40),
-                    ElevatedButton(
-                      onPressed: _finishOnboarding,
-                      style: ElevatedButton.styleFrom(
+                    FilledButton(
+                      key: const Key('onboarding.createFirstAccount'),
+                      onPressed: () =>
+                          _finishOnboarding('/accounts/add?first=1'),
+                      style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 48,
+                          horizontal: 32,
                           vertical: 16,
                         ),
                       ),
-                      child: const Text(
-                        'Go to Dashboard',
-                        style: TextStyle(fontSize: 18),
+                      child: Text(
+                        l10n.onboardingCreateFirstAccount,
+                        style: const TextStyle(fontSize: 18),
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      key: const Key('onboarding.skipFirstAccount'),
+                      onPressed: () => _finishOnboarding('/'),
+                      child: Text(l10n.onboardingSkipForNow),
                     ),
                   ],
                 ),

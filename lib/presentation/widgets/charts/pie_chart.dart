@@ -1,83 +1,84 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 
-class PieChart extends StatelessWidget {
-  final Map<String, double> data;
+/// Pie chart of the share of each amount (minor units) in the total.
+///
+/// Screen readers get one summary label with every slice and its share.
+class PieChart extends ConsumerWidget {
+  /// Label -> amount in minor units.
+  final Map<String, int> data;
   final double height;
-  final List<Color> colors;
+
+  /// Slice colours; defaults to the theme's [ChartPalette.categorical].
+  final List<Color>? colors;
   final Color labelColor;
 
   const PieChart({
     super.key,
     required this.data,
     this.height = 200,
-    this.colors = const [
-      Color(0xFF00796B), // Teal 700
-      Color(0xFFFFA000), // Amber 700
-      Color(0xFF455A64), // Blue Grey 700
-      Color(0xFFD32F2F), // Red 700
-      Color(0xFF1976D2), // Blue 700
-      Color(0xFF388E3C), // Green 700
-      Color(0xFF7B1FA2), // Purple 700
-      Color(0xFFF57C00), // Orange 700
-    ],
+    this.colors,
     required this.labelColor,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     if (data.isEmpty) {
       return SizedBox(
         height: height,
         child: Center(
-          child: Text(
-            AppLocalizations.of(context)?.noTransactions ?? 'No data available',
-            style: TextStyle(color: labelColor),
-          ),
+          child: Text(l10n.noTransactions, style: TextStyle(color: labelColor)),
         ),
       );
     }
+    final percentFormat = NumberFormat.decimalPercentPattern(
+      locale: ref.watch(appFormatterProvider).locale,
+      decimalDigits: 1,
+    );
+    String percentOf(int value, int total) =>
+        percentFormat.format(value / total);
 
-    // Process data: Top 7 + Others
+    final colors = this.colors ?? ChartPalette.of(context).categorical;
+
+    // Process data: Top 7 + Others (at most 8 slices, one colour each)
     final sortedEntries = data.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    final processedData = <MapEntry<String, double>>[];
+    final processedData = <MapEntry<String, int>>[];
 
     if (sortedEntries.length > 7) {
       processedData.addAll(sortedEntries.take(7));
-      final otherSum = sortedEntries
-          .skip(7)
-          .fold(0.0, (sum, e) => sum + e.value);
-      processedData.add(MapEntry('Others', otherSum));
+      final otherSum = Money.sum(sortedEntries.skip(7).map((e) => e.value));
+      processedData.add(MapEntry(l10n.chartOthers, otherSum));
     } else {
       processedData.addAll(sortedEntries);
     }
 
     // Normalize for Pie
-    final total = processedData.fold(0.0, (sum, e) => sum + e.value);
+    final total = Money.sum(processedData.map((e) => e.value));
     if (total == 0) {
       return SizedBox(
         height: height,
         child: Center(
-          child: Text(
-            'Total spending is zero',
-            style: TextStyle(color: labelColor),
-          ),
+          child: Text(l10n.chartTotalZero, style: TextStyle(color: labelColor)),
         ),
       );
     }
 
     final semanticDescription = processedData
-        .map((e) {
-          final percentage = (e.value / total * 100).toStringAsFixed(1);
-          return '${e.key}: $percentage%';
-        })
+        .map((e) => '${e.key} ${percentOf(e.value, total)}')
         .join(', ');
 
     return Semantics(
-      label: 'Pie Chart showing distribution. $semanticDescription',
+      label: l10n.chartPieSemantics(semanticDescription),
+      excludeSemantics: true,
       child: SizedBox(
         height: height,
         child: Row(
@@ -107,8 +108,7 @@ class PieChart extends StatelessWidget {
                 itemCount: processedData.length,
                 itemBuilder: (context, index) {
                   final entry = processedData[index];
-                  final percentage = (entry.value / total * 100)
-                      .toStringAsFixed(1);
+                  final percentage = percentOf(entry.value, total);
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2.0),
                     child: Row(
@@ -124,7 +124,7 @@ class PieChart extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '${entry.key}\n$percentage%',
+                            '${entry.key}\n$percentage',
                             style: TextStyle(color: labelColor, fontSize: 11),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 2,
@@ -144,8 +144,11 @@ class PieChart extends StatelessWidget {
 }
 
 class PieChartPainter extends CustomPainter {
-  final List<MapEntry<String, double>> data;
-  final double total;
+  /// Label -> amount in minor units.
+  final List<MapEntry<String, int>> data;
+
+  /// Sum of [data] in minor units.
+  final int total;
   final List<Color> colors;
 
   PieChartPainter({

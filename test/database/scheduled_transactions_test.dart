@@ -17,7 +17,7 @@ void main() {
   test('scheduled_transactions table should allow inserting data', () async {
     final scheduledTx = ScheduledTransactionsCompanion(
       id: const Value('sch_1'),
-      amount: const Value(100.0),
+      amount: const Value(10000),
       frequency: const Value('monthly'),
       nextDate: Value(DateTime.now()),
       autoApprove: const Value(false),
@@ -29,7 +29,7 @@ void main() {
 
     expect(result.length, 1);
     expect(result.first.id, 'sch_1');
-    expect(result.first.amount, 100.0);
+    expect(result.first.amount, 10000);
     expect(result.first.frequency, 'monthly');
     expect(result.first.accountId, null);
     expect(result.first.autoApprove, false);
@@ -70,7 +70,7 @@ void main() {
         accountId: Value('acc_1'),
         categoryId: Value('cat_1'),
         payeeId: Value('payee_1'),
-        amount: Value(50.0),
+        amount: Value(5000),
       );
 
       await database.into(database.scheduledTransactions).insert(scheduledTx);

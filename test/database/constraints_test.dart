@@ -82,7 +82,7 @@ void main() {
         id: const Value('tx_invalid'),
         accountId: const Value('acc_1'),
         date: Value(DateTime.now()),
-        amount: const Value(-10.0),
+        amount: const Value(-1000),
         payeeId: const Value('non_existent_payee'),
       );
 
@@ -104,7 +104,7 @@ void main() {
         id: const Value('tx_valid'),
         accountId: const Value('acc_1'),
         date: Value(DateTime.now()),
-        amount: const Value(-10.0),
+        amount: const Value(-1000),
         payeeId: const Value('payee_1'),
       );
 
@@ -117,7 +117,7 @@ void main() {
         id: const Value('tx_null_payee'),
         accountId: const Value('acc_1'),
         date: Value(DateTime.now()),
-        amount: const Value(-20.0),
+        amount: const Value(-2000),
         payeeId: const Value(null),
       );
 
@@ -144,7 +144,7 @@ void main() {
                 id: const Value('tx_inv_cat'),
                 accountId: const Value('acc_1'),
                 date: Value(DateTime.now()),
-                amount: const Value(-10.0),
+                amount: const Value(-1000),
                 categoryId: const Value('non_existent_cat'),
               ),
             );
@@ -161,7 +161,7 @@ void main() {
               id: const Value('tx_null_cat'),
               accountId: const Value('acc_1'),
               date: Value(DateTime.now()),
-              amount: const Value(-10.0),
+              amount: const Value(-1000),
               categoryId: const Value(null),
             ),
           );
@@ -187,7 +187,7 @@ void main() {
                 id: const Value('tx_inv_transfer'),
                 accountId: const Value('acc_1'),
                 date: Value(DateTime.now()),
-                amount: const Value(-10.0),
+                amount: const Value(-1000),
                 transferAccountId: const Value('non_existent_acc'),
               ),
             );
@@ -214,7 +214,7 @@ void main() {
               id: const Value('tx_valid_transfer'),
               accountId: const Value('acc_1'),
               date: Value(DateTime.now()),
-              amount: const Value(-100.0),
+              amount: const Value(-10000),
               transferAccountId: const Value('acc_2'),
             ),
           );
@@ -370,31 +370,6 @@ void main() {
               ),
             );
         fail('Should fail due to UNIQUE(categoryId, month)');
-      } catch (e) {
-        expect(e.toString(), contains('UNIQUE constraint failed'));
-      }
-    });
-
-    test('SyncLog should enforce UNIQUE(deltaFilename)', () async {
-      await database
-          .into(database.syncLog)
-          .insert(
-            const SyncLogCompanion(
-              id: Value('log_1'),
-              deltaFilename: Value('delta_1.json'),
-            ),
-          );
-
-      try {
-        await database
-            .into(database.syncLog)
-            .insert(
-              const SyncLogCompanion(
-                id: Value('log_2'),
-                deltaFilename: Value('delta_1.json'), // duplicate filename
-              ),
-            );
-        fail('Should fail due to UNIQUE(deltaFilename)');
       } catch (e) {
         expect(e.toString(), contains('UNIQUE constraint failed'));
       }

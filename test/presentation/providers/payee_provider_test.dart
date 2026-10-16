@@ -6,6 +6,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:mockito/mockito.dart';
 
 import '../../mocks/repository_mocks.mocks.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 
 void main() {
   late MockPayeeRepository mockPayeeRepository;

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
+import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 import 'package:ledger_zero/presentation/widgets/charts/multi_line_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/pie_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/simple_bar_chart.dart';
@@ -18,21 +20,24 @@ void main() {
     // Override providers to return dummy data immediately
     final container = ProviderContainer(
       overrides: [
+        appFormatterProvider.overrideWithValue(
+          AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
+        ),
         spendingByCategoryProvider.overrideWith(
-          (ref) => Future.value({'Food': 100.0}),
+          (ref) => Future.value({'Food': 10000}),
         ),
         spendingTrendsProvider.overrideWith(
-          (ref) => Future.value({DateTime(2025, 1, 1): 500.0}),
+          (ref) => Future.value({DateTime.utc(2025, 1, 1): 50000}),
         ),
         topPayeesProvider.overrideWith(
-          (ref) => Future.value([const MapEntry('Mario', 50.0)]),
+          (ref) => Future.value([const MapEntry('Mario', 5000)]),
         ),
         incomeVsExpenseHistoryProvider.overrideWith(
           (ref) => Future.value([
             ChartSeries(
               name: 'Income',
-              color: Colors.green,
-              points: [TimeSeriesPoint(DateTime.now(), 100)],
+              kind: ChartSeriesKind.income,
+              points: [TimeSeriesPoint(DateTime.utc(2025, 1, 1), 10000)],
             ),
           ]),
         ),
@@ -40,8 +45,8 @@ void main() {
           (ref) => Future.value([
             ChartSeries(
               name: 'Net Worth',
-              color: Colors.blue,
-              points: [TimeSeriesPoint(DateTime.now(), 1000)],
+              kind: ChartSeriesKind.netWorth,
+              points: [TimeSeriesPoint(DateTime.utc(2025, 1, 1), 100000)],
             ),
           ]),
         ),
@@ -92,6 +97,7 @@ void main() {
 
     // Data check
     expect(find.text('Mario'), findsOneWidget);
+    expect(find.text(r'$50.00'), findsOneWidget);
 
     // Clean up
     addTearDown(tester.view.resetPhysicalSize);

@@ -14,8 +14,8 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 14', () {
-    expect(database.schemaVersion, 14);
+  test('schema version should be 18', () {
+    expect(database.schemaVersion, 18);
   });
 
   group('Database Tables Creation & Defaults', () {
@@ -33,8 +33,7 @@ void main() {
 
         expect(result.id, 'acc_1');
         expect(result.currency, 'USD'); // Default
-        expect(result.startingBalance, 0.0); // Default
-        expect(result.currentBalance, 0.0); // Default
+        expect(result.startingBalance, 0); // Default
         expect(result.isClosed, false); // Default (0 -> false)
         expect(result.color, isNull);
         expect(result.icon, isNull);
@@ -86,7 +85,7 @@ void main() {
         id: const Value('tx_1'),
         accountId: const Value('acc_1'),
         date: Value(DateTime.now()),
-        amount: const Value(-50.0),
+        amount: const Value(-5000),
       );
       await database.into(database.transactions).insert(tx);
       final result = await database.select(database.transactions).getSingle();
@@ -122,9 +121,7 @@ void main() {
       await database.into(database.budgets).insert(budget);
       final result = await database.select(database.budgets).getSingle();
 
-      expect(result.budgeted, 0.0); // Default
-      expect(result.activity, 0.0); // Default
-      expect(result.available, 0.0); // Default
+      expect(result.budgeted, 0); // Default
     });
 
     test('should create scheduled_transactions with default values', () async {
@@ -151,7 +148,8 @@ void main() {
       expect(indexNames, contains('idx_transactions_date'));
       expect(indexNames, contains('idx_transactions_category'));
       expect(indexNames, contains('idx_budgets_month'));
-      expect(indexNames, contains('idx_sync_log_applied'));
+      expect(indexNames, contains('idx_pending_sync_record'));
+      expect(indexNames, contains('idx_sync_row_versions_deleted'));
     });
   });
 }

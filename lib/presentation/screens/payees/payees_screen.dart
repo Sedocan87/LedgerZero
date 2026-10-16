@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/payee_provider.dart';
 import 'package:ledger_zero/presentation/screens/payees/widgets/payee_list_item.dart';
-import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/services/csv/payee_export_service.dart';
 
 class PayeesScreen extends ConsumerWidget {
@@ -25,7 +25,10 @@ class PayeesScreen extends ConsumerWidget {
             onPressed: () {
               payeesAsync.whenData((payees) {
                 if (payees.isNotEmpty) {
-                  PayeeExportService().exportPayees(payees);
+                  PayeeExportService().exportPayees(
+                    payees,
+                    shareText: l10n.payeesShareText,
+                  );
                 }
               });
             },
@@ -72,7 +75,7 @@ class PayeesScreen extends ConsumerWidget {
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (err, stack) =>
-                      ErrorView(title: l10n.error, message: err.toString()),
+                      LoadErrorView(error: err, stackTrace: stack),
                 ),
               ),
             ],

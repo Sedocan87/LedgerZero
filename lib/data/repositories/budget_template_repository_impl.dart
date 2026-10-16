@@ -42,7 +42,10 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
           id: Value(template.id),
           name: Value(template.name),
           data: Value(jsonEncode(template.data)),
-          createdAt: Value(template.createdAt?.toIso8601String()),
+          createdAt: Value(
+            (template.createdAt ?? DateTime.now()).toUtc().toIso8601String(),
+          ),
+          updatedAt: Value(DateTime.now().toUtc()),
         ),
       );
     } catch (e, stack) {
@@ -62,12 +65,13 @@ class BudgetTemplateRepositoryImpl implements BudgetTemplateRepository {
   }
 
   BudgetTemplate _mapToEntity(drift.BudgetTemplate row) {
-    final Map<String, double> dataMap = {};
+    // Values are minor units (ints) since schema v15.
+    final Map<String, int> dataMap = {};
     try {
       final decoded = jsonDecode(row.data) as Map<String, dynamic>;
       decoded.forEach((key, value) {
         if (value is num) {
-          dataMap[key] = value.toDouble();
+          dataMap[key] = value.toInt();
         }
       });
     } catch (e) {

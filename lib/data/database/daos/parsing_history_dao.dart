@@ -12,10 +12,18 @@ class ParsingHistoryDao extends DatabaseAccessor<AppDatabase>
   Future<void> addHistory(ParsingHistoryCompanion entry) =>
       into(parsingHistory).insert(entry);
 
+  /// The history entries for exactly [input], most recent first
+  /// (`created_at` is UTC ISO-8601 text, so text order is time order; the
+  /// id breaks ties). The quick-add parser uses the first one: the user's
+  /// latest correction wins over older ones.
   Future<List<ParsingHistoryData>> getHistoryForInput(String input) {
-    return (select(
-      parsingHistory,
-    )..where((tbl) => tbl.input.equals(input))).get();
+    return (select(parsingHistory)
+          ..where((tbl) => tbl.input.equals(input))
+          ..orderBy([
+            (tbl) => OrderingTerm.desc(tbl.createdAt),
+            (tbl) => OrderingTerm.desc(tbl.id),
+          ]))
+        .get();
   }
 
   Future<void> deleteHistory(String id) {

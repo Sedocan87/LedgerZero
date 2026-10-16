@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/services/encryption/security_manager.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/widgets/security/password_strength_meter.dart';
+import 'package:ledger_zero/services/security/key_vault.dart';
 
+/// Changes the master password by re-wrapping the data key: one write of
+/// the key vault, no database re-key, the recovery key stays valid.
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
 
@@ -21,7 +23,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
   bool _isLoading = false;
   bool _isCurrentPasswordVisible = false;
-  bool _isNewPasswordVisible = false;
 
   @override
   void dispose() {
@@ -35,70 +36,36 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
     setState(() => _isLoading = true);
     final l10n = AppLocalizations.of(context)!;
-    final sm = ref.read(securityManagerProvider);
-
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      // 1. Verify current password
-      final salt = await sm.getSalt();
-      if (salt == null) {
-        throw Exception('Security configuration missing');
-      }
-
-      final oldKey = await sm.deriveKeyFromPassword(
-        _currentPasswordController.text,
-        salt,
-      );
-      if (!await sm.verifyKey(oldKey)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.incorrectPassword),
-              backgroundColor: Colors.red,
-            ),
+      await ref
+          .read(keyVaultProvider)
+          .changePassword(
+            currentPassword: _currentPasswordController.text,
+            newPassword: _newPasswordController.text,
           );
-        }
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      // 2. Generate new key
-      final newSalt = sm.generateSecureKey();
-      final newKey = await sm.deriveKeyFromPassword(
-        _newPasswordController.text,
-        newSalt,
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.passwordChangedRecoveryStillValid)),
       );
-
-      // 3. Rekey Database
-      // Note: This operation can be slow on large databases
-      await AppDatabase.instance.customStatement("PRAGMA rekey = '$newKey';");
-
-      // 4. Update Secure Storage
-      await sm.storeSalt(newSalt);
-      await sm.storeVerifier(newKey);
-
-      // If biometrics was enabled (key stored), update the stored key
-      if (await sm.hasKey()) {
-        await sm.storeKey(newKey);
-      }
-
-      // 5. Update Session Key
-      SecurityManager.setSessionKey(newKey);
-
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.passwordChangedSuccess)));
         Navigator.pop(context);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+    } on WrongPasswordException {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.incorrectPassword),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.changePasswordFailed),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -117,14 +84,20 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
                 controller: _currentPasswordController,
                 obscureText: !_isCurrentPasswordVisible,
+                autocorrect: false,
+                enableSuggestions: false,
                 decoration: InputDecoration(
                   labelText: l10n.currentPassword,
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
+                    tooltip: _isCurrentPasswordVisible
+                        ? l10n.hidePassword
+                        : l10n.showPassword,
                     icon: Icon(
                       _isCurrentPasswordVisible
                           ? Icons.visibility
@@ -136,72 +109,30 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     ),
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return l10n.incorrectPassword; // Generic message
-                  }
-                  return null;
-                },
+                validator: (value) => (value == null || value.isEmpty)
+                    ? l10n.enterPasswordPrompt
+                    : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              NewPasswordFields(
                 controller: _newPasswordController,
-                obscureText: !_isNewPasswordVisible,
-                decoration: InputDecoration(
-                  labelText: l10n.newPassword,
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _isNewPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                    onPressed: () => setState(
-                      () => _isNewPasswordVisible = !_isNewPasswordVisible,
-                    ),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return l10n.passwordTooShort;
-                  }
-                  if (value.length < 8) {
-                    return l10n.passwordTooShort;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _confirmPasswordController,
-                obscureText: !_isNewPasswordVisible,
-                decoration: InputDecoration(
-                  labelText: l10n.confirmNewPassword,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value != _newPasswordController.text) {
-                    return l10n.passwordsDoNotMatch;
-                  }
-                  return null;
-                },
+                confirmController: _confirmPasswordController,
+                label: l10n.newPassword,
+                onSubmitted: _isLoading ? null : _changePassword,
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _changePassword,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.save),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _changePassword,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.save),
               ),
             ],
           ),

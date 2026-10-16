@@ -9,9 +9,7 @@ void main() {
         id: '1',
         categoryId: 'cat1',
         month: '2023-10',
-        budgeted: 100.0,
-        activity: 50.0,
-        available: 50.0,
+        budgeted: 10000,
         createdAt: now,
         updatedAt: now,
       );
@@ -19,9 +17,7 @@ void main() {
       expect(budget.id, '1');
       expect(budget.categoryId, 'cat1');
       expect(budget.month, '2023-10');
-      expect(budget.budgeted, 100.0);
-      expect(budget.activity, 50.0);
-      expect(budget.available, 50.0);
+      expect(budget.budgeted, 10000);
       expect(budget.createdAt, now);
       expect(budget.updatedAt, now);
     });
@@ -32,9 +28,7 @@ void main() {
       expect(budget.id, '1');
       expect(budget.categoryId, isNull);
       expect(budget.month, '2023-10');
-      expect(budget.budgeted, 0.0);
-      expect(budget.activity, 0.0);
-      expect(budget.available, 0.0);
+      expect(budget.budgeted, 0);
       expect(budget.createdAt, isNull);
       expect(budget.updatedAt, isNull);
     });
@@ -45,9 +39,7 @@ void main() {
         id: '1',
         categoryId: 'cat1',
         month: '2023-10',
-        budgeted: 100.0,
-        activity: 50.0,
-        available: 50.0,
+        budgeted: 10000,
         createdAt: now,
         updatedAt: now,
       );
@@ -56,9 +48,7 @@ void main() {
       expect(json['id'], '1');
       expect(json['category_id'], 'cat1');
       expect(json['month'], '2023-10');
-      expect(json['budgeted'], 100.0);
-      expect(json['activity'], 50.0);
-      expect(json['available'], 50.0);
+      expect(json['budgeted'], 10000);
       expect(json['created_at'], now.toIso8601String());
       expect(json['updated_at'], now.toIso8601String());
 
@@ -67,8 +57,6 @@ void main() {
       expect(fromJson.categoryId, budget.categoryId);
       expect(fromJson.month, budget.month);
       expect(fromJson.budgeted, budget.budgeted);
-      expect(fromJson.activity, budget.activity);
-      expect(fromJson.available, budget.available);
       expect(fromJson.createdAt, budget.createdAt);
       expect(fromJson.updatedAt, budget.updatedAt);
     });
@@ -80,9 +68,7 @@ void main() {
       expect(budget.id, '1');
       expect(budget.categoryId, isNull);
       expect(budget.month, '2023-10');
-      expect(budget.budgeted, 0.0); // Default
-      expect(budget.activity, 0.0); // Default
-      expect(budget.available, 0.0); // Default
+      expect(budget.budgeted, 0); // Default
       expect(budget.createdAt, isNull);
       expect(budget.updatedAt, isNull);
     });
@@ -93,9 +79,7 @@ void main() {
         id: '1',
         categoryId: 'cat1',
         month: '2023-10',
-        budgeted: 100.0,
-        activity: 50.0,
-        available: 50.0,
+        budgeted: 10000,
         createdAt: now,
         updatedAt: now,
       );
@@ -104,9 +88,7 @@ void main() {
         id: '1',
         categoryId: 'cat1',
         month: '2023-10',
-        budgeted: 100.0,
-        activity: 50.0,
-        available: 50.0,
+        budgeted: 10000,
         createdAt: now,
         updatedAt: now,
       );

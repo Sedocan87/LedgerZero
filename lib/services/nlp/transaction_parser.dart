@@ -1,16 +1,18 @@
+import 'package:ledger_zero/core/money/money.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
-import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 import 'package:chrono_dart/chrono_dart.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 
 class ParsedTransaction {
-  final double? amount;
+  /// Parsed amount in minor units (always positive; see [isIncome]).
+  final int? amount;
   final String? currency;
   final DateTime? date;
   final String? payeeName;
@@ -40,24 +42,53 @@ class ParsedTransaction {
   }
 }
 
+/// Parses quick-add text ("Coffee 4.50 yesterday") into a transaction
+/// draft.
+///
+/// Order: (1) the parsing history — the payee/category the user last
+/// confirmed for exactly this input (most recent entry wins); otherwise
+/// (2) payee by name, (3) category from the payee's default, built-in
+/// keywords or a category name. Amounts are read with [amountParser], i.e.
+/// the app's active decimal separator ("1.234" is 1234.00 with a comma
+/// separator and 1.234 -> 1.23 with a dot). Keywords, payee and category
+/// names match whole words only (Unicode letters and digits are word
+/// characters, so "bus" does not match "business" and "Café" or "Müller"
+/// are words of their own).
 class TransactionParser {
   final PayeeRepository _payeeRepository;
   final CategoryRepository _categoryRepository;
   final ParsingHistoryRepository _historyRepository;
-  final ParsingRulesRepository _rulesRepository;
+
+  /// Reads amounts with the user's decimal separator.
+  final MoneyParser amountParser;
 
   TransactionParser(
     this._payeeRepository,
     this._categoryRepository,
-    this._historyRepository,
-    this._rulesRepository,
-  );
+    this._historyRepository, {
+    this.amountParser = const MoneyParser(),
+  });
+
+  /// Whether [text] contains [phrase] as whole word(s), ignoring case. A
+  /// word boundary is any character that is not a Unicode letter, mark or
+  /// digit (or the start/end of the text).
+  static bool containsWord(String text, String phrase) {
+    final needle = phrase.trim();
+    if (needle.isEmpty) {
+      return false;
+    }
+    return RegExp(
+      '(?<![\\p{L}\\p{M}\\p{N}])${RegExp.escape(needle)}(?![\\p{L}\\p{M}\\p{N}])',
+      caseSensitive: false,
+      unicode: true,
+    ).hasMatch(text);
+  }
 
   Future<ParsedTransaction> parse(String input) async {
-    // 0. Check History
+    // 0. History: the most recent confirmation for exactly this input.
     final history = await _historyRepository.getHistory(input);
     if (history.isNotEmpty) {
-      final entry = history.first; // Use most recent match logic if multiple?
+      final entry = history.first;
       final payeeId = entry['payeeId'] as String?;
       final categoryId = entry['categoryId'] as String?;
 
@@ -97,43 +128,6 @@ class TransactionParser {
     final currency = extractCurrency(input);
     final date = extractDate(input);
 
-    // 1. Rules Logic
-    final rules = await _rulesRepository.getAllRules();
-    for (final rule in rules) {
-      final keyword = rule['keyword'] as String;
-      if (input.toLowerCase().contains(keyword.toLowerCase())) {
-        final payeeId = rule['payeeId'] as String?;
-        final categoryId = rule['categoryId'] as String?;
-
-        Payee? payee;
-        if (payeeId != null) {
-          final payees = await _payeeRepository.getAllPayees();
-          try {
-            payee = payees.firstWhere((p) => p.id == payeeId);
-          } catch (_) {}
-        }
-
-        Category? category;
-        if (categoryId != null) {
-          category = await _categoryRepository.getCategoryById(categoryId);
-        }
-
-        if (payee != null || category != null) {
-          return ParsedTransaction(
-            amount: amount,
-            currency: currency,
-            date: date,
-            payeeName: payee?.name,
-            payeeId: payee?.id,
-            categoryId: category?.id,
-            categoryName: category?.name,
-            isIncome: detectIncome(input),
-            confidence: 0.9, // High confidence from rule
-          );
-        }
-      }
-    }
-
     final payeeMatch = await extractPayee(input);
     final categoryMatch = await extractCategory(input, payeeMatch);
     final isIncome = detectIncome(input);
@@ -159,7 +153,7 @@ class TransactionParser {
   }
 
   double calculateConfidence(
-    double? amount,
+    int? amount,
     DateTime? date,
     Payee? payee,
     Category? category,
@@ -199,14 +193,16 @@ class TransactionParser {
       'paycheck',
       'dividend',
       'transfer in',
+      // German
+      'gehalt',
+      'lohn',
+      'einnahme',
+      'erstattung',
+      'dividende',
+      'gutschrift',
     ];
 
-    for (final keyword in incomeKeywords) {
-      if (lowerInput.contains(keyword)) {
-        return true;
-      }
-    }
-    return false;
+    return incomeKeywords.any((keyword) => containsWord(lowerInput, keyword));
   }
 
   Future<Payee?> extractPayee(String input) async {
@@ -222,9 +218,8 @@ class TransactionParser {
     final sortedPayees = List.of(payees)
       ..sort((a, b) => b.name.length.compareTo(a.name.length));
 
-    final lowerInput = input.toLowerCase();
     for (final payee in sortedPayees) {
-      if (lowerInput.contains(payee.name.toLowerCase())) {
+      if (containsWord(input, payee.name)) {
         return payee;
       }
     }
@@ -256,26 +251,45 @@ class TransactionParser {
     // 2. Keyword matching
     // In a real app, this map would be user-configurable or larger.
     // For now, hardcode some common mappings.
+    // Keyword -> default category names (English and German seeds, see
+    // defaultCategoryNames); the first one that exists is used.
+    const groceries = ['Groceries', 'Lebensmittel'];
+    const diningOut = ['Dining Out', 'Essen gehen'];
+    const transportation = ['Transportation', 'Mobilität'];
+    const entertainment = ['Entertainment', 'Freizeit'];
     final keywordMap = {
-      'grocer': 'Groceries',
-      'supermarket': 'Groceries',
-      'food': 'Groceries',
-      'market': 'Groceries',
-      'restaurant': 'Dining Out',
-      'dinner': 'Dining Out',
-      'lunch': 'Dining Out',
-      'coffee': 'Dining Out',
-      'cafe': 'Dining Out',
-      'uber': 'Transportation',
-      'taxi': 'Transportation',
-      'bus': 'Transportation',
-      'train': 'Transportation',
-      'gas': 'Transportation',
-      'fuel': 'Transportation',
-      'netflix': 'Entertainment',
-      'cinema': 'Entertainment',
-      'movie': 'Entertainment',
-      'spotify': 'Entertainment',
+      'grocer': groceries,
+      'grocery': groceries,
+      'groceries': groceries,
+      'supermarket': groceries,
+      'food': groceries,
+      'market': groceries,
+      'supermarkt': groceries,
+      'lebensmittel': groceries,
+      'einkauf': groceries,
+      'restaurant': diningOut,
+      'dinner': diningOut,
+      'lunch': diningOut,
+      'coffee': diningOut,
+      'cafe': diningOut,
+      'café': diningOut,
+      'kaffee': diningOut,
+      'mittagessen': diningOut,
+      'abendessen': diningOut,
+      'uber': transportation,
+      'taxi': transportation,
+      'bus': transportation,
+      'train': transportation,
+      'gas': transportation,
+      'fuel': transportation,
+      'tanken': transportation,
+      'benzin': transportation,
+      'bahn': transportation,
+      'netflix': entertainment,
+      'cinema': entertainment,
+      'movie': entertainment,
+      'spotify': entertainment,
+      'kino': entertainment,
     };
 
     final lowerInput = input.toLowerCase();
@@ -286,11 +300,11 @@ class TransactionParser {
     final allCategories = await _categoryRepository.getAllCategories();
 
     for (final entry in keywordMap.entries) {
-      if (lowerInput.contains(entry.key)) {
+      if (containsWord(lowerInput, entry.key)) {
         // Find category with this name
         try {
           // simple first match
-          return allCategories.firstWhere((c) => c.name == entry.value);
+          return allCategories.firstWhere((c) => entry.value.contains(c.name));
         } catch (e) {
           // Category might not exist in user's DB
         }
@@ -305,7 +319,7 @@ class TransactionParser {
 
     // First pass: exact substring match
     for (final category in sortedCategories) {
-      if (lowerInput.contains(category.name.toLowerCase())) {
+      if (containsWord(lowerInput, category.name)) {
         return category;
       }
     }
@@ -314,7 +328,7 @@ class TransactionParser {
     // Split input into words and check if any word closely resembles a category name
     // This uses the 'fuzzy' package
     final categoryNames = allCategories.map((c) => c.name).toList();
-    final fuse = Fuzzy(
+    final fuse = Fuzzy<String>(
       categoryNames,
       options: FuzzyOptions(
         threshold:
@@ -322,21 +336,45 @@ class TransactionParser {
       ),
     );
 
-    // We try to fuzzy match chunks of text.
-    // Since categories are usually 1-2 words, we can search the whole input against categories.
-    // However, the input contains date/amount which might confuse fuzzy search.
-    // For now, let's just run fuzzy search on the input against category names.
-    final result = fuse.search(input);
-    if (result.isNotEmpty) {
-      // Return the best match
-      final bestMatchName = result.first.item;
+    // The whole input first, then each word on its own (amounts and dates
+    // in the input would otherwise hide a misspelt category such as
+    // "Groceris 50").
+    final bestMatchName = _fuzzyBest(fuse, input);
+    if (bestMatchName != null) {
       return allCategories.firstWhere((c) => c.name == bestMatchName);
     }
 
     return null;
   }
 
+  /// The best fuzzy match of [input], or of one of its words (letters
+  /// only, at least four characters), or `null`.
+  static String? _fuzzyBest(Fuzzy<String> fuse, String input) {
+    final whole = fuse.search(input);
+    if (whole.isNotEmpty) {
+      return whole.first.item;
+    }
+    String? best;
+    var bestScore = double.infinity;
+    final words = RegExp(
+      r'[\p{L}\p{M}]{4,}',
+      unicode: true,
+    ).allMatches(input).map((m) => m.group(0)!);
+    for (final word in words) {
+      final result = fuse.search(word);
+      if (result.isNotEmpty && result.first.score < bestScore) {
+        bestScore = result.first.score;
+        best = result.first.item;
+      }
+    }
+    return best;
+  }
+
   DateTime? extractDate(String input) {
+    final german = _germanRelativeDay(input);
+    if (german != null) {
+      return german;
+    }
     try {
       final results = Chrono.parse(input);
       if (results.isNotEmpty) {
@@ -348,7 +386,39 @@ class TransactionParser {
     return null;
   }
 
-  double? extractAmount(String input) {
+  /// German relative day words ("vorgestern", "gestern", "heute",
+  /// "morgen"); Chrono only understands English. "heute morgen" (this
+  /// morning) is today.
+  DateTime? _germanRelativeDay(String input) {
+    final lower = input.toLowerCase();
+    bool has(String word) =>
+        RegExp('(^|\\s)$word(\$|\\s|[.,!?])').hasMatch(lower);
+    final int? offset;
+    if (has('vorgestern')) {
+      offset = -2;
+    } else if (has('gestern')) {
+      offset = -1;
+    } else if (has('heute')) {
+      offset = 0;
+    } else if (has('übermorgen')) {
+      offset = 2;
+    } else if (has('morgen')) {
+      offset = 1;
+    } else {
+      offset = null;
+    }
+    if (offset == null) {
+      return null;
+    }
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day + offset, 12);
+  }
+
+  /// Extracts the first amount in [input] as minor units, e.g.
+  /// "$45.50" -> 4550, "12,50€" -> 1250, "1,200" -> 120000 (dot decimal
+  /// separator). Ambiguous groups such as "1.234" / "1,234" are resolved
+  /// with [amountParser]'s decimal separator.
+  int? extractAmount(String input) {
     // Regex to match amounts while avoiding dates (YYYY-MM-DD)
     // 1. Optional currency symbol (before or after)
     // 2. Number with optional commas
@@ -363,7 +433,7 @@ class TransactionParser {
     // Group 2: Plain numbers (e.g. 50.50 or 2023)
     // Group 3: Decimal only (e.g. .99)
     final regex = RegExp(
-      r'(?:[\$€£])?\s*((?:\d{1,3}(?:,\d{3})+)(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)\s*(?:[\$€£])?',
+      r'(?:[\$€£])?\s*((?:\d{1,3}(?:,\d{3})+)(?:\.\d+)?|\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?(?!\d)|\d+[.,]\d{1,2}(?!\d)|\d+(?:\.\d+)?|\.\d+)\s*(?:[\$€£])?',
     );
 
     final matches = regex.allMatches(input);
@@ -378,11 +448,8 @@ class TransactionParser {
         continue;
       }
 
-      String amountStr = match.group(1)!;
-      // Remove commas
-      amountStr = amountStr.replaceAll(',', '');
-
-      final amount = double.tryParse(amountStr);
+      final amountStr = match.group(1)!;
+      final amount = amountParser.tryParse(amountStr);
 
       if (amount != null) {
         // Additional heuristic: If it's an integer 1900-2100, checking context is safer.
@@ -405,6 +472,6 @@ final transactionParserProvider = Provider<TransactionParser>((ref) {
     ref.watch(payeeRepositoryProvider),
     ref.watch(categoryRepositoryProvider),
     ref.watch(parsingHistoryRepositoryProvider),
-    ref.watch(parsingRulesRepositoryProvider),
+    amountParser: ref.watch(appFormatterProvider).parser,
   );
 });

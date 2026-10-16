@@ -1,3 +1,4 @@
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/presentation/providers/backup_providers.dart';
+import 'package:ledger_zero/services/backup/backup_scheduler.dart';
+import 'package:mockito/mockito.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+
+class _FakeBackupScheduler extends Mock implements BackupScheduler {
+  @override
+  Future<void> checkBackupDue() async {}
+}
 
 void main() {
   testWidgets('HomeScreen shows dashboard when accounts exist', (
@@ -25,19 +35,21 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          hasAccountsProvider.overrideWith((ref) => Future.value(true)),
-          tbbProvider.overrideWith((ref, month) => Future.value(100.0)),
+          backupSchedulerProvider.overrideWithValue(_FakeBackupScheduler()),
+          hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
+          tbbProvider.overrideWith((ref, month) => Future.value(10000)),
           monthlyStatsProvider.overrideWith(
             (ref, month) =>
-                Future.value({'income': 2000.0, 'spending': -500.0}),
+                Future.value({'income': 200000, 'spending': -50000}),
           ),
+          accountsProvider.overrideWith((ref) => Stream.value([])),
           recentTransactionsProvider.overrideWith(
             (ref) => Stream.value([
               Transaction(
                 id: '1',
                 accountId: 'a1',
                 date: transactionDate,
-                amount: -15.50,
+                amount: -1550,
                 approved: true,
                 isDeleted: false,
                 createdAt: DateTime.now(),
@@ -64,6 +76,10 @@ void main() {
 
     expect(find.byType(ToBeBudgetedWidget), findsOneWidget);
     expect(find.byType(HomeEmptyState), findsNothing);
+    // Amounts are int minor units formatted by the app formatter.
+    expect(find.text('\$100.00'), findsOneWidget); // TBB 10000
+    expect(find.text('\$2,000.00'), findsOneWidget); // income 200000
+    expect(find.text('-\$15.50'), findsOneWidget); // transaction -1550
   });
 
   testWidgets('HomeScreen shows EmptyState when no accounts', (
@@ -76,7 +92,8 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          hasAccountsProvider.overrideWith((ref) => Future.value(false)),
+          backupSchedulerProvider.overrideWithValue(_FakeBackupScheduler()),
+          hasAccountsProvider.overrideWithValue(const AsyncValue.data(false)),
         ],
         child: const MaterialApp(
           localizationsDelegates: [
@@ -115,19 +132,21 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
-          hasAccountsProvider.overrideWith((ref) => Future.value(true)),
-          tbbProvider.overrideWith((ref, month) => Future.value(100.0)),
+          backupSchedulerProvider.overrideWithValue(_FakeBackupScheduler()),
+          hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
+          tbbProvider.overrideWith((ref, month) => Future.value(10000)),
           monthlyStatsProvider.overrideWith(
             (ref, month) =>
-                Future.value({'income': 2000.0, 'spending': -500.0}),
+                Future.value({'income': 200000, 'spending': -50000}),
           ),
+          accountsProvider.overrideWith((ref) => Stream.value([])),
           recentTransactionsProvider.overrideWith(
             (ref) => Stream.value([
               Transaction(
                 id: '1',
                 accountId: 'a1',
                 date: transactionDate,
-                amount: -15.50,
+                amount: -1550,
                 approved: true,
                 isDeleted: false,
                 createdAt: DateTime.now(),

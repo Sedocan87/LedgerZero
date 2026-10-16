@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_list_provider.dart';
-import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/account_card.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
@@ -39,7 +42,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 controller: _searchController,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: '${l10n.accounts}...', // Or a localized "Search"
+                  hintText: l10n.accountSearchHint,
                   border: InputBorder.none,
                 ),
                 style: Theme.of(context).textTheme.titleLarge,
@@ -54,6 +57,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           if (_isSearching)
             IconButton(
               icon: const Icon(Icons.close),
+              tooltip: l10n.clearSearch,
               onPressed: () {
                 setState(() {
                   _isSearching = false;
@@ -67,6 +71,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           else
             IconButton(
               icon: const Icon(Icons.search),
+              tooltip: l10n.search,
               onPressed: () {
                 setState(() {
                   _isSearching = true;
@@ -75,6 +80,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
+            tooltip: l10n.filter,
             onSelected: (value) {
               if (value == 'showClosed') {
                 final current = ref.read(accountFilterProvider);
@@ -88,37 +94,20 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 CheckedPopupMenuItem(
                   value: 'showClosed',
                   checked: filter.showClosed,
-                  child: const Text('Show Closed Accounts'),
+                  child: Text(l10n.accountShowClosed),
                 ),
               ];
             },
           ),
           PopupMenuButton<AccountSortOption>(
             icon: const Icon(Icons.sort),
+            tooltip: l10n.sort,
             onSelected: (option) {
               ref.read(accountSortProvider.notifier).state = option;
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: AccountSortOption.nameAsc,
-                child: Text('Name (A-Z)'),
-              ),
-              const PopupMenuItem(
-                value: AccountSortOption.nameDesc,
-                child: Text('Name (Z-A)'),
-              ),
-              const PopupMenuItem(
-                value: AccountSortOption.balanceAsc,
-                child: Text('Balance (Low-High)'),
-              ),
-              const PopupMenuItem(
-                value: AccountSortOption.balanceDesc,
-                child: Text('Balance (High-Low)'),
-              ),
-              const PopupMenuItem(
-                value: AccountSortOption.type,
-                child: Text('Type'),
-              ),
+              for (final option in AccountSortOption.values)
+                PopupMenuItem(value: option, child: Text(option.label(l10n))),
             ],
           ),
         ],
@@ -126,22 +115,15 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       body: accountsAsync.when(
         data: (accounts) {
           if (accounts.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _isSearching
-                          ? 'No accounts found'
-                          : l10n.createFirstAccountMessage,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
+            if (_isSearching) {
+              return Center(child: Text(l10n.noMatchingAccounts));
+            }
+            return EmptyState(
+              icon: Icons.account_balance_wallet_outlined,
+              title: l10n.noAccountsYet,
+              description: l10n.createFirstAccountMessage,
+              actionLabel: l10n.createAccount,
+              onAction: () => context.push('/accounts/add?first=1'),
             );
           }
           return Center(
@@ -173,13 +155,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           );
         },
         loading: () => const AppLoadingIndicator(),
-        error: (error, stack) => ErrorView(
-          title: 'Error',
-          message: error.toString(),
-          onRetry: () => ref.refresh(accountListProvider),
+        error: (error, stack) => LoadErrorView(
+          error: error,
+          stackTrace: stack,
+          onRetry: () => ref.invalidate(accountsProvider),
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'accounts-fab',
         onPressed: () {
           context.goNamed('add-account');
         },

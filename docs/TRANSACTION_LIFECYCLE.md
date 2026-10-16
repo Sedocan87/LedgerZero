@@ -1,80 +1,118 @@
 # Transaction Lifecycle
 
-This document describes the lifecycle and states of a transaction in LedgerZero.
+How a transaction is created, linked, changed and deleted. All writes go
+through `TransactionService` (`lib/domain/services/transaction_service.dart`);
+screens never write transaction rows through the repository directly. Every
+write runs in one unit of work and records one undo action.
 
-## Overview
+## Fields that matter here
 
-A transaction represents a movement of funds. It progresses through various states of verification (clearing/reconciliation) and can be linked to other transactions (transfers, splits).
+| Field | Meaning |
+| --- | --- |
+| `amount` | `int` minor units, signed (negative = outflow). Zero is rejected. |
+| `date` | Calendar day, stored as UTC midnight (`CalendarDate`). |
+| `cleared` | `TransactionClearStatus`: `uncleared`, `cleared`, `reconciled` (stored as its index 0/1/2). |
+| `approved` | `bool`, default `true`. |
+| `isDeleted` | Soft-delete flag. |
+| `transferAccountId`, `transferTransactionId` | Set on both legs of a transfer. |
+| `parentTransactionId` | Set on split lines (children). |
 
-## States
+## Creation
 
-### 1. Creation
-When a transaction is created, it is persisted in the database with `createdAt` timestamp.
-- **Default Status**: `uncleared`
-- **Default Approval**: `true` (unless created by sync/import rules which might set it to false)
-- **Deleted**: `false`
+`TransactionService.save(TransactionInput)` creates or updates a normal,
+transfer or split transaction. Validation (`ValidationException` with a
+`TransactionValidationError` code):
 
-### 2. Approval Status (`approved` boolean)
-- **Unapproved (`false`)**: Newly imported transactions or match candidates often start as unapproved, requiring user review.
-- **Approved (`true`)**: The user has verified the transaction details.
+* the amount is not zero;
+* a transfer has a different target account and is not split;
+* split lines are non-zero and add up exactly to the parent amount.
 
-### 3. Clearing Status (`cleared` enum)
-Reflects the transaction's status with the bank.
-- **Uncleared (0)**: Transaction recorded but not yet posted by the bank.
-- **Cleared (1)**: Transaction has posted to the bank account.
-- **Reconciled (2)**: Transaction has been verified against a bank statement and locked.
-  - Reconciled transactions should generally not be modified.
+Defaults for a new row: `uncleared`, `approved: true`, not deleted. A new
+payee name is resolved case-insensitively to an existing payee or created.
+When a payee and a category are saved together, the payee's default
+category (`autoCategoryId`) is updated to that category.
 
-### 4. Deletion (`isDeleted` boolean)
-LedgerZero uses **Soft Deletion**.
-- **Active (`false`)**: Normal state.
-- **Deleted (`true`)**: Hidden from UI but retained in database for sync consistency and recovery.
-  - Sync mechanism propagates deletion status.
-  - Undo/Redo can restore soft-deleted transactions.
+Where rows come from besides the form:
 
-## Linked Transactions
+* Quick add (see [NATURAL_LANGUAGE_FORMATS.md](NATURAL_LANGUAGE_FORMATS.md)).
+* Scheduled occurrences: `approved` = the schedule's `autoApprove`
+  (default off), see [SCHEDULED_TRANSACTIONS.md](SCHEDULED_TRANSACTIONS.md).
+* CSV and YNAB import: created `approved`.
+* Rules (`RuleMatchingService`) can set `approved` and `cleared` when they
+  run automatically; see [RULES.md](RULES.md).
 
-### Transfers
-A transfer moves money between two accounts. It consists of two linked transactions.
-- **Source Transaction**: Outflow from Account A.
-  - `transferAccountId`: Account B
-  - `transferTransactionId`: ID of Destination Transaction
-- **Destination Transaction**: Inflow to Account B.
-  - `transferAccountId`: Account A
-  - `transferTransactionId`: ID of Source Transaction
+`approved` does not change balances or budget numbers; unapproved rows
+count like any other and are marked in the transaction list. The list's
+selection mode can approve several rows at once.
 
-**Lifecycle Rules**:
-- Creating a transfer creates both transactions atomically.
-- Deleting one side deletes the other (cascade).
-- Editing amount/date on one side updates the other.
+## Clearing and reconciliation
 
-### Split Transactions
-A single transaction split into multiple categories.
-- **Parent Transaction**: Holds the total amount and main details.
-  - `amount`: Total sum
-  - `categoryId`: NULL (usually)
-- **Child Transactions**: Represents the splits.
-  - `parentTransactionId`: ID of Parent Transaction
-  - `amount`: Partial amount
-  - `categoryId`: Specific category
-  - `accountId`: Same as Parent
-  - `date`: Same as Parent
+* `updateClearingStatus` sets one row's status; split lines follow their
+  parent.
+* The reconciliation screen (`/accounts/:id/reconcile`) calls
+  `TransactionService.reconcile`: every `cleared` row of the account dated on
+  or before the statement date becomes `reconciled`; if the cleared balance
+  differs from the statement balance, an uncategorised, reconciled
+  adjustment is added on the statement date (it flows into To Be Budgeted).
+* Changing or deleting a reconciled row (or a row linked to one) throws
+  `ReconciledTransactionException` unless the caller passes
+  `allowReconciledChange: true`; the UI asks the user first. Approve,
+  reject, bulk categorise and mark-as-reconciled are allowed on reconciled
+  rows without asking.
 
-**Lifecycle Rules**:
-- Sum of children amounts MUST equal parent amount.
-- Deleting parent deletes all children.
-- Children are usually hidden in main lists, shown only when expanding parent.
+## Transfers
 
-## Undo/Redo
+Two rows linked both ways:
 
-Operations in `TransactionService` are reversible.
-- **Actions**: Create, Update, Delete (Single & Batch), Transfer, Split.
-- **Mechanism**: `UndoService` maintains a stack of `ReversibleAction`s.
-- **Scope**: Session-based (cleared on app restart).
+* each leg has `transferTransactionId` = the other leg's id and
+  `transferAccountId` = the other leg's account;
+* the counterpart is always derived from the edited leg (`-amount`, same
+  date and memo), so editing either leg keeps its direction;
+* transfer legs carry no category and no payee and never count towards To
+  Be Budgeted;
+* converting a normal transaction to a transfer creates the counterpart;
+  converting back deletes it;
+* the counterpart keeps its own cleared status unless it moves to another
+  account (then it starts `uncleared`).
 
-## Batch Operations
+## Splits
 
-To optimize performance, operations on multiple transactions are batched.
-- **Bulk Approve/Reject**: Updates `approved` status.
-- **Bulk Reconcile**: Sets `cleared` to `Reconciled`.
-- **Bulk Delete**: Soft deletes multiple transactions in one query.
+A parent row plus child rows:
+
+* the parent carries the account-side amount and no category; it counts
+  for the account balance only;
+* children have `parentTransactionId`, the parent's account, date, payee,
+  cleared and approved state, and their own category, amount and memo;
+  they count as category activity (uncategorised lines count towards To Be
+  Budgeted);
+* on edit, children are matched by id, so their ids survive; removed lines
+  are soft-deleted;
+* the main transaction list hides split children unless it is filtered by
+  category (e.g. "Activity" from the budget screen).
+
+## Deletion
+
+Deletion is soft (`isDeleted = true`). Soft-deleted rows are excluded from
+balances, budget numbers, reports and lists, and are kept so the deletion
+syncs to other devices and can be undone.
+
+Deleting any row of a group deletes the whole group: both transfer legs, or
+a split parent with all its children (also when deleting a single split
+line). `previewDeletion` tells the UI what will be deleted.
+
+Hard deletes happen only when a whole account is deleted (see
+[BUDGETING_RULES.md](BUDGETING_RULES.md#deleting-things)).
+
+## Undo and redo
+
+* `UndoService` (`lib/domain/services/undo_service.dart`) keeps in-memory
+  undo and redo stacks of `ReversibleAction`s, at most 50 each. They are
+  lost when the app restarts or the database is reopened.
+* Transaction writes record a `TransactionChangeSetAction`
+  (`lib/domain/undo/transaction_undo_actions.dart`): a snapshot of every
+  touched row before and after. Undo writes the "before" states back in one
+  unit of work (restoring whole transfer and split groups); undoing a create
+  soft-deletes the rows.
+* Budget edits on the budget screen record a `BudgetChangeAction`.
+* Snackbars pass the action they announced to `undo`, so a later action is
+  never undone by mistake.

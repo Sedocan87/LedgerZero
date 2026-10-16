@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart' as intl;
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
@@ -23,6 +24,7 @@ class BudgetScreen extends ConsumerStatefulWidget {
 class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   bool _isSearching = false;
   late TextEditingController _searchController;
+  final _tutorialKeys = BudgetTutorialKeys();
 
   @override
   void initState() {
@@ -31,7 +33,9 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
 
     // Trigger tutorial after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      BudgetTutorialManager.showTutorial(context, ref);
+      if (mounted) {
+        BudgetTutorialManager.showTutorial(context, ref, _tutorialKeys);
+      }
     });
   }
 
@@ -54,8 +58,6 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   Future<void> _copyPreviousMonth() async {
     final month = ref.read(selectedBudgetMonthProvider);
     await ref.read(budgetingServiceProvider).copyBudgetFromPreviousMonth(month);
-    ref.invalidate(budgetViewModelProvider);
-    ref.invalidate(tbbProvider);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.budgetUpdated)),
@@ -65,10 +67,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
 
   Future<void> _resetBudget() async {
     final month = ref.read(selectedBudgetMonthProvider);
-    final dateFormat = intl.DateFormat.yMMMM(
-      Localizations.localeOf(context).toString(),
-    );
-    final monthString = dateFormat.format(month);
+    final monthString = ref.read(appFormatterProvider).formatMonthYear(month);
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -92,8 +91,6 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
 
     if (confirm == true) {
       await ref.read(budgetingServiceProvider).resetBudget(month);
-      ref.invalidate(budgetViewModelProvider);
-      ref.invalidate(tbbProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context)!.budgetUpdated)),
@@ -202,19 +199,64 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: MonthSelector(key: monthSelectorKey),
+                  child: MonthSelector(key: _tutorialKeys.monthSelector),
                 ),
               ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: ToBeBudgetedBanner(key: tbbKey),
+                  child: ToBeBudgetedBanner(key: _tutorialKeys.tbb),
                 ),
               ),
+              const SliverToBoxAdapter(child: _NoAccountsPrompt()),
               const SliverToBoxAdapter(child: BudgetTutorialBanner()),
-              BudgetCategoryList(headerKey: categoryListKey),
+              BudgetCategoryList(headerKey: _tutorialKeys.categoryList),
               // Bottom padding
               const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown while no account exists: budgeting starts with an account's
+/// balance, so point the user there.
+class _NoAccountsPrompt extends ConsumerWidget {
+  const _NoAccountsPrompt();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasAccounts = ref
+        .watch(accountsProvider)
+        .whenData((accounts) => accounts.isNotEmpty)
+        .valueOrNull;
+    if (hasAccounts != false) {
+      return const SizedBox.shrink();
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Card(
+        key: const Key('budget.noAccounts'),
+        color: scheme.secondaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.budgetNoAccountsMessage,
+                style: TextStyle(color: scheme.onSecondaryContainer),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => context.push('/accounts/add?first=1'),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.createAccount),
+              ),
             ],
           ),
         ),

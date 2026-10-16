@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/domain/entities/transaction.dart';
-import 'package:ledger_zero/domain/entities/payee.dart';
-import 'package:ledger_zero/domain/entities/rule.dart';
-import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
-import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
-import 'package:uuid/uuid.dart';
+import 'package:ledger_zero/services/import/transaction_import_service.dart';
+import 'package:ledger_zero/app/theme.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 
+/// Review of parsed CSV rows: pick the target account (duplicates are
+/// detected against that account and re-checked when it changes), see
+/// which file categories matched, deselect rows, then import.
 class ImportConfirmationScreen extends ConsumerStatefulWidget {
   final List<ImportTransaction> transactions;
 
@@ -26,13 +28,79 @@ class ImportConfirmationScreen extends ConsumerStatefulWidget {
 class _ImportConfirmationScreenState
     extends ConsumerState<ImportConfirmationScreen> {
   late List<ImportTransaction> _transactions;
-  final dateFormat = DateFormat.yMMMd();
+  List<Account>? _accounts;
+  String? _accountId;
+  bool _checkingDuplicates = false;
   bool _isImporting = false;
 
   @override
   void initState() {
     super.initState();
-    _transactions = widget.transactions;
+    // Own copies: the route's objects are never mutated.
+    _transactions = [
+      for (final t in widget.transactions)
+        ImportTransaction(
+          date: t.date,
+          amount: t.amount,
+          payeeName: t.payeeName,
+          memo: t.memo,
+          originalDescription: t.originalDescription,
+          categoryName: t.categoryName,
+          categoryId: t.categoryId,
+          accountId: t.accountId,
+          isSelected: t.isSelected,
+          isDuplicate: t.isDuplicate,
+        ),
+    ];
+    _loadAccounts();
+  }
+
+  Future<void> _loadAccounts() async {
+    try {
+      final accounts =
+          (await ref.read(accountRepositoryProvider).getAllAccounts())
+              .where((a) => !a.isClosed)
+              .toList();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _accounts = accounts;
+        _accountId = accounts.firstOrNull?.id;
+      });
+      if (_accountId != null) {
+        await _checkDuplicates(_accountId!);
+      }
+    } catch (e, st) {
+      Logger.error('Loading accounts for the import failed', e, st);
+      if (mounted) {
+        setState(() => _accounts = const []);
+      }
+    }
+  }
+
+  /// Duplicates only count within the account the rows go into.
+  Future<void> _checkDuplicates(String accountId) async {
+    setState(() => _checkingDuplicates = true);
+    try {
+      await ref
+          .read(transactionImportServiceProvider)
+          .markDuplicates(_transactions, accountId);
+    } catch (e, st) {
+      Logger.error('Duplicate check failed', e, st);
+    } finally {
+      if (mounted) {
+        setState(() => _checkingDuplicates = false);
+      }
+    }
+  }
+
+  Future<void> _selectAccount(String? accountId) async {
+    if (accountId == null || accountId == _accountId) {
+      return;
+    }
+    setState(() => _accountId = accountId);
+    await _checkDuplicates(accountId);
   }
 
   void _toggleSelection(int index) {
@@ -44,10 +112,21 @@ class _ImportConfirmationScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final currency = ref.watch(settingsProvider).currency;
-    final currencyFormat = NumberFormat.simpleCurrency(name: currency);
-    final selectedCount = _transactions.where((t) => t.isSelected).length;
+    final theme = Theme.of(context);
+    final fmt = ref.watch(appFormatterProvider);
+    final categoryNames = ref.watch(categoryMapProvider).valueOrNull ?? {};
+    final accounts = _accounts;
+    final currency = accounts
+        ?.where((a) => a.id == _accountId)
+        .firstOrNull
+        ?.currency;
+    final selected = _transactions.where((t) => t.isSelected).toList();
+    final total = Money.sum(selected.map((t) => t.amount));
     final duplicateCount = _transactions.where((t) => t.isDuplicate).length;
+    final unmatchedCount = _transactions
+        .where((t) => t.hasUnmatchedCategory)
+        .length;
+    final busy = _isImporting || _checkingDuplicates;
 
     return Stack(
       children: [
@@ -62,37 +141,31 @@ class _ImportConfirmationScreenState
                   children: [
                     Text(
                       l10n.confirmImportDescription,
-                      style: Theme.of(context).textTheme.bodyLarge,
+                      style: theme.textTheme.bodyLarge,
                     ),
-                    if (duplicateCount > 0) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.warning,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onErrorContainer,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.deduplicationComplete(duplicateCount),
-                              style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onErrorContainer,
-                              ),
-                            ),
-                          ],
-                        ),
+                    const SizedBox(height: 12),
+                    if (accounts == null)
+                      const LinearProgressIndicator()
+                    else if (accounts.isEmpty)
+                      Text(l10n.createFirstAccountMessage)
+                    else
+                      DropdownButtonFormField<String>(
+                        key: const Key('import_account'),
+                        isExpanded: true,
+                        initialValue: _accountId,
+                        items: [
+                          for (final a in accounts)
+                            DropdownMenuItem(value: a.id, child: Text(a.name)),
+                        ],
+                        onChanged: busy ? null : _selectAccount,
+                        decoration: InputDecoration(labelText: l10n.account),
                       ),
-                    ],
+                    if (duplicateCount > 0)
+                      _Banner(text: l10n.deduplicationComplete(duplicateCount)),
+                    if (unmatchedCount > 0)
+                      _Banner(
+                        text: l10n.importUnmatchedCategories(unmatchedCount),
+                      ),
                   ],
                 ),
               ),
@@ -101,15 +174,16 @@ class _ImportConfirmationScreenState
                   itemCount: _transactions.length,
                   itemBuilder: (context, index) {
                     final tx = _transactions[index];
+                    final category = tx.categoryId == null
+                        ? null
+                        : categoryNames[tx.categoryId];
                     return CheckboxListTile(
                       value: tx.isSelected,
-                      onChanged: _isImporting
-                          ? null
-                          : (v) => _toggleSelection(index),
+                      onChanged: busy ? null : (v) => _toggleSelection(index),
                       tileColor: tx.isDuplicate
-                          ? Theme.of(
-                              context,
-                            ).colorScheme.errorContainer.withValues(alpha: 0.3)
+                          ? theme.colorScheme.errorContainer.withValues(
+                              alpha: 0.3,
+                            )
                           : null,
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -121,9 +195,11 @@ class _ImportConfirmationScreenState
                             ),
                           ),
                           Text(
-                            currencyFormat.format(tx.amount),
+                            fmt.formatMoney(tx.amount, currencyCode: currency),
                             style: TextStyle(
-                              color: tx.amount < 0 ? Colors.red : Colors.green,
+                              color: tx.amount < 0
+                                  ? AppColors.expense
+                                  : AppColors.income,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -132,19 +208,30 @@ class _ImportConfirmationScreenState
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(dateFormat.format(tx.date)),
+                          Text(fmt.formatDate(tx.date)),
+                          if (category != null) Text(category),
+                          if (tx.hasUnmatchedCategory)
+                            Text(
+                              l10n.importCategoryNotFound(
+                                tx.categoryName!.trim(),
+                              ),
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
                           if (tx.isDuplicate)
                             Text(
                               l10n.duplicateWarning,
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.error,
+                                color: theme.colorScheme.error,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
                             ),
                         ],
                       ),
-                      secondary: tx.isDuplicate
+                      secondary: tx.isDuplicate || tx.hasUnmatchedCategory
                           ? const Icon(Icons.warning, color: Colors.amber)
                           : const Icon(Icons.receipt),
                     );
@@ -153,21 +240,26 @@ class _ImportConfirmationScreenState
               ),
               Container(
                 padding: const EdgeInsets.all(16.0),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                color: theme.colorScheme.surfaceContainerHighest,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.total),
-                        Text(
-                          '$selectedCount transactions',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.importSelectedCount(selected.length),
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          Text(
+                            l10n.labelValue(
+                              l10n.total,
+                              fmt.formatMoney(total, currencyCode: currency),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const Spacer(),
                     OutlinedButton(
                       onPressed: _isImporting
                           ? null
@@ -176,10 +268,9 @@ class _ImportConfirmationScreenState
                     ),
                     const SizedBox(width: 16),
                     FilledButton(
-                      onPressed: selectedCount > 0 && !_isImporting
-                          ? () => _showAccountSelectionDialog(
-                              _transactions.where((t) => t.isSelected).toList(),
-                            )
+                      onPressed:
+                          selected.isNotEmpty && !busy && _accountId != null
+                          ? () => _performImport(selected, _accountId!)
                           : null,
                       child: Text(l10n.import),
                     ),
@@ -196,201 +287,51 @@ class _ImportConfirmationScreenState
     );
   }
 
-  Future<void> _showAccountSelectionDialog(
-    List<ImportTransaction> selectedTransactions,
-  ) async {
-    final l10n = AppLocalizations.of(context)!;
-    // We need to pick an account to import these into.
-    // Fetch accounts
-    final accounts = await ref.read(accountRepositoryProvider).getAllAccounts();
-
-    if (accounts.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.createFirstAccountMessage)));
-      }
-      return;
-    }
-
-    String? selectedAccountId = accounts.first.id;
-
-    if (!mounted) {
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(l10n.selectAccount),
-              content: DropdownButtonFormField<String>(
-                initialValue: selectedAccountId,
-                items: accounts
-                    .map(
-                      (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => selectedAccountId = v),
-                decoration: InputDecoration(labelText: l10n.account),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(l10n.import),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (confirmed == true && selectedAccountId != null) {
-      await _performImport(selectedTransactions, selectedAccountId!);
-    }
-  }
-
   Future<void> _performImport(
     List<ImportTransaction> transactions,
     String accountId,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final transactionRepo = ref.read(transactionRepositoryProvider);
-    final payeeRepo = ref.read(payeeRepositoryProvider);
-    final ruleRepo = ref.read(ruleRepositoryProvider);
+    final importService = ref.read(transactionImportServiceProvider);
 
     setState(() => _isImporting = true);
 
     try {
-      // 1. Fetch relevant data
-      final allPayees = await payeeRepo.getAllPayees();
-      final allRules = await ruleRepo.getRules();
-      final activeRules = allRules.where((r) => r.isActive).toList()
-        ..sort((a, b) => b.priority.compareTo(a.priority));
+      // Payee matching, the user's rules and the payee default category are
+      // applied by the service, atomically for all rows.
+      final count = await importService.importTransactions(
+        transactions,
+        accountId,
+      );
 
-      // Map for quick payee lookup: lowercase name -> Payee
-      final payeeMap = {for (var p in allPayees) p.name.toLowerCase(): p};
-
-      final entities = <Transaction>[];
-
-      for (final t in transactions) {
-        // 2. Payee Matching
-        String? payeeId;
-        String? categoryId;
-        String? memo = t.memo;
-
-        // Try to match Payee by name from import
-        if (t.payeeName != null && t.payeeName!.isNotEmpty) {
-          final normalizedName = t.payeeName!.trim().toLowerCase();
-          if (payeeMap.containsKey(normalizedName)) {
-            payeeId = payeeMap[normalizedName]!.id;
-            // Also inherit default category from Payee if available
-            categoryId = payeeMap[normalizedName]!.autoCategoryId;
-          } else {
-            // Create new Payee
-            final newPayee = Payee(
-              id: const Uuid().v4(),
-              name: t.payeeName!.trim(),
-              createdAt: DateTime.now(),
-            );
-            await payeeRepo.createPayee(newPayee);
-            payeeMap[normalizedName] = newPayee; // Update local cache
-            payeeId = newPayee.id;
-          }
-        }
-
-        // 3. Rule Application
-        // Prepare context for rule matching
-        final payeeNameForRules = t.payeeName ?? '';
-        final description = t.originalDescription ?? '';
-        final amount = t.amount;
-
-        for (final rule in activeRules) {
-          bool isMatch = false;
-
-          // Check conditions
-          if (rule.matchLogic == RuleMatchLogic.and) {
-            isMatch = rule.conditions.every(
-              (c) => _checkCondition(c, payeeNameForRules, description, amount),
-            );
-          } else {
-            isMatch = rule.conditions.any(
-              (c) => _checkCondition(c, payeeNameForRules, description, amount),
-            );
-          }
-
-          if (isMatch) {
-            // Apply actions
-            for (final action in rule.actions) {
-              switch (action.type) {
-                case RuleActionType.setCategory:
-                  categoryId = action.value;
-                  break;
-                case RuleActionType.setPayee:
-                  break;
-                case RuleActionType.setMemo:
-                  memo = action.value;
-                  break;
-                default:
-                  break;
-              }
-            }
-            // First matching rule wins (since we sorted by priority)?
-            // Or apply all? Usually, first match wins for conflicting actions is safer.
-            // Let's break after first match for simplicity/priority adherence.
-            break;
-          }
-        }
-
-        entities.add(
-          Transaction(
-            id: const Uuid().v4(),
-            accountId: accountId,
-            date: t.date,
-            amount: t.amount,
-            payeeId: payeeId,
-            categoryId: categoryId,
-            memo: memo,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            cleared: TransactionClearStatus.cleared,
-          ),
-        );
+      if (!mounted) {
+        return;
       }
-
-      await transactionRepo.batchCreateTransactions(entities);
-
+      setState(() => _isImporting = false);
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.importSuccess),
+          content: Text(l10n.importedTransactions(count)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.transactions),
+            ),
+          ],
+        ),
+      );
+      // Navigate with the screen's context once the dialog is gone.
       if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: Text(l10n.importSuccess),
-            content: Text(l10n.importedTransactions(entities.length)),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  context.go('/transactions');
-                },
-                child: Text(l10n.transactions),
-              ),
-            ],
-          ),
-        );
+        context.go('/transactions');
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Importing transactions failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.importFailedGeneric)));
       }
     } finally {
       if (mounted) {
@@ -398,59 +339,38 @@ class _ImportConfirmationScreenState
       }
     }
   }
+}
 
-  bool _checkCondition(
-    RuleCondition condition,
-    String payeeName,
-    String description,
-    double amount,
-  ) {
-    String valueToCheck;
-    switch (condition.type) {
-      case RuleConditionType.payee:
-        valueToCheck = payeeName;
-        break;
-      case RuleConditionType.description:
-        valueToCheck = description;
-        break;
-      case RuleConditionType.amount:
-        valueToCheck = amount
-            .toString(); // Numeric comparison handled differently ideal
-        break;
-      default:
-        return false;
-    }
+class _Banner extends StatelessWidget {
+  const _Banner({required this.text});
 
-    final targetValue = condition.value.toLowerCase();
-    final checkValue = valueToCheck.toLowerCase();
+  final String text;
 
-    // Special handling for amounts
-    if (condition.type == RuleConditionType.amount) {
-      final numCheck = double.tryParse(valueToCheck) ?? 0;
-      final numTarget = double.tryParse(condition.value) ?? 0;
-      switch (condition.operator) {
-        case RuleConditionOperator.equals:
-          return (numCheck - numTarget).abs() < 0.001;
-        case RuleConditionOperator.greaterThan:
-          return numCheck > numTarget;
-        case RuleConditionOperator.lessThan:
-          return numCheck < numTarget;
-        default:
-          return false;
-      }
-    }
-
-    switch (condition.operator) {
-      case RuleConditionOperator.equals:
-        return checkValue == targetValue;
-      case RuleConditionOperator.contains:
-        return checkValue.contains(targetValue);
-      case RuleConditionOperator.startsWith:
-        return checkValue.startsWith(targetValue);
-      case RuleConditionOperator.endsWith:
-        return checkValue.endsWith(targetValue);
-      default:
-        return false;
-    }
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: scheme.errorContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.warning, color: scheme.onErrorContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(color: scheme.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

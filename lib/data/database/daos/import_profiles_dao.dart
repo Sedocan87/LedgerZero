@@ -64,7 +64,8 @@ class ImportProfilesDao extends DatabaseAccessor<AppDatabase>
       payeeColumn: Value(profile.payeeColumn),
       memoColumn: Value(profile.memoColumn),
       categoryColumn: Value(profile.categoryColumn),
-      createdAt: Value(profile.createdAt.toIso8601String()),
+      createdAt: Value(profile.createdAt.toUtc().toIso8601String()),
+      updatedAt: Value(DateTime.now().toUtc()),
     );
   }
 }

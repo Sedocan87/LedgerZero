@@ -13,7 +13,7 @@ void main() {
       isHidden: false,
       sortOrder: 1,
       goalType: GoalType.monthlyFunding,
-      targetAmount: 500.0,
+      targetAmount: 50000,
       targetDate: testDate,
       color: 0xFF00FF00,
       icon: 'cart',
@@ -28,7 +28,7 @@ void main() {
         isHidden: false,
         sortOrder: 1,
         goalType: GoalType.monthlyFunding,
-        targetAmount: 500.0,
+        targetAmount: 50000,
         targetDate: testDate,
         color: 0xFF00FF00,
         icon: 'cart',
@@ -41,7 +41,7 @@ void main() {
         isHidden: false,
         sortOrder: 1,
         goalType: GoalType.monthlyFunding,
-        targetAmount: 500.0,
+        targetAmount: 50000,
         targetDate: testDate,
         color: 0xFF00FF00,
         icon: 'cart',
@@ -53,10 +53,10 @@ void main() {
     });
 
     test('copyWith returns new instance with updated fields', () {
-      final updated = category.copyWith(name: 'Food', targetAmount: 600.0);
+      final updated = category.copyWith(name: 'Food', targetAmount: 60000);
 
       expect(updated.name, equals('Food'));
-      expect(updated.targetAmount, equals(600.0));
+      expect(updated.targetAmount, equals(60000));
       expect(updated.id, equals(category.id));
       expect(updated.goalType, equals(category.goalType));
     });
@@ -69,7 +69,7 @@ void main() {
         'is_hidden': false,
         'sort_order': 1,
         'goal_type': 'monthlyFunding', // Assuming string representation
-        'target_amount': 500.0,
+        'target_amount': 50000,
         'target_date': testDate.toIso8601String(),
         'color': 0xFF00FF00,
         'icon': 'cart',
@@ -89,7 +89,7 @@ void main() {
         'is_hidden': false,
         'sort_order': 1,
         'goal_type': 'monthlyFunding',
-        'target_amount': 500.0,
+        'target_amount': 50000,
         'target_date': testDate.toIso8601String(),
         'color': 0xFF00FF00,
         'icon': 'cart',

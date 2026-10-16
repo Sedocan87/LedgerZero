@@ -1,16 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/memory_platform_file.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
-import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 
-// Since compute needs a real isolate, testing CsvImportService.parseCsvFile might fail in standard flutter test environment unless we are careful.
-// However, unit tests usually mock compute or it runs synchronously in some test setups.
-// But `CsvImportService` calls `compute`.
-// A standard way to test logic inside `compute` is to make the logic a static/top-level function (it is: `_parseCsvInternal`) and test that function directly if possible.
-// `_parseCsvInternal` is private. We can test `parseCsvFile` and see if `compute` works in test.
-// Flutter 2.5+ `flutter_test` supports `compute` running synchronously.
-// Let's rely on that.
+// parseCsvFile runs its parser through compute(), which runs inline in
+// flutter_test.
 
 void main() {
   late CsvImportService service;
@@ -22,9 +20,8 @@ void main() {
   group('CsvImportService', () {
     test('parseCsvFile parses valid CSV correctly', () async {
       const csvContent = 'Date,Payee,Amount\n2023-01-01,Test Payee,-50.00';
-      final file = PlatformFile(
+      final file = MemoryPlatformFile(
         name: 'test.csv',
-        size: csvContent.length,
         bytes: utf8.encode(csvContent),
       );
 
@@ -32,19 +29,15 @@ void main() {
 
       expect(result.headers, equals(['Date', 'Payee', 'Amount']));
       expect(result.rows.length, equals(1));
-      // CsvToListConverter with shouldParseNumbers: false (default behavior unless we checked)
-      // I should check CsvImportService source code.
-      // The source code I read says: `shouldParseNumbers: false`
-      // So numbers will be strings.
+      // Numbers are not parsed: cells stay strings.
       expect(result.rows[0], equals(['2023-01-01', 'Test Payee', '-50.00']));
       expect(result.delimiter, equals(','));
     });
 
     test('parseCsvFile handles semicolons', () async {
       const csvContent = 'Date;Payee;Amount\n2023-01-01;Test Payee;-50,00';
-      final file = PlatformFile(
+      final file = MemoryPlatformFile(
         name: 'test_semicolon.csv',
-        size: csvContent.length,
         bytes: utf8.encode(csvContent),
       );
 
@@ -91,7 +84,8 @@ void main() {
       );
 
       expect(result.isValid, isFalse);
-      expect(result.errors.first, contains('invalid dates'));
+      expect(result.errors.first.kind, CsvIssueKind.invalidDates);
+      expect(result.errors.first.count, 1);
     });
 
     test('convertCsvToTransactions converts correctly', () {
@@ -113,9 +107,48 @@ void main() {
       );
 
       expect(transactions.length, equals(2));
-      expect(transactions[0].amount, equals(1000.00)); // Sorted desc date
-      expect(transactions[1].amount, equals(-50.00));
+      expect(transactions[0].amount, equals(100000)); // Sorted desc date
+      expect(transactions[1].amount, equals(-5000));
       expect(transactions[1].payeeName, equals('Store A'));
+    });
+
+    test('convertCsvToTransactions parses both decimal styles exactly', () {
+      for (final (separator, rows) in [
+        (
+          ',',
+          [
+            ['01.02.2023', '-1.234,56'],
+            ['02.02.2023', '0,10'],
+            ['03.02.2023', '12,50 €'],
+          ],
+        ),
+        (
+          '.',
+          [
+            ['01.02.2023', '-1,234.56'],
+            ['02.02.2023', '0.10'],
+            ['03.02.2023', r'$12.50'],
+          ],
+        ),
+      ]) {
+        final transactions = service.convertCsvToTransactions(
+          data: CsvImportData(
+            headers: ['Date', 'Amount'],
+            rows: rows,
+            delimiter: ';',
+          ),
+          columnMapping: {'Date': 'Date', 'Amount': 'Amount'},
+          dateFormat: 'dd.MM.yyyy',
+          decimalSeparator: separator,
+          outflowIsNegative: true,
+        );
+        expect(transactions.map((t) => t.amount).toList()..sort(), [
+          -123456,
+          10,
+          1250,
+        ], reason: 'decimal separator "$separator"');
+        expect(transactions.last.date, DateTime.utc(2023, 2, 1));
+      }
     });
 
     test('checkForDuplicates marks duplicates', () {
@@ -138,7 +171,7 @@ void main() {
           id: '1',
           accountId: 'a1',
           date: DateTime(2023, 1, 1),
-          amount: -50.00,
+          amount: -5000,
           payeeId: 'p1', // mapped to 'Store' below
         ),
       ];
@@ -150,6 +183,90 @@ void main() {
       );
 
       expect(imported[0].isDuplicate, isTrue);
+    });
+
+    test('outflowIsNegative off flips the sign of every amount', () {
+      // Credit card style: charges positive, refunds/payments negative.
+      final transactions = service.convertCsvToTransactions(
+        data: CsvImportData(
+          headers: ['Date', 'Amount'],
+          rows: [
+            ['2023-01-01', '50.00'],
+            ['2023-01-02', '-20.00'],
+          ],
+          delimiter: ',',
+        ),
+        columnMapping: {'Date': 'Date', 'Amount': 'Amount'},
+        dateFormat: 'yyyy-MM-dd',
+        decimalSeparator: '.',
+        outflowIsNegative: false,
+      );
+      expect(transactions.map((t) => t.amount), [2000, -5000]);
+    });
+
+    test('the Category column is read and matched to existing categories '
+        '(case/whitespace-insensitive, "Group: Category"), never created', () {
+      final rows = service.convertCsvToTransactions(
+        data: CsvImportData(
+          headers: ['Date', 'Amount', 'Category'],
+          rows: [
+            ['2023-01-06', '-1', '  groceries '],
+            ['2023-01-05', '-2', 'food :  Dining   Out'],
+            ['2023-01-04', '-3', 'Fun:Other'],
+            ['2023-01-03', '-4', 'Other'],
+            ['2023-01-02', '-5', 'Unknown'],
+            ['2023-01-01', '-6', ''],
+          ],
+          delimiter: ',',
+        ),
+        columnMapping: {
+          'Date': 'Date',
+          'Amount': 'Amount',
+          'Category': 'Category',
+        },
+        dateFormat: 'yyyy-MM-dd',
+        decimalSeparator: '.',
+        outflowIsNegative: true,
+      );
+      expect(rows.first.categoryName, 'groceries');
+      expect(rows.last.categoryName, isNull);
+
+      service.assignCategories(
+        imported: rows,
+        groups: const [
+          CategoryGroup(id: 'g-food', name: 'Food'),
+          CategoryGroup(id: 'g-fun', name: 'Fun'),
+          CategoryGroup(id: 'g-home', name: 'Home'),
+        ],
+        categories: const [
+          Category(id: 'c-groc', name: 'Groceries', categoryGroupId: 'g-food'),
+          Category(id: 'c-dine', name: 'Dining Out', categoryGroupId: 'g-food'),
+          // "Other" exists twice: only the qualified form is unambiguous.
+          Category(id: 'c-fun-other', name: 'Other', categoryGroupId: 'g-fun'),
+          Category(
+            id: 'c-home-other',
+            name: 'Other',
+            categoryGroupId: 'g-home',
+          ),
+        ],
+      );
+
+      expect(rows.map((r) => r.categoryId), [
+        'c-groc',
+        'c-dine',
+        'c-fun-other',
+        null,
+        null,
+        null,
+      ]);
+      expect(rows.map((r) => r.hasUnmatchedCategory), [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+      ]);
     });
   });
 }

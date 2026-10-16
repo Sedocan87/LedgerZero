@@ -1,6 +1,7 @@
 /// Represents a budget allocation for a category in a specific month.
 ///
-/// This entity tracks how much money is budgeted, spent, and available for a category.
+/// Only the budgeted amount is stored. Activity and available are always
+/// computed from transactions (see BudgetingService).
 class Budget {
   /// The unique identifier of the budget.
   final String id;
@@ -11,16 +12,8 @@ class Budget {
   /// The month this budget is for, in "YYYY-MM" format.
   final String month;
 
-  /// The amount of money allocated to this category for the month.
-  final double budgeted;
-
-  /// The amount of money spent (activity) in this category for the month.
-  final double activity;
-
-  /// The amount of money available in this category.
-  ///
-  /// Calculated as: Budgeted - Activity + Carry-over from previous month.
-  final double available;
+  /// The amount allocated to this category for the month, in minor units.
+  final int budgeted;
 
   /// The date and time when the budget was created.
   final DateTime? createdAt;
@@ -33,9 +26,7 @@ class Budget {
     required this.id,
     this.categoryId,
     required this.month,
-    this.budgeted = 0.0,
-    this.activity = 0.0,
-    this.available = 0.0,
+    this.budgeted = 0,
     this.createdAt,
     this.updatedAt,
   });
@@ -45,9 +36,7 @@ class Budget {
     String? id,
     String? categoryId,
     String? month,
-    double? budgeted,
-    double? activity,
-    double? available,
+    int? budgeted,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -56,8 +45,6 @@ class Budget {
       categoryId: categoryId ?? this.categoryId,
       month: month ?? this.month,
       budgeted: budgeted ?? this.budgeted,
-      activity: activity ?? this.activity,
-      available: available ?? this.available,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -69,9 +56,7 @@ class Budget {
       id: json['id'] as String,
       categoryId: json['category_id'] as String?,
       month: json['month'] as String,
-      budgeted: (json['budgeted'] as num?)?.toDouble() ?? 0.0,
-      activity: (json['activity'] as num?)?.toDouble() ?? 0.0,
-      available: (json['available'] as num?)?.toDouble() ?? 0.0,
+      budgeted: (json['budgeted'] as num?)?.toInt() ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -88,8 +73,6 @@ class Budget {
       'category_id': categoryId,
       'month': month,
       'budgeted': budgeted,
-      'activity': activity,
-      'available': available,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -106,29 +89,18 @@ class Budget {
         other.categoryId == categoryId &&
         other.month == month &&
         other.budgeted == budgeted &&
-        other.activity == activity &&
-        other.available == available &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
 
   @override
   int get hashCode {
-    return Object.hash(
-      id,
-      categoryId,
-      month,
-      budgeted,
-      activity,
-      available,
-      createdAt,
-      updatedAt,
-    );
+    return Object.hash(id, categoryId, month, budgeted, createdAt, updatedAt);
   }
 
   @override
   String toString() {
-    return 'Budget(id: $id, categoryId: $categoryId, month: $month, budgeted: $budgeted, activity: $activity, available: $available, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Budget(id: $id, categoryId: $categoryId, month: $month, budgeted: $budgeted, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   /// Validates the [Budget] entity.

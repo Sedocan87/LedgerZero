@@ -1,164 +1,140 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
-import 'dart:typed_data';
 
+import 'package:intl/intl.dart';
 import 'package:ledger_zero/data/database/database.dart';
+import 'package:ledger_zero/services/backup/backup_format.dart';
+import 'package:ledger_zero/services/backup/backup_scheduler.dart';
+import 'package:ledger_zero/services/export/export_file_service.dart';
+import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
-import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:pointycastle/export.dart';
-import 'package:archive/archive.dart';
 
+/// Where an encrypted backup can be uploaded.
+enum BackupCloudTarget { googleDrive, iCloud }
+
+/// No cloud storage is set up for uploads.
+class BackupUploadNotConfiguredException extends BackupException {
+  const BackupUploadNotConfiguredException()
+    : super('No cloud storage is configured');
+}
+
+/// Creates encrypted backups (format v2, see [BackupFormat]).
+///
+/// Backups are always encrypted with a backup password: there is no
+/// plaintext backup. For a readable copy use the JSON/CSV export.
 class BackupService {
   final AppDatabase _db;
   final GoogleDriveService? _googleDriveService;
   final ICloudDriveService? _iCloudDriveService;
   final BackupScheduler? _backupScheduler;
+  final ExportFileService _files;
+  final KdfParams Function() _kdf;
 
   BackupService(
     this._db, {
-    GoogleDriveService? googleDriveService,
-    ICloudDriveService? iCloudDriveService,
-    BackupScheduler? backupScheduler,
-  }) : _googleDriveService = googleDriveService,
-       _iCloudDriveService = iCloudDriveService,
-       _backupScheduler = backupScheduler;
+    this._googleDriveService,
+    this._iCloudDriveService,
+    this._backupScheduler,
+    ExportFileService? files,
+    KdfParams Function()? kdf,
+  }) : _files = files ?? ExportFileService(),
+       _kdf = kdf ?? KdfParams.recommended;
 
-  /// Creates a backup of the current database.
-  ///
-  /// If [password] is provided, the backup file will be encrypted using AES-GCM.
-  /// The resulting file will have extension `.lzbk` if encrypted, or `.sqlite` if plain.
-  ///
-  /// Returns the path to the backup file.
-  Future<File> createBackup({String? password}) async {
-    final tempDir = await getTemporaryDirectory();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final tempDbName = 'backup_temp_$timestamp.sqlite';
-    final tempDbPath = p.join(tempDir.path, tempDbName);
-
-    // Ensure previous file doesn't exist
-    final tempDbFile = File(tempDbPath);
-    if (await tempDbFile.exists()) {
-      await tempDbFile.delete();
+  /// Writes an encrypted backup into the export directory and records the
+  /// backup time. The plaintext snapshot exists only in the app's temporary
+  /// directory while the backup is built and is deleted afterwards.
+  Future<File> createBackup({required String password}) async {
+    if (password.isEmpty) {
+      throw const BackupException('A backup password is required');
     }
-
-    // 1. Create a plaintext snapshot of the database using VACUUM INTO
-    await _db.customStatement('VACUUM INTO ?', [tempDbPath]);
-
-    if (password == null || password.isEmpty) {
-      // Return the plaintext backup (renamed to avoid confusion with temp)
-      final finalPath = p.join(tempDir.path, 'backup_$timestamp.sqlite');
-      return await tempDbFile.rename(finalPath);
-    }
-
-    // 2. Encrypt the backup
+    final exportDir = await _files.exportDirectory();
+    final stamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final snapshot = File(p.join(exportDir.path, '.snapshot_$stamp.sqlite'));
+    final output = File(
+      p.join(exportDir.path, 'ledgerzero_backup_$stamp.lzbk'),
+    );
     try {
-      final file = await _encryptBackup(tempDbFile, password, timestamp);
-      await _backupScheduler?.recordBackupSuccess();
-      return file;
-    } finally {
-      // Clean up the temporary plaintext file
-      if (await tempDbFile.exists()) {
-        await tempDbFile.delete();
-      }
-    }
-  }
-
-  Future<void> uploadBackupToCloud(File backupFile) async {
-    final filename = p.basename(backupFile.path);
-
-    // Try Google Drive first
-    if (_googleDriveService != null) {
-      // We don't check sync status per se, assuming if the service is injected/available, we try.
-      // But typically we should check if enabled.
-      // For now, we attempt if the service is non-null, catching errors.
-      try {
-        await _googleDriveService.uploadBackup(backupFile, filename);
-      } catch (e) {
-        // Log or rethrow depending on if we want partial success
-        // Assuming we want to try both if possible, or just one.
-        // In reality, only one sync provider is usually active.
-      }
-    }
-
-    // Try iCloud
-    if (_iCloudDriveService != null) {
-      try {
-        await _iCloudDriveService.uploadBackup(backupFile, filename);
-      } catch (e) {
-        // handle error
-      }
-    }
-  }
-
-  Future<File> _encryptBackup(
-    File inputFile,
-    String password,
-    int timestamp,
-  ) async {
-    final tempDir = await getTemporaryDirectory();
-    final outputPath = p.join(tempDir.path, 'backup_$timestamp.lzbk');
-
-    // 1. Generate Salt (32 bytes)
-    final salt = _generateRandomBytes(32);
-
-    // 2. Generate IV (12 bytes for GCM)
-    final iv = _generateRandomBytes(12);
-
-    // 3. Derive Key using PBKDF2
-    final key = _deriveKey(password, salt);
-
-    // 4. Initialize AES-GCM Cipher
-    final cipher = GCMBlockCipher(AESEngine())
-      ..init(
-        true, // Encrypt
-        AEADParameters(
-          KeyParameter(key),
-          128, // Mac size (128 bits)
-          iv,
-          Uint8List(0), // No Associated Data
-        ),
+      await writePlaintextSnapshot(snapshot);
+      await BackupFormat.encryptFile(
+        plaintext: snapshot,
+        output: output,
+        password: password,
+        schemaVersion: _db.schemaVersion,
+        kdf: _kdf(),
       );
-
-    // 5. Read input file
-    final inputBytes = await inputFile.readAsBytes();
-
-    // 5a. Compress (GZIP)
-    // Compression before encryption is crucial for size reduction
-    final compressedBytes = const GZipEncoder().encode(inputBytes);
-
-    // 6. Encrypt
-    final encryptedBytes = cipher.process(Uint8List.fromList(compressedBytes));
-
-    // 7. Write Output: [Salt (32)] [IV (12)] [Encrypted Data]
-    final outputFile = File(outputPath);
-    final sink = outputFile.openWrite();
-    sink.add(salt);
-    sink.add(iv);
-    sink.add(encryptedBytes);
-    await sink.flush();
-    await sink.close();
-
-    return outputFile;
-  }
-
-  Uint8List _generateRandomBytes(int length) {
-    final random = Random.secure();
-    final bytes = Uint8List(length);
-    for (int i = 0; i < length; i++) {
-      bytes[i] = random.nextInt(256);
+    } catch (_) {
+      await _deleteIfExists(output);
+      rethrow;
+    } finally {
+      await _deleteDatabaseFiles(snapshot);
     }
-    return bytes;
+    await _backupScheduler?.recordBackupSuccess();
+    return output;
   }
 
-  Uint8List _deriveKey(String password, Uint8List salt) {
-    final pkcs = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64));
-    pkcs.init(
-      Pbkdf2Parameters(salt, 100000, 32),
-    ); // 100k iterations, 32 byte key
-    return pkcs.process(Uint8List.fromList(utf8.encode(password)));
+  /// Writes an unencrypted copy of the open database to [target].
+  ///
+  /// Under SQLCipher `VACUUM INTO` would copy the main database's key, so the
+  /// copy is made with `ATTACH ... KEY ''` + `sqlcipher_export`. Plain SQLite
+  /// (only possible in tests) falls back to `VACUUM INTO`.
+  Future<void> writePlaintextSnapshot(File target) async {
+    await _deleteDatabaseFiles(target);
+    if (await _db.hasCipherSupport) {
+      final version = await _db.customSelect('PRAGMA user_version').getSingle();
+      final userVersion = version.data.values.first as int;
+      await _db.customStatement("ATTACH DATABASE ? AS lz_export KEY ''", [
+        target.path,
+      ]);
+      try {
+        await _db.customSelect("SELECT sqlcipher_export('lz_export')").get();
+        await _db.customStatement(
+          'PRAGMA lz_export.user_version = $userVersion',
+        );
+      } finally {
+        await _db.customStatement('DETACH DATABASE lz_export');
+      }
+    } else {
+      await _db.customStatement('VACUUM INTO ?', [target.path]);
+    }
+  }
+
+  /// Uploads [backupFile] to [target]. Errors are not swallowed: a failed
+  /// upload throws.
+  Future<void> uploadBackupToCloud(
+    File backupFile,
+    BackupCloudTarget? target,
+  ) async {
+    final filename = p.basename(backupFile.path);
+    switch (target) {
+      case BackupCloudTarget.googleDrive:
+        final drive = _googleDriveService;
+        if (drive == null) {
+          throw const BackupUploadNotConfiguredException();
+        }
+        await drive.uploadBackup(backupFile, filename);
+      case BackupCloudTarget.iCloud:
+        final iCloud = _iCloudDriveService;
+        if (iCloud == null) {
+          throw const BackupUploadNotConfiguredException();
+        }
+        await iCloud.uploadBackup(backupFile, filename);
+      case null:
+        throw const BackupUploadNotConfiguredException();
+    }
+  }
+
+  static Future<void> _deleteIfExists(File file) async {
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> _deleteDatabaseFiles(File file) async {
+    for (final suffix in const ['', '-wal', '-shm', '-journal']) {
+      await _deleteIfExists(File('${file.path}$suffix'));
+    }
   }
 }

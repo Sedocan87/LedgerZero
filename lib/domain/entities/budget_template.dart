@@ -1,7 +1,9 @@
 class BudgetTemplate {
   final String id;
   final String name;
-  final Map<String, double> data;
+
+  /// categoryId -> budgeted amount in minor units.
+  final Map<String, int> data;
   final DateTime? createdAt;
 
   const BudgetTemplate({
@@ -29,7 +31,7 @@ class BudgetTemplate {
     return Object.hash(id, name, data, createdAt);
   }
 
-  bool _mapEquals(Map<String, double> a, Map<String, double> b) {
+  bool _mapEquals(Map<String, int> a, Map<String, int> b) {
     if (a.length != b.length) {
       return false;
     }

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/account_card.dart';
 
 import '../../widget_test_helpers.dart';
+
+final _formatterOverride = appFormatterProvider.overrideWithValue(
+  AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
+);
 
 void main() {
   group('Account Widgets Tests', () {
@@ -14,13 +19,13 @@ void main() {
         id: '1',
         name: 'Checking Account',
         type: AccountType.checking,
-        currentBalance: 1234.56,
-        startingBalance: 0.0,
+        balance: 123456,
         createdAt: DateTime.now(),
       );
 
       await pumpTestWidget(
         tester,
+        overrides: [_formatterOverride],
         child: Scaffold(
           body: AccountCard(account: account, onTap: () {}),
         ),
@@ -39,13 +44,13 @@ void main() {
         id: '1',
         name: 'Savings',
         type: AccountType.savings,
-        currentBalance: 500.0,
-        startingBalance: 0.0,
+        balance: 50000,
         createdAt: DateTime.now(),
       );
 
       await pumpTestWidget(
         tester,
+        overrides: [_formatterOverride],
         child: Scaffold(
           body: AccountCard(
             account: account,

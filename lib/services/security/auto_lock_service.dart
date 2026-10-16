@@ -1,83 +1,144 @@
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/presentation/providers/auth_provider.dart';
-import 'package:ledger_zero/services/encryption/security_manager.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Key for SharedPreferences
 const String kAutoLockDurationKey = 'auto_lock_duration_minutes';
 
+/// Locks the session (closes the database, zeroes the key) when the app has
+/// been in the background for the configured time.
+///
+/// * `0` (immediate): locks as soon as the app becomes `inactive`, `hidden`
+///   or `paused`, so the app switcher never shows an unlocked app.
+/// * `n > 0` minutes: a timer locks after `n` minutes in the background
+///   (while the process runs); on resume the elapsed time is checked again.
+///   The elapsed time is the larger of a monotonic [Stopwatch] and the wall
+///   clock: moving the clock back cannot extend the session, and device
+///   sleep (which some monotonic clocks skip) is still counted.
+/// * `-1` (never): no automatic lock.
+///
+/// OS screens opened by the app itself ([ExternalUiGuard]) do not lock.
 class AutoLockService {
   final Ref _ref;
-  DateTime? _pausedTime;
+  final DateTime Function() _now;
+  final Stopwatch _stopwatch;
+  final Timer Function(Duration, void Function()) _timerFactory;
 
-  /// Set this to true before opening file picker or similar operations
-  /// that temporarily background the app but shouldn't trigger re-lock.
-  bool bypassNextPause = false;
+  bool _inBackground = false;
+  DateTime? _backgroundedAt;
+  Timer? _timer;
+  StreamSubscription<void>? _guardSubscription;
+  AppLifecycleState? _lastState;
 
-  AutoLockService(this._ref);
+  AutoLockService(
+    this._ref, {
+    DateTime Function()? now,
+    Stopwatch? stopwatch,
+    Timer Function(Duration, void Function())? timerFactory,
+  }) : _now = now ?? DateTime.now,
+       _stopwatch = stopwatch ?? Stopwatch(),
+       _timerFactory = timerFactory ?? Timer.new {
+    _guardSubscription = ExternalUiGuard.onEnded.listen((_) {
+      final state = _lastState;
+      if (state != null && state != AppLifecycleState.resumed) {
+        didChangeAppLifecycleState(state);
+      }
+    });
+  }
 
-  void onAppPaused() {
-    // If bypass is set, skip this pause cycle
-    if (bypassNextPause) {
-      bypassNextPause = false;
+  int get _duration => _ref.read(autoLockDurationProvider);
+
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lastState = state;
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _onForeground();
+      case AppLifecycleState.inactive:
+        if (_duration == 0) {
+          _onBackground();
+        }
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        _onBackground();
+      case AppLifecycleState.detached:
+        unawaited(lock());
+    }
+  }
+
+  void _onBackground() {
+    if (ExternalUiGuard.isActive) {
       return;
     }
-
-    _pausedTime = DateTime.now();
-
-    // If immediate lock (duration == 0), lock now.
-    final duration = _ref.read(autoLockDurationProvider);
+    if (!_inBackground) {
+      _inBackground = true;
+      _backgroundedAt = _now();
+      _stopwatch
+        ..reset()
+        ..start();
+    }
+    final duration = _duration;
+    if (duration < 0) {
+      return;
+    }
     if (duration == 0) {
-      _lockApp();
+      unawaited(lock());
+      return;
+    }
+    _timer ??= _timerFactory(
+      Duration(minutes: duration),
+      () => unawaited(lock()),
+    );
+  }
+
+  void _onForeground() {
+    _timer?.cancel();
+    _timer = null;
+    if (!_inBackground) {
+      return;
+    }
+    _inBackground = false;
+    _stopwatch.stop();
+    final duration = _duration;
+    if (duration > 0 && elapsedInBackground >= Duration(minutes: duration)) {
+      unawaited(lock());
     }
   }
 
-  void onAppResumed() {
-    if (_pausedTime == null) {
-      return;
+  /// Time since the app went to the background (see class doc).
+  @visibleForTesting
+  Duration get elapsedInBackground {
+    final monotonic = _stopwatch.elapsed;
+    final since = _backgroundedAt;
+    if (since == null) {
+      return monotonic;
     }
-
-    final duration = _ref.read(autoLockDurationProvider);
-
-    // If "Never" (-1), don't lock.
-    if (duration == -1) {
-      _pausedTime = null;
-      return;
-    }
-
-    // If "Immediate" (0), we already locked on pause.
-    if (duration == 0) {
-      _pausedTime = null;
-      return;
-    }
-
-    // Check elapsed time since pause
-    final now = DateTime.now();
-    final elapsed = now.difference(_pausedTime!);
-
-    if (elapsed.inMinutes >= duration) {
-      _lockApp();
-    }
-
-    _pausedTime = null;
+    final wall = _now().difference(since);
+    return wall > monotonic ? wall : monotonic;
   }
 
-  void _lockApp() {
-    // Lock database
-    SecurityManager.setSessionKey(null);
-    // Update auth state
-    if (_ref.read(authProvider).isAuthenticated) {
-      ref.read(authProvider.notifier).setAuthenticated(false);
+  Future<void> lock() async {
+    _timer?.cancel();
+    _timer = null;
+    if (_ref.read(sessionProvider).isUnlocked) {
+      await _ref.read(sessionProvider.notifier).lock();
     }
   }
 
-  // Getter for the Ref to use inside _lockApp (since it's an instance method)
-  Ref get ref => _ref;
+  void dispose() {
+    _timer?.cancel();
+    _guardSubscription?.cancel();
+  }
 }
 
 final autoLockServiceProvider = Provider<AutoLockService>((ref) {
-  return AutoLockService(ref);
+  final service = AutoLockService(ref);
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 // Provider for the duration setting

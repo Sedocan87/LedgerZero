@@ -9,23 +9,28 @@ import 'package:ledger_zero/presentation/screens/reports/providers/report_provid
 import 'package:mockito/mockito.dart';
 
 import '../../../../mocks/repository_mocks.mocks.dart';
+import '../../../../helpers/l10n_override.dart';
 
 void main() {
   late MockTransactionRepository mockTransactionRepo;
   late MockCategoryRepository mockCategoryRepo;
   late MockBudgetRepository mockBudgetRepo;
+  late MockAccountRepository mockAccountRepo;
   late ProviderContainer container;
 
   setUp(() {
     mockTransactionRepo = MockTransactionRepository();
     mockCategoryRepo = MockCategoryRepository();
     mockBudgetRepo = MockBudgetRepository();
+    mockAccountRepo = MockAccountRepository();
 
     container = ProviderContainer(
       overrides: [
+        englishL10nOverride,
         transactionRepositoryProvider.overrideWithValue(mockTransactionRepo),
         categoryRepositoryProvider.overrideWithValue(mockCategoryRepo),
         budgetRepositoryProvider.overrideWithValue(mockBudgetRepo),
+        accountRepositoryProvider.overrideWithValue(mockAccountRepo),
       ],
     );
   });
@@ -39,8 +44,8 @@ void main() {
       'spendingTrendsProvider aggregates monthly spending correctly across years',
       () async {
         // Arrange
-        final start = DateTime(2023, 1, 1);
-        final end = DateTime(2024, 12, 31);
+        final start = DateTime.utc(2023, 1, 1);
+        final end = DateTime.utc(2024, 12, 31);
 
         container.read(reportDateRangeProvider.notifier).state = DateTimeRange(
           start: start,
@@ -50,24 +55,24 @@ void main() {
         final t1 = Transaction(
           id: '1',
           accountId: 'a1',
-          date: DateTime(2023, 1, 15),
-          amount: -100,
+          date: DateTime.utc(2023, 1, 15),
+          amount: -10000,
           categoryId: 'c1',
           createdAt: DateTime.now(),
         );
         final t2 = Transaction(
           id: '2',
           accountId: 'a1',
-          date: DateTime(2023, 1, 20),
-          amount: -50,
+          date: DateTime.utc(2023, 1, 20),
+          amount: -5000,
           categoryId: 'c2',
           createdAt: DateTime.now(),
         );
         final t3 = Transaction(
           id: '3',
           accountId: 'a1',
-          date: DateTime(2024, 5, 10),
-          amount: -200,
+          date: DateTime.utc(2024, 5, 10),
+          amount: -20000,
           categoryId: 'c1',
           createdAt: DateTime.now(),
         );
@@ -76,14 +81,19 @@ void main() {
         final t4 = Transaction(
           id: '4',
           accountId: 'a1',
-          date: DateTime(2023, 6, 1),
-          amount: 1000,
+          date: DateTime.utc(2023, 6, 1),
+          amount: 100000,
           categoryId: null,
           createdAt: DateTime.now(),
         );
 
         when(
-          mockTransactionRepo.getTransactionsByDateRange(start, end),
+          // Inclusive end day -> half-open query bound.
+          mockTransactionRepo.getTransactionsByDateRange(
+            start,
+            DateTime.utc(2025, 1, 1),
+            excludeSplitParents: true,
+          ),
         ).thenAnswer((_) async => [t1, t2, t3, t4]);
 
         // Act
@@ -91,15 +101,15 @@ void main() {
 
         // Assert
         expect(trends.length, 2);
-        expect(trends[DateTime(2023, 1, 1)], 150.0);
-        expect(trends[DateTime(2024, 5, 1)], 200.0);
+        expect(trends[DateTime.utc(2023, 1, 1)], 15000);
+        expect(trends[DateTime.utc(2024, 5, 1)], 20000);
       },
     );
 
     test('budgetVsActualProvider calculates comparison correctly', () async {
       // Arrange
-      final start = DateTime(2024, 1, 1);
-      final end = DateTime(2024, 1, 31);
+      final start = DateTime.utc(2024, 1, 1);
+      final end = DateTime.utc(2024, 1, 31);
 
       container.read(reportDateRangeProvider.notifier).state = DateTimeRange(
         start: start,
@@ -128,14 +138,14 @@ void main() {
         id: 'b1',
         categoryId: 'c1',
         month: '2024-01',
-        budgeted: 500,
+        budgeted: 50000,
         createdAt: DateTime.now(),
       );
       final b2 = Budget(
         id: 'b2',
         categoryId: 'c2',
         month: '2024-01',
-        budgeted: 1000,
+        budgeted: 100000,
         createdAt: DateTime.now(),
       );
 
@@ -144,13 +154,16 @@ void main() {
       ).thenAnswer((_) async => [b1, b2]);
 
       // Expenses
-      // Mock getExpenseSumsByDateRange
+      // Mock getCategoryActivitySums
       when(
-        mockTransactionRepo.getExpenseSumsByDateRange(start, end),
+        mockTransactionRepo.getCategoryActivitySums(
+          start,
+          DateTime.utc(2024, 2, 1),
+        ),
       ).thenAnswer(
         (_) async => {
-          'c1': -450.0, // Spent 450 on Food
-          'c2': -1000.0, // Spent 1000 on Rent
+          'c1': -45000, // Spent 450 on Food
+          'c2': -100000, // Spent 1000 on Rent
         },
       );
 
@@ -161,12 +174,14 @@ void main() {
       expect(items.length, 2);
 
       final foodItem = items.firstWhere((i) => i.categoryName == 'Food');
-      expect(foodItem.budgeted, 500.0);
-      expect(foodItem.actual, 450.0);
+      expect(foodItem.budgeted, 50000);
+      expect(foodItem.actual, 45000);
 
       final rentItem = items.firstWhere((i) => i.categoryName == 'Rent');
-      expect(rentItem.budgeted, 1000.0);
-      expect(rentItem.actual, 1000.0);
+      expect(rentItem.budgeted, 100000);
+      expect(rentItem.actual, 100000);
     });
   });
 }
+
+// Net worth (grouped SQL) and refresh tests: report_providers_db_test.dart.

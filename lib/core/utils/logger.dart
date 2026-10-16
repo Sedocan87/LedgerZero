@@ -33,12 +33,16 @@ class Logger {
         );
       }
     } catch (_) {
-      // Fallback if AppConfig is not initialized or other error
+      // AppConfig not initialised (tests, early start-up): debug builds
+      // still get the message in the developer log; release builds stay
+      // silent.
       if (kDebugMode) {
-        print('[$name] $message');
-        if (error != null) {
-          print(error);
-        }
+        developer.log(
+          message,
+          name: name,
+          error: error,
+          stackTrace: stackTrace,
+        );
       }
     }
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 
 class ReorderCategoriesScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -58,11 +59,12 @@ class _ReorderCategoriesScreenState
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
       }
     } finally {
       if (mounted) {
@@ -93,11 +95,8 @@ class _ReorderCategoriesScreenState
         ],
       ),
       body: ReorderableListView(
-        onReorder: (oldIndex, newIndex) {
+        onReorderItem: (oldIndex, newIndex) {
           setState(() {
-            if (oldIndex < newIndex) {
-              newIndex -= 1;
-            }
             final item = _categories!.removeAt(oldIndex);
             _categories!.insert(newIndex, item);
           });

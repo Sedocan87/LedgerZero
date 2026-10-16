@@ -1,356 +1,968 @@
+// Multi-device sync simulation: real in-memory databases (SQLCipher), real
+// engines, a fake in-memory cloud folder. See docs/SYNC_ARCHITECTURE.md.
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:ledger_zero/data/database/database.dart';
-import 'package:ledger_zero/services/sync/delta_generation_service.dart';
-import 'package:ledger_zero/services/sync/delta_replay_service.dart';
-import 'package:ledger_zero/services/sync/local_delta_queue.dart';
-import 'package:ledger_zero/services/sync/sync_engine.dart';
-import 'package:ledger_zero/services/sync/google_drive_sync.dart';
-import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
-import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
-import 'package:ledger_zero/services/sync/connectivity_service.dart';
-import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
-import 'package:ledger_zero/services/notifications/notification_service.dart';
-import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:drift/native.dart';
-import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' hide isNotNull;
-import 'package:flutter/services.dart';
+import 'dart:math';
 
-@GenerateMocks([
-  GoogleDriveService,
-  ICloudDriveService,
-  SharedPreferences,
-  ConnectivityService,
-  NotificationService,
-])
-import 'sync_simulation_test.mocks.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/data/database/database.dart'
+    hide ScheduledTransaction;
+import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
+import 'package:ledger_zero/domain/services/scheduled_transaction_service.dart';
+import 'package:ledger_zero/domain/services/transaction_service.dart';
+import 'package:ledger_zero/domain/services/undo_service.dart';
+import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
+import 'package:ledger_zero/services/notifications/notification_service.dart';
+import 'package:ledger_zero/services/sync/format/sync_change.dart';
+import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
+import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
+import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
+import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
+import 'package:ledger_zero/services/sync/sync_engine.dart';
+import 'package:ledger_zero/services/sync/sync_local_state.dart';
+
+import '../../helpers/sync_simulation.dart';
+import '../../helpers/test_database.dart';
+
+const passphrase = 'correct horse battery staple';
+
+class _SilentNotifications extends Fake implements NotificationService {
+  @override
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {}
+
+  @override
+  Future<void> cancelNotification(int id) async {}
+}
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  late FakeSyncFolder folder;
+  final devices = <SimDevice>[];
 
-  // Mock Package Info Channel
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(
-        const MethodChannel('dev.fluttercommunity.plus/package_info'),
-        (call) async {
-          if (call.method == 'getAll') {
-            return {
-              'appName': 'LedgerZero',
-              'packageName': 'com.ledgerzero.app',
-              'version': '1.0.0',
-              'buildNumber': '1',
-            };
-          }
-          return null;
-        },
-      );
+  Future<SimDevice> device({
+    SyncEngineConfig? config,
+    QueryExecutor? executor,
+    Random? shuffle,
+    DateTime Function()? clock,
+  }) async {
+    final d = await SimDevice.create(
+      folder,
+      config: config,
+      executor: executor,
+      shuffle: shuffle,
+      clock: clock,
+    );
+    devices.add(d);
+    return d;
+  }
 
-  // Mock Path Provider
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(
-        const MethodChannel('plugins.flutter.io/path_provider'),
-        (call) async {
-          if (call.method == 'getTemporaryDirectory') {
-            return Directory.systemTemp.path;
-          }
-          if (call.method == 'getApplicationDocumentsDirectory') {
-            return Directory.systemTemp.path;
-          }
-          return null;
-        },
-      );
+  /// First device creates the folder, the others join.
+  Future<void> connect(List<SimDevice> list) async {
+    await list.first.engine.createSyncFolder(passphrase);
+    for (final d in list.skip(1)) {
+      await d.engine.joinSyncFolder(passphrase);
+    }
+  }
 
-  late MockGoogleDriveService mockDrive;
-  late MockICloudDriveService mockICloud;
+  Future<void> expectConverged(List<SimDevice> list) async {
+    final reference = await list.first.dump();
+    for (final d in list.skip(1)) {
+      expect(await d.dump(), reference, reason: 'device ${d.deviceId}');
+    }
+  }
 
-  // Simulated Cloud Storage
-  final Map<String, List<int>> cloudStorage = {}; // id -> content
-  final Map<String, String> cloudFilenames = {}; // id -> filename
+  Future<String> addAccount(SimDevice d, String id, String name) async {
+    await d.exec(
+      'INSERT INTO accounts (id, name, type, currency, starting_balance, '
+      "is_closed, created_at, updated_at) VALUES (?, ?, 'checking', 'USD', "
+      "0, 0, '2025-01-01T00:00:00.000Z', '2025-01-01T00:00:00.000Z')",
+      [id, name],
+    );
+    return id;
+  }
 
   setUp(() {
-    mockDrive = MockGoogleDriveService();
-    mockICloud = MockICloudDriveService();
-
-    cloudStorage.clear();
-    cloudFilenames.clear();
-
-    // Mock Drive listDeltas
-    when(mockDrive.listDeltas()).thenAnswer((_) async {
-      return cloudFilenames.entries
-          .map((e) => RemoteFile(e.value, e.key))
-          .toList();
-    });
-
-    // Mock Drive downloadDelta
-    when(mockDrive.downloadDelta(any, any)).thenAnswer((invocation) async {
-      final id = invocation.positionalArguments[0] as String;
-      final savePath = invocation.positionalArguments[1] as String;
-      final content = cloudStorage[id];
-      if (content == null) {
-        throw Exception('File not found: $id');
-      }
-      final file = File(savePath);
-      await file.parent.create(recursive: true);
-      await file.writeAsBytes(content);
-      return file;
-    });
-
-    // Mock Drive uploadDelta
-    when(mockDrive.uploadDelta(any, any)).thenAnswer((invocation) async {
-      final file = invocation.positionalArguments[0] as File;
-      final filename = invocation.positionalArguments[1] as String;
-      final id = const Uuid().v4();
-      cloudStorage[id] = await file.readAsBytes();
-      cloudFilenames[id] = filename;
-      return id;
-    });
+    folder = FakeSyncFolder();
+    devices.clear();
   });
 
-  Future<AppDatabase> createDb() async {
-    final db = AppDatabase(NativeDatabase.memory());
-    await db.customStatement('PRAGMA foreign_keys = ON');
-    return db;
-  }
-
-  Future<SyncEngine> createRealStack(AppDatabase db, String deviceUuid) async {
-    final devicePrefs = MockSharedPreferences();
-    when(devicePrefs.getString('sync_provider')).thenReturn('googleDrive');
-    when(devicePrefs.setString(any, any)).thenAnswer((_) async => true);
-    when(devicePrefs.getInt(any)).thenReturn(0);
-    when(devicePrefs.setInt(any, any)).thenAnswer((_) async => true);
-
-    final tempDir = await Directory.systemTemp.createTemp(
-      'ledger_test_$deviceUuid',
-    );
-
-    final queue = LocalDeltaQueue(DeltaFilenameGenerator(), tempDir);
-    final deltaGen = DeltaGenerationService(
-      db,
-      queue,
-      devicePrefs,
-      deviceUuid: deviceUuid,
-    );
-    final deltaReplay = DeltaReplayService(db, queue);
-
-    final mockConnectivity = MockConnectivityService();
-    when(mockConnectivity.isConnected).thenAnswer((_) async => true);
-    when(
-      mockConnectivity.connectionStatusStream,
-    ).thenAnswer((_) => Stream.value(ConnectionStatus.online));
-
-    final mockNotification = MockNotificationService();
-
-    return SyncEngine(
-      deltaGen,
-      queue,
-      deltaReplay,
-      {'google_drive': mockDrive, 'icloud': mockICloud},
-      devicePrefs,
-      mockConnectivity,
-      mockNotification,
-    );
-  }
-
-  test('Task 456: Multi-device Sync', () async {
-    final db1 = await createDb();
-    final db2 = await createDb();
-    final engine1 = await createRealStack(db1, 'device1');
-    final engine2 = await createRealStack(db2, 'device2');
-
-    await db1
-        .into(db1.accounts)
-        .insert(
-          AccountsCompanion.insert(id: 'acc1', name: 'Acc1', type: 'checking'),
-        );
-    await db2
-        .into(db2.accounts)
-        .insert(
-          AccountsCompanion.insert(id: 'acc1', name: 'Acc1', type: 'checking'),
-        );
-
-    // 1. Device 1 creates transaction
-    await db1
-        .into(db1.transactions)
-        .insert(
-          TransactionsCompanion.insert(
-            id: 'tx1',
-            accountId: 'acc1',
-            date: DateTime.now(),
-            amount: 100.0,
-          ),
-        );
-
-    // 2. Sync Device 1
-    await engine1.sync();
-
-    // Verify upload
-    expect(cloudStorage, isNotEmpty);
-
-    // 3. Sync Device 2
-    await engine2.sync();
-
-    // 4. Verify Device 2 has transaction
-    final tx2 = await db2.transactionsDao.getTransactionById('tx1');
-    expect(tx2, isNotNull);
-    expect(tx2!.amount, 100.0);
-
-    await db1.close();
-    await db2.close();
-  });
-
-  test('Task 457: Extended Offline Period', () async {
-    final db1 = await createDb();
-    final engine1 = await createRealStack(db1, 'device1');
-    final db2 = await createDb();
-    final engine2 = await createRealStack(db2, 'device2');
-
-    // Device 1 creates 10 changes (simulating activity over time)
-    for (int i = 0; i < 10; i++) {
-      await db1
-          .into(db1.accounts)
-          .insert(
-            AccountsCompanion.insert(
-              id: 'acc_$i',
-              name: 'Acc $i',
-              type: 'checking',
-            ),
-          );
-      await engine1.sync();
+  tearDown(() async {
+    for (final d in devices) {
+      await d.close();
     }
-
-    // Device 2 (offline until now) syncs
-    await engine2.sync();
-
-    // Verify Device 2 has all 10 accounts
-    final count = (await db2.select(db2.accounts).get()).length;
-    expect(count, 10);
-
-    await db1.close();
-    await db2.close();
   });
 
-  test('Task 458: Sync Conflict Resolution', () async {
-    final db1 = await createDb();
-    final db2 = await createDb();
-    final engine1 = await createRealStack(db1, 'deviceA');
-    final engine2 = await createRealStack(db2, 'deviceB');
+  group('two devices', () {
+    test('applied remote changes reach open stream queries', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'acc-a', 'From A');
+      await addAccount(b, 'acc-a2', 'Local on B');
 
-    await db1
-        .into(db1.accounts)
-        .insert(
-          AccountsCompanion.insert(id: 'acc1', name: 'Acc1', type: 'checking'),
-        );
-    await db2
-        .into(db2.accounts)
-        .insert(
-          AccountsCompanion.insert(id: 'acc1', name: 'Acc1', type: 'checking'),
-        );
+      // A screen on B watches the accounts table (Drift stream query).
+      final seen = <int>[];
+      final sub = b.db
+          .select(b.db.accounts)
+          .watch()
+          .listen((rows) => seen.add(rows.length));
+      await Future<void>.delayed(Duration.zero);
+      await syncAll([a, b]);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await sub.cancel();
 
-    // Initial state: tx1 exists
-    await db1
-        .into(db1.transactions)
-        .insert(
-          TransactionsCompanion.insert(
-            id: 'tx1',
-            accountId: 'acc1',
-            date: DateTime.now(),
-            amount: 100.0,
-          ),
-        );
-    await engine1.sync();
-    await engine2.sync(); // B gets tx1
+      expect(seen.last, 2);
+    });
 
-    // A updates tx1 -> 200
-    await db1
-        .update(db1.transactions)
-        .replace(
-          (await db1.transactionsDao.getTransactionById(
-            'tx1',
-          ))!.copyWith(amount: 200.0),
-        );
+    test('offline edits on both sides converge', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'acc-a', 'From A');
+      await addAccount(b, 'acc-b', 'From B');
+      await a.t!.addTransaction(id: 'tx-a', accountId: 'acc-a', amount: -1234);
+      await b.t!.addTransaction(id: 'tx-b', accountId: 'acc-b', amount: 5678);
 
-    await Future.delayed(const Duration(milliseconds: 50));
+      await syncAll([a, b]);
 
-    // B updates tx1 -> 300 (before syncing A's change)
-    await db2
-        .update(db2.transactions)
-        .replace(
-          (await db2.transactionsDao.getTransactionById(
-            'tx1',
-          ))!.copyWith(amount: 300.0, updatedAt: Value(DateTime.now().toUtc())),
-        );
+      await expectConverged([a, b]);
+      expect(await a.count('SELECT COUNT(*) FROM accounts'), 2);
+      expect(await a.count('SELECT COUNT(*) FROM transactions'), 2);
+    });
 
-    // A Syncs (uploads 200)
-    await engine1.sync();
+    test('same row edited on both: newer wins, loser recorded', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'x', 'Original');
+      await syncAll([a, b]);
 
-    // B Syncs (downloads 200, but has local pending 300)
-    // Expectation: B ignores 200 (LWW/Local-Priority), keeps 300, and uploads 300.
-    await engine2.sync();
+      await a.exec(
+        "UPDATE accounts SET name = 'A edit', "
+        "updated_at = '2030-01-01T00:00:00.000Z' WHERE id = 'x'",
+      );
+      await b.exec(
+        "UPDATE accounts SET name = 'B edit', "
+        "updated_at = '2030-01-02T00:00:00.000Z' WHERE id = 'x'",
+      );
+      await syncAll([a, b]);
 
-    final txB = await db2.transactionsDao.getTransactionById('tx1');
-    expect(txB!.amount, 300.0);
+      await expectConverged([a, b]);
+      final name = (await a.rows(
+        "SELECT name FROM accounts WHERE id='x'",
+      )).single['name'];
+      expect(name, 'B edit');
+      final conflicts = await a.db.syncDao.getConflicts();
+      expect(conflicts, hasLength(1));
+      expect(conflicts.single.localSnapshot, contains('A edit'));
+      expect(conflicts.single.remoteSnapshot, contains('B edit'));
+      expect(await b.db.syncDao.getConflicts(), isEmpty);
 
-    // A Syncs again (downloads 300)
-    await engine1.sync();
+      // "Keep mine" re-applies A's version everywhere, without a new
+      // conflict on B (B had seen nothing newer).
+      await SyncConflictResolver(a.db).keepMine(conflicts.single.id);
+      await syncAll([a, b]);
+      await expectConverged([a, b]);
+      expect(
+        (await b.rows("SELECT name FROM accounts WHERE id='x'")).single['name'],
+        'A edit',
+      );
+      expect(await a.db.syncDao.getConflicts(), isEmpty);
+      expect(await b.db.syncDao.getConflicts(), isEmpty);
+    });
 
-    final txA = await db1.transactionsDao.getTransactionById('tx1');
-    expect(txA!.amount, 300.0);
+    test('a pending local change does not win automatically', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'x', 'Original');
+      await syncAll([a, b]);
+      // B edits later (newer) and syncs; A edits earlier but has not synced.
+      await b.exec(
+        "UPDATE accounts SET name = 'B newer', "
+        "updated_at = '2031-01-01T00:00:00.000Z' WHERE id = 'x'",
+      );
+      await b.sync();
+      await a.exec(
+        "UPDATE accounts SET name = 'A older', "
+        "updated_at = '2030-01-01T00:00:00.000Z' WHERE id = 'x'",
+      );
+      await syncAll([a, b]);
+      await expectConverged([a, b]);
+      expect(
+        (await a.rows("SELECT name FROM accounts WHERE id='x'")).single['name'],
+        'B newer',
+      );
+    });
 
-    await db1.close();
-    await db2.close();
+    test('delete newer than update: delete wins on both', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'x', 'Original');
+      await syncAll([a, b]);
+
+      await b.exec(
+        "UPDATE accounts SET name = 'B edit', "
+        "updated_at = '2025-06-01T00:00:00.000Z' WHERE id = 'x'",
+      );
+      await a.exec("DELETE FROM accounts WHERE id = 'x'"); // now (2026+)
+      await b.sync();
+      await a.sync();
+      await b.sync();
+
+      await expectConverged([a, b]);
+      expect(await a.count('SELECT COUNT(*) FROM accounts'), 0);
+
+      // A late copy of the older update does not resurrect the row.
+      await a.db.syncDao.setProgress(b.deviceId, 0);
+      await a.sync();
+      expect(await a.count('SELECT COUNT(*) FROM accounts'), 0);
+    });
+
+    test('update newer than delete: update wins on both', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'x', 'Original');
+      await syncAll([a, b]);
+
+      await a.exec("DELETE FROM accounts WHERE id = 'x'");
+      await b.exec(
+        "UPDATE accounts SET name = 'B later', "
+        "updated_at = '2099-01-01T00:00:00.000Z' WHERE id = 'x'",
+      );
+      await a.sync();
+      await b.sync();
+      await a.sync();
+
+      await expectConverged([a, b]);
+      expect(
+        (await a.rows("SELECT name FROM accounts WHERE id='x'")).single['name'],
+        'B later',
+      );
+    });
+
+    test('echo prevention: replayed rows are not sent back', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.sync();
+      await b.sync();
+      await addAccount(a, 'x', 'Original');
+      await a.t!.addTransaction(accountId: 'x', amount: 100);
+      await a.sync();
+      final report = await b.sync();
+      expect(report.applied, greaterThanOrEqualTo(2));
+      expect(await b.db.syncDao.pendingCount(), 0);
+      final again = await b.sync();
+      expect(again.uploaded, 0);
+    });
   });
 
-  test('Task 451/452: Full Sync vs Incremental', () async {
-    final db1 = await createDb();
-    final engine1 = await createRealStack(db1, 'device1');
-
-    await db1
-        .into(db1.accounts)
-        .insert(
-          AccountsCompanion.insert(id: 'acc1', name: 'Acc1', type: 'checking'),
+  group('natural keys and deterministic ids', () {
+    test(
+      'budgets for the same category and month converge to one row',
+      () async {
+        final a = await device();
+        final b = await device();
+        final groceries = await a.t!.categoryId('Groceries');
+        final rent = await a.t!.categoryId('Rent/Mortgage');
+        // Before the first sync: deterministic ids (WP2) ...
+        await a.t!.budgeting.setCategoryBudgetedAmount(
+          groceries,
+          10000,
+          DateTime.utc(2025, 5),
         );
-    await db1
-        .into(db1.transactions)
-        .insert(
-          TransactionsCompanion.insert(
-            id: 'tx1',
-            accountId: 'acc1',
-            date: DateTime.now(),
-            amount: 100.0,
+        await b.t!.budgeting.setCategoryBudgetedAmount(
+          groceries,
+          25000,
+          DateTime.utc(2025, 5),
+        );
+        // ... and rows with different ids for the same natural key.
+        await a.exec(
+          'INSERT INTO budgets (id, category_id, month, budgeted, created_at, '
+          "updated_at) VALUES ('legacy-a', ?, '2025-06', 100, "
+          "'2025-01-01T00:00:00.000Z', '2025-02-01T00:00:00.000Z')",
+          [rent],
+        );
+        await b.exec(
+          'INSERT INTO budgets (id, category_id, month, budgeted, created_at, '
+          "updated_at) VALUES ('legacy-b', ?, '2025-06', 200, "
+          "'2025-01-01T00:00:00.000Z', '2025-03-01T00:00:00.000Z')",
+          [rent],
+        );
+        await a.exec(
+          'INSERT INTO report_notes (id, date, note, created_at, updated_at) '
+          "VALUES ('note-a', '2025-05', 'A', '2025-01-01T00:00:00.000Z', "
+          "'2025-04-01T00:00:00.000Z')",
+        );
+        await b.exec(
+          'INSERT INTO report_notes (id, date, note, created_at, updated_at) '
+          "VALUES ('note-b', '2025-05', 'B', '2025-01-01T00:00:00.000Z', "
+          "'2025-03-01T00:00:00.000Z')",
+        );
+        await connect([a, b]);
+        await syncAll([a, b], rounds: 3);
+
+        await expectConverged([a, b]);
+        expect(
+          await a.count("SELECT COUNT(*) FROM budgets WHERE month = '2025-05'"),
+          1,
+        );
+        final june = await a.rows(
+          "SELECT id, budgeted FROM budgets WHERE month = '2025-06'",
+        );
+        expect(june.single['id'], 'legacy-b'); // newer updated_at
+        expect(june.single['budgeted'], 200);
+        final notes = await a.rows('SELECT id, note FROM report_notes');
+        expect(notes.single['id'], 'note-a');
+      },
+    );
+
+    test('seeded default categories converge without duplicates', () async {
+      final a = await device();
+      final b = await device();
+      final seeded = await a.count('SELECT COUNT(*) FROM categories');
+      await connect([a, b]);
+      await syncAll([a, b], rounds: 3);
+      await expectConverged([a, b]);
+      expect(await b.count('SELECT COUNT(*) FROM categories'), seeded);
+      expect(await a.db.syncDao.getConflicts(), isEmpty);
+      expect(await b.db.syncDao.getConflicts(), isEmpty);
+    });
+
+    test(
+      'scheduled occurrences materialised on both devices converge',
+      () async {
+        final a = await device();
+        final b = await device();
+        await connect([a, b]);
+        await addAccount(a, 'acc', 'Main');
+        await a.t!.scheduledTransactions.createScheduledTransaction(
+          ScheduledTransaction(
+            id: 'rent',
+            accountId: 'acc',
+            amount: -90000,
+            frequency: RecurrenceFrequency.monthly,
+            nextDate: DateTime.utc(2025, 1, 1),
+            memo: 'Rent',
           ),
         );
-    await engine1.sync();
+        await syncAll([a, b]);
 
-    // Create new device
-    final db2 = await createDb();
-    final engine2 = await createRealStack(db2, 'device2');
+        ScheduledTransactionService service(TestDatabase t) =>
+            ScheduledTransactionService(
+              t.scheduledTransactions,
+              t.transactions,
+              _SilentNotifications(),
+              unitOfWork: t.unitOfWork,
+            );
+        final today = DateTime.utc(2025, 3, 15);
+        expect(await service(a.t!).processDueTransactions(today: today), 3);
+        expect(await service(b.t!).processDueTransactions(today: today), 3);
+        await syncAll([a, b], rounds: 3);
 
-    // 1. Initial Sync (Incremental/First time)
-    await engine2.sync();
-    expect(await db2.transactionsDao.getTransactionById('tx1'), isNotNull);
+        await expectConverged([a, b]);
+        expect(await a.count('SELECT COUNT(*) FROM transactions'), 3);
+      },
+    );
+  });
 
-    // 2. Add more data
-    await db1
-        .into(db1.transactions)
-        .insert(
-          TransactionsCompanion.insert(
-            id: 'tx2',
-            accountId: 'acc1',
-            date: DateTime.now(),
-            amount: 200.0,
-          ),
+  group('atomicity and ordering', () {
+    test('a transfer and a split arrive in one file', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await addAccount(a, 'checking', 'Checking');
+      await addAccount(a, 'savings', 'Savings');
+      final service = TransactionService(
+        transactionRepository: a.t!.transactions,
+        payeeRepository: a.t!.payees,
+        undoService: UndoService(),
+        unitOfWork: a.t!.unitOfWork,
+      );
+      final groceries = await a.t!.categoryId('Groceries');
+      final dining = await a.t!.categoryId('Dining Out');
+      await service.save(
+        TransactionInput(
+          accountId: 'checking',
+          date: DateTime.utc(2025, 5, 1),
+          amount: -5000,
+          transferAccountId: 'savings',
+        ),
+      );
+      await service.save(
+        TransactionInput(
+          accountId: 'checking',
+          date: DateTime.utc(2025, 5, 2),
+          amount: -3000,
+          splits: [
+            SplitLineInput(amount: -1000, categoryId: groceries),
+            SplitLineInput(amount: -2000, categoryId: dining),
+          ],
+        ),
+      );
+      final before = folder.syncFiles(device: a.deviceId).length;
+      await a.sync();
+      final created = folder.syncFiles(device: a.deviceId);
+      expect(created.length, before + 1);
+
+      final key = (await SyncLocalState(a.db.syncDao).syncKey())!;
+      final file = SyncFileCodec.decode(
+        folder.single(created.last.name).bytes,
+        key,
+      );
+      final txIds = file.changes
+          .where((c) => c.table == 'transactions')
+          .map((c) => c.id)
+          .toSet();
+      expect(txIds, hasLength(5)); // two legs + parent + two children
+
+      await b.sync();
+      await expectConverged([a, b]);
+      expect(await b.count('SELECT COUNT(*) FROM transactions'), 5);
+    });
+
+    test('large change sets are cut between row families', () async {
+      final a = await device(
+        config: const SyncEngineConfig(
+          kdfParams: fastKdf,
+          maxChangesPerFile: 3,
+        ),
+      );
+      final b = await device(
+        config: const SyncEngineConfig(
+          kdfParams: fastKdf,
+          maxChangesPerFile: 3,
+        ),
+      );
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await addAccount(a, 'acc', 'Main');
+      for (var i = 0; i < 4; i++) {
+        await a.t!.addTransaction(id: 'p$i', accountId: 'acc', amount: -300);
+        for (var j = 0; j < 2; j++) {
+          await a.t!.addTransaction(
+            id: 'p$i-c$j',
+            accountId: 'acc',
+            amount: -150,
+            parentTransactionId: 'p$i',
+          );
+        }
+      }
+      final before = folder.syncFiles(device: a.deviceId).length;
+      await a.sync();
+      final names = folder.syncFiles(device: a.deviceId).skip(before);
+      expect(names.length, greaterThan(1));
+      final key = (await SyncLocalState(a.db.syncDao).syncKey())!;
+      for (final n in names) {
+        final file = SyncFileCodec.decode(folder.single(n.name).bytes, key);
+        final ids = file.changes
+            .where((c) => c.table == 'transactions')
+            .map((c) => c.id)
+            .toSet();
+        for (final id in ids) {
+          final family = id.split('-').first;
+          expect(
+            ids.where((x) => x.split('-').first == family),
+            hasLength(3),
+            reason: 'family $family split across files',
+          );
+        }
+      }
+      await b.sync();
+      await expectConverged([a, b]);
+    });
+
+    test('250+ change files are listed across pages and all applied', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      for (var i = 0; i < 260; i++) {
+        await a.exec(
+          'INSERT INTO payees (id, name, is_favorite) VALUES (?, ?, 0)',
+          ['p$i', 'Payee $i'],
         );
-    await engine1.sync();
+        await a.sync();
+      }
+      expect(folder.syncFiles(device: a.deviceId).length, greaterThan(250));
+      b.transport.pageCalls = 0;
+      await b.sync();
+      expect(b.transport.pageCalls, greaterThanOrEqualTo(3));
+      expect(await b.count('SELECT COUNT(*) FROM payees'), 260);
+      await expectConverged([a, b]);
+    });
 
-    // 3. Full Sync Device 2
-    // Should re-process tx1 (but insertOnConflictUpdate handles it) and process tx2.
-    await engine2.sync(forceFullSync: true);
-    expect(await db2.transactionsDao.getTransactionById('tx2'), isNotNull);
+    test('delayed, reordered and duplicated files', () async {
+      final a = await device();
+      final b = await device(shuffle: Random(7));
+      await connect([a, b]);
+      await syncAll([a, b]);
+      for (var i = 0; i < 3; i++) {
+        await addAccount(a, 'acc$i', 'Account $i');
+        await a.sync();
+      }
+      final aFiles = folder.syncFiles(device: a.deviceId);
+      final second = aFiles[aFiles.length - 2].name;
+      folder.hidden.add(second);
+      // A duplicated upload of the last file (same name, two ids).
+      folder.add(aFiles.last.name, folder.named(aFiles.last.name).first.bytes);
 
-    await db1.close();
-    await db2.close();
+      await b.sync();
+      expect(await b.count('SELECT COUNT(*) FROM accounts'), 1);
+      expect(await b.db.syncDao.getQuarantine(), isEmpty);
+
+      folder.hidden.clear();
+      await b.sync();
+      expect(await b.count('SELECT COUNT(*) FROM accounts'), 3);
+      await expectConverged([a, b]);
+    });
+
+    test('a file waits for the files it depends on (causal order)', () async {
+      final a = await device();
+      final b = await device();
+      final c = await device();
+      await connect([a, b, c]);
+      await syncAll([a, b, c]);
+      await addAccount(a, 'acc', 'Main');
+      await a.sync();
+      await c.sync();
+      await c.exec(
+        "INSERT INTO payees (id, name, is_favorite) VALUES ('shop', 'Shop', 0)",
+      );
+      await c.sync();
+      final cFile = folder.syncFiles(device: c.deviceId).last.name;
+      await a.sync(); // A learns about the payee ...
+      await a.t!.addTransaction(
+        id: 'tx',
+        accountId: 'acc',
+        amount: -100,
+        payeeId: 'shop',
+      );
+      await a.sync(); // ... and uses it.
+
+      folder.hidden.add(cFile);
+      final report = await b.sync();
+      expect(report.waitingDevices, greaterThan(0));
+      expect(await b.count('SELECT COUNT(*) FROM transactions'), 0);
+
+      folder.hidden.clear();
+      await b.sync();
+      final tx = await b.rows('SELECT payee_id FROM transactions');
+      expect(tx.single['payee_id'], 'shop');
+      await syncAll([a, b, c]);
+      await expectConverged([a, b, c]);
+    });
+
+    test('a parent deleted on one device clears references on all', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'acc', 'Main');
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('extra', 'Extra', 0)",
+      );
+      await syncAll([a, b]);
+
+      await a.exec("DELETE FROM categories WHERE id = 'extra'");
+      await b.t!.addTransaction(
+        id: 'tx',
+        accountId: 'acc',
+        amount: -100,
+        categoryId: 'extra',
+      );
+      await a.exec(
+        'INSERT INTO budgets (id, category_id, month, budgeted) '
+        "VALUES ('x', ?, '2025-01', 5)",
+        [await a.t!.categoryId('Groceries')],
+      );
+      await b.exec(
+        'INSERT INTO budgets (id, category_id, month, budgeted) '
+        "VALUES ('bx', 'extra', '2025-01', 7)",
+      );
+      await syncAll([a, b], rounds: 3);
+
+      await expectConverged([a, b]);
+      final tx = await a.rows('SELECT category_id FROM transactions');
+      expect(tx.single['category_id'], isNull);
+      expect(await a.count("SELECT COUNT(*) FROM budgets WHERE id='bx'"), 0);
+    });
+  });
+
+  group('robustness', () {
+    test(
+      'a tampered file is quarantined and other devices still apply',
+      () async {
+        final a = await device();
+        final b = await device();
+        final c = await device();
+        await connect([a, b, c]);
+        await syncAll([a, b, c]);
+        for (var i = 0; i < 3; i++) {
+          await addAccount(a, 'a$i', 'A $i');
+          await a.sync();
+        }
+        await addAccount(c, 'c0', 'C 0');
+        await c.sync();
+
+        final aFiles = folder.syncFiles(device: a.deviceId);
+        final target = folder.single(aFiles[aFiles.length - 2].name);
+        final original = Uint8List.fromList(target.bytes);
+        target.bytes = Uint8List.fromList(original)
+          ..[original.length - 5] ^= 0x01;
+
+        final report = await b.sync();
+        expect(report.newlyQuarantined, 1);
+        final ids = (await b.rows(
+          'SELECT id FROM accounts ORDER BY id',
+        )).map((r) => r['id']).toList();
+        expect(ids, ['a0', 'c0']);
+        final q = await b.db.syncDao.getQuarantine();
+        expect(q.single.filename, target.name);
+        expect(q.single.reason, 'failed');
+
+        // Retries wait for the backoff ...
+        await b.sync();
+        expect((await b.db.syncDao.getQuarantine()).single.attempts, 1);
+        // ... the file is repaired; a manual retry applies everything.
+        target.bytes = original;
+        await b.engine.retryQuarantined();
+        await b.sync();
+        expect(await b.db.syncDao.getQuarantine(), isEmpty);
+        await syncAll([a, b, c]);
+        await expectConverged([a, b, c]);
+      },
+    );
+
+    test(
+      'a truncated file is quarantined, then applied when complete',
+      () async {
+        final a = await device();
+        final b = await device();
+        await connect([a, b]);
+        await syncAll([a, b]);
+        await addAccount(a, 'x', 'X');
+        await a.sync();
+        final target = folder.single(
+          folder.syncFiles(device: a.deviceId).last.name,
+        );
+        final original = target.bytes;
+        target.bytes = Uint8List.sublistView(original, 0, original.length ~/ 2);
+        await b.sync();
+        expect(await b.db.syncDao.getQuarantine(), hasLength(1));
+        target.bytes = original;
+        await b.engine.retryQuarantined();
+        await b.sync();
+        expect(await b.count('SELECT COUNT(*) FROM accounts'), 1);
+      },
+    );
+
+    test('a wrong passphrase is rejected', () async {
+      final a = await device();
+      final b = await device();
+      await a.engine.createSyncFolder(passphrase);
+      expect(await b.engine.setupStatus(), SyncSetupStatus.needsPassphrase);
+      await expectLater(
+        b.engine.joinSyncFolder('not the passphrase'),
+        throwsA(isA<WrongSyncPassphraseException>()),
+      );
+      expect((await b.sync()).setup, SyncSetupStatus.needsPassphrase);
+      await expectLater(
+        b.engine.createSyncFolder('another passphrase'),
+        throwsA(isA<SyncFolderExistsException>()),
+      );
+      await b.engine.joinSyncFolder(passphrase);
+      expect(await b.engine.setupStatus(), SyncSetupStatus.ready);
+    });
+
+    test('a file from a newer schema version is deferred', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await syncAll([a, b]);
+      final key = (await SyncLocalState(a.db.syncDao).syncKey())!;
+      final seq = await SyncLocalState(a.db.syncDao).ownSequence() + 1;
+      final bytes = SyncFileCodec.encode(
+        header: SyncFileHeader(
+          kind: SyncFileKind.changes,
+          deviceId: a.deviceId,
+          sequence: seq,
+          schemaVersion: AppDatabase.currentSchemaVersion + 1,
+          changeCount: 1,
+          maxVersion: 1,
+          vector: const {},
+          createdAt: DateTime.utc(2030),
+        ),
+        changes: const [
+          SyncChange(
+            table: 'payees',
+            id: 'future',
+            deleted: false,
+            version: 1,
+            deviceId: '00000000-0000-4000-8000-000000000000',
+            row: {'id': 'future', 'name': 'Future', 'shiny_new': 1},
+          ),
+        ],
+        key: key,
+      );
+      folder.add(SyncFileName.changes(a.deviceId, seq), bytes);
+
+      final report = await b.sync();
+      expect(report.newerSchemaPending, isTrue);
+      expect(await b.count('SELECT COUNT(*) FROM payees'), 0);
+      final q = await b.db.syncDao.getQuarantine();
+      expect(q.single.reason, 'newer_schema');
+      // Still deferred (not a failure) on the next run.
+      expect((await b.sync()).newerSchemaPending, isTrue);
+      expect((await b.db.syncDao.getQuarantine()).single.attempts, 0);
+    });
+
+    test('path-traversal and foreign file names are ignored', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      final evilBytes = Uint8List.fromList([1, 2, 3]);
+      final id = a.deviceId;
+      for (final name in [
+        '../../${id}_000000000001.lzsync',
+        '..\\${id}_000000000001.lzsync',
+        '/tmp/${id}_000000000001.lzsync',
+        'sub/${id}_000000000001.lzsync',
+        '${id}_000000000001.lzsync/../../x',
+        '${id.toUpperCase()}_000000000001.lzsync',
+        '${id}_1.lzsync',
+        'notes.txt',
+        'old_123.json.gz',
+      ]) {
+        expect(SyncFileName.tryParse(name), isNull, reason: name);
+        folder.add(name, evilBytes);
+      }
+      final report = await b.sync();
+      expect(report.legacyFilesFound, isTrue);
+      expect(await b.db.syncDao.getQuarantine(), isEmpty);
+      final parent = b.dir.parent;
+      expect(
+        File('${parent.path}/${id}_000000000001.lzsync').existsSync(),
+        isFalse,
+      );
+    });
+  });
+
+  group('snapshots, compaction and restore', () {
+    test('a third device bootstraps from a snapshot and converges', () async {
+      const config = SyncEngineConfig(
+        kdfParams: fastKdf,
+        snapshotEveryFiles: 3,
+        compactAfter: Duration.zero,
+      );
+      final a = await device(config: config);
+      final b = await device(config: config);
+      await connect([a, b]);
+      for (var i = 0; i < 4; i++) {
+        await addAccount(a, 'a$i', 'A $i');
+        await a.sync();
+        await addAccount(b, 'b$i', 'B $i');
+        await b.sync();
+      }
+      await a.exec("DELETE FROM accounts WHERE id = 'a0'");
+      await syncAll([a, b], rounds: 2);
+
+      final snapshots = folder.syncFiles(kind: SyncFileKind.snapshot);
+      expect(snapshots, isNotEmpty);
+      // Compaction removed own files covered by an own snapshot only.
+      final aSnap = snapshots
+          .where((s) => s.deviceId == a.deviceId)
+          .map((s) => s.sequence)
+          .reduce(max);
+      final aFiles = folder.syncFiles(
+        device: a.deviceId,
+        kind: SyncFileKind.changes,
+      );
+      expect(aFiles.every((f) => f.sequence > aSnap), isTrue);
+
+      final c = await device(config: config);
+      await c.engine.joinSyncFolder(passphrase);
+      c.transport.downloads = 0;
+      await c.sync();
+      await syncAll([a, b, c], rounds: 2);
+      await expectConverged([a, b, c]);
+      expect(await c.count("SELECT COUNT(*) FROM accounts WHERE id='a0'"), 0);
+    });
+
+    test('a restore triggers a rebootstrap that converges', () async {
+      final tmp = await Directory.systemTemp.createTemp('lz_restore_');
+      addTearDown(() => tmp.delete(recursive: true));
+      final dbFile = File('${tmp.path}/a.sqlite');
+      final backup = File('${tmp.path}/backup.sqlite');
+      var a = await device(executor: NativeDatabase(dbFile));
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'before', 'Before backup');
+      await syncAll([a, b]);
+
+      await a.exec('VACUUM INTO ?', [backup.path]);
+
+      await addAccount(a, 'after', 'After backup');
+      await a.sync();
+      await b.exec(
+        "UPDATE accounts SET name = 'Edited on B', "
+        "updated_at = '2031-01-01T00:00:00.000Z' WHERE id = 'before'",
+      );
+      await b.sync();
+
+      // Restore: replace the database file, empty the queue, set the flag.
+      await a.db.close();
+      devices.remove(a);
+      await backup.copy(dbFile.path);
+      final restored = AppDatabase(NativeDatabase(dbFile));
+      await restored.customStatement('DELETE FROM pending_sync_changes');
+      a = a.withDatabase(restored);
+      devices.add(a);
+      await SyncRebootstrap(a.prefs, a.outbox).markRequired();
+      expect(
+        await a.count("SELECT COUNT(*) FROM accounts WHERE id='after'"),
+        0,
+      );
+
+      await a.sync();
+      expect(a.prefs.getBool(SyncRebootstrap.prefsKey), isNull);
+      await syncAll([a, b]);
+      await expectConverged([a, b]);
+      expect(
+        await a.count("SELECT COUNT(*) FROM accounts WHERE id='after'"),
+        1,
+      );
+      expect(
+        (await a.rows(
+          "SELECT name FROM accounts WHERE id='before'",
+        )).single['name'],
+        'Edited on B',
+      );
+      // Sequences continue after the files uploaded before the restore.
+      final aFiles = folder.syncFiles(device: a.deviceId);
+      expect(aFiles.map((f) => f.name).toSet().length, aFiles.length);
+    });
+  });
+
+  group('three devices', () {
+    test('mixed offline edits converge to identical databases', () async {
+      final a = await device();
+      final b = await device();
+      final c = await device();
+      await connect([a, b, c]);
+      await addAccount(a, 'shared', 'Shared');
+      await syncAll([a, b, c]);
+      final groceries = await a.t!.categoryId('Groceries');
+      await a.t!.addTransaction(
+        id: 'ta',
+        accountId: 'shared',
+        amount: -1,
+        categoryId: groceries,
+      );
+      await b.t!.addTransaction(id: 'tb', accountId: 'shared', amount: -2);
+      await c.exec(
+        "UPDATE accounts SET name = 'C', updated_at = '2030-01-01T00:00:00.000Z' WHERE id = 'shared'",
+      );
+      await b.exec(
+        "UPDATE accounts SET name = 'B', updated_at = '2030-01-02T00:00:00.000Z' WHERE id = 'shared'",
+      );
+      await a.exec("UPDATE categories SET name = 'Food' WHERE id = ?", [
+        groceries,
+      ]);
+      await b.t!.budgeting.setCategoryBudgetedAmount(
+        groceries,
+        500,
+        DateTime.utc(2025, 1),
+      );
+      await c.t!.budgeting.setCategoryBudgetedAmount(
+        groceries,
+        700,
+        DateTime.utc(2025, 1),
+      );
+      await syncAll([c, b, a], rounds: 3);
+      await expectConverged([a, b, c]);
+      expect((await c.rows('SELECT name FROM accounts')).single['name'], 'B');
+    });
+  });
+
+  test('every synced column of every synced table round-trips', () async {
+    final a = await device();
+    final b = await device();
+    await connect([a, b]);
+    final groceries = await a.t!.categoryId('Groceries');
+    await addAccount(a, 'acc', 'Main');
+    await a.exec(
+      "UPDATE accounts SET color = 5, icon = 'bank', notes = 'n', "
+      "is_closed = 1, starting_balance = 1234 WHERE id = 'acc'",
+    );
+    await a.exec(
+      'UPDATE categories SET goal_type = ?, target_amount = 5000, '
+      "target_date = '2025-12-31T00:00:00.000Z', color = 3, icon = 'cart', "
+      'is_hidden = 1, sort_order = 9 WHERE id = ?',
+      ['target', groceries],
+    );
+    await a.exec(
+      'INSERT INTO payees (id, name, auto_category_id, default_account_id, '
+      "icon, color, notes, is_favorite) VALUES ('p', 'Shop', ?, 'acc', "
+      "'store', 7, 'pn', 1)",
+      [groceries],
+    );
+    await a.exec(
+      'INSERT INTO transactions (id, account_id, date, amount, payee_id, '
+      'category_id, memo, cleared, approved, is_deleted) VALUES '
+      "('t', 'acc', '2025-05-01T00:00:00.000Z', -1999, 'p', ?, 'memo', 2, 0, 1)",
+      [groceries],
+    );
+    await a.exec(
+      'INSERT INTO scheduled_transactions (id, account_id, payee_id, '
+      'category_id, amount, frequency, interval, occurrence_count, next_date, '
+      'end_date, auto_approve, memo, anchor_day) VALUES '
+      "('s', 'acc', 'p', ?, -500, 'monthly', 2, 10, "
+      "'2025-01-31T00:00:00.000Z', '2026-01-31T00:00:00.000Z', 1, 'gym', 31)",
+      [groceries],
+    );
+    await a.exec(
+      'INSERT INTO budget_templates (id, name, data, created_at) VALUES '
+      "('bt', 'Base', '{\"x\":1}', '2025-01-01T00:00:00.000Z')",
+    );
+    await a.exec(
+      'INSERT INTO import_profiles (id, name, date_format, decimal_separator, '
+      'outflow_is_negative, date_column, amount_column, payee_column, '
+      "memo_column, category_column, created_at) VALUES ('ip', 'Bank', "
+      "'yyyy-MM-dd', ',', 1, 'd', 'a', 'p', 'm', 'c', "
+      "'2025-01-01T00:00:00.000Z')",
+    );
+    await a.exec(
+      'INSERT INTO rules (id, name, description, priority, is_active, '
+      'match_logic, conditions, actions, created_at, updated_at) VALUES '
+      "('r', 'Rule', 'desc', 3, 0, 'and', '[]', '[]', "
+      "'2025-01-01T00:00:00.000Z', '2025-01-01T00:00:00.000Z')",
+    );
+    await a.exec(
+      "INSERT INTO report_notes (id, date, note) VALUES ('rn', '2025-05', 'x')",
+    );
+    await a.t!.budgeting.setCategoryBudgetedAmount(
+      groceries,
+      4200,
+      DateTime.utc(2025, 5),
+    );
+    await syncAll([a, b]);
+    await expectConverged([a, b]);
+    for (final table in AppDatabase.syncedTables) {
+      expect(
+        await b.count('SELECT COUNT(*) FROM "$table"'),
+        greaterThan(0),
+        reason: table,
+      );
+    }
   });
 }

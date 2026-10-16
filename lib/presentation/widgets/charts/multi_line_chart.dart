@@ -1,14 +1,23 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
+import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 
-class MultiLineChart extends StatelessWidget {
+/// Line chart of one or more money time series (values in minor units).
+///
+/// Screen readers get one summary label: per series its date range and the
+/// lowest, highest and latest value.
+class MultiLineChart extends ConsumerWidget {
   final List<ChartSeries> seriesList;
   final double height;
   final Color gridColor;
   final Color labelColor;
+
+  /// Currency of the values; defaults to the Settings currency.
+  final String? currencyCode;
 
   const MultiLineChart({
     super.key,
@@ -16,82 +25,105 @@ class MultiLineChart extends StatelessWidget {
     this.height = 200,
     required this.gridColor,
     required this.labelColor,
+    this.currencyCode,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     if (seriesList.isEmpty || seriesList.every((s) => s.points.isEmpty)) {
       return SizedBox(
         height: height,
         child: Center(
-          child: Text(
-            AppLocalizations.of(context)?.noTransactions ?? 'No data available',
-            style: TextStyle(color: labelColor),
-          ),
+          child: Text(l10n.noTransactions, style: TextStyle(color: labelColor)),
         ),
       );
     }
 
-    final seriesDescriptions = seriesList
-        .map((s) {
-          final pointsDesc = s.points
-              .take(3)
-              .map(
-                (p) =>
-                    '${DateFormat.MMMd().format(p.date)}: ${p.value.toStringAsFixed(2)}',
-              )
-              .join(', ');
-          return '${s.name}: $pointsDesc...';
-        })
-        .join('; ');
+    final fmt = ref.watch(appFormatterProvider);
+    final palette = ChartPalette.of(context);
 
-    return Column(
-      children: [
-        // Legend
-        Wrap(
-          spacing: 16,
-          children: seriesList.map((s) {
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 12, height: 12, color: s.color),
-                const SizedBox(width: 4),
-                Text(s.name, style: TextStyle(color: labelColor, fontSize: 12)),
-              ],
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 8),
-        Semantics(
-          label: 'Line Chart showing trend. $seriesDescriptions',
-          child: SizedBox(
+    final seriesDescriptions = seriesList
+        .where((s) => s.points.isNotEmpty)
+        .map(
+          (s) => lineSeriesSemanticsLabel(
+            l10n: l10n,
+            formatter: fmt,
+            name: s.name,
+            points: s.points,
+            currencyCode: currencyCode,
+          ),
+        )
+        .join('. ');
+
+    return Semantics(
+      label: l10n.chartLineSemantics(seriesDescriptions),
+      excludeSemantics: true,
+      child: Column(
+        children: [
+          // Legend
+          Wrap(
+            spacing: 16,
+            children: seriesList.map((s) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    color: palette.seriesColor(s.kind),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    s.name,
+                    style: TextStyle(color: labelColor, fontSize: 12),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
             height: height,
             width: double.infinity,
             child: RepaintBoundary(
               child: CustomPaint(
                 painter: MultiLineChartPainter(
                   seriesList: seriesList,
+                  palette: palette,
                   gridColor: gridColor,
                   labelColor: labelColor,
+                  formatter: fmt,
+                  currencyCode: currencyCode,
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class MultiLineChartPainter extends CustomPainter {
   final List<ChartSeries> seriesList;
+  final ChartPalette palette;
   final Color gridColor;
   final Color labelColor;
 
+  /// Formats axis labels.
+  final AppFormatter formatter;
+
+  /// Currency of the values; defaults to the formatter's currency.
+  final String? currencyCode;
+
   MultiLineChartPainter({
     required this.seriesList,
+    required this.palette,
     required this.gridColor,
     required this.labelColor,
+    required this.formatter,
+    this.currencyCode,
   });
 
   @override
@@ -109,7 +141,7 @@ class MultiLineChartPainter extends CustomPainter {
       size.height - bottomMargin,
     );
 
-    // 1. Calculate Bounds
+    // 1. Calculate Bounds (y in minor units; doubles only as coordinates)
     double minX = double.infinity;
     double maxX = double.negativeInfinity;
     double minY = double.infinity;
@@ -127,11 +159,12 @@ class MultiLineChartPainter extends CustomPainter {
         if (x > maxX) {
           maxX = x;
         }
-        if (p.value < minY) {
-          minY = p.value;
+        final v = p.value.toDouble();
+        if (v < minY) {
+          minY = v;
         }
-        if (p.value > maxY) {
-          maxY = p.value;
+        if (v > maxY) {
+          maxY = v;
         }
       }
     }
@@ -143,8 +176,9 @@ class MultiLineChartPainter extends CustomPainter {
     // Add padding to Y range
     final yRange = maxY - minY;
     if (yRange == 0) {
-      maxY += 10;
-      minY -= 10;
+      // +/- 10 major units
+      maxY += 1000;
+      minY -= 1000;
     } else {
       maxY += yRange * 0.1;
       minY -= yRange * 0.1;
@@ -182,7 +216,10 @@ class MultiLineChartPainter extends CustomPainter {
 
       // Label
       final labelSpan = TextSpan(
-        text: compactCurrency(value),
+        text: formatter.formatMoneyCompact(
+          value.round(),
+          currencyCode: currencyCode,
+        ),
         style: labelStyle,
       );
       final textPainter = TextPainter(
@@ -199,11 +236,11 @@ class MultiLineChartPainter extends CustomPainter {
     for (int i = 0; i <= xSteps; i++) {
       final t = minX + (safeXRange / xSteps) * i;
       final x = getX(t);
-      final date = DateTime.fromMillisecondsSinceEpoch(t.toInt());
+      final date = DateTime.fromMillisecondsSinceEpoch(t.toInt(), isUtc: true);
 
       // Label
       final labelSpan = TextSpan(
-        text: DateFormat.MMMd().format(date),
+        text: formatter.formatMonthDay(date),
         style: labelStyle,
       );
       final textPainter = TextPainter(
@@ -232,20 +269,20 @@ class MultiLineChartPainter extends CustomPainter {
       }
 
       final paint = Paint()
-        ..color = series.color
+        ..color = palette.seriesColor(series.kind)
         ..strokeWidth = 2
         ..style = PaintingStyle.stroke;
 
       final path = Path();
       path.moveTo(
         getX(series.points.first.date.millisecondsSinceEpoch.toDouble()),
-        getY(series.points.first.value),
+        getY(series.points.first.value.toDouble()),
       );
 
       for (int i = 1; i < series.points.length; i++) {
         path.lineTo(
           getX(series.points[i].date.millisecondsSinceEpoch.toDouble()),
-          getY(series.points[i].value),
+          getY(series.points[i].value.toDouble()),
         );
       }
 
@@ -255,11 +292,14 @@ class MultiLineChartPainter extends CustomPainter {
 
       // Draw points
       final dotPaint = Paint()
-        ..color = series.color
+        ..color = palette.seriesColor(series.kind)
         ..style = PaintingStyle.fill;
       for (var p in series.points) {
         canvas.drawCircle(
-          Offset(getX(p.date.millisecondsSinceEpoch.toDouble()), getY(p.value)),
+          Offset(
+            getX(p.date.millisecondsSinceEpoch.toDouble()),
+            getY(p.value.toDouble()),
+          ),
           3,
           dotPaint,
         );
@@ -268,22 +308,16 @@ class MultiLineChartPainter extends CustomPainter {
     }
   }
 
-  String compactCurrency(double value) {
-    if (value.abs() >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    }
-    if (value.abs() >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toStringAsFixed(0);
-  }
-
   @override
   bool shouldRepaint(covariant MultiLineChartPainter oldDelegate) {
-    if (oldDelegate.gridColor != gridColor) {
+    if (oldDelegate.gridColor != gridColor || oldDelegate.palette != palette) {
       return true;
     }
     if (oldDelegate.labelColor != labelColor) {
+      return true;
+    }
+    if (!identical(oldDelegate.formatter, formatter) ||
+        oldDelegate.currencyCode != currencyCode) {
       return true;
     }
     if (oldDelegate.seriesList.length != seriesList.length) {
@@ -294,7 +328,7 @@ class MultiLineChartPainter extends CustomPainter {
       if (seriesList[i].name != oldDelegate.seriesList[i].name) {
         return true;
       }
-      if (seriesList[i].color != oldDelegate.seriesList[i].color) {
+      if (seriesList[i].kind != oldDelegate.seriesList[i].kind) {
         return true;
       }
       if (seriesList[i].points.length !=

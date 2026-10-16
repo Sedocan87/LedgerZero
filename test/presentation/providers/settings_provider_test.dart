@@ -1,122 +1,84 @@
+// SettingsNotifier with the shared_preferences test store: defaults,
+// restoring saved values and persisting every change across a restart.
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'settings_provider_test.mocks.dart';
-
-@GenerateMocks([SharedPreferences])
 void main() {
-  late MockSharedPreferences mockPrefs;
-  late ProviderContainer container;
-
-  setUp(() {
-    mockPrefs = MockSharedPreferences();
-    container = ProviderContainer(
-      overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+  Future<ProviderContainer> restart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final c = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
     );
+    addTearDown(c.dispose);
+    return c;
+  }
+
+  Future<ProviderContainer> start([
+    Map<String, Object> saved = const {},
+  ]) async {
+    SharedPreferences.setMockInitialValues(saved);
+    return restart();
+  }
+
+  test('defaults', () async {
+    final s = (await start()).read(settingsProvider);
+    expect(s.currency, 'USD');
+    expect(s.language, isNull);
+    expect(s.defaultAccountId, isNull);
+    expect(s.scheduledTransactionNotifications, isTrue);
+    expect(s.budgetAlertNotifications, isTrue);
+    expect(s.syncStatusNotifications, isTrue);
   });
 
-  tearDown(() {
-    container.dispose();
+  test('restores saved values', () async {
+    final s = (await start({
+      'settings_currency': 'EUR',
+      'settings_notif_scheduled_tx': false,
+      'settings_notif_budget_alert': false,
+      'settings_notif_sync_status': false,
+    })).read(settingsProvider);
+    expect(s.currency, 'EUR');
+    expect(s.scheduledTransactionNotifications, isFalse);
+    expect(s.budgetAlertNotifications, isFalse);
+    expect(s.syncStatusNotifications, isFalse);
   });
 
-  group('SettingsNotifier', () {
-    test('loads default values when no prefs are set', () {
-      when(mockPrefs.getString(any)).thenReturn(null);
-      when(mockPrefs.getInt(any)).thenReturn(null);
-      when(mockPrefs.getBool(any)).thenReturn(null);
+  test('every change is applied and survives a restart', () async {
+    final c = await start();
+    final n = c.read(settingsProvider.notifier);
+    await n.setCurrency('JPY');
+    await n.setLanguage(const Locale('de'));
+    await n.setDefaultAccountId('acc-1');
+    await n.setDefaultCategoryId('cat-1');
+    await n.setScheduledTransactionNotifications(false);
+    await n.setBudgetAlertNotifications(false);
+    await n.setSyncStatusNotifications(false);
+    final dateFormat = AppDateFormat.values.last;
+    final numberFormat = AppNumberFormat.values.last;
+    final firstDay = AppFirstDayOfWeek.values.last;
+    await n.setDateFormat(dateFormat);
+    await n.setNumberFormat(numberFormat);
+    await n.setFirstDayOfWeek(firstDay);
+    expect(c.read(settingsProvider).currency, 'JPY');
 
-      final notifier = container.read(settingsProvider.notifier);
-      final state = notifier.state;
+    final s = (await restart()).read(settingsProvider);
+    expect(s.currency, 'JPY');
+    expect(s.language, const Locale('de'));
+    expect(s.defaultAccountId, 'acc-1');
+    expect(s.defaultCategoryId, 'cat-1');
+    expect(s.scheduledTransactionNotifications, isFalse);
+    expect(s.budgetAlertNotifications, isFalse);
+    expect(s.syncStatusNotifications, isFalse);
+    expect(s.dateFormat, dateFormat);
+    expect(s.numberFormat, numberFormat);
+    expect(s.firstDayOfWeek, firstDay);
 
-      expect(state.currency, 'USD');
-      expect(state.scheduledTransactionNotifications, true);
-      expect(state.budgetAlertNotifications, true);
-      expect(state.syncStatusNotifications, true);
-      expect(state.developerMode, false);
-    });
-
-    test('loads saved values from prefs', () {
-      when(mockPrefs.getString('settings_currency')).thenReturn('EUR');
-      when(mockPrefs.getBool('settings_notif_scheduled_tx')).thenReturn(false);
-      when(mockPrefs.getBool('settings_notif_budget_alert')).thenReturn(false);
-      when(mockPrefs.getBool('settings_notif_sync_status')).thenReturn(false);
-      when(mockPrefs.getBool('settings_developer_mode')).thenReturn(true);
-
-      // Stub other calls to return null/default
-      when(mockPrefs.getInt(any)).thenReturn(null);
-      when(mockPrefs.getString('settings_language')).thenReturn(null);
-      when(mockPrefs.getString('settings_default_account')).thenReturn(null);
-      when(mockPrefs.getString('settings_default_category')).thenReturn(null);
-
-      final notifier = container.read(settingsProvider.notifier);
-      final state = notifier.state;
-
-      expect(state.currency, 'EUR');
-      expect(state.scheduledTransactionNotifications, false);
-      expect(state.budgetAlertNotifications, false);
-      expect(state.syncStatusNotifications, false);
-      expect(state.developerMode, true);
-    });
-
-    test('updates scheduledTransactionNotifications and persists', () async {
-      when(mockPrefs.getString(any)).thenReturn(null);
-      when(mockPrefs.getInt(any)).thenReturn(null);
-      when(mockPrefs.getBool(any)).thenReturn(null);
-      when(mockPrefs.setBool(any, any)).thenAnswer((_) async => true);
-
-      final notifier = container.read(settingsProvider.notifier);
-
-      await notifier.setScheduledTransactionNotifications(false);
-
-      expect(notifier.state.scheduledTransactionNotifications, false);
-      verify(mockPrefs.setBool('settings_notif_scheduled_tx', false)).called(1);
-    });
-
-    test('updates budgetAlertNotifications and persists', () async {
-      when(mockPrefs.getString(any)).thenReturn(null);
-      when(mockPrefs.getInt(any)).thenReturn(null);
-      when(mockPrefs.getBool(any)).thenReturn(null);
-      when(mockPrefs.setBool(any, any)).thenAnswer((_) async => true);
-
-      final notifier = container.read(settingsProvider.notifier);
-
-      await notifier.setBudgetAlertNotifications(false);
-
-      expect(notifier.state.budgetAlertNotifications, false);
-      verify(mockPrefs.setBool('settings_notif_budget_alert', false)).called(1);
-    });
-
-    test('updates syncStatusNotifications and persists', () async {
-      when(mockPrefs.getString(any)).thenReturn(null);
-      when(mockPrefs.getInt(any)).thenReturn(null);
-      when(mockPrefs.getBool(any)).thenReturn(null);
-      when(mockPrefs.setBool(any, any)).thenAnswer((_) async => true);
-
-      final notifier = container.read(settingsProvider.notifier);
-
-      await notifier.setSyncStatusNotifications(false);
-
-      expect(notifier.state.syncStatusNotifications, false);
-      verify(mockPrefs.setBool('settings_notif_sync_status', false)).called(1);
-    });
-
-    test('updates developerMode and persists', () async {
-      when(mockPrefs.getString(any)).thenReturn(null);
-      when(mockPrefs.getInt(any)).thenReturn(null);
-      when(mockPrefs.getBool(any)).thenReturn(null);
-      when(mockPrefs.setBool(any, any)).thenAnswer((_) async => true);
-
-      final notifier = container.read(settingsProvider.notifier);
-
-      await notifier.setDeveloperMode(true);
-
-      expect(notifier.state.developerMode, true);
-      verify(mockPrefs.setBool('settings_developer_mode', true)).called(1);
-    });
+    // Clearing the language follows the device again.
+    await (await restart()).read(settingsProvider.notifier).setLanguage(null);
+    expect((await restart()).read(settingsProvider).language, isNull);
   });
 }

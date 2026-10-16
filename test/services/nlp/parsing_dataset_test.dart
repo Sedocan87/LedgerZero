@@ -1,28 +1,17 @@
+import 'package:ledger_zero/core/money/money.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/services/nlp/transaction_parser.dart';
-import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:ledger_zero/domain/repositories/payee_repository.dart';
-import 'package:ledger_zero/domain/repositories/category_repository.dart';
-import 'package:ledger_zero/domain/repositories/parsing_history_repository.dart';
-import 'package:ledger_zero/domain/repositories/parsing_rules_repository.dart';
 
-@GenerateNiceMocks([
-  MockSpec<PayeeRepository>(),
-  MockSpec<CategoryRepository>(),
-  MockSpec<ParsingHistoryRepository>(),
-  MockSpec<ParsingRulesRepository>(),
-])
-import 'parsing_dataset_test.mocks.dart';
+import '../../mocks/repository_mocks.mocks.dart';
 
 void main() {
   late TransactionParser parser;
   late MockPayeeRepository mockPayeeRepository;
   late MockCategoryRepository mockCategoryRepository;
   late MockParsingHistoryRepository mockParsingHistoryRepository;
-  late MockParsingRulesRepository mockParsingRulesRepository;
 
   // Mock Data
   final mockPayees = [
@@ -113,7 +102,6 @@ void main() {
     mockPayeeRepository = MockPayeeRepository();
     mockCategoryRepository = MockCategoryRepository();
     mockParsingHistoryRepository = MockParsingHistoryRepository();
-    mockParsingRulesRepository = MockParsingRulesRepository();
 
     when(
       mockPayeeRepository.getAllPayees(),
@@ -124,7 +112,6 @@ void main() {
     when(
       mockParsingHistoryRepository.getHistory(any),
     ).thenAnswer((_) async => []);
-    when(mockParsingRulesRepository.getAllRules()).thenAnswer((_) async => []);
 
     // Mock getCategoryById for auto-assign
     for (var p in mockPayees) {
@@ -140,7 +127,6 @@ void main() {
       mockPayeeRepository,
       mockCategoryRepository,
       mockParsingHistoryRepository,
-      mockParsingRulesRepository,
     );
   });
 
@@ -153,7 +139,7 @@ void main() {
       cases.add(
         TestCase(
           'Walmart 50',
-          amount: 50.0,
+          amount: 5000,
           payee: 'Walmart',
           category: 'Groceries',
         ),
@@ -161,7 +147,7 @@ void main() {
       cases.add(
         TestCase(
           'Starbucks 5.50',
-          amount: 5.50,
+          amount: 550,
           payee: 'Starbucks',
           category: 'Dining Out',
         ),
@@ -169,7 +155,7 @@ void main() {
       cases.add(
         TestCase(
           'Uber 25',
-          amount: 25.0,
+          amount: 2500,
           payee: 'Uber',
           category: 'Transportation',
         ),
@@ -177,27 +163,27 @@ void main() {
       cases.add(
         TestCase(
           'Netflix 15',
-          amount: 15.0,
+          amount: 1500,
           payee: 'Netflix',
           category: 'Entertainment',
         ),
       );
       cases.add(
-        TestCase('Groceries 100', amount: 100.0, category: 'Groceries'),
+        TestCase('Groceries 100', amount: 10000, category: 'Groceries'),
       );
-      cases.add(TestCase('Lunch 20', amount: 20.0, category: 'Dining Out'));
+      cases.add(TestCase('Lunch 20', amount: 2000, category: 'Dining Out'));
 
       // 2. Formatting Variations (Currency, positioning)
-      cases.add(TestCase('\$50 Walmart', amount: 50.0, payee: 'Walmart'));
-      cases.add(TestCase('Walmart \$50', amount: 50.0, payee: 'Walmart'));
-      cases.add(TestCase('50 Walmart', amount: 50.0, payee: 'Walmart'));
+      cases.add(TestCase('\$50 Walmart', amount: 5000, payee: 'Walmart'));
+      cases.add(TestCase('Walmart \$50', amount: 5000, payee: 'Walmart'));
+      cases.add(TestCase('50 Walmart', amount: 5000, payee: 'Walmart'));
       cases.add(
-        TestCase('Dinner 45.50', amount: 45.50, category: 'Dining Out'),
+        TestCase('Dinner 45.50', amount: 4550, category: 'Dining Out'),
       ); // Mapped via keyword 'Dinner'
       cases.add(
         TestCase(
           '45€ Dinner',
-          amount: 45.0,
+          amount: 4500,
           category: 'Dining Out',
           currency: '€',
         ),
@@ -205,12 +191,12 @@ void main() {
 
       // 3. Date Variations
       // Note: We check presence of date, not exact value to avoid mocking time in this large set
-      cases.add(TestCase('Lunch 15 tomorrow', amount: 15.0, hasDate: true));
-      cases.add(TestCase('Dinner Friday 50', amount: 50.0, hasDate: true));
+      cases.add(TestCase('Lunch 15 tomorrow', amount: 1500, hasDate: true));
+      cases.add(TestCase('Dinner Friday 50', amount: 5000, hasDate: true));
       cases.add(
         TestCase(
           'Rent 1000 due 2023-11-01',
-          amount: 1000.0,
+          amount: 100000,
           category: 'Rent',
           hasDate: true,
         ),
@@ -218,34 +204,34 @@ void main() {
 
       // 4. Income
       cases.add(
-        TestCase('Salary 3000', amount: 3000.0, isIncome: true),
+        TestCase('Salary 3000', amount: 300000, isIncome: true),
       ); // Fuzzy match 'Salary' category
-      cases.add(TestCase('Deposit 500', amount: 500.0, isIncome: true));
-      cases.add(TestCase('Refund 50', amount: 50.0, isIncome: true));
+      cases.add(TestCase('Deposit 500', amount: 50000, isIncome: true));
+      cases.add(TestCase('Refund 50', amount: 5000, isIncome: true));
 
       // 5. Natural Language
       cases.add(
-        TestCase('Spent 20 at Starbucks', amount: 20.0, payee: 'Starbucks'),
+        TestCase('Spent 20 at Starbucks', amount: 2000, payee: 'Starbucks'),
       );
       cases.add(
-        TestCase('Paid 100 to Landlord', amount: 100.0, payee: 'Landlord'),
+        TestCase('Paid 100 to Landlord', amount: 10000, payee: 'Landlord'),
       );
       cases.add(
         TestCase(
           'Received 3000 from Employer',
-          amount: 3000.0,
+          amount: 300000,
           payee: 'Employer',
         ),
       ); // Income check might fail if "Received" isn't a keyword
 
       // 6. Fuzzy Matching / Typos
-      // cases.add(TestCase('Walmrt 50', amount: 50.0, payee: 'Walmart')); // Fuzzy Payee with extra text is hard. Skipping for now.
+      // cases.add(TestCase('Walmrt 50', amount: 5000, payee: 'Walmart')); // Fuzzy Payee with extra text is hard. Skipping for now.
       cases.add(
-        TestCase('Groceris 50', amount: 50.0, category: 'Groceries'),
+        TestCase('Groceris 50', amount: 5000, category: 'Groceries'),
       ); // Fuzzy Category works because 'Groceries' is single word and distinct
-      // cases.add(TestCase('Dinnr 40', amount: 40.0, category: 'Dining Out')); // 'Dinnr' to 'Dining Out' is hard.
+      // cases.add(TestCase('Dinnr 40', amount: 4000, category: 'Dining Out')); // 'Dinnr' to 'Dining Out' is hard.
       cases.add(
-        TestCase('Dining 40', amount: 40.0, category: 'Dining Out'),
+        TestCase('Dining 40', amount: 4000, category: 'Dining Out'),
       ); // 'Dining' matches 'Dining Out' (substring)
 
       // Generating more cases to reach 100+
@@ -296,7 +282,7 @@ void main() {
           final expectedPayee = mockPayees.any((p) => p.name == m) ? m : null;
 
           cases.add(
-            TestCase('$m $a', amount: a.toDouble(), payee: expectedPayee),
+            TestCase('$m $a', amount: Money.fromMajor(a), payee: expectedPayee),
           );
         }
       }
@@ -364,7 +350,9 @@ void main() {
 
 class TestCase {
   final String input;
-  final double? amount;
+
+  /// Expected amount in minor units.
+  final int? amount;
   final String? payee;
   final String? category;
   final String? currency;

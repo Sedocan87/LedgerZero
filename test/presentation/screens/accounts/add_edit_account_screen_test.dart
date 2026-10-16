@@ -3,20 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/add_edit_account_screen.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockAccountRepository implements AccountRepository {
-  @override
-  Future<void> createAccount(Account account) async {}
+  MockAccountRepository({this.existing});
+
+  final Account? existing;
+  Account? created;
+  Account? updated;
 
   @override
-  Future<void> updateAccount(Account account) async {}
+  Future<void> createAccount(Account account) async => created = account;
 
   @override
-  Future<Account?> getAccountById(String id) async => null;
+  Future<void> updateAccount(Account account) async => updated = account;
+
+  @override
+  Future<Account?> getAccountById(String id) async => existing;
 
   @override
   Future<List<Account>> getAllAccounts() async => [];
@@ -26,7 +34,22 @@ class MockAccountRepository implements AccountRepository {
   Stream<Account?> watchAccount(String id) => Stream.value(null);
   @override
   Future<void> deleteAccount(String id) async {}
+  @override
+  Future<Map<String, int>> getAccountBalances() async => {};
+  @override
+  Stream<Map<String, int>> watchAccountBalances() => Stream.value({});
+  @override
+  Future<int> getAccountBalance(String id) async => 0;
+  @override
+  Future<int> getClearedBalance(String id, {DateTime? upTo}) async => 0;
+
+  @override
+  Future<int> getTotalStartingBalance() async => 0;
 }
+
+final _germanFormatter = appFormatterProvider.overrideWithValue(
+  AppFormatter(locale: 'de', currency: 'EUR', decimalSeparator: ','),
+);
 
 void main() {
   testWidgets('AddEditAccountScreen form validation', (
@@ -41,7 +64,11 @@ void main() {
           accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: const MaterialApp(home: AddEditAccountScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AddEditAccountScreen(),
+        ),
       ),
     );
 
@@ -76,13 +103,134 @@ void main() {
           accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: const MaterialApp(home: AddEditAccountScreen()),
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AddEditAccountScreen(),
+        ),
       ),
     );
 
     await tester.pumpAndSettle();
 
     // Check Semantics for Color Picker using exact string match
-    expect(find.bySemanticsLabel('Color option 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Color 1'), findsOneWidget);
+  });
+
+  testWidgets('saves a decimal-comma starting balance as minor units', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = MockAccountRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(repo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          _germanFormatter,
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AddEditAccountScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Girokonto');
+    await tester.enterText(find.byType(TextFormField).at(1), '1.234,56');
+    final saveButton = find.widgetWithText(ElevatedButton, 'Create Account');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(repo.created, isNotNull);
+    expect(repo.created!.name, 'Girokonto');
+    expect(repo.created!.startingBalance, 123456);
+    // New accounts default to the Settings currency.
+    expect(repo.created!.currency, 'EUR');
+  });
+
+  testWidgets('rejects an invalid starting balance', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = MockAccountRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(repo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          _germanFormatter,
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AddEditAccountScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Girokonto');
+    await tester.enterText(find.byType(TextFormField).at(1), 'abc');
+    final saveButton = find.widgetWithText(ElevatedButton, 'Create Account');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(repo.created, isNull);
+    expect(find.text('Invalid number'), findsOneWidget);
+  });
+
+  testWidgets('edit mode pre-fills the balance and keeps the currency', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = MockAccountRepository(
+      existing: const Account(
+        id: 'a1',
+        name: 'Sparkonto',
+        type: AccountType.savings,
+        currency: 'SEK', // not in supportedCurrencyCodes
+        startingBalance: 123456,
+        balance: 200000,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(repo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          _germanFormatter,
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AddEditAccountScreen(accountId: 'a1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1234,56'), findsOneWidget);
+    expect(find.text('SEK'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).at(1), '-10,5');
+    final saveButton = find.widgetWithText(ElevatedButton, 'Save Changes');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pumpAndSettle();
+
+    expect(repo.updated, isNotNull);
+    expect(repo.updated!.startingBalance, -1050);
+    expect(repo.updated!.currency, 'SEK');
   });
 }

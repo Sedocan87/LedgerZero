@@ -55,7 +55,8 @@ class AppButton extends StatelessWidget {
             Icon(icon, size: 18),
             const SizedBox(width: 8),
           ],
-          Text(label),
+          // Long (e.g. German) labels wrap instead of overflowing.
+          Flexible(child: Text(label, textAlign: TextAlign.center)),
         ],
       ),
     );

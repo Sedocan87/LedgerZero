@@ -12,11 +12,16 @@ enum AppDateFormat {
   const AppDateFormat(this.pattern);
 }
 
+/// Decimal separator preference. [system] follows the app language
+/// (`,` for German, `.` for English). New values must be appended: the
+/// index is persisted.
 enum AppNumberFormat {
   dot('.'),
-  comma(',');
+  comma(','),
+  system(null);
 
-  final String decimalSeparator;
+  /// The fixed separator, or `null` to follow the locale.
+  final String? decimalSeparator;
   const AppNumberFormat(this.decimalSeparator);
 }
 
@@ -51,12 +56,11 @@ class SettingsState {
   final bool syncStatusNotifications;
 
   // Advanced Settings
-  final bool developerMode;
 
   const SettingsState({
     this.currency = 'USD',
     this.dateFormat = AppDateFormat.iso8601,
-    this.numberFormat = AppNumberFormat.dot,
+    this.numberFormat = AppNumberFormat.system,
     this.firstDayOfWeek = AppFirstDayOfWeek.sunday,
     this.language,
     this.defaultAccountId,
@@ -64,7 +68,6 @@ class SettingsState {
     this.scheduledTransactionNotifications = true,
     this.budgetAlertNotifications = true,
     this.syncStatusNotifications = true,
-    this.developerMode = false,
   });
 
   SettingsState copyWith({
@@ -78,7 +81,6 @@ class SettingsState {
     bool? scheduledTransactionNotifications,
     bool? budgetAlertNotifications,
     bool? syncStatusNotifications,
-    bool? developerMode,
   }) {
     return SettingsState(
       currency: currency ?? this.currency,
@@ -99,7 +101,6 @@ class SettingsState {
           budgetAlertNotifications ?? this.budgetAlertNotifications,
       syncStatusNotifications:
           syncStatusNotifications ?? this.syncStatusNotifications,
-      developerMode: developerMode ?? this.developerMode,
     );
   }
 }
@@ -119,7 +120,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
       'settings_notif_budget_alert';
   static const String _keySyncStatusNotifications =
       'settings_notif_sync_status';
-  static const String _keyDeveloperMode = 'settings_developer_mode';
 
   late SharedPreferences _prefs;
 
@@ -132,7 +132,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
   SettingsState _loadState() {
     final currency = _prefs.getString(_keyCurrency) ?? 'USD';
     final dateFormatIdx = _prefs.getInt(_keyDateFormat) ?? 0;
-    final numberFormatIdx = _prefs.getInt(_keyNumberFormat) ?? 0;
+    final numberFormatIdx =
+        _prefs.getInt(_keyNumberFormat) ?? AppNumberFormat.system.index;
     final firstDayOfWeekIdx = _prefs.getInt(_keyFirstDayOfWeek) ?? 0;
     final languageCode = _prefs.getString(_keyLanguage);
     final defaultAccountId = _prefs.getString(_keyDefaultAccount);
@@ -144,7 +145,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
         AppDateFormat.iso8601;
     final numberFormat =
         AppNumberFormat.values.elementAtOrNull(numberFormatIdx) ??
-        AppNumberFormat.dot;
+        AppNumberFormat.system;
     final firstDayOfWeek =
         AppFirstDayOfWeek.values.elementAtOrNull(firstDayOfWeekIdx) ??
         AppFirstDayOfWeek.sunday;
@@ -157,7 +158,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
         _prefs.getBool(_keyBudgetAlertNotifications) ?? true;
     final syncStatusNotifications =
         _prefs.getBool(_keySyncStatusNotifications) ?? true;
-    final developerMode = _prefs.getBool(_keyDeveloperMode) ?? false;
 
     return SettingsState(
       currency: currency,
@@ -170,7 +170,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
       scheduledTransactionNotifications: scheduledTransactionNotifications,
       budgetAlertNotifications: budgetAlertNotifications,
       syncStatusNotifications: syncStatusNotifications,
-      developerMode: developerMode,
     );
   }
 
@@ -234,11 +233,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> setSyncStatusNotifications(bool value) async {
     state = state.copyWith(syncStatusNotifications: value);
     await _prefs.setBool(_keySyncStatusNotifications, value);
-  }
-
-  Future<void> setDeveloperMode(bool value) async {
-    state = state.copyWith(developerMode: value);
-    await _prefs.setBool(_keyDeveloperMode, value);
   }
 }
 

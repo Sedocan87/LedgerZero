@@ -1,45 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 
 class UserGuideScreen extends StatelessWidget {
   const UserGuideScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sections = [
+      (l10n.guideStartTitle, l10n.guideStartBody),
+      (l10n.guideAccountsTitle, l10n.guideAccountsBody),
+      (l10n.guideBudgetTitle, l10n.guideBudgetBody),
+      (l10n.guideTransactionsTitle, l10n.guideTransactionsBody),
+      (l10n.guideOverspendingTitle, l10n.guideOverspendingBody),
+      (l10n.guideReconcileTitle, l10n.guideReconcileBody),
+      (l10n.guideSyncTitle, l10n.guideSyncBody),
+    ];
     return Scaffold(
-      appBar: AppBar(title: const Text('User Guide')),
+      appBar: AppBar(title: Text(l10n.userGuide)),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          UserGuideSection(
-            title: '1. Getting Started',
-            content:
-                'LedgerZero is based on the zero-based envelope budgeting method. This means you assign every dollar you earn to a specific job (category) before you spend it.',
-          ),
-          UserGuideSection(
-            title: '2. Setting Up Accounts',
-            content:
-                'Add your checking, savings, and credit card accounts. Enter their current balances. This forms the pool of money you have "To Be Budgeted".',
-          ),
-          UserGuideSection(
-            title: '3. Budgeting Your Money',
-            content:
-                'On the Budget screen, you will see your "To Be Budgeted" amount. Tap on categories to assign funds. Your goal is to budget until TBB is zero.',
-          ),
-          UserGuideSection(
-            title: '4. Entering Transactions',
-            content:
-                'Whenever you spend money, enter a transaction. Select the payee and the category. This deducts from your budgeted "Available" amount.',
-          ),
-          UserGuideSection(
-            title: '5. Dealing with Overspending',
-            content:
-                'If a category balance turns negative (red), you have overspent. Move money from another category with available funds to cover the overspending.',
-          ),
-          UserGuideSection(
-            title: '6. Reconciliation',
-            content:
-                'Periodically compare your account balances in LedgerZero with your actual bank balances. Use the "Reconcile" feature to ensure they match.',
-          ),
+        children: [
+          for (final (title, content) in sections)
+            UserGuideSection(title: title, content: content),
         ],
       ),
     );

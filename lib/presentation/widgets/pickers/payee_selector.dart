@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/services/nlp/payee_matcher.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class PayeeSelector extends ConsumerStatefulWidget {
   final ValueChanged<Payee> onSelected;
@@ -56,7 +58,9 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
     // Debounce search
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () async {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       if (query.isEmpty) {
         setState(() {
@@ -112,7 +116,10 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
           // Header
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Select Payee', style: theme.textTheme.titleLarge),
+            child: Text(
+              AppLocalizations.of(context)!.pickerSelectPayee,
+              style: theme.textTheme.titleLarge,
+            ),
           ),
 
           // Search field
@@ -122,11 +129,12 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
               controller: _searchController,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Search payees...',
+                hintText: AppLocalizations.of(context)!.searchPayees,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
+                        tooltip: AppLocalizations.of(context)!.clearSearch,
                         onPressed: () {
                           _searchController.clear();
                           _onSearchChanged('');
@@ -177,7 +185,8 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) =>
+            LoadErrorView(error: err, stackTrace: stack, compact: true),
       );
     }
 
@@ -190,7 +199,7 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text(
-              'Matches',
+              AppLocalizations.of(context)!.payeeMatchesSection,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.primary,
               ),
@@ -204,7 +213,7 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
             child: Text(
-              'Similar',
+              AppLocalizations.of(context)!.payeeSimilarSection,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.secondary,
               ),
@@ -213,7 +222,9 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
           ..._fuzzySuggestions.map(
             (match) => _buildPayeeTile(
               match.$1,
-              subtitle: '${(match.$2 * 100).toInt()}% match',
+              subtitle: AppLocalizations.of(
+                context,
+              )!.payeeSimilarity((match.$2 * 100).toInt()),
             ),
           ),
         ],
@@ -231,7 +242,7 @@ class _PayeeSelectorState extends ConsumerState<PayeeSelector> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No payees found for "$query"',
+                  AppLocalizations.of(context)!.payeeNoResults(query),
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

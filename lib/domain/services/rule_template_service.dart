@@ -3,35 +3,40 @@ import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 import 'package:uuid/uuid.dart';
 
-class RuleTemplate {
-  final String name;
-  final String description;
-  final Rule Function() createRule;
+/// The built-in rule templates. Their titles and descriptions are
+/// localised in the presentation layer.
+enum RuleTemplateKind {
+  categorizeByPayee,
+  autoClearSmall,
+  autoApproveBill,
+  keywordCategorization,
+}
 
-  const RuleTemplate({
-    required this.name,
-    required this.description,
-    required this.createRule,
-  });
+class RuleTemplate {
+  final RuleTemplateKind kind;
+
+  /// Creates the rule; [name] is the (localised) rule name and [keyword]
+  /// the example keyword of templates that match text.
+  final Rule Function({required String name, String keyword}) createRule;
+
+  const RuleTemplate({required this.kind, required this.createRule});
 }
 
 class RuleTemplateService {
   static List<RuleTemplate> get templates => [
     RuleTemplate(
-      name: 'Categorize by Payee Name',
-      description:
-          'Automatically set a category when the payee name contains a specific keyword.',
-      createRule: () => Rule(
+      kind: RuleTemplateKind.categorizeByPayee,
+      createRule: ({required name, keyword = ''}) => Rule(
         id: const Uuid().v4(),
-        name: 'Categorize by Payee',
+        name: name,
         priority: 0,
         isActive: true,
         matchLogic: RuleMatchLogic.and,
         conditions: [
-          const RuleCondition(
+          RuleCondition(
             type: RuleConditionType.payee,
             operator: RuleConditionOperator.contains,
-            value: '', // User to fill
+            value: keyword, // User to fill
           ),
         ],
         actions: [
@@ -43,12 +48,10 @@ class RuleTemplateService {
       ),
     ),
     RuleTemplate(
-      name: 'Small Transaction Auto-Clear',
-      description:
-          'Automatically mark transactions under a certain amount as cleared.',
-      createRule: () => Rule(
+      kind: RuleTemplateKind.autoClearSmall,
+      createRule: ({required name, keyword = ''}) => Rule(
         id: const Uuid().v4(),
-        name: 'Auto-Clear Small Tx',
+        name: name,
         priority: 0,
         isActive: true,
         matchLogic: RuleMatchLogic.and,
@@ -56,7 +59,7 @@ class RuleTemplateService {
           const RuleCondition(
             type: RuleConditionType.amount,
             operator: RuleConditionOperator.lessThan,
-            value: '5.00',
+            value: '500', // minor units: 5.00
           ),
         ],
         actions: [
@@ -65,20 +68,18 @@ class RuleTemplateService {
       ),
     ),
     RuleTemplate(
-      name: 'Recurring Bill Auto-Approve',
-      description:
-          'Automatically approve transactions for a specific payee (e.g., Netflix).',
-      createRule: () => Rule(
+      kind: RuleTemplateKind.autoApproveBill,
+      createRule: ({required name, keyword = 'Netflix'}) => Rule(
         id: const Uuid().v4(),
-        name: 'Auto-Approve Bill',
+        name: name,
         priority: 0,
         isActive: true,
         matchLogic: RuleMatchLogic.and,
         conditions: [
-          const RuleCondition(
+          RuleCondition(
             type: RuleConditionType.payee,
             operator: RuleConditionOperator.contains,
-            value: 'Netflix',
+            value: keyword,
           ),
         ],
         actions: [
@@ -87,19 +88,18 @@ class RuleTemplateService {
       ),
     ),
     RuleTemplate(
-      name: 'Keyword Categorization',
-      description: 'Set category based on a keyword in the memo/description.',
-      createRule: () => Rule(
+      kind: RuleTemplateKind.keywordCategorization,
+      createRule: ({required name, keyword = ''}) => Rule(
         id: const Uuid().v4(),
-        name: 'Keyword Categorization',
+        name: name,
         priority: 0,
         isActive: true,
         matchLogic: RuleMatchLogic.and,
         conditions: [
-          const RuleCondition(
+          RuleCondition(
             type: RuleConditionType.description,
             operator: RuleConditionOperator.contains,
-            value: 'coffee',
+            value: keyword,
           ),
         ],
         actions: [

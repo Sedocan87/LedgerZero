@@ -30,14 +30,14 @@ void main() {
       id: Value('budget_1'),
       categoryId: Value(categoryId),
       month: Value('2023-10'),
-      budgeted: Value(100.0),
+      budgeted: Value(10000),
     );
 
     await database.into(database.budgets).insert(budget);
 
     final result = await database.select(database.budgets).get();
     expect(result.length, 1);
-    expect(result.first.budgeted, 100.0);
+    expect(result.first.budgeted, 10000);
   });
 
   test('should enforce unique constraint on categoryId and month', () async {

@@ -108,9 +108,6 @@ Future<void> showApplyTemplateDialog(
                       .read(budgetingServiceProvider)
                       .applyBudgetTemplate(template.id, month);
 
-                  ref.invalidate(budgetViewModelProvider);
-                  ref.invalidate(tbbProvider);
-
                   if (context.mounted) {
                     ScaffoldMessenger.of(
                       context,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 
@@ -46,7 +47,7 @@ class EmptyState extends StatelessWidget {
             if (onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
               AppButton.primary(
-                label: actionLabel ?? 'Add New',
+                label: actionLabel ?? AppLocalizations.of(context)!.add,
                 onPressed: onAction,
               ),
             ],

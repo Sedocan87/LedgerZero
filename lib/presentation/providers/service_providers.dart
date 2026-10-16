@@ -1,18 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/domain/services/analytics_service.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/domain/services/account_service.dart';
+import 'package:ledger_zero/domain/services/category_service.dart';
+import 'package:ledger_zero/domain/services/payee_service.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/domain/services/scheduled_transaction_service.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
+import 'package:ledger_zero/presentation/providers/notification_providers.dart';
+import 'package:ledger_zero/presentation/providers/privacy_settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
-import 'package:ledger_zero/services/encryption/security_manager.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:ledger_zero/services/backup/data_portability_service.dart';
 import 'package:ledger_zero/services/rules/rule_matching_service.dart';
-import 'package:ledger_zero/services/widget/widget_service.dart';
-import 'package:uuid/uuid.dart';
 
 final dataPortabilityServiceProvider = Provider<DataPortabilityService>((ref) {
   return DataPortabilityService(
@@ -25,10 +27,6 @@ final dataPortabilityServiceProvider = Provider<DataPortabilityService>((ref) {
   );
 });
 
-final securityManagerProvider = Provider<SecurityManager>((ref) {
-  return SecurityManager();
-});
-
 final undoServiceProvider = Provider<UndoService>((ref) {
   return UndoService();
 });
@@ -39,25 +37,56 @@ final budgetingServiceProvider = Provider<BudgetingService>((ref) {
     budgetRepository: ref.watch(budgetRepositoryProvider),
     categoryRepository: ref.watch(categoryRepositoryProvider),
     budgetTemplateRepository: ref.watch(budgetTemplateRepositoryProvider),
+    accountRepository: ref.watch(accountRepositoryProvider),
+    unitOfWork: ref.watch(unitOfWorkProvider),
   );
 });
 
 final transactionServiceProvider = Provider<TransactionService>((ref) {
   return TransactionService(
-    ref.watch(transactionRepositoryProvider),
-    ref.watch(undoServiceProvider),
+    transactionRepository: ref.watch(transactionRepositoryProvider),
+    payeeRepository: ref.watch(payeeRepositoryProvider),
+    undoService: ref.watch(undoServiceProvider),
+    unitOfWork: ref.watch(unitOfWorkProvider),
+    ruleMatchingService: ref.watch(ruleMatchingServiceProvider),
+    // Budget alert: notifies when an outflow overspends a category.
+    onSaved: (change) => ref
+        .read(budgetAlertProducerProvider)
+        .onSaved(change.before, change.after),
   );
 });
 
-final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
-  return AnalyticsService(
+final categoryServiceProvider = Provider<CategoryService>((ref) {
+  return CategoryService(
+    categoryRepository: ref.watch(categoryRepositoryProvider),
+    maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
+    ruleRepository: ref.watch(ruleRepositoryProvider),
+    unitOfWork: ref.watch(unitOfWorkProvider),
+  );
+});
+
+final accountServiceProvider = Provider<AccountService>((ref) {
+  return AccountService(
     accountRepository: ref.watch(accountRepositoryProvider),
-    transactionRepository: ref.watch(transactionRepositoryProvider),
+    maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
+    ruleRepository: ref.watch(ruleRepositoryProvider),
+    unitOfWork: ref.watch(unitOfWorkProvider),
+  );
+});
+
+final payeeServiceProvider = Provider<PayeeService>((ref) {
+  return PayeeService(
+    payeeRepository: ref.watch(payeeRepositoryProvider),
+    maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
+    ruleRepository: ref.watch(ruleRepositoryProvider),
+    unitOfWork: ref.watch(unitOfWorkProvider),
   );
 });
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
+  return NotificationService(
+    texts: () => notificationTextsFor(appLocalizationsFor(ref)),
+  );
 });
 
 final csvImportServiceProvider = Provider<CsvImportService>((ref) {
@@ -70,7 +99,23 @@ final scheduledTransactionServiceProvider =
         ref.watch(scheduledTransactionRepositoryProvider),
         ref.watch(transactionRepositoryProvider),
         ref.watch(notificationServiceProvider),
-        const Uuid(),
+        unitOfWork: ref.watch(unitOfWorkProvider),
+        ruleMatchingService: ref.watch(ruleMatchingServiceProvider),
+        showAmountsInNotifications: () =>
+            ref.read(privacySettingsProvider).notificationAmounts,
+        remindersEnabled: () =>
+            ref.read(settingsProvider).scheduledTransactionNotifications,
+        formatAmount: (minor) =>
+            ref.read(appFormatterProvider).formatMoney(minor.abs()),
+        reminderText: (amountText) {
+          final l10n = appLocalizationsFor(ref);
+          return (
+            title: l10n.notificationScheduledTitle,
+            body: amountText == null
+                ? l10n.notificationScheduledBodyGeneric
+                : l10n.notificationScheduledBodyAmount(amountText),
+          );
+        },
       );
     });
 
@@ -78,15 +123,6 @@ final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
   return RuleMatchingService(
     ref.watch(payeeRepositoryProvider),
     ref.watch(transactionRepositoryProvider),
-  );
-});
-
-final widgetServiceProvider = Provider<WidgetService>((ref) {
-  return WidgetService(
-    ref.watch(budgetingServiceProvider),
-    ref.watch(transactionRepositoryProvider),
-    ref.watch(categoryRepositoryProvider),
-    ref.watch(payeeRepositoryProvider),
-    ref.watch(sharedPreferencesProvider),
+    ref.watch(ruleRepositoryProvider),
   );
 });

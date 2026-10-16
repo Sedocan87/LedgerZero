@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/categories_provider.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:uuid/uuid.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class AddEditCategoryScreen extends ConsumerStatefulWidget {
   final String? categoryId;
@@ -84,7 +86,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
     // Validate group selection
     if (_selectedGroupId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category group')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.categoryGroupRequired),
+        ),
       );
       return;
     }
@@ -120,11 +124,12 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
       if (mounted) {
         context.pop();
       }
-    } catch (e) {
+    } catch (e, st) {
+      Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving category: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
       }
     } finally {
       if (mounted) {
@@ -135,7 +140,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final groupsAsync = ref.watch(categoryGroupsStreamProvider);
+    final groupsAsync = ref.watch(categoryGroupsProvider);
     final isEditing = widget.categoryId != null;
     final l10n = AppLocalizations.of(context)!;
 
@@ -160,7 +165,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   children: [
                     if (isEditing) ...[
                       Text(
-                        'Usage: $_transactionCount transactions',
+                        l10n.categoryUsage(_transactionCount),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 16),
@@ -170,7 +175,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                       label: l10n.categoryName,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Name is required'; // Use l10n
+                          return l10n.nameRequired;
                         }
                         return null;
                       },
@@ -182,6 +187,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                         return DropdownButtonFormField<String>(
                           key: ValueKey(_selectedGroupId),
                           initialValue: _selectedGroupId,
+                          isExpanded: true,
                           decoration: InputDecoration(
                             labelText: l10n.categoryGroup,
                             border: const OutlineInputBorder(),
@@ -189,7 +195,10 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                           items: groups.map((group) {
                             return DropdownMenuItem(
                               value: group.id,
-                              child: Text(group.name),
+                              child: Text(
+                                group.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -198,11 +207,12 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                             });
                           },
                           validator: (value) =>
-                              value == null ? 'Required' : null,
+                              value == null ? l10n.fieldRequired : null,
                         );
                       },
                       loading: () => const LinearProgressIndicator(),
-                      error: (e, s) => Text('Error loading groups: $e'),
+                      error: (e, s) =>
+                          LoadErrorView(error: e, stackTrace: s, compact: true),
                     ),
                     const SizedBox(height: 16),
                     SwitchListTile(

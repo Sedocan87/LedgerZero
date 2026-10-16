@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/widgets/tutorial/tutorial_data.dart';
 
-class TutorialOverlay extends StatefulWidget {
+/// Dims the screen, highlights the current step's target and shows the
+/// step's card. The card fades in and cross-fades between steps unless
+/// animations are disabled (Reduced Motion setting or platform setting).
+class TutorialOverlay extends ConsumerStatefulWidget {
   final List<TutorialStep> steps;
   final VoidCallback onComplete;
   final VoidCallback? onSkip;
@@ -13,11 +19,14 @@ class TutorialOverlay extends StatefulWidget {
     this.onSkip,
   });
 
+  /// Duration of the card's fade.
+  static const fadeDuration = Duration(milliseconds: 250);
+
   @override
-  State<TutorialOverlay> createState() => _TutorialOverlayState();
+  ConsumerState<TutorialOverlay> createState() => _TutorialOverlayState();
 }
 
-class _TutorialOverlayState extends State<TutorialOverlay> {
+class _TutorialOverlayState extends ConsumerState<TutorialOverlay> {
   int _currentStepIndex = 0;
 
   @override
@@ -25,6 +34,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
     if (widget.steps.isEmpty) {
       return const SizedBox.shrink();
     }
+    final animate = animationsEnabled(context, ref);
 
     final step = widget.steps[_currentStepIndex];
     final targetContext = step.targetKey?.currentContext;
@@ -48,19 +58,50 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       }
     }
 
-    return Stack(
-      children: [
-        // Background with hole punch
-        Positioned.fill(
-          child: CustomPaint(painter: _HolePainter(targetRect: targetRect)),
-        ),
+    // A modal layer: screen readers stay inside the tutorial card.
+    return BlockSemantics(
+      child: Semantics(
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
+        label: step.title,
+        child: Stack(
+          children: [
+            // Background with hole punch
+            Positioned.fill(
+              child: CustomPaint(painter: _HolePainter(targetRect: targetRect)),
+            ),
 
-        // Tooltip/Card
-        if (targetRect != null)
-          _buildPositionedCard(context, step, targetRect)
-        else
-          Center(child: _buildCard(context, step)),
-      ],
+            // Tooltip/Card
+            if (targetRect != null)
+              _buildPositionedCard(context, step, targetRect, animate)
+            else
+              Center(child: _animatedCard(context, step, animate)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The step's card, faded in on first show and between steps when
+  /// [animate] is true; shown directly otherwise.
+  Widget _animatedCard(BuildContext context, TutorialStep step, bool animate) {
+    final card = KeyedSubtree(
+      key: ValueKey<int>(_currentStepIndex),
+      child: _buildCard(context, step),
+    );
+    if (!animate) {
+      return card;
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: TutorialOverlay.fadeDuration,
+      builder: (context, opacity, child) =>
+          Opacity(opacity: opacity, child: child),
+      child: AnimatedSwitcher(
+        duration: TutorialOverlay.fadeDuration,
+        child: card,
+      ),
     );
   }
 
@@ -68,6 +109,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
     BuildContext context,
     TutorialStep step,
     Rect targetRect,
+    bool animate,
   ) {
     // Determine best position
     // Simple logic: if target is in top half, show below. Else above.
@@ -95,12 +137,13 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
       bottom: bottom,
       left: left,
       right: right,
-      child: _buildCard(context, step),
+      child: _animatedCard(context, step, animate),
     );
   }
 
   Widget _buildCard(BuildContext context, TutorialStep step) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Material(
       color: Colors.transparent,
@@ -122,33 +165,40 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              step.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            Semantics(
+              header: true,
+              child: Text(
+                step.title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 8),
             Text(step.description, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (widget.onSkip != null)
-                  TextButton(
-                    onPressed: widget.onSkip,
-                    child: const Text('Skip'),
+            // Wraps on narrow phones with long (German) button labels.
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                children: [
+                  if (widget.onSkip != null)
+                    TextButton(
+                      onPressed: widget.onSkip,
+                      child: Text(l10n.skip),
+                    ),
+                  FilledButton(
+                    onPressed: _nextStep,
+                    child: Text(
+                      _currentStepIndex < widget.steps.length - 1
+                          ? l10n.tutorialNext
+                          : l10n.tutorialFinish,
+                    ),
                   ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _nextStep,
-                  child: Text(
-                    _currentStepIndex < widget.steps.length - 1
-                        ? 'Next'
-                        : 'Finish',
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/domain/undo/budget_undo_actions.dart';
@@ -11,10 +12,11 @@ import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_calculator.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/move_money_modal.dart';
+import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
@@ -29,7 +31,7 @@ class BudgetCategoryRow extends ConsumerStatefulWidget {
 }
 
 class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
-  Future<void> _onSubmit(double value) async {
+  Future<void> _onSubmit(int value) async {
     await HapticFeedback.selectionClick();
     final month = ref.read(selectedBudgetMonthProvider);
     final budgetingService = ref.read(budgetingServiceProvider);
@@ -40,6 +42,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       value,
       month,
     );
+    if (!mounted) {
+      return;
+    }
 
     if (oldAmount != value) {
       ref
@@ -55,56 +60,20 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
           );
       _showUndoSnackbar();
     }
-
-    // Only clear editing state if we are still the one editing.
-    // This prevents overwriting the state if navigation (Up/Down) has already moved focus to another category.
-    if (ref.read(editingCategoryProvider) == widget.viewModel.category.id) {
-      ref.read(editingCategoryProvider.notifier).state = null;
-    }
-
-    // Refresh the budget view to reflect changes
-    ref.invalidate(budgetViewModelProvider);
-    ref.invalidate(tbbProvider);
   }
 
-  void _onDragAccept(double tbbAmount) {
-    showDialog(
+  Future<void> _onDragAccept(int tbbAmount) async {
+    final val = await showDialog<int>(
       context: context,
-      builder: (context) {
-        final controller = TextEditingController(
-          text: tbbAmount.toStringAsFixed(2),
-        );
-        return AlertDialog(
-          title: Text(
-            AppLocalizations.of(
-              context,
-            )!.assignTo(widget.viewModel.category.name),
-          ),
-          content: AppTextField(
-            controller: controller,
-            label: AppLocalizations.of(context)!.amount,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(AppLocalizations.of(context)!.cancel),
-            ),
-            TextButton(
-              onPressed: () {
-                final val = double.tryParse(controller.text) ?? 0.0;
-                if (val > 0) {
-                  // Add to existing budgeted amount
-                  _onSubmit(widget.viewModel.budgeted + val);
-                }
-                Navigator.pop(context);
-              },
-              child: Text(AppLocalizations.of(context)!.save),
-            ),
-          ],
-        );
-      },
+      builder: (context) => _AssignAmountDialog(
+        categoryName: widget.viewModel.category.name,
+        initialAmount: tbbAmount,
+      ),
     );
+    if (mounted && val != null && val > 0) {
+      // Add to existing budgeted amount
+      await _onSubmit(widget.viewModel.budgeted + val);
+    }
   }
 
   Future<void> _autoAssign(AutoAssignRule rule) async {
@@ -113,6 +82,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     final budgetingService = ref.read(budgetingServiceProvider);
     final oldAmount = widget.viewModel.budgeted;
 
+    final budgetRepo = ref.read(budgetRepositoryProvider);
     await budgetingService.autoAssign(
       widget.viewModel.category.id,
       month,
@@ -120,13 +90,15 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     );
 
     // Fetch new amount to record undo
-    final budgetRepo = ref.read(budgetRepositoryProvider);
-    final monthString = DateFormat('yyyy-MM').format(month);
+    final monthString = CalendarDate.monthKey(month);
     final newBudget = await budgetRepo.getBudgetByCategoryAndMonth(
       widget.viewModel.category.id,
       monthString,
     );
-    final newAmount = newBudget?.budgeted ?? 0.0;
+    final newAmount = newBudget?.budgeted ?? 0;
+    if (!mounted) {
+      return;
+    }
 
     if (oldAmount != newAmount) {
       ref
@@ -144,54 +116,59 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     }
 
     // Refresh providers
-    ref.invalidate(budgetViewModelProvider);
-    ref.invalidate(tbbProvider);
   }
 
   void _showUndoSnackbar() {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
+    // The snack bar can outlive this row; keep the service, not the ref.
+    final undoService = ref.read(undoServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(AppLocalizations.of(context)!.budgetUpdated),
         action: SnackBarAction(
           label: AppLocalizations.of(context)!.undo,
           onPressed: () async {
-            await ref.read(undoServiceProvider).undo();
-            ref.invalidate(budgetViewModelProvider);
-            ref.invalidate(tbbProvider);
+            await undoService.undo();
           },
         ),
       ),
     );
   }
 
+  /// Opens the category's activity for the selected month in its own,
+  /// non-persisted list (the Transactions tab keeps its filter).
   void _inspectCategory() {
     final month = ref.read(selectedBudgetMonthProvider);
-    final startDate = DateTime(month.year, month.month, 1);
-    final endDate = DateTime(
-      month.year,
-      month.month + 1,
-      1,
-    ).subtract(const Duration(milliseconds: 1));
-
+    final fmt = ref.read(appFormatterProvider);
+    // TransactionFilter dates are inclusive calendar days.
     final filter = TransactionFilter(
       categoryIds: [widget.viewModel.category.id],
-      startDate: startDate,
-      endDate: endDate,
+      startDate: CalendarDate.startOfMonthUtc(month),
+      endDate: DateTime.utc(month.year, month.month + 1, 0),
     );
-
-    ref.read(transactionsProvider.notifier).updateFilter(filter);
-    context.goNamed('transactions');
+    context.pushNamed(
+      'filtered-transactions',
+      extra: FilteredTransactionsArgs(
+        filter: filter,
+        title: AppLocalizations.of(context)!.txCategoryActivityTitle(
+          widget.viewModel.category.name,
+          fmt.formatMonthYear(month),
+        ),
+      ),
+    );
   }
 
-  // Refined implementation below:
-  // I need to track the value from onValueChanged to submit it.
-  void _showCalculatorModal(double initialValue) {
-    String currentValue = initialValue.toStringAsFixed(2);
+  void _showCalculatorModal(int initialValue) {
+    final fmt = ref.read(appFormatterProvider);
+    String currentValue = fmt.formatAmountForInput(initialValue);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      // Above the tab scaffold, so its snackbars (e.g. "Transaction saved")
+      // never cover the calculator keys.
+      useRootNavigator: true,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -203,21 +180,11 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
           },
           onSubmitted: () {
             Navigator.pop(context);
-            // Parse and submit
-            // Handle math expressions if Calculator didn't resolve them yet?
-            // Calculator usually resolves on '=', but if user types '50+50' then OK?
-            // MathEvaluator usage is internal to Calculator key press '='.
-            // If text still contains symbols, we should evaluate.
-            try {
-              // Simple parse for now, assuming calculator did its job or user typed number
-              // If MathEvaluator needed, we should expose it or use it here.
-              // Let's assume for now user presses = before OK, or just numbers.
-              // Robust parsing:
-              final val = double.tryParse(currentValue);
-              if (val != null) {
-                _onSubmit(val);
-              }
-            } catch (_) {}
+            // Accepts a plain amount or an unevaluated expression.
+            final val = parseBudgetInput(currentValue, fmt);
+            if (val != null) {
+              _onSubmit(val);
+            }
           },
         ),
       ),
@@ -249,6 +216,14 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.receipt_long_outlined),
+                title: Text(AppLocalizations.of(context)!.budgetLastMonthSpent),
+                onTap: () {
+                  Navigator.pop(context);
+                  _autoAssign(AutoAssignRule.lastMonthSpent);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.analytics_outlined),
                 title: Text(AppLocalizations.of(context)!.budgetAverageSpent),
                 onTap: () {
@@ -261,7 +236,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 title: Text(AppLocalizations.of(context)!.budgetZeroOut),
                 onTap: () {
                   Navigator.pop(context);
-                  _onSubmit(0.0);
+                  _onSubmit(0);
                 },
               ),
               ListTile(
@@ -269,8 +244,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 title: Text(AppLocalizations.of(context)!.moveMoney),
                 onTap: () {
                   Navigator.pop(context);
+                  // The sheet's context is gone once popped; use the row's.
                   showModalBottomSheet(
-                    context: context,
+                    context: this.context,
                     isScrollControlled: true,
                     builder: (context) => MoveMoneyModal(
                       initialFromCategoryId: widget.viewModel.category.id,
@@ -287,15 +263,13 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyCode = ref.watch(settingsProvider).currency;
-    final currency = NumberFormat.simpleCurrency(
-      decimalDigits: 2,
-      name: currencyCode,
-    );
+    final fmt = ref.watch(appFormatterProvider);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final available = widget.viewModel.available;
 
-    // Determine color for available amount bubble
+    // Determine color for available amount bubble (on the exact int sign,
+    // so a zero balance is neutral and never shown as "-0.00").
     Color bubbleColor;
     Color textColor;
 
@@ -318,7 +292,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
     final viewMode = ref.watch(budgetViewModeProvider);
 
-    return DragTarget<double>(
+    return DragTarget<int>(
       onWillAcceptWithDetails: (details) => details.data > 0,
       onAcceptWithDetails: (details) => _onDragAccept(details.data),
       builder: (context, candidateData, rejectedData) {
@@ -328,8 +302,12 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
             color: candidateData.isNotEmpty
                 ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
                 : Colors.transparent,
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.md, // Increased padding
+            // The amount cells are at least kMinInteractiveDimension tall;
+            // the vertical padding is reduced so the row keeps its height.
+            padding: EdgeInsets.symmetric(
+              vertical: viewMode == BudgetViewMode.standard
+                  ? AppSpacing.md - 6
+                  : AppSpacing.md,
               horizontal: AppSpacing.md,
             ),
             child: Row(
@@ -348,6 +326,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                             Icons.warning_amber_rounded,
                             size: 16,
                             color: Colors.orange.shade700,
+                            semanticLabel: l10n?.budgetGoalUnderfunded,
                           ),
                         ),
                       Expanded(
@@ -374,6 +353,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                       child: Container(
                         alignment: Alignment.centerRight,
+                        constraints: const BoxConstraints(
+                          minHeight: kMinInteractiveDimension,
+                        ),
                         padding: const EdgeInsets.symmetric(
                           vertical: 8,
                           horizontal: 4,
@@ -381,8 +363,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.transparent),
                         ),
-                        child: Text(
-                          currency.format(widget.viewModel.budgeted),
+                        child: AmountText(
+                          widget.viewModel.budgeted,
+                          amountContext: AmountContext.budgeted,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             color: theme.colorScheme.primary,
@@ -399,12 +382,16 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                       onTap: _inspectCategory,
                       child: Container(
                         alignment: Alignment.centerRight,
+                        constraints: const BoxConstraints(
+                          minHeight: kMinInteractiveDimension,
+                        ),
                         padding: const EdgeInsets.symmetric(
                           vertical: 8,
                           horizontal: 4,
                         ),
-                        child: Text(
-                          currency.format(widget.viewModel.activity),
+                        child: AmountText(
+                          widget.viewModel.activity,
+                          amountContext: AmountContext.activity,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -427,8 +414,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                           color: bubbleColor,
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
-                        child: Text(
-                          currency.format(available),
+                        child: AmountText(
+                          available,
+                          amountContext: AmountContext.available,
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: textColor,
                             fontWeight: FontWeight.bold,
@@ -446,6 +434,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                       builder: (context) {
                         final budgeted = widget.viewModel.budgeted;
                         final spent = widget.viewModel.activity.abs();
+                        // Ratio for the progress bar only.
                         final progress = budgeted > 0
                             ? (spent / budgeted).clamp(0.0, 1.0)
                             : (spent > 0 ? 1.0 : 0.0);
@@ -460,12 +449,21 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  '${currency.format(spent)} / ${currency.format(budgeted)}',
-                                  style: theme.textTheme.labelSmall,
+                                Semantics(
+                                  label: l10n?.amountSemanticsSpentOfBudgeted(
+                                    fmt.formatMoney(spent),
+                                    fmt.formatMoney(budgeted),
+                                  ),
+                                  excludeSemantics: l10n != null,
+                                  child: Text(
+                                    '${fmt.formatMoney(spent)} / ${fmt.formatMoney(budgeted)}',
+                                    style: theme.textTheme.labelSmall,
+                                  ),
                                 ),
                                 Text(
-                                  '${(progress * 100).toStringAsFixed(0)}%',
+                                  NumberFormat.percentPattern(
+                                    fmt.locale,
+                                  ).format(progress),
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: barColor,
                                   ),
@@ -491,6 +489,62 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Asks how much of the dragged To Be Budgeted amount to assign; pops with
+/// the amount in minor units, or `null` when cancelled.
+class _AssignAmountDialog extends ConsumerStatefulWidget {
+  final String categoryName;
+  final int initialAmount;
+
+  const _AssignAmountDialog({
+    required this.categoryName,
+    required this.initialAmount,
+  });
+
+  @override
+  ConsumerState<_AssignAmountDialog> createState() =>
+      _AssignAmountDialogState();
+}
+
+class _AssignAmountDialogState extends ConsumerState<_AssignAmountDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: ref
+        .read(appFormatterProvider)
+        .formatAmountForInput(widget.initialAmount),
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.assignTo(widget.categoryName)),
+      content: AppTextField(
+        controller: _controller,
+        label: l10n.amount,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            ref.read(appFormatterProvider).parseAmount(_controller.text) ?? 0,
+          ),
+          child: Text(l10n.save),
+        ),
+      ],
     );
   }
 }

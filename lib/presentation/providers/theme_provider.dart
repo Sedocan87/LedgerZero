@@ -63,10 +63,12 @@ class ThemeNotifier extends Notifier<ThemeState> {
     prefs.setBool(_reducedMotionKey, value);
   }
 
+  /// One-off check (e.g. in a post-frame callback) whether animations may
+  /// run. Widgets should call [animationsEnabled] in `build` instead so they
+  /// rebuild when the setting changes.
   static bool shouldAnimate(BuildContext context, WidgetRef ref) {
     final reducedMotion = ref.read(themeProvider).reducedMotion;
-    final systemReducedMotion = MediaQuery.of(context).disableAnimations;
-    return !reducedMotion && !systemReducedMotion;
+    return !reducedMotion && !MediaQuery.disableAnimationsOf(context);
   }
 
   ThemeMode _getThemeModeFromString(String? themeString) {
@@ -85,3 +87,33 @@ class ThemeNotifier extends Notifier<ThemeState> {
 final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(
   ThemeNotifier.new,
 );
+
+/// Whether animations may run: `false` when the user turned on Reduced
+/// Motion in Settings or the platform asks to disable animations
+/// ([MediaQueryData.disableAnimations]).
+///
+/// Call it from `build`; it watches both, so the widget rebuilds when either
+/// changes.
+bool animationsEnabled(BuildContext context, WidgetRef ref) {
+  final reducedMotion = ref.watch(
+    themeProvider.select((state) => state.reducedMotion),
+  );
+  return !reducedMotion && !MediaQuery.disableAnimationsOf(context);
+}
+
+/// [animationsEnabled] for places without a [WidgetRef], such as page
+/// `transitionsBuilder`s. Reads the setting from the enclosing
+/// [ProviderScope] without subscribing; outside a [ProviderScope] only the
+/// platform setting is used.
+bool animationsEnabledOf(BuildContext context) {
+  if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+    return false;
+  }
+  final scope = context
+      .getElementForInheritedWidgetOfExactType<UncontrolledProviderScope>();
+  if (scope == null) {
+    return true;
+  }
+  final container = ProviderScope.containerOf(context, listen: false);
+  return !container.read(themeProvider).reducedMotion;
+}

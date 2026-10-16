@@ -1,16 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 
+/// Two rules with identical conditions but contradicting actions. The UI
+/// explains it in the user's language.
 class RuleConflict {
   final Rule ruleA;
   final Rule ruleB;
-  final String description;
 
-  const RuleConflict({
-    required this.ruleA,
-    required this.ruleB,
-    required this.description,
-  });
+  const RuleConflict({required this.ruleA, required this.ruleB});
 }
 
 class RuleConflictService {
@@ -27,14 +24,7 @@ class RuleConflictService {
 
         if (_areConditionsIdentical(ruleA, ruleB) &&
             _areActionsConflicting(ruleA, ruleB)) {
-          conflicts.add(
-            RuleConflict(
-              ruleA: ruleA,
-              ruleB: ruleB,
-              description:
-                  'Rules have identical conditions but conflicting actions.',
-            ),
-          );
+          conflicts.add(RuleConflict(ruleA: ruleA, ruleB: ruleB));
         }
       }
     }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
 import 'package:ledger_zero/presentation/screens/accounts/account_detail_screen.dart';
 import 'package:ledger_zero/presentation/screens/accounts/add_edit_account_screen.dart';
@@ -26,20 +27,16 @@ import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
 import 'package:ledger_zero/presentation/screens/import/csv_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/import/import_confirmation_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/import/mint_import_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/keyboard_shortcuts_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/database_stats_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/sync_debug_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/diagnostics_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/help_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/faq_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/user_guide_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/widget_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 
 import 'package:ledger_zero/presentation/screens/onboarding/budget_setup_screen.dart';
@@ -48,17 +45,44 @@ import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/natural_language_input_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
+import 'package:ledger_zero/presentation/providers/transactions_provider.dart'
+    show FilteredTransactionsArgs;
 import 'package:ledger_zero/presentation/widgets/scaffold_with_navbar.dart';
-import 'package:ledger_zero/presentation/screens/tutorial/widget_tutorial_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+/// A location the user tried to open while the app was locked (a deep link),
+/// opened once after the next unlock. Only the latest one is kept.
+class PendingLocation {
+  String? value;
+
+  /// Returns the pending location and forgets it.
+  String? take() {
+    final location = value;
+    value = null;
+    return location;
+  }
+}
+
+final pendingLocationProvider = Provider<PendingLocation>(
+  (ref) => PendingLocation(),
+);
+
+/// The app's router. Rebuilt on every lock state change, so locking drops the
+/// navigation stack; a new unlocked router starts at the pending deep link,
+/// if any, else at Home.
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
+  final pending = ref.watch(pendingLocationProvider);
+  final initialLocation =
+      (authState.isOnboarded && authState.isAuthenticated
+          ? pending.take()
+          : null) ??
+      '/';
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/',
+    initialLocation: initialLocation,
     redirect: (context, state) {
       final isOnboarded = authState.isOnboarded;
       final isAuthenticated = authState.isAuthenticated;
@@ -67,26 +91,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       );
       final isGoingToLogin = state.matchedLocation == '/login';
 
-      debugPrint(
-        'Redirect Check: loc=${state.matchedLocation}, onboarded=$isOnboarded, auth=$isAuthenticated',
-      );
-
       if (!isOnboarded) {
-        debugPrint(
-          'Redirect: Not onboarded. Going to onboarding? $isGoingToOnboarding',
-        );
+        // The steps after the password need the unlocked database; if the
+        // app locked mid-onboarding, start over from the beginning.
+        final needsSession =
+            state.matchedLocation.startsWith('/onboarding/budget-setup') ||
+            state.matchedLocation.startsWith('/onboarding/completion');
+        if (needsSession && !isAuthenticated) {
+          return '/onboarding';
+        }
         return isGoingToOnboarding ? null : '/onboarding';
       }
 
       if (!isAuthenticated) {
-        debugPrint(
-          'Redirect: Not authenticated. Going to login? $isGoingToLogin',
-        );
-        return isGoingToLogin ? null : '/login';
+        if (isGoingToLogin) {
+          return null;
+        }
+        // Remember where a deep link wanted to go; Home is the default.
+        final location = state.matchedLocation;
+        if (location.isNotEmpty &&
+            location != '/' &&
+            !isGoingToOnboarding &&
+            state.extra == null) {
+          pending.value = state.uri.toString();
+        }
+        return '/login';
       }
 
       if (isGoingToOnboarding || isGoingToLogin) {
-        debugPrint('Redirect: Already auth/onboarded. Going home.');
         return '/';
       }
 
@@ -127,7 +159,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final accountId = state.uri.queryParameters['accountId'];
-          return AddEditTransactionScreen(initialAccountId: accountId);
+          final extra = state.extra;
+          return AddEditTransactionScreen(
+            initialAccountId: accountId,
+            draft: extra is TransactionDraft ? extra : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/filtered-transactions',
+        name: 'filtered-transactions',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final args = state.extra as FilteredTransactionsArgs;
+          return TransactionsScreen(fixedFilter: args);
         },
       ),
       GoRoute(
@@ -152,38 +197,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
         routes: [
           GoRoute(
-            path: 'database-stats',
-            name: 'database-stats',
-            builder: (context, state) => const DatabaseStatsScreen(),
-          ),
-          GoRoute(
-            path: 'widgets',
-            name: 'widget-settings',
-            builder: (context, state) => const WidgetSettingsScreen(),
-          ),
-          GoRoute(
             path: 'sync',
             name: 'sync-settings',
             builder: (context, state) => const SyncSettingsScreen(),
-            routes: [
-              GoRoute(
-                path: 'debug',
-                name: 'sync-debug',
-                builder: (context, state) => const SyncDebugScreen(),
-              ),
-            ],
           ),
           GoRoute(
             path: 'import-ynab',
             name: 'import-ynab',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => const YnabImportScreen(),
-          ),
-          GoRoute(
-            path: 'import-mint',
-            name: 'import-mint',
-            parentNavigatorKey: _rootNavigatorKey,
-            builder: (context, state) => const MintImportScreen(),
           ),
           GoRoute(
             path: 'help',
@@ -201,16 +223,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 name: 'user-guide',
                 builder: (context, state) => const UserGuideScreen(),
               ),
-              GoRoute(
-                path: 'widget-tutorial',
-                name: 'widget-tutorial',
-                builder: (context, state) => const WidgetTutorialScreen(),
-              ),
-              GoRoute(
-                path: 'shortcuts',
-                name: 'keyboard-shortcuts',
-                builder: (context, state) => const KeyboardShortcutsScreen(),
-              ),
             ],
           ),
           GoRoute(
@@ -227,6 +239,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'change-password',
                 name: 'change-password',
                 builder: (context, state) => const ChangePasswordScreen(),
+              ),
+              GoRoute(
+                path: 'diagnostics',
+                name: 'diagnostics',
+                builder: (context, state) => const DiagnosticsScreen(),
               ),
             ],
           ),
@@ -331,6 +348,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   child: const HomeScreen(),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
+                        // Reduced motion: switch pages without the fade.
+                        if (!animationsEnabledOf(context)) {
+                          return child;
+                        }
                         return FadeTransition(opacity: animation, child: child);
                       },
                 ),
@@ -347,6 +368,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   child: const BudgetScreen(),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
+                        // Reduced motion: switch pages without the fade.
+                        if (!animationsEnabledOf(context)) {
+                          return child;
+                        }
                         return FadeTransition(opacity: animation, child: child);
                       },
                 ),
@@ -405,6 +430,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   child: const AccountsScreen(),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
+                        // Reduced motion: switch pages without the fade.
+                        if (!animationsEnabledOf(context)) {
+                          return child;
+                        }
                         return FadeTransition(opacity: animation, child: child);
                       },
                 ),
@@ -413,7 +442,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'add',
                     name: 'add-account',
                     parentNavigatorKey: _rootNavigatorKey,
-                    builder: (context, state) => const AddEditAccountScreen(),
+                    builder: (context, state) => AddEditAccountScreen(
+                      firstAccount: state.uri.queryParameters['first'] == '1',
+                    ),
                   ),
                   GoRoute(
                     path: ':id',
@@ -458,6 +489,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   child: const TransactionsScreen(),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
+                        // Reduced motion: switch pages without the fade.
+                        if (!animationsEnabledOf(context)) {
+                          return child;
+                        }
                         return FadeTransition(opacity: animation, child: child);
                       },
                 ),
@@ -474,6 +509,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   child: const ReportsScreen(),
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
+                        // Reduced motion: switch pages without the fade.
+                        if (!animationsEnabledOf(context)) {
+                          return child;
+                        }
                         return FadeTransition(opacity: animation, child: child);
                       },
                 ),

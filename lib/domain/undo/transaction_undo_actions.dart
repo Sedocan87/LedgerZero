@@ -1,178 +1,62 @@
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
+import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
 
-class CreateTransactionAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final Transaction transaction;
+/// Undo/redo of any transaction write, recorded as row snapshots.
+///
+/// [before] and [after] map every touched transaction id to its full state
+/// before and after the change; `null` means "did not exist" (created rows
+/// have no `before`). Undo writes the `before` states back, redo the `after`
+/// states, in one unit of work. A row that did not exist on one side is
+/// soft-deleted when going to that side, so:
+///
+/// * undoing a create soft-deletes the rows and redo restores them (it
+///   never re-INSERTs an id that still exists);
+/// * undoing a delete restores every row that was deleted with it (both
+///   transfer legs, all split children);
+/// * undoing an edit restores the counterpart / children exactly.
+class TransactionChangeSetAction implements ReversibleAction {
+  TransactionChangeSetAction(
+    this._repository,
+    this._unitOfWork, {
+    required Map<String, Transaction?> before,
+    required Map<String, Transaction?> after,
+  }) : before = Map.unmodifiable(before),
+       after = Map.unmodifiable(after);
 
-  CreateTransactionAction(this.repository, this.transaction);
+  final TransactionRepository _repository;
+  final UnitOfWork _unitOfWork;
 
-  @override
-  Future<void> redo() async {
-    await repository.createTransaction(transaction);
-  }
+  final Map<String, Transaction?> before;
+  final Map<String, Transaction?> after;
 
-  @override
-  Future<void> undo() async {
-    await repository.deleteTransaction(transaction.id);
-  }
-}
-
-class UpdateTransactionAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final Transaction oldTransaction;
-  final Transaction newTransaction;
-
-  UpdateTransactionAction(
-    this.repository,
-    this.oldTransaction,
-    this.newTransaction,
-  );
-
-  @override
-  Future<void> redo() async {
-    await repository.updateTransaction(newTransaction);
-  }
+  /// Ids of all rows this change touched.
+  Set<String> get ids => {...before.keys, ...after.keys};
 
   @override
-  Future<void> undo() async {
-    await repository.updateTransaction(oldTransaction);
-  }
-}
-
-class DeleteTransactionAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final Transaction transaction;
-
-  DeleteTransactionAction(this.repository, this.transaction);
+  Future<void> undo() => _restore(before, after);
 
   @override
-  Future<void> redo() async {
-    await repository.deleteTransaction(transaction.id);
-  }
+  Future<void> redo() => _restore(after, before);
 
-  @override
-  Future<void> undo() async {
-    // We need to restore it.
-    // Since deleteTransaction performs soft delete, we can update isDeleted to false.
-    await repository.updateTransaction(transaction.copyWith(isDeleted: false));
-  }
-}
-
-class BatchDeleteTransactionsAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final List<Transaction> transactions;
-
-  BatchDeleteTransactionsAction(this.repository, this.transactions);
-
-  @override
-  Future<void> redo() async {
-    await repository.batchDeleteTransactions(
-      transactions.map((t) => t.id).toList(),
-    );
-  }
-
-  @override
-  Future<void> undo() async {
-    final restored = transactions
-        .map((t) => t.copyWith(isDeleted: false))
-        .toList();
-    await repository.batchUpdateTransactions(restored);
-  }
-}
-
-class BatchUpdateTransactionsAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final List<Transaction> oldTransactions;
-  final List<Transaction> newTransactions;
-
-  BatchUpdateTransactionsAction(
-    this.repository,
-    this.oldTransactions,
-    this.newTransactions,
-  );
-
-  @override
-  Future<void> redo() async {
-    await repository.batchUpdateTransactions(newTransactions);
-  }
-
-  @override
-  Future<void> undo() async {
-    await repository.batchUpdateTransactions(oldTransactions);
-  }
-}
-
-class CreateTransferAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final Transaction source;
-  final Transaction destination;
-
-  CreateTransferAction(this.repository, this.source, this.destination);
-
-  @override
-  Future<void> redo() async {
-    await repository.createTransferTransaction(source, destination);
-  }
-
-  @override
-  Future<void> undo() async {
-    await repository.deleteLinkedTransaction(source.id);
-  }
-}
-
-class CreateSplitTransactionAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final Transaction parent;
-  final List<Transaction> children;
-
-  CreateSplitTransactionAction(this.repository, this.parent, this.children);
-
-  @override
-  Future<void> redo() async {
-    await repository.createSplitTransaction(parent, children);
-  }
-
-  @override
-  Future<void> undo() async {
-    await repository.deleteLinkedTransaction(parent.id);
-  }
-}
-
-class DeleteLinkedTransactionAction implements ReversibleAction {
-  final TransactionRepository repository;
-  final Transaction primaryTransaction;
-  final Transaction? relatedTransaction;
-  final List<Transaction> children;
-
-  DeleteLinkedTransactionAction(
-    this.repository,
-    this.primaryTransaction, {
-    this.relatedTransaction,
-    this.children = const [],
-  });
-
-  @override
-  Future<void> redo() async {
-    await repository.deleteLinkedTransaction(primaryTransaction.id);
-  }
-
-  @override
-  Future<void> undo() async {
-    await repository.updateTransaction(
-      primaryTransaction.copyWith(isDeleted: false),
-    );
-    if (relatedTransaction != null) {
-      await repository.updateTransaction(
-        relatedTransaction!.copyWith(isDeleted: false),
-      );
+  Future<void> _restore(
+    Map<String, Transaction?> target,
+    Map<String, Transaction?> other,
+  ) async {
+    final rows = <Transaction>[];
+    for (final id in ids) {
+      final state = target[id] ?? other[id]?.copyWith(isDeleted: true);
+      if (state != null) {
+        rows.add(state);
+      }
     }
-    if (children.isNotEmpty) {
-      final restoredChildren = children
-          .map((c) => c.copyWith(isDeleted: false))
-          .toList();
-      await repository.batchUpdateTransactions(restoredChildren);
-    }
+    // Parents before children (children reference their parent).
+    rows.sort(
+      (a, b) => (a.parentTransactionId == null ? 0 : 1).compareTo(
+        b.parentTransactionId == null ? 0 : 1,
+      ),
+    );
+    await _unitOfWork.run(() => _repository.upsertTransactions(rows));
   }
 }

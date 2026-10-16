@@ -15,47 +15,25 @@ class HelpScreen extends StatelessWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.question_answer),
-            title: const Text('FAQ'),
-            subtitle: const Text('Frequently asked questions'),
+            title: Text(l10n.faq),
+            subtitle: Text(l10n.faqSubtitle),
             onTap: () {
               context.pushNamed('faq');
             },
           ),
           ListTile(
             leading: const Icon(Icons.book),
-            title: const Text('User Guide'),
-            subtitle: const Text('Comprehensive documentation'),
+            title: Text(l10n.userGuide),
+            subtitle: Text(l10n.userGuideSubtitle),
             onTap: () {
               context.pushNamed('user-guide');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.keyboard),
-            title: const Text('Keyboard Shortcuts'),
-            subtitle: const Text('List of available shortcuts'),
-            onTap: () {
-              context.pushNamed('keyboard-shortcuts');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.video_library),
-            title: const Text('Video Tutorials'),
-            subtitle: const Text('Learn by watching on YouTube'),
-            onTap: () async {
-              // Placeholder channel URL
-              final url = Uri.parse(
-                'https://www.youtube.com/channel/UC_placeholder',
-              );
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url);
-              }
             },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.email),
-            title: const Text('Contact Support'),
-            subtitle: const Text('support@ledgerzero.app'),
+            title: Text(l10n.contactSupport),
+            subtitle: Text(l10n.contactSupportSubtitle),
             onTap: () async {
               final url = Uri.parse('mailto:support@ledgerzero.app');
               if (await canLaunchUrl(url)) {

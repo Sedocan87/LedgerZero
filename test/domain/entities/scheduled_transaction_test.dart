@@ -10,7 +10,7 @@ void main() {
         accountId: 'acc1',
         payeeId: 'payee1',
         categoryId: 'cat1',
-        amount: 100.0,
+        amount: 10000,
         frequency: RecurrenceFrequency.monthly,
         interval: 2,
         occurrenceCount: 5,
@@ -24,7 +24,7 @@ void main() {
       expect(scheduledTransaction.accountId, 'acc1');
       expect(scheduledTransaction.payeeId, 'payee1');
       expect(scheduledTransaction.categoryId, 'cat1');
-      expect(scheduledTransaction.amount, 100.0);
+      expect(scheduledTransaction.amount, 10000);
       expect(scheduledTransaction.frequency, RecurrenceFrequency.monthly);
       expect(scheduledTransaction.interval, 2);
       expect(scheduledTransaction.occurrenceCount, 5);
@@ -58,7 +58,7 @@ void main() {
         accountId: 'acc1',
         payeeId: 'payee1',
         categoryId: 'cat1',
-        amount: 100.0,
+        amount: 10000,
         frequency: RecurrenceFrequency.monthly,
         interval: 2,
         occurrenceCount: 5,
@@ -73,7 +73,7 @@ void main() {
       expect(json['account_id'], 'acc1');
       expect(json['payee_id'], 'payee1');
       expect(json['category_id'], 'cat1');
-      expect(json['amount'], 100.0);
+      expect(json['amount'], 10000);
       expect(json['frequency'], 'monthly');
       expect(json['interval'], 2);
       expect(json['occurrence_count'], 5);
@@ -122,7 +122,7 @@ void main() {
         accountId: 'acc1',
         payeeId: 'payee1',
         categoryId: 'cat1',
-        amount: 100.0,
+        amount: 10000,
         frequency: RecurrenceFrequency.monthly,
         interval: 2,
         occurrenceCount: 5,
@@ -137,7 +137,7 @@ void main() {
         accountId: 'acc1',
         payeeId: 'payee1',
         categoryId: 'cat1',
-        amount: 100.0,
+        amount: 10000,
         frequency: RecurrenceFrequency.monthly,
         interval: 2,
         occurrenceCount: 5,

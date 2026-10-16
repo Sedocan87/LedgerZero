@@ -1,15 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
-import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_sort_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_filter_provider.dart';
 
-final accountListProvider = StreamProvider.autoDispose<List<Account>>((ref) {
-  final repository = ref.watch(accountRepositoryProvider);
+/// The Accounts tab's list: [accountsProvider] filtered and sorted.
+final accountListProvider = Provider.autoDispose<AsyncValue<List<Account>>>((
+  ref,
+) {
   final sortOption = ref.watch(accountSortProvider);
   final filter = ref.watch(accountFilterProvider);
 
-  return repository.watchAllAccounts().map((accounts) {
+  return ref.watch(accountsProvider).whenData((accounts) {
     final filtered = accounts.where((a) {
       if (!filter.showClosed && a.isClosed) {
         return false;
@@ -30,10 +32,10 @@ final accountListProvider = StreamProvider.autoDispose<List<Account>>((ref) {
         filtered.sort((a, b) => b.name.compareTo(a.name));
         break;
       case AccountSortOption.balanceAsc:
-        filtered.sort((a, b) => a.currentBalance.compareTo(b.currentBalance));
+        filtered.sort((a, b) => a.balance.compareTo(b.balance));
         break;
       case AccountSortOption.balanceDesc:
-        filtered.sort((a, b) => b.currentBalance.compareTo(a.currentBalance));
+        filtered.sort((a, b) => b.balance.compareTo(a.balance));
         break;
       case AccountSortOption.type:
         filtered.sort((a, b) {

@@ -1,0 +1,8 @@
+# Test configuration (package:test).
+tags:
+  # Time-budget tests on large data sets. Skipped by default so the normal
+  # suite stays fast and deterministic; run them with
+  #   flutter test --tags perf --run-skipped
+  perf:
+    skip: "perf test: run with --tags perf --run-skipped"
+    timeout: 2x

@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fuzzy/fuzzy.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
@@ -47,39 +47,12 @@ class PayeeMatcher {
             matchAllTokens: false,
           ),
         );
-        debugPrint(
-          'PayeeMatcher: Built cache with ${_payeeCache!.length} payees',
+        Logger.debug(
+          'PayeeMatcher: built cache with ${_payeeCache!.length} payees',
         );
       }
-    } catch (e) {
-      debugPrint('PayeeMatcher: Failed to build cache: $e');
-    }
-  }
-
-  /// Find the best matching payee for a given name.
-  /// Returns the matching payee if similarity is good enough, null otherwise.
-  Future<Payee?> findBestMatch(String payeeName) async {
-    if (payeeName.isEmpty) return null;
-
-    try {
-      await _ensureCache();
-
-      if (_fuzzyMatcher == null) return null;
-
-      final results = _fuzzyMatcher!.search(payeeName);
-
-      if (results.isNotEmpty && results.first.score <= matchThreshold) {
-        final bestMatch = results.first.item;
-        debugPrint(
-          'PayeeMatcher: Found match "${bestMatch.name}" with score ${results.first.score}',
-        );
-        return bestMatch;
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('PayeeMatcher: Error finding match: $e');
-      return null;
+    } catch (e, st) {
+      Logger.error('PayeeMatcher: failed to build cache', e, st);
     }
   }
 
@@ -89,19 +62,23 @@ class PayeeMatcher {
     String payeeName, {
     int limit = 5,
   }) async {
-    if (payeeName.isEmpty) return [];
+    if (payeeName.isEmpty) {
+      return [];
+    }
 
     try {
       await _ensureCache();
 
-      if (_fuzzyMatcher == null) return [];
+      if (_fuzzyMatcher == null) {
+        return [];
+      }
 
       final results = _fuzzyMatcher!.search(payeeName);
 
       // Convert fuzzy scores to similarity (1 - score, since lower is better in fuzzy)
       return results.take(limit).map((r) => (r.item, 1.0 - r.score)).toList();
-    } catch (e) {
-      debugPrint('PayeeMatcher: Error getting suggestions: $e');
+    } catch (e, st) {
+      Logger.error('PayeeMatcher: failed to get suggestions', e, st);
       return [];
     }
   }
@@ -113,19 +90,22 @@ class PayeeMatcher {
     }
   }
 
-  /// Clear the cache (call when payee data changes).
+  /// Drops the cache; the next lookup rebuilds it from the repository.
   void clearCache() {
     _payeeCache = null;
     _fuzzyMatcher = null;
   }
-
-  /// Add a new payee to the cache.
-  void invalidateCache() {
-    clearCache();
-  }
 }
 
-/// Provider for PayeeMatcher.
+/// The app's [PayeeMatcher]. Its cache is cleared whenever the payees table
+/// changes (created, renamed, merged or deleted payees).
 final payeeMatcherProvider = Provider<PayeeMatcher>((ref) {
-  return PayeeMatcher(ref.watch(payeeRepositoryProvider));
+  final repository = ref.watch(payeeRepositoryProvider);
+  final matcher = PayeeMatcher(repository);
+  final subscription = repository.watchAllPayees().listen(
+    (_) => matcher.clearCache(),
+    onError: (Object _) => matcher.clearCache(),
+  );
+  ref.onDispose(subscription.cancel);
+  return matcher;
 });

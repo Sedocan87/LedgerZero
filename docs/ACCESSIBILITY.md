@@ -1,49 +1,84 @@
-# Accessibility Documentation
+# Accessibility
 
-LedgerZero is committed to providing an accessible experience for all users. This document outlines the accessibility features implemented and guidelines for maintaining them.
+What the app does for screen readers, keyboard users, contrast and motion,
+and how it is tested.
 
-## Implemented Features
+## Settings
 
-### 1. Focus Indicators
-- Interactive elements (buttons, inputs) have visible focus states.
-- `BudgetCategoryRow` uses `InkWell` to provide visual feedback and focusability.
-- Text fields have distinct borders when focused.
+* **Reduced Motion**: switch in Settings (General section). Stored in
+  `ThemeState.reducedMotion`. Animations are also off when the platform asks
+  for it (`MediaQuery.disableAnimations`).
+* **High contrast**: Settings > Accessibility. Switches to
+  `AppTheme.highContrastLightTheme` / `highContrastDarkTheme` (black/white
+  primary and surface; the chart palette raises its contrast too). The
+  platform's high-contrast setting is not followed automatically.
 
-### 2. Screen Reader Support (ARIA-equivalent)
-- Charts (`PieChart`, `SimpleBarChart`, `MultiLineChart`) are wrapped in `Semantics` widgets with descriptive labels summarizing the data (e.g., "Spending trend chart showing...").
-- Images/Charts are marked as `image: true` for screen readers.
-- `AppButton` loading states are announced as "Loading".
-- `BudgetCategoryRow` provides a consolidated semantic label reading out "Category Name. Budgeted: $X. Activity: $Y. Available: $Z."
+To check whether animations may run, call `animationsEnabled(context, ref)`
+in `build` (rebuilds when the setting changes), `animationsEnabledOf(context)`
+where there is no `WidgetRef` (page transitions), or
+`ThemeNotifier.shouldAnimate` for a one-off check
+(`lib/presentation/providers/theme_provider.dart`). Page transitions in the
+router, the tutorial overlay and the onboarding completion screen use them.
+Charts are drawn without animation.
 
-### 3. Error Handling
-- Error messages in `ErrorView` utilize `Semantics(liveRegion: true)` to ensure immediate announcement by screen readers when they appear.
-- Form validation errors automatically scroll to the first invalid field using `FormUtils.focusFirstError(context)` and trigger haptic feedback. (Note: Automatic focus movement requires explicit FocusNode management which is planned for a future update).
+## Screen readers
 
-### 4. Navigation
-- A "Skip to content" link is implemented at the top of the main shell (`ScaffoldWithNavBar`). It is visible when focused (via keyboard Tab) and allows bypassing the bottom navigation bar to jump directly to the main content area.
+* Charts (`PieChart`, `SimpleBarChart`, `MultiLineChart`,
+  `BalanceTrendChart`, `BudgetVsActualChart`) expose one localised summary
+  label and exclude their painted children.
+* `AmountText` adds the meaning of an amount to its label via
+  `AmountContext` (budgeted, activity, available / overspent, To Be
+  Budgeted), so a screen reader does not just read a bare number.
+* In the budget's comparison view the progress text reads as
+  "spent of budgeted"; the underfunded goal icon has a label (it only
+  appears once goals can be set, which the app does not offer yet).
+* `AppButton` announces its loading state ("<label>, Loading").
+* `ErrorView` and `LoadErrorView` use `Semantics(liveRegion: true)` so
+  errors are announced when they appear.
+* All labels come from the ARB files (EN/DE).
 
-### 5. Color Contrast
-- The application theme (`AppColors`) is tested against WCAG AA standards (4.5:1 minimum contrast ratio for normal text).
-- Automated tests in `test/accessibility/color_contrast_test.dart` verify these ratios.
+## Keyboard and focus
 
-### 6. Reduced Motion
-- Users can toggle "Reduced Motion" in Settings.
-- Animations in charts and numeric counters (`AnimatedCountText`) respect this setting or the system-wide preference.
+* The tab shell (`ScaffoldWithNavBar`) has a "Skip to content" button that
+  appears when it receives focus and moves focus to the tab content.
+* `FormUtils.focusFirstError(context)` (used by the transaction and account
+  forms) gives haptic feedback and scrolls the first invalid field into
+  view. It does not move keyboard focus to that field.
+* Amount cells and the clear-status button are at least
+  `kMinInteractiveDimension` (48 dp) tall.
 
-### 7. Haptic Feedback
-- Critical actions (saving, errors, long-press) trigger haptic feedback to reinforce visual cues.
+## Colour
 
-## Testing Guidelines
+* Colour schemes are generated from the teal seed with
+  `ColorScheme.fromSeed`; `test/app/theme_test.dart` checks that
+  onPrimary/primary, onPrimaryContainer/primaryContainer, onSurface/surface
+  and onError/error reach WCAG AA (4.5:1) in every theme.
+* `ChartPalette` (theme extension) keeps chart colours at least 3:1 against
+  the surface (4.5:1 in high contrast); see
+  `test/presentation/widgets/charts/chart_palette_test.dart`.
 
-### Automated Tests
-- Run color contrast tests: `flutter test test/accessibility/color_contrast_test.dart`
-- Run accessibility audit tests: `flutter test test/accessibility/audit_test.dart`
+## Haptics
 
-### Manual Testing
-- **Screen Reader:** Enable TalkBack (Android) or VoiceOver (iOS) and navigate through the app. Verify that all interactive elements are reachable and labeled correctly.
-- **Keyboard:** Connect a bluetooth keyboard and navigate using Tab/Arrow keys. Verify focus indicators are visible and logical.
-- **Settings:** Toggle "Reduced Motion" and verify animations are disabled.
+A light impact on `AppButton` presses, a selection click whenever a budget
+amount is set on the budget screen, and a heavy impact when
+form validation fails (`FormUtils.focusFirstError`).
 
-## Future Improvements
-- Dynamic Type support (font scaling) audit.
-- High Contrast theme refinements.
+## Tests
+
+* `test/accessibility/semantics_test.dart`: chart summaries, AppButton
+  semantics, 48x48 clear-status button.
+* `test/accessibility/audit_test.dart`: tap-target and text-contrast
+  guidelines for `AppButton`.
+* `test/presentation/accessibility_test.dart`: Flutter accessibility
+  guidelines on the home screen.
+* `test/app/theme_test.dart`: theme contrast.
+
+Manual checks before a release: TalkBack (Android) and VoiceOver (iOS)
+through the main tabs and forms; a hardware keyboard (Tab, arrows); the
+largest system font size; Reduced Motion on.
+
+## Known gaps
+
+* No audit of large font sizes (text scaling) yet.
+* Form validation does not move focus to the first invalid field.
+* The high-contrast theme only overrides primary and surface colours.

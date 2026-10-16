@@ -55,7 +55,7 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
             ), // Keep original ID if it exists? Or use new one? Best to keep ID.
             date: Value(note.date),
             note: Value(note.note),
-            updatedAt: Value(DateTime.now().toIso8601String()),
+            updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
           ),
         );
       } else {
@@ -65,8 +65,8 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
             id: Value(note.id),
             date: Value(note.date),
             note: Value(note.note),
-            createdAt: Value(DateTime.now().toIso8601String()),
-            updatedAt: Value(DateTime.now().toIso8601String()),
+            createdAt: Value(DateTime.now().toUtc().toIso8601String()),
+            updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
           ),
         );
       }

@@ -15,7 +15,7 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<List<domain.Account>> getAllAccounts() async {
     try {
       Logger.debug('Fetching all accounts');
-      final accounts = await _accountsDao.getAllAccounts();
+      final accounts = await _accountsDao.getAllAccountsWithBalance();
       Logger.debug('Fetched ${accounts.length} accounts');
       return accounts.map(_mapToDomain).toList();
     } catch (e, stackTrace) {
@@ -28,7 +28,7 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<domain.Account?> getAccountById(String id) async {
     try {
       Logger.debug('Fetching account with id: $id');
-      final account = await _accountsDao.getAccountById(id);
+      final account = await _accountsDao.getAccountWithBalance(id);
       Logger.debug('Account found: ${account != null}');
       return account == null ? null : _mapToDomain(account);
     } catch (e, stackTrace) {
@@ -41,7 +41,9 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<void> createAccount(domain.Account account) async {
     try {
       Logger.debug('Creating account: ${account.name}');
-      await _accountsDao.insertAccount(_mapToCompanion(account));
+      await _accountsDao.insertAccount(
+        _mapToCompanion(account, isInsert: true),
+      );
       Logger.info('Account created successfully: ${account.id}');
     } catch (e, stackTrace) {
       Logger.error('Failed to create account ${account.id}', e, stackTrace);
@@ -76,7 +78,7 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Stream<List<domain.Account>> watchAllAccounts() {
     return _accountsDao
-        .watchAllAccounts()
+        .watchAllAccountsWithBalance()
         .map((accounts) {
           return accounts.map(_mapToDomain).toList();
         })
@@ -89,7 +91,7 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Stream<domain.Account?> watchAccount(String id) {
     return _accountsDao
-        .watchAccount(id)
+        .watchAccountWithBalance(id)
         .map((account) => account == null ? null : _mapToDomain(account))
         .handleError((error, stackTrace) {
           Logger.error('Error watching account $id', error, stackTrace);
@@ -97,7 +99,56 @@ class AccountRepositoryImpl implements AccountRepository {
         });
   }
 
-  domain.Account _mapToDomain(Account account) {
+  @override
+  Future<Map<String, int>> getAccountBalances() async {
+    try {
+      return await _accountsDao.getAccountBalances();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to compute account balances', e, stackTrace);
+      throw DatabaseException('Failed to compute account balances', e);
+    }
+  }
+
+  @override
+  Stream<Map<String, int>> watchAccountBalances() {
+    return _accountsDao.watchAccountBalances().handleError((error, stackTrace) {
+      Logger.error('Error watching account balances', error, stackTrace);
+      throw DatabaseException('Error watching account balances', error);
+    });
+  }
+
+  @override
+  Future<int> getAccountBalance(String id) async {
+    try {
+      return await _accountsDao.getAccountBalance(id);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to compute balance of $id', e, stackTrace);
+      throw DatabaseException('Failed to compute balance of $id', e);
+    }
+  }
+
+  @override
+  Future<int> getClearedBalance(String id, {DateTime? upTo}) async {
+    try {
+      return await _accountsDao.getClearedBalance(id, upTo: upTo);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to compute cleared balance of $id', e, stackTrace);
+      throw DatabaseException('Failed to compute cleared balance of $id', e);
+    }
+  }
+
+  @override
+  Future<int> getTotalStartingBalance() async {
+    try {
+      return await _accountsDao.getTotalStartingBalance();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to sum starting balances', e, stackTrace);
+      throw DatabaseException('Failed to sum starting balances', e);
+    }
+  }
+
+  domain.Account _mapToDomain(AccountWithBalance row) {
+    final account = row.account;
     return domain.Account(
       id: account.id,
       name: account.name,
@@ -107,7 +158,7 @@ class AccountRepositoryImpl implements AccountRepository {
       ),
       currency: account.currency,
       startingBalance: account.startingBalance,
-      currentBalance: account.currentBalance,
+      balance: row.balance,
       isClosed: account.isClosed,
       color: account.color,
       icon: account.icon,
@@ -117,20 +168,24 @@ class AccountRepositoryImpl implements AccountRepository {
     );
   }
 
-  AccountsCompanion _mapToCompanion(domain.Account account) {
+  /// The balance is computed and never written.
+  AccountsCompanion _mapToCompanion(
+    domain.Account account, {
+    bool isInsert = false,
+  }) {
+    final now = DateTime.now().toUtc();
     return AccountsCompanion(
       id: Value(account.id),
       name: Value(account.name),
       type: Value(account.type.name),
       currency: Value(account.currency),
       startingBalance: Value(account.startingBalance),
-      currentBalance: Value(account.currentBalance),
       isClosed: Value(account.isClosed),
       color: Value(account.color),
       icon: Value(account.icon),
       notes: Value(account.notes),
-      createdAt: Value(account.createdAt),
-      updatedAt: Value(account.updatedAt),
+      createdAt: Value(account.createdAt?.toUtc() ?? (isInsert ? now : null)),
+      updatedAt: Value(now),
     );
   }
 }

@@ -29,8 +29,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            hasAccountsProvider.overrideWith(
-              (ref) => Future.error('Failed to load accounts'),
+            hasAccountsProvider.overrideWithValue(
+              const AsyncValue.error(
+                'Failed to load accounts',
+                StackTrace.empty,
+              ),
             ),
             backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
             syncControllerProvider.overrideWith((ref) => MockSyncController()),
@@ -47,11 +50,9 @@ void main() {
       // Wait for the future to complete (immediately errors out)
       await tester.pumpAndSettle();
 
-      // Check for error text
-      expect(
-        find.textContaining('Error: Failed to load accounts'),
-        findsOneWidget,
-      );
+      // A friendly, localised message; never the raw exception text.
+      expect(find.text('An error occurred'), findsOneWidget);
+      expect(find.textContaining('Failed to load accounts'), findsNothing);
     });
   });
 }

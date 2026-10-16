@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class CategorySelector extends ConsumerWidget {
   final ValueChanged<Category> onSelected;
@@ -56,7 +57,8 @@ class CategorySelector extends ConsumerWidget {
           },
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) =>
+            LoadErrorView(error: err, stackTrace: stack, compact: true),
       ),
     );
   }

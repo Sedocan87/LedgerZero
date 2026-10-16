@@ -12,6 +12,7 @@ class Payees extends Table {
   TextColumn get defaultAccountId =>
       text().nullable().references(Accounts, #id)();
   DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 
   TextColumn get icon => text().nullable()();
   IntColumn get color => integer().nullable()();

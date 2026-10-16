@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/memory_platform_file.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 
 void main() {
@@ -15,9 +16,8 @@ void main() {
     const chaseCsv =
         'Details,Posting Date,Description,Amount,Type,Balance,Check or Slip #\nDEBIT,01/05/2023,"GAS STATION",-45.00,Sale,,';
     test('parses Chase format (Date,Description,Amount,Type)', () async {
-      final file = PlatformFile(
+      final file = MemoryPlatformFile(
         name: 'chase.csv',
-        size: chaseCsv.length,
         bytes: Uint8List.fromList(utf8.encode(chaseCsv)),
       );
 
@@ -35,8 +35,8 @@ void main() {
       );
 
       expect(txs.length, 1);
-      expect(txs.first.date, DateTime(2023, 1, 5));
-      expect(txs.first.amount, -45.00);
+      expect(txs.first.date, DateTime.utc(2023, 1, 5)); // calendar day, UTC
+      expect(txs.first.amount, -4500);
       expect(txs.first.payeeName, 'GAS STATION');
     });
 
@@ -46,9 +46,8 @@ void main() {
       // Adding headers for generic parser compatibility (parser expects headers)
       const csvWithHeaders = 'Date,Amount,X,Y,Description\n$csv';
 
-      final file = PlatformFile(
+      final file = MemoryPlatformFile(
         name: 'wf.csv',
-        size: csvWithHeaders.length,
         bytes: Uint8List.fromList(utf8.encode(csvWithHeaders)),
       );
 
@@ -66,7 +65,7 @@ void main() {
       );
 
       expect(txs.length, 1);
-      expect(txs.first.amount, -45.00);
+      expect(txs.first.amount, -4500);
     });
 
     test(
@@ -74,9 +73,8 @@ void main() {
       () async {
         const csv =
             'Buchungstag;Verwendungszweck;Betrag\n31.12.2023;Supermarkt;-50,00';
-        final file = PlatformFile(
+        final file = MemoryPlatformFile(
           name: 'euro.csv',
-          size: csv.length,
           bytes: Uint8List.fromList(utf8.encode(csv)),
         );
 
@@ -97,8 +95,8 @@ void main() {
         );
 
         expect(txs.length, 1);
-        expect(txs.first.date, DateTime(2023, 12, 31));
-        expect(txs.first.amount, -50.00);
+        expect(txs.first.date, DateTime.utc(2023, 12, 31));
+        expect(txs.first.amount, -5000);
         expect(txs.first.payeeName, 'Supermarkt');
       },
     );

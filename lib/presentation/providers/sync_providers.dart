@@ -1,110 +1,101 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/connectivity_provider.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
-import 'package:ledger_zero/services/sync/delta_filename_generator.dart';
-import 'package:ledger_zero/services/sync/delta_generation_service.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
-import 'package:ledger_zero/services/sync/local_delta_queue.dart';
-import 'package:ledger_zero/services/sync/delta_replay_service.dart';
+import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
+import 'package:ledger_zero/services/sync/sync_device_id.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
-import 'package:ledger_zero/services/sync/p2p/local_discovery_service.dart';
-import 'package:ledger_zero/services/sync/p2p/sync_server.dart';
-import 'package:ledger_zero/services/sync/transport/local_sync_transport.dart';
-
-final deltaFilenameGeneratorProvider = Provider<DeltaFilenameGenerator>((ref) {
-  return DeltaFilenameGenerator();
-});
-
-final localDeltaQueueProvider = Provider<LocalDeltaQueue>((ref) {
-  final filenameGenerator = ref.watch(deltaFilenameGeneratorProvider);
-  return LocalDeltaQueue(filenameGenerator);
-});
-
-final deltaGenerationServiceProvider = Provider<DeltaGenerationService>((ref) {
-  final db = ref.watch(databaseProvider);
-  final localDeltaQueue = ref.watch(localDeltaQueueProvider);
-  final prefs = ref.watch(sharedPreferencesProvider);
-  return DeltaGenerationService(db, localDeltaQueue, prefs);
-});
+import 'package:ledger_zero/services/sync/sync_outbox.dart';
 
 final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
   return GoogleAuthService();
 });
 
+/// One Drive transport per app session; its cached client is dropped when
+/// the Google account changes (sign-out) and closed on dispose.
 final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
   final authService = ref.watch(googleAuthServiceProvider);
-  final prefs = ref.watch(sharedPreferencesProvider);
-  return GoogleDriveService(authService, prefs);
+  final service = GoogleDriveService(
+    authService,
+    ref.watch(sharedPreferencesProvider),
+  );
+  final subscription = authService.onCurrentUserChanged.listen(
+    (_) => service.resetClient(),
+    onError: (Object _) {},
+  );
+  ref.onDispose(() {
+    subscription.cancel();
+    service.dispose();
+  });
+  return service;
 });
 
 final iCloudDriveServiceProvider = Provider<ICloudDriveService>((ref) {
   return ICloudDriveService();
 });
 
-final deltaReplayServiceProvider = Provider<DeltaReplayService>((ref) {
+/// Outgoing change files (not yet uploaded).
+final syncOutboxProvider = Provider<SyncOutbox>((ref) => SyncOutbox());
+
+/// This installation's sync device id.
+final syncDeviceIdProvider = Provider<String>((ref) {
+  return SyncDeviceId.of(ref.watch(sharedPreferencesProvider));
+});
+
+/// Sync services bound to the open database. Throws while locked
+/// (via [databaseProvider]); rebuilt when the database is reopened.
+final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
   final db = ref.watch(databaseProvider);
-  final queue = ref.watch(localDeltaQueueProvider);
-  return DeltaReplayService(db, queue);
-});
-
-final localDiscoveryServiceProvider = Provider<LocalDiscoveryService>((ref) {
-  final service = LocalDiscoveryService();
-  ref.onDispose(service.dispose);
-  return service;
-});
-
-final syncServerProvider = Provider<SyncServer>((ref) {
-  final queue = ref.watch(localDeltaQueueProvider);
-  return SyncServer(queue);
-});
-
-final localSyncTransportProvider = Provider<LocalSyncTransport>((ref) {
-  final discovery = ref.watch(localDiscoveryServiceProvider);
-  final server = ref.watch(syncServerProvider);
-  // Remove deltaQueue injection as it was removed from LocalSyncTransport
-  return LocalSyncTransport(discovery, server);
-});
-
-final syncEngineProvider = Provider<SyncEngine>((ref) {
-  final genService = ref.watch(deltaGenerationServiceProvider);
-  final queue = ref.watch(localDeltaQueueProvider);
-  final replayService = ref.watch(deltaReplayServiceProvider);
-  final driveService = ref.watch(googleDriveServiceProvider);
-  final iCloudService = ref.watch(iCloudDriveServiceProvider);
-  final localTransport = ref.watch(localSyncTransportProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
-  final connectivity = ref.watch(connectivityServiceProvider);
-  final notificationService = ref.watch(notificationServiceProvider);
-
-  final engine = SyncEngine(
-    genService,
-    queue,
-    replayService,
-    {
-      'google_drive': driveService,
-      'icloud': iCloudService,
-      'local_p2p': localTransport,
-    },
-    prefs,
-    connectivity,
-    notificationService,
+  final outbox = ref.watch(syncOutboxProvider);
+  final deviceId = ref.watch(syncDeviceIdProvider);
+  return SyncDependencies(
+    engineFor: (transport) => SyncEngine(
+      db: db,
+      transport: transport,
+      deviceId: deviceId,
+      outbox: outbox,
+      prefs: prefs,
+    ),
+    dao: db.syncDao,
+    resolver: SyncConflictResolver(db),
   );
-  ref.onDispose(engine.dispose);
-  return engine;
 });
 
+/// The app-wide sync controller. Created at app start (MyApp); follows
+/// [appLockStateProvider]: paused while locked, running after unlock.
 final syncControllerProvider = StateNotifierProvider<SyncController, SyncState>(
   (ref) {
-    final authService = ref.watch(googleAuthServiceProvider);
-    final iCloudService = ref.watch(iCloudDriveServiceProvider);
-    final prefs = ref.watch(sharedPreferencesProvider);
-    final engine = ref.watch(syncEngineProvider);
-    return SyncController(authService, iCloudService, prefs, engine);
+    final drive = ref.watch(googleDriveServiceProvider);
+    final iCloud = ref.watch(iCloudDriveServiceProvider);
+    final controller = SyncController(
+      authService: ref.watch(googleAuthServiceProvider),
+      iCloudService: iCloud,
+      prefs: ref.watch(sharedPreferencesProvider),
+      connectivity: ref.watch(connectivityServiceProvider),
+      dependencies: () => ref.read(syncDependenciesProvider),
+      transportFor: (provider) => switch (provider) {
+        SyncProviderType.googleDrive => drive,
+        SyncProviderType.iCloud => iCloud,
+        SyncProviderType.none => null,
+      },
+    );
+    ref.listen<AppLockState>(
+      appLockStateProvider,
+      (_, next) => controller.onLockStateChanged(next),
+      fireImmediately: true,
+    );
+    // A restore reopens the database: pick up the new connection.
+    ref.listen(databaseGenerationProvider, (_, _) async {
+      await controller.onLockStateChanged(AppLockState.locked);
+      await controller.onLockStateChanged(ref.read(appLockStateProvider));
+    });
+    return controller;
   },
 );

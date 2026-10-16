@@ -1,3 +1,4 @@
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +9,10 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
+import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:mockito/mockito.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 
 class MockBackupScheduler extends Mock implements BackupScheduler {
   @override
@@ -28,10 +32,23 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            hasAccountsProvider.overrideWith((ref) => Future.value(true)),
+            hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
             backupSchedulerProvider.overrideWithValue(MockBackupScheduler()),
             syncControllerProvider.overrideWith((ref) => MockSyncController()),
+            accountsProvider.overrideWith((ref) => Stream.value([])),
             recentTransactionsProvider.overrideWith((ref) => Stream.value([])),
+            tbbProvider.overrideWith((ref, month) => Future.value(10000)),
+            monthlyStatsProvider.overrideWith(
+              (ref, month) =>
+                  Future.value({'income': 200000, 'spending': -50000}),
+            ),
+            appFormatterProvider.overrideWithValue(
+              AppFormatter(
+                locale: 'en',
+                currency: 'USD',
+                decimalSeparator: '.',
+              ),
+            ),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

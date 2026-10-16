@@ -45,7 +45,9 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
                         onPressed: () {
                           _contentFocusNode.requestFocus();
                         },
-                        child: const Text('Skip to content'),
+                        child: Text(
+                          AppLocalizations.of(context)!.skipToContent,
+                        ),
                       ),
                     )
                   : const SizedBox(
