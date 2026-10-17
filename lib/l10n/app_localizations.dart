@@ -6120,6 +6120,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cash Reserve'**
   String get seedCatCashReserve;
+
+  /// No description provided for @cardNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Card notifications'**
+  String get cardNotifications;
+
+  /// No description provided for @cardNotificationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add card payments from your bank app\'s notifications'**
+  String get cardNotificationsSubtitle;
+
+  /// No description provided for @cardNotificationsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero can read payment notifications from your bank, card or wallet apps and add each payment as a transaction for you to review. Only the apps you choose here are read; notifications from all other apps are ignored. Everything stays on this device.'**
+  String get cardNotificationsIntro;
+
+  /// No description provided for @cardNotificationsAccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification access'**
+  String get cardNotificationsAccessTitle;
+
+  /// No description provided for @cardNotificationsAccessGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'Granted'**
+  String get cardNotificationsAccessGranted;
+
+  /// No description provided for @cardNotificationsAccessMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Not granted: nothing is captured'**
+  String get cardNotificationsAccessMissing;
+
+  /// No description provided for @cardNotificationsGrantAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant access'**
+  String get cardNotificationsGrantAccess;
+
+  /// No description provided for @cardNotificationsManageAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage in system settings'**
+  String get cardNotificationsManageAccess;
+
+  /// No description provided for @cardNotificationsDisclosureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow LedgerZero to read notifications?'**
+  String get cardNotificationsDisclosureTitle;
+
+  /// Prominent disclosure shown before opening the system notification access screen (Google Play policy)
+  ///
+  /// In en, this message translates to:
+  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until you unlock LedgerZero. You can revoke access at any time in the system settings.'**
+  String get cardNotificationsDisclosureBody;
+
+  /// No description provided for @cardNotificationsContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get cardNotificationsContinue;
+
+  /// No description provided for @cardNotificationsAppsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps'**
+  String get cardNotificationsAppsTitle;
+
+  /// No description provided for @cardNotificationsNoApps.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps chosen yet.'**
+  String get cardNotificationsNoApps;
+
+  /// No description provided for @cardNotificationsAddApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Add app'**
+  String get cardNotificationsAddApp;
+
+  /// No description provided for @cardNotificationsAccountMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'No account chosen: payments wait here'**
+  String get cardNotificationsAccountMissing;
+
+  /// No description provided for @cardNotificationsRemoveApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop watching {app}'**
+  String cardNotificationsRemoveApp(String app);
+
+  /// No description provided for @cardNotificationsPickAppTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the app'**
+  String get cardNotificationsPickAppTitle;
+
+  /// No description provided for @cardNotificationsPickAppHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps with a notification showing, apps that notified recently, and installed bank apps.'**
+  String get cardNotificationsPickAppHint;
+
+  /// No description provided for @cardNotificationsNoCandidates.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps found. Keep a notification from your bank app in the notification shade and try again.'**
+  String get cardNotificationsNoCandidates;
+
+  /// No description provided for @cardNotificationsOriginActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification showing'**
+  String get cardNotificationsOriginActive;
+
+  /// No description provided for @cardNotificationsOriginRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Notified recently'**
+  String get cardNotificationsOriginRecent;
+
+  /// No description provided for @cardNotificationsOriginKnown.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank or wallet app'**
+  String get cardNotificationsOriginKnown;
+
+  /// No description provided for @cardNotificationsPickAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add payments from {app} to'**
+  String cardNotificationsPickAccountTitle(String app);
+
+  /// No description provided for @cardNotificationsNoAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account first.'**
+  String get cardNotificationsNoAccounts;
+
+  /// No description provided for @cardNotificationsHeldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for you'**
+  String get cardNotificationsHeldTitle;
+
+  /// No description provided for @cardNotificationsHeldUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'No amount found'**
+  String get cardNotificationsHeldUnreadable;
+
+  /// No description provided for @cardNotificationsHeldNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'No account chosen for this app'**
+  String get cardNotificationsHeldNoAccount;
+
+  /// No description provided for @cardNotificationsHeldForeignCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Different currency than the account'**
+  String get cardNotificationsHeldForeignCurrency;
+
+  /// No description provided for @cardNotificationsAddManually.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get cardNotificationsAddManually;
+
+  /// No description provided for @cardNotificationsDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get cardNotificationsDismiss;
+
+  /// No description provided for @cardNotificationsHowItWorksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How it works'**
+  String get cardNotificationsHowItWorksTitle;
+
+  /// No description provided for @cardNotificationsHowItWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is locked are added after the next unlock. Declined payments, codes and balance notices are skipped.'**
+  String get cardNotificationsHowItWorks;
+
+  /// No description provided for @cardNotificationsAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 card payment added} other{{count} card payments added}}'**
+  String cardNotificationsAdded(int count);
 }
 
 class _AppLocalizationsDelegate

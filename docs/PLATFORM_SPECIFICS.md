@@ -22,6 +22,11 @@ This document outlines the platform-specific implementations, configurations, an
   - `VIBRATE`: For haptic feedback.
   - `POST_NOTIFICATIONS`: For local notifications (sync alerts, reminders).
   - `RECEIVE_BOOT_COMPLETED`: Lets scheduled local notifications survive a reboot.
+- **Notification listener**: `CardNotificationListener`, bound by the system
+  (`BIND_NOTIFICATION_LISTENER_SERVICE`) only after the user grants
+  notification access; reads notifications of the bank/card apps chosen in
+  Settings > Card notifications. `<queries>` lists known bank and wallet
+  apps for the app picker. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md).
 - **Deep links**: `ledgerzero://` scheme.
 
 ### iOS

@@ -13,6 +13,7 @@ key design is described in detail in [ENCRYPTION.md](ENCRYPTION.md).
 | Key vault | flutter_secure_storage 10: iOS Keychain (`AfterFirstUnlockThisDeviceOnly`, not synced, not migrated to other devices), Android KeyStore-protected storage. |
 | Backups (`.lzbk`) | Always encrypted (AES-256-GCM, Argon2id from a backup password, streamed in authenticated chunks). See [BACKUP_FORMAT.md](BACKUP_FORMAT.md). |
 | Exports (CSV, JSON, PDF, PNG, diagnostic log) | Plaintext by design. Written to the app's temporary directory (`tmp/` on iOS, cache on Android, not backed up), deleted once the share sheet completes (on Android 60 s later, because the receiving app may still be reading), and swept at start-up/resume if older than one hour. |
+| Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, queued until the next unlock: AES-256-GCM with an Android KeyStore key that needs no user authentication (the listener writes while the app is locked), max. 200 entries / 90 days. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
 | Diagnostic logs / crash reports | Off by default. When enabled, stored in the app cache directory, with SQL parameters, e-mail addresses, payloads and numbers removed. Shared only by the user, after a preview of the exact text. |
 
 Android: `android:allowBackup="false"`, so Google's auto backup never copies
@@ -114,6 +115,9 @@ the database or key storage.
 * Strings and native copies of the key (SQLCipher holds its own copy while
   the database is open) cannot be wiped from Dart.
 * Plaintext exports once the user has shared them with another app.
+* Queued card notifications on a rooted device: their KeyStore key is usable
+  by the app without authentication, so code running as the app can read
+  them.
 * Losing both the master password and the recovery key makes the data
   permanently unreadable; there is no back door.
 

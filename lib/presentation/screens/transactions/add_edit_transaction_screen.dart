@@ -288,7 +288,8 @@ class _AddEditTransactionScreenState
         _form.isRecurring ? l10n.txScheduledCreated : l10n.transactionSaved,
       );
       if (popAfterSave) {
-        context.pop();
+        // `true` tells a caller awaiting the route that it was saved.
+        context.pop(true);
       } else {
         _form.resetForNext();
       }

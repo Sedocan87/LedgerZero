@@ -3633,4 +3633,127 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get seedCatCashReserve => 'Liquiditätsreserve';
+
+  @override
+  String get cardNotifications => 'Kartenbenachrichtigungen';
+
+  @override
+  String get cardNotificationsSubtitle =>
+      'Kartenzahlungen aus den Benachrichtigungen Ihrer Bank-App übernehmen';
+
+  @override
+  String get cardNotificationsIntro =>
+      'LedgerZero kann Zahlungsbenachrichtigungen Ihrer Bank-, Karten- oder Wallet-Apps lesen und jede Zahlung als Transaktion zur Prüfung anlegen. Gelesen werden nur die Apps, die Sie hier auswählen; Benachrichtigungen aller anderen Apps werden ignoriert. Alles bleibt auf diesem Gerät.';
+
+  @override
+  String get cardNotificationsAccessTitle => 'Zugriff auf Benachrichtigungen';
+
+  @override
+  String get cardNotificationsAccessGranted => 'Erteilt';
+
+  @override
+  String get cardNotificationsAccessMissing =>
+      'Nicht erteilt: Es wird nichts erfasst';
+
+  @override
+  String get cardNotificationsGrantAccess => 'Zugriff erteilen';
+
+  @override
+  String get cardNotificationsManageAccess =>
+      'In den Systemeinstellungen verwalten';
+
+  @override
+  String get cardNotificationsDisclosureTitle =>
+      'LedgerZero Benachrichtigungen lesen lassen?';
+
+  @override
+  String get cardNotificationsDisclosureBody =>
+      'Android fragt Sie gleich, ob LedgerZero auf Benachrichtigungen zugreifen darf. Android erteilt diesen Zugriff für alle Apps, LedgerZero liest aber nur Benachrichtigungen der Bank-, Karten- oder Wallet-Apps, die Sie auswählen, und übernimmt daraus nur Betrag, Händler und Zeitpunkt einer Zahlung. Benachrichtigungen werden nirgendwohin gesendet. Erfasste Zahlungen bleiben verschlüsselt auf diesem Gerät, bis Sie LedgerZero entsperren. Sie können den Zugriff jederzeit in den Systemeinstellungen widerrufen.';
+
+  @override
+  String get cardNotificationsContinue => 'Weiter';
+
+  @override
+  String get cardNotificationsAppsTitle => 'Apps';
+
+  @override
+  String get cardNotificationsNoApps => 'Noch keine Apps ausgewählt.';
+
+  @override
+  String get cardNotificationsAddApp => 'App hinzufügen';
+
+  @override
+  String get cardNotificationsAccountMissing =>
+      'Kein Konto gewählt: Zahlungen warten hier';
+
+  @override
+  String cardNotificationsRemoveApp(String app) {
+    return '$app nicht mehr beobachten';
+  }
+
+  @override
+  String get cardNotificationsPickAppTitle => 'App auswählen';
+
+  @override
+  String get cardNotificationsPickAppHint =>
+      'Apps mit sichtbarer Benachrichtigung, Apps mit kürzlichen Benachrichtigungen und installierte Bank-Apps.';
+
+  @override
+  String get cardNotificationsNoCandidates =>
+      'Keine Apps gefunden. Lassen Sie eine Benachrichtigung Ihrer Bank-App in der Benachrichtigungsleiste und versuchen Sie es erneut.';
+
+  @override
+  String get cardNotificationsOriginActive => 'Benachrichtigung sichtbar';
+
+  @override
+  String get cardNotificationsOriginRecent => 'Kürzlich benachrichtigt';
+
+  @override
+  String get cardNotificationsOriginKnown => 'Bank- oder Wallet-App';
+
+  @override
+  String cardNotificationsPickAccountTitle(String app) {
+    return 'Zahlungen aus $app buchen auf';
+  }
+
+  @override
+  String get cardNotificationsNoAccounts => 'Legen Sie zuerst ein Konto an.';
+
+  @override
+  String get cardNotificationsHeldTitle => 'Wartet auf Sie';
+
+  @override
+  String get cardNotificationsHeldUnreadable => 'Kein Betrag gefunden';
+
+  @override
+  String get cardNotificationsHeldNoAccount =>
+      'Kein Konto für diese App gewählt';
+
+  @override
+  String get cardNotificationsHeldForeignCurrency =>
+      'Andere Währung als das Konto';
+
+  @override
+  String get cardNotificationsAddManually => 'Hinzufügen';
+
+  @override
+  String get cardNotificationsDismiss => 'Verwerfen';
+
+  @override
+  String get cardNotificationsHowItWorksTitle => 'So funktioniert es';
+
+  @override
+  String get cardNotificationsHowItWorks =>
+      'Erfasste Zahlungen erscheinen unter Transaktionen als nicht genehmigt. Wischen Sie nach links, um eine zu genehmigen, oder tippen Sie darauf, um sie zu korrigieren. Zahlungen, die erfasst werden, während LedgerZero gesperrt ist, werden nach dem nächsten Entsperren hinzugefügt. Abgelehnte Zahlungen, Codes und Kontostandsmeldungen werden übersprungen.';
+
+  @override
+  String cardNotificationsAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Kartenzahlungen hinzugefügt',
+      one: '1 Kartenzahlung hinzugefügt',
+    );
+    return '$_temp0';
+  }
 }

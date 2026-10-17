@@ -55,6 +55,18 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+        <!-- Card notification capture: reads notifications of the bank/card
+             apps chosen in Settings > Card notifications, only after the user
+             granted notification access in the system settings. -->
+        <service
+            android:name=".CardNotificationListener"
+            android:label="@string/app_name"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -67,6 +79,27 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Known bank, card and wallet apps offered in the card
+             notification app picker (NotificationCaptureChannel.KNOWN_APPS). -->
+        <package android:name="com.google.android.apps.walletnfcrel" />
+        <package android:name="com.paypal.android.p2pmobile" />
+        <package android:name="com.revolut.revolut" />
+        <package android:name="de.number26.android" />
+        <package android:name="de.ingdiba.bankingapp" />
+        <package android:name="com.starfinanz.smob.android.sfinanzstatus" />
+        <package android:name="de.commerzbanking.mobil" />
+        <package android:name="de.comdirect.android" />
+        <package android:name="de.dkb.portalapp" />
+        <package android:name="de.traderepublic.app" />
+        <package android:name="com.db.pwcc.dbmobile" />
+        <package android:name="de.postbank.finanzassistent" />
+        <package android:name="com.transferwise.android" />
+        <package android:name="com.bunq.android" />
+        <package android:name="com.imaginecurve.curve.prd" />
+        <package android:name="co.uk.getmondo" />
+        <package android:name="com.chase.sig.android" />
+        <package android:name="com.konylabs.capitalone" />
+        <package android:name="com.americanexpress.android.acctsvcs.us" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

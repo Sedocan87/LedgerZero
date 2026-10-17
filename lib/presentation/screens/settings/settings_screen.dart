@@ -9,6 +9,7 @@ import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
+import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
 import 'dart:async';
@@ -520,6 +521,17 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/import-ynab'),
               ),
+              // Android only: iOS gives apps no access to other apps'
+              // notifications.
+              if (ref.watch(notificationCaptureChannelProvider).isSupported)
+                ListTile(
+                  key: const Key('settings.cardNotifications'),
+                  leading: const Icon(Icons.credit_card),
+                  title: Text(l10n.cardNotifications),
+                  subtitle: Text(l10n.cardNotificationsSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/card-notifications'),
+                ),
               ListTile(
                 key: const Key('settings.rules'),
                 leading: const Icon(Icons.rule),

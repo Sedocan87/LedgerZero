@@ -92,6 +92,7 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] Argon2id unlock time (46 MiB, 2 passes) on a mid-range Android phone stays under ~1.5 s.
 - [ ] Two-device sync matrix with real accounts: Android↔Android (Drive), iPhone↔iPhone (iCloud), iPhone↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
 - [ ] Notification delivery: scheduled-transaction reminders and sync-failure notifications on both platforms (permissions, exact vs. inexact alarms, tap routing).
+- [ ] Card notification capture with real bank apps (Sparkasse, ING, DKB, N26, Revolut, Google Wallet, ...): collect anonymised notification texts, add them as parser test cases, and check that the listener survives reboots and vendor battery savers (Xiaomi/MIUI).
 
 **Engineering**
 - [ ] Riverpod 3 migration (app-wide; `flutter_riverpod` stays on 2.6).
@@ -109,6 +110,9 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] CSV import: skip preamble lines above the header, separate debit/credit columns, tab-delimited files.
 - [ ] Accessibility: move keyboard/screen-reader focus to the first invalid field on validation errors (today `FormUtils.focusFirstError` only scrolls it into view, and only in the transaction and account forms).
 - [x] Budget templates: save, apply and delete exist in the budget screen's month menu (renaming a template is not supported).
+- [x] Card notification capture (Android): watched bank/card apps, encrypted queue until unlock, captured payments booked as unapproved transactions (docs/CARD_NOTIFICATIONS.md).
+- [ ] Card notifications on iOS: an "Add transaction" App Intent for the Shortcuts Transaction automation (Apple Wallet, iOS 17+).
+- [ ] Onboarding restarts from the "Your data, your device" slide when the POST_NOTIFICATIONS prompt appears right after the recovery-key step (seen twice on the Android 16 emulator, 2026-10-17; the third run, with the permission already granted, went through). The prompt itself is wrapped in `ExternalUiGuard`; the cause is not yet known (the router sends a locked mid-onboarding session back to `/onboarding`, so a lock or lost session is the first suspect).
 - [ ] Bank CSV presets for the major German banks (Sparkasse, ING, DKB, N26, Comdirect).
 - [ ] German keywords for the natural-language parser: only a handful of German category/income keywords and relative day words ("gestern", "heute", ...) exist; Chrono parses English date phrases only, and the keyword map only matches the seeded category names.
 

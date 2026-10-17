@@ -29,6 +29,7 @@ import 'package:ledger_zero/presentation/screens/import/import_confirmation_scre
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/card_notifications_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
@@ -200,6 +201,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'sync',
             name: 'sync-settings',
             builder: (context, state) => const SyncSettingsScreen(),
+          ),
+          GoRoute(
+            path: 'card-notifications',
+            name: 'card-notifications',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => const CardNotificationsScreen(),
           ),
           GoRoute(
             path: 'import-ynab',

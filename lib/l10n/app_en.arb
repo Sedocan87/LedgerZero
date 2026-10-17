@@ -2906,5 +2906,62 @@
   "seedCatCashReserve": "Cash Reserve",
   "@seedCatCashReserve": {
     "description": "Default category (Savings & Investments group): cash the user always keeps, budgeted once"
+  },
+  "cardNotifications": "Card notifications",
+  "cardNotificationsSubtitle": "Add card payments from your bank app's notifications",
+  "cardNotificationsIntro": "LedgerZero can read payment notifications from your bank, card or wallet apps and add each payment as a transaction for you to review. Only the apps you choose here are read; notifications from all other apps are ignored. Everything stays on this device.",
+  "cardNotificationsAccessTitle": "Notification access",
+  "cardNotificationsAccessGranted": "Granted",
+  "cardNotificationsAccessMissing": "Not granted: nothing is captured",
+  "cardNotificationsGrantAccess": "Grant access",
+  "cardNotificationsManageAccess": "Manage in system settings",
+  "cardNotificationsDisclosureTitle": "Allow LedgerZero to read notifications?",
+  "cardNotificationsDisclosureBody": "Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until you unlock LedgerZero. You can revoke access at any time in the system settings.",
+  "@cardNotificationsDisclosureBody": {
+    "description": "Prominent disclosure shown before opening the system notification access screen (Google Play policy)"
+  },
+  "cardNotificationsContinue": "Continue",
+  "cardNotificationsAppsTitle": "Apps",
+  "cardNotificationsNoApps": "No apps chosen yet.",
+  "cardNotificationsAddApp": "Add app",
+  "cardNotificationsAccountMissing": "No account chosen: payments wait here",
+  "cardNotificationsRemoveApp": "Stop watching {app}",
+  "@cardNotificationsRemoveApp": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "cardNotificationsPickAppTitle": "Choose the app",
+  "cardNotificationsPickAppHint": "Apps with a notification showing, apps that notified recently, and installed bank apps.",
+  "cardNotificationsNoCandidates": "No apps found. Keep a notification from your bank app in the notification shade and try again.",
+  "cardNotificationsOriginActive": "Notification showing",
+  "cardNotificationsOriginRecent": "Notified recently",
+  "cardNotificationsOriginKnown": "Bank or wallet app",
+  "cardNotificationsPickAccountTitle": "Add payments from {app} to",
+  "@cardNotificationsPickAccountTitle": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "cardNotificationsNoAccounts": "Create an account first.",
+  "cardNotificationsHeldTitle": "Waiting for you",
+  "cardNotificationsHeldUnreadable": "No amount found",
+  "cardNotificationsHeldNoAccount": "No account chosen for this app",
+  "cardNotificationsHeldForeignCurrency": "Different currency than the account",
+  "cardNotificationsAddManually": "Add",
+  "cardNotificationsDismiss": "Dismiss",
+  "cardNotificationsHowItWorksTitle": "How it works",
+  "cardNotificationsHowItWorks": "Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is locked are added after the next unlock. Declined payments, codes and balance notices are skipped.",
+  "cardNotificationsAdded": "{count, plural, =1{1 card payment added} other{{count} card payments added}}",
+  "@cardNotificationsAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

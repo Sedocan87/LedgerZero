@@ -13,10 +13,12 @@ import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
+import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
 import 'package:ledger_zero/presentation/providers/notification_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/security/privacy_shield.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
 
 class MyApp extends ConsumerStatefulWidget {
@@ -27,6 +29,8 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  StreamSubscription<void>? _capturedSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +41,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     // (paused while locked) and syncs on unlock, resume and local changes.
     ref.read(syncControllerProvider.notifier);
     _initializeNotifications();
+    // A card notification captured while the app is open and unlocked is
+    // booked at once; otherwise after the next unlock or resume.
+    _capturedSubscription = ref
+        .read(notificationCaptureChannelProvider)
+        .captured
+        .listen((_) => _processCapturedNotifications());
   }
 
   /// Notification taps (including the one that launched the app) go to the
@@ -53,6 +63,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _capturedSubscription?.cancel();
     super.dispose();
   }
 
@@ -62,11 +73,32 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       ref.read(exportFileServiceProvider).sweepStale();
       ref.read(syncControllerProvider.notifier).onAppResumed();
+      _processCapturedNotifications();
+    }
+  }
+
+  /// Books card notifications captured since the last run (needs the
+  /// unlocked database; a locked app retries after the next unlock).
+  Future<void> _processCapturedNotifications() async {
+    if (!ref.read(authProvider).isAuthenticated) {
+      return;
+    }
+    final capture = ref.read(notificationCaptureServiceProvider);
+    if (!capture.isSupported) {
+      return;
+    }
+    try {
+      await capture.processPending();
+    } on DatabaseLockedException {
+      // Locked meanwhile; runs again after the next unlock.
+    } catch (e, stackTrace) {
+      Logger.error('Booking captured card notifications failed', e, stackTrace);
     }
   }
 
   Future<void> _initializeServices() async {
     unawaited(ref.read(notificationTapRouterProvider).onUnlocked());
+    unawaited(_processCapturedNotifications());
     final notifications = ref.read(notificationServiceProvider);
     await notifications.initialize();
     final settings = ref.read(settingsProvider);

@@ -7,6 +7,8 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterFragmentActivity() {
+    private var notificationCapture: NotificationCaptureChannel? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Financial data: no screenshots, no screen recording, and a blank
@@ -23,5 +25,12 @@ class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         BiometricKeyChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        notificationCapture = NotificationCaptureChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        notificationCapture?.dispose()
+        notificationCapture = null
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 }

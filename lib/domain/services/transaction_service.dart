@@ -75,16 +75,22 @@ class TransactionService {
   // ---------------------------------------------------------------------
 
   /// Creates or updates a normal, transfer or split transaction.
+  ///
+  /// [recordUndo] is false for writes the user did not make in the UI
+  /// (captured card notifications), so Undo never reverts them unseen.
   Future<TransactionSaveResult> save(
     TransactionInput input, {
     bool allowReconciledChange = false,
+    bool recordUndo = true,
   }) async {
     _validate(input);
     try {
       final result = await _unitOfWork.run(
         () => _save(input, allowReconciledChange: allowReconciledChange),
       );
-      _undoService.addAction(result.action);
+      if (recordUndo) {
+        _undoService.addAction(result.action);
+      }
       Logger.info('Transaction saved: ${result.id}');
       await _runSavedHook(result.action);
       return result;

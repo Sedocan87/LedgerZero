@@ -3602,4 +3602,125 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get seedCatCashReserve => 'Cash Reserve';
+
+  @override
+  String get cardNotifications => 'Card notifications';
+
+  @override
+  String get cardNotificationsSubtitle =>
+      'Add card payments from your bank app\'s notifications';
+
+  @override
+  String get cardNotificationsIntro =>
+      'LedgerZero can read payment notifications from your bank, card or wallet apps and add each payment as a transaction for you to review. Only the apps you choose here are read; notifications from all other apps are ignored. Everything stays on this device.';
+
+  @override
+  String get cardNotificationsAccessTitle => 'Notification access';
+
+  @override
+  String get cardNotificationsAccessGranted => 'Granted';
+
+  @override
+  String get cardNotificationsAccessMissing =>
+      'Not granted: nothing is captured';
+
+  @override
+  String get cardNotificationsGrantAccess => 'Grant access';
+
+  @override
+  String get cardNotificationsManageAccess => 'Manage in system settings';
+
+  @override
+  String get cardNotificationsDisclosureTitle =>
+      'Allow LedgerZero to read notifications?';
+
+  @override
+  String get cardNotificationsDisclosureBody =>
+      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until you unlock LedgerZero. You can revoke access at any time in the system settings.';
+
+  @override
+  String get cardNotificationsContinue => 'Continue';
+
+  @override
+  String get cardNotificationsAppsTitle => 'Apps';
+
+  @override
+  String get cardNotificationsNoApps => 'No apps chosen yet.';
+
+  @override
+  String get cardNotificationsAddApp => 'Add app';
+
+  @override
+  String get cardNotificationsAccountMissing =>
+      'No account chosen: payments wait here';
+
+  @override
+  String cardNotificationsRemoveApp(String app) {
+    return 'Stop watching $app';
+  }
+
+  @override
+  String get cardNotificationsPickAppTitle => 'Choose the app';
+
+  @override
+  String get cardNotificationsPickAppHint =>
+      'Apps with a notification showing, apps that notified recently, and installed bank apps.';
+
+  @override
+  String get cardNotificationsNoCandidates =>
+      'No apps found. Keep a notification from your bank app in the notification shade and try again.';
+
+  @override
+  String get cardNotificationsOriginActive => 'Notification showing';
+
+  @override
+  String get cardNotificationsOriginRecent => 'Notified recently';
+
+  @override
+  String get cardNotificationsOriginKnown => 'Bank or wallet app';
+
+  @override
+  String cardNotificationsPickAccountTitle(String app) {
+    return 'Add payments from $app to';
+  }
+
+  @override
+  String get cardNotificationsNoAccounts => 'Create an account first.';
+
+  @override
+  String get cardNotificationsHeldTitle => 'Waiting for you';
+
+  @override
+  String get cardNotificationsHeldUnreadable => 'No amount found';
+
+  @override
+  String get cardNotificationsHeldNoAccount => 'No account chosen for this app';
+
+  @override
+  String get cardNotificationsHeldForeignCurrency =>
+      'Different currency than the account';
+
+  @override
+  String get cardNotificationsAddManually => 'Add';
+
+  @override
+  String get cardNotificationsDismiss => 'Dismiss';
+
+  @override
+  String get cardNotificationsHowItWorksTitle => 'How it works';
+
+  @override
+  String get cardNotificationsHowItWorks =>
+      'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is locked are added after the next unlock. Declined payments, codes and balance notices are skipped.';
+
+  @override
+  String cardNotificationsAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count card payments added',
+      one: '1 card payment added',
+    );
+    return '$_temp0';
+  }
 }
