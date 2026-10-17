@@ -296,8 +296,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     final catColor = category.color != null
         ? Color(category.color!)
         : theme.colorScheme.primary;
-    final catIcon =
-        categoryIcons[category.icon] ?? Icons.label_outline_rounded;
+    final catIcon = categoryIcons[category.icon] ?? Icons.label_outline_rounded;
 
     final budgeted = widget.viewModel.budgeted;
     final spent = widget.viewModel.activity.abs();
@@ -339,11 +338,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                           borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
                         alignment: Alignment.center,
-                        child: Icon(
-                          catIcon,
-                          size: 15,
-                          color: catColor,
-                        ),
+                        child: Icon(catIcon, size: 15, color: catColor),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

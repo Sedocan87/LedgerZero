@@ -18,10 +18,10 @@ iOS 17+) can call; not built yet.
    app it takes title and text (big text / inbox lines when present) and
    queues them in `CaptureStore`. Group summaries, ongoing and
    foreground-service notifications are skipped.
-3. The database is encrypted with the user's key and closed while the app
-   is locked, so nothing is booked then. After every unlock, on resume and
-   (while unlocked) right after a capture, `NotificationCaptureService`
-   parses the queue:
+3. The listener runs in the app's process even when the app is closed, so
+   it only queues. When the app starts (as soon as the database opens,
+   also behind the app lock), on resume and, while the app runs, right
+   after a capture, `NotificationCaptureService` parses the queue:
    * a payment with an amount in the account's currency becomes an
      **unapproved**, uncleared transaction dated on the day the
      notification arrived. The merchant becomes the payee (existing payee
@@ -64,7 +64,7 @@ understood, add its text (anonymised) as a test case and adjust the rules.
 * `CaptureStore` keeps the watched apps (package, label, account id) and
   the queue in the app's private SharedPreferences. The queue is encrypted
   with AES-256-GCM using a key in the Android KeyStore created without user
-  authentication (the listener must write while the app is locked). It
+  authentication (the listener writes while the app is closed). It
   protects the queue at rest against file extraction, not against code
   running as the app on a rooted device.
 * Queue limits: 200 entries, 90 days. Duplicate detection keeps SHA-256

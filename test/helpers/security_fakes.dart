@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/biometric_key_store.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:ledger_zero/services/security/secure_store.dart';
@@ -48,14 +49,6 @@ class FakeBiometricKeyStore implements BiometricKeyStore {
   Future<bool> hasKey() async => secret != null;
 
   @override
-  Future<void> store(Uint8List value, BiometricPromptTexts texts) async {
-    if (!available) {
-      throw const BiometricException(BiometricFailure.unavailable);
-    }
-    secret = Uint8List.fromList(value);
-  }
-
-  @override
   Future<Uint8List> read(BiometricPromptTexts texts) async {
     final failure = failNextReadWith;
     if (failure != null) {
@@ -81,3 +74,27 @@ const testPromptTexts = BiometricPromptTexts(
   subtitle: 'Confirm',
   cancel: 'Cancel',
 );
+
+/// [AppLockAuthenticator] with a scripted outcome.
+class FakeAppLockAuthenticator implements AppLockAuthenticator {
+  FakeAppLockAuthenticator({
+    this.screenLock = true,
+    this.result = AppLockResult.success,
+  });
+
+  bool screenLock;
+  AppLockResult result;
+  int prompts = 0;
+
+  @override
+  Future<bool> canAuthenticate() async => screenLock;
+
+  @override
+  Future<AppLockResult> authenticate({
+    required String title,
+    String? subtitle,
+  }) async {
+    prompts++;
+    return screenLock ? result : AppLockResult.unavailable;
+  }
+}

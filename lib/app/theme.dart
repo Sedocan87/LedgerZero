@@ -200,10 +200,7 @@ class AppTheme {
               size: 24,
             );
           }
-          return IconThemeData(
-            color: colorScheme.onSurfaceVariant,
-            size: 24,
-          );
+          return IconThemeData(color: colorScheme.onSurfaceVariant, size: 24);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {

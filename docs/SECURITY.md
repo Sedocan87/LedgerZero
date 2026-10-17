@@ -9,36 +9,36 @@ key design is described in detail in [ENCRYPTION.md](ENCRYPTION.md).
 | Data | Protection |
 | --- | --- |
 | Database (`db.sqlite` in the app documents directory) | SQLCipher 4 (AES-256), keyed with a random 256-bit data key (DEK) passed as a raw key. The connection refuses to open without the right key or without SQLCipher. |
-| Data key | Never stored in plaintext. Stored only wrapped with AES-256-GCM by (1) an Argon2id key from the master password, (2) a key from a 160-bit recovery key, (3) optionally a Keystore key that needs a fresh biometric authentication. |
-| Key vault | flutter_secure_storage 10: Android KeyStore-protected storage. |
+| Data key | Stored by flutter_secure_storage 10 (AES-GCM under an Android KeyStore key that needs no user authentication), so the database opens whenever the app runs, also behind the app lock. There is no master password. |
 | Backups (`.lzbk`) | Always encrypted (AES-256-GCM, Argon2id from a backup password, streamed in authenticated chunks). See [BACKUP_FORMAT.md](BACKUP_FORMAT.md). |
 | Exports (CSV, JSON, PDF, PNG, diagnostic log) | Plaintext by design. Written to the app's cache directory (not backed up), deleted once the share sheet completes (on Android 60 s later, because the receiving app may still be reading), and swept at start-up/resume if older than one hour. |
-| Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, queued until the next unlock: AES-256-GCM with an Android KeyStore key that needs no user authentication (the listener writes while the app is locked), max. 200 entries / 90 days. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
+| Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, queued until the app next runs: AES-256-GCM with an Android KeyStore key that needs no user authentication, max. 200 entries / 90 days. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
 | Diagnostic logs / crash reports | Off by default. When enabled, stored in the app cache directory, with SQL parameters, e-mail addresses, payloads and numbers removed. Shared only by the user, after a preview of the exact text. |
 
 Android: `android:allowBackup="false"`, so Google's auto backup never copies
-the database or key storage.
+the database or key storage. Android's file-based encryption protects all of
+it while the phone has not been unlocked since a restart.
 
-## 2. Authentication and session
+## 2. App lock and session
 
-* **Master password**: at least 10 characters, not a common password, with a
-  local strength meter. A wrong password is detected by the AES-GCM tag of
-  the wrapped key; there is no password hash stored.
-* **Recovery key**: shown at onboarding with an explicit "I saved it" step;
-  can be shown again or replaced in Settings > Security Settings after
-  re-entering the password. Unlocking with it requires setting a new password. It is
-  never put on the clipboard.
-* **Biometrics**: Android BiometricPrompt with a Keystore `CryptoObject`
-  (BIOMETRIC_STRONG, per-use authentication, invalidated when enrolment
-  changes). A "yes/no" biometric check alone never releases the key.
-* **Session**: the data key lives only in `sessionProvider` while unlocked.
-  Locking closes the database connection, zeroes the key bytes and emits
-  `AppLockState.locked` (`appLockStateProvider`).
-* **Auto-lock**: Immediate (default) locks as soon as the app is inactive or
-  in the background; timed modes lock after 1–30 minutes in the background
-  (monotonic clock and wall clock, the larger wins).
-* **Password change** re-wraps the data key in one write; the database is
-  not re-keyed and the recovery key keeps working.
+* **App lock** (Settings > Security, offered at onboarding): the system
+  prompt for a fingerprint/face or the device PIN, pattern or password
+  (BiometricPrompt, BIOMETRIC_STRONG or DEVICE_CREDENTIAL; below API 30
+  BIOMETRIC_WEAK or DEVICE_CREDENTIAL). It gates the UI; it does not
+  release a key. Turning it on needs a screen lock and one successful
+  prompt; if the screen lock is later removed, the app turns the lock off
+  instead of locking the user out.
+* **Session**: the start-up screen opens the database with the device key
+  (`sessionProvider`), then shows the app lock. The session stays open while
+  the lock is showing (sync and card capture keep running) and is closed
+  only for a factory reset; closing zeroes the key bytes.
+* **Auto-lock** (only with the app lock on): Immediate (default) locks as
+  soon as the app is inactive or in the background; timed modes lock after
+  1–30 minutes in the background (monotonic clock and wall clock, the
+  larger wins).
+* **Older installs** with a master password unlock once with the password,
+  recovery key or biometrics; the data key then moves to the device key
+  store and the vault is deleted (see [ENCRYPTION.md](ENCRYPTION.md)).
 
 ## 3. Screen privacy
 
@@ -68,8 +68,7 @@ the database or key storage.
 * Bring-your-own storage (Google Drive, `drive.file` scope).
 * **End-to-end encrypted:** every change file and snapshot is encrypted with
   AES-256-GCM under a key derived from the user's sync passphrase (Argon2id,
-  same parameters as the master password, then HKDF bound to the folder's
-  sync id). The cloud folder holds only ciphertext plus a manifest with the
+  m = 46 MiB, t = 2, then HKDF bound to the folder's sync id). The cloud folder holds only ciphertext plus a manifest with the
   KDF salt/parameters and a key-check value. File headers (device id,
   sequence, schema version, counts, timestamps) are readable but
   authenticated. Without the passphrase nobody with folder access can read
@@ -80,8 +79,9 @@ the database or key storage.
   therefore in encrypted backups). The passphrase is never stored.
 * Remote file names are validated against a strict pattern before use and
   never become local paths.
-* Sync pauses while the app is locked (the controller follows
-  `appLockStateProvider` and cancels a running sync).
+* Sync runs whenever the database is open, also behind the app lock (the
+  controller follows `appLockStateProvider`, which is the database session,
+  and cancels a running sync when it closes).
 
 ## 6. Application security
 
@@ -104,16 +104,18 @@ the database or key storage.
   headers (schema version, change counts, newest change time).
 * A weak sync passphrase: the KDF slows guessing, but anyone with folder
   access can try passphrases offline against the manifest.
-* Data on screen while the app is unlocked, and process memory of an
-  unlocked app on a rooted/jailbroken device.
+* Data on screen while the app is unlocked.
+* Code running as the app on a rooted or exploited phone: the device key
+  needs no user authentication, so such code can open the database even
+  while the app lock is showing. (The app lock gates the UI only. This was
+  accepted in exchange for no master password to lose and for background
+  work.)
 * Strings and native copies of the key (SQLCipher holds its own copy while
   the database is open) cannot be wiped from Dart.
 * Plaintext exports once the user has shared them with another app.
-* Queued card notifications on a rooted device: their KeyStore key is usable
-  by the app without authentication, so code running as the app can read
-  them.
-* Losing both the master password and the recovery key makes the data
-  permanently unreadable; there is no back door.
+* Losing the phone (or a KeyStore failure, or a factory reset of the phone)
+  loses the data unless there is a backup or a second synced phone; the key
+  never leaves the device.
 
 ## 8. Privacy
 

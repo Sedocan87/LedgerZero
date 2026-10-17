@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthState {
   final bool isOnboarded;
+
+  /// The UI is unlocked: the app lock was passed, or it is off. The
+  /// database session ([sessionProvider]) is independent of this.
   final bool isAuthenticated;
 
   const AuthState({this.isOnboarded = false, this.isAuthenticated = false});

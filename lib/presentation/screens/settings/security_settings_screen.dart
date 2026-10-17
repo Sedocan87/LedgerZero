@@ -4,20 +4,52 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/privacy_settings_provider.dart';
-import 'package:ledger_zero/presentation/providers/session_provider.dart';
-import 'package:ledger_zero/presentation/screens/settings/security/biometrics_controller.dart';
+import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
-import 'package:ledger_zero/services/security/biometric_key_store.dart';
+import 'package:ledger_zero/services/security/external_ui_guard.dart';
 
 class SecuritySettingsScreen extends ConsumerWidget {
   const SecuritySettingsScreen({super.key});
+
+  /// Turning the app lock on needs a screen lock and one successful prompt,
+  /// so nobody locks themselves out with a lock that cannot work.
+  Future<void> _setAppLock(
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
+    final notifier = ref.read(appLockEnabledProvider.notifier);
+    if (!enabled) {
+      await notifier.set(false);
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final authenticator = ref.read(appLockAuthenticatorProvider);
+    if (!await authenticator.canAuthenticate()) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.appLockNeedsScreenLock)),
+      );
+      return;
+    }
+    final result = await ExternalUiGuard.run(
+      () => authenticator.authenticate(
+        title: l10n.appLockPromptTitle,
+        subtitle: l10n.appLockPromptSubtitle,
+      ),
+    );
+    if (result == AppLockResult.success) {
+      await notifier.set(true);
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final currentDuration = ref.watch(autoLockDurationProvider);
-    final biometricsState = ref.watch(biometricsProvider);
+    final appLockEnabled = ref.watch(appLockEnabledProvider);
     final encryption = ref.watch(databaseEncryptionStatusProvider);
     final privacy = ref.watch(privacySettingsProvider);
 
@@ -72,16 +104,19 @@ class SecuritySettingsScreen extends ConsumerWidget {
                 title: Text(l10n.encryptionStatus),
                 subtitle: Text(statusText),
               ),
-              ListTile(
-                leading: const Icon(Icons.key),
-                title: Text(l10n.recoveryKey),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/security/recovery-key'),
+              SwitchListTile(
+                key: const Key('security_app_lock'),
+                secondary: const Icon(Icons.fingerprint),
+                title: Text(l10n.appLockTitle),
+                subtitle: Text(l10n.appLockSubtitle),
+                value: appLockEnabled,
+                onChanged: (value) => _setAppLock(context, ref, value),
               ),
               ListTile(
                 leading: const Icon(Icons.timer),
                 title: Text(l10n.autoLock),
                 subtitle: Text(getDurationLabel(currentDuration)),
+                enabled: appLockEnabled,
                 onTap: () async {
                   final selected = await showDialog<int>(
                     context: context,
@@ -108,47 +143,9 @@ class SecuritySettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.lock_clock),
                 title: Text(l10n.lockNow),
-                onTap: () => ref.read(sessionProvider.notifier).lock(),
-              ),
-              ListTile(
-                leading: const Icon(Icons.password),
-                title: Text(l10n.changePassword),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/settings/security/change-password'),
-              ),
-              biometricsState.when(
-                data: (state) => SwitchListTile(
-                  secondary: const Icon(Icons.fingerprint),
-                  title: Text(l10n.biometrics),
-                  subtitle: Text(l10n.useBiometricsDescription),
-                  value: state.isEnabled,
-                  onChanged: state.isAvailable
-                      ? (value) async {
-                          final success = await ref
-                              .read(biometricsProvider.notifier)
-                              .toggleBiometrics(
-                                value,
-                                BiometricPromptTexts(
-                                  title: l10n.biometricPromptEnableTitle,
-                                  subtitle: l10n.biometricPromptSubtitle,
-                                  cancel: l10n.cancel,
-                                ),
-                              );
-                          if (!success && value && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.biometricsSetupFailed),
-                              ),
-                            );
-                          }
-                        }
-                      : null,
-                ),
-                loading: () => ListTile(
-                  leading: const Icon(Icons.fingerprint),
-                  title: Text(l10n.loading),
-                ),
-                error: (_, _) => const SizedBox.shrink(),
+                enabled: appLockEnabled,
+                onTap: () =>
+                    ref.read(authProvider.notifier).setAuthenticated(false),
               ),
             ],
           ),

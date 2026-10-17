@@ -102,11 +102,12 @@ class DashboardStatsWidget extends ConsumerWidget {
                   );
                   // Don't allow navigating past current month
                   if (selectedMonth.isBefore(currentMonth)) {
-                    ref.read(selectedHomeMonthProvider.notifier).state =
-                        DateTime.utc(
-                          selectedMonth.year,
-                          selectedMonth.month + 1,
-                        );
+                    ref
+                        .read(selectedHomeMonthProvider.notifier)
+                        .state = DateTime.utc(
+                      selectedMonth.year,
+                      selectedMonth.month + 1,
+                    );
                   }
                 },
               ),

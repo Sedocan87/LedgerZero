@@ -25,6 +25,7 @@ class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         BiometricKeyChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        AppLockChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         notificationCapture = NotificationCaptureChannel(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 

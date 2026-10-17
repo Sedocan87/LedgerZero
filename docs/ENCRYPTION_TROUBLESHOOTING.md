@@ -1,66 +1,52 @@
 # Encryption Troubleshooting Guide
 
 LedgerZero encrypts its database with SQLCipher (AES-256) using a random
-data key. Your master password, your recovery key and (optionally)
-biometrics each unlock that data key. See [ENCRYPTION.md](ENCRYPTION.md).
+data key that Android's secure key store keeps for the app. There is no
+master password; the optional app lock uses your fingerprint, face or
+screen lock. See [ENCRYPTION.md](ENCRYPTION.md).
 
-## "Incorrect Password"
+## The app lock does not appear or cannot be turned on
 
-The password did not unlock the data key.
+* The app lock needs a screen lock (PIN, pattern or password) on the phone.
+  Set one up in the Android settings, then turn the lock on in
+  **Settings > Security**. Turning it on asks for your fingerprint, face or
+  screen lock once.
+* "This phone has no screen lock any more, so the app lock was turned off":
+  the screen lock was removed in the Android settings. Set one up again and
+  turn the app lock back on.
 
-* Check Caps Lock and the keyboard layout; use the eye icon to see what you
-  typed.
-* If you changed the password, use the new one. The database itself never
-  changes when you change the password.
-* If you forgot it, tap **Use recovery key** on the login screen.
+## "Unlock one last time"
 
-## Recovery key
+Shown once after updating from a version that used a master password.
+Unlock with your master password (or **Use recovery key**, or biometrics if
+they were on). The app then keeps its key in the phone's secure key store
+and never asks for the password again; the app lock is turned on if the
+phone has a screen lock.
 
-* Unlocking with the recovery key asks you to set a new master password
-  before the app opens. The recovery key keeps working afterwards.
-* It has 32 characters in groups of four. Case, spaces and dashes do not
-  matter; `O` is read as `0`, `I` and `L` as `1`.
-* "This recovery key is not correct": check each group. If you created a new
-  recovery key in Settings, only the newest one works.
-* After updating from a version before the new key design, the app shows a
-  **new** recovery key once. Keys saved before that update no longer work.
+* "Incorrect Password": check Caps Lock and the keyboard layout; use the eye
+  icon to see what you typed.
+* The recovery key has 32 characters in groups of four. Case, spaces and
+  dashes do not matter; `O` is read as `0`, `I` and `L` as `1`.
 * "An update is still being completed": unlock once with your password; the
   recovery key works afterwards.
 
-## Biometrics
+## "LedgerZero cannot open your data"
 
-* "Biometric unlock was turned off because the biometrics on this device
-  changed": adding or removing a fingerprint or face invalidates the
-  hardware key on purpose. Unlock with your password and turn biometrics on
-  again in Settings > Security Settings.
-* Biometric unlock needs a device passcode/PIN and an enrolled strong
-  biometric (Android Class 3; Face ID / Touch ID on iOS).
-* After updating from an older version, biometrics are turned off once and
-  must be enabled again.
+The key stored on this phone is missing or does not match the database
+file, for example after clearing the app's storage, copying a database file
+from another phone, or a damaged file. The data cannot be opened without
+that key.
 
-## "Your key is correct, but the database file could not be opened"
+The screen offers **Reset app**. It asks you to type a confirmation word
+(`RESET`; German `ZURÜCKSETZEN`) and then runs the same factory reset as
+**Settings > Factory Reset**: it deletes the database with its
+`-wal`/`-shm` files, the stored key, exported files, local crash reports and
+all preferences, and opens onboarding. Set the app up again, then restore a
+backup in **Settings > Backup & Export** or sync again from your other
+phone. (Deleting and reinstalling the app has the same effect.)
 
-The data key was unlocked but does not match the database file, for example
-after copying a database file from another device or a damaged file.
-Restore a backup (`.lzbk`) instead of copying database files.
-
-## "The key data of this app is missing"
-
-The secure storage that holds the wrapped data key is empty, e.g. after
-restoring an iPhone backup to a new device (keychain items are
-device-only) or clearing app storage on Android. The database cannot be
-unlocked without it, not even with the recovery key (it unwraps the key
-stored there).
-
-The login screen shows this message after an unlock attempt, together with
-a **Reset app** button. It asks you to type a confirmation word (`RESET`;
-German `ZURÜCKSETZEN`) and then runs the same factory reset as **Settings >
-Factory Reset**: it deletes the database with its `-wal`/`-shm` files, the
-key vault, legacy and biometric key entries, exported files, local crash
-reports and all preferences, and opens onboarding. Set the app up again and
-restore a backup in **Settings > Backup & Export**. (Deleting and
-reinstalling the app, or clearing its storage on Android, has the same
-effect.)
+To be safe, keep a recent backup or a second synced phone: the key never
+leaves this phone, so a lost or reset phone means lost data otherwise.
 
 ## Settings shows "The database file is NOT encrypted"
 
@@ -71,14 +57,14 @@ report it.
 
 ## Backups
 
-* Backups always need the backup password chosen when the backup was made
-  (not necessarily your master password).
+* Backups always need the backup password chosen when the backup was made.
 * "This backup was made by a newer version": update the app first.
 * Old backups (before format v2) made by an encrypted install cannot be
   restored; see [BACKUP_FORMAT.md](BACKUP_FORMAT.md).
 
 ## Performance
 
-Unlocking takes up to about a second on a mid-range phone: that is the
-deliberate cost of Argon2id key derivation, which makes guessing passwords
-expensive. Day-to-day database access is not affected.
+Entering a backup password or sync passphrase takes up to about a second on
+a mid-range phone: that is the deliberate cost of Argon2id key derivation,
+which makes guessing them expensive. Opening the app and day-to-day
+database access are not affected.

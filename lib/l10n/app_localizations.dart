@@ -1466,24 +1466,6 @@ abstract class AppLocalizations {
   /// **'Never'**
   String get autoLockNever;
 
-  /// No description provided for @changePassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Change Password'**
-  String get changePassword;
-
-  /// No description provided for @currentPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Current Password'**
-  String get currentPassword;
-
-  /// No description provided for @newPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'New Password'**
-  String get newPassword;
-
   /// No description provided for @incorrectPassword.
   ///
   /// In en, this message translates to:
@@ -1501,18 +1483,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Biometric Authentication'**
   String get biometrics;
-
-  /// No description provided for @useBiometricsDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Use Face ID / Fingerprint to unlock'**
-  String get useBiometricsDescription;
-
-  /// No description provided for @biometricsSetupFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric setup failed'**
-  String get biometricsSetupFailed;
 
   /// No description provided for @encryptionStatus.
   ///
@@ -2468,12 +2438,6 @@ abstract class AppLocalizations {
   /// **'Hide password'**
   String get hidePassword;
 
-  /// No description provided for @enterPasswordPrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Please enter your password'**
-  String get enterPasswordPrompt;
-
   /// Password rule shown under a new password field
   ///
   /// In en, this message translates to:
@@ -2540,71 +2504,11 @@ abstract class AppLocalizations {
   /// **'Protect your data'**
   String get setupProtectTitle;
 
-  /// No description provided for @setupPasswordHeading.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a master password'**
-  String get setupPasswordHeading;
-
-  /// No description provided for @setupPasswordExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'Your data is encrypted on this device with a random key. Your master password unlocks that key. If you forget the password, only your recovery key can unlock the data.'**
-  String get setupPasswordExplanation;
-
-  /// No description provided for @setupUseBiometrics.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock with biometrics'**
-  String get setupUseBiometrics;
-
-  /// No description provided for @setupUseBiometricsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Face ID or fingerprint, protected by this device\'s security hardware'**
-  String get setupUseBiometricsSubtitle;
-
-  /// No description provided for @setupPreparing.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparing encryption…'**
-  String get setupPreparing;
-
   /// No description provided for @setupFailed.
   ///
   /// In en, this message translates to:
   /// **'Security setup failed. Please try again.'**
   String get setupFailed;
-
-  /// No description provided for @recoveryKeyHeading.
-  ///
-  /// In en, this message translates to:
-  /// **'Your recovery key'**
-  String get recoveryKeyHeading;
-
-  /// No description provided for @recoveryKeyExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'If you forget your password, this key is the only way to unlock your data. Write it down on paper and keep it somewhere safe. Anyone who has this key can unlock your data on this device.'**
-  String get recoveryKeyExplanation;
-
-  /// No description provided for @recoveryKeyNoCopyNote.
-  ///
-  /// In en, this message translates to:
-  /// **'The key cannot be copied to the clipboard on purpose: other apps could read it there.'**
-  String get recoveryKeyNoCopyNote;
-
-  /// No description provided for @recoveryKeyConfirmSaved.
-  ///
-  /// In en, this message translates to:
-  /// **'I have written down my recovery key and stored it safely'**
-  String get recoveryKeyConfirmSaved;
-
-  /// No description provided for @biometricsEnableFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric unlock could not be turned on. You can try again in Settings.'**
-  String get biometricsEnableFailed;
 
   /// No description provided for @biometricPromptTitle.
   ///
@@ -2612,23 +2516,11 @@ abstract class AppLocalizations {
   /// **'Unlock LedgerZero'**
   String get biometricPromptTitle;
 
-  /// No description provided for @biometricPromptEnableTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Turn on biometric unlock'**
-  String get biometricPromptEnableTitle;
-
   /// No description provided for @biometricPromptSubtitle.
   ///
   /// In en, this message translates to:
   /// **'Confirm it is you to unlock your data'**
   String get biometricPromptSubtitle;
-
-  /// No description provided for @loginTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Welcome back'**
-  String get loginTitle;
 
   /// No description provided for @loginUnlock.
   ///
@@ -2701,72 +2593,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An update is still being completed. Please unlock once with your password.'**
   String get recoveryKeyNeedsPassword;
-
-  /// No description provided for @setNewPasswordTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a new password'**
-  String get setNewPasswordTitle;
-
-  /// No description provided for @setNewPasswordExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'You unlocked with your recovery key. Please choose a new master password. Your recovery key stays valid.'**
-  String get setNewPasswordExplanation;
-
-  /// No description provided for @migrationRecoveryKeyExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero now protects your data with a new key scheme. This is your new recovery key. Recovery keys you saved before no longer work.'**
-  String get migrationRecoveryKeyExplanation;
-
-  /// No description provided for @migrationBiometricsReset.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric unlock was turned off during the update. You can turn it on again in Settings.'**
-  String get migrationBiometricsReset;
-
-  /// No description provided for @passwordChangedRecoveryStillValid.
-  ///
-  /// In en, this message translates to:
-  /// **'Password changed. Your recovery key still works.'**
-  String get passwordChangedRecoveryStillValid;
-
-  /// No description provided for @changePasswordFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'The password could not be changed. Please try again.'**
-  String get changePasswordFailed;
-
-  /// No description provided for @recoveryKeyScreenExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'Your recovery key unlocks your data if you forget your password. Confirm your password to show it or to create a new one.'**
-  String get recoveryKeyScreenExplanation;
-
-  /// No description provided for @recoveryKeyRegenerate.
-  ///
-  /// In en, this message translates to:
-  /// **'Create a new recovery key'**
-  String get recoveryKeyRegenerate;
-
-  /// No description provided for @recoveryKeyRegenerateConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Your current recovery key will stop working. Continue?'**
-  String get recoveryKeyRegenerateConfirm;
-
-  /// No description provided for @recoveryKeyRegenerated.
-  ///
-  /// In en, this message translates to:
-  /// **'New recovery key saved. The old one no longer works.'**
-  String get recoveryKeyRegenerated;
-
-  /// No description provided for @confirmPasswordTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm your password'**
-  String get confirmPasswordTitle;
 
   /// No description provided for @encryptionStatusEncrypted.
   ///
@@ -6154,7 +5980,7 @@ abstract class AppLocalizations {
   /// Prominent disclosure shown before opening the system notification access screen (Google Play policy)
   ///
   /// In en, this message translates to:
-  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until you unlock LedgerZero. You can revoke access at any time in the system settings.'**
+  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until LedgerZero next runs. You can revoke access at any time in the system settings.'**
   String get cardNotificationsDisclosureBody;
 
   /// No description provided for @cardNotificationsContinue.
@@ -6286,7 +6112,7 @@ abstract class AppLocalizations {
   /// No description provided for @cardNotificationsHowItWorks.
   ///
   /// In en, this message translates to:
-  /// **'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is locked are added after the next unlock. Declined payments, codes and balance notices are skipped.'**
+  /// **'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped.'**
   String get cardNotificationsHowItWorks;
 
   /// No description provided for @cardNotificationsAdded.
@@ -6294,6 +6120,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 card payment added} other{{count} card payments added}}'**
   String cardNotificationsAdded(int count);
+
+  /// No description provided for @appLockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App lock'**
+  String get appLockTitle;
+
+  /// No description provided for @appLockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask for your fingerprint, face or screen lock when opening LedgerZero'**
+  String get appLockSubtitle;
+
+  /// No description provided for @appLockNeedsScreenLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up a screen lock in the Android settings to use the app lock.'**
+  String get appLockNeedsScreenLock;
+
+  /// No description provided for @appLockPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock LedgerZero'**
+  String get appLockPromptTitle;
+
+  /// No description provided for @appLockPromptSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your fingerprint, face or screen lock'**
+  String get appLockPromptSubtitle;
+
+  /// No description provided for @appLockTurnedOffNoScreenLock.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone has no screen lock any more, so the app lock was turned off.'**
+  String get appLockTurnedOffNoScreenLock;
+
+  /// No description provided for @lockScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero is locked'**
+  String get lockScreenTitle;
+
+  /// No description provided for @lockScreenKeyError.
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone.'**
+  String get lockScreenKeyError;
+
+  /// No description provided for @legacyUnlockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock one last time'**
+  String get legacyUnlockTitle;
+
+  /// No description provided for @legacyUnlockExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero no longer uses a master password. Unlock one last time with your password or recovery key. After that, the app keeps its key in this phone\'s secure key store, and the app lock uses your fingerprint, face or screen lock.'**
+  String get legacyUnlockExplanation;
+
+  /// No description provided for @setupDeviceHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data stays on this phone'**
+  String get setupDeviceHeading;
+
+  /// No description provided for @setupDeviceExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your budget is stored only on this phone, encrypted with a key that Android keeps in its secure key store. There is no account and no password to remember. So you don\'t lose anything with your phone, create backups or sync with a second phone.'**
+  String get setupDeviceExplanation;
+
+  /// No description provided for @lockScreenReadError.
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero could not read its key from this phone\'s secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.'**
+  String get lockScreenReadError;
 }
 
 class _AppLocalizationsDelegate

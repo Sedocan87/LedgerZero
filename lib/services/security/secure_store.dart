@@ -3,8 +3,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Minimal key-value interface over the platform keystore, so key logic can
 /// be tested with an in-memory fake.
 ///
-/// Only wrapped (encrypted) key blobs and non-secret metadata are stored
-/// here. Never a plaintext database key.
+/// Holds the database key ([DeviceKeyStore]; the platform encrypts it with
+/// a KeyStore-held key) and, on installs from before it, the wrapped key
+/// vault.
 abstract class SecureStore {
   Future<String?> read(String key);
   Future<void> write(String key, String value);

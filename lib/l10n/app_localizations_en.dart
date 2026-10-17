@@ -754,15 +754,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoLockNever => 'Never';
 
   @override
-  String get changePassword => 'Change Password';
-
-  @override
-  String get currentPassword => 'Current Password';
-
-  @override
-  String get newPassword => 'New Password';
-
-  @override
   String get incorrectPassword => 'Incorrect Password';
 
   @override
@@ -770,12 +761,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get biometrics => 'Biometric Authentication';
-
-  @override
-  String get useBiometricsDescription => 'Use Face ID / Fingerprint to unlock';
-
-  @override
-  String get biometricsSetupFailed => 'Biometric setup failed';
 
   @override
   String get encryptionStatus => 'Encryption Status';
@@ -1369,9 +1354,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hidePassword => 'Hide password';
 
   @override
-  String get enterPasswordPrompt => 'Please enter your password';
-
-  @override
   String passwordMinLength(int count) {
     return 'Use at least $count characters';
   }
@@ -1411,55 +1393,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupProtectTitle => 'Protect your data';
 
   @override
-  String get setupPasswordHeading => 'Set a master password';
-
-  @override
-  String get setupPasswordExplanation =>
-      'Your data is encrypted on this device with a random key. Your master password unlocks that key. If you forget the password, only your recovery key can unlock the data.';
-
-  @override
-  String get setupUseBiometrics => 'Unlock with biometrics';
-
-  @override
-  String get setupUseBiometricsSubtitle =>
-      'Face ID or fingerprint, protected by this device\'s security hardware';
-
-  @override
-  String get setupPreparing => 'Preparing encryption…';
-
-  @override
   String get setupFailed => 'Security setup failed. Please try again.';
-
-  @override
-  String get recoveryKeyHeading => 'Your recovery key';
-
-  @override
-  String get recoveryKeyExplanation =>
-      'If you forget your password, this key is the only way to unlock your data. Write it down on paper and keep it somewhere safe. Anyone who has this key can unlock your data on this device.';
-
-  @override
-  String get recoveryKeyNoCopyNote =>
-      'The key cannot be copied to the clipboard on purpose: other apps could read it there.';
-
-  @override
-  String get recoveryKeyConfirmSaved =>
-      'I have written down my recovery key and stored it safely';
-
-  @override
-  String get biometricsEnableFailed =>
-      'Biometric unlock could not be turned on. You can try again in Settings.';
 
   @override
   String get biometricPromptTitle => 'Unlock LedgerZero';
 
   @override
-  String get biometricPromptEnableTitle => 'Turn on biometric unlock';
-
-  @override
   String get biometricPromptSubtitle => 'Confirm it is you to unlock your data';
-
-  @override
-  String get loginTitle => 'Welcome back';
 
   @override
   String get loginUnlock => 'Unlock';
@@ -1502,47 +1442,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get recoveryKeyNeedsPassword =>
       'An update is still being completed. Please unlock once with your password.';
-
-  @override
-  String get setNewPasswordTitle => 'Set a new password';
-
-  @override
-  String get setNewPasswordExplanation =>
-      'You unlocked with your recovery key. Please choose a new master password. Your recovery key stays valid.';
-
-  @override
-  String get migrationRecoveryKeyExplanation =>
-      'LedgerZero now protects your data with a new key scheme. This is your new recovery key. Recovery keys you saved before no longer work.';
-
-  @override
-  String get migrationBiometricsReset =>
-      'Biometric unlock was turned off during the update. You can turn it on again in Settings.';
-
-  @override
-  String get passwordChangedRecoveryStillValid =>
-      'Password changed. Your recovery key still works.';
-
-  @override
-  String get changePasswordFailed =>
-      'The password could not be changed. Please try again.';
-
-  @override
-  String get recoveryKeyScreenExplanation =>
-      'Your recovery key unlocks your data if you forget your password. Confirm your password to show it or to create a new one.';
-
-  @override
-  String get recoveryKeyRegenerate => 'Create a new recovery key';
-
-  @override
-  String get recoveryKeyRegenerateConfirm =>
-      'Your current recovery key will stop working. Continue?';
-
-  @override
-  String get recoveryKeyRegenerated =>
-      'New recovery key saved. The old one no longer works.';
-
-  @override
-  String get confirmPasswordTitle => 'Confirm your password';
 
   @override
   String get encryptionStatusEncrypted => 'Encrypted with SQLCipher (AES-256)';
@@ -3622,7 +3521,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardNotificationsDisclosureBody =>
-      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until you unlock LedgerZero. You can revoke access at any time in the system settings.';
+      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until LedgerZero next runs. You can revoke access at any time in the system settings.';
 
   @override
   String get cardNotificationsContinue => 'Continue';
@@ -3697,7 +3596,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardNotificationsHowItWorks =>
-      'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is locked are added after the next unlock. Declined payments, codes and balance notices are skipped.';
+      'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped.';
 
   @override
   String cardNotificationsAdded(int count) {
@@ -3709,4 +3608,51 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get appLockTitle => 'App lock';
+
+  @override
+  String get appLockSubtitle =>
+      'Ask for your fingerprint, face or screen lock when opening LedgerZero';
+
+  @override
+  String get appLockNeedsScreenLock =>
+      'Set up a screen lock in the Android settings to use the app lock.';
+
+  @override
+  String get appLockPromptTitle => 'Unlock LedgerZero';
+
+  @override
+  String get appLockPromptSubtitle =>
+      'Use your fingerprint, face or screen lock';
+
+  @override
+  String get appLockTurnedOffNoScreenLock =>
+      'This phone has no screen lock any more, so the app lock was turned off.';
+
+  @override
+  String get lockScreenTitle => 'LedgerZero is locked';
+
+  @override
+  String get lockScreenKeyError =>
+      'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone.';
+
+  @override
+  String get legacyUnlockTitle => 'Unlock one last time';
+
+  @override
+  String get legacyUnlockExplanation =>
+      'LedgerZero no longer uses a master password. Unlock one last time with your password or recovery key. After that, the app keeps its key in this phone\'s secure key store, and the app lock uses your fingerprint, face or screen lock.';
+
+  @override
+  String get setupDeviceHeading => 'Your data stays on this phone';
+
+  @override
+  String get setupDeviceExplanation =>
+      'Your budget is stored only on this phone, encrypted with a key that Android keeps in its secure key store. There is no account and no password to remember. So you don\'t lose anything with your phone, create backups or sync with a second phone.';
+
+  @override
+  String get lockScreenReadError =>
+      'LedgerZero could not read its key from this phone\'s secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.';
 }

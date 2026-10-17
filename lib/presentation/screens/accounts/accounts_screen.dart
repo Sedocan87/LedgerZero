@@ -128,8 +128,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             );
           }
           final currencies = accounts.map((a) => a.currency).toSet();
-          final showTotalBanner =
-              accounts.length > 1 && currencies.length == 1;
+          final showTotalBanner = accounts.length > 1 && currencies.length == 1;
           final totalBalance = showTotalBanner
               ? accounts.fold<int>(0, (sum, a) => sum + a.balance)
               : 0;
@@ -138,12 +137,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
               child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(
-                  0,
-                  AppSpacing.sm,
-                  0,
-                  88,
-                ),
+                padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 88),
                 itemCount: accounts.length + (showTotalBanner ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (showTotalBanner && index == 0) {
@@ -206,8 +200,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                       ),
                     );
                   }
-                  final account =
-                      accounts[index - (showTotalBanner ? 1 : 0)];
+                  final account = accounts[index - (showTotalBanner ? 1 : 0)];
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,

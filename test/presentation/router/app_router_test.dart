@@ -1,6 +1,5 @@
 // The app router's gates (onboarding, lock) and deep links while locked,
 // with the real routes and screens on an in-memory database.
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +13,7 @@ import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
-import 'package:ledger_zero/presentation/screens/login_screen.dart';
+import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/security/key_vault.dart';
@@ -87,8 +86,9 @@ void main() {
   String location(ProviderContainer c) =>
       c.read(routerProvider).routerDelegate.currentConfiguration.uri.toString();
 
+  /// Passing the app lock (the database itself is the test database).
   void unlock(ProviderContainer c) =>
-      c.read(sessionProvider.notifier).unlock(Uint8List(32));
+      c.read(authProvider.notifier).setAuthenticated(true);
 
   testWidgets('not onboarded: every location goes to onboarding', (
     tester,
@@ -102,7 +102,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(location(c), '/onboarding', reason: target);
     }
-    // The steps after the password need the unlocked database.
+    // The steps after the security step need the open database.
     c.read(routerProvider).go('/onboarding/budget-setup');
     await tester.pumpAndSettle();
     expect(location(c), '/onboarding');
@@ -110,18 +110,17 @@ void main() {
     await unmount(tester, c);
   });
 
-  testWidgets('onboarded and locked: the app starts at the login screen', (
+  testWidgets('onboarded and locked: the app starts at the lock screen', (
     tester,
   ) async {
     final c = await pumpRouter(tester, onboarded: true);
     expect(location(c), '/login');
-    expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.byType(LockScreen), findsOneWidget);
     expect(find.byType(HomeScreen), findsNothing);
     await unmount(tester, c);
   });
 
-  testWidgets('unlocking opens Home; the tabs work; locking returns to login', (
+  testWidgets('unlocking opens Home; the tabs work; locking returns to the lock screen', (
     tester,
   ) async {
     final c = await pumpRouter(tester, onboarded: true);
@@ -129,9 +128,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(location(c), '/');
     expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.byType(LoginScreen), findsNothing);
+    expect(find.byType(LockScreen), findsNothing);
 
-    // Login and onboarding are not reachable while unlocked.
+    // The lock screen and onboarding are not reachable while unlocked.
     c.read(routerProvider).go('/login');
     await tester.pumpAndSettle();
     expect(location(c), '/');
@@ -149,18 +148,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(location(c), '/login');
     expect(find.byType(AccountsScreen), findsNothing);
-    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(LockScreen), findsOneWidget);
     await unmount(tester, c);
   });
 
-  testWidgets('a deep link while locked shows login, then opens after unlock', (
+  testWidgets('a deep link while locked shows the lock screen, then opens after unlock', (
     tester,
   ) async {
     final c = await pumpRouter(tester, onboarded: true);
     c.read(routerProvider).go('/settings/scheduled-transactions');
     await tester.pumpAndSettle();
     expect(location(c), '/login');
-    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(LockScreen), findsOneWidget);
     expect(
       c.read(pendingLocationProvider).value,
       '/settings/scheduled-transactions',

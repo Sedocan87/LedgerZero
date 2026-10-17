@@ -1,15 +1,17 @@
 // The main user journey on a device, with real storage (Keychain/Keystore,
 // SQLCipher file, preferences):
 //
-// 1. First launch: onboarding with a master password and recovery key,
-//    first account, a transaction, money assigned in the budget.
-// 2. Relaunch: the app starts locked; a wrong password is rejected, the
-//    right one unlocks the same data; a CSV file is imported through the
-//    import screens; "Lock now" returns to the login screen.
+// 1. First launch: onboarding with the app lock on (the device key is
+//    created), first account, a transaction, money assigned in the budget.
+// 2. Relaunch: the database opens with the device key behind the lock
+//    screen; a cancelled prompt keeps the UI locked, a successful one
+//    shows the same data; a CSV file is imported through the import
+//    screens; "Lock now" returns to the lock screen while the database
+//    stays open.
 //
-// The tests run in order and share the device state. Biometric unlock
-// cannot be exercised on a simulator/emulator and is replaced by "not
-// available".
+// The tests run in order and share the device state. The system prompt
+// (fingerprint/face/PIN) cannot be driven on an emulator and is scripted
+// (see ScriptedAppLock).
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -27,13 +29,14 @@ import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_calculator.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_row.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
-import 'package:ledger_zero/presentation/screens/login_screen.dart';
+import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/screens/lock_screen.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'helpers.dart';
 
-const password = 'Correct Horse Battery 9';
 
 /// A picked file that lives on local disk.
 final class _DiskPlatformFile extends PlatformFile {
@@ -98,14 +101,8 @@ void main() {
     await tapWhenShown(tester, find.text('Next'));
     await tapWhenShown(tester, find.text('Get Started'));
 
-    // Master password, then the recovery key (key derivation runs here).
-    await waitFor(tester, find.byType(TextFormField));
-    await tester.enterText(find.byType(TextFormField).at(0), password);
-    await tester.enterText(find.byType(TextFormField).at(1), password);
-    await tapWhenShown(tester, find.text('Continue'));
-    await waitFor(tester, find.byType(CheckboxListTile));
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pump();
+    // Where the data lives; the app lock stays on (the default).
+    await waitFor(tester, find.text('Your data stays on this phone'));
     await tapWhenShown(tester, find.widgetWithText(ElevatedButton, 'Continue'));
 
     // Budget basics and completion.
@@ -199,24 +196,20 @@ void main() {
     await closeApp(tester, app);
   });
 
-  testWidgets('relaunch: locked, password unlock, CSV import, lock now', (
+  testWidgets('relaunch: app lock, same data, CSV import, lock now', (
     tester,
   ) async {
+    appLock.result = AppLockResult.cancelled;
     final app = await launchApp(tester);
-    await waitFor(tester, find.byType(LoginScreen));
+    await waitFor(tester, find.text('LedgerZero is locked'));
     expect(find.byType(HomeScreen), findsNothing);
+    // The database is already open behind the lock screen.
+    expect(app.read(appLockStateProvider), AppLockState.unlocked);
 
-    // A wrong password keeps the app locked.
-    await tester.enterText(find.byType(TextField).first, 'not the password');
-    await tapWhenShown(tester, find.text('Unlock'));
-    await waitFor(tester, find.text('Incorrect Password'));
-    expect(app.read(appLockStateProvider), AppLockState.locked);
-
-    await tester.enterText(find.byType(TextField).first, password);
+    appLock.result = AppLockResult.success;
     await tapWhenShown(tester, find.text('Unlock'));
     await waitFor(tester, find.byType(HomeScreen));
     await dismissTutorial(tester);
-    expect(app.read(appLockStateProvider), AppLockState.unlocked);
 
     // The data of the first launch is there (same keyed database file).
     final accounts = await app.read(accountRepositoryProvider).getAllAccounts();
@@ -260,10 +253,12 @@ void main() {
     final after = await app.read(accountRepositoryProvider).getAllAccounts();
     expect(after.single.balance, 100000 - 1234 + 250000 - 450 - 4567);
 
-    // Lock now: back to the login screen, the database is closed.
-    await app.read(sessionProvider.notifier).lock();
-    await waitFor(tester, find.byType(LoginScreen));
-    expect(app.read(appLockStateProvider), AppLockState.locked);
+    // Lock now: back to the lock screen; the database stays open.
+    appLock.result = AppLockResult.cancelled;
+    app.read(authProvider.notifier).setAuthenticated(false);
+    await waitFor(tester, find.byType(LockScreen));
+    expect(app.read(appLockStateProvider), AppLockState.unlocked);
+    appLock.result = AppLockResult.success;
 
     await closeApp(tester, app);
     await resetAppData();

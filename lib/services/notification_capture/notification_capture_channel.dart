@@ -64,7 +64,7 @@ class CandidateApp {
   final CandidateAppOrigin origin;
 }
 
-/// A notification captured while the app was locked or closed, waiting to
+/// A notification captured while the app was closed or busy, waiting to
 /// become a transaction.
 class CapturedNotification {
   const CapturedNotification({

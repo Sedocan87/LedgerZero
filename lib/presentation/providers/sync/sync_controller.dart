@@ -43,9 +43,10 @@ enum SyncPassphraseResult {
 
 /// Owns sync for the app's lifetime (decision D6, finding H5):
 ///
-/// * pauses when the app locks (cancels the running sync, stops timers and
-///   subscriptions) and resumes after unlock;
-/// * syncs automatically on unlock, on app resume (if the last sync is
+/// * pauses while the database is closed (cancels the running sync, stops
+///   timers and subscriptions) and resumes when it opens. It is open from
+///   start-up on, also behind the app lock (see [appLockStateProvider]);
+/// * syncs automatically when the database opens, on app resume (if the last sync is
 ///   older than [resumeThreshold]), [debounce] after local changes, on the
 ///   periodic timer of the chosen frequency, and when connectivity returns
 ///   — none of these when the frequency is manual;
@@ -357,7 +358,7 @@ class SyncController extends StateNotifier<SyncState> {
     } on SyncCancelledException {
       _set(state.copyWith(status: SyncStatus.connected));
     } on DatabaseLockedException {
-      // Locked while running; resumes after unlock.
+      // Closed while running (factory reset); resumes when it reopens.
     } catch (e, stack) {
       if (_cancellation?.isCancelled ?? false) {
         return;
@@ -401,7 +402,7 @@ class SyncController extends StateNotifier<SyncState> {
     return null;
   }
 
-  /// The engine for the selected provider (recreated after unlock, provider
+  /// The engine for the selected provider (recreated after a provider
   /// change or a reopened database).
   SyncEngine? _currentEngine() {
     final deps = _deps;

@@ -16,7 +16,7 @@ import 'package:ledger_zero/presentation/screens/categories/categories_screen.da
 import 'package:ledger_zero/presentation/screens/categories/reorder_categories_screen.dart';
 import 'package:ledger_zero/presentation/screens/categories/reorder_groups_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
-import 'package:ledger_zero/presentation/screens/login_screen.dart';
+import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/presentation/screens/payees/payee_detail_screen.dart';
 import 'package:ledger_zero/presentation/screens/payees/payees_screen.dart';
 import 'package:ledger_zero/presentation/screens/rules/add_edit_rule_screen.dart';
@@ -31,8 +31,6 @@ import 'package:ledger_zero/presentation/screens/settings/settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/card_notifications_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security_settings_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/diagnostics_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/help_screen.dart';
@@ -93,8 +91,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isGoingToLogin = state.matchedLocation == '/login';
 
       if (!isOnboarded) {
-        // The steps after the password need the unlocked database; if the
-        // app locked mid-onboarding, start over from the beginning.
+        // The steps after the security step need the open database; if it
+        // is not open (the app was restarted mid-onboarding), start over.
         final needsSession =
             state.matchedLocation.startsWith('/onboarding/budget-setup') ||
             state.matchedLocation.startsWith('/onboarding/completion');
@@ -152,7 +150,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => const LockScreen(),
       ),
       GoRoute(
         path: '/add-transaction',
@@ -237,16 +235,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'security-settings',
             builder: (context, state) => const SecuritySettingsScreen(),
             routes: [
-              GoRoute(
-                path: 'recovery-key',
-                name: 'recovery-key',
-                builder: (context, state) => const RecoveryKeyScreen(),
-              ),
-              GoRoute(
-                path: 'change-password',
-                name: 'change-password',
-                builder: (context, state) => const ChangePasswordScreen(),
-              ),
               GoRoute(
                 path: 'diagnostics',
                 name: 'diagnostics',

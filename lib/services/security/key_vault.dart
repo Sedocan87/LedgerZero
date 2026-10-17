@@ -161,7 +161,10 @@ class PendingVault {
   PendingVault(this.record, this.dek, this.recoveryKey);
 }
 
-/// Creates, unlocks and re-wraps the key vault. See [VaultRecord].
+/// The master-password key vault of installs from before
+/// [DeviceKeyStore]. It is only read (unlock once, then the key moves to the
+/// device key store, see `LegacyKeyMigration`); [build] is still used by the
+/// pre-v2 migration in `UnlockService`. See [VaultRecord].
 class KeyVault {
   static const String storageKey = 'lz_key_vault_v2';
   static const int dekLength = 32;
@@ -284,89 +287,10 @@ class KeyVault {
     }
   }
 
-  /// Re-wraps the DEK under [newPassword] after checking [currentPassword].
-  /// One storage write; the recovery key stays valid and the database is not
-  /// re-keyed.
-  Future<void> changePassword({
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    final record = await load();
-    final dek = await unwrapWithPassword(record, currentPassword);
-    try {
-      await _rewrapPassword(record, dek, newPassword);
-    } finally {
-      zeroBytes(dek);
-    }
-  }
-
-  /// Sets a new password for an already-unwrapped [dek] (after a recovery-key
-  /// login). One storage write; the recovery key stays valid.
-  Future<void> setPassword({
-    required Uint8List dek,
-    required String newPassword,
-  }) async {
-    final record = await load();
-    _checkDek(record, dek);
-    await _rewrapPassword(record, dek, newPassword);
-  }
-
   /// Returns the current recovery key, decrypted with the session's [dek].
   Future<RecoveryKey> revealRecoveryKey(Uint8List dek) async {
     final record = await load();
     return _decryptRecoveryKey(record, dek);
-  }
-
-  /// Builds a record with a new recovery key for [dek]. The old one stops
-  /// working once the returned record is saved with [save].
-  Future<PendingRecoveryRotation> prepareRecoveryKeyRotation(
-    Uint8List dek,
-  ) async {
-    final record = await load();
-    _checkDek(record, dek);
-    final recoveryKey = RecoveryKey.generate();
-    final recoverySalt = secureRandomBytes(16);
-    final kek = _recoveryKek(recoveryKey, recoverySalt);
-    final recoveryNonce = AesGcm.randomNonce();
-    final recoveryCiphertext = AesGcm.encrypt(
-      key: kek,
-      nonce: recoveryNonce,
-      plaintext: dek,
-      aad: _recoveryAad,
-    );
-    zeroBytes(kek);
-    final recoveryKeyNonce = AesGcm.randomNonce();
-    final recoveryKeyCiphertext = AesGcm.encrypt(
-      key: dek,
-      nonce: recoveryKeyNonce,
-      plaintext: recoveryKey.bytes,
-      aad: _recoveryKeyAad,
-    );
-    return PendingRecoveryRotation(
-      record.copyWith(
-        recoverySalt: recoverySalt,
-        recoveryNonce: recoveryNonce,
-        recoveryCiphertext: recoveryCiphertext,
-        recoveryKeyNonce: recoveryKeyNonce,
-        recoveryKeyCiphertext: recoveryKeyCiphertext,
-      ),
-      recoveryKey,
-    );
-  }
-
-  Future<void> _rewrapPassword(
-    VaultRecord record,
-    Uint8List dek,
-    String newPassword,
-  ) async {
-    final part = await _wrapWithPassword(dek, newPassword);
-    await save(
-      record.copyWith(
-        passwordKdf: part.$1,
-        passwordNonce: part.$2,
-        passwordCiphertext: part.$3,
-      ),
-    );
   }
 
   Future<(KdfParams, Uint8List, Uint8List)> _wrapWithPassword(
@@ -387,12 +311,6 @@ class KeyVault {
     } finally {
       zeroBytes(kek);
     }
-  }
-
-  /// Confirms [dek] belongs to [record] (the recovery-key ciphertext is
-  /// authenticated with it), so a stale key is never re-wrapped.
-  void _checkDek(VaultRecord record, Uint8List dek) {
-    _decryptRecoveryKey(record, dek).destroy();
   }
 
   RecoveryKey _decryptRecoveryKey(VaultRecord record, Uint8List dek) {
@@ -416,11 +334,4 @@ class KeyVault {
       Uint8List.fromList([..._passwordAad, ...params.canonicalBytes()]);
 
   static Uint8List _ascii(String s) => Uint8List.fromList(utf8.encode(s));
-}
-
-class PendingRecoveryRotation {
-  final VaultRecord record;
-  final RecoveryKey recoveryKey;
-
-  PendingRecoveryRotation(this.record, this.recoveryKey);
 }

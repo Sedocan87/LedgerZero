@@ -127,9 +127,7 @@ class TransactionListItem extends ConsumerWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: scheme.primary.withValues(
-                            alpha: 0.1,
-                          ),
+                          color: scheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(

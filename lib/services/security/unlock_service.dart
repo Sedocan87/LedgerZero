@@ -77,8 +77,7 @@ class UnlockService {
     throw const VaultMissingException();
   }
 
-  /// Unlocks with the recovery key. The UI must then make the user set a
-  /// new password ([KeyVault.setPassword]).
+  /// Unlocks with the recovery key.
   Future<Uint8List> unlockWithRecoveryKey(String typed) async {
     final record = await _vault.load();
     if (record.legacyMigrationPending) {

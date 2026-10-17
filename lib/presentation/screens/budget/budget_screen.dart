@@ -246,9 +246,7 @@ class _NoAccountsPrompt extends ConsumerWidget {
         color: scheme.secondaryContainer,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: scheme.secondary.withValues(alpha: 0.25),
-          ),
+          side: BorderSide(color: scheme.secondary.withValues(alpha: 0.25)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),

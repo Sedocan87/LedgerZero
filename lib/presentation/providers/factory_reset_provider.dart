@@ -9,24 +9,24 @@ import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 
 /// Deletes everything LedgerZero stores on this device and returns the app
 /// to the "not onboarded" state. Used by Settings > Factory reset and by the
-/// login screen when the key vault is missing (the data can no longer be
-/// unlocked, and Settings is unreachable while locked).
+/// lock screen when the database key is missing (the data can no longer be
+/// opened, and Settings is unreachable).
 class FactoryResetService {
   FactoryResetService(this._ref);
 
   final Ref _ref;
 
-  /// Locks the session (closes the database, zeroes the key), deletes the
-  /// database with its WAL/SHM files, every key vault / legacy / biometric
-  /// key entry, exported files, local error reports, captured card
-  /// notifications with their settings and preferences, and
-  /// marks the app as not onboarded. The caller navigates to onboarding.
+  /// Closes the session (closes the database, zeroes the key), deletes the
+  /// database with its WAL/SHM files, the device key and any key vault /
+  /// legacy / biometric key entry of older versions, exported files, local
+  /// error reports, captured card notifications with their settings and
+  /// preferences (the app lock setting included), and marks the app as not
+  /// onboarded. The caller navigates to onboarding.
   Future<void> reset() async {
-    await _ref.read(sessionProvider.notifier).lock();
+    await _ref.read(sessionProvider.notifier).close();
     await deleteDatabaseFiles();
-    await _ref.read(keyVaultProvider).delete();
-    await _ref.read(legacyKeyMaterialProvider).deleteAll();
-    await _ref.read(biometricKeyStoreProvider).delete();
+    await _ref.read(deviceKeyStoreProvider).delete();
+    await _ref.read(legacyKeyMigrationProvider).deleteLeftovers();
     await _ref.read(exportFileServiceProvider).deleteAll();
     await _ref.read(notificationCaptureChannelProvider).clear();
     await LocalErrorReportingService().deleteAll();

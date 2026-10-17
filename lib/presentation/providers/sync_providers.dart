@@ -64,7 +64,8 @@ final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
 });
 
 /// The app-wide sync controller. Created at app start (MyApp); follows
-/// [appLockStateProvider]: paused while locked, running after unlock.
+/// [appLockStateProvider] (the database session, not the app lock): paused
+/// while the database is closed, running while it is open.
 final syncControllerProvider = StateNotifierProvider<SyncController, SyncState>(
   (ref) {
     final drive = ref.watch(googleDriveServiceProvider);

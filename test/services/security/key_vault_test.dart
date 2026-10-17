@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/services/security/key_vault.dart';
@@ -80,90 +79,10 @@ void main() {
     },
   );
 
-  test(
-    'password change is one write, keeps the key and the recovery key',
-    () async {
-      final pending = await createVault('old password 123');
-      final recoveryText = pending.recoveryKey.format();
-      final writesBefore = store.writeCount;
-
-      await vault.changePassword(
-        currentPassword: 'old password 123',
-        newPassword: 'new password 456',
-      );
-
-      expect(store.writeCount, writesBefore + 1);
-      expect(await vault.unlockWithPassword('new password 456'), pending.dek);
-      expect(
-        () => vault.unlockWithPassword('old password 123'),
-        throwsA(isA<WrongPasswordException>()),
-      );
-      expect(await vault.unlockWithRecoveryKey(recoveryText), pending.dek);
-    },
-  );
-
-  test(
-    'password change with a wrong current password changes nothing',
-    () async {
-      await createVault('old password 123');
-      final before = store.values[KeyVault.storageKey];
-      await expectLater(
-        vault.changePassword(
-          currentPassword: 'nope nope nope',
-          newPassword: 'new password 456',
-        ),
-        throwsA(isA<WrongPasswordException>()),
-      );
-      expect(store.values[KeyVault.storageKey], before);
-    },
-  );
-
-  test(
-    'recovery login can set a new password; recovery key stays valid',
-    () async {
-      final pending = await createVault('forgotten password');
-      final recoveryText = pending.recoveryKey.format();
-      final dek = await vault.unlockWithRecoveryKey(recoveryText);
-
-      await vault.setPassword(dek: dek, newPassword: 'brand new password');
-
-      expect(await vault.unlockWithPassword('brand new password'), pending.dek);
-      expect(await vault.unlockWithRecoveryKey(recoveryText), pending.dek);
-    },
-  );
-
-  test('setPassword refuses a key that does not belong to the vault', () async {
-    await createVault('some password 1');
-    expect(
-      () => vault.setPassword(
-        dek: Uint8List(32),
-        newPassword: 'other password 2',
-      ),
-      throwsA(isA<VaultCorruptException>()),
-    );
-  });
-
-  test('recovery key can be shown again and rotated', () async {
+  test('recovery key can be shown again', () async {
     final pending = await createVault('some password 1');
     final shown = await vault.revealRecoveryKey(pending.dek);
     expect(shown.format(), pending.recoveryKey.format());
-
-    final rotation = await vault.prepareRecoveryKeyRotation(pending.dek);
-    // Not active until saved.
-    expect(
-      await vault.unlockWithRecoveryKey(pending.recoveryKey.format()),
-      pending.dek,
-    );
-    await vault.save(rotation.record);
-    expect(
-      () => vault.unlockWithRecoveryKey(pending.recoveryKey.format()),
-      throwsA(isA<InvalidRecoveryKeyException>()),
-    );
-    expect(
-      await vault.unlockWithRecoveryKey(rotation.recoveryKey.format()),
-      pending.dek,
-    );
-    expect(await vault.unlockWithPassword('some password 1'), pending.dek);
   });
 
   test('swapping in weaker KDF parameters makes the unwrap fail', () async {

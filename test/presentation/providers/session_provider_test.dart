@@ -10,6 +10,7 @@ import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
 import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
@@ -27,7 +28,11 @@ void main() {
           const MethodChannel('plugins.flutter.io/path_provider'),
           (call) async => dir.path,
         );
-    SharedPreferences.setMockInitialValues({kAutoLockDurationKey: 0});
+    SharedPreferences.setMockInitialValues({
+      kAutoLockDurationKey: 0,
+      kAppLockEnabledKey: true,
+      'user_onboarded': true,
+    });
     final prefs = await SharedPreferences.getInstance();
     container = ProviderContainer(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
@@ -39,7 +44,7 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
-  test('locked: there is no database, not even an unkeyed one', () {
+  test('closed: there is no database, not even an unkeyed one', () {
     expect(
       () => container.read(databaseProvider),
       throwsA(isA<DatabaseLockedException>()),
@@ -48,7 +53,7 @@ void main() {
   });
 
   test(
-    'unlock opens a keyed database; lock closes it and zeroes the key',
+    'open opens a keyed database; close closes it and zeroes the key',
     () async {
       final states = <AppLockState>[];
       container.listen(
@@ -58,9 +63,10 @@ void main() {
       );
 
       final dek = secureRandomBytes(32);
-      container.read(sessionProvider.notifier).unlock(dek);
+      container.read(sessionProvider.notifier).open(dek);
       await pumpEventQueue();
-      expect(container.read(authProvider).isAuthenticated, isTrue);
+      // The session is independent of the UI lock.
+      expect(container.read(authProvider).isAuthenticated, isFalse);
 
       final db = container.read(databaseProvider);
       await db
@@ -70,7 +76,7 @@ void main() {
           );
       final key = container.read(sessionProvider).key!;
 
-      await container.read(sessionProvider.notifier).lock();
+      await container.read(sessionProvider.notifier).close();
       await pumpEventQueue();
 
       expect(states, [
@@ -79,7 +85,6 @@ void main() {
         AppLockState.locked,
       ]);
       expect(key.isDestroyed, isTrue);
-      expect(container.read(authProvider).isAuthenticated, isFalse);
       // The old connection is closed.
       await expectLater(db.select(db.accounts).get(), throwsA(anything));
       expect(
@@ -87,11 +92,11 @@ void main() {
         throwsA(isA<DatabaseLockedException>()),
       );
 
-      // Unlocking again with the same key reopens the same data.
-      container.read(sessionProvider.notifier).unlock(dek);
+      // Opening again with the same key reopens the same data.
+      container.read(sessionProvider.notifier).open(dek);
       final reopened = container.read(databaseProvider);
       expect((await reopened.select(reopened.accounts).get()).single.id, 'a');
-      await container.read(sessionProvider.notifier).lock();
+      await container.read(sessionProvider.notifier).close();
     },
   );
 
@@ -111,16 +116,39 @@ void main() {
       );
     }
 
+    bool uiLocked() => !container.read(authProvider).isAuthenticated;
+
     setUp(() {
       now = DateTime.utc(2026, 1, 1, 12);
-      container.read(sessionProvider.notifier).unlock(secureRandomBytes(32));
+      container.read(sessionProvider.notifier).open(secureRandomBytes(32));
+      container.read(authProvider.notifier).setAuthenticated(true);
     });
 
     test('immediate mode locks as soon as the app becomes inactive', () async {
       final service = buildService(Stopwatch());
       service.didChangeAppLifecycleState(AppLifecycleState.inactive);
       await pumpEventQueue();
-      expect(container.read(appLockStateProvider), AppLockState.locked);
+      expect(uiLocked(), isTrue);
+      // Only the UI: the database stays open for sync and card capture.
+      expect(container.read(appLockStateProvider), AppLockState.unlocked);
+      service.dispose();
+    });
+
+    test('with the app lock off nothing locks', () async {
+      await container.read(appLockEnabledProvider.notifier).set(false);
+      final service = buildService(Stopwatch());
+      service.didChangeAppLifecycleState(AppLifecycleState.paused);
+      await pumpEventQueue();
+      expect(uiLocked(), isFalse);
+      service.dispose();
+    });
+
+    test('nothing locks before onboarding is finished', () async {
+      container.read(authProvider.notifier).setOnboarded(false);
+      final service = buildService(Stopwatch());
+      service.didChangeAppLifecycleState(AppLifecycleState.paused);
+      await pumpEventQueue();
+      expect(uiLocked(), isFalse);
       service.dispose();
     });
 
@@ -130,23 +158,59 @@ void main() {
         service.didChangeAppLifecycleState(AppLifecycleState.inactive);
         service.didChangeAppLifecycleState(AppLifecycleState.paused);
         await pumpEventQueue();
-        expect(container.read(appLockStateProvider), AppLockState.unlocked);
+        expect(uiLocked(), isFalse);
         service.didChangeAppLifecycleState(AppLifecycleState.resumed);
       });
       await pumpEventQueue();
-      expect(container.read(appLockStateProvider), AppLockState.unlocked);
+      expect(uiLocked(), isFalse);
       service.dispose();
     });
 
     test(
-      'if the app is still in the background when the OS screen closes, it locks',
+      'if the app is still in the background after the OS screen closed '
+      '(and the grace period), it locks',
       () async {
-        final service = buildService(Stopwatch());
+        void Function()? grace;
+        final service = buildService(
+          Stopwatch(),
+          timerFactory: (duration, callback) {
+            expect(duration, AutoLockService.resumeGrace);
+            grace = callback;
+            return Timer(const Duration(days: 1), () {});
+          },
+        );
         await ExternalUiGuard.run(() async {
           service.didChangeAppLifecycleState(AppLifecycleState.paused);
         });
         await pumpEventQueue();
-        expect(container.read(appLockStateProvider), AppLockState.locked);
+        expect(uiLocked(), isFalse);
+        grace!();
+        await pumpEventQueue();
+        expect(uiLocked(), isTrue);
+        service.dispose();
+      },
+    );
+
+    test(
+      'a full-screen OS prompt that reports before the app resumes does not '
+      'lock (device PIN screen of the app lock)',
+      () async {
+        void Function()? grace;
+        final service = buildService(
+          Stopwatch(),
+          timerFactory: (duration, callback) {
+            grace = callback;
+            return Timer(const Duration(days: 1), () {});
+          },
+        );
+        await ExternalUiGuard.run(() async {
+          service.didChangeAppLifecycleState(AppLifecycleState.paused);
+        });
+        // The result arrived; `resumed` follows a moment later.
+        service.didChangeAppLifecycleState(AppLifecycleState.resumed);
+        grace?.call();
+        await pumpEventQueue();
+        expect(uiLocked(), isFalse);
         service.dispose();
       },
     );
@@ -161,13 +225,13 @@ void main() {
         now = now.add(const Duration(minutes: 4));
         service.didChangeAppLifecycleState(AppLifecycleState.resumed);
         await pumpEventQueue();
-        expect(container.read(appLockStateProvider), AppLockState.unlocked);
+        expect(uiLocked(), isFalse);
 
         service.didChangeAppLifecycleState(AppLifecycleState.paused);
         now = now.add(const Duration(minutes: 6));
         service.didChangeAppLifecycleState(AppLifecycleState.resumed);
         await pumpEventQueue();
-        expect(container.read(appLockStateProvider), AppLockState.locked);
+        expect(uiLocked(), isTrue);
         service.dispose();
       },
     );
@@ -182,7 +246,7 @@ void main() {
       expect(service.elapsedInBackground, const Duration(minutes: 6));
       service.didChangeAppLifecycleState(AppLifecycleState.resumed);
       await pumpEventQueue();
-      expect(container.read(appLockStateProvider), AppLockState.locked);
+      expect(uiLocked(), isTrue);
       service.dispose();
     });
 
@@ -200,10 +264,10 @@ void main() {
       );
       service.didChangeAppLifecycleState(AppLifecycleState.paused);
       expect(scheduled, const Duration(minutes: 1));
-      expect(container.read(appLockStateProvider), AppLockState.unlocked);
+      expect(uiLocked(), isFalse);
       fire!();
       await pumpEventQueue();
-      expect(container.read(appLockStateProvider), AppLockState.locked);
+      expect(uiLocked(), isTrue);
       service.dispose();
     });
   });

@@ -96,10 +96,7 @@ void main() {
       final account = Account.fromJson(json);
       expect(account, equals(accountWithDates));
       expect(account.onBudget, isTrue);
-      expect(
-        Account.fromJson({...json, 'on_budget': false}).onBudget,
-        isFalse,
-      );
+      expect(Account.fromJson({...json, 'on_budget': false}).onBudget, isFalse);
     });
 
     test('toJson returns correct map', () {

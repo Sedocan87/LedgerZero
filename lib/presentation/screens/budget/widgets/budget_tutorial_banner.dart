@@ -52,9 +52,7 @@ class _BudgetTutorialBannerState extends ConsumerState<BudgetTutorialBanner> {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: scheme.primary.withValues(alpha: 0.25),
-          ),
+          side: BorderSide(color: scheme.primary.withValues(alpha: 0.25)),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
@@ -88,9 +86,7 @@ class _BudgetTutorialBannerState extends ConsumerState<BudgetTutorialBanner> {
                             context,
                           )!.budgetTutorialDescription,
                           style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ],
                     ),

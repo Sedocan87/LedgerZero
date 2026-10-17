@@ -278,9 +278,7 @@ void main() {
     expect(repo.created!.onBudget, isFalse);
   });
 
-  testWidgets('taking an account out of the budget asks first', (
-    tester,
-  ) async {
+  testWidgets('taking an account out of the budget asks first', (tester) async {
     final repo = MockAccountRepository(
       existing: const Account(
         id: 'a1',

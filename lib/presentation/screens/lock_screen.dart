@@ -1,0 +1,318 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/data/database/connection.dart';
+import 'package:ledger_zero/data/database/sqlcipher.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/screens/legacy_unlock_view.dart';
+import 'package:ledger_zero/presentation/widgets/security/reset_app_dialog.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
+import 'package:ledger_zero/services/security/crypto/secure_random.dart';
+import 'package:ledger_zero/services/security/external_ui_guard.dart';
+
+enum _Phase {
+  /// Opening the database.
+  starting,
+
+  /// Waiting for the fingerprint/face or device PIN.
+  locked,
+
+  /// An install from before the device key: unlock once with the master
+  /// password.
+  legacy,
+
+  /// The database key is missing or does not open the database.
+  keyError,
+
+  /// The key store failed to answer (it may work on the next try).
+  readError,
+}
+
+/// Start-up and the app lock.
+///
+/// Every start passes through here: the database session is opened with
+/// the key from [DeviceKeyStore] (so sync and card capture can run even
+/// while the lock is showing), then the app lock asks for the fingerprint,
+/// face or device PIN if it is on. After the auto-lock time the router
+/// brings the user back here; the session stays open.
+class LockScreen extends ConsumerStatefulWidget {
+  const LockScreen({super.key});
+
+  @override
+  ConsumerState<LockScreen> createState() => _LockScreenState();
+}
+
+class _LockScreenState extends ConsumerState<LockScreen> {
+  _Phase _phase = _Phase.starting;
+  bool _prompting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame: when the session is already open (the app
+    // lock came back after the auto-lock time) the prompt follows without
+    // an await, and it needs the localisations of a built context.
+    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_start()));
+  }
+
+  Future<void> _start() async {
+    try {
+      if (!ref.read(sessionProvider).isUnlocked) {
+        final migration = ref.read(legacyKeyMigrationProvider);
+        final Uint8List? dek;
+        try {
+          dek = await _readKey();
+        } catch (e, stackTrace) {
+          Logger.error('Reading the database key failed', e, stackTrace);
+          _setPhase(_Phase.readError);
+          return;
+        }
+        if (dek == null) {
+          _setPhase(
+            await migration.isPending() ? _Phase.legacy : _Phase.keyError,
+          );
+          return;
+        }
+        if (!await _opensDatabase(dek)) {
+          zeroBytes(dek);
+          _setPhase(_Phase.keyError);
+          return;
+        }
+        ref.read(sessionProvider.notifier).open(dek);
+        zeroBytes(dek);
+        // An interrupted migration may have left the old entries behind.
+        unawaited(migration.deleteLeftovers());
+      }
+      await _passLock();
+    } catch (e, stackTrace) {
+      Logger.error('Opening the database failed', e, stackTrace);
+      _setPhase(_Phase.keyError);
+    }
+  }
+
+  /// The device key; a failing key store is asked up to three times (it
+  /// can fail transiently right after an app update), so a temporary error
+  /// is never shown as missing data.
+  Future<Uint8List?> _readKey() async {
+    final store = ref.read(deviceKeyStoreProvider);
+    for (var attempt = 1; ; attempt++) {
+      try {
+        return await store.read();
+      } catch (_) {
+        if (attempt == 3) {
+          rethrow;
+        }
+        await Future<void>.delayed(Duration(milliseconds: 300 * attempt));
+      }
+    }
+  }
+
+  void _retry() {
+    _setPhase(_Phase.starting);
+    unawaited(_start());
+  }
+
+  static Future<bool> _opensDatabase(Uint8List dek) async {
+    final file = await databaseFile();
+    // A missing file is created on first use with this key.
+    return !file.existsSync() || SqlCipher.canOpen(file, RawSqlCipherKey(dek));
+  }
+
+  /// Unlocks the UI, asking for the app lock first when it is on.
+  Future<void> _passLock() async {
+    if (!ref.read(appLockEnabledProvider)) {
+      _unlockUi();
+      return;
+    }
+    _setPhase(_Phase.locked);
+    await _authenticate();
+  }
+
+  Future<void> _authenticate() async {
+    if (_prompting) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _prompting = true);
+    final result = await ExternalUiGuard.run(
+      () => ref
+          .read(appLockAuthenticatorProvider)
+          .authenticate(
+            title: l10n.appLockPromptTitle,
+            subtitle: l10n.appLockPromptSubtitle,
+          ),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _prompting = false);
+    switch (result) {
+      case AppLockResult.success:
+        _unlockUi();
+      case AppLockResult.unavailable:
+        // The screen lock was removed in the system settings (which needs
+        // the old one): the app lock cannot work, so it is turned off
+        // instead of locking the user out.
+        await ref.read(appLockEnabledProvider.notifier).set(false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.appLockTurnedOffNoScreenLock)),
+          );
+        }
+        _unlockUi();
+      case AppLockResult.cancelled:
+      case AppLockResult.failed:
+        break;
+    }
+  }
+
+  /// The router then leaves this screen (for a remembered deep link or
+  /// Home).
+  void _unlockUi() {
+    ref.read(authProvider.notifier).setAuthenticated(true);
+  }
+
+  /// After the one-time unlock of an older install.
+  Future<void> _adoptLegacyKey(Uint8List dek) async {
+    try {
+      await ref.read(legacyKeyMigrationProvider).adopt(dek);
+      ref.read(sessionProvider.notifier).open(dek);
+    } finally {
+      zeroBytes(dek);
+    }
+    // Whoever had a master password gets the app lock (when the phone
+    // has a screen lock); it can be turned off in Settings.
+    final canLock = await ref
+        .read(appLockAuthenticatorProvider)
+        .canAuthenticate();
+    await ref.read(appLockEnabledProvider.notifier).set(canLock);
+    _unlockUi();
+  }
+
+  Future<void> _resetApp() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => ResetAppDialog(l10n: l10n),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    setState(() => _phase = _Phase.starting);
+    try {
+      await ref.read(factoryResetServiceProvider).reset();
+      if (mounted) {
+        context.go('/onboarding');
+      }
+    } catch (e, stackTrace) {
+      Logger.error('Factory reset failed', e, stackTrace);
+      _setPhase(_Phase.keyError);
+    }
+  }
+
+  void _setPhase(_Phase phase) {
+    if (mounted) {
+      setState(() => _phase = phase);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: switch (_phase) {
+              _Phase.starting => const CircularProgressIndicator(),
+              _Phase.locked => _buildLocked(l10n),
+              _Phase.legacy => LegacyUnlockView(
+                onUnlocked: _adoptLegacyKey,
+                onReset: _resetApp,
+              ),
+              _Phase.keyError => _buildKeyError(l10n),
+              _Phase.readError => _buildReadError(l10n),
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocked(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Icon(Icons.lock_outline, size: 64, color: Colors.teal),
+        const SizedBox(height: 32),
+        Text(
+          l10n.lockScreenTitle,
+          style: Theme.of(context).textTheme.headlineSmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+        ElevatedButton.icon(
+          key: const Key('lock_unlock'),
+          onPressed: _prompting ? null : _authenticate,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          icon: const Icon(Icons.fingerprint),
+          label: Text(l10n.loginUnlock),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadError(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(
+          Icons.error_outline,
+          size: 64,
+          color: Theme.of(context).colorScheme.error,
+        ),
+        const SizedBox(height: 24),
+        Text(l10n.lockScreenReadError, textAlign: TextAlign.center),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          key: const Key('lock_retry'),
+          onPressed: _retry,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: Text(l10n.retry),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildKeyError(AppLocalizations l10n) {
+    final error = Theme.of(context).colorScheme.error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(Icons.error_outline, size: 64, color: error),
+        const SizedBox(height: 24),
+        Text(l10n.lockScreenKeyError, textAlign: TextAlign.center),
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          key: const Key('login_reset_app'),
+          onPressed: _resetApp,
+          icon: const Icon(Icons.restart_alt),
+          label: Text(l10n.loginResetApp),
+          style: OutlinedButton.styleFrom(foregroundColor: error),
+        ),
+      ],
+    );
+  }
+}

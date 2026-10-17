@@ -52,6 +52,10 @@ class BiometricPromptTexts {
 /// Hardware-backed storage for the data key that releases it only after a
 /// fresh biometric authentication.
 ///
+/// Used only by installs from before [DeviceKeyStore]: their biometric key
+/// can unlock once for the move to the device key store, then it is
+/// deleted. Nothing new is stored any more.
+///
 /// * Android: an AES-256-GCM key in the Android KeyStore created with
 ///   `setUserAuthenticationRequired(true)`, per-use authentication
 ///   (`setUserAuthenticationParameters(0, BIOMETRIC_STRONG)`, or validity
@@ -67,9 +71,6 @@ class BiometricPromptTexts {
 abstract class BiometricKeyStore {
   Future<bool> isAvailable();
   Future<bool> hasKey();
-
-  /// Stores [secret]. Asks for biometric confirmation first.
-  Future<void> store(Uint8List secret, BiometricPromptTexts texts);
 
   /// Returns the stored secret after a successful biometric prompt.
   Future<Uint8List> read(BiometricPromptTexts texts);
@@ -111,19 +112,6 @@ class PlatformBiometricKeyStore implements BiometricKeyStore {
       return false;
     } on MissingPluginException {
       return false;
-    }
-  }
-
-  @override
-  Future<void> store(Uint8List secret, BiometricPromptTexts texts) async {
-    _requireSupported();
-    try {
-      await _channel.invokeMethod<void>('store', {
-        'secret': secret,
-        ...texts.toMap(),
-      });
-    } on PlatformException catch (e) {
-      throw _map(e);
     }
   }
 

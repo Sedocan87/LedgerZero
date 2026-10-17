@@ -38,19 +38,15 @@ class EmptyState extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Icon(
-                  icon,
-                  size: 38,
-                  color: scheme.primary,
-                ),
+                child: Icon(icon, size: 38, color: scheme.primary),
               ),
               const SizedBox(height: AppSpacing.lg),
             ],
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),

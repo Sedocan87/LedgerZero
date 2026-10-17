@@ -82,13 +82,19 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] Closed beta with 10–20 testers (Play internal testing), recruited from r/ynab, r/Finanzen and r/personalfinance. Iterate for 1–2 weeks.
 - [ ] Launch.
 
+## Android-only and invisible encryption (2026-10)
+
+- [x] v1 is Android only; iCloud sync and backup removed (ios/ kept for later).
+- [x] No master password: the database key is kept by the Android KeyStore (flutter_secure_storage) and the database opens at every start, also behind the app lock. App lock = fingerprint/face/device PIN (BiometricPrompt), a UI gate; auto-lock locks only the UI. Older installs unlock once with the password, recovery key or biometrics and move the key (docs/ENCRYPTION.md). Sync and backups stay end-to-end encrypted.
+
 ## Follow-ups
 
 **Real-device verification** (cannot be done on simulators/emulators)
-- [ ] Biometric unlock on Android (BiometricPrompt + Keystore), including enrolment changes invalidating the key.
+- [ ] App lock on real phones: fingerprint, face and PIN/pattern prompts (Pixel 8, Xiaomi), auto-lock, and removing the screen lock turning the app lock off.
+- [ ] One-time migration of the existing master-password installs on the Pixel 8 and the Xiaomi (take a backup first): unlock once, data intact, app lock on.
 - [ ] FLAG_SECURE on Android.
 - [ ] `flutter_secure_storage` v9 → v10 migration on a real Android install that has v9 data (then move to v11, which drops the migration).
-- [ ] Argon2id unlock time (46 MiB, 2 passes) on a mid-range Android phone stays under ~1.5 s.
+- [ ] Argon2id time (46 MiB, 2 passes) for the sync passphrase and backup password on a mid-range Android phone stays under ~1.5 s.
 - [ ] Two-device sync matrix with real accounts: Android↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
 - [ ] Notification delivery: scheduled-transaction reminders and sync-failure notifications on Android (permissions, exact vs. inexact alarms, tap routing).
 - [ ] Card notification capture with real bank apps (Sparkasse, ING, DKB, N26, Revolut, Google Wallet, ...): collect anonymised notification texts, add them as parser test cases, and check that the listener survives reboots and vendor battery savers (Xiaomi/MIUI).

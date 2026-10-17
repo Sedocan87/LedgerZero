@@ -11,7 +11,7 @@ final notificationCaptureChannelProvider = Provider<NotificationCaptureChannel>(
   (ref) => PlatformNotificationCaptureChannel(),
 );
 
-/// Books captured card notifications after unlock (see
+/// Books captured card notifications when the app starts or resumes (see
 /// [NotificationCaptureService]).
 final notificationCaptureServiceProvider = Provider<NotificationCaptureService>(
   (ref) => NotificationCaptureService(

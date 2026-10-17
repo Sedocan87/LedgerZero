@@ -31,10 +31,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
       color: cardBgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        side: BorderSide(
-          color: accentColor.withValues(alpha: 0.3),
-          width: 1,
-        ),
+        side: BorderSide(color: accentColor.withValues(alpha: 0.3), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -65,10 +62,11 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           AppLocalizations.of(context)!.toBeBudgeted,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

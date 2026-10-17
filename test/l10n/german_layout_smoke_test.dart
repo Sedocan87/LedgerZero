@@ -26,13 +26,12 @@ import 'package:ledger_zero/presentation/screens/rules/rules_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit_scheduled_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/scheduled_transactions_screen.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
-import 'package:ledger_zero/presentation/screens/login_screen.dart';
+import 'package:ledger_zero/presentation/screens/legacy_unlock_view.dart';
+import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/faq_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/security/change_password_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/security/recovery_key_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
 import 'package:ledger_zero/services/security/key_vault.dart';
@@ -158,12 +157,15 @@ void main() {
     'Settings': () => const SettingsScreen(),
     'Accessibility': () => const AccessibilitySettingsScreen(),
     'Security settings': () => const SecuritySettingsScreen(),
-    'Change password': () => const ChangePasswordScreen(),
-    'Recovery key': () => const RecoveryKeyScreen(),
     'Backup': () => const BackupScreen(),
     'Sync settings': () => const SyncSettingsScreen(),
     'Security setup': () => const SecuritySetupScreen(),
-    'Login': () => const LoginScreen(),
+    'Lock screen': () => const LockScreen(),
+    'Legacy unlock': () => Scaffold(
+      body: SingleChildScrollView(
+        child: LegacyUnlockView(onUnlocked: (_) async {}, onReset: () {}),
+      ),
+    ),
     'Help': () => const HelpScreen(),
     'FAQ': () => const FaqScreen(),
     'User guide': () => const UserGuideScreen(),

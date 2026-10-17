@@ -22,11 +22,7 @@ class BudgetGroupRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             alignment: Alignment.center,
-            child: Icon(
-              Icons.folder_outlined,
-              size: 16,
-              color: scheme.primary,
-            ),
+            child: Icon(Icons.folder_outlined, size: 16, color: scheme.primary),
           ),
           const SizedBox(width: 10),
           Expanded(

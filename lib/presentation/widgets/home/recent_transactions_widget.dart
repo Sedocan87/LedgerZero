@@ -60,9 +60,7 @@ class RecentTransactionsWidget extends ConsumerWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(
-                      alpha: 0.12,
-                    ),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   alignment: Alignment.center,

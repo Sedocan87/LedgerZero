@@ -756,15 +756,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoLockNever => 'Nie';
 
   @override
-  String get changePassword => 'Passwort ändern';
-
-  @override
-  String get currentPassword => 'Aktuelles Passwort';
-
-  @override
-  String get newPassword => 'Neues Passwort';
-
-  @override
   String get incorrectPassword => 'Falsches Passwort';
 
   @override
@@ -772,14 +763,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get biometrics => 'Biometrische Entsperrung';
-
-  @override
-  String get useBiometricsDescription =>
-      'Mit Face ID oder Fingerabdruck entsperren';
-
-  @override
-  String get biometricsSetupFailed =>
-      'Die Einrichtung der Biometrie ist fehlgeschlagen';
 
   @override
   String get encryptionStatus => 'Verschlüsselungsstatus';
@@ -1380,9 +1363,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get hidePassword => 'Passwort verbergen';
 
   @override
-  String get enterPasswordPrompt => 'Bitte geben Sie Ihr Passwort ein';
-
-  @override
   String passwordMinLength(int count) {
     return 'Verwenden Sie mindestens $count Zeichen';
   }
@@ -1422,58 +1402,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get setupProtectTitle => 'Schützen Sie Ihre Daten';
 
   @override
-  String get setupPasswordHeading => 'Master-Passwort festlegen';
-
-  @override
-  String get setupPasswordExplanation =>
-      'Ihre Daten werden auf diesem Gerät mit einem zufälligen Schlüssel verschlüsselt. Ihr Master-Passwort entsperrt diesen Schlüssel. Wenn Sie das Passwort vergessen, kann nur Ihr Wiederherstellungsschlüssel die Daten entsperren.';
-
-  @override
-  String get setupUseBiometrics => 'Mit Biometrie entsperren';
-
-  @override
-  String get setupUseBiometricsSubtitle =>
-      'Face ID oder Fingerabdruck, geschützt durch die Sicherheits-Hardware dieses Geräts';
-
-  @override
-  String get setupPreparing => 'Verschlüsselung wird vorbereitet …';
-
-  @override
   String get setupFailed =>
       'Die Einrichtung der Sicherheit ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
-
-  @override
-  String get recoveryKeyHeading => 'Ihr Wiederherstellungsschlüssel';
-
-  @override
-  String get recoveryKeyExplanation =>
-      'Wenn Sie Ihr Passwort vergessen, ist dieser Schlüssel die einzige Möglichkeit, Ihre Daten zu entsperren. Schreiben Sie ihn auf Papier und bewahren Sie ihn sicher auf. Wer diesen Schlüssel hat, kann Ihre Daten auf diesem Gerät entsperren.';
-
-  @override
-  String get recoveryKeyNoCopyNote =>
-      'Der Schlüssel lässt sich absichtlich nicht in die Zwischenablage kopieren, da andere Apps ihn dort lesen könnten.';
-
-  @override
-  String get recoveryKeyConfirmSaved =>
-      'Ich habe meinen Wiederherstellungsschlüssel aufgeschrieben und sicher aufbewahrt';
-
-  @override
-  String get biometricsEnableFailed =>
-      'Die biometrische Entsperrung konnte nicht aktiviert werden. Sie können es in den Einstellungen erneut versuchen.';
 
   @override
   String get biometricPromptTitle => 'LedgerZero entsperren';
 
   @override
-  String get biometricPromptEnableTitle =>
-      'Biometrische Entsperrung aktivieren';
-
-  @override
   String get biometricPromptSubtitle =>
       'Bestätigen Sie Ihre Identität, um Ihre Daten zu entsperren';
-
-  @override
-  String get loginTitle => 'Willkommen zurück';
 
   @override
   String get loginUnlock => 'Entsperren';
@@ -1518,48 +1455,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get recoveryKeyNeedsPassword =>
       'Ein Update wird noch abgeschlossen. Bitte entsperren Sie einmal mit Ihrem Passwort.';
-
-  @override
-  String get setNewPasswordTitle => 'Neues Passwort festlegen';
-
-  @override
-  String get setNewPasswordExplanation =>
-      'Sie haben mit Ihrem Wiederherstellungsschlüssel entsperrt. Bitte wählen Sie ein neues Master-Passwort. Ihr Wiederherstellungsschlüssel bleibt gültig.';
-
-  @override
-  String get migrationRecoveryKeyExplanation =>
-      'LedgerZero schützt Ihre Daten jetzt mit einem neuen Schlüsselverfahren. Dies ist Ihr neuer Wiederherstellungsschlüssel. Früher gespeicherte Wiederherstellungsschlüssel funktionieren nicht mehr.';
-
-  @override
-  String get migrationBiometricsReset =>
-      'Die biometrische Entsperrung wurde während des Updates deaktiviert. Sie können sie in den Einstellungen wieder aktivieren.';
-
-  @override
-  String get passwordChangedRecoveryStillValid =>
-      'Passwort geändert. Ihr Wiederherstellungsschlüssel funktioniert weiterhin.';
-
-  @override
-  String get changePasswordFailed =>
-      'Das Passwort konnte nicht geändert werden. Bitte versuchen Sie es erneut.';
-
-  @override
-  String get recoveryKeyScreenExplanation =>
-      'Ihr Wiederherstellungsschlüssel entsperrt Ihre Daten, wenn Sie Ihr Passwort vergessen. Bestätigen Sie Ihr Passwort, um ihn anzuzeigen oder einen neuen zu erstellen.';
-
-  @override
-  String get recoveryKeyRegenerate =>
-      'Neuen Wiederherstellungsschlüssel erstellen';
-
-  @override
-  String get recoveryKeyRegenerateConfirm =>
-      'Ihr aktueller Wiederherstellungsschlüssel funktioniert dann nicht mehr. Fortfahren?';
-
-  @override
-  String get recoveryKeyRegenerated =>
-      'Neuer Wiederherstellungsschlüssel gespeichert. Der alte funktioniert nicht mehr.';
-
-  @override
-  String get confirmPasswordTitle => 'Bestätigen Sie Ihr Passwort';
 
   @override
   String get encryptionStatusEncrypted =>
@@ -3655,7 +3550,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardNotificationsDisclosureBody =>
-      'Android fragt Sie gleich, ob LedgerZero auf Benachrichtigungen zugreifen darf. Android erteilt diesen Zugriff für alle Apps, LedgerZero liest aber nur Benachrichtigungen der Bank-, Karten- oder Wallet-Apps, die Sie auswählen, und übernimmt daraus nur Betrag, Händler und Zeitpunkt einer Zahlung. Benachrichtigungen werden nirgendwohin gesendet. Erfasste Zahlungen bleiben verschlüsselt auf diesem Gerät, bis Sie LedgerZero entsperren. Sie können den Zugriff jederzeit in den Systemeinstellungen widerrufen.';
+      'Android fragt Sie gleich, ob LedgerZero auf Benachrichtigungen zugreifen darf. Android erteilt diesen Zugriff für alle Apps, LedgerZero liest aber nur Benachrichtigungen der Bank-, Karten- oder Wallet-Apps, die Sie auswählen, und übernimmt daraus nur Betrag, Händler und Zeitpunkt einer Zahlung. Benachrichtigungen werden nirgendwohin gesendet. Erfasste Zahlungen bleiben verschlüsselt auf diesem Gerät, bis LedgerZero das nächste Mal läuft. Sie können den Zugriff jederzeit in den Systemeinstellungen widerrufen.';
 
   @override
   String get cardNotificationsContinue => 'Weiter';
@@ -3731,7 +3626,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardNotificationsHowItWorks =>
-      'Erfasste Zahlungen erscheinen unter Transaktionen als nicht genehmigt. Wischen Sie nach links, um eine zu genehmigen, oder tippen Sie darauf, um sie zu korrigieren. Zahlungen, die erfasst werden, während LedgerZero gesperrt ist, werden nach dem nächsten Entsperren hinzugefügt. Abgelehnte Zahlungen, Codes und Kontostandsmeldungen werden übersprungen.';
+      'Erfasste Zahlungen erscheinen unter Transaktionen als nicht genehmigt. Wischen Sie nach links, um eine zu genehmigen, oder tippen Sie darauf, um sie zu korrigieren. Zahlungen, die erfasst werden, während LedgerZero geschlossen ist, werden beim nächsten Start hinzugefügt. Abgelehnte Zahlungen, Codes und Kontostandsmeldungen werden übersprungen.';
 
   @override
   String cardNotificationsAdded(int count) {
@@ -3743,4 +3638,51 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get appLockTitle => 'App-Sperre';
+
+  @override
+  String get appLockSubtitle =>
+      'Beim Öffnen von LedgerZero nach Fingerabdruck, Gesicht oder Displaysperre fragen';
+
+  @override
+  String get appLockNeedsScreenLock =>
+      'Richten Sie in den Android-Einstellungen eine Displaysperre ein, um die App-Sperre zu nutzen.';
+
+  @override
+  String get appLockPromptTitle => 'LedgerZero entsperren';
+
+  @override
+  String get appLockPromptSubtitle =>
+      'Mit Fingerabdruck, Gesicht oder Displaysperre';
+
+  @override
+  String get appLockTurnedOffNoScreenLock =>
+      'Dieses Telefon hat keine Displaysperre mehr, daher wurde die App-Sperre ausgeschaltet.';
+
+  @override
+  String get lockScreenTitle => 'LedgerZero ist gesperrt';
+
+  @override
+  String get lockScreenKeyError =>
+      'LedgerZero kann Ihre Daten nicht öffnen: Der auf diesem Telefon gespeicherte Schlüssel fehlt oder passt nicht zu den Daten. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon.';
+
+  @override
+  String get legacyUnlockTitle => 'Ein letztes Mal entsperren';
+
+  @override
+  String get legacyUnlockExplanation =>
+      'LedgerZero verwendet kein Master-Passwort mehr. Entsperren Sie ein letztes Mal mit Ihrem Passwort oder Wiederherstellungsschlüssel. Danach bewahrt die App ihren Schlüssel im sicheren Schlüsselspeicher dieses Telefons auf, und die App-Sperre nutzt Fingerabdruck, Gesicht oder Displaysperre.';
+
+  @override
+  String get setupDeviceHeading => 'Ihre Daten bleiben auf diesem Telefon';
+
+  @override
+  String get setupDeviceExplanation =>
+      'Ihr Budget wird nur auf diesem Telefon gespeichert, verschlüsselt mit einem Schlüssel, den Android in seinem sicheren Schlüsselspeicher aufbewahrt. Es gibt kein Konto und kein Passwort, das Sie sich merken müssen. Damit Sie mit dem Telefon nichts verlieren, erstellen Sie Sicherungen oder synchronisieren Sie mit einem zweiten Telefon.';
+
+  @override
+  String get lockScreenReadError =>
+      'LedgerZero konnte seinen Schlüssel gerade nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen. Ihre Daten sind nicht betroffen. Versuchen Sie es erneut; wenn es weiterhin fehlschlägt, starten Sie das Telefon neu.';
 }

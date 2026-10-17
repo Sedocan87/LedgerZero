@@ -32,10 +32,7 @@ class MonthSelector extends ConsumerWidget {
             tooltip: l10n.previousMonth,
             onPressed: () {
               ref.read(selectedBudgetMonthProvider.notifier).state =
-                  DateTime.utc(
-                    selectedMonth.year,
-                    selectedMonth.month - 1,
-                  );
+                  DateTime.utc(selectedMonth.year, selectedMonth.month - 1);
             },
           ),
           // Long month names ("September 2026") shrink instead of
@@ -71,10 +68,7 @@ class MonthSelector extends ConsumerWidget {
             tooltip: l10n.nextMonth,
             onPressed: () {
               ref.read(selectedBudgetMonthProvider.notifier).state =
-                  DateTime.utc(
-                    selectedMonth.year,
-                    selectedMonth.month + 1,
-                  );
+                  DateTime.utc(selectedMonth.year, selectedMonth.month + 1);
             },
           ),
         ],

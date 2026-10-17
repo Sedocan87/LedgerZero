@@ -614,10 +614,7 @@ class _ReportCard extends StatelessWidget {
             const SizedBox(height: 16),
             RepaintBoundary(
               key: repaintKey,
-              child: Container(
-                color: scheme.surfaceContainerLow,
-                child: child,
-              ),
+              child: Container(color: scheme.surfaceContainerLow, child: child),
             ),
           ],
         ),
@@ -638,9 +635,9 @@ class _SectionTitle extends StatelessWidget {
       header: true,
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         overflow: TextOverflow.ellipsis,
       ),
     );
@@ -837,9 +834,9 @@ class _TopPayeesList extends ConsumerWidget {
                 ),
                 title: Text(
                   data[i].key,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

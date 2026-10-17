@@ -3,15 +3,18 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Key for SharedPreferences
 const String kAutoLockDurationKey = 'auto_lock_duration_minutes';
 
-/// Locks the session (closes the database, zeroes the key) when the app has
-/// been in the background for the configured time.
+/// Shows the app lock again when the app has been in the background for
+/// the configured time. Only the UI is locked ([AuthState.isAuthenticated]);
+/// the database stays open, so sync and card capture keep working. Does
+/// nothing while the app lock is off or onboarding is not finished.
 ///
 /// * `0` (immediate): locks as soon as the app becomes `inactive`, `hidden`
 ///   or `paused`, so the app switcher never shows an unlocked app.
@@ -32,6 +35,13 @@ class AutoLockService {
   bool _inBackground = false;
   DateTime? _backgroundedAt;
   Timer? _timer;
+  Timer? _graceTimer;
+
+  /// How long to wait for `resumed` after an OS screen closed. A full-screen
+  /// OS activity (the device PIN screen of the app lock) reports its result
+  /// before the app is resumed; without the grace period the app would lock
+  /// again right after a successful unlock.
+  static const Duration resumeGrace = Duration(seconds: 1);
   StreamSubscription<void>? _guardSubscription;
   AppLifecycleState? _lastState;
 
@@ -45,9 +55,19 @@ class AutoLockService {
        _timerFactory = timerFactory ?? Timer.new {
     _guardSubscription = ExternalUiGuard.onEnded.listen((_) {
       final state = _lastState;
-      if (state != null && state != AppLifecycleState.resumed) {
-        didChangeAppLifecycleState(state);
+      if (state == null || state == AppLifecycleState.resumed) {
+        return;
       }
+      _graceTimer?.cancel();
+      _graceTimer = _timerFactory(resumeGrace, () {
+        _graceTimer = null;
+        final now = _lastState;
+        if (now != null &&
+            now != AppLifecycleState.resumed &&
+            !ExternalUiGuard.isActive) {
+          didChangeAppLifecycleState(now);
+        }
+      });
     });
   }
 
@@ -57,6 +77,8 @@ class AutoLockService {
     _lastState = state;
     switch (state) {
       case AppLifecycleState.resumed:
+        _graceTimer?.cancel();
+        _graceTimer = null;
         _onForeground();
       case AppLifecycleState.inactive:
         if (_duration == 0) {
@@ -124,13 +146,18 @@ class AutoLockService {
   Future<void> lock() async {
     _timer?.cancel();
     _timer = null;
-    if (_ref.read(sessionProvider).isUnlocked) {
-      await _ref.read(sessionProvider.notifier).lock();
+    final auth = _ref.read(authProvider);
+    if (!_ref.read(appLockEnabledProvider) ||
+        !auth.isOnboarded ||
+        !auth.isAuthenticated) {
+      return;
     }
+    _ref.read(authProvider.notifier).setAuthenticated(false);
   }
 
   void dispose() {
     _timer?.cancel();
+    _graceTimer?.cancel();
     _guardSubscription?.cancel();
   }
 }

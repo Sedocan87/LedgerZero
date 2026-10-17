@@ -1,7 +1,7 @@
 // Shared setup of the on-device tests: the real app (MyApp) with real
 // storage — SharedPreferences, Keychain/Keystore, the SQLCipher database
-// file — so what runs here is what ships. Only biometrics are replaced
-// (they cannot be driven on a simulator/emulator).
+// file — so what runs here is what ships. Only the system prompts are
+// replaced (fingerprint/face/PIN cannot be driven on an emulator).
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 
@@ -11,7 +11,9 @@ import 'package:ledger_zero/app/app.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/data/database/connection.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/biometric_key_store.dart';
+import 'package:ledger_zero/services/security/device_key_store.dart';
 import 'package:ledger_zero/services/security/key_vault.dart';
 import 'package:ledger_zero/services/security/legacy_key_material.dart';
 import 'package:ledger_zero/services/security/secure_store.dart';
@@ -26,17 +28,36 @@ class NoBiometrics implements BiometricKeyStore {
   @override
   Future<bool> hasKey() async => false;
   @override
-  Future<void> store(Uint8List key, BiometricPromptTexts texts) async =>
-      throw const BiometricException(BiometricFailure.unavailable);
-  @override
   Future<Uint8List> read(BiometricPromptTexts texts) async =>
       throw const BiometricException(BiometricFailure.unavailable);
   @override
   Future<void> delete() async {}
 }
 
+/// The app lock prompt, answered with [result].
+class ScriptedAppLock implements AppLockAuthenticator {
+  AppLockResult result = AppLockResult.success;
+  int prompts = 0;
+
+  @override
+  Future<bool> canAuthenticate() async => true;
+
+  @override
+  Future<AppLockResult> authenticate({
+    required String title,
+    String? subtitle,
+  }) async {
+    prompts++;
+    return result;
+  }
+}
+
+/// The app lock of the running test app (see [launchApp]).
+final appLock = ScriptedAppLock();
+
 /// Wipes everything the app stored on this device (test app sandbox only):
-/// preferences, key vault and legacy key entries, database files.
+/// preferences, the device key, key vault and legacy key entries, database
+/// files.
 Future<void> resetAppData() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear();
@@ -51,6 +72,7 @@ Future<void> resetAppData() async {
     await prefs.setBool(key, false);
   }
   final store = FlutterSecureStore.current();
+  await store.delete(DeviceKeyStore.storageKey);
   await store.delete(KeyVault.storageKey);
   final legacy = FlutterSecureStore.legacy();
   for (final key in const [
@@ -79,6 +101,7 @@ Future<ProviderContainer> launchApp(WidgetTester tester) async {
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
       biometricKeyStoreProvider.overrideWithValue(const NoBiometrics()),
+      appLockAuthenticatorProvider.overrideWithValue(appLock),
     ],
   );
   await tester.pumpWidget(
@@ -90,7 +113,7 @@ Future<ProviderContainer> launchApp(WidgetTester tester) async {
 
 /// Closes the app's database and unmounts it (end of a test).
 Future<void> closeApp(WidgetTester tester, ProviderContainer c) async {
-  await c.read(sessionProvider.notifier).lock();
+  await c.read(sessionProvider.notifier).close();
   await tester.pumpWidget(const SizedBox());
   await tester.pump(const Duration(milliseconds: 500));
   c.dispose();

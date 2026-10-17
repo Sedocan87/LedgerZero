@@ -21,13 +21,12 @@ import javax.crypto.spec.GCMParameterSpec
  * * Sources: the apps the user chose to watch (package, label, linked
  *   account id) as JSON. The listener only looks at notifications from
  *   these packages.
- * * Queue: captured notifications (title, text, time) waiting for the app
- *   to be unlocked. The database is encrypted with the user's key and
- *   cannot be written while the app is locked, so the listener writes here
- *   and the Dart side turns entries into transactions after the next
- *   unlock. The queue is encrypted with an AES-256-GCM key in the Android
- *   KeyStore (no user authentication, so the listener can write while the
- *   app is locked); only IV + ciphertext reach SharedPreferences.
+ * * Queue: captured notifications (title, text, time) waiting for the
+ *   Flutter side. The listener runs even when the app (and its database)
+ *   is closed, so it writes here and the Dart side turns entries into
+ *   transactions when the app next starts. The queue is encrypted with an
+ *   AES-256-GCM key in the Android KeyStore (no user authentication); only
+ *   IV + ciphertext reach SharedPreferences.
  *   At most [MAX_QUEUE] entries are kept, none older than [MAX_AGE_MS].
  * * Seen: SHA-256 fingerprints (notification key, title, text) of recent
  *   captures with their time, so a notification that is re-posted or

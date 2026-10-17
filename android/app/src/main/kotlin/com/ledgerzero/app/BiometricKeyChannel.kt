@@ -1,10 +1,7 @@
 package com.ledgerzero.app
 
 import android.content.Context
-import android.os.Build
-import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
-import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
@@ -16,18 +13,19 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.security.KeyStore
 import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Stores the database key so that it can only be recovered after a fresh
- * BIOMETRIC_STRONG authentication.
+ * Reads the database key that installs from before the device key stored
+ * for biometric unlock (it can only be recovered after a fresh
+ * BIOMETRIC_STRONG authentication). Used once to move the key to the
+ * device key store; nothing new is stored any more.
  *
- * An AES-256-GCM key is generated in the Android KeyStore with
+ * The key was an AES-256-GCM key in the Android KeyStore with
  * setUserAuthenticationRequired(true), per-use authentication (timeout 0 on
  * API 30+, validity -1 below) and setInvalidatedByBiometricEnrollment(true).
- * The secret is encrypted and decrypted only through a
+ * The secret is decrypted only through a
  * BiometricPrompt.CryptoObject wrapping that key; only IV + ciphertext are
  * written to SharedPreferences. Enrolling a new fingerprint/face invalidates
  * the key (KeyPermanentlyInvalidatedException); the entry is then deleted.
@@ -55,7 +53,6 @@ class BiometricKeyChannel(
             when (call.method) {
                 "isAvailable" -> result.success(isAvailable())
                 "hasKey" -> result.success(hasKey())
-                "store" -> store(call, result)
                 "read" -> read(call, result)
                 "delete" -> {
                     delete()
@@ -84,49 +81,6 @@ class BiometricKeyChannel(
         val ks = keyStore()
         if (ks.containsAlias(KEY_ALIAS)) {
             ks.deleteEntry(KEY_ALIAS)
-        }
-    }
-
-    private fun createKey(): SecretKey {
-        delete()
-        val builder = KeyGenParameterSpec.Builder(
-            KEY_ALIAS,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-        )
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(256)
-            .setUserAuthenticationRequired(true)
-            .setInvalidatedByBiometricEnrollment(true)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            builder.setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
-        } else {
-            @Suppress("DEPRECATION")
-            builder.setUserAuthenticationValidityDurationSeconds(-1)
-        }
-        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-        generator.init(builder.build())
-        return generator.generateKey()
-    }
-
-    private fun store(call: MethodCall, result: MethodChannel.Result) {
-        val secret = call.argument<ByteArray>("secret")
-        if (secret == null) {
-            result.error("failed", "missing secret", null)
-            return
-        }
-        if (!isAvailable()) {
-            result.error("unavailable", null, null)
-            return
-        }
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, createKey())
-        authenticate(call, cipher, result) { authenticated ->
-            val ciphertext = authenticated.doFinal(secret)
-            val blob = Base64.encodeToString(authenticated.iv, Base64.NO_WRAP) + ":" +
-                Base64.encodeToString(ciphertext, Base64.NO_WRAP)
-            prefs().edit().putString(PREF_BLOB, blob).apply()
-            null
         }
     }
 

@@ -15,7 +15,7 @@ import android.service.notification.StatusBarNotification
  *
  * The system binds this service only after the user granted notification
  * access in the system settings. Parsing and saving happen in Dart after
- * the next unlock (see lib/services/notification_capture/).
+ * the next start of the app (see lib/services/notification_capture/).
  */
 class CardNotificationListener : NotificationListenerService() {
 

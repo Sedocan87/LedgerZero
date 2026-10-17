@@ -37,12 +37,13 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Exports that outlived a crash or a killed process.
     ref.read(exportFileServiceProvider).sweepStale();
-    // Sync lives for the whole app session: it follows the lock state
-    // (paused while locked) and syncs on unlock, resume and local changes.
+    // Sync lives for the whole app session: it follows the database session
+    // (opened at start-up, also behind the app lock) and syncs when it
+    // opens, on resume and on local changes.
     ref.read(syncControllerProvider.notifier);
     _initializeNotifications();
-    // A card notification captured while the app is open and unlocked is
-    // booked at once; otherwise after the next unlock or resume.
+    // A card notification captured while the app runs is booked at once;
+    // otherwise at the next start or resume.
     _capturedSubscription = ref
         .read(notificationCaptureChannelProvider)
         .captured
@@ -77,10 +78,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     }
   }
 
-  /// Books card notifications captured since the last run (needs the
-  /// unlocked database; a locked app retries after the next unlock).
+  /// Books card notifications captured since the last run (needs the open
+  /// database, not the unlocked UI).
   Future<void> _processCapturedNotifications() async {
-    if (!ref.read(authProvider).isAuthenticated) {
+    if (!ref.read(sessionProvider).isUnlocked) {
       return;
     }
     final capture = ref.read(notificationCaptureServiceProvider);
@@ -90,23 +91,17 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     try {
       await capture.processPending();
     } on DatabaseLockedException {
-      // Locked meanwhile; runs again after the next unlock.
+      // Closed meanwhile (factory reset); runs again when it reopens.
     } catch (e, stackTrace) {
       Logger.error('Booking captured card notifications failed', e, stackTrace);
     }
   }
 
+  /// Runs when the database session opens (start-up, before the app lock).
   Future<void> _initializeServices() async {
-    unawaited(ref.read(notificationTapRouterProvider).onUnlocked());
     unawaited(_processCapturedNotifications());
     final notifications = ref.read(notificationServiceProvider);
     await notifications.initialize();
-    final settings = ref.read(settingsProvider);
-    if (settings.scheduledTransactionNotifications ||
-        settings.budgetAlertNotifications ||
-        settings.syncStatusNotifications) {
-      await notifications.requestPermissions();
-    }
     try {
       final scheduled = ref.read(scheduledTransactionServiceProvider);
       await scheduled.processDueTransactions(
@@ -115,7 +110,21 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       // New or edited schedules and a changed reminder toggle take effect.
       await scheduled.rescheduleReminders();
     } on DatabaseLockedException {
-      // Locked while starting up; runs again after the next unlock.
+      // Closed while starting up; runs again when it reopens.
+    }
+  }
+
+  /// Runs when the UI is unlocked: things the user sees wait for the app
+  /// lock (the permission prompt would otherwise cover it).
+  Future<void> _onUiUnlocked() async {
+    unawaited(ref.read(notificationTapRouterProvider).onUnlocked());
+    final settings = ref.read(settingsProvider);
+    if (settings.scheduledTransactionNotifications ||
+        settings.budgetAlertNotifications ||
+        settings.syncStatusNotifications) {
+      final notifications = ref.read(notificationServiceProvider);
+      await notifications.initialize();
+      await notifications.requestPermissions();
     }
   }
 
@@ -129,10 +138,17 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final themeState = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
 
+    // Start-up work needs the database, not the unlocked UI: it runs as soon
+    // as the lock screen has opened the session.
+    ref.listen<AppLockState>(appLockStateProvider, (previous, next) {
+      if (next == AppLockState.unlocked && previous != AppLockState.unlocked) {
+        _initializeServices();
+      }
+    });
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.isAuthenticated &&
           (previous == null || !previous.isAuthenticated)) {
-        _initializeServices();
+        _onUiUnlocked();
       }
     });
     ref.listen<SyncState>(

@@ -250,9 +250,7 @@ class BudgetSummaryFooter extends ConsumerWidget {
         color: scheme.surfaceContainerHigh,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.6),
-          ),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
@@ -323,9 +321,7 @@ class BudgetSummaryFooter extends ConsumerWidget {
                     textAlign: TextAlign.right,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: totalAvailable < 0
-                          ? scheme.error
-                          : scheme.primary,
+                      color: totalAvailable < 0 ? scheme.error : scheme.primary,
                     ),
                   ),
                 ),
