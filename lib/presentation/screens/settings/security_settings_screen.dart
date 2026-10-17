@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/privacy_settings_provider.dart';
@@ -107,7 +109,12 @@ class SecuritySettingsScreen extends ConsumerWidget {
               SwitchListTile(
                 key: const Key('security_app_lock'),
                 secondary: const Icon(Icons.fingerprint),
-                title: Text(l10n.appLockTitle),
+                title: Row(
+                  children: [
+                    Flexible(child: Text(l10n.appLockTitle)),
+                    const InfoButton(HelpTopic.appLock),
+                  ],
+                ),
                 subtitle: Text(l10n.appLockSubtitle),
                 value: appLockEnabled,
                 onChanged: (value) => _setAppLock(context, ref, value),

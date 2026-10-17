@@ -564,15 +564,23 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                                           value: null,
                                           child: Text(l10n.none),
                                         ),
-                                        ...accounts.map(
-                                          (a) => DropdownMenuItem(
-                                            value: a.id,
-                                            child: Text(
-                                              a.name,
-                                              overflow: TextOverflow.ellipsis,
+                                        ...accounts
+                                            .where(
+                                              (a) =>
+                                                  !a.isPartners ||
+                                                  a.id ==
+                                                      payee.defaultAccountId,
+                                            )
+                                            .map(
+                                              (a) => DropdownMenuItem(
+                                                value: a.id,
+                                                child: Text(
+                                                  a.name,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
                                       ],
                                       onChanged: (value) {
                                         if (value != payee.defaultAccountId) {

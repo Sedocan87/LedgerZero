@@ -8,14 +8,26 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/screens/accounts/widgets/leave_budget_dialog.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.dart';
+import 'package:ledger_zero/presentation/screens/settings/income/income_settings_screen.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
+import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+
+/// Remembers that the "outside the budget" hint after creating an account
+/// was shown.
+const offBudgetAccountHintKey = 'hint_offbudget_account_seen';
 
 class AddEditAccountScreen extends ConsumerStatefulWidget {
   final String? accountId;
@@ -48,6 +60,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   int _selectedColor = 0xFF4CAF50; // Default Green
   String _selectedIcon = 'Wallet';
   bool _onBudget = true;
+  bool _personal = false;
+
+  /// An existing shared account that already synced cannot become personal
+  /// (the partner's phone has its transactions).
+  bool _personalLocked = false;
 
   bool _isLoading = false;
   Account? _existingAccount;
@@ -134,6 +151,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       'color': _selectedColor,
       'icon': _selectedIcon,
       'onBudget': _onBudget,
+      'personal': _personal,
     };
     await prefs.setString('draft_account_add', jsonEncode(data));
   }
@@ -167,6 +185,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           if (data['onBudget'] is bool) {
             _onBudget = data['onBudget'];
           }
+          if (data['personal'] == true) {
+            _personal = true;
+            _onBudget = false;
+          }
           _isFormDirty = true;
         });
 
@@ -193,6 +215,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     try {
       final repository = ref.read(accountRepositoryProvider);
       final account = await repository.getAccountById(id);
+      final locked =
+          account != null &&
+          !account.isPersonal &&
+          await repository.wasSynced(account.id);
 
       if (mounted && account != null) {
         _existingAccount = account;
@@ -207,6 +233,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           _selectedColor = account.color ?? 0xFF4CAF50;
           _selectedIcon = account.icon ?? 'Wallet';
           _onBudget = account.onBudget;
+          _personal = account.isPersonal;
+          _personalLocked = locked;
           _isFormDirty = false;
         });
       }
@@ -224,19 +252,15 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     }
   }
 
-  /// Asks before an existing account moves into or out of the budget: it
-  /// changes To Be Budgeted in every month.
+  /// Asks before an existing account moves into the budget: it changes To
+  /// Be Budgeted in every month (leaving it: [showLeaveBudgetDialog]).
   Future<bool> _confirmBudgetChange() async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.accountOnBudgetChangeTitle),
-        content: Text(
-          _onBudget
-              ? l10n.accountOnBudgetChangeOn
-              : l10n.accountOnBudgetChangeOff,
-        ),
+        content: Text(l10n.accountOnBudgetChangeOn),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -252,21 +276,116 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     return confirmed ?? false;
   }
 
+  /// Asks before a personal account becomes shared: its transactions then
+  /// sync to the partner, and it cannot become personal again.
+  Future<bool> _confirmShare() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.accountShareTitle),
+        content: Text(l10n.accountShareBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.accountShareAction),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  /// After the first account: asks for the salary (unless recurring income
+  /// already exists) and opens its form. "Skip" also retires the salary
+  /// card on the budget screen.
+  Future<void> _offerSalary() async {
+    try {
+      final schedules = await ref
+          .read(scheduledTransactionRepositoryProvider)
+          .getAllScheduledTransactions();
+      if (schedules.any((s) => (s.amount ?? 0) > 0 && !s.isFinished)) {
+        return;
+      }
+    } catch (e, st) {
+      Logger.error('Loading recurring income failed', e, st);
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final add = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('firstAccount.salaryQuestion'),
+        icon: const Icon(Icons.payments_outlined),
+        title: Text(l10n.firstAccountSalaryTitle),
+        content: Text(l10n.salaryPromptBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.skip),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.budgetIncomeAddButton),
+          ),
+        ],
+      ),
+    );
+    if (add == false) {
+      await ref
+          .read(sharedPreferencesProvider)
+          .setBool(SalaryPrompt.handledKey, true);
+    } else if (add == true && mounted) {
+      await showAddIncomeSheet(context);
+    }
+  }
+
   Future<void> _saveAccount() async {
     if (!_formKey.currentState!.validate()) {
       FormUtils.focusFirstError(context);
       return;
     }
     if (_existingAccount != null &&
-        _existingAccount!.onBudget != _onBudget &&
-        !await _confirmBudgetChange()) {
+        _existingAccount!.isPersonal &&
+        !_personal &&
+        !await _confirmShare()) {
       return;
+    }
+    if (!mounted) {
+      return;
+    }
+    // Leaving the budget can release money budgeted for this account.
+    var release = const <String, int>{};
+    if (_existingAccount != null && _existingAccount!.onBudget != _onBudget) {
+      if (_onBudget) {
+        if (!await _confirmBudgetChange()) {
+          return;
+        }
+      } else {
+        final chosen = await showLeaveBudgetDialog(
+          context,
+          ref,
+          _existingAccount!.id,
+        );
+        if (chosen == null) {
+          return;
+        }
+        release = chosen;
+      }
     }
 
     setState(() => _isLoading = true);
     try {
       final repository = ref.read(accountRepositoryProvider);
       final isEditing = widget.accountId != null;
+      var released = 0;
 
       final name = _nameController.text.trim();
       final startingBalance =
@@ -282,11 +401,22 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           currency: _selectedCurrency,
           startingBalance: startingBalance,
           onBudget: _onBudget,
+          owner: _personal ? AccountOwner.me : AccountOwner.shared,
           color: _selectedColor,
           icon: _selectedIcon,
           updatedAt: DateTime.now().toUtc(),
         );
         await repository.updateAccount(updatedAccount);
+        final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
+        final budgeting = ref.read(budgetingServiceProvider);
+        for (final MapEntry(key: categoryId, value: amount)
+            in release.entries) {
+          released += await budgeting.releaseFromCategory(
+            categoryId,
+            amount,
+            month,
+          );
+        }
       } else {
         final newAccount = Account(
           id: const Uuid().v4(),
@@ -295,6 +425,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           currency: _selectedCurrency,
           startingBalance: startingBalance,
           onBudget: _onBudget,
+          owner: _personal ? AccountOwner.me : AccountOwner.shared,
           color: _selectedColor,
           icon: _selectedIcon,
           createdAt: DateTime.now().toUtc(),
@@ -308,17 +439,54 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         // Clear dirty flag so we can pop
         setState(() => _isFormDirty = false);
         final messenger = ScaffoldMessenger.of(context);
+        final rootNavigator = Navigator.of(context, rootNavigator: true);
         final l10n = AppLocalizations.of(context)!;
         if (widget.firstAccount) {
+          // Saved: no spinner behind the question.
+          setState(() => _isLoading = false);
+          await _offerSalary();
+          if (!mounted) {
+            return;
+          }
           // The starting balance is now To Be Budgeted: assign it.
           context.go('/budget');
         } else {
           Navigator.of(context).pop();
         }
+        // The first account outside the budget: how to save into it.
+        final prefs = ref.read(sharedPreferencesProvider);
+        if (!isEditing &&
+            !_onBudget &&
+            !(prefs.getBool(offBudgetAccountHintKey) ?? false)) {
+          await prefs.setBool(offBudgetAccountHintKey, true);
+          final helpContext = rootNavigator.context;
+          messenger.showSnackBar(
+            SnackBar(
+              key: const Key('hint.offBudgetAccount'),
+              content: Text(l10n.hintOffBudgetAccount),
+              duration: const Duration(seconds: 10),
+              action: SnackBarAction(
+                label: l10n.helpShowMe,
+                onPressed: () {
+                  if (helpContext.mounted) {
+                    showHelpSheet(helpContext, HelpTopic.saving);
+                  }
+                },
+              ),
+            ),
+          );
+          return;
+        }
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              isEditing ? l10n.accountUpdated : l10n.accountCreated,
+              released > 0
+                  ? l10n.accountReleased(
+                      ref.read(appFormatterProvider).formatMoney(released),
+                    )
+                  : isEditing
+                  ? l10n.accountUpdated
+                  : l10n.accountCreated,
             ),
             backgroundColor: Colors.green,
           ),
@@ -359,6 +527,14 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         ) ??
         false;
   }
+
+  /// A switch title followed by its ⓘ button.
+  Widget _titleWithInfo(String title, HelpTopic topic) => Row(
+    children: [
+      Flexible(child: Text(title)),
+      InfoButton(topic),
+    ],
+  );
 
   @override
   void dispose() {
@@ -461,41 +637,106 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         ),
                         const SizedBox(height: AppSpacing.md),
 
-                        DropdownButtonFormField<AccountType>(
-                          // Rebuilt when the value is set from outside
-                          // (loading the account being edited).
-                          key: ValueKey(_selectedType),
-                          initialValue: _selectedType,
-                          decoration: InputDecoration(
-                            labelText: l10n.accountTypeLabel,
-                            helperText: l10n.accountTypeHelper,
-                          ),
-                          items: AccountType.values.map((type) {
-                            return DropdownMenuItem(
-                              value: type,
-                              child: Text(type.label(l10n)),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedType = value);
-                              _onFieldChange();
-                            }
-                          },
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<AccountType>(
+                                // Rebuilt when the value is set from outside
+                                // (loading the account being edited).
+                                key: ValueKey(_selectedType),
+                                initialValue: _selectedType,
+                                decoration: InputDecoration(
+                                  labelText: l10n.accountTypeLabel,
+                                  helperText: l10n.accountTypeHelper,
+                                ),
+                                items: AccountType.values.map((type) {
+                                  return DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type.label(l10n)),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _selectedType = value;
+                                      // A new savings or investment account
+                                      // starts outside the budget (net worth
+                                      // only); the switch below can change it.
+                                      // Not for the first account: its balance
+                                      // is meant to be budgeted.
+                                      if (widget.accountId == null &&
+                                          !widget.firstAccount &&
+                                          !_personal) {
+                                        _onBudget = !value.startsOffBudget;
+                                      }
+                                    });
+                                    _onFieldChange();
+                                  }
+                                },
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: InfoButton(HelpTopic.accountTypes),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: AppSpacing.sm),
 
                         SwitchListTile(
                           key: const Key('account.onBudget'),
                           contentPadding: EdgeInsets.zero,
-                          title: Text(l10n.accountOnBudgetLabel),
-                          subtitle: Text(l10n.accountOnBudgetHelper),
+                          title: _titleWithInfo(
+                            l10n.accountOnBudgetLabel,
+                            HelpTopic.onBudget,
+                          ),
+                          subtitle: Text(
+                            _personal
+                                ? l10n.accountOnBudgetPersonal
+                                : l10n.accountOnBudgetHelper,
+                          ),
                           value: _onBudget,
-                          onChanged: (value) {
-                            setState(() => _onBudget = value);
-                            _onFieldChange();
-                          },
+                          onChanged: _personal
+                              ? null
+                              : (value) {
+                                  setState(() => _onBudget = value);
+                                  _onFieldChange();
+                                },
                         ),
+                        // The first account is the budget's own account.
+                        if (!widget.firstAccount)
+                          SwitchListTile(
+                            key: const Key('account.personal'),
+                            contentPadding: EdgeInsets.zero,
+                            title: _titleWithInfo(
+                              l10n.accountPersonalLabel,
+                              HelpTopic.personal,
+                            ),
+                            subtitle: Text(
+                              _personalLocked
+                                  ? l10n.accountPersonalSynced
+                                  : l10n.accountPersonalHelper,
+                            ),
+                            value: _personal,
+                            onChanged: _personalLocked
+                                ? null
+                                : (value) {
+                                    setState(() {
+                                      _personal = value;
+                                      // Personal accounts are off-budget;
+                                      // back to shared, a new account gets
+                                      // its type's default again.
+                                      if (value) {
+                                        _onBudget = false;
+                                      } else if (_existingAccount == null) {
+                                        _onBudget =
+                                            !_selectedType.startsOffBudget;
+                                      }
+                                    });
+                                    _onFieldChange();
+                                  },
+                          ),
                         const SizedBox(height: AppSpacing.sm),
 
                         Row(

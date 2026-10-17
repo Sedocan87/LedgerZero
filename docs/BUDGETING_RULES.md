@@ -49,6 +49,29 @@ loan). The "Include in budget" switch on the account form sets it
     ignored, so the budget stays balanced.
 *   Changing the switch recalculates every month (the app asks first).
 
+### Personal accounts (household sync)
+
+An account can be **personal** ("Personal" switch on the account form,
+`accounts.owner_id`, schema v20): it belongs to the phone's user, not to
+the household. A personal account is always off budget: budgets sync, but
+its money exists on one phone only, so counting it would give each phone a
+different TBB. Only its name, type and balance reach the partner's phone,
+where it is listed under "Your partner's accounts", read-only, and counts
+towards household net worth (the account list splits net worth into
+shared, mine and partner's). Its transactions stay on the owner's phone;
+a transfer from a shared account into it syncs as the shared leg only
+("Transfer to <name>"), and the partner cannot change or delete that leg
+or book into the account. How it syncs: SYNC_ARCHITECTURE.md, "Personal
+accounts".
+
+*   An account can become personal while it has not synced yet (e.g. set
+    up before pairing). Once synced, the partner's phone has its
+    transactions, so it stays shared.
+*   A personal account can become shared at any time (the app asks first);
+    its history then syncs.
+*   The first account created after onboarding is the budget's account and
+    is never personal.
+
 ## To Be Budgeted (TBB)
 
 `TBB(M) = sum of the on-budget accounts' starting balances`
@@ -98,14 +121,36 @@ transfers to and from it).
 
 ## Setting money aside
 
-New budgets include a "Savings & Investments" group (Cash Reserve, Stocks &
-ETFs, Crypto, Bonds, Retirement); budgets created earlier are offered it
-once on the budget screen. Money assigned to such a category leaves TBB and
-rolls over every month, so a reserve you always keep (e.g. 5,000 in
-checking) is budgeted once into Cash Reserve and never shows up in TBB
-again. A reserve that is a whole account can instead be an off-budget
-account. Interest and dividends are not categories: they are uncategorised
-income and flow into TBB (or stay in an off-budget account).
+Savings and investments are kept **outside the budget**: a savings,
+brokerage, crypto or retirement account is an off-budget account ("Include
+in budget" off; new Savings and Investment accounts start that way, except
+the first account created after onboarding). Its balance never enters TBB
+and needs no budgeting, its own transactions (interest, dividends, value
+changes) need no category, and it still counts towards net worth.
+
+What the budget sees is the money moved there each month: a transfer from
+a budget account to an off-budget account leaves the budget and takes a
+category. The "Savings & Investments" group (Savings, Stocks & ETFs,
+Crypto, Bonds, Retirement) is for these monthly contributions, so its
+amounts repeat every month like any other (see BUDGET_INTERACTIONS.md,
+"Filling a new month"). New budgets include the group; budgets created
+earlier are offered it once on the budget screen. Budgets seeded before
+"Savings" replaced "Cash Reserve" keep their Cash Reserve category.
+
+A reserve kept inside an account you spend from cannot be off-budget
+(budget membership is per account): budget it once into a category (e.g.
+Savings), where it rolls over every month and stays out of TBB.
+
+**Taking an account out of the budget** removes its balance from TBB in
+every month. If that money was budgeted (e.g. a reserve in Savings), TBB
+would be short by that much, so the confirmation lists the Savings &
+Investments categories with money available, pre-selected, and releases
+up to the account's balance from them (`BudgetingService.releaseFromCategory`:
+oldest budgets first, where the money was assigned, never leaving a month
+overspent and never below zero).
+
+Interest and dividends are not categories: they are uncategorised income
+and flow into TBB (or stay in an off-budget account).
 
 ## Credit cards (current behaviour)
 

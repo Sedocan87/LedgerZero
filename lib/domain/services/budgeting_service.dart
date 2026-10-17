@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
@@ -167,20 +169,28 @@ class BudgetingService {
 
   /// Sets the budget of [categoryId] in [month] to `compute(current)`,
   /// creating the row (deterministic id) when it does not exist.
+  ///
+  /// [stampedAt] replaces the current time as the row's `updated_at` (the
+  /// sync conflict timestamp), see [fillEmptyCategories].
   Future<void> _writeBudget(
     String categoryId,
     DateTime month,
-    int Function(int current) compute,
-  ) async {
+    int Function(int current) compute, {
+    DateTime? stampedAt,
+  }) async {
     final monthString = CalendarDate.monthKey(month);
     final now = DateTime.now().toUtc();
+    final updatedAt = stampedAt ?? now;
     final existing = await _budgetRepository.getBudgetByCategoryAndMonth(
       categoryId,
       monthString,
     );
     if (existing != null) {
       await _budgetRepository.updateBudget(
-        existing.copyWith(budgeted: compute(existing.budgeted), updatedAt: now),
+        existing.copyWith(
+          budgeted: compute(existing.budgeted),
+          updatedAt: updatedAt,
+        ),
       );
       return;
     }
@@ -192,7 +202,7 @@ class BudgetingService {
           month: monthString,
           budgeted: compute(0),
           createdAt: now,
-          updatedAt: now,
+          updatedAt: updatedAt,
         ),
       );
     } catch (e) {
@@ -206,7 +216,7 @@ class BudgetingService {
         rethrow;
       }
       await _budgetRepository.updateBudget(
-        retry.copyWith(budgeted: compute(retry.budgeted), updatedAt: now),
+        retry.copyWith(budgeted: compute(retry.budgeted), updatedAt: updatedAt),
       );
     }
   }
@@ -468,6 +478,210 @@ class BudgetingService {
         if (budget.categoryId != null && budget.budgeted > 0) {
           await _writeBudget(budget.categoryId!, month, (_) => budget.budgeted);
         }
+      }
+    });
+  }
+
+  /// Adds [amount] to the budget of [categoryId] in [month].
+  Future<void> addToCategoryBudget(
+    String categoryId,
+    int amount,
+    DateTime month,
+  ) async {
+    await _unitOfWork.run(
+      () => _writeBudget(categoryId, month, (current) => current + amount),
+    );
+  }
+
+  /// Takes up to [amount] of budgeted money back out of [categoryId] into
+  /// To Be Budgeted, e.g. after the account it was set aside for left the
+  /// budget (its balance then leaves To Be Budgeted in every month).
+  ///
+  /// Budgets are reduced from the oldest month on, where the money was
+  /// first assigned, so earlier months do not stay short. A month gives up
+  /// only as much as keeps the category's available amount from turning
+  /// negative in that or any later month (up to the later of [month] and
+  /// its last budget), so spending that was covered stays covered. Budgets
+  /// never go below zero. Returns the amount released.
+  Future<int> releaseFromCategory(
+    String categoryId,
+    int amount,
+    DateTime month,
+  ) async {
+    if (amount <= 0) {
+      return 0;
+    }
+    final budgets =
+        (await _budgetRepository.getAllBudgets())
+            .where((b) => b.categoryId == categoryId && b.budgeted > 0)
+            .toList()
+          ..sort((a, b) => a.month.compareTo(b.month));
+    if (budgets.isEmpty) {
+      return 0;
+    }
+    final first = CalendarDate.parseMonthKey(budgets.first.month);
+    final lastBudget = CalendarDate.parseMonthKey(budgets.last.month);
+    final end = lastBudget.isAfter(month) ? lastBudget : month;
+    final count = _monthsDifference(first, end) + 1;
+
+    // Lowest available amount from each month to the end: how much budget
+    // that month can give up without leaving a later month overspent.
+    final lowestFrom = List<int>.filled(count, 0);
+    for (var i = count - 1; i >= 0; i--) {
+      final available = await calculateCategoryAvailable(
+        categoryId,
+        DateTime.utc(first.year, first.month + i, 1),
+      );
+      lowestFrom[i] = i == count - 1
+          ? available
+          : math.min(available, lowestFrom[i + 1]);
+    }
+
+    final plan = <DateTime, int>{};
+    var released = 0;
+    for (final budget in budgets) {
+      final budgetMonth = CalendarDate.parseMonthKey(budget.month);
+      final room = lowestFrom[_monthsDifference(first, budgetMonth)] - released;
+      final take = math.min(budget.budgeted, math.min(amount - released, room));
+      if (take > 0) {
+        plan[budgetMonth] = take;
+        released += take;
+      }
+      if (released >= amount) {
+        break;
+      }
+    }
+    if (plan.isEmpty) {
+      return 0;
+    }
+    await _unitOfWork.run(() async {
+      for (final MapEntry(key: budgetMonth, value: take) in plan.entries) {
+        await _writeBudget(
+          categoryId,
+          budgetMonth,
+          (current) => current - take,
+        );
+      }
+    });
+    return released;
+  }
+
+  // --- Filling a new month ---
+
+  /// The sync timestamp of an automatic fill of [month]: its first day,
+  /// 00:00 UTC (see [fillEmptyCategories]). A hand edit never has exactly
+  /// this time, so sync can tell the two apart.
+  static DateTime automaticFillStamp(DateTime month) =>
+      CalendarDate.startOfMonthUtc(month);
+
+  /// The positive budgets of the month before [month], per category.
+  Future<Map<String, int>> budgetsOfPreviousMonth(DateTime month) async {
+    final previous = DateTime.utc(month.year, month.month - 1, 1);
+    final budgets = await _budgetRepository.getBudgetsForMonth(
+      CalendarDate.monthKey(previous),
+    );
+    return {
+      for (final b in budgets)
+        if (b.categoryId != null && b.budgeted > 0) b.categoryId!: b.budgeted,
+    };
+  }
+
+  /// The amounts of template [templateId]; null when it no longer exists.
+  Future<Map<String, int>?> templateAmounts(String templateId) async {
+    final template = await _budgetTemplateRepository.getTemplateById(
+      templateId,
+    );
+    return template == null ? null : Map.of(template.data);
+  }
+
+  /// Whether nothing is budgeted in [month] (every category at zero).
+  Future<bool> isMonthEmpty(DateTime month) async {
+    final budgets = await _budgetRepository.getBudgetsForMonth(
+      CalendarDate.monthKey(month),
+    );
+    return budgets.every((b) => b.budgeted == 0);
+  }
+
+  /// Writes [amounts] into the categories of [month] that have nothing
+  /// budgeted, in one unit of work. Hidden and deleted categories and
+  /// non-positive amounts are skipped. Returns what was written.
+  ///
+  /// [stampedAt] (the automatic fill uses [automaticFillStamp]) is
+  /// stored as the rows' sync timestamp instead of the current time, so any
+  /// edit made by hand during the month, on this phone or a paired one, is
+  /// newer and wins, and two phones filling the same month agree. A category
+  /// already written at or after [stampedAt] (e.g. set to zero on purpose)
+  /// is left alone, so the timestamps only ever move forward.
+  Future<Map<String, int>> fillEmptyCategories(
+    DateTime month,
+    Map<String, int> amounts, {
+    DateTime? stampedAt,
+  }) async {
+    final filled = await planFill(month, amounts, stampedAt: stampedAt);
+    if (filled.isEmpty) {
+      return filled;
+    }
+    await _unitOfWork.run(() async {
+      for (final MapEntry(key: categoryId, value: amount) in filled.entries) {
+        await _writeBudget(
+          categoryId,
+          month,
+          (_) => amount,
+          stampedAt: stampedAt,
+        );
+      }
+    });
+    return filled;
+  }
+
+  /// What [fillEmptyCategories] would write, without writing it.
+  Future<Map<String, int>> planFill(
+    DateTime month,
+    Map<String, int> amounts, {
+    DateTime? stampedAt,
+  }) async {
+    final visible = {
+      for (final c in await _categoryRepository.getAllCategories())
+        if (!c.isHidden) c.id,
+    };
+    final existing = {
+      for (final b in await _budgetRepository.getBudgetsForMonth(
+        CalendarDate.monthKey(month),
+      ))
+        if (b.categoryId != null) b.categoryId!: b,
+    };
+    return {
+      for (final MapEntry(key: categoryId, value: amount) in amounts.entries)
+        if (amount > 0 &&
+            visible.contains(categoryId) &&
+            (existing[categoryId]?.budgeted ?? 0) == 0 &&
+            !_editedSince(existing[categoryId]?.updatedAt, stampedAt))
+          categoryId: amount,
+    };
+  }
+
+  static bool _editedSince(DateTime? edited, DateTime? since) =>
+      since != null && edited != null && !edited.isBefore(since);
+
+  /// Undoes [fillEmptyCategories]: sets the [filled] categories of [month]
+  /// back to zero, except those changed since.
+  Future<void> undoFill(DateTime month, Map<String, int> filled) async {
+    final current = {
+      for (final b in await _budgetRepository.getBudgetsForMonth(
+        CalendarDate.monthKey(month),
+      ))
+        if (b.categoryId != null) b.categoryId!: b.budgeted,
+    };
+    final unchanged = [
+      for (final MapEntry(key: categoryId, value: amount) in filled.entries)
+        if (current[categoryId] == amount) categoryId,
+    ];
+    if (unchanged.isEmpty) {
+      return;
+    }
+    await _unitOfWork.run(() async {
+      for (final categoryId in unchanged) {
+        await _writeBudget(categoryId, month, (_) => 0);
       }
     });
   }

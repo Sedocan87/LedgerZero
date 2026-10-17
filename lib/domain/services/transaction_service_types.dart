@@ -11,6 +11,10 @@ enum TransactionValidationError {
   splitLineZero,
   splitSumMismatch,
   notFound,
+
+  /// The transaction (or its transfer counterpart) is in the partner's
+  /// personal account.
+  partnerAccount,
 }
 
 /// Exception thrown when transaction validation fails.

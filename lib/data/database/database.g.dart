@@ -89,6 +89,28 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _ownerIdMeta = const VerificationMeta(
+    'ownerId',
+  );
+  @override
+  late final GeneratedColumn<String> ownerId = GeneratedColumn<String>(
+    'owner_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sharedBalanceMeta = const VerificationMeta(
+    'sharedBalance',
+  );
+  @override
+  late final GeneratedColumn<int> sharedBalance = GeneratedColumn<int>(
+    'shared_balance',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _colorMeta = const VerificationMeta('color');
   @override
   late final GeneratedColumn<int> color = GeneratedColumn<int>(
@@ -147,6 +169,8 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     startingBalance,
     isClosed,
     onBudget,
+    ownerId,
+    sharedBalance,
     color,
     icon,
     notes,
@@ -211,6 +235,21 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       context.handle(
         _onBudgetMeta,
         onBudget.isAcceptableOrUnknown(data['on_budget']!, _onBudgetMeta),
+      );
+    }
+    if (data.containsKey('owner_id')) {
+      context.handle(
+        _ownerIdMeta,
+        ownerId.isAcceptableOrUnknown(data['owner_id']!, _ownerIdMeta),
+      );
+    }
+    if (data.containsKey('shared_balance')) {
+      context.handle(
+        _sharedBalanceMeta,
+        sharedBalance.isAcceptableOrUnknown(
+          data['shared_balance']!,
+          _sharedBalanceMeta,
+        ),
       );
     }
     if (data.containsKey('color')) {
@@ -280,6 +319,14 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.bool,
         data['${effectivePrefix}on_budget'],
       )!,
+      ownerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_id'],
+      ),
+      sharedBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shared_balance'],
+      ),
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}color'],
@@ -325,6 +372,18 @@ class Account extends DataClass implements Insertable<Account> {
   /// (tracking) account counts towards net worth only: its starting
   /// balance and transactions never reach To Be Budgeted or categories.
   final bool onBudget;
+
+  /// Household member who owns a personal account (schema v20); null for a
+  /// shared account. A personal account is always off-budget, and its
+  /// transactions and scheduled transactions never leave the owner's
+  /// device: other members only get this row (see docs/SYNC_ARCHITECTURE.md,
+  /// "Personal accounts").
+  final String? ownerId;
+
+  /// The balance of a personal account as last computed on the owner's
+  /// device (kept by triggers there), so other members can show it. Null
+  /// for shared accounts.
+  final int? sharedBalance;
   final int? color;
   final String? icon;
   final String? notes;
@@ -338,6 +397,8 @@ class Account extends DataClass implements Insertable<Account> {
     required this.startingBalance,
     required this.isClosed,
     required this.onBudget,
+    this.ownerId,
+    this.sharedBalance,
     this.color,
     this.icon,
     this.notes,
@@ -354,6 +415,12 @@ class Account extends DataClass implements Insertable<Account> {
     map['starting_balance'] = Variable<int>(startingBalance);
     map['is_closed'] = Variable<bool>(isClosed);
     map['on_budget'] = Variable<bool>(onBudget);
+    if (!nullToAbsent || ownerId != null) {
+      map['owner_id'] = Variable<String>(ownerId);
+    }
+    if (!nullToAbsent || sharedBalance != null) {
+      map['shared_balance'] = Variable<int>(sharedBalance);
+    }
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<int>(color);
     }
@@ -381,6 +448,12 @@ class Account extends DataClass implements Insertable<Account> {
       startingBalance: Value(startingBalance),
       isClosed: Value(isClosed),
       onBudget: Value(onBudget),
+      ownerId: ownerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerId),
+      sharedBalance: sharedBalance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sharedBalance),
       color: color == null && nullToAbsent
           ? const Value.absent()
           : Value(color),
@@ -410,6 +483,8 @@ class Account extends DataClass implements Insertable<Account> {
       startingBalance: serializer.fromJson<int>(json['startingBalance']),
       isClosed: serializer.fromJson<bool>(json['isClosed']),
       onBudget: serializer.fromJson<bool>(json['onBudget']),
+      ownerId: serializer.fromJson<String?>(json['ownerId']),
+      sharedBalance: serializer.fromJson<int?>(json['sharedBalance']),
       color: serializer.fromJson<int?>(json['color']),
       icon: serializer.fromJson<String?>(json['icon']),
       notes: serializer.fromJson<String?>(json['notes']),
@@ -428,6 +503,8 @@ class Account extends DataClass implements Insertable<Account> {
       'startingBalance': serializer.toJson<int>(startingBalance),
       'isClosed': serializer.toJson<bool>(isClosed),
       'onBudget': serializer.toJson<bool>(onBudget),
+      'ownerId': serializer.toJson<String?>(ownerId),
+      'sharedBalance': serializer.toJson<int?>(sharedBalance),
       'color': serializer.toJson<int?>(color),
       'icon': serializer.toJson<String?>(icon),
       'notes': serializer.toJson<String?>(notes),
@@ -444,6 +521,8 @@ class Account extends DataClass implements Insertable<Account> {
     int? startingBalance,
     bool? isClosed,
     bool? onBudget,
+    Value<String?> ownerId = const Value.absent(),
+    Value<int?> sharedBalance = const Value.absent(),
     Value<int?> color = const Value.absent(),
     Value<String?> icon = const Value.absent(),
     Value<String?> notes = const Value.absent(),
@@ -457,6 +536,10 @@ class Account extends DataClass implements Insertable<Account> {
     startingBalance: startingBalance ?? this.startingBalance,
     isClosed: isClosed ?? this.isClosed,
     onBudget: onBudget ?? this.onBudget,
+    ownerId: ownerId.present ? ownerId.value : this.ownerId,
+    sharedBalance: sharedBalance.present
+        ? sharedBalance.value
+        : this.sharedBalance,
     color: color.present ? color.value : this.color,
     icon: icon.present ? icon.value : this.icon,
     notes: notes.present ? notes.value : this.notes,
@@ -474,6 +557,10 @@ class Account extends DataClass implements Insertable<Account> {
           : this.startingBalance,
       isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
       onBudget: data.onBudget.present ? data.onBudget.value : this.onBudget,
+      ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
+      sharedBalance: data.sharedBalance.present
+          ? data.sharedBalance.value
+          : this.sharedBalance,
       color: data.color.present ? data.color.value : this.color,
       icon: data.icon.present ? data.icon.value : this.icon,
       notes: data.notes.present ? data.notes.value : this.notes,
@@ -492,6 +579,8 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('startingBalance: $startingBalance, ')
           ..write('isClosed: $isClosed, ')
           ..write('onBudget: $onBudget, ')
+          ..write('ownerId: $ownerId, ')
+          ..write('sharedBalance: $sharedBalance, ')
           ..write('color: $color, ')
           ..write('icon: $icon, ')
           ..write('notes: $notes, ')
@@ -510,6 +599,8 @@ class Account extends DataClass implements Insertable<Account> {
     startingBalance,
     isClosed,
     onBudget,
+    ownerId,
+    sharedBalance,
     color,
     icon,
     notes,
@@ -527,6 +618,8 @@ class Account extends DataClass implements Insertable<Account> {
           other.startingBalance == this.startingBalance &&
           other.isClosed == this.isClosed &&
           other.onBudget == this.onBudget &&
+          other.ownerId == this.ownerId &&
+          other.sharedBalance == this.sharedBalance &&
           other.color == this.color &&
           other.icon == this.icon &&
           other.notes == this.notes &&
@@ -542,6 +635,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int> startingBalance;
   final Value<bool> isClosed;
   final Value<bool> onBudget;
+  final Value<String?> ownerId;
+  final Value<int?> sharedBalance;
   final Value<int?> color;
   final Value<String?> icon;
   final Value<String?> notes;
@@ -556,6 +651,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.startingBalance = const Value.absent(),
     this.isClosed = const Value.absent(),
     this.onBudget = const Value.absent(),
+    this.ownerId = const Value.absent(),
+    this.sharedBalance = const Value.absent(),
     this.color = const Value.absent(),
     this.icon = const Value.absent(),
     this.notes = const Value.absent(),
@@ -571,6 +668,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.startingBalance = const Value.absent(),
     this.isClosed = const Value.absent(),
     this.onBudget = const Value.absent(),
+    this.ownerId = const Value.absent(),
+    this.sharedBalance = const Value.absent(),
     this.color = const Value.absent(),
     this.icon = const Value.absent(),
     this.notes = const Value.absent(),
@@ -588,6 +687,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<int>? startingBalance,
     Expression<bool>? isClosed,
     Expression<bool>? onBudget,
+    Expression<String>? ownerId,
+    Expression<int>? sharedBalance,
     Expression<int>? color,
     Expression<String>? icon,
     Expression<String>? notes,
@@ -603,6 +704,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (startingBalance != null) 'starting_balance': startingBalance,
       if (isClosed != null) 'is_closed': isClosed,
       if (onBudget != null) 'on_budget': onBudget,
+      if (ownerId != null) 'owner_id': ownerId,
+      if (sharedBalance != null) 'shared_balance': sharedBalance,
       if (color != null) 'color': color,
       if (icon != null) 'icon': icon,
       if (notes != null) 'notes': notes,
@@ -620,6 +723,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<int>? startingBalance,
     Value<bool>? isClosed,
     Value<bool>? onBudget,
+    Value<String?>? ownerId,
+    Value<int?>? sharedBalance,
     Value<int?>? color,
     Value<String?>? icon,
     Value<String?>? notes,
@@ -635,6 +740,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       startingBalance: startingBalance ?? this.startingBalance,
       isClosed: isClosed ?? this.isClosed,
       onBudget: onBudget ?? this.onBudget,
+      ownerId: ownerId ?? this.ownerId,
+      sharedBalance: sharedBalance ?? this.sharedBalance,
       color: color ?? this.color,
       icon: icon ?? this.icon,
       notes: notes ?? this.notes,
@@ -668,6 +775,12 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (onBudget.present) {
       map['on_budget'] = Variable<bool>(onBudget.value);
     }
+    if (ownerId.present) {
+      map['owner_id'] = Variable<String>(ownerId.value);
+    }
+    if (sharedBalance.present) {
+      map['shared_balance'] = Variable<int>(sharedBalance.value);
+    }
     if (color.present) {
       map['color'] = Variable<int>(color.value);
     }
@@ -699,6 +812,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('startingBalance: $startingBalance, ')
           ..write('isClosed: $isClosed, ')
           ..write('onBudget: $onBudget, ')
+          ..write('ownerId: $ownerId, ')
+          ..write('sharedBalance: $sharedBalance, ')
           ..write('color: $color, ')
           ..write('icon: $icon, ')
           ..write('notes: $notes, ')
@@ -9677,6 +9792,8 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<int> startingBalance,
       Value<bool> isClosed,
       Value<bool> onBudget,
+      Value<String?> ownerId,
+      Value<int?> sharedBalance,
       Value<int?> color,
       Value<String?> icon,
       Value<String?> notes,
@@ -9693,6 +9810,8 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<int> startingBalance,
       Value<bool> isClosed,
       Value<bool> onBudget,
+      Value<String?> ownerId,
+      Value<int?> sharedBalance,
       Value<int?> color,
       Value<String?> icon,
       Value<String?> notes,
@@ -9830,6 +9949,16 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get onBudget => $composableBuilder(
     column: $table.onBudget,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sharedBalance => $composableBuilder(
+    column: $table.sharedBalance,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10004,6 +10133,16 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get ownerId => $composableBuilder(
+    column: $table.ownerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sharedBalance => $composableBuilder(
+    column: $table.sharedBalance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get color => $composableBuilder(
     column: $table.color,
     builder: (column) => ColumnOrderings(column),
@@ -10061,6 +10200,14 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<bool> get onBudget =>
       $composableBuilder(column: $table.onBudget, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerId =>
+      $composableBuilder(column: $table.ownerId, builder: (column) => column);
+
+  GeneratedColumn<int> get sharedBalance => $composableBuilder(
+    column: $table.sharedBalance,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
@@ -10219,6 +10366,8 @@ class $$AccountsTableTableManager
                 Value<int> startingBalance = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
                 Value<bool> onBudget = const Value.absent(),
+                Value<String?> ownerId = const Value.absent(),
+                Value<int?> sharedBalance = const Value.absent(),
                 Value<int?> color = const Value.absent(),
                 Value<String?> icon = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
@@ -10233,6 +10382,8 @@ class $$AccountsTableTableManager
                 startingBalance: startingBalance,
                 isClosed: isClosed,
                 onBudget: onBudget,
+                ownerId: ownerId,
+                sharedBalance: sharedBalance,
                 color: color,
                 icon: icon,
                 notes: notes,
@@ -10249,6 +10400,8 @@ class $$AccountsTableTableManager
                 Value<int> startingBalance = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
                 Value<bool> onBudget = const Value.absent(),
+                Value<String?> ownerId = const Value.absent(),
+                Value<int?> sharedBalance = const Value.absent(),
                 Value<int?> color = const Value.absent(),
                 Value<String?> icon = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
@@ -10263,6 +10416,8 @@ class $$AccountsTableTableManager
                 startingBalance: startingBalance,
                 isClosed: isClosed,
                 onBudget: onBudget,
+                ownerId: ownerId,
+                sharedBalance: sharedBalance,
                 color: color,
                 icon: icon,
                 notes: notes,

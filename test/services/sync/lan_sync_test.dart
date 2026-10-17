@@ -124,6 +124,46 @@ void main() {
     expect(a.service.peers[b.deviceId]?.lastSync, isNotNull);
   });
 
+  test('data from before pairing reaches a new phone that joins', () async {
+    await a.t.addAccount(id: 'acc-a', name: 'Joint checking');
+    final pairing = LanPairing.generate();
+    await a.service.pair(pairing);
+    await a.service.start();
+    await a.engine.createSyncFolder(pairing.passphrase);
+    await a.engine.sync();
+
+    final code = LanPairingCode.decode((await a.code()).encode());
+    await b.service.pair(code.pairing);
+    await b.service.start();
+    await b.service.addPeerFromCode(code);
+    await b.engine.joinSyncFolder(code.pairing.passphrase);
+    await b.engine.sync();
+
+    expect(await b.accountNames(), ['Joint checking']);
+  });
+
+  test(
+    'data from before pairing reaches the phone whose code was scanned',
+    () async {
+      await a.t.addAccount(id: 'acc-a', name: 'Joint checking');
+      final pairing = LanPairing.generate();
+      await b.service.pair(pairing);
+      await b.service.start();
+      await b.engine.createSyncFolder(pairing.passphrase);
+      await b.engine.sync();
+
+      final code = LanPairingCode.decode((await b.code()).encode());
+      await a.service.pair(code.pairing);
+      await a.service.start();
+      await a.service.addPeerFromCode(code);
+      await a.engine.joinSyncFolder(code.pairing.passphrase);
+      await a.engine.sync();
+      await b.engine.sync();
+
+      expect(await b.accountNames(), ['Joint checking']);
+    },
+  );
+
   test('a phone joins with only the code, before discovery found it', () async {
     final pairing = LanPairing.generate();
     await a.service.pair(pairing);

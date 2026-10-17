@@ -32,7 +32,7 @@ void main() {
   test('new databases are seeded with Savings & Investments', () async {
     expect(await t.categories.getCategoryGroupById(groupId), isNotNull);
     expect(await savingsCategoryNames(), [
-      'Cash Reserve',
+      'Savings',
       'Stocks & ETFs',
       'Crypto',
       'Bonds',
@@ -61,7 +61,7 @@ void main() {
         others.every((g) => (g.sortOrder ?? 0) < added.sortOrder!),
         isTrue,
       );
-      expect((await savingsCategoryNames()).first, 'de:Cash Reserve');
+      expect((await savingsCategoryNames()).first, 'de:Savings');
       expect(
         await t.categories.getCategoryById(
           DeterministicId.defaultCategory(savings, 'Crypto'),

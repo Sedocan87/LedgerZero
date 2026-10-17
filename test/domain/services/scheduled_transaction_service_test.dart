@@ -611,6 +611,62 @@ void main() {
     });
   });
 
+  group('saving books what is already due', () {
+    ScheduledTransaction salary(DateTime nextDate) => ScheduledTransaction(
+      id: 'salary',
+      accountId: accountId,
+      amount: 300000,
+      frequency: RecurrenceFrequency.monthly,
+      interval: 1,
+      nextDate: nextDate,
+      createdAt: DateTime.utc(2024, 1, 1),
+    );
+
+    test('a salary due today is booked when it is saved', () async {
+      service = ScheduledTransactionService(
+        t.scheduledTransactions,
+        t.transactions,
+        notifications,
+        unitOfWork: t.unitOfWork,
+        defaultMemo: () => fallback,
+      );
+      final now = CalendarDate.today();
+      await service.saveScheduledTransaction(salary(now), isNew: true);
+
+      final booked = await occurrences();
+      expect(booked, hasLength(1));
+      expect(booked.single.amount, 300000);
+      expect(booked.single.date, now);
+      expect(booked.single.memo, fallback);
+      final next = (await reload('salary')).nextDate!;
+      expect(next.isAfter(now), isTrue);
+      // The reminder is for the next payday, not the one just booked.
+      expect(
+        notifications.scheduled[ScheduledTransactionService.reminderId(
+          'salary',
+        )],
+        DateTime(next.year, next.month, next.day - 1, 9),
+      );
+    });
+
+    test('a later payday waits', () async {
+      final later = CalendarDate.today().add(const Duration(days: 5));
+      await service.saveScheduledTransaction(salary(later), isNew: true);
+      expect(await occurrences(), isEmpty);
+      expect((await reload('salary')).nextDate, later);
+    });
+
+    test('editing a schedule to today books it too', () async {
+      final now = CalendarDate.today();
+      await service.saveScheduledTransaction(
+        salary(now.add(const Duration(days: 5))),
+        isNew: true,
+      );
+      await service.saveScheduledTransaction(salary(now), isNew: false);
+      expect(await occurrences(), hasLength(1));
+    });
+  });
+
   group('amount validation', () {
     ScheduledTransaction schedule(int? amount) => ScheduledTransaction(
       id: 'sched-z',

@@ -10,9 +10,11 @@ class FaqScreen extends StatelessWidget {
     final entries = [
       (l10n.faqBudgetingQ, l10n.faqBudgetingA),
       (l10n.faqSafeQ, l10n.faqSafeA),
+      (l10n.faqSavingQ, l10n.faqSavingA),
       (l10n.faqSyncQ, l10n.faqSyncA),
+      (l10n.faqPersonalQ, l10n.faqPersonalA),
       (l10n.faqOfflineQ, l10n.faqOfflineA),
-      (l10n.faqPasswordQ, l10n.faqPasswordA),
+      (l10n.faqLockQ, l10n.faqLockA),
       (l10n.faqBackupQ, l10n.faqBackupA),
       (l10n.faqImportQ, l10n.faqImportA),
     ];

@@ -436,16 +436,19 @@ void main() {
       await expectInvariant(jan);
     });
 
-    test('a cash reserve budgeted once stays out of TBB', () async {
-      final reserve = await t.categoryId('Cash Reserve');
-      await t.budgeting.setCategoryBudgetedAmount(reserve, 500000 ~/ 2, jan);
-      expect(await t.budgeting.calculateTBB(feb), 310000 - 250000);
-      expect(
-        await t.budgeting.calculateCategoryAvailable(reserve, feb),
-        250000,
-      );
-      await expectInvariant(feb);
-    });
+    test(
+      'a reserve budgeted once in a savings category stays out of TBB',
+      () async {
+        final reserve = await t.categoryId('Savings');
+        await t.budgeting.setCategoryBudgetedAmount(reserve, 500000 ~/ 2, jan);
+        expect(await t.budgeting.calculateTBB(feb), 310000 - 250000);
+        expect(
+          await t.budgeting.calculateCategoryAvailable(reserve, feb),
+          250000,
+        );
+        await expectInvariant(feb);
+      },
+    );
 
     test('switching an account off budget recalculates TBB', () async {
       final wallet = await t.addAccount(name: 'Wallet', startingBalance: 7000);

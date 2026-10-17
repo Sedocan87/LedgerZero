@@ -11,6 +11,7 @@ import 'package:ledger_zero/services/sync/format/sync_change.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
+import 'package:ledger_zero/services/sync/personal_rows.dart';
 import 'package:ledger_zero/services/sync/sync_local_state.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
@@ -740,7 +741,8 @@ class SyncEngine {
     Logger.info('Sync: wrote snapshot $ownSeq');
   }
 
-  /// Encrypted snapshot of every synced row and tombstone as of [sequence].
+  /// Encrypted snapshot of every synced row and tombstone as of [sequence]
+  /// (without the rows of personal accounts, [PersonalRows]).
   Future<Uint8List> writeSnapshotBytes(Uint8List key, int sequence) {
     return _db.transaction(() async {
       final changes = <SyncChange>[];
@@ -748,10 +750,14 @@ class SyncEngine {
         for (final v in await _db.select(_db.syncRowVersions).get())
           (v.syncTable, v.rowId): v,
       };
+      final personal = await PersonalRows.load(_db);
       for (final table in SyncSchema.dependencyOrder) {
         final rows = await _db.customSelect('SELECT * FROM "$table"').get();
         for (final r in rows) {
           final row = Map<String, Object?>.of(r.data);
+          if (personal.isPrivate(table, row)) {
+            continue;
+          }
           final id = row['id'] as String;
           final version = SyncSchema.versionOf(row['updated_at']);
           final known = versions[(table, id)];

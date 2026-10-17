@@ -13,10 +13,12 @@ import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
+import 'package:ledger_zero/presentation/providers/new_month_fill_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
 import 'package:ledger_zero/presentation/providers/notification_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
+import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/presentation/widgets/security/privacy_shield.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
@@ -75,6 +77,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       ref.read(exportFileServiceProvider).sweepStale();
       ref.read(syncControllerProvider.notifier).onAppResumed();
       _processCapturedNotifications();
+      // A payday or a new month may have come while the app was in the
+      // background.
+      if (ref.read(sessionProvider).isUnlocked) {
+        unawaited(_processDueSchedules());
+        unawaited(ref.read(newMonthFillProvider.notifier).runIfDue());
+      }
     }
     if (state == AppLifecycleState.paused) {
       ref.read(syncControllerProvider.notifier).onAppPaused();
@@ -100,6 +108,19 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     }
   }
 
+  /// Books the scheduled occurrences that are due by today.
+  Future<void> _processDueSchedules() async {
+    try {
+      await ref
+          .read(scheduledTransactionServiceProvider)
+          .processDueTransactions(fallbackMemo: _scheduledFallbackMemo());
+    } on DatabaseLockedException {
+      // Closed meanwhile; runs again when it reopens.
+    } catch (e, stackTrace) {
+      Logger.error('Booking due scheduled transactions failed', e, stackTrace);
+    }
+  }
+
   /// Runs when the database session opens (start-up, before the app lock).
   Future<void> _initializeServices() async {
     unawaited(_processCapturedNotifications());
@@ -112,6 +133,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       );
       // New or edited schedules and a changed reminder toggle take effect.
       await scheduled.rescheduleReminders();
+      await ref.read(newMonthFillProvider.notifier).runIfDue();
     } on DatabaseLockedException {
       // Closed while starting up; runs again when it reopens.
     }
@@ -176,8 +198,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       locale: ref.watch(settingsProvider).language,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) =>
-          PrivacyShield(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => PrivacyShield(
+        child: LockOverlay(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

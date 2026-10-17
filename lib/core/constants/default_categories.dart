@@ -4,12 +4,15 @@
 /// every device creates identical rows; only the display name is
 /// localised).
 abstract final class DefaultCategories {
-  /// Money set aside: a cash reserve kept in a budget account (budgeted
-  /// once, it rolls over and stays out of To Be Budgeted) and money to
-  /// invest. Seeded into new databases since schema v19; existing budgets
-  /// are offered it once on the budget screen. Investment income (interest,
-  /// dividends) is not a category: it is uncategorised income and flows
-  /// into To Be Budgeted.
+  /// What is moved to savings and investment accounts each month. Those
+  /// accounts are kept outside the budget (net worth only), so the
+  /// transfer to them leaves the budget through one of these categories.
+  /// Seeded into new databases since schema v19 ("Cash Reserve" until it
+  /// was replaced by "Savings"; existing budgets keep theirs); budgets
+  /// without the group are offered it once on the budget screen.
+  /// Investment income (interest, dividends) is not a category: it is
+  /// uncategorised income and flows into To Be Budgeted (or stays in an
+  /// off-budget account).
   static const savingsGroup = 'Savings & Investments';
 
   /// Group name -> category names, in display order.
@@ -38,12 +41,6 @@ abstract final class DefaultCategories {
       'Entertainment',
     ],
     'Just for Fun': ['Gaming', 'Music', 'Fun Money'],
-    savingsGroup: [
-      'Cash Reserve',
-      'Stocks & ETFs',
-      'Crypto',
-      'Bonds',
-      'Retirement',
-    ],
+    savingsGroup: ['Savings', 'Stocks & ETFs', 'Crypto', 'Bonds', 'Retirement'],
   };
 }

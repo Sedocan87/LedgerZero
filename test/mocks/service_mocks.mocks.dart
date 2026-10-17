@@ -271,6 +271,116 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
           as _i3.Future<void>);
 
   @override
+  _i3.Future<void> addToCategoryBudget(
+    String? categoryId,
+    int? amount,
+    DateTime? month,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addToCategoryBudget, [
+              categoryId,
+              amount,
+              month,
+            ]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
+  _i3.Future<int> releaseFromCategory(
+    String? categoryId,
+    int? amount,
+    DateTime? month,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#releaseFromCategory, [
+              categoryId,
+              amount,
+              month,
+            ]),
+            returnValue: _i3.Future<int>.value(0),
+            returnValueForMissingStub: _i3.Future<int>.value(0),
+          )
+          as _i3.Future<int>);
+
+  @override
+  _i3.Future<Map<String, int>> budgetsOfPreviousMonth(DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#budgetsOfPreviousMonth, [month]),
+            returnValue: _i3.Future<Map<String, int>>.value(<String, int>{}),
+            returnValueForMissingStub: _i3.Future<Map<String, int>>.value(
+              <String, int>{},
+            ),
+          )
+          as _i3.Future<Map<String, int>>);
+
+  @override
+  _i3.Future<Map<String, int>?> templateAmounts(String? templateId) =>
+      (super.noSuchMethod(
+            Invocation.method(#templateAmounts, [templateId]),
+            returnValue: _i3.Future<Map<String, int>?>.value(),
+            returnValueForMissingStub: _i3.Future<Map<String, int>?>.value(),
+          )
+          as _i3.Future<Map<String, int>?>);
+
+  @override
+  _i3.Future<bool> isMonthEmpty(DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#isMonthEmpty, [month]),
+            returnValue: _i3.Future<bool>.value(false),
+            returnValueForMissingStub: _i3.Future<bool>.value(false),
+          )
+          as _i3.Future<bool>);
+
+  @override
+  _i3.Future<Map<String, int>> fillEmptyCategories(
+    DateTime? month,
+    Map<String, int>? amounts, {
+    DateTime? stampedAt,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #fillEmptyCategories,
+              [month, amounts],
+              {#stampedAt: stampedAt},
+            ),
+            returnValue: _i3.Future<Map<String, int>>.value(<String, int>{}),
+            returnValueForMissingStub: _i3.Future<Map<String, int>>.value(
+              <String, int>{},
+            ),
+          )
+          as _i3.Future<Map<String, int>>);
+
+  @override
+  _i3.Future<Map<String, int>> planFill(
+    DateTime? month,
+    Map<String, int>? amounts, {
+    DateTime? stampedAt,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #planFill,
+              [month, amounts],
+              {#stampedAt: stampedAt},
+            ),
+            returnValue: _i3.Future<Map<String, int>>.value(<String, int>{}),
+            returnValueForMissingStub: _i3.Future<Map<String, int>>.value(
+              <String, int>{},
+            ),
+          )
+          as _i3.Future<Map<String, int>>);
+
+  @override
+  _i3.Future<void> undoFill(DateTime? month, Map<String, int>? filled) =>
+      (super.noSuchMethod(
+            Invocation.method(#undoFill, [month, filled]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
+
+  @override
   _i3.Future<void> resetBudget(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#resetBudget, [month]),

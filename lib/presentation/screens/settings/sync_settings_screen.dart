@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -85,7 +87,10 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.syncSettings)),
+      appBar: AppBar(
+        title: Text(l10n.syncSettings),
+        actions: const [InfoButton(HelpTopic.sync)],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [

@@ -208,7 +208,7 @@ class _CardNotificationsScreenState
   /// Asks for the account payments of [appLabel] are booked to.
   Future<String?> _pickAccount(String appLabel, List<Account> accounts) async {
     final l10n = AppLocalizations.of(context)!;
-    final open = accounts.where((a) => !a.isClosed).toList();
+    final open = accounts.where((a) => !a.isClosed && !a.isPartners).toList();
     return showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(

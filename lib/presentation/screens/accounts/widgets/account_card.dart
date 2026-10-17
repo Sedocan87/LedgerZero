@@ -45,6 +45,19 @@ class AccountCard extends StatelessWidget {
         isDark ? Colors.green.shade300 : AppColors.income,
         l10n?.accountTypeCash,
       ),
+      AccountType.investment => (
+        Icons.trending_up_rounded,
+        isDark ? Colors.indigo.shade200 : const Color(0xFF3949AB),
+        l10n?.accountTypeInvestment,
+      ),
+    };
+
+    // A personal account is always off-budget: its owner badge says enough.
+    final statusBadge = switch (account.owner) {
+      AccountOwner.me => l10n?.accountPersonalBadge,
+      AccountOwner.partner => l10n?.accountPartnerBadge,
+      AccountOwner.shared when !account.onBudget => l10n?.accountOffBudgetBadge,
+      AccountOwner.shared => null,
     };
 
     // Determine color for balance (red for negative, default for positive)
@@ -89,8 +102,7 @@ class AccountCard extends StatelessWidget {
                   runSpacing: 4,
                   children: [
                     _Badge((typeName ?? account.type.name).toUpperCase()),
-                    if (!account.onBudget && l10n != null)
-                      _Badge(l10n.accountOffBudgetBadge.toUpperCase()),
+                    if (statusBadge != null) _Badge(statusBadge.toUpperCase()),
                   ],
                 ),
               ],

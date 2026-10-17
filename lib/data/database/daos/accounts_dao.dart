@@ -1,14 +1,17 @@
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/database/tables/accounts.dart';
+import 'package:ledger_zero/data/database/tables/sync_tables.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
+import 'package:uuid/uuid.dart';
 
 part 'accounts_dao.g.dart';
 
-/// An account row together with its computed balance in minor units.
-typedef AccountWithBalance = ({Account account, int balance});
+/// An account row together with its balance in minor units and its
+/// [AccountsDao.ownershipExpression] value.
+typedef AccountWithBalance = ({Account account, int balance, int ownership});
 
-@DriftAccessor(tables: [Accounts, Transactions])
+@DriftAccessor(tables: [Accounts, Transactions, SyncKv])
 class AccountsDao extends DatabaseAccessor<AppDatabase>
     with _$AccountsDaoMixin {
   AccountsDao(super.db);
@@ -17,10 +20,22 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
   /// starting balance + SUM(amount) of the account's non-deleted rows that
   /// are not split children (split children are already represented by
   /// their parent's amount).
+  ///
+  /// Another member's personal account has no transactions here; its
+  /// balance is the one its owner's device shared.
   static const String balanceExpression =
-      'a.starting_balance + COALESCE((SELECT SUM(t.amount) FROM transactions t '
-      'WHERE t.account_id = a.id AND t.is_deleted = 0 '
-      'AND t.parent_transaction_id IS NULL), 0)';
+      'CASE WHEN a.owner_id IS NOT NULL '
+      'AND a.owner_id IS NOT ${AppDatabase.localMemberSql} '
+      'THEN COALESCE(a.shared_balance, a.starting_balance) '
+      'ELSE a.starting_balance + COALESCE((SELECT SUM(t.amount) '
+      'FROM transactions t WHERE t.account_id = a.id AND t.is_deleted = 0 '
+      'AND t.parent_transaction_id IS NULL), 0) END';
+
+  /// SQL for who owns account alias `a`: 0 shared, 1 this device's member
+  /// (personal), 2 another member (their personal account).
+  static const String ownershipExpression =
+      'CASE WHEN a.owner_id IS NULL THEN 0 '
+      'WHEN a.owner_id = ${AppDatabase.localMemberSql} THEN 1 ELSE 2 END';
 
   Future<List<Account>> getAllAccounts() => select(accounts).get();
 
@@ -43,14 +58,16 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
 
   Selectable<AccountWithBalance> _accountsWithBalance({String? id}) {
     return customSelect(
-      'SELECT a.*, $balanceExpression AS computed_balance FROM accounts a'
+      'SELECT a.*, $balanceExpression AS computed_balance, '
+      '$ownershipExpression AS ownership FROM accounts a'
       '${id == null ? '' : ' WHERE a.id = ?'}',
       variables: [if (id != null) Variable.withString(id)],
-      readsFrom: {accounts, transactions},
+      readsFrom: {accounts, transactions, syncKv},
     ).map(
       (row) => (
         account: accounts.map(row.data),
         balance: row.read<int>('computed_balance'),
+        ownership: row.read<int>('ownership'),
       ),
     );
   }
@@ -75,7 +92,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
       'SELECT a.id AS id, $balanceExpression AS computed_balance '
       'FROM accounts a${id == null ? '' : ' WHERE a.id = ?'}',
       variables: [if (id != null) Variable.withString(id)],
-      readsFrom: {accounts, transactions},
+      readsFrom: {accounts, transactions, syncKv},
     ).map(
       (row) =>
           MapEntry(row.read<String>('id'), row.read<int>('computed_balance')),
@@ -115,6 +132,59 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
       readsFrom: {accounts, transactions},
     ).getSingleOrNull();
     return row?.read<int>('b') ?? 0;
+  }
+
+  /// This device's household member id, created on first use (the owner
+  /// of personal accounts created here).
+  Future<String> localMemberId() {
+    return transaction(() async {
+      final existing = await (select(
+        syncKv,
+      )..where((t) => t.key.equals(AppDatabase.memberIdKey))).getSingleOrNull();
+      if (existing != null) {
+        return existing.value;
+      }
+      final id = const Uuid().v4();
+      await into(
+        syncKv,
+      ).insert(SyncKvCompanion.insert(key: AppDatabase.memberIdKey, value: id));
+      return id;
+    });
+  }
+
+  /// The stored owner of account [id] (null: shared or missing).
+  Future<String?> ownerIdOf(String id) async {
+    final query = selectOnly(accounts)
+      ..addColumns([accounts.ownerId])
+      ..where(accounts.id.equals(id));
+    return (await query.getSingleOrNull())?.read(accounts.ownerId);
+  }
+
+  /// Whether account [id] has already gone out to the sync folder (this
+  /// device knows a synced version of it).
+  Future<bool> wasSynced(String id) async {
+    final row = await customSelect(
+      "SELECT 1 FROM sync_row_versions WHERE sync_table = 'accounts' "
+      'AND row_id = ? LIMIT 1',
+      variables: [Variable.withString(id)],
+    ).getSingleOrNull();
+    return row != null;
+  }
+
+  /// Queues every transaction and scheduled transaction of account [id] for
+  /// upload, e.g. after a personal account became shared (they were held
+  /// back until now).
+  Future<void> queueHistoryForSync(String id) async {
+    const now = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+    await customStatement(
+      'INSERT INTO pending_sync_changes '
+      '(table_name, record_id, action, changed_at) '
+      "SELECT 'transactions', id, 'UPDATE', $now FROM transactions "
+      'WHERE account_id = ?1 '
+      "UNION ALL SELECT 'scheduled_transactions', id, 'UPDATE', $now "
+      'FROM scheduled_transactions WHERE account_id = ?1',
+      [id],
+    );
   }
 
   /// Sum of the on-budget accounts' starting balances (minor units).

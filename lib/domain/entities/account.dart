@@ -11,6 +11,30 @@ enum AccountType {
 
   /// Cash account.
   cash,
+
+  /// Brokerage, crypto or retirement account. New ones start outside the
+  /// budget (tracked for net worth only). Added last: drafts store the
+  /// index.
+  investment;
+
+  /// Accounts whose money is usually saved rather than spent: they start
+  /// outside the budget when created.
+  bool get startsOffBudget =>
+      this == AccountType.savings || this == AccountType.investment;
+}
+
+/// Who an account belongs to in a household that syncs.
+enum AccountOwner {
+  /// Shared: everything syncs to the partner's phone.
+  shared,
+
+  /// Personal to this phone's user: off-budget, and only its name and
+  /// balance sync (its transactions stay on this phone).
+  me,
+
+  /// The partner's personal account: read-only here, with the balance their
+  /// phone shared and no transactions.
+  partner,
 }
 
 /// Represents a financial account in the LedgerZero application.
@@ -46,6 +70,10 @@ class Account {
   /// account counts towards net worth only; see docs/BUDGETING_RULES.md.
   final bool onBudget;
 
+  /// Who the account belongs to; see [AccountOwner]. A personal account is
+  /// always off-budget.
+  final AccountOwner owner;
+
   /// The color of the account.
   final int? color;
 
@@ -71,6 +99,7 @@ class Account {
     this.balance = 0,
     this.isClosed = false,
     this.onBudget = true,
+    this.owner = AccountOwner.shared,
     this.color,
     this.icon,
     this.notes,
@@ -88,6 +117,7 @@ class Account {
     int? balance,
     bool? isClosed,
     bool? onBudget,
+    AccountOwner? owner,
     int? color,
     String? icon,
     String? notes,
@@ -103,6 +133,7 @@ class Account {
       balance: balance ?? this.balance,
       isClosed: isClosed ?? this.isClosed,
       onBudget: onBudget ?? this.onBudget,
+      owner: owner ?? this.owner,
       color: color ?? this.color,
       icon: icon ?? this.icon,
       notes: notes ?? this.notes,
@@ -116,12 +147,20 @@ class Account {
     return Account(
       id: json['id'] as String,
       name: json['name'] as String,
-      type: AccountType.values.firstWhere((e) => e.name == json['type']),
+      // Unknown (newer) types read as checking, like the repository does.
+      type: AccountType.values.firstWhere(
+        (e) => e.name == json['type'],
+        orElse: () => AccountType.checking,
+      ),
       currency: json['currency'] as String? ?? 'USD',
       startingBalance: (json['starting_balance'] as num?)?.toInt() ?? 0,
       balance: (json['balance'] as num?)?.toInt() ?? 0,
       isClosed: json['is_closed'] as bool? ?? false,
       onBudget: json['on_budget'] as bool? ?? true,
+      owner: AccountOwner.values.firstWhere(
+        (e) => e.name == json['owner'],
+        orElse: () => AccountOwner.shared,
+      ),
       color: json['color'] as int?,
       icon: json['icon'] as String?,
       notes: json['notes'] as String?,
@@ -145,6 +184,7 @@ class Account {
       'balance': balance,
       'is_closed': isClosed,
       'on_budget': onBudget,
+      'owner': owner.name,
       'color': color,
       'icon': icon,
       'notes': notes,
@@ -168,6 +208,7 @@ class Account {
         other.balance == balance &&
         other.isClosed == isClosed &&
         other.onBudget == onBudget &&
+        other.owner == owner &&
         other.color == color &&
         other.icon == icon &&
         other.notes == notes &&
@@ -186,6 +227,7 @@ class Account {
       balance,
       isClosed,
       onBudget,
+      owner,
       color,
       icon,
       notes,
@@ -196,8 +238,16 @@ class Account {
 
   @override
   String toString() {
-    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, balance: $balance, isClosed: $isClosed, onBudget: $onBudget, color: $color, icon: $icon, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, balance: $balance, isClosed: $isClosed, onBudget: $onBudget, owner: $owner, color: $color, icon: $icon, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
+
+  /// Personal to one member of the household (this phone's user or the
+  /// partner).
+  bool get isPersonal => owner != AccountOwner.shared;
+
+  /// The partner's personal account: shown with its balance, never written
+  /// here.
+  bool get isPartners => owner == AccountOwner.partner;
 
   /// Validates the [Account] entity.
   ///

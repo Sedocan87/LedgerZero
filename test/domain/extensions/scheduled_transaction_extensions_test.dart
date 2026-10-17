@@ -428,4 +428,65 @@ void main() {
       );
     });
   });
+  group('occurrencesBetween', () {
+    final oct = DateTime.utc(2026, 10, 1);
+    final nov = DateTime.utc(2026, 11, 1);
+
+    test('lists every weekly occurrence inside the range', () {
+      final s = schedule(DateTime.utc(2026, 9, 24), RecurrenceFrequency.weekly);
+      expect(s.occurrencesBetween(oct, nov), [
+        DateTime.utc(2026, 10, 1),
+        DateTime.utc(2026, 10, 8),
+        DateTime.utc(2026, 10, 15),
+        DateTime.utc(2026, 10, 22),
+        DateTime.utc(2026, 10, 29),
+      ]);
+    });
+
+    test('excludes the exclusive end', () {
+      final s = schedule(nov, RecurrenceFrequency.monthly);
+      expect(s.occurrencesBetween(oct, nov), isEmpty);
+    });
+
+    test('reaches a later month and keeps the anchor day', () {
+      final s = schedule(
+        DateTime.utc(2026, 1, 31),
+        RecurrenceFrequency.monthly,
+      );
+      expect(
+        s.occurrencesBetween(
+          DateTime.utc(2026, 2, 1),
+          DateTime.utc(2026, 4, 1),
+        ),
+        [DateTime.utc(2026, 2, 28), DateTime.utc(2026, 3, 31)],
+      );
+    });
+
+    test('respects the occurrence count and the end date', () {
+      final counted = schedule(
+        DateTime.utc(2026, 10, 1),
+        RecurrenceFrequency.weekly,
+        occurrenceCount: 2,
+      );
+      expect(counted.occurrencesBetween(oct, nov), [
+        DateTime.utc(2026, 10, 1),
+        DateTime.utc(2026, 10, 8),
+      ]);
+
+      final ending = schedule(
+        DateTime.utc(2026, 10, 1),
+        RecurrenceFrequency.weekly,
+        endDate: DateTime.utc(2026, 10, 10),
+      );
+      expect(ending.occurrencesBetween(oct, nov), [
+        DateTime.utc(2026, 10, 1),
+        DateTime.utc(2026, 10, 8),
+      ]);
+    });
+
+    test('is empty for a finished schedule', () {
+      const s = ScheduledTransaction(id: 's');
+      expect(s.occurrencesBetween(oct, nov), isEmpty);
+    });
+  });
 }

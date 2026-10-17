@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -183,6 +184,27 @@ void main() {
       await unmount(tester);
     });
   }
+
+  testWidgets('the savings transfer hint fits 360 dp in German', (
+    tester,
+  ) async {
+    final savings = await t.categoryId(german.seedCatSavings);
+    await tester.runAsync(
+      () => t.budgeting.setCategoryBudgetedAmount(
+        savings,
+        50000,
+        CalendarDate.startOfMonthUtc(CalendarDate.today()),
+      ),
+    );
+    await pumpScreen(tester, const BudgetScreen());
+    final hint = find.text(german.hintSavingsTransfer);
+    await tester.scrollUntilVisible(hint, 300);
+    await tester.pumpAndSettle();
+    expect(hint, findsOneWidget);
+    expect(find.byKey(const Key('info.saving')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
 
   testWidgets('budget tutorial steps fit 360 dp in German', (tester) async {
     await prefs.remove('tutorial_completed_budget_screen_intro');

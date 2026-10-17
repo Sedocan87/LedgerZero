@@ -200,14 +200,15 @@ class _SearchablePickerSheetState<T>
   }
 }
 
-/// Searchable sheet listing the open accounts; returns the picked one.
+/// Searchable sheet listing the open accounts (not the partner's personal
+/// ones); returns the picked one.
 Future<Account?> showAccountPicker(BuildContext context, {String? excludeId}) {
   final l10n = AppLocalizations.of(context)!;
   return showSearchablePicker<Account>(
     context,
     icon: Icons.account_balance,
     options: (ref) => ref
-        .watch(accountsProvider)
+        .watch(writableAccountsProvider)
         .whenData(
           (all) => [
             for (final account in all)
@@ -222,9 +223,12 @@ Future<Account?> showAccountPicker(BuildContext context, {String? excludeId}) {
   );
 }
 
-/// Searchable sheet listing the visible categories by group; returns the
-/// picked one.
-Future<Category?> showCategoryPicker(BuildContext context) {
+/// Searchable sheet listing the visible categories by group (the group
+/// [firstGroupId] first, if given); returns the picked one.
+Future<Category?> showCategoryPicker(
+  BuildContext context, {
+  String? firstGroupId,
+}) {
   return showSearchablePicker<Category>(
     context,
     icon: Icons.label_outline,
@@ -232,7 +236,10 @@ Future<Category?> showCategoryPicker(BuildContext context) {
         .watch(categoryHierarchyProvider)
         .whenData(
           (hierarchy) => [
-            for (final entry in hierarchy.entries)
+            for (final entry in [
+              ...hierarchy.entries.where((e) => e.key.id == firstGroupId),
+              ...hierarchy.entries.where((e) => e.key.id != firstGroupId),
+            ])
               for (final category in entry.value)
                 PickerOption(
                   value: category,

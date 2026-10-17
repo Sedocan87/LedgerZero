@@ -102,6 +102,8 @@ class YnabImportScreen extends ConsumerWidget {
         return l10n.ynabImportAccountTypeCredit;
       case AccountType.cash:
         return l10n.ynabImportAccountTypeCash;
+      case AccountType.investment:
+        return l10n.accountTypeInvestment;
     }
   }
 

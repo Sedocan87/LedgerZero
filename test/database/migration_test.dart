@@ -68,7 +68,8 @@ void main() {
           // table. The schema snapshots carry no triggers, so an upgrade
           // that starts at v17 or later has none to check (the v18 step
           // only drops the unused parsing_rules table, the v19 step only
-          // adds a column).
+          // adds a column, the v20 step adds columns and the personal
+          // balance triggers, checked below).
           if (from >= 17) {
             await db.close();
             return;
@@ -484,6 +485,47 @@ void main() {
       final accounts = await db.accountsDao.getAllAccounts();
       expect(accounts.every((a) => a.onBudget), isTrue);
       expect(await db.accountsDao.getBudgetStartingBalance(), 25000);
+      await db.close();
+    });
+  });
+
+  group('v19 -> v20', () {
+    test('existing accounts stay shared; personal balances are kept by '
+        'triggers', () async {
+      final schema = await verifier.schemaAt(19);
+      final raw = schema.rawDatabase;
+      raw.execute(
+        'INSERT INTO accounts (id, name, type, currency, starting_balance, '
+        "is_closed, on_budget) VALUES ('a1', 'Main', 'checking', 'USD', "
+        '5000, 0, 1)',
+      );
+      final db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, latest);
+
+      expect(
+        await columns(db, 'accounts'),
+        containsAll(['owner_id', 'shared_balance']),
+      );
+      final triggers = await triggerNames(db);
+      for (final name in [
+        'transactions_insert_personal_balance',
+        'transactions_update_personal_balance',
+        'transactions_delete_personal_balance',
+        'accounts_insert_personal_balance',
+        'accounts_update_personal_balance',
+      ]) {
+        expect(triggers, contains(name));
+      }
+      final account = await row(db, 'accounts', 'a1');
+      expect(account['owner_id'], isNull);
+      expect(account['shared_balance'], isNull);
+
+      final member = await db.accountsDao.localMemberId();
+      await db.customStatement(
+        "UPDATE accounts SET owner_id = ?, on_budget = 0 WHERE id = 'a1'",
+        [member],
+      );
+      expect((await row(db, 'accounts', 'a1'))['shared_balance'], 5000);
       await db.close();
     });
   });

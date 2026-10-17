@@ -16,8 +16,10 @@ const String kAutoLockDurationKey = 'auto_lock_duration_minutes';
 /// the database stays open, so sync and card capture keep working. Does
 /// nothing while the app lock is off or onboarding is not finished.
 ///
-/// * `0` (immediate): locks as soon as the app becomes `inactive`, `hidden`
-///   or `paused`, so the app switcher never shows an unlocked app.
+/// * `0` (immediate): locks as soon as the app is `hidden` or `paused` (it
+///   left the screen). `inactive` alone does not lock: it also means the
+///   notification shade, a system dialog or the app switcher is over the
+///   app, which FLAG_SECURE and the privacy shield already cover.
 /// * `n > 0` minutes: a timer locks after `n` minutes in the background
 ///   (while the process runs); on resume the elapsed time is checked again.
 ///   The elapsed time is the larger of a monotonic [Stopwatch] and the wall
@@ -81,9 +83,7 @@ class AutoLockService {
         _graceTimer = null;
         _onForeground();
       case AppLifecycleState.inactive:
-        if (_duration == 0) {
-          _onBackground();
-        }
+        break;
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
         _onBackground();
@@ -173,9 +173,10 @@ class AutoLockDurationNotifier extends StateNotifier<int> {
   final SharedPreferences _prefs;
 
   AutoLockDurationNotifier(this._prefs)
-    : super(
-        _prefs.getInt(kAutoLockDurationKey) ?? 0,
-      ); // Default to Immediate (0)
+    : super(_prefs.getInt(kAutoLockDurationKey) ?? defaultMinutes);
+
+  /// Until the user picks one: a quick look at another app does not lock.
+  static const int defaultMinutes = 1;
 
   Future<void> setDuration(int minutes) async {
     await _prefs.setInt(kAutoLockDurationKey, minutes);

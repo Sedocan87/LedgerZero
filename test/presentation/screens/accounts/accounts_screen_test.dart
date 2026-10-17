@@ -36,6 +36,8 @@ class FakeAccountRepository implements AccountRepository {
   Future<int> getAccountBalance(String id) async => 0;
   @override
   Future<int> getClearedBalance(String id, {DateTime? upTo}) async => 0;
+  @override
+  Future<bool> wasSynced(String id) async => false;
 
   @override
   Future<int> getBudgetStartingBalance() async => 0;

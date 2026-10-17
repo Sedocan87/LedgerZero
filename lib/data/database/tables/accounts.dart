@@ -16,6 +16,18 @@ class Accounts extends Table {
   /// (tracking) account counts towards net worth only: its starting
   /// balance and transactions never reach To Be Budgeted or categories.
   BoolColumn get onBudget => boolean().withDefault(const Constant(true))();
+
+  /// Household member who owns a personal account (schema v20); null for a
+  /// shared account. A personal account is always off-budget, and its
+  /// transactions and scheduled transactions never leave the owner's
+  /// device: other members only get this row (see docs/SYNC_ARCHITECTURE.md,
+  /// "Personal accounts").
+  TextColumn get ownerId => text().nullable()();
+
+  /// The balance of a personal account as last computed on the owner's
+  /// device (kept by triggers there), so other members can show it. Null
+  /// for shared accounts.
+  IntColumn get sharedBalance => integer().nullable()();
   IntColumn get color => integer().nullable()();
   TextColumn get icon => text().nullable()();
   TextColumn get notes => text().nullable()();

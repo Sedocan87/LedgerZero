@@ -229,6 +229,42 @@ void main() {
       expect(container.read(sessionProvider).key, same(key));
     });
 
+    testWidgets('a lock on the way to the background prompts only when the '
+        'app is back in the foreground', (tester) async {
+      await prefs.setBool(kAppLockEnabledKey, true);
+      final dek = await storeDeviceKey();
+      final container = await pumpApp(tester, const SizedBox());
+      container.read(sessionProvider.notifier).open(Uint8List.fromList(dek));
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      addTearDown(
+        () => tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        ),
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('en'),
+            home: LockScreen(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      // Not over the home screen or another app.
+      expect(appLock.prompts, 0);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await waitUntil(
+        tester,
+        () => container.read(authProvider).isAuthenticated,
+      );
+      expect(appLock.prompts, 1);
+    });
+
     testWidgets('a failing key store shows "try again", never the reset', (
       tester,
     ) async {

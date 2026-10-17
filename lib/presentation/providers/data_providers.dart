@@ -21,6 +21,19 @@ final accountsProvider = StreamProvider<List<Account>>((ref) {
   return ref.watch(accountRepositoryProvider).watchAllAccounts();
 });
 
+/// The accounts this phone can book into: all but the partner's personal
+/// accounts (those are shown, never written). For pickers.
+final writableAccountsProvider = Provider<AsyncValue<List<Account>>>((ref) {
+  return ref
+      .watch(accountsProvider)
+      .whenData(
+        (all) => [
+          for (final a in all)
+            if (!a.isPartners) a,
+        ],
+      );
+});
+
 /// All categories (including hidden ones).
 final categoriesProvider = StreamProvider<List<Category>>((ref) {
   return ref.watch(categoryRepositoryProvider).watchAllCategories();

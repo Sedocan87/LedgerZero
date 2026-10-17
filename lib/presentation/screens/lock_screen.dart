@@ -11,6 +11,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/presentation/screens/legacy_unlock_view.dart';
 import 'package:ledger_zero/presentation/widgets/security/reset_app_dialog.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
@@ -40,8 +41,12 @@ enum _Phase {
 /// Every start passes through here: the database session is opened with
 /// the key from [DeviceKeyStore] (so sync and card capture can run even
 /// while the lock is showing), then the app lock asks for the fingerprint,
-/// face or device PIN if it is on. After the auto-lock time the router
-/// brings the user back here; the session stays open.
+/// face or device PIN if it is on. After the auto-lock time it is shown
+/// over the app (`LockOverlay`); the session stays open.
+///
+/// The system prompt only opens while the app is in the foreground: a lock
+/// that happened on the way to the background asks when the user returns,
+/// never over another app or the home screen.
 class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
 
@@ -49,17 +54,42 @@ class LockScreen extends ConsumerStatefulWidget {
   ConsumerState<LockScreen> createState() => _LockScreenState();
 }
 
-class _LockScreenState extends ConsumerState<LockScreen> {
+class _LockScreenState extends ConsumerState<LockScreen>
+    with WidgetsBindingObserver {
   _Phase _phase = _Phase.starting;
   bool _prompting = false;
+
+  /// The prompt is due but the app is not in the foreground.
+  bool _promptOnResume = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // After the first frame: when the session is already open (the app
     // lock came back after the auto-lock time) the prompt follows without
     // an await, and it needs the localisations of a built context.
     WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_start()));
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _promptOnResume) {
+      _promptOnResume = false;
+      unawaited(_authenticate());
+    }
+  }
+
+  static bool get _inForeground {
+    final state = WidgetsBinding.instance.lifecycleState;
+    // Unknown only very early at start-up, when the app is being opened.
+    return state == null || state == AppLifecycleState.resumed;
   }
 
   Future<void> _start() async {
@@ -132,11 +162,15 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       return;
     }
     _setPhase(_Phase.locked);
+    if (!_inForeground) {
+      _promptOnResume = true;
+      return;
+    }
     await _authenticate();
   }
 
   Future<void> _authenticate() async {
-    if (_prompting) {
+    if (_prompting || !mounted) {
       return;
     }
     final l10n = AppLocalizations.of(context)!;
@@ -173,8 +207,8 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     }
   }
 
-  /// The router then leaves this screen (for a remembered deep link or
-  /// Home).
+  /// At start-up the router then leaves this screen (for a remembered deep
+  /// link or Home); later the overlay disappears.
   void _unlockUi() {
     ref.read(authProvider.notifier).setAuthenticated(true);
   }
@@ -209,7 +243,10 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     try {
       await ref.read(factoryResetServiceProvider).reset();
       if (mounted) {
-        context.go('/onboarding');
+        // The overlay is outside the router.
+        final GoRouter router =
+            GoRouter.maybeOf(context) ?? ref.read(routerProvider);
+        router.go('/onboarding');
       }
     } catch (e, stackTrace) {
       Logger.error('Factory reset failed', e, stackTrace);

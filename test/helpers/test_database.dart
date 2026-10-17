@@ -99,6 +99,7 @@ class TestDatabase {
     String currency = 'USD',
     int startingBalance = 0,
     bool onBudget = true,
+    domain.AccountOwner owner = domain.AccountOwner.shared,
   }) async {
     final account = domain.Account(
       id: id ?? _nextId('acc'),
@@ -106,7 +107,8 @@ class TestDatabase {
       type: type,
       currency: currency,
       startingBalance: startingBalance,
-      onBudget: onBudget,
+      onBudget: onBudget && owner == domain.AccountOwner.shared,
+      owner: owner,
     );
     await accounts.createAccount(account);
     return account;

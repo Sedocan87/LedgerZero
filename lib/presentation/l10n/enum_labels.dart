@@ -24,6 +24,7 @@ extension AccountTypeLabel on AccountType {
     AccountType.savings => l10n.accountTypeSavings,
     AccountType.credit => l10n.accountTypeCredit,
     AccountType.cash => l10n.accountTypeCash,
+    AccountType.investment => l10n.accountTypeInvestment,
   };
 }
 

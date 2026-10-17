@@ -15,6 +15,7 @@ import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
+import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/security/key_vault.dart';
 import 'package:mockito/mockito.dart';
@@ -64,6 +65,8 @@ void main() {
         child: Consumer(
           builder: (context, ref, _) => MaterialApp.router(
             routerConfig: ref.watch(routerProvider),
+            // As in MyApp: a later lock covers the app.
+            builder: (context, child) => LockOverlay(child: child!),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             locale: const Locale('en'),
@@ -121,7 +124,8 @@ void main() {
   });
 
   testWidgets(
-    'unlocking opens Home; the tabs work; locking returns to the lock screen',
+    'unlocking opens Home; the tabs work; a later lock covers the app and '
+    'unlocking returns to the same screen',
     (tester) async {
       final c = await pumpRouter(tester, onboarded: true);
       unlock(c);
@@ -143,12 +147,21 @@ void main() {
       expect(location(c), '/accounts');
       expect(find.byType(AccountsScreen), findsOneWidget);
 
-      // Locking (auto-lock or "Lock now") drops the protected screens.
+      // Locking (auto-lock or "Lock now") hides the app but keeps it.
+      final accounts = tester.state(find.byType(AccountsScreen));
       c.read(authProvider.notifier).setAuthenticated(false);
-      await tester.pumpAndSettle();
-      expect(location(c), '/login');
-      expect(find.byType(AccountsScreen), findsNothing);
+      await tester.pump();
       expect(find.byType(LockScreen), findsOneWidget);
+      expect(find.byType(AccountsScreen), findsNothing);
+      expect(find.byType(AccountsScreen, skipOffstage: false), findsOneWidget);
+      expect(location(c), '/accounts');
+
+      unlock(c);
+      await tester.pumpAndSettle();
+      expect(find.byType(LockScreen), findsNothing);
+      expect(location(c), '/accounts');
+      // The same screen, not a new one.
+      expect(tester.state(find.byType(AccountsScreen)), same(accounts));
       await unmount(tester, c);
     },
   );
@@ -171,12 +184,13 @@ void main() {
       expect(location(c), '/settings/scheduled-transactions');
       expect(c.read(pendingLocationProvider).value, isNull);
 
-      // Opened once: the next lock/unlock starts at Home again.
+      // Opened once; a later lock/unlock stays where the user is.
       c.read(authProvider.notifier).setAuthenticated(false);
-      await tester.pumpAndSettle();
+      await tester.pump();
       unlock(c);
       await tester.pumpAndSettle();
-      expect(location(c), '/');
+      expect(location(c), '/settings/scheduled-transactions');
+      expect(c.read(pendingLocationProvider).value, isNull);
       await unmount(tester, c);
     },
   );

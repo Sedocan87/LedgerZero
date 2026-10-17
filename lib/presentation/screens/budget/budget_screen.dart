@@ -10,6 +10,9 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_template_dialogs.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_tutorial_banner.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/leftover_card.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/new_month_card.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/savings_categories_offer.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
@@ -166,6 +169,8 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
                   await showApplyTemplateDialog(context, ref);
                 } else if (value == 'copy_previous') {
                   await _copyPreviousMonth();
+                } else if (value == 'auto_fill') {
+                  await showAutoFillSettingsDialog(context, ref);
                 } else if (value == 'reset') {
                   await _resetBudget();
                 }
@@ -183,6 +188,10 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
                 PopupMenuItem(
                   value: 'copy_previous',
                   child: Text(l10n.copyFromPreviousMonth),
+                ),
+                PopupMenuItem(
+                  value: 'auto_fill',
+                  child: Text(l10n.autoFillMenu),
                 ),
                 PopupMenuItem(value: 'reset', child: Text(l10n.resetBudget)),
               ],
@@ -211,6 +220,10 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               ),
               const SliverToBoxAdapter(child: _NoAccountsPrompt()),
               const SliverToBoxAdapter(child: BudgetTutorialBanner()),
+              const SliverToBoxAdapter(child: SalaryPrompt()),
+              const SliverToBoxAdapter(child: LeftoverCard()),
+              const SliverToBoxAdapter(child: AutoFillNoteCard()),
+              const SliverToBoxAdapter(child: NewMonthCard()),
               const SliverToBoxAdapter(child: SavingsCategoriesOffer()),
               BudgetCategoryList(headerKey: _tutorialKeys.categoryList),
               // Bottom padding

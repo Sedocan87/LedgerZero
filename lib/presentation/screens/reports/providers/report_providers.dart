@@ -173,7 +173,12 @@ final netWorthHistoryProvider = FutureProvider.autoDispose<List<ChartSeries>>((
   final bounds = reportQueryBounds(range);
 
   final accounts = await accountRepo.getAllAccounts();
-  var balance = accounts.fold<int>(0, (sum, a) => sum + a.startingBalance);
+  // The partner's personal accounts have no transactions here: they count
+  // with the balance their phone shared, over the whole range.
+  var balance = accounts.fold<int>(
+    0,
+    (sum, a) => sum + (a.isPartners ? a.balance : a.startingBalance),
+  );
   balance += await transactionRepo.getBalanceChangeSum(bounds.start);
   final monthly = await transactionRepo.getMonthlyBalanceChanges(
     bounds.start,

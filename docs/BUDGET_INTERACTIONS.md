@@ -83,6 +83,42 @@ appears.
 * **Copy from previous month**: copies the positive budgets of the previous
   month.
 * **Reset budget**: sets all of the month's budgets to 0.
+* **Fill automatically…**: the setting described below.
+
+## Filling a new month
+
+Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
+`NewMonthFillController` (`lib/presentation/providers/new_month_fill_provider.dart`),
+`NewMonthCard` and `AutoFillNoteCard`
+(`lib/presentation/screens/budget/widgets/new_month_card.dart`).
+
+* **Leftover card** (`LeftoverCard`, `leftoverProvider`): in the current
+  month, when the month before was budgeted and left money unassigned that
+  is still in To Be Budgeted: *Budget for savings…* (category picker with
+  the Savings & Investments group first; snack bar with Undo) or *Keep for
+  (month)*, which hides it for the month. Not shown for a new budget: a
+  starting balance counts in every month and is no leftover.
+* **New-month card**: for the current or a later month with nothing budgeted
+  whose previous month has budgets. It shows the total, To Be Budgeted after
+  filling and the income still expected, and offers *Fill like (previous
+  month)*, *Use a template* (when templates exist) and *Not now* (hides it
+  for that month). Filling shows a snack bar with Undo.
+* **Fill new months automatically** (off by default; the month before or a
+  template): runs at start-up and on resume, once per month and phone, and
+  only when the month is still empty. It starts with the month after it
+  was turned on. A card ("November was filled automatically") offers Undo.
+  If the template was deleted, the month before is used and the setting
+  switches to it.
+* Both only fill categories that are still at zero (never hidden ones) and
+  never overwrite an amount. Undo resets only the categories still at the
+  filled amount.
+* **Sync**: the automatic fill stores the first day of the month, 00:00 UTC
+  (`BudgetingService.automaticFillStamp`), as the rows' `updated_at`, and
+  skips categories written at or after that time. Any edit by hand, on
+  either phone, is therefore newer and wins; two phones filling the same
+  month agree; and an automatic amount that loses is not recorded as a
+  conflict (see SYNC_ARCHITECTURE.md, section 5). The one-tap card writes
+  ordinary edits.
 
 ## Updates
 
@@ -92,3 +128,22 @@ write to transactions, accounts, budgets, categories, category groups or
 payees (local edits, scheduled-transaction catch-up, imports and changes
 applied by sync alike). Everything works offline; cloud sync is described in
 [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md).
+
+## In-app help
+
+ⓘ buttons (`InfoButton`, `lib/presentation/widgets/help/`) open a bottom
+sheet: a short text, steps, and "Open the user guide" at the matching
+chapter (`/settings/help/user-guide?chapter=<GuideChapter>`). Topics
+(`HelpTopic`) and their places: Savings & Investments group header (saving),
+To Be Budgeted banner, new-month card, account form (type, Include in
+budget, Personal), Accounts app bar (net worth and badges), transfer
+category hint, Sync settings, CSV import and the app lock switch. The sheet
+and the guide share their wording through `app_*.arb` (`help*`, `guide*`).
+
+One-time hints (remembered in SharedPreferences once dismissed or shown):
+
+| Hint | Where | Key |
+|---|---|---|
+| Move budgeted savings with a transfer | Savings & Investments group, once money is budgeted there | `hint_savings_transfer_seen` |
+| How to save into an account outside the budget | Snack bar after creating the first off-budget account | `hint_offbudget_account_seen` |
+| What the partner's accounts are | Accounts list, above the partner's accounts | `hint_partner_accounts_seen` |

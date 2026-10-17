@@ -76,6 +76,25 @@ extension ScheduledTransactionExtensions on ScheduledTransaction {
   /// Whether the schedule has no further occurrence.
   bool get isFinished => nextDate == null;
 
+  /// The occurrences from [nextDate] onwards with `start <= date <
+  /// endExclusive`, as calendar days (UTC midnight), stepping like
+  /// [advanced] (so [occurrenceCount] and [endDate] are respected).
+  List<DateTime> occurrencesBetween(DateTime start, DateTime endExclusive) {
+    final result = <DateTime>[];
+    var current = this;
+    while (current.nextDate != null) {
+      final date = CalendarDate.normalize(current.nextDate!);
+      if (!date.isBefore(endExclusive)) {
+        break;
+      }
+      if (!date.isBefore(start)) {
+        result.add(date);
+      }
+      current = current.advanced();
+    }
+    return result;
+  }
+
   /// The schedule after its current occurrence ([nextDate]) has been
   /// materialised or skipped. Shared by catch-up processing and "skip".
   ///

@@ -59,7 +59,7 @@ class _ImportConfirmationScreenState
     try {
       final accounts =
           (await ref.read(accountRepositoryProvider).getAllAccounts())
-              .where((a) => !a.isClosed)
+              .where((a) => !a.isClosed && !a.isPartners)
               .toList();
       if (!mounted) {
         return;

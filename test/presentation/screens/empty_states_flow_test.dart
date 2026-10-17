@@ -8,6 +8,7 @@ import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
 import 'package:ledger_zero/presentation/screens/accounts/add_edit_account_screen.dart';
 import 'package:ledger_zero/presentation/screens/budget/budget_screen.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -96,6 +97,52 @@ void main() {
     await tester.pumpAndSettle();
     // The first-account form explains why an account comes first.
     expect(find.byKey(const Key('firstAccount.explanation')), findsOneWidget);
+    await unmount(tester);
+  });
+
+  Future<void> createFirstAccount(WidgetTester tester) async {
+    await pumpAt(tester, '/accounts/add?first=1');
+    await tester.enterText(find.byType(TextFormField).at(0), 'Checking');
+    await tester.enterText(find.byType(TextFormField).at(1), '100');
+    final save = find.widgetWithText(ElevatedButton, 'Create Account');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+  }
+
+  final salaryQuestion = find.byKey(const Key('firstAccount.salaryQuestion'));
+
+  testWidgets('First account: asks for the salary; skipping goes to the '
+      'budget and retires the salary card', (tester) async {
+    await createFirstAccount(tester);
+    expect(salaryQuestion, findsOneWidget);
+    expect(find.text('When do you get paid?'), findsOneWidget);
+
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BudgetScreen), findsOneWidget);
+    expect(prefs.getBool(SalaryPrompt.handledKey), isTrue);
+    expect(find.byKey(const Key('budget.salaryPrompt')), findsNothing);
+    // Still reachable under To Be Budgeted.
+    expect(
+      find.text('Add your salary to budget it every month'),
+      findsOneWidget,
+    );
+    await unmount(tester);
+  });
+
+  testWidgets('First account: "Add salary" opens the income form, then the '
+      'budget', (tester) async {
+    await createFirstAccount(tester);
+    await tester.tap(find.text('Add salary'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add Salary / Income'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BudgetScreen), findsOneWidget);
+    // Not declined: the budget screen may still suggest it.
+    expect(prefs.getBool(SalaryPrompt.handledKey), isNull);
     await unmount(tester);
   });
 

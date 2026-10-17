@@ -21,6 +21,7 @@ import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
+import 'package:ledger_zero/presentation/widgets/common/overflow_tooltip_text.dart';
 
 class BudgetCategoryRow extends ConsumerStatefulWidget {
   final BudgetCategoryViewModel viewModel;
@@ -362,13 +363,12 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                                     ),
                                   ),
                                 Expanded(
-                                  child: Text(
+                                  // Two lines; tap shows a longer name.
+                                  child: OverflowTooltipText(
                                     category.name,
                                     style: theme.textTheme.titleSmall?.copyWith(
                                       fontWeight: FontWeight.w600,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],

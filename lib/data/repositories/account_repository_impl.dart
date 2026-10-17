@@ -42,7 +42,7 @@ class AccountRepositoryImpl implements AccountRepository {
     try {
       Logger.debug('Creating account: ${account.name}');
       await _accountsDao.insertAccount(
-        _mapToCompanion(account, isInsert: true),
+        await _mapToCompanion(account, isInsert: true),
       );
       Logger.info('Account created successfully: ${account.id}');
     } catch (e, stackTrace) {
@@ -55,11 +55,30 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<void> updateAccount(domain.Account account) async {
     try {
       Logger.debug('Updating account: ${account.id}');
-      await _accountsDao.updateAccount(_mapToCompanion(account));
+      if (account.isPartners) {
+        throw StateError('The partner\'s account ${account.id} is read-only');
+      }
+      final wasPersonal = await _accountsDao.ownerIdOf(account.id) != null;
+      await _accountsDao.transaction(() async {
+        await _accountsDao.updateAccount(await _mapToCompanion(account));
+        if (wasPersonal && !account.isPersonal) {
+          await _accountsDao.queueHistoryForSync(account.id);
+        }
+      });
       Logger.info('Account updated successfully: ${account.id}');
     } catch (e, stackTrace) {
       Logger.error('Failed to update account ${account.id}', e, stackTrace);
       throw DatabaseException('Failed to update account ${account.id}', e);
+    }
+  }
+
+  @override
+  Future<bool> wasSynced(String id) async {
+    try {
+      return await _accountsDao.wasSynced(id);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to read the sync state of $id', e, stackTrace);
+      throw DatabaseException('Failed to read the sync state of $id', e);
     }
   }
 
@@ -161,6 +180,11 @@ class AccountRepositoryImpl implements AccountRepository {
       balance: row.balance,
       isClosed: account.isClosed,
       onBudget: account.onBudget,
+      owner: switch (row.ownership) {
+        1 => domain.AccountOwner.me,
+        2 => domain.AccountOwner.partner,
+        _ => domain.AccountOwner.shared,
+      },
       color: account.color,
       icon: account.icon,
       notes: account.notes,
@@ -169,12 +193,19 @@ class AccountRepositoryImpl implements AccountRepository {
     );
   }
 
-  /// The balance is computed and never written.
-  AccountsCompanion _mapToCompanion(
+  /// The balance is computed and never written; the shared balance of a
+  /// personal account is kept by triggers. A personal account is always
+  /// off-budget.
+  Future<AccountsCompanion> _mapToCompanion(
     domain.Account account, {
     bool isInsert = false,
-  }) {
+  }) async {
     final now = DateTime.now().toUtc();
+    final ownerId = switch (account.owner) {
+      domain.AccountOwner.shared => null,
+      domain.AccountOwner.me => await _accountsDao.localMemberId(),
+      domain.AccountOwner.partner => await _accountsDao.ownerIdOf(account.id),
+    };
     return AccountsCompanion(
       id: Value(account.id),
       name: Value(account.name),
@@ -182,7 +213,8 @@ class AccountRepositoryImpl implements AccountRepository {
       currency: Value(account.currency),
       startingBalance: Value(account.startingBalance),
       isClosed: Value(account.isClosed),
-      onBudget: Value(account.onBudget),
+      onBudget: Value(account.onBudget && !account.isPersonal),
+      ownerId: Value(ownerId),
       color: Value(account.color),
       icon: Value(account.icon),
       notes: Value(account.notes),

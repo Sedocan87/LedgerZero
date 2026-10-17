@@ -9,6 +9,7 @@ mixin _$AccountsDaoMixin on DatabaseAccessor<AppDatabase> {
   $CategoriesTable get categories => attachedDatabase.categories;
   $PayeesTable get payees => attachedDatabase.payees;
   $TransactionsTable get transactions => attachedDatabase.transactions;
+  $SyncKvTable get syncKv => attachedDatabase.syncKv;
   AccountsDaoManager get managers => AccountsDaoManager(this);
 }
 
@@ -28,4 +29,6 @@ class AccountsDaoManager {
       $$PayeesTableTableManager(_db.attachedDatabase, _db.payees);
   $$TransactionsTableTableManager get transactions =>
       $$TransactionsTableTableManager(_db.attachedDatabase, _db.transactions);
+  $$SyncKvTableTableManager get syncKv =>
+      $$SyncKvTableTableManager(_db.attachedDatabase, _db.syncKv);
 }

@@ -800,12 +800,6 @@ abstract class AppLocalizations {
   /// **'Total'**
   String get total;
 
-  /// No description provided for @tbbTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Money you have not assigned to a category yet. Budget it until this reaches zero.'**
-  String get tbbTooltip;
-
   /// No description provided for @budgetedTooltip.
   ///
   /// In en, this message translates to:
@@ -5014,19 +5008,19 @@ abstract class AppLocalizations {
   /// FAQ answer
   ///
   /// In en, this message translates to:
-  /// **'Your data is stored only on your device, in a database encrypted with AES-256 and unlocked with your master password. If you turn on sync, it is encrypted with your sync passphrase before it leaves the device. There are no LedgerZero servers, no tracking and no analytics.'**
+  /// **'Your data is stored only on your phone, in an encrypted database whose key is kept in the phone’s secure hardware (Android KeyStore). The app lock adds your fingerprint, face or phone PIN. Synced data is encrypted before it leaves the phone. There are no LedgerZero servers, no tracking and no analytics.'**
   String get faqSafeA;
 
   /// FAQ question
   ///
   /// In en, this message translates to:
-  /// **'How do I sync between devices?'**
+  /// **'How do my partner and I share a budget?'**
   String get faqSyncQ;
 
-  /// FAQ answer; menu names must match the settings labels
+  /// FAQ answer
   ///
   /// In en, this message translates to:
-  /// **'Open Settings > Sync Settings, choose Google Drive and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.'**
+  /// **'Open Settings > Sync Settings. At home, pair the phones over Wi-Fi by scanning a QR code. To sync while you are apart, both phones use the same Google Drive account and sync passphrase. The user guide chapter “Using LedgerZero with a partner” explains the details.'**
   String get faqSyncA;
 
   /// FAQ question
@@ -5040,18 +5034,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes. Everything works offline. Sync catches up automatically when you are back online.'**
   String get faqOfflineA;
-
-  /// FAQ question
-  ///
-  /// In en, this message translates to:
-  /// **'What if I forget my master password?'**
-  String get faqPasswordQ;
-
-  /// FAQ answer
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock with the recovery key you wrote down during setup, then choose a new password. Without the password and the recovery key nobody can unlock your data, not even the developer.'**
-  String get faqPasswordA;
 
   /// FAQ question
   ///
@@ -5077,58 +5059,58 @@ abstract class AppLocalizations {
   /// **'Yes. Settings > YNAB Migration imports nYNAB CSV exports and YNAB 4 budgets. Settings > Import CSV reads the CSV export of your bank.'**
   String get faqImportA;
 
-  /// User guide section title
+  /// User guide chapter title
   ///
   /// In en, this message translates to:
-  /// **'1. Getting started'**
+  /// **'Getting started'**
   String get guideStartTitle;
 
-  /// User guide section text
+  /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'LedgerZero uses zero-based envelope budgeting: before you spend money, you give it a job by assigning it to a category.'**
+  /// **'LedgerZero uses envelope budgeting: before you spend money, you give it a job by budgeting it to a category. Add the account your money is in, add your salary, then budget until To Be Budgeted is zero. The ⓘ buttons across the app explain each part where you need it.'**
   String get guideStartBody;
 
-  /// User guide section title
+  /// User guide chapter title
   ///
   /// In en, this message translates to:
-  /// **'2. Accounts'**
+  /// **'Accounts'**
   String get guideAccountsTitle;
 
-  /// User guide section text
+  /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Add the accounts you pay from (checking, savings, credit card, cash) with their current balance. That money is what you can budget: it appears as To Be Budgeted.'**
+  /// **'Add every account with its current balance. Accounts in the budget (checking, cash, credit cards) hold the money you budget. Savings, brokerage and pension accounts usually stay outside the budget: they count towards net worth only. The type sets the icon and whether a new account starts in the budget.'**
   String get guideAccountsBody;
 
-  /// User guide section title
+  /// User guide chapter title
   ///
   /// In en, this message translates to:
-  /// **'3. Budgeting'**
+  /// **'Budgeting'**
   String get guideBudgetTitle;
 
-  /// User guide section text
+  /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'On the Budget screen, tap a category\'s budgeted amount to assign money. Keep going until To Be Budgeted is zero. Income without a category adds to To Be Budgeted.'**
+  /// **'On the Budget screen, tap a category’s budgeted amount to give it money, until To Be Budgeted is zero. Income without a category adds to To Be Budgeted; add your salary as recurring income to see what is coming. Each category keeps what is left from month to month. A new month starts empty: fill it like the month before or from a template, by hand or automatically. Money left unbudgeted at the end of a month is offered for savings in the next one.'**
   String get guideBudgetBody;
 
-  /// User guide section title
+  /// User guide chapter title
   ///
   /// In en, this message translates to:
-  /// **'4. Transactions'**
+  /// **'Transactions'**
   String get guideTransactionsTitle;
 
-  /// User guide section text
+  /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, and rules categorise imported transactions automatically.'**
+  /// **'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorise transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.'**
   String get guideTransactionsBody;
 
-  /// User guide section title
+  /// User guide chapter title
   ///
   /// In en, this message translates to:
-  /// **'5. Overspending'**
+  /// **'Overspending'**
   String get guideOverspendingTitle;
 
   /// User guide section text
@@ -5137,10 +5119,10 @@ abstract class AppLocalizations {
   /// **'When a category\'s available amount turns red, you have spent more than you budgeted. Move money from another category to cover it.'**
   String get guideOverspendingBody;
 
-  /// User guide section title
+  /// User guide chapter title
   ///
   /// In en, this message translates to:
-  /// **'6. Reconciling'**
+  /// **'Reconciling'**
   String get guideReconcileTitle;
 
   /// User guide section text
@@ -5148,18 +5130,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Now and then, compare an account with your bank statement using Reconcile Account on the account screen. Cleared transactions are marked as reconciled, and any difference is recorded as an adjustment.'**
   String get guideReconcileBody;
-
-  /// User guide section title
-  ///
-  /// In en, this message translates to:
-  /// **'7. Sync and backups'**
-  String get guideSyncTitle;
-
-  /// User guide section text
-  ///
-  /// In en, this message translates to:
-  /// **'Sync keeps your phones and tablets up to date through your own Google Drive, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.'**
-  String get guideSyncBody;
 
   /// Button: next onboarding page
   ///
@@ -5857,7 +5827,7 @@ abstract class AppLocalizations {
   /// **'Optional. Without a category the money comes out of, or goes into, To Be Budgeted.'**
   String get transferCategoryHint;
 
-  /// Default category group for money set aside (cash reserve, investments)
+  /// Default category group for money moved to savings and investment accounts
   ///
   /// In en, this message translates to:
   /// **'Savings & Investments'**
@@ -5896,7 +5866,7 @@ abstract class AppLocalizations {
   /// Body of the one-time Investments offer card
   ///
   /// In en, this message translates to:
-  /// **'Add a Savings & Investments group: Cash Reserve, Stocks & ETFs, Crypto, Bonds and Retirement. Money you assign there stays out of To Be Budgeted and carries over every month, e.g. a cash reserve you always keep. To invest, transfer it to your off-budget brokerage account using the category.'**
+  /// **'Add a Savings & Investments group: Savings, Stocks & ETFs, Crypto, Bonds and Retirement. Budget there what you move to your savings and investment accounts each month. Keep those accounts outside the budget (switch off \"Include in budget\"): their balances then count towards your net worth only.'**
   String get savingsOfferBody;
 
   /// Button: add the Investments category group
@@ -5917,11 +5887,11 @@ abstract class AppLocalizations {
   /// **'Savings & Investments categories added'**
   String get savingsOfferAdded;
 
-  /// Default category (Savings & Investments group): cash the user always keeps, budgeted once
+  /// Default category (Savings & Investments group): money moved to savings accounts each month
   ///
   /// In en, this message translates to:
-  /// **'Cash Reserve'**
-  String get seedCatCashReserve;
+  /// **'Savings'**
+  String get seedCatSavings;
 
   /// No description provided for @cardNotifications.
   ///
@@ -6366,6 +6336,636 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This phone and the other one were paired with different codes. Turn off Wi-Fi sync on this phone and pair it again.'**
   String get syncErrorPairingMismatch;
+
+  /// Label of the income line under To Be Budgeted on the budget screen
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get budgetIncomeLabel;
+
+  /// Income line: money that arrived in To Be Budgeted this month
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} received'**
+  String budgetIncomeReceived(String amount);
+
+  /// Income line: recurring income (salary) still to come this month and the date of the next payment, e.g. '€3,000 expected, next Oct 25'
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} expected, next {date}'**
+  String budgetIncomeExpected(String amount, String date);
+
+  /// Income line value when the month has no income yet; shown after 'Income: '
+  ///
+  /// In en, this message translates to:
+  /// **'none this month'**
+  String get budgetIncomeNone;
+
+  /// Income line under To Be Budgeted while no recurring income is set up
+  ///
+  /// In en, this message translates to:
+  /// **'Add your salary to budget it every month'**
+  String get budgetIncomeAddPrompt;
+
+  /// Button: open the form for a recurring income (salary)
+  ///
+  /// In en, this message translates to:
+  /// **'Add salary'**
+  String get budgetIncomeAddButton;
+
+  /// Title of the one-time card on the budget screen suggesting to set up the salary
+  ///
+  /// In en, this message translates to:
+  /// **'Add your salary?'**
+  String get salaryPromptTitle;
+
+  /// Body of the one-time salary card and of the salary question after the first account
+  ///
+  /// In en, this message translates to:
+  /// **'Set it up once and it lands in To Be Budgeted every payday, ready to assign to your categories. You also see the expected amount for each month in advance.'**
+  String get salaryPromptBody;
+
+  /// Button: dismiss the salary suggestion for good (it stays reachable under To Be Budgeted)
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get salaryPromptDismiss;
+
+  /// Title of the question asked right after the first account was created
+  ///
+  /// In en, this message translates to:
+  /// **'When do you get paid?'**
+  String get firstAccountSalaryTitle;
+
+  /// Card on the budget screen for an empty month: copy the budget of the month before. Month names, e.g. 'Start November like October?'
+  ///
+  /// In en, this message translates to:
+  /// **'Start {month} like {previous}?'**
+  String newMonthTitle(String month, String previous);
+
+  /// Body of the new-month card: the total that would be budgeted and what To Be Budgeted would show afterwards
+  ///
+  /// In en, this message translates to:
+  /// **'{total} in the same categories. To Be Budgeted after: {tbb}.'**
+  String newMonthBody(String total, String tbb);
+
+  /// Button: budget the same amounts as in the month before (month name)
+  ///
+  /// In en, this message translates to:
+  /// **'Fill like {previous}'**
+  String newMonthFill(String previous);
+
+  /// Button on the new-month card: fill the month from a saved budget template
+  ///
+  /// In en, this message translates to:
+  /// **'Use a template'**
+  String get newMonthTemplate;
+
+  /// Button: hide the new-month card for this month
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get newMonthDismiss;
+
+  /// Snack bar after filling a month (with Undo)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 category filled} other{{count} categories filled}}'**
+  String newMonthFilled(int count);
+
+  /// Setting (budget menu, new-month card): budget every new month automatically
+  ///
+  /// In en, this message translates to:
+  /// **'Fill new months automatically'**
+  String get autoFillTitle;
+
+  /// Budget screen menu entry that opens the automatic fill setting
+  ///
+  /// In en, this message translates to:
+  /// **'Fill automatically…'**
+  String get autoFillMenu;
+
+  /// Explanation in the automatic fill setting
+  ///
+  /// In en, this message translates to:
+  /// **'On the first open of a new month, categories that are still empty get these amounts. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.'**
+  String get autoFillExplanation;
+
+  /// Automatic fill option: do not fill new months
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get autoFillOff;
+
+  /// Automatic fill option: copy the previous month's budgets
+  ///
+  /// In en, this message translates to:
+  /// **'Same as the month before'**
+  String get autoFillPrevious;
+
+  /// Automatic fill option: use the saved template with this name
+  ///
+  /// In en, this message translates to:
+  /// **'Template: {name}'**
+  String autoFillTemplate(String name);
+
+  /// Card after the automatic fill of a month (month name)
+  ///
+  /// In en, this message translates to:
+  /// **'{month} was filled automatically'**
+  String autoFillNoteTitle(String month);
+
+  /// Body of the automatic fill card: total and where it came from (previous month name or template name)
+  ///
+  /// In en, this message translates to:
+  /// **'{total} from {source}. Change any amount as usual.'**
+  String autoFillNoteBody(String total, String source);
+
+  /// Snack bar after undoing the automatic fill
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic budget undone'**
+  String get autoFillUndone;
+
+  /// Account type: brokerage, crypto or retirement account
+  ///
+  /// In en, this message translates to:
+  /// **'Investment'**
+  String get accountTypeInvestment;
+
+  /// In the dialog for taking an account out of the budget: its balance and the categories holding money budgeted for it
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} in this account leaves your budget. Release the money you budgeted for it:'**
+  String accountReleaseIntro(String amount);
+
+  /// Under a category in the release list: how much is taken out of its budget
+  ///
+  /// In en, this message translates to:
+  /// **'Release {amount}'**
+  String accountReleaseAmount(String amount);
+
+  /// Snack bar after releasing budgeted money when an account left the budget
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} returned to To Be Budgeted'**
+  String accountReleased(String amount);
+
+  /// Card at the start of a month: money left unassigned in the month before (month name)
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} from {previous} wasn\'t budgeted'**
+  String leftoverTitle(String amount, String previous);
+
+  /// Body of the leftover card
+  ///
+  /// In en, this message translates to:
+  /// **'It is still in To Be Budgeted for {month}. Put it towards savings?'**
+  String leftoverBody(String month);
+
+  /// Button: choose a category (savings first) to budget the leftover in
+  ///
+  /// In en, this message translates to:
+  /// **'Budget for savings…'**
+  String get leftoverAssign;
+
+  /// Button: leave the leftover in To Be Budgeted for this month (month name)
+  ///
+  /// In en, this message translates to:
+  /// **'Keep for {month}'**
+  String leftoverKeep(String month);
+
+  /// Snack bar after budgeting the leftover (with Undo)
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} budgeted for {category}'**
+  String leftoverAssigned(String amount, String category);
+
+  /// Switch on the account form: the account is personal to this phone's user
+  ///
+  /// In en, this message translates to:
+  /// **'Personal'**
+  String get accountPersonalLabel;
+
+  /// Explanation under the Personal switch on the account form
+  ///
+  /// In en, this message translates to:
+  /// **'Only you see its transactions. A partner you sync with sees just its name and balance.'**
+  String get accountPersonalHelper;
+
+  /// Explanation under the disabled Personal switch for an account that has already synced
+  ///
+  /// In en, this message translates to:
+  /// **'Already shared with your partner, so it can\'t become personal. Create a new personal account instead.'**
+  String get accountPersonalSynced;
+
+  /// Explanation under the disabled Include in budget switch of a personal account
+  ///
+  /// In en, this message translates to:
+  /// **'Personal accounts stay outside the budget.'**
+  String get accountOnBudgetPersonal;
+
+  /// Dialog title when a personal account becomes shared
+  ///
+  /// In en, this message translates to:
+  /// **'Share with your partner?'**
+  String get accountShareTitle;
+
+  /// Dialog text when a personal account becomes shared
+  ///
+  /// In en, this message translates to:
+  /// **'Its transactions will sync to your partner\'s phone, and your partner can change them too. It can\'t become personal again.'**
+  String get accountShareBody;
+
+  /// Button confirming that a personal account becomes shared
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get accountShareAction;
+
+  /// Badge on the card of this user's personal account
+  ///
+  /// In en, this message translates to:
+  /// **'Personal'**
+  String get accountPersonalBadge;
+
+  /// Badge on the card of the partner's personal account
+  ///
+  /// In en, this message translates to:
+  /// **'Partner\'s'**
+  String get accountPartnerBadge;
+
+  /// Section header in the account list above the partner's personal accounts
+  ///
+  /// In en, this message translates to:
+  /// **'Your partner\'s accounts'**
+  String get accountsPartnerSection;
+
+  /// Part of net worth in shared accounts
+  ///
+  /// In en, this message translates to:
+  /// **'Shared'**
+  String get netWorthShared;
+
+  /// Part of net worth in this user's personal accounts
+  ///
+  /// In en, this message translates to:
+  /// **'Mine'**
+  String get netWorthMine;
+
+  /// Part of net worth in the partner's personal accounts
+  ///
+  /// In en, this message translates to:
+  /// **'Partner\'s'**
+  String get netWorthPartner;
+
+  /// Title on the detail screen of the partner's personal account
+  ///
+  /// In en, this message translates to:
+  /// **'Your partner\'s personal account'**
+  String get accountPartnerTitle;
+
+  /// Text on the detail screen of the partner's personal account
+  ///
+  /// In en, this message translates to:
+  /// **'Its transactions stay on your partner\'s phone. The balance updates whenever their phone syncs.'**
+  String get accountPartnerBody;
+
+  /// Message when a transaction involving the partner's personal account cannot be changed
+  ///
+  /// In en, this message translates to:
+  /// **'This belongs to your partner\'s personal account. Your partner can change it on their phone.'**
+  String get txPartnerAccount;
+
+  /// Label above the balance of the partner's personal account
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get accountBalanceLabel;
+
+  /// Tooltip and screen reader label of an info button; topic is the help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'About {topic}'**
+  String helpInfoTooltip(String topic);
+
+  /// Button in a help sheet that opens the matching user guide chapter
+  ///
+  /// In en, this message translates to:
+  /// **'Open the user guide'**
+  String get helpOpenGuide;
+
+  /// Heading above the numbered steps in a help sheet
+  ///
+  /// In en, this message translates to:
+  /// **'How it works'**
+  String get helpHowTo;
+
+  /// Button on a one-time hint that opens the matching help sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Show me'**
+  String get helpShowMe;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Saving and investing'**
+  String get helpSavingTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'Keep savings and investments in their own accounts outside the budget. The budget decides how much goes there each month: budget the amount in a Savings & Investments category, then move the money with a transfer that uses that category.'**
+  String get helpSavingBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'Budget the amount, for example 500 in Stocks & ETFs.\nAdd a transfer from your budget account (for example checking) to the brokerage or savings account.\nPick Stocks & ETFs as its category. The category is spent, the brokerage account grows, and To Be Budgeted stays the same.\nGains, dividends and fees inside the brokerage account need no category.'**
+  String get helpSavingSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'To Be Budgeted'**
+  String get helpTbbTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every euro has a job.'**
+  String get helpTbbBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'Negative means you budgeted more than you have: lower a category until it is back at zero.\nWhat is left at the end of a month carries over to the next month, where you can budget it.\nAccounts outside the budget, like savings or a brokerage account, do not count here.'**
+  String get helpTbbSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Filling a new month'**
+  String get helpNewMonthTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'A new month starts empty. Fill it like the month before or from a template, by hand or automatically every month (Budget menu ⋮, “Fill automatically…”).'**
+  String get helpNewMonthBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'Only empty categories are filled: amounts you already set stay.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.'**
+  String get helpNewMonthSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'In or out of the budget'**
+  String get helpOnBudgetTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts in the budget hold the money you spend and plan with: their balance is what you budget. Accounts outside the budget only count towards net worth.'**
+  String get helpOnBudgetBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'In the budget: checking, cash, credit cards and the account your salary arrives in.\nOutside: savings, brokerage, crypto and pension accounts, loans.\nA reserve inside your checking account cannot be outside: budget it into a category like Savings instead.\nTaking an account out offers to release the money you budgeted for it, so To Be Budgeted does not go negative.'**
+  String get helpOnBudgetSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Personal accounts'**
+  String get helpPersonalTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'For couples who sync: a personal account belongs to you. Your partner sees its name and balance in net worth, but not its transactions, and cannot change it.'**
+  String get helpPersonalBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'Personal accounts are always outside the budget.\nA transfer between a shared account and your personal one syncs as the shared side only.\nAn account can become personal only before it first syncs, so mark it before pairing. Sharing it later is always possible and sends its history.'**
+  String get helpPersonalSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Account types'**
+  String get helpAccountTypesTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'The type sets the icon and whether a new account starts in the budget. Savings and Investment accounts start outside the budget; the switch below changes that.'**
+  String get helpAccountTypesBody;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts and net worth'**
+  String get helpAccountsTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth adds up all accounts, in or out of the budget. If you sync with a partner, it is your household’s net worth, and the lines below it split it into shared, yours and your partner’s.'**
+  String get helpAccountsBody;
+
+  /// Lines of a help topic explaining the account badges, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'Off budget: counts towards net worth only.\nPersonal: yours; your partner sees only its name and balance.\nPartner’s: your partner’s personal accounts, read-only, with the balance their phone last shared.'**
+  String get helpAccountsSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Transfers'**
+  String get helpTransferTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'A transfer moves money between two of your accounts. It is neither income nor spending.'**
+  String get helpTransferBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'Between two budget accounts (checking to cash): no category, nothing changes in the budget.\nFrom a budget account to one outside (checking to brokerage): pick the category you budgeted for it, for example Stocks & ETFs. Without a category the money comes out of To Be Budgeted.\nBack from outside into the budget (savings to checking): without a category it adds to To Be Budgeted.'**
+  String get helpTransferSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing with a partner'**
+  String get helpSyncTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'Two phones can share one budget: over your home Wi-Fi without any cloud, or through a Google Drive account you both use when you are apart. Everything is encrypted before it leaves the phone.'**
+  String get helpSyncBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'Every change syncs on its own. If both phones change the same thing, the later change wins and the other one is listed under conflicts, where you can keep it.\nPersonal accounts share only their name and balance.\nBoth phones need the same app version.'**
+  String get helpSyncSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Importing a CSV file'**
+  String get helpCsvTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'Export your transactions from your bank as a CSV file. LedgerZero matches the columns by their names, and you can correct the matching before importing.'**
+  String get helpCsvBody;
+
+  /// Numbered steps of a help topic, one per line
+  ///
+  /// In en, this message translates to:
+  /// **'The first row must hold the column names: delete any lines above it.\nAmounts must be in one column, negative for money going out. Separate debit and credit columns are not supported yet.\nOn the review screen, untick the rows you do not want.'**
+  String get helpCsvSteps;
+
+  /// Help topic title
+  ///
+  /// In en, this message translates to:
+  /// **'App lock'**
+  String get helpAppLockTitle;
+
+  /// Help topic text
+  ///
+  /// In en, this message translates to:
+  /// **'The app locks with your fingerprint, face or phone PIN once it has been in the background for the time you choose. Pulling down notifications or answering a system dialog does not lock it, and after unlocking you are back where you were.'**
+  String get helpAppLockBody;
+
+  /// One-time hint in the Savings & Investments group once money is budgeted there
+  ///
+  /// In en, this message translates to:
+  /// **'Budgeted money stays in your checking account until you move it: add a transfer to your savings or brokerage account and pick this category.'**
+  String get hintSavingsTransfer;
+
+  /// One-time snack bar after creating the first account outside the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Account created. It is outside the budget: to save into it, budget the amount in Savings & Investments and add a transfer with that category.'**
+  String get hintOffBudgetAccount;
+
+  /// One-time hint above the partner's accounts in the account list
+  ///
+  /// In en, this message translates to:
+  /// **'These are your partner’s personal accounts. You see their balance; their transactions stay on your partner’s phone.'**
+  String get hintPartnerAccounts;
+
+  /// User guide chapter title
+  ///
+  /// In en, this message translates to:
+  /// **'Transfers'**
+  String get guideTransfersTitle;
+
+  /// User guide chapter text
+  ///
+  /// In en, this message translates to:
+  /// **'A transfer moves money between two of your accounts and is neither income nor spending. Between two budget accounts it needs no category and changes nothing in the budget. From a budget account to an account outside the budget, the money leaves the budget: pick the category you budgeted for it, or leave the category empty to take it from To Be Budgeted. Money coming back from outside without a category adds to To Be Budgeted.'**
+  String get guideTransfersBody;
+
+  /// User guide chapter title
+  ///
+  /// In en, this message translates to:
+  /// **'Saving and investing'**
+  String get guideSavingTitle;
+
+  /// User guide chapter text
+  ///
+  /// In en, this message translates to:
+  /// **'Keep savings and investments in their own accounts outside the budget, so price changes and interest never disturb it. Each month, budget what you want to put aside in Savings & Investments (Savings, Stocks & ETFs, Crypto, Bonds, Retirement). When you move the money, add a transfer from your budget account to the savings account and pick that category: the category is spent, the savings account grows and To Be Budgeted stays the same. Example: budget 500 in Stocks & ETFs, then transfer 500 from checking to your brokerage account with Stocks & ETFs. A reserve you keep in your checking account stays in a category like Savings instead, where it carries over every month.'**
+  String get guideSavingBody;
+
+  /// User guide chapter title
+  ///
+  /// In en, this message translates to:
+  /// **'Using LedgerZero with a partner'**
+  String get guidePartnerTitle;
+
+  /// User guide chapter text
+  ///
+  /// In en, this message translates to:
+  /// **'Two phones can share one budget. Pair them in Sync Settings: over your home Wi-Fi (scan the QR code on the other phone; both need LedgerZero open on the same Wi-Fi) or through a Google Drive account you both use. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.'**
+  String get guidePartnerBody;
+
+  /// User guide chapter title
+  ///
+  /// In en, this message translates to:
+  /// **'Security and backups'**
+  String get guideSecurityTitle;
+
+  /// User guide chapter text
+  ///
+  /// In en, this message translates to:
+  /// **'Your data is stored encrypted on your phone, and the key is kept in the phone’s secure hardware. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. Create encrypted backups regularly in Settings > Backup & Export and keep the backup password safe: without it a backup cannot be restored.'**
+  String get guideSecurityBody;
+
+  /// User guide chapter title
+  ///
+  /// In en, this message translates to:
+  /// **'Importing'**
+  String get guideImportTitle;
+
+  /// User guide chapter text
+  ///
+  /// In en, this message translates to:
+  /// **'Settings > Import CSV reads your bank’s CSV export: the first row must hold the column names, and amounts must be in one column (negative for money going out). Columns are matched by name and can be corrected before importing. YNAB budgets can be imported from Settings as well.'**
+  String get guideImportBody;
+
+  /// FAQ question
+  ///
+  /// In en, this message translates to:
+  /// **'What if my fingerprint is not recognised?'**
+  String get faqLockQ;
+
+  /// FAQ answer
+  ///
+  /// In en, this message translates to:
+  /// **'The app lock also accepts your phone’s PIN, pattern or password, the same way your phone’s lock screen does.'**
+  String get faqLockA;
+
+  /// FAQ question
+  ///
+  /// In en, this message translates to:
+  /// **'How do I put money into savings or investments?'**
+  String get faqSavingQ;
+
+  /// FAQ answer
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the savings or brokerage account outside the budget. Each month, budget the amount in a Savings & Investments category, then add a transfer from your checking account to the savings account and pick that category. The category is spent and To Be Budgeted stays the same.'**
+  String get faqSavingA;
+
+  /// FAQ question
+  ///
+  /// In en, this message translates to:
+  /// **'Can I keep an account to myself?'**
+  String get faqPersonalQ;
+
+  /// FAQ answer
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.'**
+  String get faqPersonalA;
 }
 
 class _AppLocalizationsDelegate

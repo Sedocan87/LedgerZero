@@ -178,6 +178,8 @@ class AccountDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accountAsync = ref.watch(accountDetailProvider(accountId));
     final l10n = AppLocalizations.of(context)!;
+    // The partner's personal account is read-only here.
+    final readOnly = accountAsync.value?.isPartners ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -187,57 +189,62 @@ class AccountDetailScreen extends ConsumerWidget {
           error: (_, _) => Text(l10n.error),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => context.goNamed(
-              'edit-account',
-              pathParameters: {'id': accountId},
+          if (!readOnly) ...[
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => context.goNamed(
+                'edit-account',
+                pathParameters: {'id': accountId},
+              ),
             ),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'delete') {
-                await _deleteAccount(context, ref, accountAsync.value);
-              } else if (value == 'close') {
-                final account = accountAsync.value;
-                if (account != null) {
-                  await _setClosed(context, ref, !account.isClosed);
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'delete') {
+                  await _deleteAccount(context, ref, accountAsync.value);
+                } else if (value == 'close') {
+                  final account = accountAsync.value;
+                  if (account != null) {
+                    await _setClosed(context, ref, !account.isClosed);
+                  }
+                } else if (value == 'reconcile') {
+                  context.goNamed(
+                    'reconcile-account',
+                    pathParameters: {'id': accountId},
+                  );
+                } else if (value == 'export') {
+                  final account = accountAsync.value;
+                  if (account != null) {
+                    await _export(context, ref, account);
+                  }
                 }
-              } else if (value == 'reconcile') {
-                context.goNamed(
-                  'reconcile-account',
-                  pathParameters: {'id': accountId},
-                );
-              } else if (value == 'export') {
-                final account = accountAsync.value;
-                if (account != null) {
-                  await _export(context, ref, account);
-                }
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'reconcile',
-                child: Text(l10n.reconcileAccount),
-              ),
-              PopupMenuItem(value: 'export', child: Text(l10n.exportToCsv)),
-              PopupMenuItem(
-                value: 'close',
-                child: Text(
-                  accountAsync.value?.isClosed == true
-                      ? l10n.reopenAccount
-                      : l10n.closeAccount,
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'reconcile',
+                  child: Text(l10n.reconcileAccount),
                 ),
-              ),
-              PopupMenuItem(value: 'delete', child: Text(l10n.deleteAccount)),
-            ],
-          ),
+                PopupMenuItem(value: 'export', child: Text(l10n.exportToCsv)),
+                PopupMenuItem(
+                  value: 'close',
+                  child: Text(
+                    accountAsync.value?.isClosed == true
+                        ? l10n.reopenAccount
+                        : l10n.closeAccount,
+                  ),
+                ),
+                PopupMenuItem(value: 'delete', child: Text(l10n.deleteAccount)),
+              ],
+            ),
+          ],
         ],
       ),
       body: accountAsync.when(
         data: (account) {
           if (account == null) {
             return Center(child: Text(l10n.accountNotFound));
+          }
+          if (account.isPartners) {
+            return _PartnerAccountView(account: account);
           }
           return Column(
             children: [
@@ -258,6 +265,70 @@ class AccountDetailScreen extends ConsumerWidget {
         loading: () => const AppLoadingIndicator(),
         error: (e, s) => LoadErrorView(error: e, stackTrace: s),
       ),
+    );
+  }
+}
+
+/// The partner's personal account: its balance as their phone shared it,
+/// and why there are no transactions.
+class _PartnerAccountView extends ConsumerWidget {
+  const _PartnerAccountView({required this.account});
+
+  final Account account;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.accountBalanceLabel,
+                  style: theme.textTheme.labelLarge,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  ref
+                      .watch(appFormatterProvider)
+                      .formatMoney(
+                        account.balance,
+                        currencyCode: account.currency,
+                      ),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          key: const Key('account.partnerNotice'),
+          color: theme.colorScheme.secondaryContainer,
+          child: ListTile(
+            leading: Icon(
+              Icons.lock_person_outlined,
+              color: theme.colorScheme.onSecondaryContainer,
+            ),
+            title: Text(
+              l10n.accountPartnerTitle,
+              style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+            ),
+            subtitle: Text(
+              l10n.accountPartnerBody,
+              style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

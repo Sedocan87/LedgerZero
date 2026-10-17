@@ -168,7 +168,6 @@
   "budgetTutorialDescription": "Tap on amounts to budget. Use quick actions for auto-assignment.",
   "gotIt": "Got it",
   "total": "Total",
-  "tbbTooltip": "Money you have not assigned to a category yet. Budget it until this reaches zero.",
   "budgetedTooltip": "The amount you've assigned to this category for this month.",
   "activityTooltip": "The sum of this month's transactions in this category.",
   "availableTooltip": "What you can still spend: budgeted plus activity plus what carried over from last month.",
@@ -2156,17 +2155,17 @@
   "@faqSafeQ": {
     "description": "FAQ question"
   },
-  "faqSafeA": "Your data is stored only on your device, in a database encrypted with AES-256 and unlocked with your master password. If you turn on sync, it is encrypted with your sync passphrase before it leaves the device. There are no LedgerZero servers, no tracking and no analytics.",
+  "faqSafeA": "Your data is stored only on your phone, in an encrypted database whose key is kept in the phone’s secure hardware (Android KeyStore). The app lock adds your fingerprint, face or phone PIN. Synced data is encrypted before it leaves the phone. There are no LedgerZero servers, no tracking and no analytics.",
   "@faqSafeA": {
     "description": "FAQ answer"
   },
-  "faqSyncQ": "How do I sync between devices?",
+  "faqSyncQ": "How do my partner and I share a budget?",
   "@faqSyncQ": {
     "description": "FAQ question"
   },
-  "faqSyncA": "Open Settings > Sync Settings, choose Google Drive and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.",
+  "faqSyncA": "Open Settings > Sync Settings. At home, pair the phones over Wi-Fi by scanning a QR code. To sync while you are apart, both phones use the same Google Drive account and sync passphrase. The user guide chapter “Using LedgerZero with a partner” explains the details.",
   "@faqSyncA": {
-    "description": "FAQ answer; menu names must match the settings labels"
+    "description": "FAQ answer"
   },
   "faqOfflineQ": "Can I use the app offline?",
   "@faqOfflineQ": {
@@ -2174,14 +2173,6 @@
   },
   "faqOfflineA": "Yes. Everything works offline. Sync catches up automatically when you are back online.",
   "@faqOfflineA": {
-    "description": "FAQ answer"
-  },
-  "faqPasswordQ": "What if I forget my master password?",
-  "@faqPasswordQ": {
-    "description": "FAQ question"
-  },
-  "faqPasswordA": "Unlock with the recovery key you wrote down during setup, then choose a new password. Without the password and the recovery key nobody can unlock your data, not even the developer.",
-  "@faqPasswordA": {
     "description": "FAQ answer"
   },
   "faqBackupQ": "How do backups work?",
@@ -2200,60 +2191,52 @@
   "@faqImportA": {
     "description": "FAQ answer; menu names must match the settings labels"
   },
-  "guideStartTitle": "1. Getting started",
+  "guideStartTitle": "Getting started",
   "@guideStartTitle": {
-    "description": "User guide section title"
+    "description": "User guide chapter title"
   },
-  "guideStartBody": "LedgerZero uses zero-based envelope budgeting: before you spend money, you give it a job by assigning it to a category.",
+  "guideStartBody": "LedgerZero uses envelope budgeting: before you spend money, you give it a job by budgeting it to a category. Add the account your money is in, add your salary, then budget until To Be Budgeted is zero. The ⓘ buttons across the app explain each part where you need it.",
   "@guideStartBody": {
-    "description": "User guide section text"
+    "description": "User guide chapter text"
   },
-  "guideAccountsTitle": "2. Accounts",
+  "guideAccountsTitle": "Accounts",
   "@guideAccountsTitle": {
-    "description": "User guide section title"
+    "description": "User guide chapter title"
   },
-  "guideAccountsBody": "Add the accounts you pay from (checking, savings, credit card, cash) with their current balance. That money is what you can budget: it appears as To Be Budgeted.",
+  "guideAccountsBody": "Add every account with its current balance. Accounts in the budget (checking, cash, credit cards) hold the money you budget. Savings, brokerage and pension accounts usually stay outside the budget: they count towards net worth only. The type sets the icon and whether a new account starts in the budget.",
   "@guideAccountsBody": {
-    "description": "User guide section text"
+    "description": "User guide chapter text"
   },
-  "guideBudgetTitle": "3. Budgeting",
+  "guideBudgetTitle": "Budgeting",
   "@guideBudgetTitle": {
-    "description": "User guide section title"
+    "description": "User guide chapter title"
   },
-  "guideBudgetBody": "On the Budget screen, tap a category's budgeted amount to assign money. Keep going until To Be Budgeted is zero. Income without a category adds to To Be Budgeted.",
+  "guideBudgetBody": "On the Budget screen, tap a category’s budgeted amount to give it money, until To Be Budgeted is zero. Income without a category adds to To Be Budgeted; add your salary as recurring income to see what is coming. Each category keeps what is left from month to month. A new month starts empty: fill it like the month before or from a template, by hand or automatically. Money left unbudgeted at the end of a month is offered for savings in the next one.",
   "@guideBudgetBody": {
-    "description": "User guide section text"
+    "description": "User guide chapter text"
   },
-  "guideTransactionsTitle": "4. Transactions",
+  "guideTransactionsTitle": "Transactions",
   "@guideTransactionsTitle": {
-    "description": "User guide section title"
+    "description": "User guide chapter title"
   },
-  "guideTransactionsBody": "Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, and rules categorise imported transactions automatically.",
+  "guideTransactionsBody": "Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorise transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.",
   "@guideTransactionsBody": {
-    "description": "User guide section text"
+    "description": "User guide chapter text"
   },
-  "guideOverspendingTitle": "5. Overspending",
+  "guideOverspendingTitle": "Overspending",
   "@guideOverspendingTitle": {
-    "description": "User guide section title"
+    "description": "User guide chapter title"
   },
   "guideOverspendingBody": "When a category's available amount turns red, you have spent more than you budgeted. Move money from another category to cover it.",
   "@guideOverspendingBody": {
     "description": "User guide section text"
   },
-  "guideReconcileTitle": "6. Reconciling",
+  "guideReconcileTitle": "Reconciling",
   "@guideReconcileTitle": {
-    "description": "User guide section title"
+    "description": "User guide chapter title"
   },
   "guideReconcileBody": "Now and then, compare an account with your bank statement using Reconcile Account on the account screen. Cleared transactions are marked as reconciled, and any difference is recorded as an adjustment.",
   "@guideReconcileBody": {
-    "description": "User guide section text"
-  },
-  "guideSyncTitle": "7. Sync and backups",
-  "@guideSyncTitle": {
-    "description": "User guide section title"
-  },
-  "guideSyncBody": "Sync keeps your phones and tablets up to date through your own Google Drive, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.",
-  "@guideSyncBody": {
     "description": "User guide section text"
   },
   "next": "Next",
@@ -2829,7 +2812,7 @@
   },
   "seedGroupSavings": "Savings & Investments",
   "@seedGroupSavings": {
-    "description": "Default category group for money set aside (cash reserve, investments)"
+    "description": "Default category group for money moved to savings and investment accounts"
   },
   "seedCatStocks": "Stocks & ETFs",
   "@seedCatStocks": {
@@ -2851,7 +2834,7 @@
   "@savingsOfferTitle": {
     "description": "Title of the one-time card on the budget screen offering the Investments category group"
   },
-  "savingsOfferBody": "Add a Savings & Investments group: Cash Reserve, Stocks & ETFs, Crypto, Bonds and Retirement. Money you assign there stays out of To Be Budgeted and carries over every month, e.g. a cash reserve you always keep. To invest, transfer it to your off-budget brokerage account using the category.",
+  "savingsOfferBody": "Add a Savings & Investments group: Savings, Stocks & ETFs, Crypto, Bonds and Retirement. Budget there what you move to your savings and investment accounts each month. Keep those accounts outside the budget (switch off \"Include in budget\"): their balances then count towards your net worth only.",
   "@savingsOfferBody": {
     "description": "Body of the one-time Investments offer card"
   },
@@ -2867,9 +2850,9 @@
   "@savingsOfferAdded": {
     "description": "Snack bar after adding the Investments group"
   },
-  "seedCatCashReserve": "Cash Reserve",
-  "@seedCatCashReserve": {
-    "description": "Default category (Savings & Investments group): cash the user always keeps, budgeted once"
+  "seedCatSavings": "Savings",
+  "@seedCatSavings": {
+    "description": "Default category (Savings & Investments group): money moved to savings accounts each month"
   },
   "cardNotifications": "Card notifications",
   "cardNotificationsSubtitle": "Add card payments from your bank app's notifications",
@@ -2975,5 +2958,528 @@
   },
   "lanPeerNeverSynced": "Not synced yet",
   "lanTurnOff": "Turn off Wi-Fi sync",
-  "syncErrorPairingMismatch": "This phone and the other one were paired with different codes. Turn off Wi-Fi sync on this phone and pair it again."
+  "syncErrorPairingMismatch": "This phone and the other one were paired with different codes. Turn off Wi-Fi sync on this phone and pair it again.",
+  "budgetIncomeLabel": "Income",
+  "@budgetIncomeLabel": {
+    "description": "Label of the income line under To Be Budgeted on the budget screen"
+  },
+  "budgetIncomeReceived": "{amount} received",
+  "@budgetIncomeReceived": {
+    "description": "Income line: money that arrived in To Be Budgeted this month",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetIncomeExpected": "{amount} expected, next {date}",
+  "@budgetIncomeExpected": {
+    "description": "Income line: recurring income (salary) still to come this month and the date of the next payment, e.g. '€3,000 expected, next Oct 25'",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetIncomeNone": "none this month",
+  "@budgetIncomeNone": {
+    "description": "Income line value when the month has no income yet; shown after 'Income: '"
+  },
+  "budgetIncomeAddPrompt": "Add your salary to budget it every month",
+  "@budgetIncomeAddPrompt": {
+    "description": "Income line under To Be Budgeted while no recurring income is set up"
+  },
+  "budgetIncomeAddButton": "Add salary",
+  "@budgetIncomeAddButton": {
+    "description": "Button: open the form for a recurring income (salary)"
+  },
+  "salaryPromptTitle": "Add your salary?",
+  "@salaryPromptTitle": {
+    "description": "Title of the one-time card on the budget screen suggesting to set up the salary"
+  },
+  "salaryPromptBody": "Set it up once and it lands in To Be Budgeted every payday, ready to assign to your categories. You also see the expected amount for each month in advance.",
+  "@salaryPromptBody": {
+    "description": "Body of the one-time salary card and of the salary question after the first account"
+  },
+  "salaryPromptDismiss": "Not now",
+  "@salaryPromptDismiss": {
+    "description": "Button: dismiss the salary suggestion for good (it stays reachable under To Be Budgeted)"
+  },
+  "firstAccountSalaryTitle": "When do you get paid?",
+  "@firstAccountSalaryTitle": {
+    "description": "Title of the question asked right after the first account was created"
+  },
+  "newMonthTitle": "Start {month} like {previous}?",
+  "@newMonthTitle": {
+    "description": "Card on the budget screen for an empty month: copy the budget of the month before. Month names, e.g. 'Start November like October?'",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "previous": {
+        "type": "String"
+      }
+    }
+  },
+  "newMonthBody": "{total} in the same categories. To Be Budgeted after: {tbb}.",
+  "@newMonthBody": {
+    "description": "Body of the new-month card: the total that would be budgeted and what To Be Budgeted would show afterwards",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "tbb": {
+        "type": "String"
+      }
+    }
+  },
+  "newMonthFill": "Fill like {previous}",
+  "@newMonthFill": {
+    "description": "Button: budget the same amounts as in the month before (month name)",
+    "placeholders": {
+      "previous": {
+        "type": "String"
+      }
+    }
+  },
+  "newMonthTemplate": "Use a template",
+  "@newMonthTemplate": {
+    "description": "Button on the new-month card: fill the month from a saved budget template"
+  },
+  "newMonthDismiss": "Not now",
+  "@newMonthDismiss": {
+    "description": "Button: hide the new-month card for this month"
+  },
+  "newMonthFilled": "{count, plural, =1{1 category filled} other{{count} categories filled}}",
+  "@newMonthFilled": {
+    "description": "Snack bar after filling a month (with Undo)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "autoFillTitle": "Fill new months automatically",
+  "@autoFillTitle": {
+    "description": "Setting (budget menu, new-month card): budget every new month automatically"
+  },
+  "autoFillMenu": "Fill automatically…",
+  "@autoFillMenu": {
+    "description": "Budget screen menu entry that opens the automatic fill setting"
+  },
+  "autoFillExplanation": "On the first open of a new month, categories that are still empty get these amounts. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.",
+  "@autoFillExplanation": {
+    "description": "Explanation in the automatic fill setting"
+  },
+  "autoFillOff": "Off",
+  "@autoFillOff": {
+    "description": "Automatic fill option: do not fill new months"
+  },
+  "autoFillPrevious": "Same as the month before",
+  "@autoFillPrevious": {
+    "description": "Automatic fill option: copy the previous month's budgets"
+  },
+  "autoFillTemplate": "Template: {name}",
+  "@autoFillTemplate": {
+    "description": "Automatic fill option: use the saved template with this name",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "autoFillNoteTitle": "{month} was filled automatically",
+  "@autoFillNoteTitle": {
+    "description": "Card after the automatic fill of a month (month name)",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "autoFillNoteBody": "{total} from {source}. Change any amount as usual.",
+  "@autoFillNoteBody": {
+    "description": "Body of the automatic fill card: total and where it came from (previous month name or template name)",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "autoFillUndone": "Automatic budget undone",
+  "@autoFillUndone": {
+    "description": "Snack bar after undoing the automatic fill"
+  },
+  "accountTypeInvestment": "Investment",
+  "@accountTypeInvestment": {
+    "description": "Account type: brokerage, crypto or retirement account"
+  },
+  "accountReleaseIntro": "{amount} in this account leaves your budget. Release the money you budgeted for it:",
+  "@accountReleaseIntro": {
+    "description": "In the dialog for taking an account out of the budget: its balance and the categories holding money budgeted for it",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "accountReleaseAmount": "Release {amount}",
+  "@accountReleaseAmount": {
+    "description": "Under a category in the release list: how much is taken out of its budget",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "accountReleased": "{amount} returned to To Be Budgeted",
+  "@accountReleased": {
+    "description": "Snack bar after releasing budgeted money when an account left the budget",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "leftoverTitle": "{amount} from {previous} wasn't budgeted",
+  "@leftoverTitle": {
+    "description": "Card at the start of a month: money left unassigned in the month before (month name)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "previous": {
+        "type": "String"
+      }
+    }
+  },
+  "leftoverBody": "It is still in To Be Budgeted for {month}. Put it towards savings?",
+  "@leftoverBody": {
+    "description": "Body of the leftover card",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "leftoverAssign": "Budget for savings…",
+  "@leftoverAssign": {
+    "description": "Button: choose a category (savings first) to budget the leftover in"
+  },
+  "leftoverKeep": "Keep for {month}",
+  "@leftoverKeep": {
+    "description": "Button: leave the leftover in To Be Budgeted for this month (month name)",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "leftoverAssigned": "{amount} budgeted for {category}",
+  "@leftoverAssigned": {
+    "description": "Snack bar after budgeting the leftover (with Undo)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "accountPersonalLabel": "Personal",
+  "@accountPersonalLabel": {
+    "description": "Switch on the account form: the account is personal to this phone's user"
+  },
+  "accountPersonalHelper": "Only you see its transactions. A partner you sync with sees just its name and balance.",
+  "@accountPersonalHelper": {
+    "description": "Explanation under the Personal switch on the account form"
+  },
+  "accountPersonalSynced": "Already shared with your partner, so it can't become personal. Create a new personal account instead.",
+  "@accountPersonalSynced": {
+    "description": "Explanation under the disabled Personal switch for an account that has already synced"
+  },
+  "accountOnBudgetPersonal": "Personal accounts stay outside the budget.",
+  "@accountOnBudgetPersonal": {
+    "description": "Explanation under the disabled Include in budget switch of a personal account"
+  },
+  "accountShareTitle": "Share with your partner?",
+  "@accountShareTitle": {
+    "description": "Dialog title when a personal account becomes shared"
+  },
+  "accountShareBody": "Its transactions will sync to your partner's phone, and your partner can change them too. It can't become personal again.",
+  "@accountShareBody": {
+    "description": "Dialog text when a personal account becomes shared"
+  },
+  "accountShareAction": "Share",
+  "@accountShareAction": {
+    "description": "Button confirming that a personal account becomes shared"
+  },
+  "accountPersonalBadge": "Personal",
+  "@accountPersonalBadge": {
+    "description": "Badge on the card of this user's personal account"
+  },
+  "accountPartnerBadge": "Partner's",
+  "@accountPartnerBadge": {
+    "description": "Badge on the card of the partner's personal account"
+  },
+  "accountsPartnerSection": "Your partner's accounts",
+  "@accountsPartnerSection": {
+    "description": "Section header in the account list above the partner's personal accounts"
+  },
+  "netWorthShared": "Shared",
+  "@netWorthShared": {
+    "description": "Part of net worth in shared accounts"
+  },
+  "netWorthMine": "Mine",
+  "@netWorthMine": {
+    "description": "Part of net worth in this user's personal accounts"
+  },
+  "netWorthPartner": "Partner's",
+  "@netWorthPartner": {
+    "description": "Part of net worth in the partner's personal accounts"
+  },
+  "accountPartnerTitle": "Your partner's personal account",
+  "@accountPartnerTitle": {
+    "description": "Title on the detail screen of the partner's personal account"
+  },
+  "accountPartnerBody": "Its transactions stay on your partner's phone. The balance updates whenever their phone syncs.",
+  "@accountPartnerBody": {
+    "description": "Text on the detail screen of the partner's personal account"
+  },
+  "txPartnerAccount": "This belongs to your partner's personal account. Your partner can change it on their phone.",
+  "@txPartnerAccount": {
+    "description": "Message when a transaction involving the partner's personal account cannot be changed"
+  },
+  "accountBalanceLabel": "Balance",
+  "@accountBalanceLabel": {
+    "description": "Label above the balance of the partner's personal account"
+  },
+  "helpInfoTooltip": "About {topic}",
+  "@helpInfoTooltip": {
+    "description": "Tooltip and screen reader label of an info button; topic is the help topic title",
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "helpOpenGuide": "Open the user guide",
+  "@helpOpenGuide": {
+    "description": "Button in a help sheet that opens the matching user guide chapter"
+  },
+  "helpHowTo": "How it works",
+  "@helpHowTo": {
+    "description": "Heading above the numbered steps in a help sheet"
+  },
+  "helpShowMe": "Show me",
+  "@helpShowMe": {
+    "description": "Button on a one-time hint that opens the matching help sheet"
+  },
+  "helpSavingTitle": "Saving and investing",
+  "@helpSavingTitle": {
+    "description": "Help topic title"
+  },
+  "helpSavingBody": "Keep savings and investments in their own accounts outside the budget. The budget decides how much goes there each month: budget the amount in a Savings & Investments category, then move the money with a transfer that uses that category.",
+  "@helpSavingBody": {
+    "description": "Help topic text"
+  },
+  "helpSavingSteps": "Budget the amount, for example 500 in Stocks & ETFs.\nAdd a transfer from your budget account (for example checking) to the brokerage or savings account.\nPick Stocks & ETFs as its category. The category is spent, the brokerage account grows, and To Be Budgeted stays the same.\nGains, dividends and fees inside the brokerage account need no category.",
+  "@helpSavingSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpTbbTitle": "To Be Budgeted",
+  "@helpTbbTitle": {
+    "description": "Help topic title"
+  },
+  "helpTbbBody": "Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every euro has a job.",
+  "@helpTbbBody": {
+    "description": "Help topic text"
+  },
+  "helpTbbSteps": "Negative means you budgeted more than you have: lower a category until it is back at zero.\nWhat is left at the end of a month carries over to the next month, where you can budget it.\nAccounts outside the budget, like savings or a brokerage account, do not count here.",
+  "@helpTbbSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpNewMonthTitle": "Filling a new month",
+  "@helpNewMonthTitle": {
+    "description": "Help topic title"
+  },
+  "helpNewMonthBody": "A new month starts empty. Fill it like the month before or from a template, by hand or automatically every month (Budget menu ⋮, “Fill automatically…”).",
+  "@helpNewMonthBody": {
+    "description": "Help topic text"
+  },
+  "helpNewMonthSteps": "Only empty categories are filled: amounts you already set stay.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.",
+  "@helpNewMonthSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpOnBudgetTitle": "In or out of the budget",
+  "@helpOnBudgetTitle": {
+    "description": "Help topic title"
+  },
+  "helpOnBudgetBody": "Accounts in the budget hold the money you spend and plan with: their balance is what you budget. Accounts outside the budget only count towards net worth.",
+  "@helpOnBudgetBody": {
+    "description": "Help topic text"
+  },
+  "helpOnBudgetSteps": "In the budget: checking, cash, credit cards and the account your salary arrives in.\nOutside: savings, brokerage, crypto and pension accounts, loans.\nA reserve inside your checking account cannot be outside: budget it into a category like Savings instead.\nTaking an account out offers to release the money you budgeted for it, so To Be Budgeted does not go negative.",
+  "@helpOnBudgetSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpPersonalTitle": "Personal accounts",
+  "@helpPersonalTitle": {
+    "description": "Help topic title"
+  },
+  "helpPersonalBody": "For couples who sync: a personal account belongs to you. Your partner sees its name and balance in net worth, but not its transactions, and cannot change it.",
+  "@helpPersonalBody": {
+    "description": "Help topic text"
+  },
+  "helpPersonalSteps": "Personal accounts are always outside the budget.\nA transfer between a shared account and your personal one syncs as the shared side only.\nAn account can become personal only before it first syncs, so mark it before pairing. Sharing it later is always possible and sends its history.",
+  "@helpPersonalSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpAccountTypesTitle": "Account types",
+  "@helpAccountTypesTitle": {
+    "description": "Help topic title"
+  },
+  "helpAccountTypesBody": "The type sets the icon and whether a new account starts in the budget. Savings and Investment accounts start outside the budget; the switch below changes that.",
+  "@helpAccountTypesBody": {
+    "description": "Help topic text"
+  },
+  "helpAccountsTitle": "Accounts and net worth",
+  "@helpAccountsTitle": {
+    "description": "Help topic title"
+  },
+  "helpAccountsBody": "Net worth adds up all accounts, in or out of the budget. If you sync with a partner, it is your household’s net worth, and the lines below it split it into shared, yours and your partner’s.",
+  "@helpAccountsBody": {
+    "description": "Help topic text"
+  },
+  "helpAccountsSteps": "Off budget: counts towards net worth only.\nPersonal: yours; your partner sees only its name and balance.\nPartner’s: your partner’s personal accounts, read-only, with the balance their phone last shared.",
+  "@helpAccountsSteps": {
+    "description": "Lines of a help topic explaining the account badges, one per line"
+  },
+  "helpTransferTitle": "Transfers",
+  "@helpTransferTitle": {
+    "description": "Help topic title"
+  },
+  "helpTransferBody": "A transfer moves money between two of your accounts. It is neither income nor spending.",
+  "@helpTransferBody": {
+    "description": "Help topic text"
+  },
+  "helpTransferSteps": "Between two budget accounts (checking to cash): no category, nothing changes in the budget.\nFrom a budget account to one outside (checking to brokerage): pick the category you budgeted for it, for example Stocks & ETFs. Without a category the money comes out of To Be Budgeted.\nBack from outside into the budget (savings to checking): without a category it adds to To Be Budgeted.",
+  "@helpTransferSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpSyncTitle": "Syncing with a partner",
+  "@helpSyncTitle": {
+    "description": "Help topic title"
+  },
+  "helpSyncBody": "Two phones can share one budget: over your home Wi-Fi without any cloud, or through a Google Drive account you both use when you are apart. Everything is encrypted before it leaves the phone.",
+  "@helpSyncBody": {
+    "description": "Help topic text"
+  },
+  "helpSyncSteps": "Every change syncs on its own. If both phones change the same thing, the later change wins and the other one is listed under conflicts, where you can keep it.\nPersonal accounts share only their name and balance.\nBoth phones need the same app version.",
+  "@helpSyncSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpCsvTitle": "Importing a CSV file",
+  "@helpCsvTitle": {
+    "description": "Help topic title"
+  },
+  "helpCsvBody": "Export your transactions from your bank as a CSV file. LedgerZero matches the columns by their names, and you can correct the matching before importing.",
+  "@helpCsvBody": {
+    "description": "Help topic text"
+  },
+  "helpCsvSteps": "The first row must hold the column names: delete any lines above it.\nAmounts must be in one column, negative for money going out. Separate debit and credit columns are not supported yet.\nOn the review screen, untick the rows you do not want.",
+  "@helpCsvSteps": {
+    "description": "Numbered steps of a help topic, one per line"
+  },
+  "helpAppLockTitle": "App lock",
+  "@helpAppLockTitle": {
+    "description": "Help topic title"
+  },
+  "helpAppLockBody": "The app locks with your fingerprint, face or phone PIN once it has been in the background for the time you choose. Pulling down notifications or answering a system dialog does not lock it, and after unlocking you are back where you were.",
+  "@helpAppLockBody": {
+    "description": "Help topic text"
+  },
+  "hintSavingsTransfer": "Budgeted money stays in your checking account until you move it: add a transfer to your savings or brokerage account and pick this category.",
+  "@hintSavingsTransfer": {
+    "description": "One-time hint in the Savings & Investments group once money is budgeted there"
+  },
+  "hintOffBudgetAccount": "Account created. It is outside the budget: to save into it, budget the amount in Savings & Investments and add a transfer with that category.",
+  "@hintOffBudgetAccount": {
+    "description": "One-time snack bar after creating the first account outside the budget"
+  },
+  "hintPartnerAccounts": "These are your partner’s personal accounts. You see their balance; their transactions stay on your partner’s phone.",
+  "@hintPartnerAccounts": {
+    "description": "One-time hint above the partner's accounts in the account list"
+  },
+  "guideTransfersTitle": "Transfers",
+  "@guideTransfersTitle": {
+    "description": "User guide chapter title"
+  },
+  "guideTransfersBody": "A transfer moves money between two of your accounts and is neither income nor spending. Between two budget accounts it needs no category and changes nothing in the budget. From a budget account to an account outside the budget, the money leaves the budget: pick the category you budgeted for it, or leave the category empty to take it from To Be Budgeted. Money coming back from outside without a category adds to To Be Budgeted.",
+  "@guideTransfersBody": {
+    "description": "User guide chapter text"
+  },
+  "guideSavingTitle": "Saving and investing",
+  "@guideSavingTitle": {
+    "description": "User guide chapter title"
+  },
+  "guideSavingBody": "Keep savings and investments in their own accounts outside the budget, so price changes and interest never disturb it. Each month, budget what you want to put aside in Savings & Investments (Savings, Stocks & ETFs, Crypto, Bonds, Retirement). When you move the money, add a transfer from your budget account to the savings account and pick that category: the category is spent, the savings account grows and To Be Budgeted stays the same. Example: budget 500 in Stocks & ETFs, then transfer 500 from checking to your brokerage account with Stocks & ETFs. A reserve you keep in your checking account stays in a category like Savings instead, where it carries over every month.",
+  "@guideSavingBody": {
+    "description": "User guide chapter text"
+  },
+  "guidePartnerTitle": "Using LedgerZero with a partner",
+  "@guidePartnerTitle": {
+    "description": "User guide chapter title"
+  },
+  "guidePartnerBody": "Two phones can share one budget. Pair them in Sync Settings: over your home Wi-Fi (scan the QR code on the other phone; both need LedgerZero open on the same Wi-Fi) or through a Google Drive account you both use. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.",
+  "@guidePartnerBody": {
+    "description": "User guide chapter text"
+  },
+  "guideSecurityTitle": "Security and backups",
+  "@guideSecurityTitle": {
+    "description": "User guide chapter title"
+  },
+  "guideSecurityBody": "Your data is stored encrypted on your phone, and the key is kept in the phone’s secure hardware. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. Create encrypted backups regularly in Settings > Backup & Export and keep the backup password safe: without it a backup cannot be restored.",
+  "@guideSecurityBody": {
+    "description": "User guide chapter text"
+  },
+  "guideImportTitle": "Importing",
+  "@guideImportTitle": {
+    "description": "User guide chapter title"
+  },
+  "guideImportBody": "Settings > Import CSV reads your bank’s CSV export: the first row must hold the column names, and amounts must be in one column (negative for money going out). Columns are matched by name and can be corrected before importing. YNAB budgets can be imported from Settings as well.",
+  "@guideImportBody": {
+    "description": "User guide chapter text"
+  },
+  "faqLockQ": "What if my fingerprint is not recognised?",
+  "@faqLockQ": {
+    "description": "FAQ question"
+  },
+  "faqLockA": "The app lock also accepts your phone’s PIN, pattern or password, the same way your phone’s lock screen does.",
+  "@faqLockA": {
+    "description": "FAQ answer"
+  },
+  "faqSavingQ": "How do I put money into savings or investments?",
+  "@faqSavingQ": {
+    "description": "FAQ question"
+  },
+  "faqSavingA": "Keep the savings or brokerage account outside the budget. Each month, budget the amount in a Savings & Investments category, then add a transfer from your checking account to the savings account and pick that category. The category is spent and To Be Budgeted stays the same.",
+  "@faqSavingA": {
+    "description": "FAQ answer"
+  },
+  "faqPersonalQ": "Can I keep an account to myself?",
+  "@faqPersonalQ": {
+    "description": "FAQ question"
+  },
+  "faqPersonalA": "Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.",
+  "@faqPersonalA": {
+    "description": "FAQ answer"
+  }
 }

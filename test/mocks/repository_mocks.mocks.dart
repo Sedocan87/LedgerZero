@@ -83,6 +83,15 @@ class MockAccountRepository extends _i1.Mock implements _i2.AccountRepository {
           as _i3.Future<void>);
 
   @override
+  _i3.Future<bool> wasSynced(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#wasSynced, [id]),
+            returnValue: _i3.Future<bool>.value(false),
+            returnValueForMissingStub: _i3.Future<bool>.value(false),
+          )
+          as _i3.Future<bool>);
+
+  @override
   _i3.Future<void> deleteAccount(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteAccount, [id]),

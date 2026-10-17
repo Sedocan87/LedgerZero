@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
+import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
@@ -9,6 +11,9 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_group_row.dart';
 import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
+
+/// Remembers that the Savings & Investments transfer hint was dismissed.
+const savingsTransferHintKey = 'hint_savings_transfer_seen';
 
 class BudgetCategoryList extends ConsumerWidget {
   final Key? headerKey;
@@ -77,7 +82,17 @@ class BudgetCategoryList extends ConsumerWidget {
 
               // Groups (index 1 to groups.length)
               final groupVM = groups[index - 1];
-              final categoryWidgets = <Widget>[];
+              final categoryWidgets = <Widget>[
+                // Once money is budgeted for savings: how it gets there.
+                if (groupVM.group.id == savingsGroupId &&
+                    groupVM.categories.any((c) => c.budgeted > 0))
+                  OneTimeHintCard(
+                    prefsKey: savingsTransferHintKey,
+                    text: AppLocalizations.of(context)!.hintSavingsTransfer,
+                    topic: HelpTopic.saving,
+                    margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  ),
+              ];
               for (var i = 0; i < groupVM.categories.length; i++) {
                 if (i == 0) {
                   categoryWidgets.add(

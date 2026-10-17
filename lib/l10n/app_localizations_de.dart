@@ -366,10 +366,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get total => 'Gesamt';
 
   @override
-  String get tbbTooltip =>
-      'Geld, das Sie noch keiner Kategorie zugewiesen haben. Budgetieren Sie, bis hier null steht.';
-
-  @override
   String get budgetedTooltip =>
       'Der Betrag, den Sie dieser Kategorie in diesem Monat zugewiesen haben.';
 
@@ -2932,14 +2928,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get faqSafeA =>
-      'Ihre Daten liegen nur auf Ihrem Gerät, in einer mit AES-256 verschlüsselten Datenbank, die Ihr Master-Passwort entsperrt. Wenn Sie die Synchronisierung nutzen, werden die Daten mit Ihrer Sync-Passphrase verschlüsselt, bevor sie das Gerät verlassen. Es gibt keine LedgerZero-Server, kein Tracking und keine Analyse.';
+      'Ihre Daten liegen nur auf Ihrem Telefon, in einer verschlüsselten Datenbank, deren Schlüssel in der sicheren Hardware des Telefons liegt (Android KeyStore). Die App-Sperre schützt zusätzlich mit Fingerabdruck, Gesicht oder Geräte-PIN. Synchronisierte Daten werden verschlüsselt, bevor sie das Telefon verlassen. Es gibt keine LedgerZero-Server, kein Tracking und keine Analyse.';
 
   @override
-  String get faqSyncQ => 'Wie synchronisiere ich mehrere Geräte?';
+  String get faqSyncQ => 'Wie teilen mein Partner und ich ein Budget?';
 
   @override
   String get faqSyncA =>
-      'Öffnen Sie Einstellungen > Synchronisierung, wählen Sie Google Drive und melden Sie sich an. Auf dem ersten Gerät legen Sie eine Sync-Passphrase fest, auf allen weiteren Geräten geben Sie dieselbe ein. Bewahren Sie sie gut auf: Sie lässt sich nicht wiederherstellen.';
+      'Öffnen Sie Einstellungen > Synchronisierung. Zu Hause koppeln Sie die Telefone über WLAN, indem Sie einen QR-Code scannen. Um auch unterwegs zu synchronisieren, verwenden beide Telefone dasselbe Google-Drive-Konto und dieselbe Sync-Passphrase. Das Kapitel „LedgerZero zu zweit nutzen“ im Benutzerhandbuch erklärt die Einzelheiten.';
 
   @override
   String get faqOfflineQ => 'Funktioniert die App offline?';
@@ -2947,13 +2943,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get faqOfflineA =>
       'Ja. Alles funktioniert offline. Die Synchronisierung holt Änderungen automatisch nach, sobald Sie wieder online sind.';
-
-  @override
-  String get faqPasswordQ => 'Was, wenn ich mein Master-Passwort vergesse?';
-
-  @override
-  String get faqPasswordA =>
-      'Entsperren Sie mit dem Wiederherstellungsschlüssel, den Sie bei der Einrichtung notiert haben, und wählen Sie ein neues Passwort. Ohne Passwort und Wiederherstellungsschlüssel kann niemand Ihre Daten entsperren, auch nicht der Entwickler.';
 
   @override
   String get faqBackupQ => 'Wie funktionieren Sicherungen?';
@@ -2971,53 +2960,46 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ja. Einstellungen > YNAB-Migration übernimmt CSV-Exporte aus nYNAB und Budgets aus YNAB 4. Einstellungen > CSV importieren liest den CSV-Export Ihrer Bank.';
 
   @override
-  String get guideStartTitle => '1. Erste Schritte';
+  String get guideStartTitle => 'Erste Schritte';
 
   @override
   String get guideStartBody =>
-      'LedgerZero arbeitet nach dem Nullsummen-Umschlagprinzip: Bevor Sie Geld ausgeben, geben Sie ihm eine Aufgabe, indem Sie es einer Kategorie zuweisen.';
+      'LedgerZero arbeitet nach dem Umschlagprinzip: Bevor Sie Geld ausgeben, geben Sie ihm eine Aufgabe, indem Sie es einer Kategorie zuweisen. Legen Sie das Konto an, auf dem Ihr Geld liegt, tragen Sie Ihr Gehalt ein und budgetieren Sie, bis „Zu budgetieren“ bei null steht. Die ⓘ-Schaltflächen in der App erklären jeden Teil dort, wo Sie ihn brauchen.';
 
   @override
-  String get guideAccountsTitle => '2. Konten';
+  String get guideAccountsTitle => 'Konten';
 
   @override
   String get guideAccountsBody =>
-      'Legen Sie die Konten an, von denen Sie bezahlen (Girokonto, Sparkonto, Kreditkarte, Bargeld), jeweils mit dem aktuellen Kontostand. Dieses Geld können Sie budgetieren: Es erscheint unter „Zu budgetieren“.';
+      'Legen Sie jedes Konto mit seinem aktuellen Saldo an. Konten im Budget (Girokonto, Bargeld, Kreditkarten) enthalten das Geld, das Sie budgetieren. Spar-, Depot- und Rentenkonten bleiben meist außerhalb des Budgets: Sie zählen nur zum Nettovermögen. Die Kontoart bestimmt das Symbol und ob ein neues Konto im Budget beginnt.';
 
   @override
-  String get guideBudgetTitle => '3. Budgetieren';
+  String get guideBudgetTitle => 'Budgetieren';
 
   @override
   String get guideBudgetBody =>
-      'Tippen Sie im Budget auf den budgetierten Betrag einer Kategorie, um Geld zuzuweisen, bis „Zu budgetieren“ bei null steht. Einnahmen ohne Kategorie erhöhen „Zu budgetieren“.';
+      'Tippen Sie im Budget auf den budgetierten Betrag einer Kategorie, um ihr Geld zuzuweisen, bis „Zu budgetieren“ bei null steht. Einnahmen ohne Kategorie erhöhen „Zu budgetieren“; tragen Sie Ihr Gehalt als regelmäßige Einnahme ein, um zu sehen, was kommt. Jede Kategorie behält, was übrig ist, von Monat zu Monat. Ein neuer Monat beginnt leer: Füllen Sie ihn wie den Vormonat oder aus einer Vorlage, von Hand oder automatisch. Geld, das am Monatsende nicht budgetiert ist, wird im nächsten Monat zum Sparen angeboten.';
 
   @override
-  String get guideTransactionsTitle => '4. Transaktionen';
+  String get guideTransactionsTitle => 'Transaktionen';
 
   @override
   String get guideTransactionsBody =>
-      'Erfassen Sie jede Ausgabe mit Empfänger und Kategorie; sie verringert den verfügbaren Betrag der Kategorie. Mit der Schnelleingabe tippen Sie eine Transaktion in einer Zeile ein, und Regeln kategorisieren importierte Transaktionen automatisch.';
+      'Erfassen Sie jede Ausgabe mit Empfänger und Kategorie; sie verringert den verfügbaren Betrag der Kategorie. Mit der Schnelleingabe tippen Sie eine Transaktion in einer Zeile ein, Regeln kategorisieren automatisch, und mit Kartenbenachrichtigungen kommen Zahlungen aus Ihrer Banking-App als Transaktionen zum Bestätigen an.';
 
   @override
-  String get guideOverspendingTitle => '5. Überzogene Kategorien';
+  String get guideOverspendingTitle => 'Überzogene Kategorien';
 
   @override
   String get guideOverspendingBody =>
       'Wird der verfügbare Betrag einer Kategorie rot, haben Sie mehr ausgegeben als budgetiert. Verschieben Sie Geld aus einer anderen Kategorie, um das auszugleichen.';
 
   @override
-  String get guideReconcileTitle => '6. Abgleichen';
+  String get guideReconcileTitle => 'Abgleichen';
 
   @override
   String get guideReconcileBody =>
       'Gleichen Sie ein Konto ab und zu mit Ihrem Kontoauszug ab: über „Konto abgleichen“ auf der Kontoseite. Gebuchte Transaktionen werden als abgeglichen markiert, eine Differenz wird als Ausgleichsbuchung erfasst.';
-
-  @override
-  String get guideSyncTitle => '7. Synchronisierung und Sicherungen';
-
-  @override
-  String get guideSyncBody =>
-      'Die Synchronisierung hält Ihre Smartphones und Tablets über Ihr eigenes Google Drive aktuell, Ende-zu-Ende-verschlüsselt mit Ihrer Sync-Passphrase. Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export.';
 
   @override
   String get next => 'Weiter';
@@ -3501,7 +3483,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get savingsOfferBody =>
-      'Fügen Sie eine Gruppe „Sparen & Geldanlage“ hinzu: Liquiditätsreserve, Aktien & ETFs, Krypto, Anleihen und Altersvorsorge. Geld, das Sie dort zuweisen, zählt nicht mehr zu „Zu budgetieren“ und wird jeden Monat übertragen, z. B. eine Reserve, die Sie immer behalten. Zum Investieren überweisen Sie es mit dieser Kategorie auf Ihr Depot außerhalb des Budgets.';
+      'Fügen Sie eine Gruppe „Sparen & Geldanlage“ hinzu: Sparen, Aktien & ETFs, Krypto, Anleihen und Altersvorsorge. Budgetieren Sie dort, was Sie jeden Monat auf Spar- und Anlagekonten überweisen. Führen Sie diese Konten außerhalb des Budgets („Im Budget berücksichtigen“ aus): Ihre Salden zählen dann nur zum Vermögen.';
 
   @override
   String get savingsOfferAdd => 'Kategorien hinzufügen';
@@ -3514,7 +3496,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Kategorien für Sparen & Geldanlage hinzugefügt';
 
   @override
-  String get seedCatCashReserve => 'Liquiditätsreserve';
+  String get seedCatSavings => 'Sparen';
 
   @override
   String get cardNotifications => 'Kartenbenachrichtigungen';
@@ -3782,4 +3764,399 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get syncErrorPairingMismatch =>
       'Dieses und das andere Telefon wurden mit unterschiedlichen Codes gekoppelt. Schalten Sie die WLAN-Synchronisierung auf diesem Telefon aus und koppeln Sie es erneut.';
+
+  @override
+  String get budgetIncomeLabel => 'Einkommen';
+
+  @override
+  String budgetIncomeReceived(String amount) {
+    return '$amount erhalten';
+  }
+
+  @override
+  String budgetIncomeExpected(String amount, String date) {
+    return '$amount erwartet, nächste Zahlung am $date';
+  }
+
+  @override
+  String get budgetIncomeNone => 'keines in diesem Monat';
+
+  @override
+  String get budgetIncomeAddPrompt =>
+      'Fügen Sie Ihr Gehalt hinzu, um es jeden Monat zu budgetieren';
+
+  @override
+  String get budgetIncomeAddButton => 'Gehalt hinzufügen';
+
+  @override
+  String get salaryPromptTitle => 'Gehalt hinzufügen?';
+
+  @override
+  String get salaryPromptBody =>
+      'Einmal eingerichtet, landet es an jedem Zahltag in „Zu budgetieren“, bereit zur Verteilung auf Ihre Kategorien. Den erwarteten Betrag sehen Sie für jeden Monat schon im Voraus.';
+
+  @override
+  String get salaryPromptDismiss => 'Nicht jetzt';
+
+  @override
+  String get firstAccountSalaryTitle => 'Wann bekommen Sie Ihr Gehalt?';
+
+  @override
+  String newMonthTitle(String month, String previous) {
+    return '$month wie $previous beginnen?';
+  }
+
+  @override
+  String newMonthBody(String total, String tbb) {
+    return '$total in denselben Kategorien. Danach zu budgetieren: $tbb.';
+  }
+
+  @override
+  String newMonthFill(String previous) {
+    return 'Wie $previous füllen';
+  }
+
+  @override
+  String get newMonthTemplate => 'Vorlage verwenden';
+
+  @override
+  String get newMonthDismiss => 'Nicht jetzt';
+
+  @override
+  String newMonthFilled(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Kategorien gefüllt',
+      one: '1 Kategorie gefüllt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get autoFillTitle => 'Neue Monate automatisch füllen';
+
+  @override
+  String get autoFillMenu => 'Automatisch füllen…';
+
+  @override
+  String get autoFillExplanation =>
+      'Beim ersten Öffnen eines neuen Monats erhalten Kategorien, die noch leer sind, diese Beträge. Selbst eingetragene Beträge werden nie überschrieben, auch nicht vom gekoppelten Telefon. Gilt ab dem nächsten Monat.';
+
+  @override
+  String get autoFillOff => 'Aus';
+
+  @override
+  String get autoFillPrevious => 'Wie im Vormonat';
+
+  @override
+  String autoFillTemplate(String name) {
+    return 'Vorlage: $name';
+  }
+
+  @override
+  String autoFillNoteTitle(String month) {
+    return '$month wurde automatisch gefüllt';
+  }
+
+  @override
+  String autoFillNoteBody(String total, String source) {
+    return '$total aus $source. Beträge wie gewohnt ändern.';
+  }
+
+  @override
+  String get autoFillUndone => 'Automatisches Budget rückgängig gemacht';
+
+  @override
+  String get accountTypeInvestment => 'Geldanlage';
+
+  @override
+  String accountReleaseIntro(String amount) {
+    return '$amount auf diesem Konto verlassen Ihr Budget. Dafür budgetiertes Geld freigeben:';
+  }
+
+  @override
+  String accountReleaseAmount(String amount) {
+    return '$amount freigeben';
+  }
+
+  @override
+  String accountReleased(String amount) {
+    return '$amount zurück in „Zu budgetieren“';
+  }
+
+  @override
+  String leftoverTitle(String amount, String previous) {
+    return '$amount aus $previous wurden nicht budgetiert';
+  }
+
+  @override
+  String leftoverBody(String month) {
+    return 'Das Geld ist weiter in „Zu budgetieren“ für $month. Fürs Sparen budgetieren?';
+  }
+
+  @override
+  String get leftoverAssign => 'Fürs Sparen budgetieren…';
+
+  @override
+  String leftoverKeep(String month) {
+    return 'Für $month behalten';
+  }
+
+  @override
+  String leftoverAssigned(String amount, String category) {
+    return '$amount für $category budgetiert';
+  }
+
+  @override
+  String get accountPersonalLabel => 'Persönlich';
+
+  @override
+  String get accountPersonalHelper =>
+      'Nur Sie sehen die Buchungen. Ein Partner, mit dem Sie synchronisieren, sieht nur Name und Saldo.';
+
+  @override
+  String get accountPersonalSynced =>
+      'Bereits mit Ihrem Partner geteilt, daher kann es nicht persönlich werden. Legen Sie stattdessen ein neues persönliches Konto an.';
+
+  @override
+  String get accountOnBudgetPersonal =>
+      'Persönliche Konten bleiben außerhalb des Budgets.';
+
+  @override
+  String get accountShareTitle => 'Mit Ihrem Partner teilen?';
+
+  @override
+  String get accountShareBody =>
+      'Die Buchungen werden auf das Telefon Ihres Partners synchronisiert, und Ihr Partner kann sie auch ändern. Das Konto kann danach nicht wieder persönlich werden.';
+
+  @override
+  String get accountShareAction => 'Teilen';
+
+  @override
+  String get accountPersonalBadge => 'Persönlich';
+
+  @override
+  String get accountPartnerBadge => 'Partner';
+
+  @override
+  String get accountsPartnerSection => 'Konten Ihres Partners';
+
+  @override
+  String get netWorthShared => 'Gemeinsam';
+
+  @override
+  String get netWorthMine => 'Meins';
+
+  @override
+  String get netWorthPartner => 'Partner';
+
+  @override
+  String get accountPartnerTitle => 'Persönliches Konto Ihres Partners';
+
+  @override
+  String get accountPartnerBody =>
+      'Die Buchungen bleiben auf dem Telefon Ihres Partners. Der Saldo wird aktualisiert, sobald dessen Telefon synchronisiert.';
+
+  @override
+  String get txPartnerAccount =>
+      'Das gehört zum persönlichen Konto Ihres Partners. Ihr Partner kann es auf seinem Telefon ändern.';
+
+  @override
+  String get accountBalanceLabel => 'Saldo';
+
+  @override
+  String helpInfoTooltip(String topic) {
+    return 'Über: $topic';
+  }
+
+  @override
+  String get helpOpenGuide => 'Benutzerhandbuch öffnen';
+
+  @override
+  String get helpHowTo => 'So geht es';
+
+  @override
+  String get helpShowMe => 'Zeig es mir';
+
+  @override
+  String get helpSavingTitle => 'Sparen und Geldanlage';
+
+  @override
+  String get helpSavingBody =>
+      'Halten Sie Ersparnisse und Geldanlagen auf eigenen Konten außerhalb des Budgets. Das Budget bestimmt, wie viel jeden Monat dorthin geht: Budgetieren Sie den Betrag in einer Kategorie von „Sparen & Geldanlage“ und bewegen Sie das Geld dann mit einer Umbuchung, die diese Kategorie verwendet.';
+
+  @override
+  String get helpSavingSteps =>
+      'Budgetieren Sie den Betrag, zum Beispiel 500 in „Aktien & ETFs“.\nLegen Sie eine Umbuchung von Ihrem Budgetkonto (zum Beispiel dem Girokonto) auf das Depot- oder Sparkonto an.\nWählen Sie „Aktien & ETFs“ als Kategorie. Die Kategorie ist ausgegeben, das Depot wächst, und „Zu budgetieren“ bleibt gleich.\nKursgewinne, Dividenden und Gebühren im Depot brauchen keine Kategorie.';
+
+  @override
+  String get helpTbbTitle => 'Zu budgetieren';
+
+  @override
+  String get helpTbbBody =>
+      'Geld auf Ihren Budgetkonten, das noch keine Aufgabe hat. Einnahmen ohne Kategorie erhöhen den Betrag, Geld, das Sie einer Kategorie zuweisen, verringert ihn. Ziel ist null: Dann hat jeder Euro eine Aufgabe.';
+
+  @override
+  String get helpTbbSteps =>
+      'Negativ heißt: Sie haben mehr budgetiert, als Sie haben. Verringern Sie eine Kategorie, bis wieder null erreicht ist.\nWas am Monatsende übrig ist, geht in den nächsten Monat über und kann dort budgetiert werden.\nKonten außerhalb des Budgets, etwa Sparkonto oder Depot, zählen hier nicht.';
+
+  @override
+  String get helpNewMonthTitle => 'Einen neuen Monat füllen';
+
+  @override
+  String get helpNewMonthBody =>
+      'Ein neuer Monat beginnt leer. Füllen Sie ihn wie den Vormonat oder aus einer Vorlage, von Hand oder jeden Monat automatisch (Budget-Menü ⋮, „Automatisch füllen…“).';
+
+  @override
+  String get helpNewMonthSteps =>
+      'Nur leere Kategorien werden gefüllt; Beträge, die Sie schon gesetzt haben, bleiben.\nWas Sie von Hand ändern, hat immer Vorrang, auch wenn das Telefon Ihres Partners denselben Monat füllt.\nRückgängig direkt nach dem Füllen setzt nur Kategorien zurück, die Sie seitdem nicht geändert haben.';
+
+  @override
+  String get helpOnBudgetTitle => 'Im Budget oder außerhalb';
+
+  @override
+  String get helpOnBudgetBody =>
+      'Konten im Budget enthalten das Geld, mit dem Sie planen und bezahlen: Ihr Saldo ist das, was Sie budgetieren. Konten außerhalb des Budgets zählen nur zum Nettovermögen.';
+
+  @override
+  String get helpOnBudgetSteps =>
+      'Im Budget: Girokonto, Bargeld, Kreditkarten und das Konto, auf dem Ihr Gehalt eingeht.\nAußerhalb: Spar-, Depot-, Krypto- und Rentenkonten, Kredite.\nEine Rücklage auf dem Girokonto kann nicht außerhalb sein: Budgetieren Sie sie stattdessen in einer Kategorie wie „Sparen“.\nNehmen Sie ein Konto heraus, bietet die App an, dafür budgetiertes Geld freizugeben, damit „Zu budgetieren“ nicht negativ wird.';
+
+  @override
+  String get helpPersonalTitle => 'Persönliche Konten';
+
+  @override
+  String get helpPersonalBody =>
+      'Für Paare, die synchronisieren: Ein persönliches Konto gehört Ihnen. Ihr Partner sieht Name und Saldo im Nettovermögen, aber nicht die Buchungen, und kann es nicht ändern.';
+
+  @override
+  String get helpPersonalSteps =>
+      'Persönliche Konten sind immer außerhalb des Budgets.\nEine Umbuchung zwischen einem gemeinsamen und Ihrem persönlichen Konto wird nur mit der gemeinsamen Seite synchronisiert.\nEin Konto kann nur vor der ersten Synchronisierung persönlich werden; markieren Sie es also vor dem Koppeln. Später teilen geht jederzeit und überträgt den Verlauf.';
+
+  @override
+  String get helpAccountTypesTitle => 'Kontoarten';
+
+  @override
+  String get helpAccountTypesBody =>
+      'Die Art bestimmt das Symbol und ob ein neues Konto im Budget beginnt. Spar- und Anlagekonten beginnen außerhalb des Budgets; der Schalter darunter ändert das.';
+
+  @override
+  String get helpAccountsTitle => 'Konten und Nettovermögen';
+
+  @override
+  String get helpAccountsBody =>
+      'Das Nettovermögen zählt alle Konten zusammen, im Budget oder außerhalb. Synchronisieren Sie mit einem Partner, ist es das Nettovermögen Ihres Haushalts; die Zeilen darunter teilen es in gemeinsam, Ihres und das Ihres Partners auf.';
+
+  @override
+  String get helpAccountsSteps =>
+      'Außerhalb des Budgets: zählt nur zum Nettovermögen.\nPersönlich: Ihres; Ihr Partner sieht nur Name und Saldo.\nPartner: die persönlichen Konten Ihres Partners, nur lesbar, mit dem Saldo, den sein Telefon zuletzt geteilt hat.';
+
+  @override
+  String get helpTransferTitle => 'Umbuchungen';
+
+  @override
+  String get helpTransferBody =>
+      'Eine Umbuchung bewegt Geld zwischen zwei Ihrer Konten. Sie ist weder Einnahme noch Ausgabe.';
+
+  @override
+  String get helpTransferSteps =>
+      'Zwischen zwei Budgetkonten (Girokonto zu Bargeld): keine Kategorie, im Budget ändert sich nichts.\nVon einem Budgetkonto auf eines außerhalb (Girokonto zu Depot): Wählen Sie die Kategorie, die Sie dafür budgetiert haben, zum Beispiel „Aktien & ETFs“. Ohne Kategorie kommt das Geld aus „Zu budgetieren“.\nVon außerhalb zurück ins Budget (Sparkonto zu Girokonto): Ohne Kategorie erhöht es „Zu budgetieren“.';
+
+  @override
+  String get helpSyncTitle => 'Mit einem Partner synchronisieren';
+
+  @override
+  String get helpSyncBody =>
+      'Zwei Telefone können ein Budget teilen: über Ihr WLAN zu Hause ganz ohne Cloud, oder über ein gemeinsames Google-Drive-Konto, wenn Sie unterwegs sind. Alles wird verschlüsselt, bevor es das Telefon verlässt.';
+
+  @override
+  String get helpSyncSteps =>
+      'Jede Änderung wird einzeln synchronisiert. Ändern beide Telefone dasselbe, gilt die spätere Änderung; die andere erscheint unter den Konflikten, wo Sie sie behalten können.\nPersönliche Konten teilen nur Name und Saldo.\nBeide Telefone brauchen dieselbe App-Version.';
+
+  @override
+  String get helpCsvTitle => 'Eine CSV-Datei importieren';
+
+  @override
+  String get helpCsvBody =>
+      'Exportieren Sie Ihre Buchungen bei Ihrer Bank als CSV-Datei. LedgerZero ordnet die Spalten anhand ihrer Namen zu; Sie können die Zuordnung vor dem Import korrigieren.';
+
+  @override
+  String get helpCsvSteps =>
+      'Die erste Zeile muss die Spaltennamen enthalten: Löschen Sie alle Zeilen darüber.\nBeträge müssen in einer Spalte stehen, negativ für Ausgaben. Getrennte Soll- und Haben-Spalten werden noch nicht unterstützt.\nEntfernen Sie im Prüfschritt den Haken bei Zeilen, die Sie nicht möchten.';
+
+  @override
+  String get helpAppLockTitle => 'App-Sperre';
+
+  @override
+  String get helpAppLockBody =>
+      'Die App sperrt sich mit Fingerabdruck, Gesicht oder Geräte-PIN, sobald sie die gewählte Zeit im Hintergrund war. Das Herunterziehen der Benachrichtigungen oder ein Systemdialog sperrt sie nicht, und nach dem Entsperren sind Sie wieder dort, wo Sie waren.';
+
+  @override
+  String get hintSavingsTransfer =>
+      'Budgetiertes Geld bleibt auf Ihrem Girokonto, bis Sie es bewegen: Legen Sie eine Umbuchung auf Ihr Spar- oder Depotkonto an und wählen Sie diese Kategorie.';
+
+  @override
+  String get hintOffBudgetAccount =>
+      'Konto angelegt. Es ist außerhalb des Budgets: Um darauf zu sparen, budgetieren Sie den Betrag in „Sparen & Geldanlage“ und legen eine Umbuchung mit dieser Kategorie an.';
+
+  @override
+  String get hintPartnerAccounts =>
+      'Das sind die persönlichen Konten Ihres Partners. Sie sehen den Saldo; die Buchungen bleiben auf dem Telefon Ihres Partners.';
+
+  @override
+  String get guideTransfersTitle => 'Umbuchungen';
+
+  @override
+  String get guideTransfersBody =>
+      'Eine Umbuchung bewegt Geld zwischen zwei Ihrer Konten und ist weder Einnahme noch Ausgabe. Zwischen zwei Budgetkonten braucht sie keine Kategorie und ändert im Budget nichts. Von einem Budgetkonto auf ein Konto außerhalb verlässt das Geld das Budget: Wählen Sie die Kategorie, die Sie dafür budgetiert haben, oder lassen Sie sie leer, dann kommt es aus „Zu budgetieren“. Geld, das ohne Kategorie von außerhalb zurückkommt, erhöht „Zu budgetieren“.';
+
+  @override
+  String get guideSavingTitle => 'Sparen und Geldanlage';
+
+  @override
+  String get guideSavingBody =>
+      'Halten Sie Ersparnisse und Geldanlagen auf eigenen Konten außerhalb des Budgets, damit Kursschwankungen und Zinsen es nie stören. Budgetieren Sie jeden Monat, was Sie zurücklegen möchten, in „Sparen & Geldanlage“ (Sparen, Aktien & ETFs, Krypto, Anleihen, Altersvorsorge). Wenn Sie das Geld bewegen, legen Sie eine Umbuchung vom Budgetkonto auf das Sparkonto an und wählen diese Kategorie: Die Kategorie ist ausgegeben, das Sparkonto wächst und „Zu budgetieren“ bleibt gleich. Beispiel: 500 in „Aktien & ETFs“ budgetieren, dann 500 vom Girokonto auf das Depot umbuchen, mit „Aktien & ETFs“. Eine Rücklage auf dem Girokonto bleibt stattdessen in einer Kategorie wie „Sparen“, wo sie jeden Monat weiterläuft.';
+
+  @override
+  String get guidePartnerTitle => 'LedgerZero zu zweit nutzen';
+
+  @override
+  String get guidePartnerBody =>
+      'Zwei Telefone können ein Budget teilen. Koppeln Sie sie unter Synchronisierung: über Ihr WLAN zu Hause (den QR-Code auf dem anderen Telefon scannen; auf beiden muss LedgerZero im selben WLAN geöffnet sein) oder über ein gemeinsames Google-Drive-Konto. Jede Änderung wird einzeln synchronisiert; ändern Sie beide dasselbe, gilt die spätere Änderung, und die Synchronisierung listet die andere auf. Konten, die Sie als persönlich markieren, bleiben Ihre: Ihr Partner sieht Name und Saldo im Nettovermögen, aber nicht die Buchungen. Markieren Sie ein Konto vor der ersten Synchronisierung als persönlich; teilen können Sie es auch später noch.';
+
+  @override
+  String get guideSecurityTitle => 'Sicherheit und Sicherungen';
+
+  @override
+  String get guideSecurityBody =>
+      'Ihre Daten liegen verschlüsselt auf Ihrem Telefon, der Schlüssel in der sicheren Hardware des Telefons. Die App-Sperre fragt nach Fingerabdruck, Gesicht oder Geräte-PIN, wenn die App im Hintergrund war. Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export und bewahren Sie das Sicherungspasswort gut auf: Ohne es lässt sich eine Sicherung nicht wiederherstellen.';
+
+  @override
+  String get guideImportTitle => 'Importieren';
+
+  @override
+  String get guideImportBody =>
+      'Einstellungen > CSV importieren liest den CSV-Export Ihrer Bank: Die erste Zeile muss die Spaltennamen enthalten, und Beträge müssen in einer Spalte stehen (negativ für Ausgaben). Spalten werden anhand ihrer Namen zugeordnet und können vor dem Import korrigiert werden. YNAB-Budgets lassen sich ebenfalls über die Einstellungen importieren.';
+
+  @override
+  String get faqLockQ => 'Was, wenn mein Fingerabdruck nicht erkannt wird?';
+
+  @override
+  String get faqLockA =>
+      'Die App-Sperre akzeptiert auch die PIN, das Muster oder das Passwort Ihres Telefons, genau wie der Sperrbildschirm.';
+
+  @override
+  String get faqSavingQ => 'Wie lege ich Geld fürs Sparen oder Anlegen zurück?';
+
+  @override
+  String get faqSavingA =>
+      'Lassen Sie das Spar- oder Depotkonto außerhalb des Budgets. Budgetieren Sie jeden Monat den Betrag in einer Kategorie von „Sparen & Geldanlage“ und legen Sie dann eine Umbuchung vom Girokonto auf das Sparkonto mit dieser Kategorie an. Die Kategorie ist ausgegeben, „Zu budgetieren“ bleibt gleich.';
+
+  @override
+  String get faqPersonalQ => 'Kann ich ein Konto für mich behalten?';
+
+  @override
+  String get faqPersonalA =>
+      'Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam.';
 }

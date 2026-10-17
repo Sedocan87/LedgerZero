@@ -9,12 +9,29 @@ class AuthState {
   /// database session ([sessionProvider]) is independent of this.
   final bool isAuthenticated;
 
-  const AuthState({this.isOnboarded = false, this.isAuthenticated = false});
+  /// The UI was unlocked at least once since start-up (or since onboarding
+  /// started again). From then on the app lock covers the app instead of
+  /// replacing it, so the user returns to where they were.
+  final bool hasUnlocked;
 
-  AuthState copyWith({bool? isOnboarded, bool? isAuthenticated}) {
+  const AuthState({
+    this.isOnboarded = false,
+    this.isAuthenticated = false,
+    this.hasUnlocked = false,
+  });
+
+  /// The app lock is showing over the unlocked app (see [hasUnlocked]).
+  bool get isRelocked => isOnboarded && hasUnlocked && !isAuthenticated;
+
+  AuthState copyWith({
+    bool? isOnboarded,
+    bool? isAuthenticated,
+    bool? hasUnlocked,
+  }) {
     return AuthState(
       isOnboarded: isOnboarded ?? this.isOnboarded,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      hasUnlocked: hasUnlocked ?? this.hasUnlocked,
     );
   }
 }
@@ -31,13 +48,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
         ),
       );
 
+  /// Onboarding again (factory reset) starts a new UI session.
   void setOnboarded(bool value) {
     _prefs.setBool(_onboardedKey, value);
-    state = state.copyWith(isOnboarded: value);
+    state = state.copyWith(
+      isOnboarded: value,
+      hasUnlocked: value ? null : false,
+    );
   }
 
   void setAuthenticated(bool value) {
-    state = state.copyWith(isAuthenticated: value);
+    state = state.copyWith(
+      isAuthenticated: value,
+      hasUnlocked: value ? true : null,
+    );
   }
 }
 

@@ -365,10 +365,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get total => 'Total';
 
   @override
-  String get tbbTooltip =>
-      'Money you have not assigned to a category yet. Budget it until this reaches zero.';
-
-  @override
   String get budgetedTooltip =>
       'The amount you\'ve assigned to this category for this month.';
 
@@ -2909,14 +2905,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqSafeA =>
-      'Your data is stored only on your device, in a database encrypted with AES-256 and unlocked with your master password. If you turn on sync, it is encrypted with your sync passphrase before it leaves the device. There are no LedgerZero servers, no tracking and no analytics.';
+      'Your data is stored only on your phone, in an encrypted database whose key is kept in the phone’s secure hardware (Android KeyStore). The app lock adds your fingerprint, face or phone PIN. Synced data is encrypted before it leaves the phone. There are no LedgerZero servers, no tracking and no analytics.';
 
   @override
-  String get faqSyncQ => 'How do I sync between devices?';
+  String get faqSyncQ => 'How do my partner and I share a budget?';
 
   @override
   String get faqSyncA =>
-      'Open Settings > Sync Settings, choose Google Drive and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.';
+      'Open Settings > Sync Settings. At home, pair the phones over Wi-Fi by scanning a QR code. To sync while you are apart, both phones use the same Google Drive account and sync passphrase. The user guide chapter “Using LedgerZero with a partner” explains the details.';
 
   @override
   String get faqOfflineQ => 'Can I use the app offline?';
@@ -2924,13 +2920,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get faqOfflineA =>
       'Yes. Everything works offline. Sync catches up automatically when you are back online.';
-
-  @override
-  String get faqPasswordQ => 'What if I forget my master password?';
-
-  @override
-  String get faqPasswordA =>
-      'Unlock with the recovery key you wrote down during setup, then choose a new password. Without the password and the recovery key nobody can unlock your data, not even the developer.';
 
   @override
   String get faqBackupQ => 'How do backups work?';
@@ -2947,53 +2936,46 @@ class AppLocalizationsEn extends AppLocalizations {
       'Yes. Settings > YNAB Migration imports nYNAB CSV exports and YNAB 4 budgets. Settings > Import CSV reads the CSV export of your bank.';
 
   @override
-  String get guideStartTitle => '1. Getting started';
+  String get guideStartTitle => 'Getting started';
 
   @override
   String get guideStartBody =>
-      'LedgerZero uses zero-based envelope budgeting: before you spend money, you give it a job by assigning it to a category.';
+      'LedgerZero uses envelope budgeting: before you spend money, you give it a job by budgeting it to a category. Add the account your money is in, add your salary, then budget until To Be Budgeted is zero. The ⓘ buttons across the app explain each part where you need it.';
 
   @override
-  String get guideAccountsTitle => '2. Accounts';
+  String get guideAccountsTitle => 'Accounts';
 
   @override
   String get guideAccountsBody =>
-      'Add the accounts you pay from (checking, savings, credit card, cash) with their current balance. That money is what you can budget: it appears as To Be Budgeted.';
+      'Add every account with its current balance. Accounts in the budget (checking, cash, credit cards) hold the money you budget. Savings, brokerage and pension accounts usually stay outside the budget: they count towards net worth only. The type sets the icon and whether a new account starts in the budget.';
 
   @override
-  String get guideBudgetTitle => '3. Budgeting';
+  String get guideBudgetTitle => 'Budgeting';
 
   @override
   String get guideBudgetBody =>
-      'On the Budget screen, tap a category\'s budgeted amount to assign money. Keep going until To Be Budgeted is zero. Income without a category adds to To Be Budgeted.';
+      'On the Budget screen, tap a category’s budgeted amount to give it money, until To Be Budgeted is zero. Income without a category adds to To Be Budgeted; add your salary as recurring income to see what is coming. Each category keeps what is left from month to month. A new month starts empty: fill it like the month before or from a template, by hand or automatically. Money left unbudgeted at the end of a month is offered for savings in the next one.';
 
   @override
-  String get guideTransactionsTitle => '4. Transactions';
+  String get guideTransactionsTitle => 'Transactions';
 
   @override
   String get guideTransactionsBody =>
-      'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, and rules categorise imported transactions automatically.';
+      'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorise transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.';
 
   @override
-  String get guideOverspendingTitle => '5. Overspending';
+  String get guideOverspendingTitle => 'Overspending';
 
   @override
   String get guideOverspendingBody =>
       'When a category\'s available amount turns red, you have spent more than you budgeted. Move money from another category to cover it.';
 
   @override
-  String get guideReconcileTitle => '6. Reconciling';
+  String get guideReconcileTitle => 'Reconciling';
 
   @override
   String get guideReconcileBody =>
       'Now and then, compare an account with your bank statement using Reconcile Account on the account screen. Cleared transactions are marked as reconciled, and any difference is recorded as an adjustment.';
-
-  @override
-  String get guideSyncTitle => '7. Sync and backups';
-
-  @override
-  String get guideSyncBody =>
-      'Sync keeps your phones and tablets up to date through your own Google Drive, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.';
 
   @override
   String get next => 'Next';
@@ -3474,7 +3456,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get savingsOfferBody =>
-      'Add a Savings & Investments group: Cash Reserve, Stocks & ETFs, Crypto, Bonds and Retirement. Money you assign there stays out of To Be Budgeted and carries over every month, e.g. a cash reserve you always keep. To invest, transfer it to your off-budget brokerage account using the category.';
+      'Add a Savings & Investments group: Savings, Stocks & ETFs, Crypto, Bonds and Retirement. Budget there what you move to your savings and investment accounts each month. Keep those accounts outside the budget (switch off \"Include in budget\"): their balances then count towards your net worth only.';
 
   @override
   String get savingsOfferAdd => 'Add categories';
@@ -3486,7 +3468,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get savingsOfferAdded => 'Savings & Investments categories added';
 
   @override
-  String get seedCatCashReserve => 'Cash Reserve';
+  String get seedCatSavings => 'Savings';
 
   @override
   String get cardNotifications => 'Card notifications';
@@ -3751,4 +3733,399 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get syncErrorPairingMismatch =>
       'This phone and the other one were paired with different codes. Turn off Wi-Fi sync on this phone and pair it again.';
+
+  @override
+  String get budgetIncomeLabel => 'Income';
+
+  @override
+  String budgetIncomeReceived(String amount) {
+    return '$amount received';
+  }
+
+  @override
+  String budgetIncomeExpected(String amount, String date) {
+    return '$amount expected, next $date';
+  }
+
+  @override
+  String get budgetIncomeNone => 'none this month';
+
+  @override
+  String get budgetIncomeAddPrompt =>
+      'Add your salary to budget it every month';
+
+  @override
+  String get budgetIncomeAddButton => 'Add salary';
+
+  @override
+  String get salaryPromptTitle => 'Add your salary?';
+
+  @override
+  String get salaryPromptBody =>
+      'Set it up once and it lands in To Be Budgeted every payday, ready to assign to your categories. You also see the expected amount for each month in advance.';
+
+  @override
+  String get salaryPromptDismiss => 'Not now';
+
+  @override
+  String get firstAccountSalaryTitle => 'When do you get paid?';
+
+  @override
+  String newMonthTitle(String month, String previous) {
+    return 'Start $month like $previous?';
+  }
+
+  @override
+  String newMonthBody(String total, String tbb) {
+    return '$total in the same categories. To Be Budgeted after: $tbb.';
+  }
+
+  @override
+  String newMonthFill(String previous) {
+    return 'Fill like $previous';
+  }
+
+  @override
+  String get newMonthTemplate => 'Use a template';
+
+  @override
+  String get newMonthDismiss => 'Not now';
+
+  @override
+  String newMonthFilled(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count categories filled',
+      one: '1 category filled',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get autoFillTitle => 'Fill new months automatically';
+
+  @override
+  String get autoFillMenu => 'Fill automatically…';
+
+  @override
+  String get autoFillExplanation =>
+      'On the first open of a new month, categories that are still empty get these amounts. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.';
+
+  @override
+  String get autoFillOff => 'Off';
+
+  @override
+  String get autoFillPrevious => 'Same as the month before';
+
+  @override
+  String autoFillTemplate(String name) {
+    return 'Template: $name';
+  }
+
+  @override
+  String autoFillNoteTitle(String month) {
+    return '$month was filled automatically';
+  }
+
+  @override
+  String autoFillNoteBody(String total, String source) {
+    return '$total from $source. Change any amount as usual.';
+  }
+
+  @override
+  String get autoFillUndone => 'Automatic budget undone';
+
+  @override
+  String get accountTypeInvestment => 'Investment';
+
+  @override
+  String accountReleaseIntro(String amount) {
+    return '$amount in this account leaves your budget. Release the money you budgeted for it:';
+  }
+
+  @override
+  String accountReleaseAmount(String amount) {
+    return 'Release $amount';
+  }
+
+  @override
+  String accountReleased(String amount) {
+    return '$amount returned to To Be Budgeted';
+  }
+
+  @override
+  String leftoverTitle(String amount, String previous) {
+    return '$amount from $previous wasn\'t budgeted';
+  }
+
+  @override
+  String leftoverBody(String month) {
+    return 'It is still in To Be Budgeted for $month. Put it towards savings?';
+  }
+
+  @override
+  String get leftoverAssign => 'Budget for savings…';
+
+  @override
+  String leftoverKeep(String month) {
+    return 'Keep for $month';
+  }
+
+  @override
+  String leftoverAssigned(String amount, String category) {
+    return '$amount budgeted for $category';
+  }
+
+  @override
+  String get accountPersonalLabel => 'Personal';
+
+  @override
+  String get accountPersonalHelper =>
+      'Only you see its transactions. A partner you sync with sees just its name and balance.';
+
+  @override
+  String get accountPersonalSynced =>
+      'Already shared with your partner, so it can\'t become personal. Create a new personal account instead.';
+
+  @override
+  String get accountOnBudgetPersonal =>
+      'Personal accounts stay outside the budget.';
+
+  @override
+  String get accountShareTitle => 'Share with your partner?';
+
+  @override
+  String get accountShareBody =>
+      'Its transactions will sync to your partner\'s phone, and your partner can change them too. It can\'t become personal again.';
+
+  @override
+  String get accountShareAction => 'Share';
+
+  @override
+  String get accountPersonalBadge => 'Personal';
+
+  @override
+  String get accountPartnerBadge => 'Partner\'s';
+
+  @override
+  String get accountsPartnerSection => 'Your partner\'s accounts';
+
+  @override
+  String get netWorthShared => 'Shared';
+
+  @override
+  String get netWorthMine => 'Mine';
+
+  @override
+  String get netWorthPartner => 'Partner\'s';
+
+  @override
+  String get accountPartnerTitle => 'Your partner\'s personal account';
+
+  @override
+  String get accountPartnerBody =>
+      'Its transactions stay on your partner\'s phone. The balance updates whenever their phone syncs.';
+
+  @override
+  String get txPartnerAccount =>
+      'This belongs to your partner\'s personal account. Your partner can change it on their phone.';
+
+  @override
+  String get accountBalanceLabel => 'Balance';
+
+  @override
+  String helpInfoTooltip(String topic) {
+    return 'About $topic';
+  }
+
+  @override
+  String get helpOpenGuide => 'Open the user guide';
+
+  @override
+  String get helpHowTo => 'How it works';
+
+  @override
+  String get helpShowMe => 'Show me';
+
+  @override
+  String get helpSavingTitle => 'Saving and investing';
+
+  @override
+  String get helpSavingBody =>
+      'Keep savings and investments in their own accounts outside the budget. The budget decides how much goes there each month: budget the amount in a Savings & Investments category, then move the money with a transfer that uses that category.';
+
+  @override
+  String get helpSavingSteps =>
+      'Budget the amount, for example 500 in Stocks & ETFs.\nAdd a transfer from your budget account (for example checking) to the brokerage or savings account.\nPick Stocks & ETFs as its category. The category is spent, the brokerage account grows, and To Be Budgeted stays the same.\nGains, dividends and fees inside the brokerage account need no category.';
+
+  @override
+  String get helpTbbTitle => 'To Be Budgeted';
+
+  @override
+  String get helpTbbBody =>
+      'Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every euro has a job.';
+
+  @override
+  String get helpTbbSteps =>
+      'Negative means you budgeted more than you have: lower a category until it is back at zero.\nWhat is left at the end of a month carries over to the next month, where you can budget it.\nAccounts outside the budget, like savings or a brokerage account, do not count here.';
+
+  @override
+  String get helpNewMonthTitle => 'Filling a new month';
+
+  @override
+  String get helpNewMonthBody =>
+      'A new month starts empty. Fill it like the month before or from a template, by hand or automatically every month (Budget menu ⋮, “Fill automatically…”).';
+
+  @override
+  String get helpNewMonthSteps =>
+      'Only empty categories are filled: amounts you already set stay.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.';
+
+  @override
+  String get helpOnBudgetTitle => 'In or out of the budget';
+
+  @override
+  String get helpOnBudgetBody =>
+      'Accounts in the budget hold the money you spend and plan with: their balance is what you budget. Accounts outside the budget only count towards net worth.';
+
+  @override
+  String get helpOnBudgetSteps =>
+      'In the budget: checking, cash, credit cards and the account your salary arrives in.\nOutside: savings, brokerage, crypto and pension accounts, loans.\nA reserve inside your checking account cannot be outside: budget it into a category like Savings instead.\nTaking an account out offers to release the money you budgeted for it, so To Be Budgeted does not go negative.';
+
+  @override
+  String get helpPersonalTitle => 'Personal accounts';
+
+  @override
+  String get helpPersonalBody =>
+      'For couples who sync: a personal account belongs to you. Your partner sees its name and balance in net worth, but not its transactions, and cannot change it.';
+
+  @override
+  String get helpPersonalSteps =>
+      'Personal accounts are always outside the budget.\nA transfer between a shared account and your personal one syncs as the shared side only.\nAn account can become personal only before it first syncs, so mark it before pairing. Sharing it later is always possible and sends its history.';
+
+  @override
+  String get helpAccountTypesTitle => 'Account types';
+
+  @override
+  String get helpAccountTypesBody =>
+      'The type sets the icon and whether a new account starts in the budget. Savings and Investment accounts start outside the budget; the switch below changes that.';
+
+  @override
+  String get helpAccountsTitle => 'Accounts and net worth';
+
+  @override
+  String get helpAccountsBody =>
+      'Net worth adds up all accounts, in or out of the budget. If you sync with a partner, it is your household’s net worth, and the lines below it split it into shared, yours and your partner’s.';
+
+  @override
+  String get helpAccountsSteps =>
+      'Off budget: counts towards net worth only.\nPersonal: yours; your partner sees only its name and balance.\nPartner’s: your partner’s personal accounts, read-only, with the balance their phone last shared.';
+
+  @override
+  String get helpTransferTitle => 'Transfers';
+
+  @override
+  String get helpTransferBody =>
+      'A transfer moves money between two of your accounts. It is neither income nor spending.';
+
+  @override
+  String get helpTransferSteps =>
+      'Between two budget accounts (checking to cash): no category, nothing changes in the budget.\nFrom a budget account to one outside (checking to brokerage): pick the category you budgeted for it, for example Stocks & ETFs. Without a category the money comes out of To Be Budgeted.\nBack from outside into the budget (savings to checking): without a category it adds to To Be Budgeted.';
+
+  @override
+  String get helpSyncTitle => 'Syncing with a partner';
+
+  @override
+  String get helpSyncBody =>
+      'Two phones can share one budget: over your home Wi-Fi without any cloud, or through a Google Drive account you both use when you are apart. Everything is encrypted before it leaves the phone.';
+
+  @override
+  String get helpSyncSteps =>
+      'Every change syncs on its own. If both phones change the same thing, the later change wins and the other one is listed under conflicts, where you can keep it.\nPersonal accounts share only their name and balance.\nBoth phones need the same app version.';
+
+  @override
+  String get helpCsvTitle => 'Importing a CSV file';
+
+  @override
+  String get helpCsvBody =>
+      'Export your transactions from your bank as a CSV file. LedgerZero matches the columns by their names, and you can correct the matching before importing.';
+
+  @override
+  String get helpCsvSteps =>
+      'The first row must hold the column names: delete any lines above it.\nAmounts must be in one column, negative for money going out. Separate debit and credit columns are not supported yet.\nOn the review screen, untick the rows you do not want.';
+
+  @override
+  String get helpAppLockTitle => 'App lock';
+
+  @override
+  String get helpAppLockBody =>
+      'The app locks with your fingerprint, face or phone PIN once it has been in the background for the time you choose. Pulling down notifications or answering a system dialog does not lock it, and after unlocking you are back where you were.';
+
+  @override
+  String get hintSavingsTransfer =>
+      'Budgeted money stays in your checking account until you move it: add a transfer to your savings or brokerage account and pick this category.';
+
+  @override
+  String get hintOffBudgetAccount =>
+      'Account created. It is outside the budget: to save into it, budget the amount in Savings & Investments and add a transfer with that category.';
+
+  @override
+  String get hintPartnerAccounts =>
+      'These are your partner’s personal accounts. You see their balance; their transactions stay on your partner’s phone.';
+
+  @override
+  String get guideTransfersTitle => 'Transfers';
+
+  @override
+  String get guideTransfersBody =>
+      'A transfer moves money between two of your accounts and is neither income nor spending. Between two budget accounts it needs no category and changes nothing in the budget. From a budget account to an account outside the budget, the money leaves the budget: pick the category you budgeted for it, or leave the category empty to take it from To Be Budgeted. Money coming back from outside without a category adds to To Be Budgeted.';
+
+  @override
+  String get guideSavingTitle => 'Saving and investing';
+
+  @override
+  String get guideSavingBody =>
+      'Keep savings and investments in their own accounts outside the budget, so price changes and interest never disturb it. Each month, budget what you want to put aside in Savings & Investments (Savings, Stocks & ETFs, Crypto, Bonds, Retirement). When you move the money, add a transfer from your budget account to the savings account and pick that category: the category is spent, the savings account grows and To Be Budgeted stays the same. Example: budget 500 in Stocks & ETFs, then transfer 500 from checking to your brokerage account with Stocks & ETFs. A reserve you keep in your checking account stays in a category like Savings instead, where it carries over every month.';
+
+  @override
+  String get guidePartnerTitle => 'Using LedgerZero with a partner';
+
+  @override
+  String get guidePartnerBody =>
+      'Two phones can share one budget. Pair them in Sync Settings: over your home Wi-Fi (scan the QR code on the other phone; both need LedgerZero open on the same Wi-Fi) or through a Google Drive account you both use. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.';
+
+  @override
+  String get guideSecurityTitle => 'Security and backups';
+
+  @override
+  String get guideSecurityBody =>
+      'Your data is stored encrypted on your phone, and the key is kept in the phone’s secure hardware. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. Create encrypted backups regularly in Settings > Backup & Export and keep the backup password safe: without it a backup cannot be restored.';
+
+  @override
+  String get guideImportTitle => 'Importing';
+
+  @override
+  String get guideImportBody =>
+      'Settings > Import CSV reads your bank’s CSV export: the first row must hold the column names, and amounts must be in one column (negative for money going out). Columns are matched by name and can be corrected before importing. YNAB budgets can be imported from Settings as well.';
+
+  @override
+  String get faqLockQ => 'What if my fingerprint is not recognised?';
+
+  @override
+  String get faqLockA =>
+      'The app lock also accepts your phone’s PIN, pattern or password, the same way your phone’s lock screen does.';
+
+  @override
+  String get faqSavingQ => 'How do I put money into savings or investments?';
+
+  @override
+  String get faqSavingA =>
+      'Keep the savings or brokerage account outside the budget. Each month, budget the amount in a Savings & Investments category, then add a transfer from your checking account to the savings account and pick that category. The category is spent and To Be Budgeted stays the same.';
+
+  @override
+  String get faqPersonalQ => 'Can I keep an account to myself?';
+
+  @override
+  String get faqPersonalA =>
+      'Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.';
 }

@@ -124,15 +124,34 @@ void main() {
       container.read(authProvider.notifier).setAuthenticated(true);
     });
 
-    test('immediate mode locks as soon as the app becomes inactive', () async {
+    test('immediate mode locks when the app leaves the screen, not when '
+        'the notification shade covers it', () async {
       final service = buildService(Stopwatch());
+      // Notification shade, system dialog, app switcher.
       service.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      await pumpEventQueue();
+      expect(uiLocked(), isFalse);
+      service.didChangeAppLifecycleState(AppLifecycleState.resumed);
+
+      service.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      service.didChangeAppLifecycleState(AppLifecycleState.hidden);
       await pumpEventQueue();
       expect(uiLocked(), isTrue);
       // Only the UI: the database stays open for sync and card capture.
       expect(container.read(appLockStateProvider), AppLockState.unlocked);
       service.dispose();
     });
+
+    test(
+      'until the user picks a time, the app locks after one minute',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final notifier = AutoLockDurationNotifier(
+          await SharedPreferences.getInstance(),
+        );
+        expect(notifier.state, 1);
+      },
+    );
 
     test('with the app lock off nothing locks', () async {
       await container.read(appLockEnabledProvider.notifier).set(false);

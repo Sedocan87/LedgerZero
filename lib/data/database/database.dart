@@ -94,7 +94,7 @@ class AppDatabase extends _$AppDatabase {
   static String _englishName(String name) => name;
 
   /// The current schema version (also used to validate restored backups).
-  static const int currentSchemaVersion = 19;
+  static const int currentSchemaVersion = 20;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -121,6 +121,7 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
         await _seedDefaultCategories();
         await _createSyncTriggers();
+        await _createPersonalBalanceTriggers();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         // Steps run in ascending order. Steps that create tables use the
@@ -213,6 +214,12 @@ class AppDatabase extends _$AppDatabase {
           // the budget. The v15 step rebuilds accounts from the current
           // definition, so the column may already exist.
           await _addMissingColumns(m, accounts);
+        }
+        if (from < 20) {
+          // v20: personal accounts (owner_id, shared_balance). Existing
+          // accounts stay shared.
+          await _addMissingColumns(m, accounts);
+          await _createPersonalBalanceTriggers();
         }
       },
       beforeOpen: (details) async {
@@ -543,6 +550,66 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _createSyncTriggers() async {
     for (final table in syncedTables) {
       await _createSyncTriggersForTable(table);
+    }
+  }
+
+  /// `sync_kv` key of this device's household member id: the owner of the
+  /// personal accounts created here. It lives in the database (not in
+  /// SharedPreferences like the sync device id), so restoring a backup keeps
+  /// the accounts personal to the same member.
+  static const String memberIdKey = 'member_id';
+
+  /// SQL for this device's member id (NULL until a personal account exists).
+  static const String localMemberSql =
+      "(SELECT value FROM sync_kv WHERE key = '$memberIdKey')";
+
+  /// SQL for the computed balance of the `accounts` row being updated (see
+  /// `AccountsDao.balanceExpression`).
+  static const String _ownBalanceSql =
+      'starting_balance + COALESCE((SELECT SUM(t.amount) FROM transactions t '
+      'WHERE t.account_id = accounts.id AND t.is_deleted = 0 '
+      'AND t.parent_transaction_id IS NULL), 0)';
+
+  /// Keeps `accounts.shared_balance` of this member's personal accounts
+  /// equal to their computed balance. The transactions of a personal account
+  /// never sync, so other members show this column instead; changing it
+  /// goes through the accounts sync trigger (new `updated_at`, pending
+  /// change), so every balance change reaches them. A shared account has no
+  /// shared balance. Like the sync triggers, nothing happens while a change
+  /// file is applied.
+  Future<void> _createPersonalBalanceTriggers() async {
+    String refresh(String where) =>
+        'UPDATE accounts SET shared_balance = $_ownBalanceSql '
+        'WHERE $where AND owner_id = $localMemberSql '
+        'AND shared_balance IS NOT ($_ownBalanceSql);';
+    for (final (event, where) in const [
+      ('INSERT', 'id = NEW.account_id'),
+      ('UPDATE', 'id IN (NEW.account_id, OLD.account_id)'),
+      ('DELETE', 'id = OLD.account_id'),
+    ]) {
+      await customStatement('''
+        CREATE TRIGGER IF NOT EXISTS
+          transactions_${event.toLowerCase()}_personal_balance
+        AFTER $event ON transactions
+        WHEN $_notApplying
+        BEGIN
+          ${refresh(where)}
+        END;
+      ''');
+    }
+    for (final event in const ['INSERT', 'UPDATE']) {
+      await customStatement('''
+        CREATE TRIGGER IF NOT EXISTS
+          accounts_${event.toLowerCase()}_personal_balance
+        AFTER $event ON accounts
+        WHEN $_notApplying
+        BEGIN
+          ${refresh('id = NEW.id')}
+          UPDATE accounts SET shared_balance = NULL
+            WHERE id = NEW.id AND owner_id IS NULL
+            AND shared_balance IS NOT NULL;
+        END;
+      ''');
     }
   }
 

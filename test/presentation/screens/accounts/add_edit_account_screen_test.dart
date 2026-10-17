@@ -42,6 +42,8 @@ class MockAccountRepository implements AccountRepository {
   Future<int> getAccountBalance(String id) async => 0;
   @override
   Future<int> getClearedBalance(String id, {DateTime? upTo}) async => 0;
+  @override
+  Future<bool> wasSynced(String id) async => false;
 
   @override
   Future<int> getBudgetStartingBalance() async => 0;
@@ -238,6 +240,7 @@ void main() {
     WidgetTester tester,
     MockAccountRepository repo, {
     String? accountId,
+    bool firstAccount = false,
   }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -250,7 +253,10 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AddEditAccountScreen(accountId: accountId),
+          home: AddEditAccountScreen(
+            accountId: accountId,
+            firstAccount: firstAccount,
+          ),
         ),
       ),
     );
@@ -302,5 +308,38 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(repo.updated!.onBudget, isFalse);
+  });
+  bool includedInBudget(WidgetTester tester) => tester
+      .widget<SwitchListTile>(find.byKey(const Key('account.onBudget')))
+      .value;
+
+  Future<void> chooseType(WidgetTester tester, String label) async {
+    await tapAndSettle(
+      tester,
+      find.byType(DropdownButtonFormField<AccountType>),
+    );
+    await tester.tap(find.text(label).last);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a new savings or investment account starts outside the '
+      'budget; switching back to checking includes it again', (tester) async {
+    await pumpForm(tester, MockAccountRepository());
+    expect(includedInBudget(tester), isTrue);
+
+    await chooseType(tester, 'Investment');
+    expect(includedInBudget(tester), isFalse);
+    await chooseType(tester, 'Savings');
+    expect(includedInBudget(tester), isFalse);
+    await chooseType(tester, 'Checking');
+    expect(includedInBudget(tester), isTrue);
+  });
+
+  testWidgets('the first account stays in the budget whatever its type', (
+    tester,
+  ) async {
+    await pumpForm(tester, MockAccountRepository(), firstAccount: true);
+    await chooseType(tester, 'Savings');
+    expect(includedInBudget(tester), isTrue);
   });
 }

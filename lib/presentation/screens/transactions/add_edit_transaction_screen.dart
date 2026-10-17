@@ -65,6 +65,10 @@ class _AddEditTransactionScreenState
   Timer? _autosaveTimer;
   bool _saving = false;
 
+  /// The transaction touches the partner's personal account (a transfer
+  /// into or out of it): shown, not editable here.
+  bool _readOnly = false;
+
   bool get _isEditing => widget.transactionId != null;
 
   @override
@@ -118,6 +122,12 @@ class _AddEditTransactionScreenState
         t.transferTransactionId != null && t.categoryId == null
         ? (await repo.getTransactionById(t.transferTransactionId!))?.categoryId
         : null;
+    final accountRepo = ref.read(accountRepositoryProvider);
+    var readOnly = false;
+    for (final accountId in {t.accountId, t.transferAccountId}.nonNulls) {
+      readOnly |=
+          (await accountRepo.getAccountById(accountId))?.isPartners ?? false;
+    }
     final children = await repo.getSplitTransactions(t.id);
     final payee = t.payeeId == null
         ? null
@@ -134,6 +144,9 @@ class _AddEditTransactionScreenState
     if (counterpartCategory != null) {
       _form.categoryId = counterpartCategory;
       _form.changed();
+    }
+    if (readOnly) {
+      setState(() => _readOnly = true);
     }
   }
 
@@ -241,7 +254,7 @@ class _AddEditTransactionScreenState
   }
 
   Future<void> _submit({bool popAfterSave = true}) async {
-    if (_saving) {
+    if (_saving || _readOnly) {
       return;
     }
     final l10n = AppLocalizations.of(context)!;
@@ -337,9 +350,11 @@ class _AddEditTransactionScreenState
     final payeeId = await ref
         .read(transactionServiceProvider)
         .resolvePayee(payeeId: input.payeeId, name: input.newPayeeName);
+    // Through the service: an occurrence due today is booked right away.
     await ref
-        .read(scheduledTransactionRepositoryProvider)
-        .createScheduledTransaction(
+        .read(scheduledTransactionServiceProvider)
+        .saveScheduledTransaction(
+          isNew: true,
           ScheduledTransaction(
             id: const Uuid().v4(),
             accountId: input.accountId,
@@ -383,7 +398,7 @@ class _AddEditTransactionScreenState
                 key: _tutorialKeys.save,
                 icon: const Icon(Icons.check),
                 tooltip: l10n.save,
-                onPressed: _saving ? null : _submit,
+                onPressed: _saving || _readOnly ? null : _submit,
               ),
             ],
           ),
@@ -391,15 +406,32 @@ class _AddEditTransactionScreenState
             key: _formKey,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
-              child: TransactionFormBody(
-                controller: _form,
-                tutorialKeys: _tutorialKeys,
-                payeeFocus: _payeeFocus,
-                onSubmit: _submit,
-                onPayeeSelected: _onPayeeSelected,
-                onSaveAndAddAnother: _isEditing
-                    ? null
-                    : () => _submit(popAfterSave: false),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_readOnly)
+                    Card(
+                      key: const Key('transaction.partnerNotice'),
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      child: ListTile(
+                        leading: const Icon(Icons.lock_person_outlined),
+                        title: Text(l10n.txPartnerAccount),
+                      ),
+                    ),
+                  AbsorbPointer(
+                    absorbing: _readOnly,
+                    child: TransactionFormBody(
+                      controller: _form,
+                      tutorialKeys: _tutorialKeys,
+                      payeeFocus: _payeeFocus,
+                      onSubmit: _submit,
+                      onPayeeSelected: _onPayeeSelected,
+                      onSaveAndAddAnother: _isEditing
+                          ? null
+                          : () => _submit(popAfterSave: false),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

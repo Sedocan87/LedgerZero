@@ -112,6 +112,9 @@ class AppFormatter {
   /// Abbreviated month, e.g. `Dec`.
   String formatMonthShort(DateTime date) => _date('MMM').format(date);
 
+  /// "November".
+  String formatMonthName(DateTime date) => _date('MMMM').format(date);
+
   /// Day and abbreviated month, e.g. `Dec 31` / `31. Dez.`.
   String formatMonthDay(DateTime date) => _date('MMMd').format(date);
 

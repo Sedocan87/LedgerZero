@@ -14,8 +14,8 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 19', () {
-    expect(database.schemaVersion, 19);
+  test('schema version should be 20', () {
+    expect(database.schemaVersion, 20);
   });
 
   group('Database Tables Creation & Defaults', () {

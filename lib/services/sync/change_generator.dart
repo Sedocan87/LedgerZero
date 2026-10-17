@@ -5,6 +5,7 @@ import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/services/sync/format/sync_change.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
+import 'package:ledger_zero/services/sync/personal_rows.dart';
 import 'package:ledger_zero/services/sync/sync_local_state.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
@@ -17,7 +18,8 @@ import 'package:ledger_zero/services/sync/sync_schema.dart';
 /// carries the row as it is now, a delete becomes a tombstone. Files are
 /// cut only between "families" of rows (a split parent and its children, the
 /// two legs of a transfer), upserts come parents-first and deletes
-/// children-first, so a receiver can apply each file on its own.
+/// children-first, so a receiver can apply each file on its own. The rows
+/// of personal accounts ([PersonalRows]) are left out.
 class ChangeGenerator {
   final AppDatabase _db;
   final SyncSchema _schema;
@@ -104,6 +106,7 @@ class ChangeGenerator {
 
       final rows = await _fetchRows(aggregates.keys);
       final versions = await _fetchVersions(aggregates.keys);
+      final personal = await PersonalRows.load(_db);
 
       final upserts = <_Entry>[];
       final deletes = <_Entry>[];
@@ -112,6 +115,9 @@ class ChangeGenerator {
         final row = rows[k];
         final known = versions[k];
         if (row != null) {
+          if (personal.isPrivate(table, row)) {
+            return; // stays on this device (personal account)
+          }
           final version = SyncSchema.versionOf(row['updated_at']);
           // Rows edited here are this device's versions; rows that only
           // pass through a full upload keep the device that wrote them.

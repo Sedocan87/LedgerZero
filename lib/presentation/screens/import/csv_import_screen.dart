@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -357,6 +359,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       appBar: AppBar(
         title: Text(l10n.importCsv),
         actions: [
+          const InfoButton(HelpTopic.csvImport),
           IconButton(
             icon: const Icon(Icons.file_upload),
             onPressed: _showLoadProfileDialog,

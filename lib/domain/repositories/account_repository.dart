@@ -16,7 +16,15 @@ abstract class AccountRepository {
   Future<void> createAccount(Account account);
 
   /// Updates an existing account.
+  ///
+  /// The partner's accounts are never written. Making a personal account
+  /// shared queues its transactions for sync (they were held back).
   Future<void> updateAccount(Account account);
+
+  /// Whether account [id] has already synced to the household. A synced
+  /// shared account cannot become personal any more: the partner's phone
+  /// already has its transactions.
+  Future<bool> wasSynced(String id);
 
   /// Deletes an account by its unique identifier.
   Future<void> deleteAccount(String id);

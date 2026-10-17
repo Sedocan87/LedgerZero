@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_list_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
@@ -13,6 +16,9 @@ import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_sort_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_filter_provider.dart';
+
+/// Remembers that the hint above the partner's accounts was dismissed.
+const partnerAccountsHintKey = 'hint_partner_accounts_seen';
 
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
@@ -100,6 +106,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               ];
             },
           ),
+          const InfoButton(HelpTopic.accounts),
           PopupMenuButton<AccountSortOption>(
             icon: const Icon(Icons.sort),
             tooltip: l10n.sort,
@@ -129,94 +136,74 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           }
           final currencies = accounts.map((a) => a.currency).toSet();
           final showTotalBanner = accounts.length > 1 && currencies.length == 1;
-          final totalBalance = showTotalBanner
-              ? accounts.fold<int>(0, (sum, a) => sum + a.balance)
-              : 0;
+          // The partner's personal accounts come last, under their own
+          // header.
+          final own = accounts.where((a) => !a.isPartners).toList();
+          final partners = accounts.where((a) => a.isPartners).toList();
+
+          Widget card(Account account) => Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 5,
+            ),
+            child: AccountCard(
+              account: account,
+              onTap: () {
+                context.goNamed(
+                  'account-detail',
+                  pathParameters: {'id': account.id},
+                );
+              },
+            ),
+          );
 
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
-              child: ListView.builder(
+              child: ListView(
                 padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 88),
-                itemCount: accounts.length + (showTotalBanner ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (showTotalBanner && index == 0) {
-                    final scheme = Theme.of(context).colorScheme;
-                    return Padding(
+                children: [
+                  if (showTotalBanner)
+                    _NetWorthBanner(
+                      accounts: accounts,
+                      currency: currencies.first,
+                    ),
+                  for (final account in own) card(account),
+                  if (partners.isNotEmpty) ...[
+                    Padding(
                       padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md + 4,
+                        AppSpacing.md,
                         AppSpacing.md,
                         AppSpacing.xs,
+                      ),
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          l10n.accountsPartnerSection,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ),
+                    OneTimeHintCard(
+                      prefsKey: partnerAccountsHintKey,
+                      text: l10n.hintPartnerAccounts,
+                      topic: HelpTopic.personal,
+                      margin: const EdgeInsets.fromLTRB(
                         AppSpacing.md,
-                        AppSpacing.sm,
+                        0,
+                        AppSpacing.md,
+                        AppSpacing.xs,
                       ),
-                      child: Card(
-                        color: scheme.primaryContainer,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.xl),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  l10n.netWorth,
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        color: scheme.onPrimaryContainer,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Flexible(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    ref
-                                        .watch(appFormatterProvider)
-                                        .formatMoney(
-                                          totalBalance,
-                                          currencyCode: currencies.first,
-                                        ),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineSmall
-                                        ?.copyWith(
-                                          color: scheme.onPrimaryContainer,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  final account = accounts[index - (showTotalBanner ? 1 : 0)];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: 5,
                     ),
-                    child: AccountCard(
-                      account: account,
-                      onTap: () {
-                        context.goNamed(
-                          'account-detail',
-                          pathParameters: {'id': account.id},
-                        );
-                      },
-                    ),
-                  );
-                },
+                    for (final account in partners) card(account),
+                  ],
+                ],
               ),
             ),
           );
@@ -235,6 +222,113 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         },
         tooltip: l10n.createAccount,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+/// Net worth of all accounts. With personal accounts in the household, a
+/// line below splits it into shared, this user's and the partner's part.
+class _NetWorthBanner extends ConsumerWidget {
+  const _NetWorthBanner({required this.accounts, required this.currency});
+
+  final List<Account> accounts;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final fmt = ref.watch(appFormatterProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    int sum(AccountOwner owner) => accounts
+        .where((a) => a.owner == owner)
+        .fold<int>(0, (total, a) => total + a.balance);
+    final total = accounts.fold<int>(0, (sum, a) => sum + a.balance);
+    final split = accounts.any((a) => a.isPersonal);
+    final onBanner = scheme.onPrimaryContainer;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      child: Card(
+        color: scheme.primaryContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.netWorth,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: onBanner,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        fmt.formatMoney(total, currencyCode: currency),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: onBanner,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (split) ...[
+                const SizedBox(height: AppSpacing.sm),
+                for (final (label, owner) in [
+                  (l10n.netWorthShared, AccountOwner.shared),
+                  (l10n.netWorthMine, AccountOwner.me),
+                  (l10n.netWorthPartner, AccountOwner.partner),
+                ])
+                  if (accounts.any((a) => a.owner == owner))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        key: Key('netWorth.${owner.name}'),
+                        children: [
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: onBanner,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            fmt.formatMoney(sum(owner), currencyCode: currency),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: onBanner,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

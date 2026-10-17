@@ -78,6 +78,7 @@ String transactionValidationMessage(
     TransactionValidationError.splitWithoutLines => l10n.txSplitSumMismatch,
     TransactionValidationError.splitLineZero => l10n.txSplitLineZero,
     TransactionValidationError.splitSumMismatch => l10n.txSplitSumMismatch,
+    TransactionValidationError.partnerAccount => l10n.txPartnerAccount,
     TransactionValidationError.notFound || null => l10n.txSaveFailed,
   };
 }

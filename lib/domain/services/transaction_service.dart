@@ -179,6 +179,12 @@ class TransactionService {
       }
       children = await _transactionRepository.getSplitTransactions(existing.id);
     }
+    await _ensureNotPartners([
+      input.accountId,
+      input.transferAccountId,
+      existing?.accountId,
+      existing?.transferAccountId,
+    ]);
     final before = <String, Transaction?>{
       ?existing?.id: existing,
       ?counterpart?.id: counterpart,
@@ -430,6 +436,21 @@ class TransactionService {
     return rows.values.toList();
   }
 
+  /// The partner's personal accounts are read-only here: their
+  /// transactions live on the partner's phone, so a transfer into one would
+  /// have its other leg there.
+  Future<void> _ensureNotPartners(Iterable<String?> accountIds) async {
+    for (final id in accountIds.nonNulls.toSet()) {
+      final account = await _accountRepository.getAccountById(id);
+      if (account != null && account.isPartners) {
+        throw ValidationException(
+          'Account $id is the partner\'s personal account',
+          TransactionValidationError.partnerAccount,
+        );
+      }
+    }
+  }
+
   /// Describes what deleting [ids] would delete.
   Future<DeletionPreview> previewDeletion(Iterable<String> ids) async {
     final rows = await _groupsOf(ids);
@@ -465,6 +486,9 @@ class TransactionService {
       if (rows.isEmpty) {
         return null;
       }
+      await _ensureNotPartners([
+        for (final t in rows) ...[t.accountId, t.transferAccountId],
+      ]);
       if (!allowReconciledChange) {
         final reconciled = rows
             .where((t) => t.cleared == TransactionClearStatus.reconciled)

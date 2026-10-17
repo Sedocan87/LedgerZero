@@ -193,7 +193,10 @@ class BudgetRepositoryImpl implements BudgetRepository {
       month: Value(b.month),
       budgeted: Value(b.budgeted),
       createdAt: Value(b.createdAt?.toUtc() ?? now),
-      updatedAt: Value(now),
+      // Kept when set (the new-month fill stamps its own time); an
+      // unchanged value is replaced with the current time by the sync
+      // trigger, so ordinary edits still carry their edit time.
+      updatedAt: Value(b.updatedAt?.toUtc() ?? now),
     );
   }
 }

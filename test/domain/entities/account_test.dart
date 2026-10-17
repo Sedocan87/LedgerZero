@@ -97,6 +97,9 @@ void main() {
       expect(account, equals(accountWithDates));
       expect(account.onBudget, isTrue);
       expect(Account.fromJson({...json, 'on_budget': false}).onBudget, isFalse);
+      // Older exports have no `owner`: the account is shared.
+      expect(account.owner, AccountOwner.shared);
+      expect(Account.fromJson({...json, 'owner': 'me'}).owner, AccountOwner.me);
     });
 
     test('toJson returns correct map', () {
@@ -110,6 +113,7 @@ void main() {
         'balance': 0,
         'is_closed': false,
         'on_budget': true,
+        'owner': 'shared',
         'color': 0xFF000000,
         'icon': 'bank',
         'notes': 'Test notes',

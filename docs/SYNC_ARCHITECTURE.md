@@ -127,7 +127,9 @@ sent yet competes the same way — it does not win automatically.
   applied the file carrying it) and the content differs, the overwritten
   local row is recorded in `sync_conflicts`. Sync settings lists them:
   *Keep mine* re-applies the local snapshot as a new local edit (newer than
-  every known version), *Dismiss* removes the entry.
+  every known version), *Dismiss* removes the entry. Not recorded: a budget
+  amount written by the automatic new-month fill (its `updated_at` is the
+  first day of its month, 00:00 UTC; see BUDGET_INTERACTIONS.md).
 * Seeded default categories use deterministic ids and a fixed timestamp, so
   they are identical on all devices and never conflict.
 
@@ -267,7 +269,47 @@ between their folders.
   and when the other phone appears). Each phone works fully on its own in
   between.
 
-## 12. Old format
+## 12. Personal accounts
+
+A personal account (`accounts.owner_id` set, schema v20) belongs to one
+household member; see BUDGETING_RULES.md for what users see.
+
+* **Member id.** `sync_kv` key `member_id`: a random UUID created when this
+  device's user first makes an account personal. It lives in the database,
+  not in SharedPreferences like the device id, so a restored backup keeps
+  its accounts personal to the same member. A row whose `owner_id` is
+  another value is the partner's account.
+* **What syncs.** The account row (name, type, owner, closed, and
+  `shared_balance`). The account's transactions and scheduled transactions
+  never leave the device: `PersonalRows` leaves them out of change files and
+  snapshots. Their captured changes are dropped like the others. Tombstones
+  are not filtered (a deleted row's account is unknown; one the partner
+  never had changes nothing there).
+* **Balance.** Triggers on transactions and accounts keep
+  `shared_balance` of this member's personal accounts equal to the computed
+  balance. Changing it goes through the accounts sync trigger, so every
+  balance change gives the row a new `updated_at` and reaches the partner.
+  `AccountsDao.balanceExpression` uses `shared_balance` for the partner's
+  accounts and the computed balance for all others. The net worth report
+  counts the partner's accounts at that balance over the whole range (they
+  have no history here).
+* **Read-only.** The repository refuses to update the partner's accounts;
+  `TransactionService` refuses to save or delete a transaction whose
+  account or transfer account is one (`partnerAccount`); pickers leave
+  them out. A transfer from a shared account into a personal one syncs as
+  its shared leg only; its `transfer_transaction_id` points at a row the
+  partner does not have (it is not a foreign key).
+* **Becoming shared.** Setting the owner to shared queues every
+  transaction and scheduled transaction of the account
+  (`AccountsDao.queueHistoryForSync`); the partner applies them as new
+  rows. The opposite is allowed only while the account has no entry in
+  `sync_row_versions` (it never went out).
+* **Not covered.** One member with two phones: personal transactions do
+  not reach the member's second phone (everyone in the folder can read
+  every file, so they are never uploaded at all). Payees created for
+  personal transactions sync like all payees.
+
+## 13. Old format
 
 Files of sync format v1 (`*.json.gz`, plaintext) are ignored and never
 deleted by the app; Sync settings tells the user that an old sync folder was

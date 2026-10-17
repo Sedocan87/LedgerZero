@@ -174,7 +174,7 @@ class _NaturalLanguageInputScreenState
     final l10n = AppLocalizations.of(context)!;
 
     // Initialize account selection
-    final accountsAsync = ref.watch(accountsProvider);
+    final accountsAsync = ref.watch(writableAccountsProvider);
 
     accountsAsync.whenData((accounts) {
       if (!_accountInitialized && accounts.isNotEmpty) {

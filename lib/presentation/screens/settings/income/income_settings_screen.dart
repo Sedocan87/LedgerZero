@@ -73,7 +73,7 @@ class IncomeSettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed: () => _showAddIncomeSheet(context),
+                    onPressed: () => showAddIncomeSheet(context),
                     child: Text(l10n.incomeAddTitle),
                   ),
                 ],
@@ -112,7 +112,7 @@ class IncomeSettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 onTap: () =>
-                    _showAddIncomeSheet(context, transaction: transaction),
+                    showAddIncomeSheet(context, transaction: transaction),
               );
             },
           );
@@ -125,7 +125,7 @@ class IncomeSettingsScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'income-settings-fab',
-        onPressed: () => _showAddIncomeSheet(context),
+        onPressed: () => showAddIncomeSheet(context),
         icon: const Icon(Icons.add),
         label: Text(l10n.incomeAddButton),
       ),
@@ -162,27 +162,29 @@ class IncomeSettingsScreen extends ConsumerWidget {
     }
     return '$every · ${l10n.labelValue(l10n.nextDate, fmt.formatDate(next))}';
   }
+}
 
-  void _showAddIncomeSheet(
-    BuildContext context, {
-    ScheduledTransaction? transaction,
-  }) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => AddIncomeSheet(
-          transaction: transaction,
-          scrollController: scrollController,
-        ),
+/// Opens the form for a new recurring income (or for editing [transaction])
+/// as a bottom sheet. Completes when the sheet is closed.
+Future<void> showAddIncomeSheet(
+  BuildContext context, {
+  ScheduledTransaction? transaction,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (context) => DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) => AddIncomeSheet(
+        transaction: transaction,
+        scrollController: scrollController,
       ),
-    );
-  }
+    ),
+  );
 }
 
 class AddIncomeSheet extends ConsumerStatefulWidget {
@@ -252,7 +254,9 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
         final accounts = await ref
             .read(accountRepositoryProvider)
             .getAllAccounts();
-        final first = accounts.where((a) => !a.isClosed).firstOrNull;
+        final first = accounts
+            .where((a) => !a.isClosed && !a.isPartners)
+            .firstOrNull;
         if (mounted && first != null && _selectedAccountId == null) {
           setState(() => _selectedAccountId = first.id);
         }

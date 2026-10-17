@@ -36,6 +36,7 @@ Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
                 await ref
                     .read(budgetingServiceProvider)
                     .saveBudgetTemplate(name, month);
+                ref.invalidate(budgetTemplatesProvider);
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -96,6 +97,7 @@ Future<void> showApplyTemplateDialog(
                     await ref
                         .read(budgetingServiceProvider)
                         .deleteTemplate(template.id);
+                    ref.invalidate(budgetTemplatesProvider);
                     if (context.mounted) {
                       Navigator.pop(context);
                     }

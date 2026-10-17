@@ -56,6 +56,7 @@ String syncFieldLabel(AppLocalizations l10n, String column) => switch (column) {
   'amount' => l10n.amount,
   'budgeted' => l10n.budgeted,
   'starting_balance' => l10n.startingBalanceLabel,
+  'shared_balance' => l10n.accountBalanceLabel,
   'target_amount' => l10n.goalTarget,
   'date' => l10n.date,
   'month' => l10n.month,
@@ -84,6 +85,7 @@ const _moneyColumns = {
   'amount',
   'budgeted',
   'starting_balance',
+  'shared_balance',
   'target_amount',
 };
 

@@ -3,6 +3,7 @@ import 'package:ledger_zero/presentation/screens/settings/income/income_settings
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
@@ -67,24 +68,23 @@ final pendingLocationProvider = Provider<PendingLocation>(
   (ref) => PendingLocation(),
 );
 
-/// The app's router. Rebuilt on every lock state change, so locking drops the
-/// navigation stack; a new unlocked router starts at the pending deep link,
-/// if any, else at Home.
+/// The app's router. Rebuilt when onboarding starts or ends and on the first
+/// unlock after start-up; that router starts at the pending deep link, if
+/// any, else at Home. A later app lock does not rebuild it: `LockOverlay`
+/// covers the app, so the navigation stack (tab, open screen, unsaved
+/// form) survives the lock.
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final (isOnboarded, isAuthenticated) = ref.watch(
+    authProvider.select((s) => (s.isOnboarded, s.hasUnlocked)),
+  );
   final pending = ref.watch(pendingLocationProvider);
   final initialLocation =
-      (authState.isOnboarded && authState.isAuthenticated
-          ? pending.take()
-          : null) ??
-      '/';
+      (isOnboarded && isAuthenticated ? pending.take() : null) ?? '/';
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: initialLocation,
     redirect: (context, state) {
-      final isOnboarded = authState.isOnboarded;
-      final isAuthenticated = authState.isAuthenticated;
       final isGoingToOnboarding = state.matchedLocation.startsWith(
         '/onboarding',
       );
@@ -226,7 +226,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'user-guide',
                 name: 'user-guide',
-                builder: (context, state) => const UserGuideScreen(),
+                builder: (context, state) => UserGuideScreen(
+                  initialChapter: GuideChapter.tryParse(
+                    state.uri.queryParameters['chapter'],
+                  ),
+                ),
               ),
             ],
           ),

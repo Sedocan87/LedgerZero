@@ -108,6 +108,8 @@ final scheduledTransactionServiceProvider =
             ref.read(settingsProvider).scheduledTransactionNotifications,
         formatAmount: (minor) =>
             ref.read(appFormatterProvider).formatMoney(minor.abs()),
+        defaultMemo: () =>
+            appLocalizationsFor(ref).scheduledTransactionDefaultMemo,
         reminderText: (amountText) {
           final l10n = appLocalizationsFor(ref);
           return (

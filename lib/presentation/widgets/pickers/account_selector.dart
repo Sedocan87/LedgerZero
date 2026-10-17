@@ -13,7 +13,7 @@ class AccountSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accountsAsync = ref.watch(accountsProvider);
+    final accountsAsync = ref.watch(writableAccountsProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return DraggableScrollableSheet(

@@ -7,6 +7,8 @@ import 'package:ledger_zero/services/sync/format/sync_change.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/domain/services/budgeting_service.dart';
 
 /// A change file that cannot be applied (unknown table or column, a
 /// constraint that cannot be resolved, ...). The file is quarantined.
@@ -326,6 +328,9 @@ class ChangeApplier {
         SyncSchema.contentKey(incoming.row)) {
       return;
     }
+    if (table == 'budgets' && _isAutomaticFill(local)) {
+      return; // nothing the user decided was lost
+    }
     await _db.syncDao.addConflict(
       SyncConflictsCompanion.insert(
         syncTable: table,
@@ -339,6 +344,23 @@ class ChangeApplier {
       ),
     );
     result.conflicts++;
+  }
+
+  /// A budget amount the new-month fill wrote on this phone (stamped with
+  /// [BudgetingService.automaticFillStamp] of its month).
+  static bool _isAutomaticFill(_Local local) {
+    final month = local.row?['month'];
+    if (month is! String) {
+      return false;
+    }
+    try {
+      final stamp = BudgetingService.automaticFillStamp(
+        CalendarDate.parseMonthKey(month),
+      );
+      return local.version == stamp.microsecondsSinceEpoch;
+    } catch (_) {
+      return false; // malformed month key
+    }
   }
 
   Future<void> _upsert(SyncedTable table, Map<String, Object?> row) async {

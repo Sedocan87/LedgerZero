@@ -231,7 +231,7 @@ class NotificationCaptureService {
     final account = source?.accountId == null
         ? null
         : accounts[source!.accountId];
-    if (account == null || account.isClosed) {
+    if (account == null || account.isClosed || account.isPartners) {
       return CaptureHoldReason.noAccount;
     }
     if (!currencyMatches(parse.currency, account.currency)) {

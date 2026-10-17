@@ -42,6 +42,10 @@ class ScheduledTransactionService {
   /// locale; the default is a plain number.
   final String Function(int minor)? _formatAmount;
 
+  /// Localised memo for generated occurrences without memo and payee (the
+  /// default of [processDueTransactions]'s `fallbackMemo`).
+  final String Function()? _defaultMemo;
+
   ScheduledTransactionService(
     this._scheduledTransactionRepository,
     this._transactionRepository,
@@ -52,6 +56,7 @@ class ScheduledTransactionService {
     bool Function()? showAmountsInNotifications,
     bool Function()? remindersEnabled,
     this._formatAmount,
+    this._defaultMemo,
   }) : _showAmounts = showAmountsInNotifications ?? _never,
        _remindersEnabled = remindersEnabled ?? _always;
 
@@ -77,7 +82,8 @@ class ScheduledTransactionService {
   }
 
   /// Validates and stores [schedule] (created when [isNew], otherwise
-  /// updated) and schedules its reminder.
+  /// updated), books its occurrences that are already due (e.g. a salary
+  /// whose next date is today) and schedules its reminder.
   Future<void> saveScheduledTransaction(
     ScheduledTransaction schedule, {
     required bool isNew,
@@ -92,7 +98,11 @@ class ScheduledTransactionService {
         schedule,
       );
     }
-    await _syncReminder(schedule);
+    await processDueTransactions();
+    // Catching up may have advanced the schedule.
+    final stored = await _scheduledTransactionRepository
+        .getScheduledTransactionById(schedule.id);
+    await _syncReminder(stored ?? schedule);
   }
 
   /// Skips the next occurrence of [scheduledId] (same advance step as
@@ -147,6 +157,7 @@ class ScheduledTransactionService {
     DateTime? today,
   }) async {
     Logger.info('Processing due scheduled transactions...');
+    fallbackMemo ??= _defaultMemo?.call();
     var processedCount = 0;
     try {
       // Scheduled dates are calendar days stored as UTC midnight.

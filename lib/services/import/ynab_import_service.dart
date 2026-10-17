@@ -748,6 +748,8 @@ class YnabImportService {
       case 'MerchantAccount':
       case 'PayPal':
         return AccountType.cash;
+      case 'InvestmentAccount':
+        return AccountType.investment;
       default:
         return AccountType.checking; // Default
     }
@@ -921,6 +923,11 @@ class YnabImportService {
     }
     if (normalized.contains('cash')) {
       return AccountType.cash;
+    }
+    if (normalized.contains('invest') ||
+        normalized.contains('brokerage') ||
+        normalized.contains('retirement')) {
+      return AccountType.investment;
     }
     return AccountType.checking; // Default
   }
