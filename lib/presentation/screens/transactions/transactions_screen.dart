@@ -289,16 +289,24 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return Dismissible(
       key: Key(tx.id),
       background: Container(
-        color: Colors.red,
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.error,
+          borderRadius: BorderRadius.circular(14),
+        ),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20.0),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       secondaryBackground: Container(
-        color: Colors.green,
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2E7D32),
+          borderRadius: BorderRadius.circular(14),
+        ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20.0),
-        child: const Icon(Icons.check, color: Colors.white),
+        child: const Icon(Icons.check_rounded, color: Colors.white),
       ),
       // The row is never removed by the Dismissible itself: the list
       // updates from the database once the service has written.

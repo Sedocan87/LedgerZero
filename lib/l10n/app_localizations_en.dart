@@ -3528,4 +3528,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moveMoneyDone => 'Money moved';
+
+  @override
+  String get accountOnBudgetLabel => 'Include in budget';
+
+  @override
+  String get accountOnBudgetHelper =>
+      'Turn off for savings or investments you don\'t want to budget. They still count towards your net worth.';
+
+  @override
+  String get accountOnBudgetChangeTitle => 'Change what you budget?';
+
+  @override
+  String get accountOnBudgetChangeOff =>
+      'This account\'s balance and transactions will no longer count towards To Be Budgeted, in every month. Transfers between it and your budget accounts will move money out of or into your budget.';
+
+  @override
+  String get accountOnBudgetChangeOn =>
+      'This account\'s balance and transactions will count towards To Be Budgeted again, in every month.';
+
+  @override
+  String get accountOffBudgetBadge => 'Off budget';
+
+  @override
+  String get offBudgetTransactionHint =>
+      'This account is off budget: its transactions don\'t change your categories or To Be Budgeted.';
+
+  @override
+  String get homeBalanceInBudget => 'In budget accounts';
+
+  @override
+  String homeBalancePage(int page, int pages) {
+    return '$page of $pages';
+  }
+
+  @override
+  String get homeBalanceNext => 'Show next total';
+
+  @override
+  String get transferCategoryHint =>
+      'Optional. Without a category the money comes out of, or goes into, To Be Budgeted.';
+
+  @override
+  String get seedGroupSavings => 'Savings & Investments';
+
+  @override
+  String get seedCatStocks => 'Stocks & ETFs';
+
+  @override
+  String get seedCatCrypto => 'Crypto';
+
+  @override
+  String get seedCatBonds => 'Bonds';
+
+  @override
+  String get seedCatRetirement => 'Retirement';
+
+  @override
+  String get savingsOfferTitle => 'Set money aside?';
+
+  @override
+  String get savingsOfferBody =>
+      'Add a Savings & Investments group: Cash Reserve, Stocks & ETFs, Crypto, Bonds and Retirement. Money you assign there stays out of To Be Budgeted and carries over every month, e.g. a cash reserve you always keep. To invest, transfer it to your off-budget brokerage account using the category.';
+
+  @override
+  String get savingsOfferAdd => 'Add categories';
+
+  @override
+  String get savingsOfferDismiss => 'No thanks';
+
+  @override
+  String get savingsOfferAdded => 'Savings & Investments categories added';
+
+  @override
+  String get seedCatCashReserve => 'Cash Reserve';
 }

@@ -5988,6 +5988,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Money moved'**
   String get moveMoneyDone;
+
+  /// Switch on the account form: whether the account counts towards To Be Budgeted
+  ///
+  /// In en, this message translates to:
+  /// **'Include in budget'**
+  String get accountOnBudgetLabel;
+
+  /// Helper text under the Include in budget switch
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off for savings or investments you don\'t want to budget. They still count towards your net worth.'**
+  String get accountOnBudgetHelper;
+
+  /// Title of the dialog confirming a change of an account's Include in budget setting
+  ///
+  /// In en, this message translates to:
+  /// **'Change what you budget?'**
+  String get accountOnBudgetChangeTitle;
+
+  /// Dialog text when an existing account is taken out of the budget
+  ///
+  /// In en, this message translates to:
+  /// **'This account\'s balance and transactions will no longer count towards To Be Budgeted, in every month. Transfers between it and your budget accounts will move money out of or into your budget.'**
+  String get accountOnBudgetChangeOff;
+
+  /// Dialog text when an existing account is put back into the budget
+  ///
+  /// In en, this message translates to:
+  /// **'This account\'s balance and transactions will count towards To Be Budgeted again, in every month.'**
+  String get accountOnBudgetChangeOn;
+
+  /// Badge on an account card for an account that does not count towards the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Off budget'**
+  String get accountOffBudgetBadge;
+
+  /// Hint on the transaction form instead of the category field when the account is off budget
+  ///
+  /// In en, this message translates to:
+  /// **'This account is off budget: its transactions don\'t change your categories or To Be Budgeted.'**
+  String get offBudgetTransactionHint;
+
+  /// Home banner page: total balance of the accounts that count towards the budget
+  ///
+  /// In en, this message translates to:
+  /// **'In budget accounts'**
+  String get homeBalanceInBudget;
+
+  /// Screen reader label of the home banner page indicator
+  ///
+  /// In en, this message translates to:
+  /// **'{page} of {pages}'**
+  String homeBalancePage(int page, int pages);
+
+  /// Screen reader action of the home banner: tapping it shows the next total (To Be Budgeted, net worth, ...)
+  ///
+  /// In en, this message translates to:
+  /// **'Show next total'**
+  String get homeBalanceNext;
+
+  /// Hint under the category field of a transfer between a budget account and an off-budget account
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Without a category the money comes out of, or goes into, To Be Budgeted.'**
+  String get transferCategoryHint;
+
+  /// Default category group for money set aside (cash reserve, investments)
+  ///
+  /// In en, this message translates to:
+  /// **'Savings & Investments'**
+  String get seedGroupSavings;
+
+  /// Default category (Investments group)
+  ///
+  /// In en, this message translates to:
+  /// **'Stocks & ETFs'**
+  String get seedCatStocks;
+
+  /// Default category (Investments group)
+  ///
+  /// In en, this message translates to:
+  /// **'Crypto'**
+  String get seedCatCrypto;
+
+  /// Default category (Investments group)
+  ///
+  /// In en, this message translates to:
+  /// **'Bonds'**
+  String get seedCatBonds;
+
+  /// Default category (Investments group): private pension / retirement savings
+  ///
+  /// In en, this message translates to:
+  /// **'Retirement'**
+  String get seedCatRetirement;
+
+  /// Title of the one-time card on the budget screen offering the Investments category group
+  ///
+  /// In en, this message translates to:
+  /// **'Set money aside?'**
+  String get savingsOfferTitle;
+
+  /// Body of the one-time Investments offer card
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Savings & Investments group: Cash Reserve, Stocks & ETFs, Crypto, Bonds and Retirement. Money you assign there stays out of To Be Budgeted and carries over every month, e.g. a cash reserve you always keep. To invest, transfer it to your off-budget brokerage account using the category.'**
+  String get savingsOfferBody;
+
+  /// Button: add the Investments category group
+  ///
+  /// In en, this message translates to:
+  /// **'Add categories'**
+  String get savingsOfferAdd;
+
+  /// Button: dismiss the Investments offer for good
+  ///
+  /// In en, this message translates to:
+  /// **'No thanks'**
+  String get savingsOfferDismiss;
+
+  /// Snack bar after adding the Investments group
+  ///
+  /// In en, this message translates to:
+  /// **'Savings & Investments categories added'**
+  String get savingsOfferAdded;
+
+  /// Default category (Savings & Investments group): cash the user always keeps, budgeted once
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Reserve'**
+  String get seedCatCashReserve;
 }
 
 class _AppLocalizationsDelegate

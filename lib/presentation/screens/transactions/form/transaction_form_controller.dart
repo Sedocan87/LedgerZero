@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
@@ -63,6 +64,20 @@ class TransactionFormController extends ChangeNotifier {
 
   bool get isTransfer => formType == TransactionFormType.transfer;
   bool get isEditing => editingId != null;
+
+  /// Whether the transaction can have a category, given [accounts] (id ->
+  /// account). Categories only exist in the budget: a transaction of an
+  /// off-budget account has none, and a transfer has one only when it moves
+  /// money out of or into the budget (exactly one side off budget).
+  bool categoryAllowed(Map<String, Account> accounts) {
+    bool? onBudget(String? id) => accounts[id]?.onBudget;
+    if (isTransfer) {
+      final from = onBudget(accountId);
+      final to = onBudget(transferAccountId);
+      return from != null && to != null && from != to;
+    }
+    return onBudget(accountId) ?? true;
+  }
 
   /// Notifies listeners after a field changed.
   void changed() => notifyListeners();
@@ -229,9 +244,13 @@ class TransactionFormController extends ChangeNotifier {
   }
 
   /// Converts the form into a service input, or returns the first problem.
+  ///
+  /// [categoryAllowed] is [TransactionFormController.categoryAllowed] for
+  /// the current accounts; without it the category is dropped.
   ({TransactionInput? input, TransactionFormError? error}) buildInput(
-    AppFormatter fmt,
-  ) {
+    AppFormatter fmt, {
+    bool categoryAllowed = true,
+  }) {
     final amount = signedAmount(fmt);
     if (amount == null) {
       return (input: null, error: TransactionFormError.invalidAmount);
@@ -284,7 +303,7 @@ class TransactionFormController extends ChangeNotifier {
         newPayeeName: isTransfer || payeeId != null || payeeName.isEmpty
             ? null
             : payeeName,
-        categoryId: isTransfer || isSplit ? null : categoryId,
+        categoryId: isSplit || !categoryAllowed ? null : categoryId,
         memo: memoController.text.isEmpty ? null : memoController.text,
         cleared: cleared,
         transferAccountId: isTransfer ? transferAccountId : null,

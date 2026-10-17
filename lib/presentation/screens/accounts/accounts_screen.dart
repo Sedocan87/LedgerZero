@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/account_card.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_sort_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_filter_provider.dart';
 
@@ -126,18 +127,91 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               onAction: () => context.push('/accounts/add?first=1'),
             );
           }
+          final currencies = accounts.map((a) => a.currency).toSet();
+          final showTotalBanner =
+              accounts.length > 1 && currencies.length == 1;
+          final totalBalance = showTotalBanner
+              ? accounts.fold<int>(0, (sum, a) => sum + a.balance)
+              : 0;
+
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                itemCount: accounts.length,
+                padding: const EdgeInsets.fromLTRB(
+                  0,
+                  AppSpacing.sm,
+                  0,
+                  88,
+                ),
+                itemCount: accounts.length + (showTotalBanner ? 1 : 0),
                 itemBuilder: (context, index) {
-                  final account = accounts[index];
+                  if (showTotalBanner && index == 0) {
+                    final scheme = Theme.of(context).colorScheme;
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                      ),
+                      child: Card(
+                        color: scheme.primaryContainer,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.xl),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  l10n.netWorth,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        color: scheme.onPrimaryContainer,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    ref
+                                        .watch(appFormatterProvider)
+                                        .formatMoney(
+                                          totalBalance,
+                                          currencyCode: currencies.first,
+                                        ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(
+                                          color: scheme.onPrimaryContainer,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  final account =
+                      accounts[index - (showTotalBanner ? 1 : 0)];
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
-                      vertical: AppSpacing.xs,
+                      vertical: 5,
                     ),
                     child: AccountCard(
                       account: account,

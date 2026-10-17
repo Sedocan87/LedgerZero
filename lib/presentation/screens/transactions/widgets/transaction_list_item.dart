@@ -39,92 +39,149 @@ class TransactionListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fmt = ref.watch(appFormatterProvider);
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final isDark = theme.brightness == Brightness.dark;
     // Color coding
     final isIncome = transaction.amount >= 0;
-    final amountColor = isIncome ? AppColors.income : theme.colorScheme.error;
+    final amountColor = isIncome
+        ? (isDark ? Colors.green.shade300 : AppColors.income)
+        : (isDark ? Colors.red.shade300 : AppColors.expense);
 
-    return ListTile(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      selected: isSelected,
-      selectedTileColor: theme.colorScheme.primaryContainer.withValues(
-        alpha: 0.2,
-      ),
-      leading: isSelectionMode
-          ? Checkbox(value: isSelected, onChanged: (_) => onTap?.call())
-          : _buildClearedStatus(context, l10n),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              // Payee
-              payeeName ?? l10n.transactionNoPayee,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: Material(
+        color: isSelected
+            ? Color.alphaBlend(
+                scheme.primary.withValues(alpha: 0.12),
+                scheme.surfaceContainerLow,
+              )
+            : scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: isSelected
+                ? scheme.primary.withValues(alpha: 0.5)
+                : scheme.outlineVariant.withValues(alpha: 0.4),
           ),
-          const SizedBox(width: 8),
-          if (!transaction.approved) ...[
-            Tooltip(
-              message: l10n.transactionNotApproved,
-              child: Icon(
-                Icons.info_outline,
-                size: 16,
-                color: theme.colorScheme.tertiary,
-                semanticLabel: l10n.transactionNotApproved,
-              ),
-            ),
-            const SizedBox(width: 4),
-          ],
-          AmountText(
-            // Amount
-            transaction.amount,
-            currencyCode: currencyCode,
-            amountContext: AmountContext.transaction,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: amountColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          selected: isSelected,
+          contentPadding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
+          leading: isSelectionMode
+              ? Checkbox(value: isSelected, onChanged: (_) => onTap?.call())
+              : _buildClearedStatus(context, l10n),
+          title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  // Category
-                  categoryName ?? l10n.uncategorized,
-                  style: theme.textTheme.bodyMedium,
+                  // Payee
+                  payeeName ?? l10n.transactionNoPayee,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                // Date
-                fmt.formatDate(transaction.date),
-                style: theme.textTheme.bodySmall,
+              if (!transaction.approved) ...[
+                Tooltip(
+                  message: l10n.transactionNotApproved,
+                  child: Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: scheme.tertiary,
+                    semanticLabel: l10n.transactionNotApproved,
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
+              AmountText(
+                // Amount
+                transaction.amount,
+                currencyCode: currencyCode,
+                amountContext: AmountContext.transaction,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: amountColor,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
-          if (accountName != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              accountName!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontStyle: FontStyle.italic,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: scheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          // Category
+                          categoryName ?? l10n.uncategorized,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      // Date
+                      fmt.formatDate(transaction.date),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                if (accountName != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.account_balance_outlined,
+                        size: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          accountName!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

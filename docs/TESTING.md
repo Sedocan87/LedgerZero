@@ -66,7 +66,7 @@ What is covered where (main areas):
 | Transactions, transfers, splits, reconcile | `test/domain/services/transaction_service*_test.dart` |
 | Undo/redo of every recorded action | `test/domain/undo/undo_round_trip_test.dart` |
 | Deleting categories, groups, accounts, payees with dependants | `test/domain/services/{category,account,payee}_service_test.dart` |
-| Schema migrations v1, v14, v15, v16, v17 -> v18 (structure and data) | `test/database/migration_test.dart` |
+| Schema migrations v1, v14, v15, v16, v17, v18 -> v19 (structure and data) | `test/database/migration_test.dart` |
 | Encrypted database, key vault, unlock, password change | `test/data/database/`, `test/services/security/` |
 | Backup format, backup -> restore round trip | `test/services/backup/` |
 | CSV export -> import round trip, bank formats, YNAB import | `test/services/csv/`, `test/services/import/` |

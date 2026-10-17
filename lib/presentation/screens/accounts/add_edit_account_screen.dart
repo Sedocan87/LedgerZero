@@ -47,6 +47,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   String _selectedCurrency = defaultCurrencyCode;
   int _selectedColor = 0xFF4CAF50; // Default Green
   String _selectedIcon = 'Wallet';
+  bool _onBudget = true;
 
   bool _isLoading = false;
   Account? _existingAccount;
@@ -132,6 +133,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
       'currency': _selectedCurrency,
       'color': _selectedColor,
       'icon': _selectedIcon,
+      'onBudget': _onBudget,
     };
     await prefs.setString('draft_account_add', jsonEncode(data));
   }
@@ -161,6 +163,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           }
           if (data['icon'] != null) {
             _selectedIcon = data['icon'];
+          }
+          if (data['onBudget'] is bool) {
+            _onBudget = data['onBudget'];
           }
           _isFormDirty = true;
         });
@@ -201,6 +206,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           _selectedCurrency = account.currency;
           _selectedColor = account.color ?? 0xFF4CAF50;
           _selectedIcon = account.icon ?? 'Wallet';
+          _onBudget = account.onBudget;
           _isFormDirty = false;
         });
       }
@@ -218,9 +224,42 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     }
   }
 
+  /// Asks before an existing account moves into or out of the budget: it
+  /// changes To Be Budgeted in every month.
+  Future<bool> _confirmBudgetChange() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.accountOnBudgetChangeTitle),
+        content: Text(
+          _onBudget
+              ? l10n.accountOnBudgetChangeOn
+              : l10n.accountOnBudgetChangeOff,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.continueAction),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
   Future<void> _saveAccount() async {
     if (!_formKey.currentState!.validate()) {
       FormUtils.focusFirstError(context);
+      return;
+    }
+    if (_existingAccount != null &&
+        _existingAccount!.onBudget != _onBudget &&
+        !await _confirmBudgetChange()) {
       return;
     }
 
@@ -242,6 +281,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           type: _selectedType,
           currency: _selectedCurrency,
           startingBalance: startingBalance,
+          onBudget: _onBudget,
           color: _selectedColor,
           icon: _selectedIcon,
           updatedAt: DateTime.now().toUtc(),
@@ -254,6 +294,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           type: _selectedType,
           currency: _selectedCurrency,
           startingBalance: startingBalance,
+          onBudget: _onBudget,
           color: _selectedColor,
           icon: _selectedIcon,
           createdAt: DateTime.now().toUtc(),
@@ -442,7 +483,20 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                             }
                           },
                         ),
-                        const SizedBox(height: AppSpacing.md),
+                        const SizedBox(height: AppSpacing.sm),
+
+                        SwitchListTile(
+                          key: const Key('account.onBudget'),
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(l10n.accountOnBudgetLabel),
+                          subtitle: Text(l10n.accountOnBudgetHelper),
+                          value: _onBudget,
+                          onChanged: (value) {
+                            setState(() => _onBudget = value);
+                            _onFieldChange();
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
 
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

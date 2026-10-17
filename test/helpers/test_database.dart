@@ -98,6 +98,7 @@ class TestDatabase {
     domain.AccountType type = domain.AccountType.checking,
     String currency = 'USD',
     int startingBalance = 0,
+    bool onBudget = true,
   }) async {
     final account = domain.Account(
       id: id ?? _nextId('acc'),
@@ -105,6 +106,7 @@ class TestDatabase {
       type: type,
       currency: currency,
       startingBalance: startingBalance,
+      onBudget: onBudget,
     );
     await accounts.createAccount(account);
     return account;

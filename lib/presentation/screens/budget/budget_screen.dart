@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_template_dialogs.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_tutorial_banner.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/savings_categories_offer.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/month_selector.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
 import 'package:ledger_zero/presentation/screens/budget/budget_tutorial_manager.dart';
@@ -204,12 +205,13 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
                   child: ToBeBudgetedBanner(key: _tutorialKeys.tbb),
                 ),
               ),
               const SliverToBoxAdapter(child: _NoAccountsPrompt()),
               const SliverToBoxAdapter(child: BudgetTutorialBanner()),
+              const SliverToBoxAdapter(child: SavingsCategoriesOffer()),
               BudgetCategoryList(headerKey: _tutorialKeys.categoryList),
               // Bottom padding
               const SliverToBoxAdapter(child: SizedBox(height: 80)),
@@ -238,18 +240,39 @@ class _NoAccountsPrompt extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Card(
         key: const Key('budget.noAccounts'),
         color: scheme.secondaryContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: scheme.secondary.withValues(alpha: 0.25),
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.budgetNoAccountsMessage,
-                style: TextStyle(color: scheme.onSecondaryContainer),
+              Row(
+                children: [
+                  Icon(
+                    Icons.account_balance_outlined,
+                    size: 20,
+                    color: scheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l10n.budgetNoAccountsMessage,
+                      style: TextStyle(
+                        color: scheme.onSecondaryContainer,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               FilledButton.icon(

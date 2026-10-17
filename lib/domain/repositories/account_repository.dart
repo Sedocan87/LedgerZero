@@ -41,6 +41,6 @@ abstract class AccountRepository {
   /// only those dated on or before the calendar day [upTo].
   Future<int> getClearedBalance(String id, {DateTime? upTo});
 
-  /// Sum of the starting balances of all accounts (minor units).
-  Future<int> getTotalStartingBalance();
+  /// Sum of the starting balances of the on-budget accounts (minor units).
+  Future<int> getBudgetStartingBalance();
 }

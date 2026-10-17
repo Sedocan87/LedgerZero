@@ -1,3 +1,7 @@
+import 'package:ledger_zero/core/constants/default_categories.dart';
+import 'package:ledger_zero/core/constants/deterministic_id.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/reference_maintenance_repository.dart';
@@ -83,6 +87,53 @@ class CategoryService {
         await _maintenance.moveCategoriesToGroup(groupId, moveCategoriesTo);
       }
       await _categoryRepository.deleteCategoryGroup(groupId);
+    });
+  }
+
+  /// Adds the default group [englishGroup] (a key of
+  /// [DefaultCategories.groups]) with its categories, named by [nameOf] (the
+  /// app language), after the existing groups. Ids are the deterministic
+  /// default ids, so rows that already exist (added on another device, or
+  /// seeded) are kept and nothing is duplicated.
+  Future<void> addDefaultGroup(
+    String englishGroup,
+    String Function(String englishName) nameOf,
+  ) {
+    final names = DefaultCategories.groups[englishGroup];
+    if (names == null) {
+      throw ArgumentError.value(englishGroup, 'englishGroup');
+    }
+    return _unitOfWork.run(() async {
+      final now = DateTime.now().toUtc();
+      final groupId = DeterministicId.defaultGroup(englishGroup);
+      final groups = await _categoryRepository.getAllCategoryGroups();
+      if (!groups.any((g) => g.id == groupId)) {
+        final lastSort = groups
+            .map((g) => g.sortOrder ?? 0)
+            .fold<int>(-1, (a, b) => a > b ? a : b);
+        await _categoryRepository.createCategoryGroup(
+          CategoryGroup(
+            id: groupId,
+            name: nameOf(englishGroup),
+            sortOrder: lastSort + 1,
+            createdAt: now,
+          ),
+        );
+      }
+      for (final (index, name) in names.indexed) {
+        final id = DeterministicId.defaultCategory(englishGroup, name);
+        if (await _categoryRepository.getCategoryById(id) == null) {
+          await _categoryRepository.createCategory(
+            Category(
+              id: id,
+              name: nameOf(name),
+              categoryGroupId: groupId,
+              sortOrder: index,
+              createdAt: now,
+            ),
+          );
+        }
+      }
     });
   }
 }

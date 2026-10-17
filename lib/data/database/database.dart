@@ -30,6 +30,7 @@ import 'package:ledger_zero/data/database/daos/scheduled_transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/sync_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/pending_sync_changes_dao.dart';
+import 'package:ledger_zero/core/constants/default_categories.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
 
 // Explicit imports for types used in generated code
@@ -93,7 +94,7 @@ class AppDatabase extends _$AppDatabase {
   static String _englishName(String name) => name;
 
   /// The current schema version (also used to validate restored backups).
-  static const int currentSchemaVersion = 18;
+  static const int currentSchemaVersion = 19;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -206,6 +207,12 @@ class AppDatabase extends _$AppDatabase {
           // v18: quick-add keyword rules were never created by the app (no
           // UI); the table is dropped. It was never synced.
           await customStatement('DROP TABLE IF EXISTS parsing_rules');
+        }
+        if (from < 19) {
+          // v19: off-budget (tracking) accounts. Existing accounts stay in
+          // the budget. The v15 step rebuilds accounts from the current
+          // definition, so the column may already exist.
+          await _addMissingColumns(m, accounts);
         }
       },
       beforeOpen: (details) async {
@@ -563,33 +570,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _seedDefaultCategories() async {
     final now = seedTimestamp;
 
-    // Define defaults
-    final defaults = {
-      'Immediate Obligations': [
-        'Rent/Mortgage',
-        'Electric',
-        'Water',
-        'Internet',
-        'Groceries',
-        'Transportation',
-      ],
-      'True Expenses': [
-        'Medical',
-        'Auto Maintenance',
-        'Home Maintenance',
-        'Renter\'s/Home Insurance',
-        'Software Subscriptions',
-      ],
-      'Debt Payments': ['Student Loan', 'Car Payment', 'Credit Card'],
-      'Quality of Life': [
-        'Vacation',
-        'Fitness',
-        'Education',
-        'Dining Out',
-        'Entertainment',
-      ],
-      'Just for Fun': ['Gaming', 'Music', 'Fun Money'],
-    };
+    const defaults = DefaultCategories.groups;
 
     int groupSort = 0;
 

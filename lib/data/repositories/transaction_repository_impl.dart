@@ -198,6 +198,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     DateTime end, {
     bool excludeSplitParents = false,
     bool excludeSplitChildren = false,
+    bool onBudgetOnly = false,
   }) async {
     try {
       final transactions = await _transactionsDao.getTransactionsByDateRange(
@@ -205,6 +206,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         end,
         excludeSplitParents: excludeSplitParents,
         excludeSplitChildren: excludeSplitChildren,
+        onBudgetOnly: onBudgetOnly,
       );
       return transactions.map(_mapToDomain).toList();
     } catch (e, stackTrace) {

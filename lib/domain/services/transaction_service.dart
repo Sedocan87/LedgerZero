@@ -5,6 +5,7 @@ import 'package:ledger_zero/domain/services/transaction_service_types.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
@@ -33,7 +34,11 @@ typedef TransactionSavedHook =
 /// * A split is a parent (account-side amount, no category) plus children
 ///   (categories) whose amounts add up to the parent. Children are diffed
 ///   by id on edit (their cleared/reconciled state and ids survive).
-/// * Transfer legs and split parents never carry a category.
+/// * Split parents never carry a category. A transfer carries one only
+///   when it crosses the budget boundary (one account on budget, the other
+///   off budget, see docs/BUDGETING_RULES.md): then the input's category is
+///   stored on the on-budget leg, so the money moves from that category
+///   instead of To Be Budgeted. Any other transfer has no category.
 /// * Deleting any row of a transfer or split deletes the whole group;
 ///   undo restores the whole group.
 /// * Changing or deleting a reconciled row requires
@@ -44,6 +49,7 @@ class TransactionService {
   TransactionService({
     required this._transactionRepository,
     required this._payeeRepository,
+    required this._accountRepository,
     required this._undoService,
     required this._unitOfWork,
     this._ruleMatchingService,
@@ -53,6 +59,7 @@ class TransactionService {
 
   final TransactionRepository _transactionRepository;
   final PayeeRepository _payeeRepository;
+  final AccountRepository _accountRepository;
   final UndoService _undoService;
   final UnitOfWork _unitOfWork;
   final RuleMatchingService? _ruleMatchingService;
@@ -185,6 +192,7 @@ class TransactionService {
     final payeeId = input.isTransfer ? null : await _resolvePayee(input);
     final primaryId = existing?.id ?? _uuid.v4();
     final written = <Transaction>[];
+    final transferCategory = await _transferCategory(input);
 
     // Transfer counterpart.
     String? counterpartId;
@@ -203,6 +211,7 @@ class TransactionService {
               ? counterpart!.cleared
               : TransactionClearStatus.uncleared,
           approved: input.approved,
+          categoryId: transferCategory.counterpart,
           transferAccountId: input.accountId,
           transferTransactionId: primaryId,
           createdAt: counterpart?.createdAt ?? now,
@@ -219,7 +228,9 @@ class TransactionService {
       date: date,
       amount: input.amount,
       payeeId: payeeId,
-      categoryId: (input.isTransfer || input.isSplit) ? null : input.categoryId,
+      categoryId: input.isTransfer
+          ? transferCategory.primary
+          : (input.isSplit ? null : input.categoryId),
       memo: input.memo,
       cleared: input.cleared,
       approved: input.approved,
@@ -275,6 +286,28 @@ class TransactionService {
       after: {for (final t in written) t.id: t},
     );
     return TransactionSaveResult(primaryId, action);
+  }
+
+  /// Where the category of a transfer [input] goes: on the leg in the
+  /// on-budget account when exactly one of the two accounts is on budget;
+  /// nowhere otherwise (and for anything that is not a transfer).
+  Future<({String? primary, String? counterpart})> _transferCategory(
+    TransactionInput input,
+  ) async {
+    final categoryId = input.categoryId;
+    if (!input.isTransfer || categoryId == null) {
+      return (primary: null, counterpart: null);
+    }
+    final from = await _accountRepository.getAccountById(input.accountId);
+    final to = await _accountRepository.getAccountById(
+      input.transferAccountId!,
+    );
+    if (from == null || to == null || from.onBudget == to.onBudget) {
+      return (primary: null, counterpart: null);
+    }
+    return from.onBudget
+        ? (primary: categoryId, counterpart: null)
+        : (primary: null, counterpart: categoryId);
   }
 
   Transaction _deleted(Transaction t, DateTime now) =>

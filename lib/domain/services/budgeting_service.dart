@@ -56,18 +56,21 @@ class BudgetingService {
 
   /// Calculates "To Be Budgeted" (TBB) at the end of [targetMonth]:
   ///
-  /// TBB = SUM(starting balances of all accounts)
-  ///     + SUM(uncategorised, non-transfer, non-split-parent rows up to the
-  ///       end of the month, both signs)
+  /// TBB = SUM(starting balances of the on-budget accounts)
+  ///     + SUM(uncategorised, non-split-parent rows of on-budget accounts up
+  ///       to the end of the month, both signs, transfer legs only when the
+  ///       other account is off-budget)
   ///     - SUM(budgeted up to and including the month).
   ///
   /// Uncategorised outflows (and reconciliation adjustments) therefore
-  /// reduce TBB, starting balances are budgetable, and transfers between
-  /// accounts do not change it.
+  /// reduce TBB, starting balances are budgetable, transfers between
+  /// on-budget accounts do not change it, and off-budget (tracking)
+  /// accounts only matter when money moves to or from them.
   Future<int> calculateTBB(DateTime targetMonth) async {
     final nextMonthStart = CalendarDate.endOfMonthUtc(targetMonth);
 
-    final startingBalances = await _accountRepository.getTotalStartingBalance();
+    final startingBalances = await _accountRepository
+        .getBudgetStartingBalance();
     final readyToAssign = await _transactionRepository.getReadyToAssignSum(
       CalendarDate.beginningOfTime,
       nextMonthStart,

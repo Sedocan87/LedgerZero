@@ -93,6 +93,7 @@ void main() {
             start,
             DateTime.utc(2025, 1, 1),
             excludeSplitParents: true,
+            onBudgetOnly: true,
           ),
         ).thenAnswer((_) async => [t1, t2, t3, t4]);
 

@@ -30,7 +30,6 @@ class DashboardStatsCard extends StatelessWidget {
 
     return Expanded(
       child: Card(
-        // Theme handles shape/color
         // Read as one item: "<title>, <amount>".
         child: MergeSemantics(
           child: Padding(
@@ -41,12 +40,14 @@ class DashboardStatsCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: iconColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
+                        color: iconColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.sm + 2),
                       ),
-                      child: Icon(icon, color: iconColor, size: 20),
+                      alignment: Alignment.center,
+                      child: Icon(icon, color: iconColor, size: 18),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
@@ -54,6 +55,7 @@ class DashboardStatsCard extends StatelessWidget {
                         title,
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -61,13 +63,17 @@ class DashboardStatsCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
-                AmountText(
-                  amount,
-                  currencyCode: currencyCode,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    // M3 Style
-                    color: amountColor ?? theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: AmountText(
+                    amount,
+                    currencyCode: currencyCode,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: amountColor ?? theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                 ),
               ],

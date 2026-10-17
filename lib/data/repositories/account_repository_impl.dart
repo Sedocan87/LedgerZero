@@ -138,9 +138,9 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
-  Future<int> getTotalStartingBalance() async {
+  Future<int> getBudgetStartingBalance() async {
     try {
-      return await _accountsDao.getTotalStartingBalance();
+      return await _accountsDao.getBudgetStartingBalance();
     } catch (e, stackTrace) {
       Logger.error('Failed to sum starting balances', e, stackTrace);
       throw DatabaseException('Failed to sum starting balances', e);
@@ -160,6 +160,7 @@ class AccountRepositoryImpl implements AccountRepository {
       startingBalance: account.startingBalance,
       balance: row.balance,
       isClosed: account.isClosed,
+      onBudget: account.onBudget,
       color: account.color,
       icon: account.icon,
       notes: account.notes,
@@ -181,6 +182,7 @@ class AccountRepositoryImpl implements AccountRepository {
       currency: Value(account.currency),
       startingBalance: Value(account.startingBalance),
       isClosed: Value(account.isClosed),
+      onBudget: Value(account.onBudget),
       color: Value(account.color),
       icon: Value(account.icon),
       notes: Value(account.notes),

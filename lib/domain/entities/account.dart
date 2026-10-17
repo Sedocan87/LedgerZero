@@ -42,6 +42,10 @@ class Account {
   /// Whether the account is closed.
   final bool isClosed;
 
+  /// Whether the account belongs to the budget. An off-budget (tracking)
+  /// account counts towards net worth only; see docs/BUDGETING_RULES.md.
+  final bool onBudget;
+
   /// The color of the account.
   final int? color;
 
@@ -66,6 +70,7 @@ class Account {
     this.startingBalance = 0,
     this.balance = 0,
     this.isClosed = false,
+    this.onBudget = true,
     this.color,
     this.icon,
     this.notes,
@@ -82,6 +87,7 @@ class Account {
     int? startingBalance,
     int? balance,
     bool? isClosed,
+    bool? onBudget,
     int? color,
     String? icon,
     String? notes,
@@ -96,6 +102,7 @@ class Account {
       startingBalance: startingBalance ?? this.startingBalance,
       balance: balance ?? this.balance,
       isClosed: isClosed ?? this.isClosed,
+      onBudget: onBudget ?? this.onBudget,
       color: color ?? this.color,
       icon: icon ?? this.icon,
       notes: notes ?? this.notes,
@@ -114,6 +121,7 @@ class Account {
       startingBalance: (json['starting_balance'] as num?)?.toInt() ?? 0,
       balance: (json['balance'] as num?)?.toInt() ?? 0,
       isClosed: json['is_closed'] as bool? ?? false,
+      onBudget: json['on_budget'] as bool? ?? true,
       color: json['color'] as int?,
       icon: json['icon'] as String?,
       notes: json['notes'] as String?,
@@ -136,6 +144,7 @@ class Account {
       'starting_balance': startingBalance,
       'balance': balance,
       'is_closed': isClosed,
+      'on_budget': onBudget,
       'color': color,
       'icon': icon,
       'notes': notes,
@@ -158,6 +167,7 @@ class Account {
         other.startingBalance == startingBalance &&
         other.balance == balance &&
         other.isClosed == isClosed &&
+        other.onBudget == onBudget &&
         other.color == color &&
         other.icon == icon &&
         other.notes == notes &&
@@ -175,6 +185,7 @@ class Account {
       startingBalance,
       balance,
       isClosed,
+      onBudget,
       color,
       icon,
       notes,
@@ -185,7 +196,7 @@ class Account {
 
   @override
   String toString() {
-    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, balance: $balance, isClosed: $isClosed, color: $color, icon: $icon, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Account(id: $id, name: $name, type: $type, currency: $currency, startingBalance: $startingBalance, balance: $balance, isClosed: $isClosed, onBudget: $onBudget, color: $color, icon: $icon, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   /// Validates the [Account] entity.

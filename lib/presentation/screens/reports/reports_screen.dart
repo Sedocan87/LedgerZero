@@ -323,6 +323,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final dateRange = ref.watch(reportDateRangeProvider);
     final fmt = ref.watch(appFormatterProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -338,108 +339,123 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Date Range Display
-              Text(
-                '${fmt.formatDate(dateRange.start)} - ${fmt.formatDate(dateRange.end)}',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Date Range Capsule Banner
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: scheme.primary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.date_range_rounded,
+                            size: 16,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              '${fmt.formatDate(dateRange.start)} - ${fmt.formatDate(dateRange.end)}',
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(
+                                    color: scheme.onSurface,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-              const ReportNotesSection(),
-              const SizedBox(height: 32),
+                  const ReportNotesSection(),
+                  const SizedBox(height: 16),
 
-              // Spending Trends (Compare Months)
-              _SectionTitle(l10n.spendingTrends),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _chartKeys[ReportType.spendingTrends],
-                child: Container(
-                  color: Theme.of(
-                    context,
-                  ).scaffoldBackgroundColor, // Ensure background is captured
-                  child: _SpendingTrendsChart(),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  // Spending Trends (Compare Months)
+                  _ReportCard(
+                    title: l10n.spendingTrends,
+                    icon: Icons.trending_up_rounded,
+                    repaintKey: _chartKeys[ReportType.spendingTrends],
+                    child: _SpendingTrendsChart(),
+                  ),
+                  const SizedBox(height: 16),
 
-              // Spending by Category (Bar Chart)
-              _SectionTitle(l10n.spendingByCategory),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _chartKeys[ReportType.spendingByCategory],
-                child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: _SpendingChart(),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  // Spending by Category (Bar Chart)
+                  _ReportCard(
+                    title: l10n.spendingByCategory,
+                    icon: Icons.bar_chart_rounded,
+                    repaintKey: _chartKeys[ReportType.spendingByCategory],
+                    child: _SpendingChart(),
+                  ),
+                  const SizedBox(height: 16),
 
-              // Category Breakdown (Pie Chart)
-              _SectionTitle(l10n.categoryBreakdown),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _chartKeys[ReportType.categoryBreakdown],
-                child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: _CategoryPieChart(),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  // Category Breakdown (Pie Chart)
+                  _ReportCard(
+                    title: l10n.categoryBreakdown,
+                    icon: Icons.pie_chart_outline_rounded,
+                    repaintKey: _chartKeys[ReportType.categoryBreakdown],
+                    child: _CategoryPieChart(),
+                  ),
+                  const SizedBox(height: 16),
 
-              // Income vs Expense
-              _SectionTitle(l10n.incomeVsExpense),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _chartKeys[ReportType.incomeVsExpense],
-                child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: _IncomeExpenseChart(),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  // Income vs Expense
+                  _ReportCard(
+                    title: l10n.incomeVsExpense,
+                    icon: Icons.swap_vert_rounded,
+                    repaintKey: _chartKeys[ReportType.incomeVsExpense],
+                    child: _IncomeExpenseChart(),
+                  ),
+                  const SizedBox(height: 16),
 
-              // Net Worth
-              _SectionTitle(l10n.netWorth),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _chartKeys[ReportType.netWorth],
-                child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: _NetWorthChart(),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  // Net Worth
+                  _ReportCard(
+                    title: l10n.netWorth,
+                    icon: Icons.account_balance_wallet_outlined,
+                    repaintKey: _chartKeys[ReportType.netWorth],
+                    child: _NetWorthChart(),
+                  ),
+                  const SizedBox(height: 16),
 
-              // Top Payees
-              _SectionTitle(l10n.topPayees),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _chartKeys[ReportType.topPayees],
-                child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: _TopPayeesList(),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  // Top Payees
+                  _ReportCard(
+                    title: l10n.topPayees,
+                    icon: Icons.storefront_outlined,
+                    repaintKey: _chartKeys[ReportType.topPayees],
+                    child: _TopPayeesList(),
+                  ),
+                  const SizedBox(height: 16),
 
-              // Budget vs Actual
-              _SectionTitle(l10n.budgetVsActual),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _chartKeys[ReportType.budgetVsActual],
-                child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  child: const BudgetVsActualChart(),
-                ),
+                  // Budget vs Actual
+                  _ReportCard(
+                    title: l10n.budgetVsActual,
+                    icon: Icons.compare_arrows_rounded,
+                    repaintKey: _chartKeys[ReportType.budgetVsActual],
+                    child: const BudgetVsActualChart(),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 32),
-            ],
+            ),
           ),
         ),
       ),
@@ -555,6 +571,61 @@ class _ExportDialogState extends State<_ExportDialog> {
   }
 }
 
+/// A modern card framing a report chart and its accessible heading.
+class _ReportCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Key? repaintKey;
+  final Widget child;
+
+  const _ReportCard({
+    required this.title,
+    required this.icon,
+    this.repaintKey,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: 18, color: scheme.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: _SectionTitle(title)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            RepaintBoundary(
+              key: repaintKey,
+              child: Container(
+                color: scheme.surfaceContainerLow,
+                child: child,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A report section heading, announced as a header by screen readers.
 class _SectionTitle extends StatelessWidget {
   final String title;
@@ -565,7 +636,13 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       header: true,
-      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
@@ -715,6 +792,7 @@ class _TopPayeesList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final payeesAsync = ref.watch(topPayeesProvider);
     final fmt = ref.watch(appFormatterProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return payeesAsync.when(
       data: (data) {
@@ -727,22 +805,55 @@ class _TopPayeesList extends ConsumerWidget {
           );
         }
 
-        return Card(
-          child: Column(
-            children: data.map((entry) {
-              return ListTile(
-                title: Text(entry.key),
+        return Column(
+          children: [
+            for (var i = 0; i < data.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  indent: 48,
+                  color: scheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 4,
+                  vertical: 2,
+                ),
+                leading: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${i + 1}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  data[i].key,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: Text(
-                  fmt.formatMoney(entry.value),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                  fmt.formatMoney(data[i].value),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
                   ),
                 ),
                 dense: true,
-              );
-            }).toList(),
-          ),
+              ),
+            ],
+          ],
         );
       },
       loading: () => const SizedBox(

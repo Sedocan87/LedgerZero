@@ -65,36 +65,48 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: (int index) {
-          widget.navigationShell.goBranch(
-            index,
-            initialLocation: index == widget.navigationShell.currentIndex,
-          );
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(AppIcons.home),
-            label: AppLocalizations.of(context)!.home,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.4),
+              width: 1,
+            ),
           ),
-          NavigationDestination(
-            icon: const Icon(AppIcons.budget),
-            label: AppLocalizations.of(context)!.budget,
-          ),
-          NavigationDestination(
-            icon: const Icon(AppIcons.accounts),
-            label: AppLocalizations.of(context)!.accounts,
-          ),
-          NavigationDestination(
-            icon: const Icon(AppIcons.transactions),
-            label: AppLocalizations.of(context)!.transactions,
-          ),
-          NavigationDestination(
-            icon: const Icon(AppIcons.reports),
-            label: AppLocalizations.of(context)!.reports,
-          ),
-        ],
+        ),
+        child: NavigationBar(
+          selectedIndex: widget.navigationShell.currentIndex,
+          onDestinationSelected: (int index) {
+            widget.navigationShell.goBranch(
+              index,
+              initialLocation: index == widget.navigationShell.currentIndex,
+            );
+          },
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(AppIcons.home),
+              label: AppLocalizations.of(context)!.home,
+            ),
+            NavigationDestination(
+              icon: const Icon(AppIcons.budget),
+              label: AppLocalizations.of(context)!.budget,
+            ),
+            NavigationDestination(
+              icon: const Icon(AppIcons.accounts),
+              label: AppLocalizations.of(context)!.accounts,
+            ),
+            NavigationDestination(
+              icon: const Icon(AppIcons.transactions),
+              label: AppLocalizations.of(context)!.transactions,
+            ),
+            NavigationDestination(
+              icon: const Icon(AppIcons.reports),
+              label: AppLocalizations.of(context)!.reports,
+            ),
+          ],
+        ),
       ),
     );
   }

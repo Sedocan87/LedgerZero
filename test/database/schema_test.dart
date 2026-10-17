@@ -14,8 +14,8 @@ void main() {
     await database.close();
   });
 
-  test('schema version should be 18', () {
-    expect(database.schemaVersion, 18);
+  test('schema version should be 19', () {
+    expect(database.schemaVersion, 19);
   });
 
   group('Database Tables Creation & Defaults', () {
@@ -35,6 +35,7 @@ void main() {
         expect(result.currency, 'USD'); // Default
         expect(result.startingBalance, 0); // Default
         expect(result.isClosed, false); // Default (0 -> false)
+        expect(result.onBudget, true); // Default (1 -> true)
         expect(result.color, isNull);
         expect(result.icon, isNull);
         expect(result.notes, isNull);

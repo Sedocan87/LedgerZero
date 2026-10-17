@@ -3558,4 +3558,79 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get moveMoneyDone => 'Betrag verschoben';
+
+  @override
+  String get accountOnBudgetLabel => 'Im Budget berücksichtigen';
+
+  @override
+  String get accountOnBudgetHelper =>
+      'Für Ersparnisse oder Geldanlagen ausschalten, die Sie nicht budgetieren möchten. Sie zählen weiterhin zu Ihrem Nettovermögen.';
+
+  @override
+  String get accountOnBudgetChangeTitle => 'Budget ändern?';
+
+  @override
+  String get accountOnBudgetChangeOff =>
+      'Saldo und Buchungen dieses Kontos zählen in keinem Monat mehr zu „Zu budgetieren“. Überweisungen zwischen diesem Konto und Ihren Budgetkonten bringen Geld aus dem Budget heraus oder hinein.';
+
+  @override
+  String get accountOnBudgetChangeOn =>
+      'Saldo und Buchungen dieses Kontos zählen in jedem Monat wieder zu „Zu budgetieren“.';
+
+  @override
+  String get accountOffBudgetBadge => 'Außerhalb des Budgets';
+
+  @override
+  String get offBudgetTransactionHint =>
+      'Dieses Konto ist außerhalb des Budgets: Seine Buchungen ändern weder Kategorien noch „Zu budgetieren“.';
+
+  @override
+  String get homeBalanceInBudget => 'Auf Budgetkonten';
+
+  @override
+  String homeBalancePage(int page, int pages) {
+    return '$page von $pages';
+  }
+
+  @override
+  String get homeBalanceNext => 'Nächste Summe anzeigen';
+
+  @override
+  String get transferCategoryHint =>
+      'Optional. Ohne Kategorie wird der Betrag „Zu budgetieren“ entnommen bzw. gutgeschrieben.';
+
+  @override
+  String get seedGroupSavings => 'Sparen & Geldanlage';
+
+  @override
+  String get seedCatStocks => 'Aktien & ETFs';
+
+  @override
+  String get seedCatCrypto => 'Krypto';
+
+  @override
+  String get seedCatBonds => 'Anleihen';
+
+  @override
+  String get seedCatRetirement => 'Altersvorsorge';
+
+  @override
+  String get savingsOfferTitle => 'Geld zurücklegen?';
+
+  @override
+  String get savingsOfferBody =>
+      'Fügen Sie eine Gruppe „Sparen & Geldanlage“ hinzu: Liquiditätsreserve, Aktien & ETFs, Krypto, Anleihen und Altersvorsorge. Geld, das Sie dort zuweisen, zählt nicht mehr zu „Zu budgetieren“ und wird jeden Monat übertragen, z. B. eine Reserve, die Sie immer behalten. Zum Investieren überweisen Sie es mit dieser Kategorie auf Ihr Depot außerhalb des Budgets.';
+
+  @override
+  String get savingsOfferAdd => 'Kategorien hinzufügen';
+
+  @override
+  String get savingsOfferDismiss => 'Nein, danke';
+
+  @override
+  String get savingsOfferAdded =>
+      'Kategorien für Sparen & Geldanlage hinzugefügt';
+
+  @override
+  String get seedCatCashReserve => 'Liquiditätsreserve';
 }

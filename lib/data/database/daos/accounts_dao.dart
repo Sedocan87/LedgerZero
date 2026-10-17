@@ -117,10 +117,12 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
     return row?.read<int>('b') ?? 0;
   }
 
-  /// Sum of all accounts' starting balances (minor units).
-  Future<int> getTotalStartingBalance() {
+  /// Sum of the on-budget accounts' starting balances (minor units).
+  Future<int> getBudgetStartingBalance() {
     final total = accounts.startingBalance.sum();
-    final query = selectOnly(accounts)..addColumns([total]);
+    final query = selectOnly(accounts)
+      ..where(accounts.onBudget.equals(true))
+      ..addColumns([total]);
     return query.map((row) => row.read(total) ?? 0).getSingle();
   }
 }

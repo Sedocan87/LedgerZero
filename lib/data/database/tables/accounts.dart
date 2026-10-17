@@ -11,6 +11,11 @@ class Accounts extends Table {
   /// account's non-deleted transactions that are not split children.
   IntColumn get startingBalance => integer().withDefault(const Constant(0))();
   BoolColumn get isClosed => boolean().withDefault(const Constant(false))();
+
+  /// Whether the account belongs to the budget (schema v19). An off-budget
+  /// (tracking) account counts towards net worth only: its starting
+  /// balance and transactions never reach To Be Budgeted or categories.
+  BoolColumn get onBudget => boolean().withDefault(const Constant(true))();
   IntColumn get color => integer().nullable()();
   TextColumn get icon => text().nullable()();
   TextColumn get notes => text().nullable()();

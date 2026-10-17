@@ -2810,5 +2810,101 @@
   "moveMoneyDone": "Money moved",
   "@moveMoneyDone": {
     "description": "Snack bar after moving budgeted money between categories (with an Undo action)"
+  },
+  "accountOnBudgetLabel": "Include in budget",
+  "@accountOnBudgetLabel": {
+    "description": "Switch on the account form: whether the account counts towards To Be Budgeted"
+  },
+  "accountOnBudgetHelper": "Turn off for savings or investments you don't want to budget. They still count towards your net worth.",
+  "@accountOnBudgetHelper": {
+    "description": "Helper text under the Include in budget switch"
+  },
+  "accountOnBudgetChangeTitle": "Change what you budget?",
+  "@accountOnBudgetChangeTitle": {
+    "description": "Title of the dialog confirming a change of an account's Include in budget setting"
+  },
+  "accountOnBudgetChangeOff": "This account's balance and transactions will no longer count towards To Be Budgeted, in every month. Transfers between it and your budget accounts will move money out of or into your budget.",
+  "@accountOnBudgetChangeOff": {
+    "description": "Dialog text when an existing account is taken out of the budget"
+  },
+  "accountOnBudgetChangeOn": "This account's balance and transactions will count towards To Be Budgeted again, in every month.",
+  "@accountOnBudgetChangeOn": {
+    "description": "Dialog text when an existing account is put back into the budget"
+  },
+  "accountOffBudgetBadge": "Off budget",
+  "@accountOffBudgetBadge": {
+    "description": "Badge on an account card for an account that does not count towards the budget"
+  },
+  "offBudgetTransactionHint": "This account is off budget: its transactions don't change your categories or To Be Budgeted.",
+  "@offBudgetTransactionHint": {
+    "description": "Hint on the transaction form instead of the category field when the account is off budget"
+  },
+  "homeBalanceInBudget": "In budget accounts",
+  "@homeBalanceInBudget": {
+    "description": "Home banner page: total balance of the accounts that count towards the budget"
+  },
+  "homeBalancePage": "{page} of {pages}",
+  "@homeBalancePage": {
+    "description": "Screen reader label of the home banner page indicator",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "homeBalanceNext": "Show next total",
+  "@homeBalanceNext": {
+    "description": "Screen reader action of the home banner: tapping it shows the next total (To Be Budgeted, net worth, ...)"
+  },
+  "transferCategoryHint": "Optional. Without a category the money comes out of, or goes into, To Be Budgeted.",
+  "@transferCategoryHint": {
+    "description": "Hint under the category field of a transfer between a budget account and an off-budget account"
+  },
+  "seedGroupSavings": "Savings & Investments",
+  "@seedGroupSavings": {
+    "description": "Default category group for money set aside (cash reserve, investments)"
+  },
+  "seedCatStocks": "Stocks & ETFs",
+  "@seedCatStocks": {
+    "description": "Default category (Investments group)"
+  },
+  "seedCatCrypto": "Crypto",
+  "@seedCatCrypto": {
+    "description": "Default category (Investments group)"
+  },
+  "seedCatBonds": "Bonds",
+  "@seedCatBonds": {
+    "description": "Default category (Investments group)"
+  },
+  "seedCatRetirement": "Retirement",
+  "@seedCatRetirement": {
+    "description": "Default category (Investments group): private pension / retirement savings"
+  },
+  "savingsOfferTitle": "Set money aside?",
+  "@savingsOfferTitle": {
+    "description": "Title of the one-time card on the budget screen offering the Investments category group"
+  },
+  "savingsOfferBody": "Add a Savings & Investments group: Cash Reserve, Stocks & ETFs, Crypto, Bonds and Retirement. Money you assign there stays out of To Be Budgeted and carries over every month, e.g. a cash reserve you always keep. To invest, transfer it to your off-budget brokerage account using the category.",
+  "@savingsOfferBody": {
+    "description": "Body of the one-time Investments offer card"
+  },
+  "savingsOfferAdd": "Add categories",
+  "@savingsOfferAdd": {
+    "description": "Button: add the Investments category group"
+  },
+  "savingsOfferDismiss": "No thanks",
+  "@savingsOfferDismiss": {
+    "description": "Button: dismiss the Investments offer for good"
+  },
+  "savingsOfferAdded": "Savings & Investments categories added",
+  "@savingsOfferAdded": {
+    "description": "Snack bar after adding the Investments group"
+  },
+  "seedCatCashReserve": "Cash Reserve",
+  "@seedCatCashReserve": {
+    "description": "Default category (Savings & Investments group): cash the user always keeps, budgeted once"
   }
 }

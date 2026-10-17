@@ -74,6 +74,21 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _onBudgetMeta = const VerificationMeta(
+    'onBudget',
+  );
+  @override
+  late final GeneratedColumn<bool> onBudget = GeneratedColumn<bool>(
+    'on_budget',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("on_budget" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _colorMeta = const VerificationMeta('color');
   @override
   late final GeneratedColumn<int> color = GeneratedColumn<int>(
@@ -131,6 +146,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     currency,
     startingBalance,
     isClosed,
+    onBudget,
     color,
     icon,
     notes,
@@ -189,6 +205,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       context.handle(
         _isClosedMeta,
         isClosed.isAcceptableOrUnknown(data['is_closed']!, _isClosedMeta),
+      );
+    }
+    if (data.containsKey('on_budget')) {
+      context.handle(
+        _onBudgetMeta,
+        onBudget.isAcceptableOrUnknown(data['on_budget']!, _onBudgetMeta),
       );
     }
     if (data.containsKey('color')) {
@@ -254,6 +276,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_closed'],
       )!,
+      onBudget: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}on_budget'],
+      )!,
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}color'],
@@ -294,6 +320,11 @@ class Account extends DataClass implements Insertable<Account> {
   /// account's non-deleted transactions that are not split children.
   final int startingBalance;
   final bool isClosed;
+
+  /// Whether the account belongs to the budget (schema v19). An off-budget
+  /// (tracking) account counts towards net worth only: its starting
+  /// balance and transactions never reach To Be Budgeted or categories.
+  final bool onBudget;
   final int? color;
   final String? icon;
   final String? notes;
@@ -306,6 +337,7 @@ class Account extends DataClass implements Insertable<Account> {
     required this.currency,
     required this.startingBalance,
     required this.isClosed,
+    required this.onBudget,
     this.color,
     this.icon,
     this.notes,
@@ -321,6 +353,7 @@ class Account extends DataClass implements Insertable<Account> {
     map['currency'] = Variable<String>(currency);
     map['starting_balance'] = Variable<int>(startingBalance);
     map['is_closed'] = Variable<bool>(isClosed);
+    map['on_budget'] = Variable<bool>(onBudget);
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<int>(color);
     }
@@ -347,6 +380,7 @@ class Account extends DataClass implements Insertable<Account> {
       currency: Value(currency),
       startingBalance: Value(startingBalance),
       isClosed: Value(isClosed),
+      onBudget: Value(onBudget),
       color: color == null && nullToAbsent
           ? const Value.absent()
           : Value(color),
@@ -375,6 +409,7 @@ class Account extends DataClass implements Insertable<Account> {
       currency: serializer.fromJson<String>(json['currency']),
       startingBalance: serializer.fromJson<int>(json['startingBalance']),
       isClosed: serializer.fromJson<bool>(json['isClosed']),
+      onBudget: serializer.fromJson<bool>(json['onBudget']),
       color: serializer.fromJson<int?>(json['color']),
       icon: serializer.fromJson<String?>(json['icon']),
       notes: serializer.fromJson<String?>(json['notes']),
@@ -392,6 +427,7 @@ class Account extends DataClass implements Insertable<Account> {
       'currency': serializer.toJson<String>(currency),
       'startingBalance': serializer.toJson<int>(startingBalance),
       'isClosed': serializer.toJson<bool>(isClosed),
+      'onBudget': serializer.toJson<bool>(onBudget),
       'color': serializer.toJson<int?>(color),
       'icon': serializer.toJson<String?>(icon),
       'notes': serializer.toJson<String?>(notes),
@@ -407,6 +443,7 @@ class Account extends DataClass implements Insertable<Account> {
     String? currency,
     int? startingBalance,
     bool? isClosed,
+    bool? onBudget,
     Value<int?> color = const Value.absent(),
     Value<String?> icon = const Value.absent(),
     Value<String?> notes = const Value.absent(),
@@ -419,6 +456,7 @@ class Account extends DataClass implements Insertable<Account> {
     currency: currency ?? this.currency,
     startingBalance: startingBalance ?? this.startingBalance,
     isClosed: isClosed ?? this.isClosed,
+    onBudget: onBudget ?? this.onBudget,
     color: color.present ? color.value : this.color,
     icon: icon.present ? icon.value : this.icon,
     notes: notes.present ? notes.value : this.notes,
@@ -435,6 +473,7 @@ class Account extends DataClass implements Insertable<Account> {
           ? data.startingBalance.value
           : this.startingBalance,
       isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
+      onBudget: data.onBudget.present ? data.onBudget.value : this.onBudget,
       color: data.color.present ? data.color.value : this.color,
       icon: data.icon.present ? data.icon.value : this.icon,
       notes: data.notes.present ? data.notes.value : this.notes,
@@ -452,6 +491,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('currency: $currency, ')
           ..write('startingBalance: $startingBalance, ')
           ..write('isClosed: $isClosed, ')
+          ..write('onBudget: $onBudget, ')
           ..write('color: $color, ')
           ..write('icon: $icon, ')
           ..write('notes: $notes, ')
@@ -469,6 +509,7 @@ class Account extends DataClass implements Insertable<Account> {
     currency,
     startingBalance,
     isClosed,
+    onBudget,
     color,
     icon,
     notes,
@@ -485,6 +526,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.currency == this.currency &&
           other.startingBalance == this.startingBalance &&
           other.isClosed == this.isClosed &&
+          other.onBudget == this.onBudget &&
           other.color == this.color &&
           other.icon == this.icon &&
           other.notes == this.notes &&
@@ -499,6 +541,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> currency;
   final Value<int> startingBalance;
   final Value<bool> isClosed;
+  final Value<bool> onBudget;
   final Value<int?> color;
   final Value<String?> icon;
   final Value<String?> notes;
@@ -512,6 +555,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.currency = const Value.absent(),
     this.startingBalance = const Value.absent(),
     this.isClosed = const Value.absent(),
+    this.onBudget = const Value.absent(),
     this.color = const Value.absent(),
     this.icon = const Value.absent(),
     this.notes = const Value.absent(),
@@ -526,6 +570,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.currency = const Value.absent(),
     this.startingBalance = const Value.absent(),
     this.isClosed = const Value.absent(),
+    this.onBudget = const Value.absent(),
     this.color = const Value.absent(),
     this.icon = const Value.absent(),
     this.notes = const Value.absent(),
@@ -542,6 +587,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? currency,
     Expression<int>? startingBalance,
     Expression<bool>? isClosed,
+    Expression<bool>? onBudget,
     Expression<int>? color,
     Expression<String>? icon,
     Expression<String>? notes,
@@ -556,6 +602,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (currency != null) 'currency': currency,
       if (startingBalance != null) 'starting_balance': startingBalance,
       if (isClosed != null) 'is_closed': isClosed,
+      if (onBudget != null) 'on_budget': onBudget,
       if (color != null) 'color': color,
       if (icon != null) 'icon': icon,
       if (notes != null) 'notes': notes,
@@ -572,6 +619,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String>? currency,
     Value<int>? startingBalance,
     Value<bool>? isClosed,
+    Value<bool>? onBudget,
     Value<int?>? color,
     Value<String?>? icon,
     Value<String?>? notes,
@@ -586,6 +634,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       currency: currency ?? this.currency,
       startingBalance: startingBalance ?? this.startingBalance,
       isClosed: isClosed ?? this.isClosed,
+      onBudget: onBudget ?? this.onBudget,
       color: color ?? this.color,
       icon: icon ?? this.icon,
       notes: notes ?? this.notes,
@@ -615,6 +664,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     }
     if (isClosed.present) {
       map['is_closed'] = Variable<bool>(isClosed.value);
+    }
+    if (onBudget.present) {
+      map['on_budget'] = Variable<bool>(onBudget.value);
     }
     if (color.present) {
       map['color'] = Variable<int>(color.value);
@@ -646,6 +698,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('currency: $currency, ')
           ..write('startingBalance: $startingBalance, ')
           ..write('isClosed: $isClosed, ')
+          ..write('onBudget: $onBudget, ')
           ..write('color: $color, ')
           ..write('icon: $icon, ')
           ..write('notes: $notes, ')
@@ -9623,6 +9676,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<String> currency,
       Value<int> startingBalance,
       Value<bool> isClosed,
+      Value<bool> onBudget,
       Value<int?> color,
       Value<String?> icon,
       Value<String?> notes,
@@ -9638,6 +9692,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> currency,
       Value<int> startingBalance,
       Value<bool> isClosed,
+      Value<bool> onBudget,
       Value<int?> color,
       Value<String?> icon,
       Value<String?> notes,
@@ -9770,6 +9825,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get isClosed => $composableBuilder(
     column: $table.isClosed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onBudget => $composableBuilder(
+    column: $table.onBudget,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9939,6 +9999,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get onBudget => $composableBuilder(
+    column: $table.onBudget,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get color => $composableBuilder(
     column: $table.color,
     builder: (column) => ColumnOrderings(column),
@@ -9993,6 +10058,9 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<bool> get isClosed =>
       $composableBuilder(column: $table.isClosed, builder: (column) => column);
+
+  GeneratedColumn<bool> get onBudget =>
+      $composableBuilder(column: $table.onBudget, builder: (column) => column);
 
   GeneratedColumn<int> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
@@ -10150,6 +10218,7 @@ class $$AccountsTableTableManager
                 Value<String> currency = const Value.absent(),
                 Value<int> startingBalance = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
+                Value<bool> onBudget = const Value.absent(),
                 Value<int?> color = const Value.absent(),
                 Value<String?> icon = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
@@ -10163,6 +10232,7 @@ class $$AccountsTableTableManager
                 currency: currency,
                 startingBalance: startingBalance,
                 isClosed: isClosed,
+                onBudget: onBudget,
                 color: color,
                 icon: icon,
                 notes: notes,
@@ -10178,6 +10248,7 @@ class $$AccountsTableTableManager
                 Value<String> currency = const Value.absent(),
                 Value<int> startingBalance = const Value.absent(),
                 Value<bool> isClosed = const Value.absent(),
+                Value<bool> onBudget = const Value.absent(),
                 Value<int?> color = const Value.absent(),
                 Value<String?> icon = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
@@ -10191,6 +10262,7 @@ class $$AccountsTableTableManager
                 currency: currency,
                 startingBalance: startingBalance,
                 isClosed: isClosed,
+                onBudget: onBudget,
                 color: color,
                 icon: icon,
                 notes: notes,

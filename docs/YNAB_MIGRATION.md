@@ -61,9 +61,10 @@ changed; please try again.").
 - **Ready to Assign**: income assigned to YNAB's "Ready to Assign" / "To be
   Budgeted" is imported without a category and counts towards To Be
   Budgeted.
-- **Tracking (off-budget) accounts** (YNAB 4): LedgerZero has no off-budget
-  accounts, and every account counts towards To Be Budgeted. Tracking
-  accounts and their own transactions are therefore not imported; the
+- **Tracking (off-budget) accounts** (YNAB 4): not imported yet. You can
+  create them in LedgerZero yourself and switch off "Include in budget"
+  (see docs/BUDGETING_RULES.md). Tracking accounts and their own
+  transactions are skipped; the
   preview marks them "Tracking account – not imported" and the result
   screen says how many were left out. A transfer between a budget account
   and a tracking account is how money leaves or enters the budget, so its

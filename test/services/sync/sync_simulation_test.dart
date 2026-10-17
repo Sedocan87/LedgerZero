@@ -386,6 +386,7 @@ void main() {
       final service = TransactionService(
         transactionRepository: a.t!.transactions,
         payeeRepository: a.t!.payees,
+        accountRepository: a.t!.accounts,
         undoService: UndoService(),
         unitOfWork: a.t!.unitOfWork,
       );

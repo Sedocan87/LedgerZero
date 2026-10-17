@@ -135,15 +135,43 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   Expression<bool> get _isNotSplitParent =>
       const CustomExpression<bool>('NOT $splitParentCondition');
 
+  /// The row of table `transactions` belongs to an on-budget account.
+  /// Rows of off-budget (tracking) accounts never reach To Be Budgeted,
+  /// categories or spending figures; they only count towards net worth.
+  static const CustomExpression<bool> _inBudgetAccount = CustomExpression(
+    'transactions.account_id IN '
+    '(SELECT id FROM accounts WHERE on_budget = 1)',
+  );
+
+  /// The row is a transfer leg whose other account is off-budget: money
+  /// leaving or entering the budget.
+  static const CustomExpression<bool> _transferAcrossBudget = CustomExpression(
+    'transactions.transfer_account_id IN '
+    '(SELECT id FROM accounts WHERE on_budget = 0)',
+  );
+
+  /// Rows that count as category activity: non-deleted, in an on-budget
+  /// account, and not a transfer leg unless the transfer crosses the budget
+  /// boundary (a categorised transfer within the budget, e.g. after an
+  /// account was put back on budget, moves no money out of a category).
+  Expression<bool> get _activityRow =>
+      transactions.isDeleted.equals(false) &
+      _inBudgetAccount &
+      (transactions.transferAccountId.isNull() | _transferAcrossBudget);
+
   /// Rows that flow into To Be Budgeted (decision D3): non-deleted,
-  /// uncategorised, not a transfer leg and not a split parent. Both signs
-  /// count (an uncategorised outflow reduces To Be Budgeted). Uncategorised
-  /// split children count too: they are the part of a split that was not
-  /// assigned to a category (the parent itself is excluded).
+  /// uncategorised, in an on-budget account, not a split parent, and not a
+  /// transfer leg unless the transfer crosses the budget boundary (a
+  /// transfer to an off-budget account reduces To Be Budgeted, one from it
+  /// increases it). Both signs count (an uncategorised outflow reduces To
+  /// Be Budgeted). Uncategorised split children count too: they are the
+  /// part of a split that was not assigned to a category (the parent itself
+  /// is excluded).
   Expression<bool> get _readyToAssignRow =>
       transactions.isDeleted.equals(false) &
       transactions.categoryId.isNull() &
-      transactions.transferAccountId.isNull() &
+      _inBudgetAccount &
+      (transactions.transferAccountId.isNull() | _transferAcrossBudget) &
       _isNotSplitParent;
 
   /// Non-deleted transactions with `start <= date < endExclusive`.
@@ -152,12 +180,15 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   /// per-payee aggregations, where the children carry the detail);
   /// [excludeSplitChildren] drops split children (use for account-side
   /// aggregations, where the parent carries the amount). Setting neither
-  /// returns both, which double counts a split's amount.
+  /// returns both, which double counts a split's amount. [onBudgetOnly]
+  /// drops the rows of off-budget accounts (use for budget figures such as
+  /// income and spending).
   Future<List<Transaction>> getTransactionsByDateRange(
     DateTime start,
     DateTime endExclusive, {
     bool excludeSplitParents = false,
     bool excludeSplitChildren = false,
+    bool onBudgetOnly = false,
   }) =>
       (select(transactions)..where((t) {
             var where =
@@ -167,6 +198,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
             }
             if (excludeSplitChildren) {
               where = where & t.parentTransactionId.isNull();
+            }
+            if (onBudgetOnly) {
+              where = where & _inBudgetAccount;
             }
             return where;
           }))
@@ -222,14 +256,17 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     };
   }
 
-  /// Income (minor units): the positive part of [getReadyToAssignSum], i.e.
-  /// uncategorised inflows that are not transfers or split parents.
+  /// Income (minor units): the positive part of [getReadyToAssignSum]
+  /// without transfers, i.e. uncategorised inflows of on-budget accounts
+  /// that are not transfer legs or split parents (money brought in from an
+  /// off-budget account is not income).
   Future<int> getIncomeSum(DateTime start, DateTime endExclusive) {
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
       ..where(
         _inRange(start, endExclusive) &
             _readyToAssignRow &
+            transactions.transferAccountId.isNull() &
             transactions.amount.isBiggerThanValue(0),
       )
       ..addColumns([amount]);
@@ -237,15 +274,16 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     return query.map((row) => row.read(amount) ?? 0).getSingle();
   }
 
-  /// Spending (minor units, negative): the sum of all non-deleted outflows
-  /// that are not transfer legs and not split parents (split children are
-  /// counted instead of their parent).
+  /// Spending (minor units, negative): the sum of the non-deleted outflows
+  /// of on-budget accounts that are not transfer legs and not split parents
+  /// (split children are counted instead of their parent).
   Future<int> getOutflowSum(DateTime start, DateTime endExclusive) {
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
       ..where(
         _inRange(start, endExclusive) &
             transactions.isDeleted.equals(false) &
+            _inBudgetAccount &
             transactions.transferAccountId.isNull() &
             transactions.amount.isSmallerThanValue(0) &
             _isNotSplitParent,
@@ -256,7 +294,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Activity (signed sum, minor units) of a category with
-  /// `start <= date < endExclusive`: its non-deleted rows, split children
+  /// `start <= date < endExclusive`: its [_activityRow]s, split children
   /// included.
   Future<int> getCategoryActivitySum(
     String categoryId,
@@ -268,7 +306,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       ..where(
         _inRange(start, endExclusive) &
             transactions.categoryId.equals(categoryId) &
-            transactions.isDeleted.equals(false),
+            _activityRow,
       )
       ..addColumns([amount]);
 
@@ -303,8 +341,8 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     return row != null;
   }
 
-  /// categoryId -> activity (signed sum, minor units) of categorised rows
-  /// with `start <= date < endExclusive`.
+  /// categoryId -> activity (signed sum, minor units) of categorised
+  /// [_activityRow]s with `start <= date < endExclusive`.
   Future<Map<String, int>> getCategoryActivitySums(
     DateTime start,
     DateTime endExclusive,
@@ -314,7 +352,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       ..where(
         _inRange(start, endExclusive) &
             transactions.categoryId.isNotNull() &
-            transactions.isDeleted.equals(false),
+            _activityRow,
       )
       ..addColumns([transactions.categoryId, amount])
       ..groupBy([transactions.categoryId]);

@@ -34,5 +34,11 @@ String Function(String englishName) defaultCategoryNames(
       'Gaming' => l10n.seedCatGaming,
       'Music' => l10n.seedCatMusic,
       'Fun Money' => l10n.seedCatFunMoney,
+      'Savings & Investments' => l10n.seedGroupSavings,
+      'Cash Reserve' => l10n.seedCatCashReserve,
+      'Stocks & ETFs' => l10n.seedCatStocks,
+      'Crypto' => l10n.seedCatCrypto,
+      'Bonds' => l10n.seedCatBonds,
+      'Retirement' => l10n.seedCatRetirement,
       _ => englishName,
     };

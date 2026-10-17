@@ -71,22 +71,25 @@ abstract class TransactionRepository {
   /// A split is stored as a parent (account-side amount, no category) plus
   /// children (categories). Pass [excludeSplitParents] for category/payee
   /// aggregations and [excludeSplitChildren] for account-side aggregations,
-  /// otherwise a split's amount is counted twice.
+  /// otherwise a split's amount is counted twice. [onBudgetOnly] drops the
+  /// rows of off-budget accounts (for budget figures).
   Future<List<Transaction>> getTransactionsByDateRange(
     DateTime start,
     DateTime endExclusive, {
     bool excludeSplitParents = false,
     bool excludeSplitChildren = false,
+    bool onBudgetOnly = false,
   });
 
   /// Signed sum (minor units) of the transactions that flow into To Be
   /// Budgeted (decision D3) with `start <= date < endExclusive`:
-  /// non-deleted, uncategorised, not a transfer leg, not a split parent.
+  /// non-deleted, uncategorised, in an on-budget account, not a split
+  /// parent, and not a transfer leg unless its other account is off-budget.
   /// Inflows add to To Be Budgeted, outflows reduce it.
   Future<int> getReadyToAssignSum(DateTime start, DateTime endExclusive);
 
   /// Income in minor units: the positive rows of [getReadyToAssignSum]
-  /// (uncategorised inflows that are not transfers or split parents).
+  /// that are not transfer legs.
   Future<int> getIncomeSum(DateTime start, DateTime endExclusive);
 
   /// Sum (minor units) of all account-balance rows (non-deleted, not split
@@ -100,20 +103,21 @@ abstract class TransactionRepository {
     DateTime endExclusive,
   );
 
-  /// Spending in minor units (negative): non-deleted outflows that are not
-  /// transfer legs or split parents, with `start <= date < endExclusive`.
+  /// Spending in minor units (negative): non-deleted outflows of on-budget
+  /// accounts that are not transfer legs or split parents, with
+  /// `start <= date < endExclusive`.
   Future<int> getOutflowSum(DateTime start, DateTime endExclusive);
 
   /// Activity of a category (signed sum, minor units, split children
-  /// included) with `start <= date < endExclusive`.
+  /// included, on-budget accounts only) with `start <= date < endExclusive`.
   Future<int> getCategoryActivitySum(
     String categoryId,
     DateTime start,
     DateTime endExclusive,
   );
 
-  /// categoryId -> activity (signed sum, minor units) with
-  /// `start <= date < endExclusive`.
+  /// categoryId -> activity (signed sum, minor units, on-budget accounts
+  /// only) with `start <= date < endExclusive`.
   Future<Map<String, int>> getCategoryActivitySums(
     DateTime start,
     DateTime endExclusive,

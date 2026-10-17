@@ -43,6 +43,7 @@ class RecentTransactionsWidget extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -53,28 +54,67 @@ class RecentTransactionsWidget extends ConsumerWidget {
               AppSpacing.md,
               AppSpacing.sm,
             ),
-            child: Text(
-              l10n.recentTransactions,
-              style: theme.textTheme.titleLarge,
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(
+                      alpha: 0.12,
+                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.receipt_long_outlined,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.recentTransactions,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
           transactionsAsync.when(
             data: (transactions) {
               if (transactions.isEmpty) {
                 return Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.xl,
+                  ),
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          size: 48,
-                          color: theme.colorScheme.outline,
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.receipt_long_outlined,
+                            size: 26,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                        const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: AppSpacing.sm + 2),
                         Text(
                           l10n.noRecentTransactions,
-                          style: TextStyle(
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
@@ -89,15 +129,19 @@ class RecentTransactionsWidget extends ConsumerWidget {
                 itemCount: transactions.length,
                 separatorBuilder: (context, index) => Divider(
                   height: 1,
-                  indent: AppSpacing.xxl + AppSpacing.md, // Indent past icon
+                  indent: AppSpacing.xxl + AppSpacing.md,
+                  endIndent: AppSpacing.md,
                   color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.5,
+                    alpha: 0.4,
                   ),
                 ),
                 itemBuilder: (context, index) {
                   final transaction = transactions[index];
                   final isIncome = transaction.amount >= 0;
-                  final color = isIncome ? AppColors.income : AppColors.expense;
+                  final isDark = theme.brightness == Brightness.dark;
+                  final color = isIncome
+                      ? (isDark ? Colors.green.shade300 : AppColors.income)
+                      : (isDark ? Colors.red.shade300 : AppColors.expense);
 
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(
@@ -105,14 +149,17 @@ class RecentTransactionsWidget extends ConsumerWidget {
                       vertical: AppSpacing.xs,
                     ),
                     leading: Container(
-                      width: 40,
-                      height: 40,
+                      width: 42,
+                      height: 42,
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
+                      alignment: Alignment.center,
                       child: Icon(
-                        isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                        isIncome
+                            ? Icons.arrow_downward_rounded
+                            : Icons.arrow_upward_rounded,
                         color: color,
                         size: 20,
                       ),
@@ -122,14 +169,14 @@ class RecentTransactionsWidget extends ConsumerWidget {
                           transaction.memo ??
                           l10n.unknownPayee,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
                       fmt.formatDate(transaction.date),
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -139,7 +186,7 @@ class RecentTransactionsWidget extends ConsumerWidget {
                       amountContext: AmountContext.transaction,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: color,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   );

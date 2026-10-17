@@ -1,7 +1,8 @@
 // The budget identity (decision D3) on a real database:
 //
 //   SUM over categories of available(M) + TBB(M)
-//     == SUM of account balances counting transactions up to end of M
+//     == SUM of on-budget account balances counting transactions up to
+//        end of M
 //
 // plus targeted regression tests for the ledger-math findings.
 import 'package:drift/drift.dart' show Variable;
@@ -32,6 +33,7 @@ void main() {
     service = TransactionService(
       transactionRepository: t.transactions,
       payeeRepository: t.payees,
+      accountRepository: t.accounts,
       undoService: UndoService(),
       unitOfWork: t.unitOfWork,
       ruleMatchingService: RuleMatchingService(
@@ -53,13 +55,16 @@ void main() {
     return total;
   }
 
-  /// SUM of account balances counting rows dated before the next month.
+  /// SUM of on-budget account balances counting rows dated before the next
+  /// month.
   Future<int> sumBalancesAt(DateTime month) async {
     final row = await t.db
         .customSelect(
-          'SELECT COALESCE((SELECT SUM(starting_balance) FROM accounts), 0) + '
+          'SELECT COALESCE((SELECT SUM(starting_balance) FROM accounts '
+          'WHERE on_budget = 1), 0) + '
           'COALESCE((SELECT SUM(amount) FROM transactions WHERE is_deleted = 0 '
-          'AND parent_transaction_id IS NULL AND date < ?), 0) AS total',
+          'AND parent_transaction_id IS NULL AND date < ? AND account_id IN '
+          '(SELECT id FROM accounts WHERE on_budget = 1)), 0) AS total',
           variables: [Variable.withDateTime(CalendarDate.endOfMonthUtc(month))],
         )
         .getSingle();
@@ -281,6 +286,176 @@ void main() {
     });
   });
 
+  group('off-budget accounts', () {
+    late String checking;
+    late String savings;
+    late String groceries;
+
+    setUp(() async {
+      groceries = await t.categoryId('Groceries');
+      checking = (await t.addAccount(
+        name: 'Checking',
+        startingBalance: 10000,
+      )).id;
+      savings = (await t.addAccount(
+        name: 'Savings',
+        type: AccountType.savings,
+        startingBalance: 500000,
+        onBudget: false,
+      )).id;
+      // Salary into checking, interest into savings.
+      await t.addTransaction(accountId: checking, amount: 300000, date: jan);
+      await t.addTransaction(accountId: savings, amount: 1200, date: jan);
+    });
+
+    test('their balance and transactions stay out of the budget', () async {
+      // A categorised row in a tracking account is not category activity.
+      await t.addTransaction(
+        accountId: savings,
+        amount: -3000,
+        date: jan,
+        categoryId: groceries,
+      );
+      expect(await t.budgeting.calculateTBB(jan), 310000);
+      expect(await t.budgeting.calculateCategoryActivity(groceries, jan), 0);
+      expect(await t.budgeting.calculateTotalIncomeForMonth(jan), 300000);
+      expect(await t.budgeting.calculateTotalSpendingForMonth(jan), 0);
+      // Net worth still counts the tracking account.
+      expect(await t.accounts.getAccountBalance(savings), 498200);
+      await expectInvariant(jan);
+    });
+
+    test('a transfer to a tracking account leaves the budget', () async {
+      await service.save(
+        TransactionInput(
+          accountId: checking,
+          date: jan,
+          amount: -50000,
+          transferAccountId: savings,
+        ),
+      );
+      expect(await t.budgeting.calculateTBB(jan), 260000);
+      // Moving money is neither income nor spending.
+      expect(await t.budgeting.calculateTotalIncomeForMonth(jan), 300000);
+      expect(await t.budgeting.calculateTotalSpendingForMonth(jan), 0);
+      await expectInvariant(jan);
+    });
+
+    test('a transfer from a tracking account enters the budget', () async {
+      await service.save(
+        TransactionInput(
+          accountId: savings,
+          date: feb,
+          amount: -20000,
+          transferAccountId: checking,
+        ),
+      );
+      expect(await t.budgeting.calculateTBB(jan), 310000);
+      expect(await t.budgeting.calculateTBB(feb), 330000);
+      expect(await t.budgeting.calculateTotalIncomeForMonth(feb), 0);
+      await expectInvariant(jan);
+      await expectInvariant(feb);
+    });
+
+    test('a categorised transfer to a tracking account spends the category, '
+        'not TBB', () async {
+      final stocks = await t.categoryId('Stocks & ETFs');
+      await t.budgeting.setCategoryBudgetedAmount(stocks, 50000, jan);
+      final id = (await service.save(
+        TransactionInput(
+          accountId: checking,
+          date: jan,
+          amount: -50000,
+          transferAccountId: savings,
+          categoryId: stocks,
+        ),
+      )).id;
+      // The category sits on the on-budget leg only.
+      final out = (await t.transactions.getTransactionById(id))!;
+      expect(out.categoryId, stocks);
+      final inflow = (await t.transactions.getTransactionById(
+        out.transferTransactionId!,
+      ))!;
+      expect(inflow.categoryId, isNull);
+      expect(await t.budgeting.calculateTBB(jan), 310000 - 50000);
+      expect(await t.budgeting.calculateCategoryAvailable(stocks, jan), 0);
+      await expectInvariant(jan);
+    });
+
+    test('a categorised transfer from a tracking account funds the category '
+        '(the category goes on the inflow leg)', () async {
+      final vacation = await t.categoryId('Vacation');
+      await service.save(
+        TransactionInput(
+          accountId: savings,
+          date: jan,
+          amount: -20000,
+          transferAccountId: checking,
+          categoryId: vacation,
+        ),
+      );
+      expect(await t.budgeting.calculateTBB(jan), 310000);
+      expect(
+        await t.budgeting.calculateCategoryAvailable(vacation, jan),
+        20000,
+      );
+      await expectInvariant(jan);
+    });
+
+    test('a transfer inside the budget never keeps a category', () async {
+      final wallet = (await t.addAccount(name: 'Wallet')).id;
+      final id = (await service.save(
+        TransactionInput(
+          accountId: checking,
+          date: jan,
+          amount: -5000,
+          transferAccountId: wallet,
+          categoryId: groceries,
+        ),
+      )).id;
+      expect((await t.transactions.getTransactionById(id))!.categoryId, isNull);
+      expect(await t.budgeting.calculateTBB(jan), 310000);
+      await expectInvariant(jan);
+    });
+
+    test('putting the tracking account back on budget neutralises a '
+        'categorised transfer', () async {
+      final stocks = await t.categoryId('Stocks & ETFs');
+      await service.save(
+        TransactionInput(
+          accountId: checking,
+          date: jan,
+          amount: -50000,
+          transferAccountId: savings,
+          categoryId: stocks,
+        ),
+      );
+      final account = (await t.accounts.getAccountById(savings))!;
+      await t.accounts.updateAccount(account.copyWith(onBudget: true));
+      expect(await t.budgeting.calculateCategoryActivity(stocks, jan), 0);
+      await expectInvariant(jan);
+    });
+
+    test('a cash reserve budgeted once stays out of TBB', () async {
+      final reserve = await t.categoryId('Cash Reserve');
+      await t.budgeting.setCategoryBudgetedAmount(reserve, 500000 ~/ 2, jan);
+      expect(await t.budgeting.calculateTBB(feb), 310000 - 250000);
+      expect(
+        await t.budgeting.calculateCategoryAvailable(reserve, feb),
+        250000,
+      );
+      await expectInvariant(feb);
+    });
+
+    test('switching an account off budget recalculates TBB', () async {
+      final wallet = await t.addAccount(name: 'Wallet', startingBalance: 7000);
+      expect(await t.budgeting.calculateTBB(jan), 317000);
+      await t.accounts.updateAccount(wallet.copyWith(onBudget: false));
+      expect(await t.budgeting.calculateTBB(jan), 310000);
+      await expectInvariant(jan);
+    });
+  });
+
   group('split parents (finding 2)', () {
     late String checking;
     late String fun;
@@ -360,5 +535,42 @@ void main() {
 
     final payees = await container.read(topPayeesProvider.future);
     expect(Map.fromEntries(payees)['Shop'], 10000);
+
+    // Rows of a tracking account are not income or spending.
+    final brokerage = (await t.addAccount(
+      name: 'Brokerage',
+      onBudget: false,
+    )).id;
+    await t.addTransaction(
+      accountId: brokerage,
+      amount: 50000,
+      date: DateTime.utc(2024, 1, 3),
+    );
+    await t.addTransaction(
+      accountId: brokerage,
+      amount: -8000,
+      date: DateTime.utc(2024, 1, 4),
+      payeeId: (await t.payees.getAllPayees()).first.id,
+    );
+    container.invalidate(incomeVsExpenseHistoryProvider);
+    container.invalidate(spendingTrendsProvider);
+    container.invalidate(topPayeesProvider);
+    final after = await container.read(incomeVsExpenseHistoryProvider.future);
+    expect(
+      after.firstWhere((s) => s.name == 'Income').points.single.value,
+      200000,
+    );
+    expect(
+      after.firstWhere((s) => s.name == 'Expenses').points.single.value,
+      10000,
+    );
+    expect(
+      (await container.read(spendingTrendsProvider.future)).values.single,
+      10000,
+    );
+    expect(
+      Map.fromEntries(await container.read(topPayeesProvider.future))['Shop'],
+      10000,
+    );
   });
 }

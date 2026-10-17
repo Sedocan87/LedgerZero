@@ -44,7 +44,7 @@ class MockAccountRepository implements AccountRepository {
   Future<int> getClearedBalance(String id, {DateTime? upTo}) async => 0;
 
   @override
-  Future<int> getTotalStartingBalance() async => 0;
+  Future<int> getBudgetStartingBalance() async => 0;
 }
 
 final _germanFormatter = appFormatterProvider.overrideWithValue(
@@ -232,5 +232,77 @@ void main() {
     expect(repo.updated, isNotNull);
     expect(repo.updated!.startingBalance, -1050);
     expect(repo.updated!.currency, 'SEK');
+  });
+
+  Future<void> pumpForm(
+    WidgetTester tester,
+    MockAccountRepository repo, {
+    String? accountId,
+  }) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(repo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AddEditAccountScreen(accountId: accountId),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> tapAndSettle(WidgetTester tester, Finder finder) async {
+    await tester.ensureVisible(finder);
+    await tester.pumpAndSettle();
+    await tester.tap(finder);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a new account can be kept out of the budget', (tester) async {
+    final repo = MockAccountRepository();
+    await pumpForm(tester, repo);
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Brokerage');
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    await tapAndSettle(
+      tester,
+      find.widgetWithText(ElevatedButton, 'Create Account'),
+    );
+
+    expect(repo.created!.onBudget, isFalse);
+  });
+
+  testWidgets('taking an account out of the budget asks first', (
+    tester,
+  ) async {
+    final repo = MockAccountRepository(
+      existing: const Account(
+        id: 'a1',
+        name: 'Savings',
+        type: AccountType.savings,
+      ),
+    );
+    await pumpForm(tester, repo, accountId: 'a1');
+
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    final save = find.widgetWithText(ElevatedButton, 'Save Changes');
+
+    // Cancel keeps the account unchanged.
+    await tapAndSettle(tester, save);
+    expect(find.text('Change what you budget?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(repo.updated, isNull);
+
+    await tapAndSettle(tester, save);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(repo.updated!.onBudget, isFalse);
   });
 }

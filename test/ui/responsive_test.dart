@@ -15,6 +15,8 @@ import 'package:mockito/mockito.dart';
 import '../widget_test_helpers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Create a mock for BackupScheduler
 class MockBackupScheduler extends Mock implements BackupScheduler {
@@ -57,8 +59,11 @@ void main() {
     late MockBackupScheduler mockBackupScheduler;
     late MockSyncController mockSyncController;
     late DateTime currentMonth;
+    late SharedPreferences prefs;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
       mockBackupScheduler = MockBackupScheduler();
       mockSyncController = MockSyncController();
       final now = DateTime.now();
@@ -75,6 +80,7 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
           appFormatterProvider.overrideWithValue(
             AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
@@ -111,6 +117,7 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
           appFormatterProvider.overrideWithValue(
             AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
@@ -145,6 +152,7 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
           appFormatterProvider.overrideWithValue(
             AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
@@ -180,6 +188,7 @@ void main() {
         tester,
         child: const HomeScreen(),
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           hasAccountsProvider.overrideWithValue(const AsyncValue.data(true)),
           appFormatterProvider.overrideWithValue(
             AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),

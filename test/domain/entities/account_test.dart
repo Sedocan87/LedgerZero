@@ -92,8 +92,14 @@ void main() {
         'updated_at': testDate.toIso8601String(),
       };
 
+      // Older exports have no `on_budget`: the account stays on budget.
       final account = Account.fromJson(json);
       expect(account, equals(accountWithDates));
+      expect(account.onBudget, isTrue);
+      expect(
+        Account.fromJson({...json, 'on_budget': false}).onBudget,
+        isFalse,
+      );
     });
 
     test('toJson returns correct map', () {
@@ -106,6 +112,7 @@ void main() {
         'starting_balance': 10000,
         'balance': 0,
         'is_closed': false,
+        'on_budget': true,
         'color': 0xFF000000,
         'icon': 'bank',
         'notes': 'Test notes',

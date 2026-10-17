@@ -99,11 +99,13 @@ final incomeVsExpenseHistoryProvider =
       final l10n = ref.watch(appLocalizationsProvider);
       final bounds = reportQueryBounds(range);
 
-      // A split counts through its children (categories), never twice.
+      // A split counts through its children (categories), never twice;
+      // off-budget accounts are not part of income and spending.
       final transactions = await transactionRepo.getTransactionsByDateRange(
         bounds.start,
         bounds.endExclusive,
         excludeSplitParents: true,
+        onBudgetOnly: true,
       );
 
       // Group by month (minor units)
@@ -212,11 +214,13 @@ final spendingTrendsProvider = FutureProvider.autoDispose<Map<DateTime, int>>((
   final transactionRepo = ref.watch(transactionRepositoryProvider);
   final bounds = reportQueryBounds(range);
 
-  // A split counts through its children (categories), never twice.
+  // A split counts through its children (categories), never twice;
+  // off-budget accounts are not part of spending.
   final transactions = await transactionRepo.getTransactionsByDateRange(
     bounds.start,
     bounds.endExclusive,
     excludeSplitParents: true,
+    onBudgetOnly: true,
   );
   final trends = <DateTime, int>{};
 
@@ -348,11 +352,13 @@ final topPayeesProvider =
       final l10n = ref.watch(appLocalizationsProvider);
       final bounds = reportQueryBounds(range);
 
-      // A split counts through its children (categories), never twice.
+      // A split counts through its children (categories), never twice;
+      // off-budget accounts are not part of income and spending.
       final transactions = await transactionRepo.getTransactionsByDateRange(
         bounds.start,
         bounds.endExclusive,
         excludeSplitParents: true,
+        onBudgetOnly: true,
       );
       final payees = await payeeRepo.getAllPayees();
       final payeeNameMap = {for (var p in payees) p.id: p.name};

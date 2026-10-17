@@ -40,6 +40,7 @@ void main() {
     service = TransactionService(
       transactionRepository: t.transactions,
       payeeRepository: t.payees,
+      accountRepository: t.accounts,
       undoService: UndoService(),
       unitOfWork: t.unitOfWork,
     );

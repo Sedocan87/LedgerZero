@@ -103,6 +103,7 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 
 **Product**
 - [ ] Credit-card payment categories (YNAB-style handling of card spending and payments).
+- [ ] Off-budget accounts, next step: import YNAB tracking accounts as off-budget accounts instead of skipping them (their on-budget transfer legs could then stay real transfers with YNAB's category).
 - [ ] Goals UI (goal types and targets exist in the data model; the `underfunded` auto-assign rule and the budget row's underfunded icon wait for it).
 - [ ] Double-import protection for the YNAB import (a second import of the same export duplicates all transactions; e.g. store YNAB ids / a file fingerprint and skip known rows).
 - [ ] CSV import: skip preamble lines above the header, separate debit/credit columns, tab-delimited files.

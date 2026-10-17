@@ -8,11 +8,13 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
@@ -110,6 +112,12 @@ class _AddEditTransactionScreenState
       // A split line is edited as part of its split.
       t = await repo.getTransactionById(t.parentTransactionId!) ?? t;
     }
+    // A transfer's category sits on its on-budget leg, which is the inflow
+    // leg when money comes in from an off-budget account.
+    final counterpartCategory =
+        t.transferTransactionId != null && t.categoryId == null
+        ? (await repo.getTransactionById(t.transferTransactionId!))?.categoryId
+        : null;
     final children = await repo.getSplitTransactions(t.id);
     final payee = t.payeeId == null
         ? null
@@ -123,6 +131,10 @@ class _AddEditTransactionScreenState
       payeeName: payee?.name,
       fmt: ref.read(appFormatterProvider),
     );
+    if (counterpartCategory != null) {
+      _form.categoryId = counterpartCategory;
+      _form.changed();
+    }
   }
 
   // --- Draft autosave (new transactions) ---------------------------------
@@ -237,7 +249,14 @@ class _AddEditTransactionScreenState
       FormUtils.focusFirstError(context);
       return;
     }
-    final built = _form.buildInput(ref.read(appFormatterProvider));
+    final accounts = <String, Account>{
+      for (final a in ref.read(accountsProvider).valueOrNull ?? const [])
+        a.id: a,
+    };
+    final built = _form.buildInput(
+      ref.read(appFormatterProvider),
+      categoryAllowed: _form.categoryAllowed(accounts),
+    );
     final input = built.input;
     if (input == null) {
       _showMessage(switch (built.error!) {

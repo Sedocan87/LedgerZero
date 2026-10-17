@@ -277,10 +277,19 @@ class TransactionListChartWrapper extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(accountTransactionsProvider(accountId));
     return transactionsAsync.when(
-      data: (transactions) => BalanceTrendChart(
-        transactions: transactions,
-        startingBalance: startingBalance,
-        currencyCode: currencyCode,
+      data: (transactions) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: BalanceTrendChart(
+              transactions: transactions,
+              startingBalance: startingBalance,
+              currencyCode: currencyCode,
+            ),
+          ),
+        ),
       ),
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
@@ -305,6 +314,9 @@ class TransactionList extends ConsumerWidget {
     final accountNames = ref.watch(accountMapProvider).valueOrNull ?? const {};
     final l10n = AppLocalizations.of(context)!;
     final fmt = ref.watch(appFormatterProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return transactionsAsync.when(
       data: (transactions) {
@@ -319,14 +331,15 @@ class TransactionList extends ConsumerWidget {
           );
         }
 
-        return ListView.separated(
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           itemCount: transactions.length,
-          separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final t = transactions[index];
             final String title;
             String subtitle = fmt.formatDate(t.date);
-            if (t.transferAccountId != null) {
+            final isTransfer = t.transferAccountId != null;
+            if (isTransfer) {
               final other = accountNames[t.transferAccountId];
               title = other == null
                   ? l10n.transfer
@@ -340,15 +353,59 @@ class TransactionList extends ConsumerWidget {
               title = payeeNames[t.payeeId] ?? t.memo ?? l10n.unknownPayee;
             }
 
-            return ListTile(
-              onTap: () => context.push('/edit-transaction/${t.id}'),
-              title: Text(title),
-              subtitle: Text(subtitle),
-              trailing: Text(
-                fmt.formatMoney(t.amount, currencyCode: currency),
-                style: TextStyle(
-                  color: t.amount < 0 ? AppColors.expense : AppColors.income,
-                  fontWeight: FontWeight.bold,
+            final isIncome = t.amount >= 0;
+            final amountColor = isIncome
+                ? (isDark ? Colors.green.shade300 : AppColors.income)
+                : (isDark ? Colors.red.shade300 : AppColors.expense);
+            final iconData = isTransfer
+                ? Icons.swap_horiz_rounded
+                : (isIncome
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded);
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  onTap: () => context.push('/edit-transaction/${t.id}'),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 2,
+                  ),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: amountColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(iconData, color: amountColor, size: 20),
+                  ),
+                  title: Text(
+                    title,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Text(
+                    fmt.formatMoney(t.amount, currencyCode: currency),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: amountColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             );

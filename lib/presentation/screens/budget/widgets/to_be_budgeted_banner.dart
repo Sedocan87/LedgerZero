@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -15,94 +16,154 @@ class ToBeBudgetedBanner extends ConsumerWidget {
       tbbProvider(ref.watch(selectedBudgetMonthProvider)),
     );
     final fmt = ref.watch(appFormatterProvider);
+    final scheme = Theme.of(context).colorScheme;
+
+    final tbbValue = tbbAsync.valueOrNull ?? 0;
+    final isNegative = tbbValue < 0;
+    final accentColor = isNegative ? scheme.error : Colors.green.shade700;
+    final cardBgColor = Color.alphaBlend(
+      accentColor.withValues(alpha: 0.06),
+      scheme.surfaceContainerLow,
+    );
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      color: Theme.of(context).colorScheme.primaryContainer,
+      margin: EdgeInsets.zero,
+      color: cardBgColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        side: BorderSide(
+          color: accentColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+        child: Row(
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.toBeBudgeted,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: AppLocalizations.of(context)!.tbbTooltip,
-                  triggerMode: TooltipTriggerMode.tap,
-                  // 16 px icon, 48 x 48 tap target.
-                  child: SizedBox.square(
-                    dimension: kMinInteractiveDimension,
-                    child: Icon(
-                      Icons.help_outline,
-                      size: 16,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            tbbAsync.when(
-              data: (tbb) {
-                final formatted = fmt.formatMoney(tbb);
-                final textWidget = AmountText(
-                  tbb,
-                  amountContext: AmountContext.toBeBudgeted,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: tbb >= 0
-                        ? Colors.green.shade700
-                        : Theme.of(context).colorScheme.error,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-
-                if (tbb <= 0) {
-                  return textWidget;
-                }
-
-                return LongPressDraggable<int>(
-                  data: tbb,
-                  feedback: Material(
-                    color: Colors.transparent,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        formatted,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                    ),
-                  ),
-                  childWhenDragging: Opacity(opacity: 0.5, child: textWidget),
-                  child: textWidget,
-                );
-              },
-              loading: () => const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
-              error: (err, stack) =>
-                  LoadErrorView(error: err, stackTrace: stack, compact: true),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.account_balance_wallet_outlined,
+                color: accentColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          AppLocalizations.of(context)!.toBeBudgeted,
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  tbbAsync.when(
+                    data: (tbb) {
+                      final formatted = fmt.formatMoney(tbb);
+                      final textWidget = AmountText(
+                        tbb,
+                        amountContext: AmountContext.toBeBudgeted,
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: tbb >= 0
+                                  ? Colors.green.shade700
+                                  : scheme.error,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      );
+
+                      if (tbb <= 0) {
+                        return textWidget;
+                      }
+
+                      return LongPressDraggable<int>(
+                        data: tbb,
+                        feedback: Material(
+                          color: Colors.transparent,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: scheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.full,
+                              ),
+                              border: Border.all(
+                                color: Colors.green.shade700.withValues(
+                                  alpha: 0.4,
+                                ),
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              formatted,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700,
+                                  ),
+                            ),
+                          ),
+                        ),
+                        childWhenDragging: Opacity(
+                          opacity: 0.5,
+                          child: textWidget,
+                        ),
+                        child: textWidget,
+                      );
+                    },
+                    loading: () => const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    error: (err, stack) => LoadErrorView(
+                      error: err,
+                      stackTrace: stack,
+                      compact: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Tooltip(
+              message: AppLocalizations.of(context)!.tbbTooltip,
+              triggerMode: TooltipTriggerMode.tap,
+              // 16 px icon, 48 x 48 tap target.
+              child: SizedBox.square(
+                dimension: kMinInteractiveDimension,
+                child: Icon(
+                  Icons.help_outline,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ],
         ),

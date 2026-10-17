@@ -56,6 +56,7 @@ void main() {
     service = TransactionService(
       transactionRepository: t.transactions,
       payeeRepository: t.payees,
+      accountRepository: t.accounts,
       undoService: UndoService(),
       unitOfWork: t.unitOfWork,
     );
@@ -140,6 +141,55 @@ void main() {
     expect(find.text('To Account'), findsOneWidget);
     expect(find.text('From Account'), findsOneWidget);
     expect(find.text('Payee'), findsNothing);
+  });
+
+  dbTestWidgets('a transfer inside the budget has no category field', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const AddEditTransactionScreen(initialAccountId: 'checking'),
+    );
+    await tester.tap(find.text('Transfer'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('transfer.category')), findsNothing);
+  });
+
+  dbTestWidgets('a transfer from an off-budget account keeps the category of '
+      'its on-budget (inflow) leg', (tester) async {
+    final stocks = await tester.runAsync(() => t.categoryId('Stocks & ETFs'));
+    final savings = (await tester.runAsync(
+      () => t.accounts.getAccountById('savings'),
+    ))!;
+    await tester.runAsync(
+      () => t.accounts.updateAccount(savings.copyWith(onBudget: false)),
+    );
+    final outId = (await tester.runAsync(
+      () => service.save(
+        TransactionInput(
+          accountId: 'savings',
+          date: DateTime.utc(2024, 3, 1),
+          amount: -50000,
+          transferAccountId: 'checking',
+          categoryId: stocks,
+        ),
+      ),
+    ))!.id;
+
+    await pump(tester, AddEditTransactionScreen(transactionId: outId));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('transfer.category')), findsOneWidget);
+    expect(find.text('Stocks & ETFs'), findsOneWidget);
+
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.check));
+    await tester.pumpAndSettle();
+    final rows = await liveRows(tester);
+    expect(
+      rows.firstWhere((r) => r.accountId == 'checking').categoryId,
+      stocks,
+    );
+    expect(rows.firstWhere((r) => r.accountId == 'savings').categoryId, isNull);
   });
 
   dbTestWidgets('saves "12,50" as 1250 minor units with a decimal comma', (

@@ -15,7 +15,7 @@ import '../../helpers/test_database.dart';
 /// Budget invariant for [month]:
 ///
 /// SUM(available of every category) + To Be Budgeted
-///   == SUM over accounts of (starting balance + non-deleted,
+///   == SUM over on-budget accounts of (starting balance + non-deleted,
 ///      non-split-child rows dated before the next month).
 Future<void> expectLedgerInvariant(TestDatabase t, DateTime month) async {
   final categories = await t.categories.getAllCategories();
@@ -26,9 +26,11 @@ Future<void> expectLedgerInvariant(TestDatabase t, DateTime month) async {
   final tbb = await t.budgeting.calculateTBB(month);
   final row = await t.db
       .customSelect(
-        'SELECT COALESCE((SELECT SUM(starting_balance) FROM accounts), 0) + '
+        'SELECT COALESCE((SELECT SUM(starting_balance) FROM accounts '
+        'WHERE on_budget = 1), 0) + '
         'COALESCE((SELECT SUM(amount) FROM transactions WHERE is_deleted = 0 '
-        'AND parent_transaction_id IS NULL AND date < ?), 0) AS total',
+        'AND parent_transaction_id IS NULL AND date < ? AND account_id IN '
+        '(SELECT id FROM accounts WHERE on_budget = 1)), 0) AS total',
         variables: [Variable.withDateTime(CalendarDate.endOfMonthUtc(month))],
       )
       .getSingle();
@@ -246,6 +248,7 @@ Future<void> seedSampleLedger(TestDatabase t) async {
   final service = TransactionService(
     transactionRepository: t.transactions,
     payeeRepository: t.payees,
+    accountRepository: t.accounts,
     undoService: UndoService(),
     unitOfWork: t.unitOfWork,
   );

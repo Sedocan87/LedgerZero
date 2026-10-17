@@ -148,9 +148,9 @@ class MockAccountRepository extends _i1.Mock implements _i2.AccountRepository {
           as _i3.Future<int>);
 
   @override
-  _i3.Future<int> getTotalStartingBalance() =>
+  _i3.Future<int> getBudgetStartingBalance() =>
       (super.noSuchMethod(
-            Invocation.method(#getTotalStartingBalance, []),
+            Invocation.method(#getBudgetStartingBalance, []),
             returnValue: _i3.Future<int>.value(0),
             returnValueForMissingStub: _i3.Future<int>.value(0),
           )
@@ -710,6 +710,7 @@ class MockTransactionRepository extends _i1.Mock
     DateTime? endExclusive, {
     bool? excludeSplitParents = false,
     bool? excludeSplitChildren = false,
+    bool? onBudgetOnly = false,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -718,6 +719,7 @@ class MockTransactionRepository extends _i1.Mock
               {
                 #excludeSplitParents: excludeSplitParents,
                 #excludeSplitChildren: excludeSplitChildren,
+                #onBudgetOnly: onBudgetOnly,
               },
             ),
             returnValue: _i3.Future<List<_i14.Transaction>>.value(

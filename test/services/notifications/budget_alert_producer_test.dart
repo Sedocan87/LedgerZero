@@ -48,6 +48,7 @@ void main() {
   TransactionService service(BudgetAlertProducer p) => TransactionService(
     transactionRepository: t.transactions,
     payeeRepository: t.payees,
+    accountRepository: t.accounts,
     undoService: UndoService(),
     unitOfWork: t.unitOfWork,
     onSaved: (change) => p.onSaved(change.before, change.after),
@@ -220,6 +221,7 @@ void main() {
     final s = TransactionService(
       transactionRepository: t.transactions,
       payeeRepository: t.payees,
+      accountRepository: t.accounts,
       undoService: UndoService(),
       unitOfWork: t.unitOfWork,
       onSaved: (_) => throw StateError('hook failed'),
@@ -230,6 +232,7 @@ void main() {
     final async = TransactionService(
       transactionRepository: t.transactions,
       payeeRepository: t.payees,
+      accountRepository: t.accounts,
       undoService: UndoService(),
       unitOfWork: t.unitOfWork,
       onSaved: (_) async => throw StateError('hook failed'),

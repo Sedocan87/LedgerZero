@@ -62,104 +62,86 @@ class TransactionFormBody extends ConsumerWidget {
 
     return ListenableBuilder(
       listenable: c,
-      builder: (context, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SegmentedButton<TransactionFormType>(
-            segments: [
-              ButtonSegment(
-                value: TransactionFormType.expense,
-                label: Text(l10n.outflow),
-                icon: const Icon(Icons.remove_circle_outline),
+      builder: (context, _) {
+        // Off-budget accounts have no categories (an existing split keeps
+        // its editor so it can still be changed).
+        final offBudget =
+            !c.isTransfer && !c.categoryAllowed(accounts) && !c.isSplit;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SegmentedButton<TransactionFormType>(
+              segments: [
+                ButtonSegment(
+                  value: TransactionFormType.expense,
+                  label: Text(l10n.outflow),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                ButtonSegment(
+                  value: TransactionFormType.income,
+                  label: Text(l10n.inflow),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+                ButtonSegment(
+                  value: TransactionFormType.transfer,
+                  label: Text(l10n.transfer),
+                  icon: const Icon(Icons.swap_horiz),
+                ),
+              ],
+              selected: {c.formType},
+              onSelectionChanged: (selection) => c.setFormType(selection.first),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              key: tutorialKeys.amount,
+              controller: c.amountController,
+              label: l10n.amount,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
               ),
-              ButtonSegment(
-                value: TransactionFormType.income,
-                label: Text(l10n.inflow),
-                icon: const Icon(Icons.add_circle_outline),
-              ),
-              ButtonSegment(
-                value: TransactionFormType.transfer,
-                label: Text(l10n.transfer),
-                icon: const Icon(Icons.swap_horiz),
-              ),
-            ],
-            selected: {c.formType},
-            onSelectionChanged: (selection) => c.setFormType(selection.first),
-          ),
-          const SizedBox(height: 16),
-          AppTextField(
-            key: tutorialKeys.amount,
-            controller: c.amountController,
-            label: l10n.amount,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.next,
-            onChanged: (_) => c.changed(),
-            validator: (value) {
-              final amount = fmt.parseAmount(value ?? '');
-              return amount == null || amount == 0 ? l10n.invalidAmount : null;
-            },
-          ),
-          const SizedBox(height: 16),
-          PickerField(
-            label: c.isTransfer ? l10n.fromAccount : l10n.account,
-            text: accounts[c.accountId]?.name ?? '',
-            onTap: () async {
-              final picked = await showAccountPicker(context);
-              if (picked != null) {
-                c.accountId = picked.id;
-                c.changed();
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-          if (c.isTransfer) ...[
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => c.changed(),
+              validator: (value) {
+                final amount = fmt.parseAmount(value ?? '');
+                return amount == null || amount == 0
+                    ? l10n.invalidAmount
+                    : null;
+              },
+            ),
+            const SizedBox(height: 16),
             PickerField(
-              label: l10n.toAccount,
-              text: accounts[c.transferAccountId]?.name ?? '',
+              label: c.isTransfer ? l10n.fromAccount : l10n.account,
+              text: accounts[c.accountId]?.name ?? '',
               onTap: () async {
-                final picked = await showAccountPicker(
-                  context,
-                  excludeId: c.accountId,
-                );
+                final picked = await showAccountPicker(context);
                 if (picked != null) {
-                  c.transferAccountId = picked.id;
+                  c.accountId = picked.id;
                   c.changed();
                 }
               },
             ),
             const SizedBox(height: 16),
-          ],
-          PickerField(
-            label: l10n.date,
-            text: fmt.formatDate(c.date),
-            prefixIcon: const Icon(Icons.calendar_today),
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: CalendarDate.toLocalDay(c.date),
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) {
-                c.date = CalendarDate.fromLocalPick(picked);
-                c.changed();
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-          if (!c.isTransfer) ...[
-            PayeeField(
-              key: tutorialKeys.payee,
-              controller: c.payeeController,
-              focusNode: payeeFocus,
-              onSelected: onPayeeSelected,
-              onTextChanged: c.payeeTextChanged,
-            ),
-            const SizedBox(height: 16),
-            if (!c.isSplit)
-              KeyedSubtree(
-                key: tutorialKeys.category,
-                child: PickerField(
+            if (c.isTransfer) ...[
+              PickerField(
+                label: l10n.toAccount,
+                text: accounts[c.transferAccountId]?.name ?? '',
+                onTap: () async {
+                  final picked = await showAccountPicker(
+                    context,
+                    excludeId: c.accountId,
+                  );
+                  if (picked != null) {
+                    c.transferAccountId = picked.id;
+                    c.changed();
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              // Money moving out of or into the budget can come from (or go
+              // to) a category instead of To Be Budgeted.
+              if (c.categoryAllowed(accounts)) ...[
+                PickerField(
+                  fieldKey: const Key('transfer.category'),
                   label: l10n.category,
                   text: categories[c.categoryId]?.name ?? '',
                   onTap: () async {
@@ -169,48 +151,132 @@ class TransactionFormBody extends ConsumerWidget {
                       c.changed();
                     }
                   },
+                  onClear: () {
+                    c.categoryId = null;
+                    c.changed();
+                  },
                 ),
-              ),
-            SwitchListTile(
-              title: Text(l10n.split),
-              value: c.isSplit,
-              onChanged: c.setSplit,
-            ),
-            if (c.isSplit)
-              SplitEditor(
-                items: c.splits,
-                categories: categories,
-                onChanged: c.changed,
-              ),
-          ],
-          const SizedBox(height: 16),
-          AppTextField(
-            controller: c.memoController,
-            label: l10n.memo,
-            maxLines: 2,
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => onSubmit(),
-            onChanged: (_) => c.changed(),
-          ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: Text(l10n.cleared),
-            value: c.cleared != TransactionClearStatus.uncleared,
-            onChanged: c.setCleared,
-          ),
-          if (!c.isEditing && !c.isSplit && !c.isTransfer)
-            _RecurrenceSection(controller: c),
-          const SizedBox(height: 24),
-          if (onSaveAndAddAnother != null) ...[
-            AppButton.secondary(
-              label: l10n.saveAndAddAnother,
-              icon: Icons.playlist_add,
-              onPressed: onSaveAndAddAnother,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                  child: Text(
+                    l10n.transferCategoryHint,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ],
+            PickerField(
+              label: l10n.date,
+              text: fmt.formatDate(c.date),
+              prefixIcon: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: CalendarDate.toLocalDay(c.date),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2100),
+                );
+                if (picked != null) {
+                  c.date = CalendarDate.fromLocalPick(picked);
+                  c.changed();
+                }
+              },
             ),
             const SizedBox(height: 16),
+            if (!c.isTransfer) ...[
+              PayeeField(
+                key: tutorialKeys.payee,
+                controller: c.payeeController,
+                focusNode: payeeFocus,
+                onSelected: onPayeeSelected,
+                onTextChanged: c.payeeTextChanged,
+              ),
+              const SizedBox(height: 16),
+              if (offBudget)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.offBudgetTransactionHint,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (!c.isSplit)
+                KeyedSubtree(
+                  key: tutorialKeys.category,
+                  child: PickerField(
+                    label: l10n.category,
+                    text: categories[c.categoryId]?.name ?? '',
+                    onTap: () async {
+                      final picked = await showCategoryPicker(context);
+                      if (picked != null) {
+                        c.categoryId = picked.id;
+                        c.changed();
+                      }
+                    },
+                  ),
+                ),
+              if (!offBudget)
+                SwitchListTile(
+                  title: Text(l10n.split),
+                  value: c.isSplit,
+                  onChanged: c.setSplit,
+                ),
+              if (c.isSplit)
+                SplitEditor(
+                  items: c.splits,
+                  categories: categories,
+                  onChanged: c.changed,
+                ),
+            ],
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: c.memoController,
+              label: l10n.memo,
+              maxLines: 2,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => onSubmit(),
+              onChanged: (_) => c.changed(),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: Text(l10n.cleared),
+              value: c.cleared != TransactionClearStatus.uncleared,
+              onChanged: c.setCleared,
+            ),
+            if (!c.isEditing && !c.isSplit && !c.isTransfer)
+              _RecurrenceSection(controller: c),
+            const SizedBox(height: 24),
+            if (onSaveAndAddAnother != null) ...[
+              AppButton.secondary(
+                label: l10n.saveAndAddAnother,
+                icon: Icons.playlist_add,
+                onPressed: onSaveAndAddAnother,
+              ),
+              const SizedBox(height: 16),
+            ],
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 }

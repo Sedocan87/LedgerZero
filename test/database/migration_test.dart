@@ -67,7 +67,8 @@ void main() {
           // The v17 step (re)creates the sync triggers for every synced
           // table. The schema snapshots carry no triggers, so an upgrade
           // that starts at v17 or later has none to check (the v18 step
-          // only drops the unused parsing_rules table).
+          // only drops the unused parsing_rules table, the v19 step only
+          // adds a column).
           if (from >= 17) {
             await db.close();
             return;
@@ -462,5 +463,28 @@ void main() {
         await db.close();
       },
     );
+  });
+
+  group('v18 -> v19', () {
+    test('existing accounts stay on budget; balances and TBB keep', () async {
+      final schema = await verifier.schemaAt(18);
+      final raw = schema.rawDatabase;
+      raw.execute(
+        'INSERT INTO accounts (id, name, type, currency, starting_balance, '
+        "is_closed) VALUES ('a1', 'Main', 'checking', 'USD', 5000, 0)",
+      );
+      raw.execute(
+        'INSERT INTO accounts (id, name, type, currency, starting_balance, '
+        "is_closed) VALUES ('a2', 'Savings', 'savings', 'USD', 20000, 0)",
+      );
+      final db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, latest);
+
+      expect(await columns(db, 'accounts'), contains('on_budget'));
+      final accounts = await db.accountsDao.getAllAccounts();
+      expect(accounts.every((a) => a.onBudget), isTrue);
+      expect(await db.accountsDao.getBudgetStartingBalance(), 25000);
+      await db.close();
+    });
   });
 }

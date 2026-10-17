@@ -46,6 +46,7 @@ final transactionServiceProvider = Provider<TransactionService>((ref) {
   return TransactionService(
     transactionRepository: ref.watch(transactionRepositoryProvider),
     payeeRepository: ref.watch(payeeRepositoryProvider),
+    accountRepository: ref.watch(accountRepositoryProvider),
     undoService: ref.watch(undoServiceProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
     ruleMatchingService: ref.watch(ruleMatchingServiceProvider),

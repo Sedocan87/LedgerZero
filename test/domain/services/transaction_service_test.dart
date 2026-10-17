@@ -23,6 +23,7 @@ void main() {
     service = TransactionService(
       transactionRepository: t.transactions,
       payeeRepository: t.payees,
+      accountRepository: t.accounts,
       undoService: undo,
       unitOfWork: t.unitOfWork,
       ruleMatchingService: RuleMatchingService(

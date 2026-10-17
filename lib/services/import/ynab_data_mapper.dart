@@ -30,9 +30,9 @@ import 'package:uuid/uuid.dart';
 ///   complete. All new accounts get the currency passed to [importData]
 ///   (the user's choice on the import screen, default: the app's default
 ///   currency); YNAB exports carry no currency.
-/// * Tracking (off-budget) accounts are not imported: LedgerZero has no
-///   off-budget accounts, and every account it has counts towards To Be
-///   Budgeted. Their own transactions are skipped. A transfer between an
+/// * Tracking (off-budget) accounts are not imported (yet; LedgerZero has
+///   off-budget accounts since schema v19, see ROADMAP.md). Their own
+///   transactions are skipped. A transfer between an
 ///   on-budget and a tracking account is the moment money leaves or enters
 ///   the budget, so its on-budget leg is imported as a normal row: with
 ///   YNAB's category if it had one (YNAB requires one for such outflows),

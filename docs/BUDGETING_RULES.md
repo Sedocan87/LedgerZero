@@ -15,22 +15,49 @@ day.
 *   **Account balance** = starting balance + sum of the account's non-deleted
     transactions that are not split lines (a split counts once, through its
     parent row).
-*   **Category activity** = sum of the non-deleted transactions carrying the
-    category (split lines included). Transfer legs and split parents never
-    carry a category.
+*   **Category activity** = sum of the non-deleted transactions of
+    on-budget accounts carrying the category (split lines included). Split
+    parents never carry a category; a transfer leg only counts when the
+    transfer crosses the budget boundary (see below).
 *   **Budgeted** = money assigned to a category for a month (one row per
     category and month, id `UUIDv5("budget:<categoryId>:<yyyy-MM>")`).
 *   **Available(category, M)** = budgeted up to and including M + activity up
     to the end of M. Positive balances and overspending roll over.
 
+## On-budget and off-budget accounts
+
+Every account is either **on budget** (the default) or **off budget**
+(a tracking account: savings you don't want to budget, investments, a
+loan). The "Include in budget" switch on the account form sets it
+(`accounts.on_budget`, schema v19).
+
+*   An off-budget account counts towards net worth only. Its starting
+    balance and its transactions never reach To Be Budgeted, category
+    activity, income or spending (reports included); a category on one of
+    its transactions is ignored, and the transaction form offers none.
+*   A transfer between an on-budget and an off-budget account is money
+    leaving or entering the budget. Without a category its on-budget leg
+    flows into TBB (a transfer to savings reduces TBB, one back from
+    savings increases it). With a category (the transfer form offers one
+    for exactly these transfers) the category is stored on the on-budget
+    leg and the money leaves or enters that category instead: budget 500
+    to "Stocks & ETFs", transfer 500 to the brokerage account with that
+    category, and the category is spent while TBB is untouched. It is
+    neither income nor spending.
+*   Any other transfer has no category. A category left on a transfer leg
+    that no longer crosses the boundary (an account was switched back) is
+    ignored, so the budget stays balanced.
+*   Changing the switch recalculates every month (the app asks first).
+
 ## To Be Budgeted (TBB)
 
-`TBB(M) = sum of all accounts' starting balances`
+`TBB(M) = sum of the on-budget accounts' starting balances`
 `       + sum of the transactions that flow into TBB, up to the end of M`
 `       - sum of everything budgeted up to and including M`
 
-A transaction flows into TBB when it is **not deleted, uncategorised, not a
-transfer leg and not a split parent**. Both signs count:
+A transaction flows into TBB when it is **not deleted, uncategorised, in an
+on-budget account, not a split parent, and not a transfer leg unless the
+other account is off budget**. Both signs count:
 
 *   An uncategorised inflow (salary, refund you did not categorise, the YNAB
     "Starting Balance" row) increases TBB.
@@ -39,30 +66,46 @@ transfer leg and not a split parent**. Both signs count:
     difference found while reconciling changes TBB deliberately.
 *   Starting balances are budgetable. A credit-card account opened with a
     negative starting balance (existing debt) reduces TBB by that amount.
-*   Moving money between your accounts (a transfer: two linked rows,
-    uncategorised) never changes TBB.
+*   Moving money between two on-budget accounts (a transfer: two linked
+    rows, uncategorised) never changes TBB.
 *   A split counts through its lines: lines with a category are category
     activity, lines without a category flow into TBB; the parent row itself
     never counts (it only carries the account-side total).
 
 ### Income and spending figures
 
-*   **Income** of a period = the positive transactions that flow into TBB.
-*   **Spending** of a period = all outflows that are not transfer legs, with a
-    split counted through its lines (never parent and lines together).
+*   **Income** of a period = the positive transactions that flow into TBB,
+    without transfer legs.
+*   **Spending** of a period = all outflows of on-budget accounts that are
+    not transfer legs, with a split counted through its lines (never parent
+    and lines together).
+*   **Net worth** counts every account, on and off budget.
 
 ### The invariant
 
 For every month M:
 
-`sum over categories of Available(M) + TBB(M) = sum of account balances
-(counting transactions up to the end of M)`
+`sum over categories of Available(M) + TBB(M) = sum of the on-budget
+account balances (counting transactions up to the end of M)`
 
 This is checked by `test/domain/services/budget_invariant_test.dart` on a
 real database with several accounts (including a credit card with a
 negative starting balance), income, categorised and uncategorised spending,
 transfers in both directions, an income split and an expense split, a
-deleted row, a reconciliation adjustment and budgets in two months.
+deleted row, a reconciliation adjustment and budgets in two months, and
+with an off-budget account (its own rows, categorised ones included, and
+transfers to and from it).
+
+## Setting money aside
+
+New budgets include a "Savings & Investments" group (Cash Reserve, Stocks &
+ETFs, Crypto, Bonds, Retirement); budgets created earlier are offered it
+once on the budget screen. Money assigned to such a category leaves TBB and
+rolls over every month, so a reserve you always keep (e.g. 5,000 in
+checking) is budgeted once into Cash Reserve and never shows up in TBB
+again. A reserve that is a whole account can instead be an off-budget
+account. Interest and dividends are not categories: they are uncategorised
+income and flow into TBB (or stay in an off-budget account).
 
 ## Credit cards (current behaviour)
 
