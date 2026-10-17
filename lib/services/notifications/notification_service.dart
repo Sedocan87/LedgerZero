@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/notifications/local_notifications_client.dart';
 import 'package:ledger_zero/services/notifications/notification_payload.dart';
+import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -125,9 +126,11 @@ class NotificationService {
     }
   }
 
+  /// The OS permission dialog makes the app `inactive`; [ExternalUiGuard]
+  /// keeps the immediate auto-lock from locking for it.
   Future<void> requestPermissions() async {
     try {
-      await _client.requestPermissions();
+      await ExternalUiGuard.run(_client.requestPermissions);
     } catch (e, stack) {
       Logger.error('Failed to request notification permission', e, stack);
     }

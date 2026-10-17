@@ -7,6 +7,7 @@ import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -74,12 +75,16 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         settings.syncStatusNotifications) {
       await notifications.requestPermissions();
     }
-    final scheduled = ref.read(scheduledTransactionServiceProvider);
-    await scheduled.processDueTransactions(
-      fallbackMemo: _scheduledFallbackMemo(),
-    );
-    // New or edited schedules and a changed reminder toggle take effect.
-    await scheduled.rescheduleReminders();
+    try {
+      final scheduled = ref.read(scheduledTransactionServiceProvider);
+      await scheduled.processDueTransactions(
+        fallbackMemo: _scheduledFallbackMemo(),
+      );
+      // New or edited schedules and a changed reminder toggle take effect.
+      await scheduled.rescheduleReminders();
+    } on DatabaseLockedException {
+      // Locked while starting up; runs again after the next unlock.
+    }
   }
 
   /// Localised memo for generated scheduled occurrences without memo and
