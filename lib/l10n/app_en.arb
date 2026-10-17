@@ -2940,5 +2940,40 @@
   "legacyUnlockExplanation": "LedgerZero no longer uses a master password. Unlock one last time with your password or recovery key. After that, the app keeps its key in this phone's secure key store, and the app lock uses your fingerprint, face or screen lock.",
   "setupDeviceHeading": "Your data stays on this phone",
   "setupDeviceExplanation": "Your budget is stored only on this phone, encrypted with a key that Android keeps in its secure key store. There is no account and no password to remember. So you don't lose anything with your phone, create backups or sync with a second phone.",
-  "lockScreenReadError": "LedgerZero could not read its key from this phone's secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone."
+  "lockScreenReadError": "LedgerZero could not read its key from this phone's secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.",
+  "providerLocalWifi": "Home Wi-Fi (phone to phone)",
+  "lanSyncTitle": "Wi-Fi sync",
+  "lanSetupExplanation": "Share one budget with a second phone, for example your partner's, without any cloud. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.",
+  "lanStart": "Start on this phone",
+  "lanStartHint": "Choose this on the phone that already has your budget.",
+  "lanJoin": "Join the other phone",
+  "lanJoinHint": "Choose this on the second phone. Its data is merged into the shared budget.",
+  "lanPairPhone": "Pair a phone",
+  "lanShowCodeInstructions": "On the other phone open Settings > Sync, choose Home Wi-Fi, tap \"Join the other phone\" and scan this code. Both phones must be on the same Wi-Fi with LedgerZero open.",
+  "lanShowCodeWarning": "This code gives access to your budget. Only show it to phones you trust.",
+  "lanCodeTextLabel": "Can't scan? Type this code on the other phone:",
+  "lanScanTitle": "Scan the pairing code",
+  "lanEnterCode": "Enter code instead",
+  "lanEnterCodeTitle": "Pairing code",
+  "lanEnterCodeHint": "Starts with lzpair1:",
+  "lanCameraUnavailable": "The camera is not available. Enter the code instead.",
+  "lanJoining": "Connecting to the other phone…",
+  "lanStarted": "Wi-Fi sync is on. Pair a second phone to share the budget.",
+  "lanJoined": "Paired. The budget is now shared.",
+  "lanInvalidCode": "This is not a LedgerZero pairing code.",
+  "lanPhoneNotFound": "The other phone could not be reached. Make sure both phones are on the same Wi-Fi and LedgerZero is open on the other phone.",
+  "lanSetupFailed": "Wi-Fi sync could not be set up.",
+  "lanPeersTitle": "Paired phones",
+  "lanNoPeers": "No phone paired yet.",
+  "lanPeerLastSync": "Last synced {time}",
+  "@lanPeerLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lanPeerNeverSynced": "Not synced yet",
+  "lanTurnOff": "Turn off Wi-Fi sync",
+  "syncErrorPairingMismatch": "This phone and the other one were paired with different codes. Turn off Wi-Fi sync on this phone and pair it again."
 }

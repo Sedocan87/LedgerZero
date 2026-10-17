@@ -3685,4 +3685,101 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get lockScreenReadError =>
       'LedgerZero konnte seinen Schlüssel gerade nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen. Ihre Daten sind nicht betroffen. Versuchen Sie es erneut; wenn es weiterhin fehlschlägt, starten Sie das Telefon neu.';
+
+  @override
+  String get providerLocalWifi => 'Heim-WLAN (Telefon zu Telefon)';
+
+  @override
+  String get lanSyncTitle => 'WLAN-Synchronisierung';
+
+  @override
+  String get lanSetupExplanation =>
+      'Teilen Sie ein Budget mit einem zweiten Telefon, zum Beispiel dem Ihres Partners, ganz ohne Cloud. Die Telefone synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist.';
+
+  @override
+  String get lanStart => 'Auf diesem Telefon starten';
+
+  @override
+  String get lanStartHint =>
+      'Wählen Sie dies auf dem Telefon, das Ihr Budget bereits hat.';
+
+  @override
+  String get lanJoin => 'Dem anderen Telefon beitreten';
+
+  @override
+  String get lanJoinHint =>
+      'Wählen Sie dies auf dem zweiten Telefon. Seine Daten werden in das gemeinsame Budget übernommen.';
+
+  @override
+  String get lanPairPhone => 'Telefon koppeln';
+
+  @override
+  String get lanShowCodeInstructions =>
+      'Öffnen Sie auf dem anderen Telefon Einstellungen > Synchronisierung, wählen Sie Heim-WLAN, tippen Sie auf „Dem anderen Telefon beitreten“ und scannen Sie diesen Code. Beide Telefone müssen im selben WLAN sein und LedgerZero geöffnet haben.';
+
+  @override
+  String get lanShowCodeWarning =>
+      'Dieser Code gewährt Zugriff auf Ihr Budget. Zeigen Sie ihn nur Telefonen, denen Sie vertrauen.';
+
+  @override
+  String get lanCodeTextLabel =>
+      'Scannen klappt nicht? Geben Sie diesen Code auf dem anderen Telefon ein:';
+
+  @override
+  String get lanScanTitle => 'Kopplungscode scannen';
+
+  @override
+  String get lanEnterCode => 'Stattdessen Code eingeben';
+
+  @override
+  String get lanEnterCodeTitle => 'Kopplungscode';
+
+  @override
+  String get lanEnterCodeHint => 'Beginnt mit lzpair1:';
+
+  @override
+  String get lanCameraUnavailable =>
+      'Die Kamera ist nicht verfügbar. Geben Sie stattdessen den Code ein.';
+
+  @override
+  String get lanJoining => 'Verbindung zum anderen Telefon wird hergestellt…';
+
+  @override
+  String get lanStarted =>
+      'Die WLAN-Synchronisierung ist an. Koppeln Sie ein zweites Telefon, um das Budget zu teilen.';
+
+  @override
+  String get lanJoined => 'Gekoppelt. Das Budget wird jetzt geteilt.';
+
+  @override
+  String get lanInvalidCode => 'Das ist kein LedgerZero-Kopplungscode.';
+
+  @override
+  String get lanPhoneNotFound =>
+      'Das andere Telefon ist nicht erreichbar. Achten Sie darauf, dass beide Telefone im selben WLAN sind und LedgerZero auf dem anderen Telefon geöffnet ist.';
+
+  @override
+  String get lanSetupFailed =>
+      'Die WLAN-Synchronisierung konnte nicht eingerichtet werden.';
+
+  @override
+  String get lanPeersTitle => 'Gekoppelte Telefone';
+
+  @override
+  String get lanNoPeers => 'Noch kein Telefon gekoppelt.';
+
+  @override
+  String lanPeerLastSync(String time) {
+    return 'Zuletzt synchronisiert $time';
+  }
+
+  @override
+  String get lanPeerNeverSynced => 'Noch nicht synchronisiert';
+
+  @override
+  String get lanTurnOff => 'WLAN-Synchronisierung ausschalten';
+
+  @override
+  String get syncErrorPairingMismatch =>
+      'Dieses und das andere Telefon wurden mit unterschiedlichen Codes gekoppelt. Schalten Sie die WLAN-Synchronisierung auf diesem Telefon aus und koppeln Sie es erneut.';
 }

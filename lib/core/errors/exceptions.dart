@@ -32,6 +32,10 @@ enum SyncErrorKind {
   /// The cloud storage is full.
   storageFull,
 
+  /// Wi-Fi sync: the paired phones use different sync folders (paired
+  /// with different codes); pair them again.
+  pairingMismatch,
+
   /// Anything else (the details are logged).
   other,
 }

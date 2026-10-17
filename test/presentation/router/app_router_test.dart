@@ -120,62 +120,64 @@ void main() {
     await unmount(tester, c);
   });
 
-  testWidgets('unlocking opens Home; the tabs work; locking returns to the lock screen', (
-    tester,
-  ) async {
-    final c = await pumpRouter(tester, onboarded: true);
-    unlock(c);
-    await tester.pumpAndSettle();
-    expect(location(c), '/');
-    expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.byType(LockScreen), findsNothing);
+  testWidgets(
+    'unlocking opens Home; the tabs work; locking returns to the lock screen',
+    (tester) async {
+      final c = await pumpRouter(tester, onboarded: true);
+      unlock(c);
+      await tester.pumpAndSettle();
+      expect(location(c), '/');
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(LockScreen), findsNothing);
 
-    // The lock screen and onboarding are not reachable while unlocked.
-    c.read(routerProvider).go('/login');
-    await tester.pumpAndSettle();
-    expect(location(c), '/');
-    c.read(routerProvider).go('/onboarding');
-    await tester.pumpAndSettle();
-    expect(location(c), '/');
+      // The lock screen and onboarding are not reachable while unlocked.
+      c.read(routerProvider).go('/login');
+      await tester.pumpAndSettle();
+      expect(location(c), '/');
+      c.read(routerProvider).go('/onboarding');
+      await tester.pumpAndSettle();
+      expect(location(c), '/');
 
-    await tester.tap(find.text('Accounts').last);
-    await tester.pumpAndSettle();
-    expect(location(c), '/accounts');
-    expect(find.byType(AccountsScreen), findsOneWidget);
+      await tester.tap(find.text('Accounts').last);
+      await tester.pumpAndSettle();
+      expect(location(c), '/accounts');
+      expect(find.byType(AccountsScreen), findsOneWidget);
 
-    // Locking (auto-lock or "Lock now") drops the protected screens.
-    c.read(authProvider.notifier).setAuthenticated(false);
-    await tester.pumpAndSettle();
-    expect(location(c), '/login');
-    expect(find.byType(AccountsScreen), findsNothing);
-    expect(find.byType(LockScreen), findsOneWidget);
-    await unmount(tester, c);
-  });
+      // Locking (auto-lock or "Lock now") drops the protected screens.
+      c.read(authProvider.notifier).setAuthenticated(false);
+      await tester.pumpAndSettle();
+      expect(location(c), '/login');
+      expect(find.byType(AccountsScreen), findsNothing);
+      expect(find.byType(LockScreen), findsOneWidget);
+      await unmount(tester, c);
+    },
+  );
 
-  testWidgets('a deep link while locked shows the lock screen, then opens after unlock', (
-    tester,
-  ) async {
-    final c = await pumpRouter(tester, onboarded: true);
-    c.read(routerProvider).go('/settings/scheduled-transactions');
-    await tester.pumpAndSettle();
-    expect(location(c), '/login');
-    expect(find.byType(LockScreen), findsOneWidget);
-    expect(
-      c.read(pendingLocationProvider).value,
-      '/settings/scheduled-transactions',
-    );
+  testWidgets(
+    'a deep link while locked shows the lock screen, then opens after unlock',
+    (tester) async {
+      final c = await pumpRouter(tester, onboarded: true);
+      c.read(routerProvider).go('/settings/scheduled-transactions');
+      await tester.pumpAndSettle();
+      expect(location(c), '/login');
+      expect(find.byType(LockScreen), findsOneWidget);
+      expect(
+        c.read(pendingLocationProvider).value,
+        '/settings/scheduled-transactions',
+      );
 
-    unlock(c);
-    await tester.pumpAndSettle();
-    expect(location(c), '/settings/scheduled-transactions');
-    expect(c.read(pendingLocationProvider).value, isNull);
+      unlock(c);
+      await tester.pumpAndSettle();
+      expect(location(c), '/settings/scheduled-transactions');
+      expect(c.read(pendingLocationProvider).value, isNull);
 
-    // Opened once: the next lock/unlock starts at Home again.
-    c.read(authProvider.notifier).setAuthenticated(false);
-    await tester.pumpAndSettle();
-    unlock(c);
-    await tester.pumpAndSettle();
-    expect(location(c), '/');
-    await unmount(tester, c);
-  });
+      // Opened once: the next lock/unlock starts at Home again.
+      c.read(authProvider.notifier).setAuthenticated(false);
+      await tester.pumpAndSettle();
+      unlock(c);
+      await tester.pumpAndSettle();
+      expect(location(c), '/');
+      await unmount(tester, c);
+    },
+  );
 }

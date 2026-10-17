@@ -166,54 +166,48 @@ void main() {
       service.dispose();
     });
 
-    test(
-      'if the app is still in the background after the OS screen closed '
-      '(and the grace period), it locks',
-      () async {
-        void Function()? grace;
-        final service = buildService(
-          Stopwatch(),
-          timerFactory: (duration, callback) {
-            expect(duration, AutoLockService.resumeGrace);
-            grace = callback;
-            return Timer(const Duration(days: 1), () {});
-          },
-        );
-        await ExternalUiGuard.run(() async {
-          service.didChangeAppLifecycleState(AppLifecycleState.paused);
-        });
-        await pumpEventQueue();
-        expect(uiLocked(), isFalse);
-        grace!();
-        await pumpEventQueue();
-        expect(uiLocked(), isTrue);
-        service.dispose();
-      },
-    );
+    test('if the app is still in the background after the OS screen closed '
+        '(and the grace period), it locks', () async {
+      void Function()? grace;
+      final service = buildService(
+        Stopwatch(),
+        timerFactory: (duration, callback) {
+          expect(duration, AutoLockService.resumeGrace);
+          grace = callback;
+          return Timer(const Duration(days: 1), () {});
+        },
+      );
+      await ExternalUiGuard.run(() async {
+        service.didChangeAppLifecycleState(AppLifecycleState.paused);
+      });
+      await pumpEventQueue();
+      expect(uiLocked(), isFalse);
+      grace!();
+      await pumpEventQueue();
+      expect(uiLocked(), isTrue);
+      service.dispose();
+    });
 
-    test(
-      'a full-screen OS prompt that reports before the app resumes does not '
-      'lock (device PIN screen of the app lock)',
-      () async {
-        void Function()? grace;
-        final service = buildService(
-          Stopwatch(),
-          timerFactory: (duration, callback) {
-            grace = callback;
-            return Timer(const Duration(days: 1), () {});
-          },
-        );
-        await ExternalUiGuard.run(() async {
-          service.didChangeAppLifecycleState(AppLifecycleState.paused);
-        });
-        // The result arrived; `resumed` follows a moment later.
-        service.didChangeAppLifecycleState(AppLifecycleState.resumed);
-        grace?.call();
-        await pumpEventQueue();
-        expect(uiLocked(), isFalse);
-        service.dispose();
-      },
-    );
+    test('a full-screen OS prompt that reports before the app resumes does not '
+        'lock (device PIN screen of the app lock)', () async {
+      void Function()? grace;
+      final service = buildService(
+        Stopwatch(),
+        timerFactory: (duration, callback) {
+          grace = callback;
+          return Timer(const Duration(days: 1), () {});
+        },
+      );
+      await ExternalUiGuard.run(() async {
+        service.didChangeAppLifecycleState(AppLifecycleState.paused);
+      });
+      // The result arrived; `resumed` follows a moment later.
+      service.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      grace?.call();
+      await pumpEventQueue();
+      expect(uiLocked(), isFalse);
+      service.dispose();
+    });
 
     test(
       'timeout mode: locks on resume after the timeout, not before',

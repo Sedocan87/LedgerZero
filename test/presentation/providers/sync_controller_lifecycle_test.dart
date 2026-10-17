@@ -1,3 +1,8 @@
+import 'package:ledger_zero/services/sync/lan/local_sync_folder.dart';
+import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
+import 'package:ledger_zero/services/sync/lan/lan_peers.dart';
+import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
+import 'dart:io';
 import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:ledger_zero/data/database/database.dart';
@@ -15,6 +20,7 @@ import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 
 import '../../helpers/sync_simulation.dart';
+import '../../helpers/security_fakes.dart' show InMemorySecureStore;
 import '../../helpers/test_database.dart';
 
 class FakeEngine implements SyncEngine {
@@ -308,4 +314,81 @@ void main() {
     expect(engine.runs, 0);
     expect(c.state.status, isNot(SyncStatus.error));
   });
+
+  group('Wi-Fi sync', () {
+    late Directory dir;
+    late LanSyncService lan;
+
+    setUp(() async {
+      dir = await Directory.systemTemp.createTemp('lz_lan_ctrl_');
+      lan = LanSyncService(
+        folder: LocalSyncFolder(() async => Directory('${dir.path}/lan')),
+        pairingStore: LanPairingStore(InMemorySecureStore()),
+        peers: LanPeers(prefs),
+        deviceId: '00000000-0000-4000-8000-000000000001',
+        deviceName: 'Test phone',
+        serverPort: 0,
+        discoveryPort: 0,
+        bindAddress: InternetAddress.loopbackIPv4,
+      );
+      engine = _NoFolderEngine();
+    });
+
+    tearDown(() async {
+      await lan.stop();
+      await dir.delete(recursive: true);
+    });
+
+    SyncController lanController() {
+      prefs.values['sync_provider'] = 'localWifi';
+      final c = SyncController(
+        authService: FakeAuth(),
+        prefs: prefs,
+        connectivity: connectivity,
+        dependencies: () => SyncDependencies(
+          engineFor: (_) => engine,
+          dao: t.db.syncDao,
+          resolver: SyncConflictResolver(t.db),
+        ),
+        transportFor: (p) =>
+            p == SyncProviderType.localWifi ? lan.transport : null,
+        lan: lan,
+      );
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    test('unpaired: the setup offers start/join and nothing syncs', () async {
+      final c = lanController();
+      await c.onLockStateChanged(AppLockState.unlocked);
+      await settle();
+      expect(c.state.status, SyncStatus.connected);
+      expect(c.state.setup, SyncSetupState.needsNewPassphrase);
+      expect(engine.runs, 0);
+    });
+
+    test('joining with an invalid code or an unreachable phone', () async {
+      final c = lanController();
+      await c.onLockStateChanged(AppLockState.unlocked);
+
+      expect(await c.joinLanSync('hello'), LanSetupResult.invalidCode);
+
+      final unreachable = LanPairingCode(
+        pairing: LanPairing.generate(),
+        deviceId: '00000000-0000-4000-8000-000000000002',
+        deviceName: 'Other',
+        // Nothing listens on port 9 of loopback.
+        endpoints: const [LanEndpoint('127.0.0.1', 9)],
+      ).encode();
+      expect(await c.joinLanSync(unreachable), LanSetupResult.phoneNotFound);
+      expect(lan.isPaired, isFalse);
+    });
+  });
+}
+
+/// The folder has no manifest (the other phone was not reached).
+class _NoFolderEngine extends FakeEngine {
+  @override
+  Future<void> joinSyncFolder(String passphrase) async =>
+      throw const SyncFolderMissingException();
 }

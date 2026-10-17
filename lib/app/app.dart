@@ -76,6 +76,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       ref.read(syncControllerProvider.notifier).onAppResumed();
       _processCapturedNotifications();
     }
+    if (state == AppLifecycleState.paused) {
+      ref.read(syncControllerProvider.notifier).onAppPaused();
+    }
   }
 
   /// Books card notifications captured since the last run (needs the open

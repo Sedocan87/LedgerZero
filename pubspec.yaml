@@ -77,6 +77,8 @@ dependencies:
   # SQLCipher is bundled through the sqlite3 build hook (see `hooks` below).
   sqlite3: ^3.7.1
   http: ^1.6.0 # Drive media download client
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.2
 
 dev_dependencies:
   flutter_test:

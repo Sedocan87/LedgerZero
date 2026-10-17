@@ -22,6 +22,11 @@ This document outlines the platform-specific implementations, configurations, an
   - `VIBRATE`: For haptic feedback.
   - `POST_NOTIFICATIONS`: For local notifications (sync alerts, reminders).
   - `RECEIVE_BOOT_COMPLETED`: Lets scheduled local notifications survive a reboot.
+- **Camera** (`CAMERA`, added by `mobile_scanner`): only for scanning the
+  Wi-Fi sync pairing code; asked when the scanner opens.
+- **Local network**: Wi-Fi sync listens on TCP 47321 and sends/receives UDP
+  broadcasts on 47322 while the app is open. See
+  [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md#local-wi-fi).
 - **Notification listener**: `CardNotificationListener`, bound by the system
   (`BIND_NOTIFICATION_LISTENER_SERVICE`) only after the user grants
   notification access; reads notifications of the bank/card apps chosen in

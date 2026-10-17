@@ -3655,4 +3655,100 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lockScreenReadError =>
       'LedgerZero could not read its key from this phone\'s secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.';
+
+  @override
+  String get providerLocalWifi => 'Home Wi-Fi (phone to phone)';
+
+  @override
+  String get lanSyncTitle => 'Wi-Fi sync';
+
+  @override
+  String get lanSetupExplanation =>
+      'Share one budget with a second phone, for example your partner\'s, without any cloud. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.';
+
+  @override
+  String get lanStart => 'Start on this phone';
+
+  @override
+  String get lanStartHint =>
+      'Choose this on the phone that already has your budget.';
+
+  @override
+  String get lanJoin => 'Join the other phone';
+
+  @override
+  String get lanJoinHint =>
+      'Choose this on the second phone. Its data is merged into the shared budget.';
+
+  @override
+  String get lanPairPhone => 'Pair a phone';
+
+  @override
+  String get lanShowCodeInstructions =>
+      'On the other phone open Settings > Sync, choose Home Wi-Fi, tap \"Join the other phone\" and scan this code. Both phones must be on the same Wi-Fi with LedgerZero open.';
+
+  @override
+  String get lanShowCodeWarning =>
+      'This code gives access to your budget. Only show it to phones you trust.';
+
+  @override
+  String get lanCodeTextLabel =>
+      'Can\'t scan? Type this code on the other phone:';
+
+  @override
+  String get lanScanTitle => 'Scan the pairing code';
+
+  @override
+  String get lanEnterCode => 'Enter code instead';
+
+  @override
+  String get lanEnterCodeTitle => 'Pairing code';
+
+  @override
+  String get lanEnterCodeHint => 'Starts with lzpair1:';
+
+  @override
+  String get lanCameraUnavailable =>
+      'The camera is not available. Enter the code instead.';
+
+  @override
+  String get lanJoining => 'Connecting to the other phone…';
+
+  @override
+  String get lanStarted =>
+      'Wi-Fi sync is on. Pair a second phone to share the budget.';
+
+  @override
+  String get lanJoined => 'Paired. The budget is now shared.';
+
+  @override
+  String get lanInvalidCode => 'This is not a LedgerZero pairing code.';
+
+  @override
+  String get lanPhoneNotFound =>
+      'The other phone could not be reached. Make sure both phones are on the same Wi-Fi and LedgerZero is open on the other phone.';
+
+  @override
+  String get lanSetupFailed => 'Wi-Fi sync could not be set up.';
+
+  @override
+  String get lanPeersTitle => 'Paired phones';
+
+  @override
+  String get lanNoPeers => 'No phone paired yet.';
+
+  @override
+  String lanPeerLastSync(String time) {
+    return 'Last synced $time';
+  }
+
+  @override
+  String get lanPeerNeverSynced => 'Not synced yet';
+
+  @override
+  String get lanTurnOff => 'Turn off Wi-Fi sync';
+
+  @override
+  String get syncErrorPairingMismatch =>
+      'This phone and the other one were paired with different codes. Turn off Wi-Fi sync on this phone and pair it again.';
 }

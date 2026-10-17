@@ -11,6 +11,8 @@ import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
+import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
+import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
@@ -29,6 +31,19 @@ class SyncDependencies {
     required this.dao,
     required this.resolver,
   });
+}
+
+/// Outcome of starting or joining Wi-Fi sync.
+enum LanSetupResult {
+  ok,
+
+  /// The scanned or typed text is not a LedgerZero pairing code.
+  invalidCode,
+
+  /// The other phone could not be reached (not on the same Wi-Fi, app not
+  /// open, or the network blocks phones from talking to each other).
+  phoneNotFound,
+  failed,
 }
 
 /// Outcome of setting or entering the sync passphrase.
@@ -58,6 +73,9 @@ class SyncController extends StateNotifier<SyncState> {
   final ConnectivityService _connectivity;
   final SyncDependencies Function() _dependencies;
   final SyncTransport? Function(SyncProviderType provider) _transportFor;
+
+  /// Wi-Fi sync (null in tests that do not use it).
+  final LanSyncService? _lan;
   final Duration debounce;
   final Duration resumeThreshold;
   final Duration Function(SyncFrequency frequency)? _intervalOverride;
@@ -68,6 +86,7 @@ class SyncController extends StateNotifier<SyncState> {
   static const String _syncFrequencyKey = 'sync_frequency';
 
   bool _unlocked = false;
+  bool _foreground = true;
   static bool _legacyQueueRemoved = false;
   bool _disposed = false;
   SyncDependencies? _deps;
@@ -98,6 +117,7 @@ class SyncController extends StateNotifier<SyncState> {
     required this._connectivity,
     required this._dependencies,
     required this._transportFor,
+    this._lan,
     this.debounce = const Duration(seconds: 10),
     this.resumeThreshold = const Duration(seconds: 60),
     Duration Function(SyncFrequency frequency)? intervalFor,
@@ -211,6 +231,7 @@ class SyncController extends StateNotifier<SyncState> {
       return;
     }
     _unlocked = false;
+    unawaited(_lan?.stop());
     _cancellation?.cancel();
     _stopTimersAndSubscriptions();
     _deps = null;
@@ -236,8 +257,17 @@ class SyncController extends StateNotifier<SyncState> {
     _quarantineSub = null;
   }
 
+  /// The app went to the background: Wi-Fi sync stops listening (Android
+  /// would stop it soon anyway).
+  void onAppPaused() {
+    _foreground = false;
+    unawaited(_lan?.stop());
+  }
+
   /// The app returned to the foreground.
   void onAppResumed() {
+    _foreground = true;
+    unawaited(_startLanIfPaired());
     final last = state.lastSyncTime;
     if (last == null || _clock().difference(last) > resumeThreshold) {
       _requestAutoSync('resume');
@@ -332,6 +362,10 @@ class SyncController extends StateNotifier<SyncState> {
       }
       if (automatic && state.wifiOnly && !await _connectivity.isWifi) {
         Logger.info('Sync deferred: Wi-Fi only.');
+        return;
+      }
+      if (state.selectedProvider == SyncProviderType.localWifi &&
+          (!(_lan?.isPaired ?? false) || !await _connectivity.isWifi)) {
         return;
       }
       if (_disposed || !_unlocked) {
@@ -435,6 +469,9 @@ class SyncController extends StateNotifier<SyncState> {
       return;
     }
     await _prefs.setString(_syncProviderKey, provider.name);
+    if (state.selectedProvider == SyncProviderType.localWifi) {
+      await _lan?.stop();
+    }
     _engine = null;
     _engineTransport = null;
     state = state.copyWith(
@@ -444,10 +481,10 @@ class SyncController extends StateNotifier<SyncState> {
       clearError: true,
       clearAccount: true,
     );
-    if (provider == SyncProviderType.googleDrive) {
-      await _refreshConnectionState();
-    } else {
+    if (provider == SyncProviderType.none) {
       await _discardCapturedChanges();
+    } else {
+      await _refreshConnectionState();
     }
   }
 
@@ -476,6 +513,10 @@ class SyncController extends StateNotifier<SyncState> {
                 accountEmail: _authService.currentUser?.email,
               ),
             );
+          }
+        case SyncProviderType.localWifi:
+          if (!await _prepareLan()) {
+            return;
           }
         case SyncProviderType.none:
           return;
@@ -529,6 +570,10 @@ class SyncController extends StateNotifier<SyncState> {
             status: SyncStatus.connected,
             accountEmail: account.email,
           );
+        case SyncProviderType.localWifi:
+          if (!await _prepareLan()) {
+            return;
+          }
         case SyncProviderType.none:
           state = state.copyWith(status: SyncStatus.disconnected);
           return;
@@ -555,6 +600,9 @@ class SyncController extends StateNotifier<SyncState> {
       }
       if (state.selectedProvider == SyncProviderType.googleDrive) {
         await _authService.signOut();
+      }
+      if (state.selectedProvider == SyncProviderType.localWifi) {
+        await _lan?.unpair();
       }
       await _prefs.remove(_syncProviderKey);
       _engine = null;
@@ -588,6 +636,101 @@ class SyncController extends StateNotifier<SyncState> {
       Logger.warning('Could not clear captured changes: $e');
     }
   }
+
+  // ---------------------------------------------------------------------
+  // Wi-Fi sync
+  // ---------------------------------------------------------------------
+
+  /// Loads the pairing and starts listening; false while not paired (the
+  /// setup offers "start" and "join").
+  Future<bool> _prepareLan() async {
+    final lan = _lan;
+    if (lan == null) {
+      return false;
+    }
+    await lan.load();
+    _set(state.copyWith(status: SyncStatus.connected, clearError: true));
+    if (!lan.isPaired) {
+      _set(state.copyWith(setup: SyncSetupState.needsNewPassphrase));
+      return false;
+    }
+    await _startLanIfPaired();
+    return true;
+  }
+
+  Future<void> _startLanIfPaired() async {
+    final lan = _lan;
+    if (lan != null &&
+        lan.isPaired &&
+        _foreground &&
+        _unlocked &&
+        state.selectedProvider == SyncProviderType.localWifi) {
+      await lan.start();
+    }
+  }
+
+  /// First phone: creates the pairing and the sync folder.
+  Future<LanSetupResult> startLanSync() async {
+    final lan = _lan;
+    final engine = _currentEngine();
+    if (lan == null || engine == null) {
+      return LanSetupResult.failed;
+    }
+    try {
+      final pairing = LanPairing.generate();
+      await lan.folder.clear();
+      await lan.pair(pairing);
+      await _startLanIfPaired();
+      await engine.createSyncFolder(pairing.passphrase);
+      _set(state.copyWith(setup: SyncSetupState.ready, clearError: true));
+      unawaited(syncNow());
+      return LanSetupResult.ok;
+    } catch (e, stack) {
+      Logger.error('Starting Wi-Fi sync failed', e, stack);
+      return LanSetupResult.failed;
+    }
+  }
+
+  /// Further phones: pairs with the code scanned on the first phone,
+  /// fetches its sync folder and joins it. This phone's data is merged
+  /// into the shared budget by the first sync.
+  Future<LanSetupResult> joinLanSync(String codeText) async {
+    final lan = _lan;
+    final engine = _currentEngine();
+    if (lan == null || engine == null) {
+      return LanSetupResult.failed;
+    }
+    final LanPairingCode code;
+    try {
+      code = LanPairingCode.decode(codeText);
+    } on FormatException {
+      return LanSetupResult.invalidCode;
+    }
+    try {
+      await lan.folder.clear();
+      await lan.pair(code.pairing);
+      await _startLanIfPaired();
+      await lan.addPeerFromCode(code);
+      await engine.joinSyncFolder(code.pairing.passphrase);
+      _set(state.copyWith(setup: SyncSetupState.ready, clearError: true));
+      unawaited(syncNow());
+      return LanSetupResult.ok;
+    } on SyncFolderMissingException {
+      await lan.unpair();
+      return LanSetupResult.phoneNotFound;
+    } catch (e, stack) {
+      Logger.error('Joining Wi-Fi sync failed', e, stack);
+      await lan.unpair();
+      return LanSetupResult.failed;
+    }
+  }
+
+  /// The code (and QR code) to show on this phone for pairing another one.
+  Future<String?> lanPairingCode() async =>
+      (await _lan?.pairingCode())?.encode();
+
+  /// A paired phone appeared or sent files.
+  void onLanActivity() => _requestAutoSync('wifi peer');
 
   // ---------------------------------------------------------------------
   // Passphrase

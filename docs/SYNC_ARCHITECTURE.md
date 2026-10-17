@@ -218,8 +218,54 @@ by name, delete, dispose.
   uploads look the name up first, so a retried create never duplicates a
   file; transient errors (408, 429, rate limits, 5xx, network) are retried.
 
-Google Drive is the only transport for now. A local Wi-Fi transport
-(devices on the same network, no cloud) is planned.
+* Local Wi-Fi (`lib/services/sync/lan/`, Settings > Sync > Home Wi-Fi):
+  phones on the same network sync without any cloud. See below.
+
+### Local Wi-Fi
+
+Meant for a household sharing one budget (for example a couple's two
+phones). The engine is unchanged: it runs against a folder on the phone
+(`<documents>/sync/lan`, `LocalSyncFolder`), and the phones copy files
+between their folders.
+
+* **Pairing.** "Start on this phone" generates a pair key (32 random bytes)
+  and a sync passphrase (26 random Crockford-base32 characters, 130 bits)
+  and creates the folder's manifest. "Pair a phone" shows a QR code
+  (`lzpair1:` + base64url JSON: pair key, passphrase, device id and name,
+  the phone's IPv4 addresses and port), also as text for typing. The other
+  phone scans it, stores pair key and passphrase in the KeyStore-protected
+  secure storage (`lz_lan_pairing_v1`), fetches the first phone's folder and
+  joins it with the passphrase like any further device; its own rows are
+  merged by the first sync. The passphrase is never typed or shown as such.
+* **Transport.** While the app is in the foreground and paired, each phone
+  runs an HTTP server on TCP 47321 (another free port if taken) serving its
+  folder: `POST /v1/exchange` (folder states both ways), `GET` and
+  `PUT /v1/files/<name>`. Only sync file names are served or accepted;
+  bodies are limited to 64 MiB. When the engine lists the folder, the
+  transport exchanges with every paired phone that has an address: it
+  downloads what it lacks and uploads what the other lacks. Each file the
+  engine uploads is also pushed to phones reached in the last 10 minutes.
+  Deletions (compaction of a device's own files) are recorded and sent with
+  the next exchange, so the other phone deletes its copy instead of copying
+  the file back.
+* **Authentication.** Every request carries `X-LZ-Auth: v1 <device> <time>
+  <nonce> <HMAC-SHA256>` under the pair key (method, path, device, time,
+  nonce, body hash); the server rejects anything older than 2 minutes or
+  replayed, and signs its response (`X-LZ-Mac`). The files themselves stay
+  AES-GCM encrypted with the sync key as on Drive. Phones paired with
+  different codes (different manifests) refuse to exchange
+  (`pairingMismatch`).
+* **Discovery.** UDP broadcast beacons on port 47322 every 15 s, tagged
+  with an HMAC under the pair key (others are ignored and cannot redirect
+  a phone). A beacon or an incoming exchange updates the peer's address
+  and triggers a sync. Where broadcasts are blocked (guest networks, some
+  mesh systems) the address from the pairing code and the last known
+  address are used.
+* **Limits.** Android stops background apps, so the server only runs while
+  LedgerZero is open: phones sync when both have the app open on the same
+  Wi-Fi (on opening, every 5 minutes with "real-time", after local changes
+  and when the other phone appears). Each phone works fully on its own in
+  between.
 
 ## 12. Old format
 

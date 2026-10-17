@@ -63,9 +63,10 @@ it while the phone has not been unlocked since a restart.
   device's sync state from the latest snapshot and the change files (newer
   changes from other devices win), then shares the restored rows again.
 
-## 5. Cloud synchronisation
+## 5. Synchronisation
 
-* Bring-your-own storage (Google Drive, `drive.file` scope).
+* Bring-your-own storage (Google Drive, `drive.file` scope), or phone to
+  phone on the local Wi-Fi without any cloud (see below).
 * **End-to-end encrypted:** every change file and snapshot is encrypted with
   AES-256-GCM under a key derived from the user's sync passphrase (Argon2id,
   m = 46 MiB, t = 2, then HKDF bound to the folder's sync id). The cloud folder holds only ciphertext plus a manifest with the
@@ -82,6 +83,15 @@ it while the phone has not been unlocked since a restart.
 * Sync runs whenever the database is open, also behind the app lock (the
   controller follows `appLockStateProvider`, which is the database session,
   and cancels a running sync when it closes).
+
+* **Wi-Fi sync**: the paired phones authenticate every request and
+  response with HMAC-SHA256 under a random 256-bit pair key (with a 2-minute
+  time window and replay protection); discovery beacons are tagged with it
+  too. Pair key and sync passphrase travel only in the pairing QR code
+  shown on one phone and scanned on the other, and are stored in the
+  KeyStore-protected secure storage. The files exchanged are the same
+  AES-GCM encrypted change files as on Drive. The server listens only while
+  the app is open.
 
 ## 6. Application security
 
@@ -101,7 +111,12 @@ it while the phone has not been unlocked since a restart.
 
 * Sync metadata visible in the cloud folder: file names (random device ids
   and sequence numbers), file sizes and times, and the authenticated file
-  headers (schema version, change counts, newest change time).
+  headers (schema version, change counts, newest change time). On the local
+  network, Wi-Fi sync traffic is plain HTTP: others on the network can see
+  that two phones exchange files, their names and sizes (not their content)
+  and the discovery beacons (device id and name).
+* Anyone who sees the pairing QR code (or its text) can join the shared
+  budget; the app warns when showing it.
 * A weak sync passphrase: the KDF slows guessing, but anyone with folder
   access can try passphrases offline against the manifest.
 * Data on screen while the app is unlocked.

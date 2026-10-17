@@ -6198,6 +6198,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'LedgerZero could not read its key from this phone\'s secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.'**
   String get lockScreenReadError;
+
+  /// No description provided for @providerLocalWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Wi-Fi (phone to phone)'**
+  String get providerLocalWifi;
+
+  /// No description provided for @lanSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi sync'**
+  String get lanSyncTitle;
+
+  /// No description provided for @lanSetupExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Share one budget with a second phone, for example your partner\'s, without any cloud. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.'**
+  String get lanSetupExplanation;
+
+  /// No description provided for @lanStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start on this phone'**
+  String get lanStart;
+
+  /// No description provided for @lanStartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose this on the phone that already has your budget.'**
+  String get lanStartHint;
+
+  /// No description provided for @lanJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the other phone'**
+  String get lanJoin;
+
+  /// No description provided for @lanJoinHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose this on the second phone. Its data is merged into the shared budget.'**
+  String get lanJoinHint;
+
+  /// No description provided for @lanPairPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair a phone'**
+  String get lanPairPhone;
+
+  /// No description provided for @lanShowCodeInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'On the other phone open Settings > Sync, choose Home Wi-Fi, tap \"Join the other phone\" and scan this code. Both phones must be on the same Wi-Fi with LedgerZero open.'**
+  String get lanShowCodeInstructions;
+
+  /// No description provided for @lanShowCodeWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This code gives access to your budget. Only show it to phones you trust.'**
+  String get lanShowCodeWarning;
+
+  /// No description provided for @lanCodeTextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t scan? Type this code on the other phone:'**
+  String get lanCodeTextLabel;
+
+  /// No description provided for @lanScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the pairing code'**
+  String get lanScanTitle;
+
+  /// No description provided for @lanEnterCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter code instead'**
+  String get lanEnterCode;
+
+  /// No description provided for @lanEnterCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing code'**
+  String get lanEnterCodeTitle;
+
+  /// No description provided for @lanEnterCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts with lzpair1:'**
+  String get lanEnterCodeHint;
+
+  /// No description provided for @lanCameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera is not available. Enter the code instead.'**
+  String get lanCameraUnavailable;
+
+  /// No description provided for @lanJoining.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting to the other phone…'**
+  String get lanJoining;
+
+  /// No description provided for @lanStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi sync is on. Pair a second phone to share the budget.'**
+  String get lanStarted;
+
+  /// No description provided for @lanJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired. The budget is now shared.'**
+  String get lanJoined;
+
+  /// No description provided for @lanInvalidCode.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a LedgerZero pairing code.'**
+  String get lanInvalidCode;
+
+  /// No description provided for @lanPhoneNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'The other phone could not be reached. Make sure both phones are on the same Wi-Fi and LedgerZero is open on the other phone.'**
+  String get lanPhoneNotFound;
+
+  /// No description provided for @lanSetupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi sync could not be set up.'**
+  String get lanSetupFailed;
+
+  /// No description provided for @lanPeersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired phones'**
+  String get lanPeersTitle;
+
+  /// No description provided for @lanNoPeers.
+  ///
+  /// In en, this message translates to:
+  /// **'No phone paired yet.'**
+  String get lanNoPeers;
+
+  /// No description provided for @lanPeerLastSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {time}'**
+  String lanPeerLastSync(String time);
+
+  /// No description provided for @lanPeerNeverSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Not synced yet'**
+  String get lanPeerNeverSynced;
+
+  /// No description provided for @lanTurnOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off Wi-Fi sync'**
+  String get lanTurnOff;
+
+  /// No description provided for @syncErrorPairingMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone and the other one were paired with different codes. Turn off Wi-Fi sync on this phone and pair it again.'**
+  String get syncErrorPairingMismatch;
 }
 
 class _AppLocalizationsDelegate

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/screens/settings/sync/lan_pairing_screens.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
@@ -20,6 +22,9 @@ class SyncSettingsScreen extends ConsumerStatefulWidget {
 
 class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
   final _tutorialKeys = SyncTutorialKeys();
+
+  /// Starting or joining Wi-Fi sync is in progress.
+  bool _busy = false;
 
   @override
   void initState() {
@@ -48,7 +53,12 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
         value: SyncProviderType.googleDrive,
         child: Text(l10n.providerGoogleDrive),
       ),
+      DropdownMenuItem(
+        value: SyncProviderType.localWifi,
+        child: Text(l10n.providerLocalWifi, overflow: TextOverflow.ellipsis),
+      ),
     ];
+    final isLan = state.selectedProvider == SyncProviderType.localWifi;
 
     // Sync Frequencies
     final frequencies = [
@@ -82,6 +92,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
           // Provider Selection
           DropdownButtonFormField<SyncProviderType>(
             key: _tutorialKeys.provider,
+            isExpanded: true,
             decoration: InputDecoration(
               labelText: l10n.syncProvider,
               border: const OutlineInputBorder(),
@@ -122,7 +133,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
           // Provider Specific UI
           if (state.selectedProvider != SyncProviderType.none) ...[
             Text(
-              l10n.googleDriveSync,
+              isLan ? l10n.lanSyncTitle : l10n.googleDriveSync,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -131,8 +142,9 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
             const SizedBox(height: 24),
 
             // Connect Button (for cloud providers)
-            if (state.status == SyncStatus.disconnected ||
-                state.status == SyncStatus.error)
+            if (!isLan &&
+                (state.status == SyncStatus.disconnected ||
+                    state.status == SyncStatus.error))
               FilledButton.icon(
                 key: _tutorialKeys.connect,
                 onPressed: () => controller.connect(),
@@ -140,9 +152,14 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                 label: Text(l10n.connectToGoogleDrive),
               ),
 
-            if (state.status == SyncStatus.connected ||
-                state.status == SyncStatus.syncing) ...[
-              ..._setupSection(context, state, controller),
+            if (isLan && state.setup != SyncSetupState.ready)
+              ..._lanSetupSection(context),
+            if (isLan && state.setup == SyncSetupState.ready)
+              ..._lanPeersSection(context),
+            if ((state.status == SyncStatus.connected ||
+                    state.status == SyncStatus.syncing) &&
+                (!isLan || state.setup == SyncSetupState.ready)) ...[
+              if (!isLan) ..._setupSection(context, state, controller),
               if (state.setup == SyncSetupState.ready) ...[
                 Text(l10n.syncPendingChanges(state.pendingChanges)),
                 const SizedBox(height: 16),
@@ -160,7 +177,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                     ? null
                     : () => controller.disconnect(),
                 icon: const Icon(Icons.logout),
-                label: Text(l10n.disconnect),
+                label: Text(isLan ? l10n.lanTurnOff : l10n.disconnect),
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
               ),
             ],
@@ -176,6 +193,8 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                     SyncErrorKind.notSignedIn => l10n.syncErrorNotSignedIn,
                     SyncErrorKind.authFailed => l10n.syncErrorAuthFailed,
                     SyncErrorKind.storageFull => l10n.syncErrorStorageFull,
+                    SyncErrorKind.pairingMismatch =>
+                      l10n.syncErrorPairingMismatch,
                     SyncErrorKind.other || null => l10n.syncError,
                   },
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -185,6 +204,146 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
         ],
       ),
     );
+  }
+
+  /// Wi-Fi sync before pairing: start on this phone or join another.
+  List<Widget> _lanSetupSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return [
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l10n.lanSetupExplanation),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                key: const Key('lan_start'),
+                onPressed: _busy ? null : _startLan,
+                icon: const Icon(Icons.wifi_tethering),
+                label: Text(l10n.lanStart),
+              ),
+              const SizedBox(height: 4),
+              Text(l10n.lanStartHint, style: _hintStyle(context)),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                key: const Key('lan_join'),
+                onPressed: _busy ? null : _joinLan,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: Text(l10n.lanJoin),
+              ),
+              const SizedBox(height: 4),
+              Text(l10n.lanJoinHint, style: _hintStyle(context)),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+    ];
+  }
+
+  /// Wi-Fi sync after pairing: the paired phones and "Pair a phone".
+  List<Widget> _lanPeersSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final peers = ref.watch(lanPeersProvider).value ?? const [];
+    final formatter = ref.watch(appFormatterProvider);
+    String synced(DateTime time) => l10n.lanPeerLastSync(
+      '${formatter.formatDate(time)} '
+      '${TimeOfDay.fromDateTime(time).format(context)}',
+    );
+    return [
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ListTile(
+                title: Text(
+                  l10n.lanPeersTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              if (peers.isEmpty) ListTile(title: Text(l10n.lanNoPeers)),
+              for (final peer in peers)
+                ListTile(
+                  leading: const Icon(Icons.smartphone),
+                  title: Text(peer.name),
+                  subtitle: Text(
+                    peer.lastSync == null
+                        ? l10n.lanPeerNeverSynced
+                        : synced(peer.lastSync!),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: OutlinedButton.icon(
+                  key: const Key('lan_pair_phone'),
+                  onPressed: () => LanShowCodeScreen.show(context),
+                  icon: const Icon(Icons.qr_code),
+                  label: Text(l10n.lanPairPhone),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+    ];
+  }
+
+  TextStyle? _hintStyle(BuildContext context) =>
+      Theme.of(context).textTheme.bodySmall;
+
+  Future<void> _startLan() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    final result = await ref
+        .read(syncControllerProvider.notifier)
+        .startLanSync();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _busy = false);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          result == LanSetupResult.ok ? l10n.lanStarted : l10n.lanSetupFailed,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _joinLan() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final code = await LanScanCodeScreen.show(context);
+    if (code == null || code.isEmpty || !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    messenger.showSnackBar(SnackBar(content: Text(l10n.lanJoining)));
+    final result = await ref
+        .read(syncControllerProvider.notifier)
+        .joinLanSync(code);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _busy = false);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(switch (result) {
+            LanSetupResult.ok => l10n.lanJoined,
+            LanSetupResult.invalidCode => l10n.lanInvalidCode,
+            LanSetupResult.phoneNotFound => l10n.lanPhoneNotFound,
+            LanSetupResult.failed => l10n.lanSetupFailed,
+          }),
+        ),
+      );
   }
 
   List<Widget> _setupSection(

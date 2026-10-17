@@ -2,9 +2,9 @@
 
 **Goal:** a privacy-first, one-time-purchase envelope budgeting app for Android. It should be good enough that someone tired of YNAB's subscription would pay €29–49 for it.
 
-**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, encrypted local database, backup and restore, sync via Google Drive. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
+**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, encrypted local database, backup and restore, sync via Google Drive or phone to phone on the home Wi-Fi. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
 
-**Out of scope for v1:** LAN/P2P sync, PDF/OCR import, ML categorisation, Mint import, desktop and web, home-screen widgets. All of these were removed on the `slim-down` branch and remain in `main`'s history if needed later.
+**Out of scope for v1:** PDF/OCR import, ML categorisation, Mint import, desktop and web, home-screen widgets. All of these were removed on the `slim-down` branch and remain in `main`'s history if needed later.
 
 ---
 
@@ -82,9 +82,10 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] Closed beta with 10–20 testers (Play internal testing), recruited from r/ynab, r/Finanzen and r/personalfinance. Iterate for 1–2 weeks.
 - [ ] Launch.
 
-## Android-only and invisible encryption (2026-10)
+## Android-only, invisible encryption and Wi-Fi sync (2026-10)
 
 - [x] v1 is Android only; iCloud sync and backup removed (ios/ kept for later).
+- [x] Wi-Fi sync between paired phones (a household sharing one budget): QR pairing, signed local HTTP exchange of the encrypted change files, UDP discovery (docs/SYNC_ARCHITECTURE.md, "Local Wi-Fi").
 - [x] No master password: the database key is kept by the Android KeyStore (flutter_secure_storage) and the database opens at every start, also behind the app lock. App lock = fingerprint/face/device PIN (BiometricPrompt), a UI gate; auto-lock locks only the UI. Older installs unlock once with the password, recovery key or biometrics and move the key (docs/ENCRYPTION.md). Sync and backups stay end-to-end encrypted.
 
 ## Follow-ups
@@ -96,6 +97,7 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] `flutter_secure_storage` v9 → v10 migration on a real Android install that has v9 data (then move to v11, which drops the migration).
 - [ ] Argon2id time (46 MiB, 2 passes) for the sync passphrase and backup password on a mid-range Android phone stays under ~1.5 s.
 - [ ] Two-device sync matrix with real accounts: Android↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
+- [ ] Wi-Fi sync on two real phones on a real home router: QR scan, discovery (routers that block broadcasts or client-to-client traffic), Xiaomi battery saver, merging the second phone's existing data.
 - [ ] Notification delivery: scheduled-transaction reminders and sync-failure notifications on Android (permissions, exact vs. inexact alarms, tap routing).
 - [ ] Card notification capture with real bank apps (Sparkasse, ING, DKB, N26, Revolut, Google Wallet, ...): collect anonymised notification texts, add them as parser test cases, and check that the listener survives reboots and vendor battery savers (Xiaomi/MIUI).
 

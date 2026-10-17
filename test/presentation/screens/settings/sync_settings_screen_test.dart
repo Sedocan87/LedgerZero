@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_view_models.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
+import 'package:ledger_zero/services/sync/lan/lan_peers.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,7 +70,11 @@ void main() {
 
   tearDown(() => t.close());
 
-  Future<_TestController> pump(WidgetTester tester, {String? provider}) async {
+  Future<_TestController> pump(
+    WidgetTester tester, {
+    String? provider,
+    List<Override> overrides = const [],
+  }) async {
     if (provider != null) {
       await prefs.setString('sync_provider', provider);
     }
@@ -90,6 +95,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           syncControllerProvider.overrideWith((ref) => controller),
+          ...overrides,
         ],
         child: const MaterialApp(
           localizationsDelegates: [
@@ -117,6 +123,60 @@ void main() {
     await pump(tester, provider: 'googleDrive');
     expect(find.text('Google Drive Sync'), findsOneWidget);
     expect(find.text('Connect to Google Drive'), findsOneWidget);
+  });
+
+  testWidgets('Wi-Fi sync before pairing offers start and join', (
+    tester,
+  ) async {
+    final controller = await pump(tester, provider: 'localWifi');
+    controller.emit(
+      controller.state.copyWith(
+        status: SyncStatus.connected,
+        setup: SyncSetupState.needsNewPassphrase,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Wi-Fi sync'), findsOneWidget);
+    expect(find.byKey(const Key('lan_start')), findsOneWidget);
+    expect(find.byKey(const Key('lan_join')), findsOneWidget);
+    // No passphrase to type and no Google sign-in.
+    expect(find.text('Set a sync passphrase'), findsNothing);
+    expect(find.text('Connect to Google Drive'), findsNothing);
+  });
+
+  testWidgets('Wi-Fi sync after pairing lists the paired phones', (
+    tester,
+  ) async {
+    final controller = await pump(
+      tester,
+      provider: 'localWifi',
+      overrides: [
+        lanPeersProvider.overrideWith(
+          (ref) => Stream.value([
+            LanPeer(
+              deviceId: 'd',
+              name: 'Google Pixel 8',
+              lastSync: DateTime(2026, 10, 17, 20, 15),
+            ),
+            const LanPeer(deviceId: 'e', name: 'Xiaomi Redmi'),
+          ]),
+        ),
+      ],
+    );
+    controller.emit(
+      controller.state.copyWith(
+        status: SyncStatus.connected,
+        setup: SyncSetupState.ready,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Paired phones'), findsOneWidget);
+    expect(find.text('Google Pixel 8'), findsOneWidget);
+    expect(find.textContaining('Last synced'), findsOneWidget);
+    expect(find.text('Not synced yet'), findsOneWidget);
+    expect(find.byKey(const Key('lan_pair_phone')), findsOneWidget);
+    expect(find.text('Turn off Wi-Fi sync'), findsOneWidget);
+    expect(find.byKey(const Key('lan_start')), findsNothing);
   });
 
   testWidgets('an iCloud provider from an older version shows no sync', (
