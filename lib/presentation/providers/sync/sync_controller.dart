@@ -11,7 +11,6 @@ import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
-import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
@@ -54,7 +53,6 @@ enum SyncPassphraseResult {
 /// * every entry point catches its errors (no unhandled futures).
 class SyncController extends StateNotifier<SyncState> {
   final GoogleAuthService _authService;
-  final ICloudDriveService _iCloudService;
   final SharedPreferences _prefs;
   final ConnectivityService _connectivity;
   final SyncDependencies Function() _dependencies;
@@ -95,7 +93,6 @@ class SyncController extends StateNotifier<SyncState> {
 
   SyncController({
     required this._authService,
-    required this._iCloudService,
     required this._prefs,
     required this._connectivity,
     required this._dependencies,
@@ -448,8 +445,6 @@ class SyncController extends StateNotifier<SyncState> {
     );
     if (provider == SyncProviderType.googleDrive) {
       await _refreshConnectionState();
-    } else if (provider == SyncProviderType.iCloud) {
-      await connect();
     } else {
       await _discardCapturedChanges();
     }
@@ -481,9 +476,6 @@ class SyncController extends StateNotifier<SyncState> {
               ),
             );
           }
-        case SyncProviderType.iCloud:
-          await _iCloudService.verifyContainerAccess();
-          _set(state.copyWith(status: SyncStatus.connected));
         case SyncProviderType.none:
           return;
       }
@@ -536,9 +528,6 @@ class SyncController extends StateNotifier<SyncState> {
             status: SyncStatus.connected,
             accountEmail: account.email,
           );
-        case SyncProviderType.iCloud:
-          await _iCloudService.verifyContainerAccess();
-          state = state.copyWith(status: SyncStatus.connected);
         case SyncProviderType.none:
           state = state.copyWith(status: SyncStatus.disconnected);
           return;

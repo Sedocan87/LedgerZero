@@ -32,9 +32,6 @@ enum SyncErrorKind {
   /// The cloud storage is full.
   storageFull,
 
-  /// iCloud is off or not signed in on this device.
-  iCloudUnavailable,
-
   /// Anything else (the details are logged).
   other,
 }

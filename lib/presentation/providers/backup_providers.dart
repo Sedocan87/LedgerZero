@@ -30,9 +30,6 @@ final backupCloudTargetProvider = Provider<BackupCloudTarget?>((ref) {
   if (name == SyncProviderType.googleDrive.name) {
     return BackupCloudTarget.googleDrive;
   }
-  if (name == SyncProviderType.iCloud.name) {
-    return BackupCloudTarget.iCloud;
-  }
   return null;
 });
 
@@ -41,7 +38,6 @@ final backupServiceProvider = Provider<BackupService>((ref) {
     // watch: a re-login or restore opens a new connection.
     ref.watch(databaseProvider),
     googleDriveService: ref.watch(googleDriveServiceProvider),
-    iCloudDriveService: ref.watch(iCloudDriveServiceProvider),
     backupScheduler: ref.watch(backupSchedulerProvider),
     files: ref.watch(exportFileServiceProvider),
   );

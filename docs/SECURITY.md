@@ -9,10 +9,10 @@ key design is described in detail in [ENCRYPTION.md](ENCRYPTION.md).
 | Data | Protection |
 | --- | --- |
 | Database (`db.sqlite` in the app documents directory) | SQLCipher 4 (AES-256), keyed with a random 256-bit data key (DEK) passed as a raw key. The connection refuses to open without the right key or without SQLCipher. |
-| Data key | Never stored in plaintext. Stored only wrapped with AES-256-GCM by (1) an Argon2id key from the master password, (2) a key from a 160-bit recovery key, (3) optionally a Keystore/Keychain key that needs a fresh biometric authentication. |
-| Key vault | flutter_secure_storage 10: iOS Keychain (`AfterFirstUnlockThisDeviceOnly`, not synced, not migrated to other devices), Android KeyStore-protected storage. |
+| Data key | Never stored in plaintext. Stored only wrapped with AES-256-GCM by (1) an Argon2id key from the master password, (2) a key from a 160-bit recovery key, (3) optionally a Keystore key that needs a fresh biometric authentication. |
+| Key vault | flutter_secure_storage 10: Android KeyStore-protected storage. |
 | Backups (`.lzbk`) | Always encrypted (AES-256-GCM, Argon2id from a backup password, streamed in authenticated chunks). See [BACKUP_FORMAT.md](BACKUP_FORMAT.md). |
-| Exports (CSV, JSON, PDF, PNG, diagnostic log) | Plaintext by design. Written to the app's temporary directory (`tmp/` on iOS, cache on Android, not backed up), deleted once the share sheet completes (on Android 60 s later, because the receiving app may still be reading), and swept at start-up/resume if older than one hour. |
+| Exports (CSV, JSON, PDF, PNG, diagnostic log) | Plaintext by design. Written to the app's cache directory (not backed up), deleted once the share sheet completes (on Android 60 s later, because the receiving app may still be reading), and swept at start-up/resume if older than one hour. |
 | Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, queued until the next unlock: AES-256-GCM with an Android KeyStore key that needs no user authentication (the listener writes while the app is locked), max. 200 entries / 90 days. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
 | Diagnostic logs / crash reports | Off by default. When enabled, stored in the app cache directory, with SQL parameters, e-mail addresses, payloads and numbers removed. Shared only by the user, after a preview of the exact text. |
 
@@ -30,9 +30,7 @@ the database or key storage.
   never put on the clipboard.
 * **Biometrics**: Android BiometricPrompt with a Keystore `CryptoObject`
   (BIOMETRIC_STRONG, per-use authentication, invalidated when enrolment
-  changes); iOS Keychain item with `.biometryCurrentSet` and
-  `WhenPasscodeSetThisDeviceOnly`. A "yes/no" biometric check alone never
-  releases the key.
+  changes). A "yes/no" biometric check alone never releases the key.
 * **Session**: the data key lives only in `sessionProvider` while unlocked.
   Locking closes the database connection, zeroes the key bytes and emits
   `AppLockState.locked` (`appLockStateProvider`).
@@ -46,8 +44,6 @@ the database or key storage.
 
 * Android: `FLAG_SECURE` on the activity (no screenshots/recording, blank
   app-switcher thumbnail) and `setRecentsScreenshotEnabled(false)` on API 33+.
-* iOS: an opaque cover is added when the scene resigns active and removed
-  when it becomes active again, so the app-switcher snapshot shows nothing.
 * Flutter: `PrivacyShield` covers the UI whenever the lifecycle state is not
   `resumed`.
 * Reminder notifications contain no amounts unless the user turns that on;
@@ -69,9 +65,7 @@ the database or key storage.
 
 ## 5. Cloud synchronisation
 
-* Bring-your-own storage (Google Drive `drive.file` scope, iCloud
-  container with `NSUbiquitousContainerIsDocumentScopePublic = false`, so the
-  folder is not shown in the Files app).
+* Bring-your-own storage (Google Drive, `drive.file` scope).
 * **End-to-end encrypted:** every change file and snapshot is encrypted with
   AES-256-GCM under a key derived from the user's sync passphrase (Argon2id,
   same parameters as the master password, then HKDF bound to the folder's

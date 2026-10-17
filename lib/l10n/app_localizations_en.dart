@@ -810,22 +810,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get iCloudDriveSync => 'iCloud Drive Sync';
-
-  @override
   String get syncProvider => 'Sync Provider';
-
-  @override
-  String get connectToICloud => 'Connect to iCloud';
 
   @override
   String get providerNone => 'None';
 
   @override
   String get providerGoogleDrive => 'Google Drive';
-
-  @override
-  String get providerICloud => 'iCloud Drive';
 
   @override
   String get disconnect => 'Disconnect';
@@ -1630,8 +1621,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupUploadToCloud => 'Also upload to your sync storage';
 
   @override
-  String get backupUploadNotConfigured =>
-      'Set up Google Drive or iCloud sync first';
+  String get backupUploadNotConfigured => 'Set up Google Drive sync first';
 
   @override
   String get backupExport => 'Export backup';
@@ -2989,7 +2979,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutSyncProviderBody =>
-      'Sync through your own Google Drive or iCloud. Your data is encrypted before it leaves this device.';
+      'Sync through your own Google Drive. Your data is encrypted before it leaves this device.';
 
   @override
   String get tutSyncConnectTitle => 'Connect';
@@ -3027,7 +3017,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqSyncA =>
-      'Open Settings > Sync Settings, choose Google Drive or iCloud (iPhone and iPad only) and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.';
+      'Open Settings > Sync Settings, choose Google Drive and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.';
 
   @override
   String get faqOfflineQ => 'Can I use the app offline?';
@@ -3104,7 +3094,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideSyncBody =>
-      'Sync keeps your phones and tablets up to date through your own Google Drive or iCloud, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.';
+      'Sync keeps your phones and tablets up to date through your own Google Drive, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.';
 
   @override
   String get next => 'Next';
@@ -3156,7 +3146,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onbPrivacyOwnCloud =>
-      'We never see your financial data. Sync runs through your own cloud (Google Drive, iCloud), end-to-end encrypted.';
+      'We never see your financial data. Sync runs through your own Google Drive, end-to-end encrypted.';
 
   @override
   String get budgetBasicsTitle => 'Budgeting Basics';
@@ -3360,10 +3350,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get syncErrorStorageFull =>
       'Your cloud storage is full. Free up space to keep syncing.';
-
-  @override
-  String get syncErrorICloudUnavailable =>
-      'iCloud is not available. Check that you are signed in to iCloud and that iCloud Drive is on for LedgerZero.';
 
   @override
   String get transactionsShareText => 'LedgerZero transactions (CSV)';

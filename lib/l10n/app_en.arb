@@ -392,12 +392,9 @@
       }
     }
   },
-  "iCloudDriveSync": "iCloud Drive Sync",
   "syncProvider": "Sync Provider",
-  "connectToICloud": "Connect to iCloud",
   "providerNone": "None",
   "providerGoogleDrive": "Google Drive",
-  "providerICloud": "iCloud Drive",
   "disconnect": "Disconnect",
   "offlineMode": "Offline Mode",
   "syncOnlyOnWifi": "Sync only on Wi-Fi",
@@ -909,7 +906,7 @@
   "backupCreateExplanation": "A full copy of your data, always encrypted with a backup password you choose. Keep this password: without it the backup cannot be opened. For a readable copy, use the JSON or CSV export instead.",
   "backupPasswordLabel": "Backup password",
   "backupUploadToCloud": "Also upload to your sync storage",
-  "backupUploadNotConfigured": "Set up Google Drive or iCloud sync first",
+  "backupUploadNotConfigured": "Set up Google Drive sync first",
   "backupExport": "Export backup",
   "backupCreating": "Creating backup…",
   "backupUploaded": "Backup uploaded",
@@ -2152,7 +2149,7 @@
   "@tutSyncProviderTitle": {
     "description": "Sync tutorial step title"
   },
-  "tutSyncProviderBody": "Sync through your own Google Drive or iCloud. Your data is encrypted before it leaves this device.",
+  "tutSyncProviderBody": "Sync through your own Google Drive. Your data is encrypted before it leaves this device.",
   "@tutSyncProviderBody": {
     "description": "Sync tutorial step text"
   },
@@ -2196,7 +2193,7 @@
   "@faqSyncQ": {
     "description": "FAQ question"
   },
-  "faqSyncA": "Open Settings > Sync Settings, choose Google Drive or iCloud (iPhone and iPad only) and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.",
+  "faqSyncA": "Open Settings > Sync Settings, choose Google Drive and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.",
   "@faqSyncA": {
     "description": "FAQ answer; menu names must match the settings labels"
   },
@@ -2284,7 +2281,7 @@
   "@guideSyncTitle": {
     "description": "User guide section title"
   },
-  "guideSyncBody": "Sync keeps your phones and tablets up to date through your own Google Drive or iCloud, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.",
+  "guideSyncBody": "Sync keeps your phones and tablets up to date through your own Google Drive, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.",
   "@guideSyncBody": {
     "description": "User guide section text"
   },
@@ -2348,7 +2345,7 @@
   "@onbPrivacyEncrypted": {
     "description": "Onboarding privacy point"
   },
-  "onbPrivacyOwnCloud": "We never see your financial data. Sync runs through your own cloud (Google Drive, iCloud), end-to-end encrypted.",
+  "onbPrivacyOwnCloud": "We never see your financial data. Sync runs through your own Google Drive, end-to-end encrypted.",
   "@onbPrivacyOwnCloud": {
     "description": "Onboarding privacy point"
   },
@@ -2596,10 +2593,6 @@
   },
   "syncErrorStorageFull": "Your cloud storage is full. Free up space to keep syncing.",
   "@syncErrorStorageFull": {
-    "description": "Sync error"
-  },
-  "syncErrorICloudUnavailable": "iCloud is not available. Check that you are signed in to iCloud and that iCloud Drive is on for LedgerZero.",
-  "@syncErrorICloudUnavailable": {
     "description": "Sync error"
   },
   "transactionsShareText": "LedgerZero transactions (CSV)",

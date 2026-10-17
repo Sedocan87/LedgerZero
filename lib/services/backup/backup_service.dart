@@ -7,11 +7,10 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
-import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:path/path.dart' as p;
 
 /// Where an encrypted backup can be uploaded.
-enum BackupCloudTarget { googleDrive, iCloud }
+enum BackupCloudTarget { googleDrive }
 
 /// No cloud storage is set up for uploads.
 class BackupUploadNotConfiguredException extends BackupException {
@@ -26,7 +25,6 @@ class BackupUploadNotConfiguredException extends BackupException {
 class BackupService {
   final AppDatabase _db;
   final GoogleDriveService? _googleDriveService;
-  final ICloudDriveService? _iCloudDriveService;
   final BackupScheduler? _backupScheduler;
   final ExportFileService _files;
   final KdfParams Function() _kdf;
@@ -34,7 +32,6 @@ class BackupService {
   BackupService(
     this._db, {
     this._googleDriveService,
-    this._iCloudDriveService,
     this._backupScheduler,
     ExportFileService? files,
     KdfParams Function()? kdf,
@@ -113,12 +110,6 @@ class BackupService {
           throw const BackupUploadNotConfiguredException();
         }
         await drive.uploadBackup(backupFile, filename);
-      case BackupCloudTarget.iCloud:
-        final iCloud = _iCloudDriveService;
-        if (iCloud == null) {
-          throw const BackupUploadNotConfiguredException();
-        }
-        await iCloud.uploadBackup(backupFile, filename);
       case null:
         throw const BackupUploadNotConfiguredException();
     }

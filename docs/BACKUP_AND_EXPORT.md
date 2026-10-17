@@ -13,7 +13,7 @@ to protect your data against loss.
 2. Under **Create backup**, choose a **backup password** (at least 10
    characters) and confirm it.
 3. Optionally turn on **Also upload to your sync storage** (only available
-   when Google Drive or iCloud sync is set up). A failed upload is reported;
+   when Google Drive sync is set up). A failed upload is reported;
    the backup is still created.
 4. Tap **Export backup** and use the share sheet to save the `.lzbk` file
    (e.g. to Files, a computer or a USB drive). The temporary copy inside the

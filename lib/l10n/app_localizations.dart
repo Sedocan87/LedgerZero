@@ -1574,23 +1574,11 @@ abstract class AppLocalizations {
   /// **'Last Synced: {time}'**
   String lastSynced(String time);
 
-  /// No description provided for @iCloudDriveSync.
-  ///
-  /// In en, this message translates to:
-  /// **'iCloud Drive Sync'**
-  String get iCloudDriveSync;
-
   /// No description provided for @syncProvider.
   ///
   /// In en, this message translates to:
   /// **'Sync Provider'**
   String get syncProvider;
-
-  /// No description provided for @connectToICloud.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect to iCloud'**
-  String get connectToICloud;
 
   /// No description provided for @providerNone.
   ///
@@ -1603,12 +1591,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Google Drive'**
   String get providerGoogleDrive;
-
-  /// No description provided for @providerICloud.
-  ///
-  /// In en, this message translates to:
-  /// **'iCloud Drive'**
-  String get providerICloud;
 
   /// No description provided for @disconnect.
   ///
@@ -2927,7 +2909,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupUploadNotConfigured.
   ///
   /// In en, this message translates to:
-  /// **'Set up Google Drive or iCloud sync first'**
+  /// **'Set up Google Drive sync first'**
   String get backupUploadNotConfigured;
 
   /// No description provided for @backupExport.
@@ -5152,7 +5134,7 @@ abstract class AppLocalizations {
   /// Sync tutorial step text
   ///
   /// In en, this message translates to:
-  /// **'Sync through your own Google Drive or iCloud. Your data is encrypted before it leaves this device.'**
+  /// **'Sync through your own Google Drive. Your data is encrypted before it leaves this device.'**
   String get tutSyncProviderBody;
 
   /// Sync tutorial step title
@@ -5218,7 +5200,7 @@ abstract class AppLocalizations {
   /// FAQ answer; menu names must match the settings labels
   ///
   /// In en, this message translates to:
-  /// **'Open Settings > Sync Settings, choose Google Drive or iCloud (iPhone and iPad only) and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.'**
+  /// **'Open Settings > Sync Settings, choose Google Drive and sign in. On the first device you set a sync passphrase; enter the same passphrase on every other device. Keep it safe: it cannot be recovered.'**
   String get faqSyncA;
 
   /// FAQ question
@@ -5350,7 +5332,7 @@ abstract class AppLocalizations {
   /// User guide section text
   ///
   /// In en, this message translates to:
-  /// **'Sync keeps your phones and tablets up to date through your own Google Drive or iCloud, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.'**
+  /// **'Sync keeps your phones and tablets up to date through your own Google Drive, end-to-end encrypted with your sync passphrase. Create encrypted backups regularly in Settings > Backup & Export.'**
   String get guideSyncBody;
 
   /// Button: next onboarding page
@@ -5446,7 +5428,7 @@ abstract class AppLocalizations {
   /// Onboarding privacy point
   ///
   /// In en, this message translates to:
-  /// **'We never see your financial data. Sync runs through your own cloud (Google Drive, iCloud), end-to-end encrypted.'**
+  /// **'We never see your financial data. Sync runs through your own Google Drive, end-to-end encrypted.'**
   String get onbPrivacyOwnCloud;
 
   /// App bar title of the onboarding budgeting explanation
@@ -5706,12 +5688,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your cloud storage is full. Free up space to keep syncing.'**
   String get syncErrorStorageFull;
-
-  /// Sync error
-  ///
-  /// In en, this message translates to:
-  /// **'iCloud is not available. Check that you are signed in to iCloud and that iCloud Drive is on for LedgerZero.'**
-  String get syncErrorICloudUnavailable;
 
   /// Share sheet text of a transaction CSV export
   ///

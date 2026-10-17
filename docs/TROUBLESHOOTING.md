@@ -8,12 +8,11 @@ This guide helps you resolve common issues with LedgerZero.
 **Cause:** The database file has been corrupted, likely due to a sudden power loss or hardware issue.
 **Solution:**
 1. Restore a backup (`.lzbk`) in Settings > Backup & Export (backups you
-   uploaded are in `LedgerZero/Backups` on Google Drive or `Backups/` in the
-   iCloud container). See [ERROR_RECOVERY.md](ERROR_RECOVERY.md).
+   uploaded are in `LedgerZero/Backups` on Google Drive). See [ERROR_RECOVERY.md](ERROR_RECOVERY.md).
 2. If you have no backup, you may need to reinstall the app (warning: data loss).
 
 ### "Your cloud storage is full. Free up space to keep syncing."
-**Cause:** Your Google Drive or iCloud storage is full.
+**Cause:** Your Google Drive storage is full.
 **Solution:**
 1. Free up space on your cloud provider.
 2. Or empty the Trash in your cloud provider.

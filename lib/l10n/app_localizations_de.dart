@@ -814,22 +814,13 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get iCloudDriveSync => 'iCloud-Drive-Synchronisierung';
-
-  @override
   String get syncProvider => 'Speicherdienst';
-
-  @override
-  String get connectToICloud => 'Mit iCloud verbinden';
 
   @override
   String get providerNone => 'Keiner';
 
   @override
   String get providerGoogleDrive => 'Google Drive';
-
-  @override
-  String get providerICloud => 'iCloud Drive';
 
   @override
   String get disconnect => 'Trennen';
@@ -1653,7 +1644,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupUploadNotConfigured =>
-      'Richten Sie zuerst die Synchronisierung mit Google Drive oder iCloud ein';
+      'Richten Sie zuerst die Synchronisierung mit Google Drive ein';
 
   @override
   String get backupExport => 'Sicherung exportieren';
@@ -3016,7 +3007,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get tutSyncProviderBody =>
-      'Synchronisieren Sie über Ihr eigenes Google Drive oder iCloud. Ihre Daten werden verschlüsselt, bevor sie dieses Gerät verlassen.';
+      'Synchronisieren Sie über Ihr eigenes Google Drive. Ihre Daten werden verschlüsselt, bevor sie dieses Gerät verlassen.';
 
   @override
   String get tutSyncConnectTitle => 'Verbinden';
@@ -3053,7 +3044,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get faqSyncA =>
-      'Öffnen Sie Einstellungen > Synchronisierung, wählen Sie Google Drive oder iCloud (nur iPhone und iPad) und melden Sie sich an. Auf dem ersten Gerät legen Sie eine Sync-Passphrase fest, auf allen weiteren Geräten geben Sie dieselbe ein. Bewahren Sie sie gut auf: Sie lässt sich nicht wiederherstellen.';
+      'Öffnen Sie Einstellungen > Synchronisierung, wählen Sie Google Drive und melden Sie sich an. Auf dem ersten Gerät legen Sie eine Sync-Passphrase fest, auf allen weiteren Geräten geben Sie dieselbe ein. Bewahren Sie sie gut auf: Sie lässt sich nicht wiederherstellen.';
 
   @override
   String get faqOfflineQ => 'Funktioniert die App offline?';
@@ -3131,7 +3122,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get guideSyncBody =>
-      'Die Synchronisierung hält Ihre Smartphones und Tablets über Ihr eigenes Google Drive oder iCloud aktuell, Ende-zu-Ende-verschlüsselt mit Ihrer Sync-Passphrase. Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export.';
+      'Die Synchronisierung hält Ihre Smartphones und Tablets über Ihr eigenes Google Drive aktuell, Ende-zu-Ende-verschlüsselt mit Ihrer Sync-Passphrase. Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export.';
 
   @override
   String get next => 'Weiter';
@@ -3185,7 +3176,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbPrivacyOwnCloud =>
-      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt über Ihre eigene Cloud (Google Drive, iCloud).';
+      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt über Ihr eigenes Google Drive.';
 
   @override
   String get budgetBasicsTitle => 'Budget-Grundlagen';
@@ -3389,10 +3380,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get syncErrorStorageFull =>
       'Ihr Cloud-Speicher ist voll. Geben Sie Speicherplatz frei, um weiter zu synchronisieren.';
-
-  @override
-  String get syncErrorICloudUnavailable =>
-      'iCloud ist nicht verfügbar. Prüfen Sie, ob Sie bei iCloud angemeldet sind und iCloud Drive für LedgerZero aktiviert ist.';
 
   @override
   String get transactionsShareText => 'LedgerZero-Transaktionen (CSV)';

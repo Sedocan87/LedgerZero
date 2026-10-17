@@ -13,12 +13,12 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
 
 ### Recovery Steps
 1. **Restore from Backup**:
-   - If you uploaded backups, the `LedgerZero/Backups` folder (Google Drive) or `Backups/` in the iCloud container contains encrypted backups (`.lzbk`).
+   - If you uploaded backups, the `LedgerZero/Backups` folder on Google Drive contains encrypted backups (`.lzbk`).
    - Uninstall and reinstall the app, then complete onboarding.
    - Go to **Settings > Backup & Export**, tap **Restore from file**, pick the `.lzbk` file and enter its backup password.
 
 2. **Manual Extraction (Advanced)**:
-   - The database is `db.sqlite` in the app's documents directory (Android: `/data/data/com.ledgerzero.app/app_flutter/`, iOS: the app sandbox `Documents/`).
+   - The database is `db.sqlite` in the app's documents directory (`/data/data/com.ledgerzero.app/app_flutter/`).
    - It is encrypted with SQLCipher under a random data key that is never shown or exported, so a copied file cannot be opened with an SQLite browser. Restore a backup instead.
 
 ## 2. Synchronization Issues
@@ -68,9 +68,8 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
    - Uninstall and reinstall the app.
    - If you have a backup *and* know its backup password (chosen when the backup was made; not necessarily your master password), restore it in Settings > Backup & Export.
 3. **"The key data of this app is missing"** (the secure storage holding the
-   wrapped data key was emptied, e.g. after moving an iPhone backup to a new
-   device): neither the password nor the recovery key can unlock the data.
-   The login screen then offers **Reset app**; after typing the
+   wrapped data key was emptied): neither the password nor the recovery key
+   can unlock the data. The login screen then offers **Reset app**; after typing the
    confirmation word it performs the factory reset (database and its
    WAL/SHM files, key vault entries, preferences, exported files) and
    returns to onboarding, where you can set up the app and restore a backup.

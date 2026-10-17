@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,7 +39,6 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
     final state = ref.watch(syncControllerProvider);
     final controller = ref.read(syncControllerProvider.notifier);
 
-    // Determine available providers
     final availableProviders = [
       DropdownMenuItem(
         value: SyncProviderType.none,
@@ -52,15 +49,6 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
         child: Text(l10n.providerGoogleDrive),
       ),
     ];
-
-    if (Platform.isIOS) {
-      availableProviders.add(
-        DropdownMenuItem(
-          value: SyncProviderType.iCloud,
-          child: Text(l10n.providerICloud),
-        ),
-      );
-    }
 
     // Sync Frequencies
     final frequencies = [
@@ -134,9 +122,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
           // Provider Specific UI
           if (state.selectedProvider != SyncProviderType.none) ...[
             Text(
-              state.selectedProvider == SyncProviderType.googleDrive
-                  ? l10n.googleDriveSync
-                  : l10n.iCloudDriveSync,
+              l10n.googleDriveSync,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -151,11 +137,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                 key: _tutorialKeys.connect,
                 onPressed: () => controller.connect(),
                 icon: const Icon(Icons.login),
-                label: Text(
-                  state.selectedProvider == SyncProviderType.googleDrive
-                      ? l10n.connectToGoogleDrive
-                      : l10n.connectToICloud,
-                ),
+                label: Text(l10n.connectToGoogleDrive),
               ),
 
             if (state.status == SyncStatus.connected ||
@@ -194,8 +176,6 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                     SyncErrorKind.notSignedIn => l10n.syncErrorNotSignedIn,
                     SyncErrorKind.authFailed => l10n.syncErrorAuthFailed,
                     SyncErrorKind.storageFull => l10n.syncErrorStorageFull,
-                    SyncErrorKind.iCloudUnavailable =>
-                      l10n.syncErrorICloudUnavailable,
                     SyncErrorKind.other || null => l10n.syncError,
                   },
                   style: TextStyle(color: Theme.of(context).colorScheme.error),

@@ -9,8 +9,8 @@ from YNAB 4 (classic desktop app). Format details:
 - **nYNAB (web app)**: use YNAB's budget export. It downloads a ZIP with two
   CSV files, `... - Register.csv` (transactions) and `... - Budget.csv`
   (monthly budgeted amounts). Unzip it and put both files where the phone's
-  file picker can reach them (e.g. Files / iCloud Drive / Google Drive /
-  Downloads). Do not open and re-save them in a spreadsheet app.
+  file picker can reach them (e.g. Google Drive or Downloads). Do not open
+  and re-save them in a spreadsheet app.
 - **YNAB 4**: copy the budget folder (name ending in `.ynab4`) to a location
   the phone can open as a folder.
 

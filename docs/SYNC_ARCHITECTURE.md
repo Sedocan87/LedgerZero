@@ -2,8 +2,8 @@
 
 LedgerZero is local-first: every change is committed to the encrypted local
 database, and devices exchange encrypted change files through a cloud folder
-(Google Drive `LedgerZero/Sync`, or the app's iCloud Drive container). There
-is no server; the cloud only stores opaque files.
+(Google Drive `LedgerZero/Sync`). There is no server; the cloud only stores
+opaque files.
 
 Code: `lib/services/sync/` (engine, generator, applier, format, transports),
 `lib/presentation/providers/sync/` (controller, state),
@@ -50,7 +50,7 @@ are deleted at the next run.
 * Every remote name is validated with a strict regex and `basename` checks
   (`SyncFileName.tryParse`) before anything else; anything else is ignored
   and logged. Remote names never become local paths (downloads are kept in
-  memory; iCloud uses random temporary file names).
+  memory).
 * When a run is split into several files, cuts are made only between row
   families (a split parent and its children, the two legs of a transfer);
   upserts go parents-first and deletes children-first, so every file can be
@@ -90,7 +90,7 @@ value (a known constant encrypted with the key) are in
 ## 4. Receiving
 
 Each run lists **all** files (Drive: every page, 1,000 per page, ordered by
-name; iCloud: `gather`, downloads awaited until complete). Per device,
+name). Per device,
 `sync_device_progress` stores the last applied sequence (high-water mark);
 only files above it are downloaded. Files are applied
 
@@ -217,13 +217,9 @@ by name, delete, dispose.
   cached but validated once per session and re-resolved on 404/trash;
   uploads look the name up first, so a retried create never duplicates a
   file; transient errors (408, 429, rate limits, 5xx, network) are retried.
-* iCloud (`ICloudDriveService`, `icloud_storage` 2.2.0 through an injectable
-  `ICloudStoragePlatform`): the plugin completes `download`/`upload` before
-  the transfer is done; the transport waits for the
-  end of the progress stream (timeout), verifies download sizes, and treats
-  native/network/timeout errors as retryable and missing container or
-  permission as permanent. A slow upload is left to iCloud (the file is
-  already in the ubiquity container).
+
+Google Drive is the only transport for now. A local Wi-Fi transport
+(devices on the same network, no cloud) is planned.
 
 ## 12. Old format
 
@@ -234,6 +230,5 @@ removed. No migration exists (v1 was never released).
 
 ## What only real accounts can verify
 
-Drive OAuth, quota and rate-limit behaviour, iCloud container entitlements,
-background transfer timing and metadata propagation delays are covered by
+Drive OAuth, quota and rate-limit behaviour, background transfer timing and metadata propagation delays are covered by
 fakes in tests and must be checked on devices with real accounts.

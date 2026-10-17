@@ -14,7 +14,7 @@ accounts, categories, transactions and budgeted amounts."
 extracted.
 **Audio**: "In the YNAB web app, export your budget. You get a ZIP file with
 two CSV files: Register and Budget. Unzip it and save both files where your
-phone can open them, for example in iCloud Drive or Google Drive."
+phone can open them, for example in Google Drive or Downloads."
 
 ## Scene 3: Start the migration (0:40 - 1:10)
 **Action**:

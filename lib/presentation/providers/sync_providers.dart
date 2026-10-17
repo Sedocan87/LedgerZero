@@ -7,7 +7,6 @@ import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/google_drive_sync.dart';
-import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_device_id.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
@@ -34,10 +33,6 @@ final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
     service.dispose();
   });
   return service;
-});
-
-final iCloudDriveServiceProvider = Provider<ICloudDriveService>((ref) {
-  return ICloudDriveService();
 });
 
 /// Outgoing change files (not yet uploaded).
@@ -73,16 +68,13 @@ final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
 final syncControllerProvider = StateNotifierProvider<SyncController, SyncState>(
   (ref) {
     final drive = ref.watch(googleDriveServiceProvider);
-    final iCloud = ref.watch(iCloudDriveServiceProvider);
     final controller = SyncController(
       authService: ref.watch(googleAuthServiceProvider),
-      iCloudService: iCloud,
       prefs: ref.watch(sharedPreferencesProvider),
       connectivity: ref.watch(connectivityServiceProvider),
       dependencies: () => ref.read(syncDependenciesProvider),
       transportFor: (provider) => switch (provider) {
         SyncProviderType.googleDrive => drive,
-        SyncProviderType.iCloud => iCloud,
         SyncProviderType.none => null,
       },
     );

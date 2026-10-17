@@ -10,7 +10,6 @@ import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
-import 'package:ledger_zero/services/sync/icloud_drive_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
@@ -75,13 +74,6 @@ class FakeAuth implements GoogleAuthService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class FakeICloud implements ICloudDriveService {
-  @override
-  Future<void> verifyContainerAccess() async {}
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 class DummyTransport implements SyncTransport {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -98,13 +90,13 @@ void main() {
     SyncFrequency frequency = SyncFrequency.realtime,
     Duration? interval,
     bool wifiOnly = false,
+    String provider = 'googleDrive',
   }) {
-    prefs.values['sync_provider'] = SyncProviderType.iCloud.name;
+    prefs.values['sync_provider'] = provider;
     prefs.values['sync_frequency'] = frequency.name;
     prefs.values['sync_on_wifi_only'] = wifiOnly;
     final c = SyncController(
       authService: FakeAuth(),
-      iCloudService: FakeICloud(),
       prefs: prefs,
       connectivity: connectivity,
       dependencies: () => SyncDependencies(
@@ -304,5 +296,16 @@ void main() {
     await c.dismissConflict(c.state.conflicts.single.id);
     await settle(100);
     expect(c.state.conflicts, isEmpty);
+  });
+
+  test('a provider saved by an older version (iCloud) means no sync', () async {
+    final c = controller(provider: 'iCloud');
+    expect(c.state.selectedProvider, SyncProviderType.none);
+    await c.onLockStateChanged(AppLockState.unlocked);
+    await localChange('p1');
+    await c.syncNow();
+    await settle(100);
+    expect(engine.runs, 0);
+    expect(c.state.status, isNot(SyncStatus.error));
   });
 }

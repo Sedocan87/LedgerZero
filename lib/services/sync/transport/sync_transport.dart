@@ -6,7 +6,7 @@ class RemoteFile {
   /// `SyncFileName.tryParse` before using it for anything.
   final String name;
 
-  /// Provider id (Drive file id; iCloud relative path).
+  /// Provider id (the Drive file id).
   final String id;
   final int? size;
   final DateTime? modifiedTime;
@@ -17,11 +17,11 @@ class RemoteFile {
   String toString() => 'RemoteFile($name)';
 }
 
-/// Storage for the sync folder (Google Drive, iCloud Drive, a fake in
-/// tests). Implementations retry transient errors themselves and throw a
+/// Storage for the sync folder (Google Drive, a fake in tests).
+/// Implementations retry transient errors themselves and throw a
 /// `SyncException` otherwise.
 abstract class SyncTransport {
-  /// Stable identifier ('google_drive', 'icloud').
+  /// Stable identifier (e.g. 'google_drive').
   String get name;
 
   /// Every file in the sync folder (all pages).

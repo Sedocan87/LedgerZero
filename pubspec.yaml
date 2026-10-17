@@ -28,7 +28,6 @@ dependencies:
   # Cloud Sync
   googleapis: ^17.0.0
   googleapis_auth: ^2.3.4
-  icloud_storage: ^2.2.0
 
   # Natural Language Processing
   chrono_dart: ^2.0.1

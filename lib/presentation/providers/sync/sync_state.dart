@@ -4,7 +4,7 @@ import 'package:ledger_zero/presentation/providers/sync/sync_view_models.dart';
 
 enum SyncStatus { idle, disconnected, connected, syncing, error }
 
-enum SyncProviderType { none, googleDrive, iCloud }
+enum SyncProviderType { none, googleDrive }
 
 enum SyncFrequency {
   manual,

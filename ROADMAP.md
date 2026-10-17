@@ -1,8 +1,8 @@
 # LedgerZero v1 Roadmap
 
-**Goal:** a privacy-first, one-time-purchase envelope budgeting app for iOS and Android. It should be good enough that someone tired of YNAB's subscription would pay €29–49 for it.
+**Goal:** a privacy-first, one-time-purchase envelope budgeting app for Android. It should be good enough that someone tired of YNAB's subscription would pay €29–49 for it.
 
-**v1 scope:** iOS and Android. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, encrypted local database, backup and restore, sync via Google Drive or iCloud.
+**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, encrypted local database, backup and restore, sync via Google Drive. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
 
 **Out of scope for v1:** LAN/P2P sync, PDF/OCR import, ML categorisation, Mint import, desktop and web, home-screen widgets. All of these were removed on the `slim-down` branch and remain in `main`'s history if needed later.
 
@@ -39,7 +39,7 @@
 - [x] **Dependency refresh** (see "Audit fixes" below): `pdf` 3.13.1 without the `image` pin, Gradle 9.3.1, AGP 9.1.0, Kotlin 2.4.0 with built-in Kotlin, Java 17.
 - [x] **Dead code and docs removed.** No `developerMode`, `delta_debug_utils.dart` or removed-feature l10n keys; `PerformanceMonitor` only runs in debug/profile; README and docs rewritten.
 - [x] **Integration tests** (onboarding → budget, relaunch/unlock, CSV import, lock; backup/restore; v14 → v17 upgrade) pass on the iOS Simulator and an Android emulator.
-- [ ] **Manual smoke test on a real iPhone and Android phone**, every flow from onboarding to sync (see the real-device list below).
+- [ ] **Manual smoke test on a real Android phone**, every flow from onboarding to sync (see the real-device list below).
 
 **Exit criteria:** all tests green ✅; money stored as integers ✅; encrypted DB verified on simulator/emulator ✅ and on real phones (open); two-device sync matrix on real devices (open); no crashes across a full manual run (open).
 
@@ -65,33 +65,32 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] **Transaction entry in under 5 seconds.** Make quick-add the default entry path, payee and category autocomplete up front. (The 1,588-line form screen is already split into `form/` widgets and a controller.)
 - [ ] Rework Home/Dashboard, Accounts and Reports once the budget screen sets the visual language.
 - [ ] **Onboarding:** from install to the first budgeted euro in under 2 minutes.
-- [ ] iOS feel: Cupertino-style navigation and pickers where it matters; respect Dynamic Type.
 - [x] **Localisation:** all strings in ARB, German complete, `de_DE` formats (audit package 6).
-- [ ] Accessibility: contrast checks exist for the themes and chart palette, screen-reader labels on amounts and charts are done; still to do: a full TalkBack/VoiceOver pass and 48dp touch targets everywhere.
+- [ ] Accessibility: contrast checks exist for the themes and chart palette, screen-reader labels on amounts and charts are done; still to do: a full TalkBack pass and 48dp touch targets everywhere.
 - [ ] Semantic colours (income/expense/success/warning in `AppColors`) are fixed values; derive them from the theme so they keep contrast in dark and high-contrast mode.
 - [ ] Empty, loading and error states on every screen (a shared `LoadErrorView` exists; not every screen uses it yet).
 
-**Exit criteria:** every screen redesigned. Screenshots good enough for the App Store. A new user can set up a budget without help.
+**Exit criteria:** every screen redesigned. Screenshots good enough for the Play Store. A new user can set up a budget without help.
 
 ## Phase 3: Ship (about 1–2 weeks)
 
 - [ ] **Monetisation:** a free tier (e.g. 1 budget, 3 accounts or 100 transactions) plus a one-time "LedgerZero Pro" unlock via in-app purchase (`in_app_purchase` or RevenueCat). Add Restore Purchases and Family Sharing.
-- [ ] Store setup: bundle IDs, release keystore and `android/key.properties`, Play Console and App Store Connect listings in EN and DE, screenshots, and a short video.
-- [ ] Privacy: App Store "Data Not Collected" label, Play data-safety form, a privacy-policy page, and a working support email/domain (`support@ledgerzero.app` is referenced; confirm you own it).
+- [ ] Store setup: application IDs, release keystore and `android/key.properties`, Play Console listing in EN and DE, screenshots, and a short video.
+- [ ] Privacy: Play data-safety form, a privacy-policy page, and a working support email/domain (`support@ledgerzero.app` is referenced; confirm you own it).
 - [ ] Google OAuth consent screen verification for the Drive `drive.file` scope; Android OAuth clients for every app ID/signing key.
 - [ ] Opt-in crash reporting or a "send diagnostic log" button (the local, opt-in error reporter exists).
-- [ ] Closed beta with 10–20 testers (TestFlight and Play internal testing), recruited from r/ynab, r/Finanzen and r/personalfinance. Iterate for 1–2 weeks.
+- [ ] Closed beta with 10–20 testers (Play internal testing), recruited from r/ynab, r/Finanzen and r/personalfinance. Iterate for 1–2 weeks.
 - [ ] Launch.
 
 ## Follow-ups
 
 **Real-device verification** (cannot be done on simulators/emulators)
-- [ ] Biometric unlock on iPhone (Face ID/Touch ID, Keychain access control) and Android (BiometricPrompt + Keystore), including enrolment changes invalidating the key.
-- [ ] FLAG_SECURE on Android and the app-switcher privacy cover on iOS.
+- [ ] Biometric unlock on Android (BiometricPrompt + Keystore), including enrolment changes invalidating the key.
+- [ ] FLAG_SECURE on Android.
 - [ ] `flutter_secure_storage` v9 → v10 migration on a real Android install that has v9 data (then move to v11, which drops the migration).
 - [ ] Argon2id unlock time (46 MiB, 2 passes) on a mid-range Android phone stays under ~1.5 s.
-- [ ] Two-device sync matrix with real accounts: Android↔Android (Drive), iPhone↔iPhone (iCloud), iPhone↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
-- [ ] Notification delivery: scheduled-transaction reminders and sync-failure notifications on both platforms (permissions, exact vs. inexact alarms, tap routing).
+- [ ] Two-device sync matrix with real accounts: Android↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
+- [ ] Notification delivery: scheduled-transaction reminders and sync-failure notifications on Android (permissions, exact vs. inexact alarms, tap routing).
 - [ ] Card notification capture with real bank apps (Sparkasse, ING, DKB, N26, Revolut, Google Wallet, ...): collect anonymised notification texts, add them as parser test cases, and check that the listener survives reboots and vendor battery savers (Xiaomi/MIUI).
 
 **Engineering**
@@ -99,7 +98,6 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] `google_sign_in` 7 (new authentication/authorization API, Android Credential Manager with a server client ID); needs real-device verification of Drive sign-in.
 - [ ] `go_router` 18 together with the move to the unbundled `material_ui`/`cupertino_ui` packages.
 - [ ] `csv` 7+ (rewritten parser); re-run all import fixtures.
-- [ ] `icloud_storage` has no Swift Package Manager support (Flutter warns this will become an error) and is barely maintained; replace it with a small own platform channel.
 - [ ] Third-party Android plugins still use deprecated Groovy DSL syntax (Gradle 10 will remove it) and `android.newDsl=false`; update when the plugins do.
 
 **Product**
@@ -111,7 +109,6 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] Accessibility: move keyboard/screen-reader focus to the first invalid field on validation errors (today `FormUtils.focusFirstError` only scrolls it into view, and only in the transaction and account forms).
 - [x] Budget templates: save, apply and delete exist in the budget screen's month menu (renaming a template is not supported).
 - [x] Card notification capture (Android): watched bank/card apps, encrypted queue until unlock, captured payments booked as unapproved transactions (docs/CARD_NOTIFICATIONS.md).
-- [ ] Card notifications on iOS: an "Add transaction" App Intent for the Shortcuts Transaction automation (Apple Wallet, iOS 17+).
 - [ ] Onboarding restarts from the "Your data, your device" slide when the POST_NOTIFICATIONS prompt appears right after the recovery-key step (seen twice on the Android 16 emulator, 2026-10-17; the third run, with the permission already granted, went through). The prompt itself is wrapped in `ExternalUiGuard`; the cause is not yet known (the router sends a locked mid-onboarding session back to `/onboarding`, so a lock or lost session is the first suspect).
 - [ ] Bank CSV presets for the major German banks (Sparkasse, ING, DKB, N26, Comdirect).
 - [ ] German keywords for the natural-language parser: only a handful of German category/income keywords and relative day words ("gestern", "heute", ...) exist; Chrono parses English date phrases only, and the keyword map only matches the seeded category names.
@@ -124,4 +121,4 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 
 ## Later (v1.1+)
 
-Home-screen and lock-screen widgets (respecting privacy and app lock). macOS app. Shared household budgets.
+iOS app (the Flutter code and `ios/` project are kept; card notifications there would need an "Add transaction" App Intent for the Shortcuts Transaction automation, Apple Wallet, iOS 17+). Home-screen and lock-screen widgets (respecting privacy and app lock). macOS app. Shared household budgets.

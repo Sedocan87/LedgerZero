@@ -16,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/test_database.dart';
 import '../../providers/sync_controller_lifecycle_test.dart'
-    show DummyTransport, FakeAuth, FakeConnectivity, FakeICloud;
+    show DummyTransport, FakeAuth, FakeConnectivity;
 
 class _SetupEngine implements SyncEngine {
   String? created;
@@ -46,7 +46,6 @@ class _TestController extends SyncController {
     required super.connectivity,
   }) : super(
          authService: FakeAuth(),
-         iCloudService: FakeICloud(),
          transportFor: (p) =>
              p == SyncProviderType.none ? null : DummyTransport(),
        );
@@ -118,6 +117,14 @@ void main() {
     await pump(tester, provider: 'googleDrive');
     expect(find.text('Google Drive Sync'), findsOneWidget);
     expect(find.text('Connect to Google Drive'), findsOneWidget);
+  });
+
+  testWidgets('an iCloud provider from an older version shows no sync', (
+    tester,
+  ) async {
+    await pump(tester, provider: 'iCloud');
+    expect(find.text('None'), findsOneWidget);
+    expect(find.text('Google Drive Sync'), findsNothing);
   });
 
   testWidgets('first device sets a passphrase that meets the rules', (

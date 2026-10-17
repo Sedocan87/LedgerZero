@@ -1,11 +1,13 @@
 # LedgerZero
 
 LedgerZero is a local-first envelope budgeting app (zero-based, YNAB-style)
-for iOS and Android, in English and German. All data lives in an encrypted
-database on the phone; sync and backups go to the user's own Google Drive or
-iCloud Drive, end-to-end encrypted. No account, no server. It is planned as a
-one-time purchase (see [ROADMAP.md](ROADMAP.md)). Version 0.1.0, not
-released yet.
+for Android, in English and German. All data lives in an encrypted
+database on the phone; sync and backups go to the user's own Google Drive,
+end-to-end encrypted. No account, no server. It is planned as a one-time
+purchase (see [ROADMAP.md](ROADMAP.md)). Version 0.1.0, not released yet.
+
+v1 is Android only. The Flutter code and the `ios/` project stay in the
+repository, but iOS is not built, tested or supported in v1.
 
 ## Features
 
@@ -21,8 +23,8 @@ released yet.
 - Import from CSV (saved column mappings) and YNAB; CSV export.
 - Master password, recovery key, optional biometric unlock, auto-lock,
   app-switcher privacy cover.
-- Encrypted backup/restore and encrypted multi-device sync via Google Drive
-  or iCloud Drive.
+- Encrypted backup/restore and encrypted multi-device sync via Google
+  Drive.
 
 ## Architecture
 
@@ -54,7 +56,7 @@ core          money, calendar dates, formatting helpers, constants, errors
   key the database does not open. See [docs/ENCRYPTION.md](docs/ENCRYPTION.md)
   and [docs/SECURITY.md](docs/SECURITY.md).
 - **Sync v2:** each sync run uploads one AES-256-GCM encrypted change file
-  to the user's Google Drive (`drive.file` scope) or iCloud Drive; the key
+  to the user's Google Drive (`drive.file` scope); the key
   comes from a separate sync passphrase. Rows merge last-writer-wins by
   their UTC `updated_at`; new devices bootstrap from an encrypted snapshot.
   See [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md) and
@@ -68,8 +70,8 @@ core          money, calendar dates, formatting helpers, constants, errors
 
 ## Getting started
 
-Requirements: Flutter 3.47 (Dart 3.13), Xcode with an iOS 15+ simulator,
-Android SDK 36 with JDK 17 (Android Studio's bundled JBR works).
+Requirements: Flutter 3.47 (Dart 3.13), Android SDK 36 with JDK 17 (Android
+Studio's bundled JBR works).
 
 ```bash
 flutter pub get
@@ -81,18 +83,16 @@ bash tool/check.sh                                         # l10n check, analyze
 
 Android has three flavors (`development`, `staging`, `production`; app IDs
 `com.ledgerzero.app.dev`, `.staging` and `com.ledgerzero.app`), each with its
-own entry point. iOS has no flavors; pass the entry point.
+own entry point.
 
 ```bash
 flutter run --flavor development -t lib/main_development.dart -d <android-device>
-flutter run -t lib/main_development.dart -d <ios-simulator>
 ```
 
 Release builds:
 
 ```bash
 flutter build apk --release --flavor production -t lib/main_production.dart
-flutter build ios --release -t lib/main_production.dart
 ```
 
 Android release signing reads `android/key.properties` (`storeFile`,
@@ -102,23 +102,17 @@ key so they still build locally; such APKs cannot be uploaded to Play.
 
 ### Google Drive sign-in
 
-- iOS: create `ios/Flutter/GoogleSignIn.xcconfig` (git-ignored) with your
-  iOS OAuth client ID. Without it the app builds and runs, but Google Drive
-  sync reports "not configured".
-- Android: register an Android OAuth client for each application ID and
-  signing certificate (SHA-1) you use.
-
-Details: [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md). iCloud
-needs the `iCloud.com.ledgerzero.app` container on your Apple developer
-account: [docs/ICLOUD_SETUP.md](docs/ICLOUD_SETUP.md).
+Register an Android OAuth client for each application ID and signing
+certificate (SHA-1) you use. Details:
+[docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md).
 
 ### Tests
 
 - `bash tool/check.sh`: generated localisations up to date and complete,
   `flutter analyze` (0 issues), all unit and widget tests (`--perf` adds the
   timing tests).
-- Integration tests run on an iOS Simulator or Android emulator only (they
-  wipe the app's data): see [docs/TESTING.md](docs/TESTING.md).
+- Integration tests run on an Android emulator only (they wipe the app's
+  data): see [docs/TESTING.md](docs/TESTING.md).
 
 ## Project structure
 
@@ -148,7 +142,7 @@ docs/             design and user documentation
 | Transactions, scheduled transactions, payees, rules | [docs/TRANSACTION_LIFECYCLE.md](docs/TRANSACTION_LIFECYCLE.md), [docs/SCHEDULED_TRANSACTIONS.md](docs/SCHEDULED_TRANSACTIONS.md), [docs/PAYEE_MANAGEMENT.md](docs/PAYEE_MANAGEMENT.md), [docs/RULES.md](docs/RULES.md) |
 | Quick add parser | [docs/NATURAL_LANGUAGE_FORMATS.md](docs/NATURAL_LANGUAGE_FORMATS.md) |
 | Encryption and security | [docs/ENCRYPTION.md](docs/ENCRYPTION.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ENCRYPTION_TROUBLESHOOTING.md](docs/ENCRYPTION_TROUBLESHOOTING.md) |
-| Sync | [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md), [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md), [docs/DELTA_SCHEMA_MIGRATION.md](docs/DELTA_SCHEMA_MIGRATION.md), [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md), [docs/ICLOUD_SETUP.md](docs/ICLOUD_SETUP.md), [docs/ICLOUD_TROUBLESHOOTING.md](docs/ICLOUD_TROUBLESHOOTING.md), [docs/OFFLINE_CAPABILITIES.md](docs/OFFLINE_CAPABILITIES.md) |
+| Sync | [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md), [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md), [docs/DELTA_SCHEMA_MIGRATION.md](docs/DELTA_SCHEMA_MIGRATION.md), [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md), [docs/OFFLINE_CAPABILITIES.md](docs/OFFLINE_CAPABILITIES.md) |
 | Backup, import, export | [docs/BACKUP_AND_EXPORT.md](docs/BACKUP_AND_EXPORT.md), [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md), [docs/CSV_FORMAT.md](docs/CSV_FORMAT.md), [docs/YNAB_MIGRATION.md](docs/YNAB_MIGRATION.md) |
 | Platform notes, errors | [docs/PLATFORM_SPECIFICS.md](docs/PLATFORM_SPECIFICS.md), [docs/ERROR_RECOVERY.md](docs/ERROR_RECOVERY.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 | Code and tests | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md), [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md), [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), [docs/TESTING.md](docs/TESTING.md), [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
