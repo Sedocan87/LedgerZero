@@ -11,7 +11,12 @@ import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/presentation/screens/accounts/accounts_screen.dart';
+import 'package:ledger_zero/presentation/screens/accounts/add_edit_account_screen.dart';
+import 'package:ledger_zero/presentation/screens/categories/add_edit_category_screen.dart';
+import 'package:ledger_zero/presentation/screens/categories/reorder_categories_screen.dart';
+import 'package:ledger_zero/presentation/screens/categories/reorder_groups_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
@@ -194,4 +199,90 @@ void main() {
       await unmount(tester, c);
     },
   );
+
+  testWidgets('a rebuilt router disposes the previous one', (tester) async {
+    final c = await pumpRouter(tester, onboarded: true);
+    final before = c.read(routerProvider);
+    // The first unlock rebuilds the router (it starts at the pending link).
+    unlock(c);
+    await tester.pumpAndSettle();
+    final after = c.read(routerProvider);
+    expect(after, isNot(same(before)));
+    expect(
+      () => ChangeNotifier.debugAssertNotDisposed(before.routerDelegate),
+      throwsFlutterError,
+    );
+    expect(
+      () => ChangeNotifier.debugAssertNotDisposed(after.routerDelegate),
+      returnsNormally,
+    );
+    await unmount(tester, c);
+  });
+
+  testWidgets('literal paths open their own screen, not a sibling :id route', (
+    tester,
+  ) async {
+    final c = await pumpRouter(tester, onboarded: true);
+    unlock(c);
+    await tester.pumpAndSettle();
+
+    Future<void> open(String path, Type screen) async {
+      c.read(routerProvider).go(path);
+      await tester.pumpAndSettle();
+      expect(location(c), path);
+      expect(find.byType(screen), findsOneWidget, reason: path);
+    }
+
+    await open('/budget/categories/reorder-groups', ReorderGroupsScreen);
+    await open(
+      '/budget/categories/reorder-categories/g1',
+      ReorderCategoriesScreen,
+    );
+    await open('/budget/categories/add', AddEditCategoryScreen);
+    expect(
+      tester
+          .widget<AddEditCategoryScreen>(find.byType(AddEditCategoryScreen))
+          .categoryId,
+      isNull,
+    );
+    await open('/accounts/add', AddEditAccountScreen);
+    expect(
+      tester
+          .widget<AddEditAccountScreen>(find.byType(AddEditAccountScreen))
+          .accountId,
+      isNull,
+    );
+    await unmount(tester, c);
+  });
+
+  test('no :parameter route precedes a literal sibling anywhere', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    );
+    addTearDown(container.dispose);
+    final router = container.read(routerProvider);
+    final offenders = <String>[];
+
+    void check(List<RouteBase> routes, String prefix) {
+      String? parameterSeen;
+      for (final route in routes) {
+        if (route is GoRoute) {
+          final first = route.path.split('/').first;
+          if (first.startsWith(':')) {
+            parameterSeen ??= route.path;
+          } else if (parameterSeen != null) {
+            offenders.add('$prefix${route.path} after $prefix$parameterSeen');
+          }
+          check(route.routes, '$prefix${route.path}/');
+        } else if (route is ShellRouteBase) {
+          check(route.routes, prefix);
+        }
+      }
+    }
+
+    check(router.configuration.routes, '/');
+    expect(offenders, isEmpty);
+  });
 }

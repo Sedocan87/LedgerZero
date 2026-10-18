@@ -7086,6 +7086,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.'**
   String get faqPersonalA;
+
+  /// Category editor: the category to edit was not found
+  ///
+  /// In en, this message translates to:
+  /// **'This category no longer exists. It may have been deleted on this or your partner’s phone.'**
+  String get categoryNotFound;
 }
 
 class _AppLocalizationsDelegate

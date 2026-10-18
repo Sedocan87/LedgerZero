@@ -4244,4 +4244,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get faqPersonalA =>
       'Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam.';
+
+  @override
+  String get categoryNotFound =>
+      'Diese Kategorie gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht.';
 }

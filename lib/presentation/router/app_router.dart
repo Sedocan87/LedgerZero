@@ -82,7 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final initialLocation =
       (isOnboarded && isAuthenticated ? pending.take() : null) ?? '/';
 
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: initialLocation,
     redirect: (context, state) {
@@ -400,15 +400,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                             const AddEditCategoryScreen(),
                       ),
                       GoRoute(
-                        path: ':id',
-                        name: 'edit-category',
-                        parentNavigatorKey: _rootNavigatorKey,
-                        builder: (context, state) {
-                          final id = state.pathParameters['id'];
-                          return AddEditCategoryScreen(categoryId: id);
-                        },
-                      ),
-                      GoRoute(
                         path: 'reorder-groups',
                         name: 'reorder-groups',
                         parentNavigatorKey: _rootNavigatorKey,
@@ -422,6 +413,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                         builder: (context, state) {
                           final groupId = state.pathParameters['groupId']!;
                           return ReorderCategoriesScreen(groupId: groupId);
+                        },
+                      ),
+                      // Last: go_router takes the first matching route, so a
+                      // parameter route must follow its literal siblings
+                      // (`/budget/categories/reorder-groups` would otherwise
+                      // open the editor with id "reorder-groups").
+                      GoRoute(
+                        path: ':id',
+                        name: 'edit-category',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        builder: (context, state) {
+                          final id = state.pathParameters['id'];
+                          return AddEditCategoryScreen(categoryId: id);
                         },
                       ),
                     ],
@@ -533,4 +537,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  // A rebuilt router replaces this one: release its listeners and delegates.
+  ref.onDispose(router.dispose);
+  return router;
 });

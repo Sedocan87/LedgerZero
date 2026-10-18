@@ -10,6 +10,7 @@ import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class AddEditCategoryScreen extends ConsumerStatefulWidget {
@@ -33,6 +34,12 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   Category? _existingCategory;
   int _transactionCount = 0;
 
+  /// Why the category being edited could not be loaded (the editor then
+  /// shows the error instead of an empty form that would create a new one).
+  Object? _loadError;
+  StackTrace? _loadStackTrace;
+  bool _notFound = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,12 +55,19 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   }
 
   Future<void> _loadCategory() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+      _loadStackTrace = null;
+      _notFound = false;
+    });
     try {
       final category = await ref
           .read(categoryRepositoryProvider)
           .getCategoryById(widget.categoryId!);
-      if (category != null) {
+      if (category == null) {
+        _notFound = true;
+      } else {
         _existingCategory = category;
         _nameController.text = category.name;
         _selectedGroupId = category.categoryGroupId;
@@ -69,14 +83,21 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
             );
         _transactionCount = transactions.length;
       }
-    } catch (e) {
-      // Handle error
+    } catch (e, st) {
+      Logger.error('Loading the category failed', e, st);
+      _loadError = e;
+      _loadStackTrace = st;
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
+
+  /// Editing: only once the category is loaded (saving before that would
+  /// create a new category).
+  bool get _canSave =>
+      !_isLoading && (widget.categoryId == null || _existingCategory != null);
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
@@ -150,12 +171,25 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
-            onPressed: _isLoading ? null : _save,
+            tooltip: l10n.save,
+            onPressed: _canSave ? _save : null,
           ),
         ],
       ),
       body: _isLoading && _existingCategory == null && isEditing
           ? const Center(child: CircularProgressIndicator())
+          : _loadError != null
+          ? LoadErrorView(
+              error: _loadError!,
+              stackTrace: _loadStackTrace,
+              onRetry: _loadCategory,
+            )
+          : _notFound
+          ? ErrorView(
+              key: const Key('category.notFound'),
+              title: l10n.editCategory,
+              message: l10n.categoryNotFound,
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Form(
