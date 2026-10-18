@@ -44,6 +44,7 @@ void main() {
           connectivityServiceProvider.overrideWithValue(
             mockConnectivityService,
           ),
+          networkSyncConfiguredProvider.overrideWithValue(true),
         ],
         child: const MaterialApp(
           localizationsDelegates: [
@@ -61,6 +62,41 @@ void main() {
     await tester.pump(); // Process stream
 
     expect(find.text('Offline Mode'), findsOneWidget);
+    // A subtle chip, not an error-coloured banner.
+    expect(find.byKey(const Key('offline.chip')), findsOneWidget);
+    final chip = tester.widget<Chip>(find.byKey(const Key('offline.chip')));
+    final scheme = Theme.of(
+      tester.element(find.byKey(const Key('offline.chip'))),
+    ).colorScheme;
+    expect(chip.backgroundColor, isNot(scheme.errorContainer));
+  });
+
+  testWidgets('OfflineIndicator stays hidden without a network sync provider', (
+    tester,
+  ) async {
+    when(
+      mockConnectivityService.connectionStatusStream,
+    ).thenAnswer((_) => Stream.value(ConnectionStatus.offline));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          connectivityServiceProvider.overrideWithValue(
+            mockConnectivityService,
+          ),
+          networkSyncConfiguredProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: Scaffold(body: Column(children: [OfflineIndicator()])),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Offline Mode'), findsNothing);
   });
 
   testWidgets('OfflineIndicator hides when online', (tester) async {
@@ -74,6 +110,7 @@ void main() {
           connectivityServiceProvider.overrideWithValue(
             mockConnectivityService,
           ),
+          networkSyncConfiguredProvider.overrideWithValue(true),
         ],
         child: const MaterialApp(
           localizationsDelegates: [
