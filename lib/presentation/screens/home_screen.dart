@@ -8,6 +8,7 @@ import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
 import 'package:ledger_zero/presentation/widgets/home/home_empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
@@ -60,13 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: Text(l10n.home),
         centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => context.push('/settings'),
-            tooltip: l10n.settings,
-          ),
-        ],
+        actions: const [SettingsAction()],
       ),
       body: hasAccountsAsync.when(
         data: (hasAccounts) {

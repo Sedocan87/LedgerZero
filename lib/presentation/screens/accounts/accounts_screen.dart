@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
+import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
@@ -118,6 +119,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 PopupMenuItem(value: option, child: Text(option.label(l10n))),
             ],
           ),
+          const SettingsAction(),
         ],
       ),
       body: accountsAsync.when(

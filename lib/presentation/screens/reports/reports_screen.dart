@@ -15,6 +15,7 @@ import 'package:ledger_zero/presentation/screens/reports/widgets/report_category
 import 'package:ledger_zero/presentation/screens/reports/widgets/report_date_selector.dart';
 import 'package:ledger_zero/presentation/screens/reports/widgets/report_notes_section.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
+import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
 import 'package:ledger_zero/presentation/widgets/charts/multi_line_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/pie_chart.dart';
 import 'package:ledger_zero/presentation/widgets/charts/simple_bar_chart.dart';
@@ -336,6 +337,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             onPressed: _showExportDialog,
           ),
           const ReportDateSelector(),
+          const SettingsAction(),
         ],
       ),
       body: SingleChildScrollView(
