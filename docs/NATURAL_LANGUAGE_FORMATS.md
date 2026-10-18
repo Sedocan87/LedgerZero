@@ -14,9 +14,16 @@ transaction form pre-filled with the parsed values.
 
 ### Amount (required)
 
-The first number in the text that is not part of a `yyyy-mm-dd` date. Both
-decimal styles and grouping are accepted (examples with the English dot
-decimal separator):
+A number in the text that is not a date token (`2023-10-15`, `15.10.2023`,
+`15.10.`, `10/15`) and not part of a relative phrase (`in 3 days`, `3 days
+ago`, `vor 3 Tagen`). Among several numbers, the first one with a decimal
+part or a currency symbol wins over a bare integer (`2 Kaffee 7,50` is
+7.50, `3 beers 12€` is 12.00); when none has either, the first number wins
+(`Lunch 15 yesterday`). Nothing alphanumeric may touch the number, so
+`15th`, `7pm` and `4:30` are never amounts. A sign directly before the
+number (`refund -12.50`) is accepted and ignored; the direction comes from
+the income words below. Both decimal styles and grouping are accepted
+(examples with the English dot decimal separator):
 
 | Input | Amount |
 | --- | --- |
@@ -26,8 +33,8 @@ decimal separator):
 | `Miete 1.234,56` | 1234.56 |
 | `.99` | 0.99 |
 
-Because the first number wins, put the amount before any other number
-(`Taxi 12 in 3 days`, not `in 3 days taxi 12`).
+Two bare integers remain ambiguous (`2 pizzas 15` reads 2.00); put the
+amount first or write it with decimals.
 
 A single separator followed by exactly three digits (`1.234`, `1,234`) is
 ambiguous; it is resolved with the app's active decimal separator (Settings
@@ -57,10 +64,19 @@ A transaction is an expense unless the text contains an income word:
 
 * German relative days: `vorgestern`, `gestern`, `heute`, `morgen`,
   `übermorgen` (`heute morgen` = today).
+* An explicit German date: `15.10.2023`, `15.10.23` or `15.10.` (current
+  year). The trailing dot matters: `15.10` is an amount.
 * Otherwise English expressions via the `chrono_dart` package, e.g.
   `today`, `yesterday`, `tomorrow`, `next friday`, `last monday`,
-  `in 3 days`, `2025-10-25`.
+  `in 3 days`, `10/15` (month/day), `2025-10-25`.
 * No date found: today.
+
+Relative words count calendar days of the phone's local time zone, also
+right after midnight (`gestern` typed at 01:00 on 18 October is 17
+October): the parser reads the day components, never the UTC fields of an
+instant. The amount is blanked out before the date is read, so `Taxi 20
+yesterday` is 20.00 on yesterday, not 20:00. The result is the calendar day
+as local noon; the screen stores it with `CalendarDate.fromLocalPick`.
 
 ### Payee
 
@@ -101,6 +117,12 @@ accents (`café`, `Bäcker`) are part of the word. German compounds
 
 When saving, the user's rules fill anything still empty in suggest mode
 (see [RULES.md](RULES.md)).
+
+### Memo
+
+The memo of the saved transaction is the raw input text (the whole line as
+typed, including amount and date words), unless a rule sets a memo in
+suggest mode.
 
 ## History
 

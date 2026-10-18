@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/services/nlp/transaction_parser.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
@@ -204,6 +205,124 @@ void main() {
       when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => []);
       expect((await parser.parse('busy day 5')).payeeId, isNot('p'));
       expect((await parser.parse('Bus 5')).payeeId, 'p');
+    });
+  });
+
+  group('dates near midnight and amounts next to dates (L1, L6)', () {
+    // 01:00 local on 18 Oct: in a UTC+ zone, the UTC day is still 17 Oct.
+    final oneAmLocal = DateTime(2025, 10, 18, 1, 0);
+    TransactionParser at(DateTime now, {String separator = '.'}) =>
+        TransactionParser(
+          mockPayeeRepo,
+          mockCategoryRepo,
+          mockHistoryRepo,
+          amountParser: MoneyParser(decimalSeparator: separator),
+          now: () => now,
+        );
+
+    setUp(() {
+      when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async => []);
+      when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => []);
+    });
+
+    test('"yesterday" at 01:00 local is the previous local day', () async {
+      final result = await at(oneAmLocal).parse('Taxi yesterday');
+      expect(result.date, isNotNull);
+      expect(
+        CalendarDate.fromLocalPick(result.date!),
+        DateTime.utc(2025, 10, 17),
+      );
+    });
+
+    test('"in 3 days" counts local days and keeps the amount', () async {
+      final result = await at(oneAmLocal).parse('in 3 days taxi 12');
+      expect(result.amount, 1200);
+      expect(
+        CalendarDate.fromLocalPick(result.date!),
+        DateTime.utc(2025, 10, 21),
+      );
+    });
+
+    test('a bare number before a day word is the amount, not a time', () async {
+      final result = await at(oneAmLocal).parse('Taxi 20 yesterday');
+      expect(result.amount, 2000);
+      expect(
+        CalendarDate.fromLocalPick(result.date!),
+        DateTime.utc(2025, 10, 17),
+      );
+    });
+
+    test('German "gestern" uses the injected clock', () async {
+      final result = await at(oneAmLocal).parse('Taxi 20 gestern');
+      expect(result.amount, 2000);
+      expect(
+        CalendarDate.fromLocalPick(result.date!),
+        DateTime.utc(2025, 10, 17),
+      );
+    });
+
+    test('a German date is not the amount (dd.MM.yyyy)', () async {
+      final result = await at(
+        oneAmLocal,
+        separator: ',',
+      ).parse('15.10.2023 Essen 12,50');
+      expect(result.amount, 1250);
+      expect(
+        CalendarDate.fromLocalPick(result.date!),
+        DateTime.utc(2023, 10, 15),
+      );
+    });
+
+    test('"15.10." is a date of the current year, "15.10" an amount', () async {
+      final parser = at(oneAmLocal, separator: ',');
+      final dated = await parser.parse('Essen 15.10. 12,50');
+      expect(dated.amount, 1250);
+      expect(
+        CalendarDate.fromLocalPick(dated.date!),
+        DateTime.utc(2025, 10, 15),
+      );
+      final amountOnly = await parser.parse('Essen 15.10');
+      expect(amountOnly.amount, 1510);
+    });
+
+    test('a US date is not the amount (MM/dd)', () async {
+      final result = await at(oneAmLocal).parse('10/15 lunch 12.50');
+      expect(result.amount, 1250);
+      expect(
+        CalendarDate.fromLocalPick(result.date!),
+        DateTime.utc(2025, 10, 15),
+      );
+    });
+
+    test('a number with decimals beats a bare quantity', () async {
+      final result = await at(
+        oneAmLocal,
+        separator: ',',
+      ).parse('2 Kaffee 7,50');
+      expect(result.amount, 750);
+    });
+
+    test('a currency symbol beats a bare quantity', () async {
+      final result = await at(oneAmLocal).parse('3 beers 12€');
+      expect(result.amount, 1200);
+      expect(result.currency, '€');
+    });
+
+    test(
+      'a leading minus is accepted; the direction comes from the words',
+      () async {
+        final refund = await at(oneAmLocal).parse('refund -12.50');
+        expect(refund.amount, 1250);
+        expect(refund.isIncome, isTrue);
+        final coffee = await at(oneAmLocal).parse('coffee -4.50');
+        expect(coffee.amount, 450);
+        expect(coffee.isIncome, isFalse);
+      },
+    );
+
+    test('times and ordinals are not amounts', () async {
+      expect((await at(oneAmLocal).parse('oct 15th 4')).amount, 400);
+      expect((await at(oneAmLocal).parse('dinner at 7pm 32')).amount, 3200);
     });
   });
 }
