@@ -21,6 +21,12 @@ class BudgetVsActualItem {
   });
 }
 
+/// What a category spent, from its net activity [netActivity] (signed
+/// minor units: outflows negative, refunds positive): the net outflow, or 0
+/// when refunds outweigh spending. A refund of 80 against spending of 30 is
+/// no spending at all, not 50 spent.
+int spentOf(int netActivity) => netActivity < 0 ? -netActivity : 0;
+
 /// Half-open UTC query bounds `[start, endExclusive)` for a report range
 /// whose `start` and `end` are inclusive calendar days.
 ({DateTime start, DateTime endExclusive}) reportQueryBounds(
@@ -76,9 +82,7 @@ final spendingByCategoryProvider = FutureProvider.autoDispose<Map<String, int>>(
       }
 
       final name = categoryNameMap[entry.key] ?? l10n.unknown;
-      // Expense sums are sums of signed amounts (negative for outflow).
-      // We take absolute value for the chart.
-      final amount = entry.value.abs();
+      final amount = spentOf(entry.value);
 
       if (amount > 0) {
         result[name] = (result[name] ?? 0) + amount;
@@ -303,7 +307,7 @@ final budgetVsActualProvider =
         }
 
         final budgeted = budgetedMap[catId] ?? 0;
-        final actual = (expenseMap[catId] ?? 0).abs(); // Spending is negative
+        final actual = spentOf(expenseMap[catId] ?? 0);
 
         if (budgeted > 0 || actual > 0) {
           items.add(

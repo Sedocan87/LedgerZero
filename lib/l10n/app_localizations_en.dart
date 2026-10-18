@@ -3339,7 +3339,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ynabImportCurrency => 'Currency of the imported accounts';
 
   @override
-  String get ynabImportTrackingAccount => 'Tracking account – not imported';
+  String get ynabImportTrackingAccount =>
+      'Tracking account – imported outside the budget';
 
   @override
   String ynabImportTrackingSkipped(int count) {
@@ -3347,9 +3348,9 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          '$count tracking accounts were not imported. Transfers between them and your budget accounts were imported as outflows and inflows of the budget accounts.',
+          '$count tracking accounts were imported outside the budget. Transfers between them and your budget accounts are linked; a category on the budget side stays there.',
       one:
-          '1 tracking account was not imported. Transfers between it and your budget accounts were imported as outflows and inflows of the budget accounts.',
+          '1 tracking account was imported outside the budget. Transfers between it and your budget accounts are linked; a category on the budget side stays there.',
     );
     return '$_temp0';
   }
@@ -4381,4 +4382,139 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get setupExistingDataKept =>
       'Your existing data on this phone was found and kept.';
+
+  @override
+  String get csvBankFormat => 'Bank format';
+
+  @override
+  String get csvBankFormatNone => 'None (columns by name)';
+
+  @override
+  String csvBankFormatDetected(String name) {
+    return 'Recognised from the column headers: $name';
+  }
+
+  @override
+  String csvHeaderLinesSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lines above the column headers were skipped.',
+      one: '1 line above the column headers was skipped.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csvDateFormatAmbiguous(String format, String other) {
+    return 'Day and month could be swapped: both $format and $other fit every date. Check the dates in the preview.';
+  }
+
+  @override
+  String get csvIssueNoRows =>
+      'The file has no data rows below the column headers.';
+
+  @override
+  String csvIssueInvalidDatesSkipped(int count, String format) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows have dates that do not match the format $format and will be skipped.',
+      one:
+          '1 row has a date that does not match the format $format and will be skipped.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csvIssueInvalidAmountsBlocking(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rows have unreadable amounts.',
+      one: '1 row has an unreadable amount.',
+    );
+    return '$_temp0 Check the Amount column and the decimal separator.';
+  }
+
+  @override
+  String get csvMoreColumns => 'More columns';
+
+  @override
+  String get csvFieldDebit => 'Debit column (Soll)';
+
+  @override
+  String get csvFieldCredit => 'Credit column (Haben)';
+
+  @override
+  String get csvFieldDebitCreditFlag => 'Debit/credit flag (S/H)';
+
+  @override
+  String get csvFieldInflowPayee => 'Payee for inflows';
+
+  @override
+  String get csvFieldTransfer => 'Transfer (other account)';
+
+  @override
+  String importAccountFromFile(String names) {
+    return 'Account from file ($names)';
+  }
+
+  @override
+  String get possibleDuplicateWarning =>
+      'An existing transaction without payee (e.g. a transfer) has the same date and amount.';
+
+  @override
+  String importPossibleDuplicates(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows match existing transactions without payee by date and amount and are unchecked.',
+      one:
+          '1 row matches an existing transaction without payee by date and amount and is unchecked.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importTransferLegs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows are transfers and will be linked to their counterparts when both accounts are imported.',
+      one:
+          '1 row is a transfer and will be linked to its counterpart when both accounts are imported.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ynabImportDateFormat => 'Date format in Register.csv';
+
+  @override
+  String get ynabImportDateFormatAmbiguous =>
+      'No day above 12 in the file: day and month could be swapped. Check a date and switch the format if needed.';
+
+  @override
+  String get ynabImportTrackingSwitch =>
+      'Tracking account (outside the budget)';
+
+  @override
+  String get ynabImportTrackingHint =>
+      'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.';
+
+  @override
+  String get ynabImportCategoriesCount => 'Categories';
+
+  @override
+  String get ynabImportCategoriesOnlyInBudget =>
+      'Categories only in Budget.csv';
+
+  @override
+  String ynabImportAlreadyImported(String date) {
+    return 'This export was already imported on $date. Importing it again duplicates its transactions.';
+  }
 }

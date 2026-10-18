@@ -86,11 +86,15 @@ The CSV file includes the following columns:
 - `Category`
 - `Memo`
 - `Amount` (plain decimal in major units, e.g. `-12.50`)
-- `Cleared`
+- `Cleared` (`cleared`, `uncleared`, `reconciled`)
 - `Approved` (`Yes`/`No`)
+- `Transfer` (the other account of a transfer leg, else empty)
 
-Header names stay English in every app language. A split transaction is
-exported as its lines (the parent row is left out).
+Header names stay English in every app language: the file is a machine
+format that re-imports losslessly (see [CSV_FORMAT.md](CSV_FORMAT.md),
+"Export and re-import"). Report CSVs (section 5) are documents for
+reading and use the app language instead. A split transaction is exported
+as its lines (the parent row is left out).
 
 ## 5. Report Exports
 

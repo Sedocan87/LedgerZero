@@ -64,4 +64,22 @@ void main() {
       throwsA(isA<CategoryCsvFormatException>()),
     );
   });
+
+  test(
+    'semicolon-separated files and Windows-1252 bytes are read (I13)',
+    () async {
+      // "Gruppe;Kategorie" as a German spreadsheet saves it, with an umlaut
+      // in Windows-1252 (0xE4 = ä).
+      final bytes = [
+        ...'Group;Category;Hidden\nFreizeit;B'.codeUnits,
+        0xE4,
+        ...'der;false\nFreizeit;Kino;true\n'.codeUnits,
+      ];
+      final result = await service.importCsvBytes(bytes);
+      expect(result.groupsCreated, 1);
+      expect(result.categoriesCreated, 2);
+      final names = (await t.categories.getAllCategories()).map((c) => c.name);
+      expect(names, containsAll(['Bäder', 'Kino']));
+    },
+  );
 }

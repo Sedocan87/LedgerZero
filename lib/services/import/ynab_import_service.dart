@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
@@ -9,6 +10,7 @@ import 'package:csv/csv.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/services/csv/decimal_separator_inference.dart';
 
 /// Why a YNAB export could not be parsed.
 enum YnabImportFailure {
@@ -65,10 +67,14 @@ class YnabImportService {
   static const _exportLocale = 'en_US';
 
   /// The one format of [registerDateFormats] that parses every value of
-  /// [dates] strictly. Throws [YnabImportFailure.invalidDates] naming the
-  /// first value that the best-fitting format rejects.
+  /// [dates] strictly (the first of [fittingRegisterDateFormats]). Throws
+  /// [YnabImportFailure.invalidDates] naming the first value that the
+  /// best-fitting format rejects.
   static String detectRegisterDateFormat(List<String> dates) {
-    String? bestFormat;
+    final fitting = fittingRegisterDateFormats(dates);
+    if (fitting.isNotEmpty) {
+      return fitting.first;
+    }
     String? bestFirstBad;
     var bestFailures = -1;
     for (final format in registerDateFormats) {
@@ -83,11 +89,7 @@ class YnabImportService {
           firstBad ??= value;
         }
       }
-      if (failures == 0) {
-        return format;
-      }
-      if (bestFormat == null || failures < bestFailures) {
-        bestFormat = format;
+      if (bestFailures == -1 || failures < bestFailures) {
         bestFailures = failures;
         bestFirstBad = firstBad;
       }
@@ -98,19 +100,60 @@ class YnabImportService {
     );
   }
 
+  /// Every format of [registerDateFormats] (in order of preference) that
+  /// parses all of [dates] strictly. More than one means day and month are
+  /// ambiguous (no day above 12).
+  static List<String> fittingRegisterDateFormats(List<String> dates) {
+    final fitting = <String>[];
+    for (final format in registerDateFormats) {
+      final parser = DateFormat(format, _exportLocale);
+      var ok = true;
+      for (final value in dates) {
+        try {
+          parser.parseStrict(value);
+        } on FormatException {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        fitting.add(format);
+      }
+    }
+    return fitting;
+  }
+
   /// Parses nYNAB CSV export files.
   ///
   /// [registerCsvContent]: Content of the 'Register.csv' file.
   /// [budgetCsvContent]: Content of the 'Budget.csv' file.
+  /// [dateFormat]: a format of [registerDateFormats] to read the register
+  /// dates with instead of the detected one (the user's choice when the
+  /// file is ambiguous); it must still fit every date.
+  ///
+  /// Tracking accounts: the CSV does not say which accounts are off
+  /// budget. An account whose rows are only its "Starting Balance" and
+  /// transfer legs is taken to be a tracking account (the user can change
+  /// it in the preview).
   Future<YnabImportData> parseCsvExport({
     required String registerCsvContent,
     required String budgetCsvContent,
+    String? dateFormat,
   }) async {
     final transactions = <YnabTransaction>[];
     final accounts = <YnabAccount>[];
     final categoryGroups = <YnabCategoryGroup>[];
     final categories = <YnabCategory>[];
     final budgetEntries = <YnabBudgetEntry>[];
+    String? chosenDateFormat;
+    var dateFormatCandidates = const <String>[];
+    // One decimal separator for the whole export: YNAB writes every
+    // amount the same way, so "€1.234" (no decimals) is read as 1234.
+    final amountParser = MoneyParser(
+      decimalSeparator: inferDecimalSeparator(
+        _amountCells(registerCsvContent, budgetCsvContent),
+      ),
+    );
 
     String? detectEol(String content) {
       if (content.contains('\r\n')) {
@@ -183,12 +226,20 @@ class YnabImportService {
       ];
       // One date format for the whole file: a per-row guess would read
       // 05/03 as May 3 in one row and 13/03 as March 13 in the next.
-      final dateFormat = usableRows.isEmpty
+      final dateValues = [
+        for (final row in usableRows) row[dateIdx].toString().trim(),
+      ];
+      dateFormatCandidates = usableRows.isEmpty
+          ? registerDateFormats
+          : fittingRegisterDateFormats(dateValues);
+      final detected = usableRows.isEmpty
           ? registerDateFormats.first
-          : detectRegisterDateFormat([
-              for (final row in usableRows) row[dateIdx].toString().trim(),
-            ]);
-      final dateParser = DateFormat(dateFormat, _exportLocale);
+          : detectRegisterDateFormat(dateValues);
+      chosenDateFormat =
+          dateFormat != null && dateFormatCandidates.contains(dateFormat)
+          ? dateFormat
+          : detected;
+      final dateParser = DateFormat(chosenDateFormat, _exportLocale);
 
       for (final row in usableRows) {
         final accName = row[accIdx].toString();
@@ -213,7 +264,7 @@ class YnabImportService {
 
         // Parse amounts (currency strings, either decimal style) into
         // minor units.
-        int parseAmount(dynamic val) => _parseCsvAmount(val);
+        int parseAmount(dynamic val) => _parseCsvAmount(val, amountParser);
 
         final outflow = parseAmount(row[outflowIdx]);
         final inflow = parseAmount(row[inflowIdx]);
@@ -260,9 +311,24 @@ class YnabImportService {
         );
       }
       transactions.addAll(_groupRegisterLines(lines));
+
+      // Tracking accounts: only starting balance and transfer legs.
+      final hasOwnRows = <String>{};
+      for (final line in lines) {
+        final isStart = line.payee.trim().toLowerCase() == 'starting balance';
+        if (!isStart && transferTargetName(line.payee) == null) {
+          hasOwnRows.add(line.accountName);
+        }
+      }
+      for (var i = 0; i < accounts.length; i++) {
+        if (!hasOwnRows.contains(accounts[i].id)) {
+          accounts[i] = accounts[i].copyWith(onBudget: false);
+        }
+      }
     }
 
     // 2. Parse Budget CSV
+    var categoriesOnlyInBudget = 0;
     final budgetEol = detectEol(budgetCsvContent);
     final budgetRows = const CsvToListConverter().convert(
       budgetCsvContent,
@@ -297,7 +363,22 @@ class YnabImportService {
           final group = row[groupIdx].toString();
           final category = row[catIdx].toString();
 
-          final budgeted = _parseCsvAmount(row[budgetedIdx]);
+          final budgeted = _parseCsvAmount(row[budgetedIdx], amountParser);
+
+          // A category budgeted but never used in the register (a sinking
+          // fund, a credit card payment category) still exists.
+          if (group.isNotEmpty && category.isNotEmpty) {
+            final key = '$group|$category';
+            if (!categories.any((c) => c.id == key)) {
+              if (!categoryGroups.any((g) => g.name == group)) {
+                categoryGroups.add(YnabCategoryGroup(id: group, name: group));
+              }
+              categories.add(
+                YnabCategory(id: key, groupId: group, name: category),
+              );
+              categoriesOnlyInBudget++;
+            }
+          }
 
           if (budgeted != 0) {
             budgetEntries.add(
@@ -321,7 +402,48 @@ class YnabImportService {
       budgetEntries: budgetEntries,
       source: 'CSV',
       importedAt: DateTime.now().toUtc(),
+      registerDateFormat: chosenDateFormat,
+      dateFormatCandidates: dateFormatCandidates,
+      categoriesOnlyInBudget: categoriesOnlyInBudget,
+      fingerprint: fingerprintOf(registerCsvContent),
     );
+  }
+
+  /// SHA-256 of an export's text, the key of the "already imported" check.
+  static String fingerprintOf(String content) =>
+      sha256.convert(utf8.encode(content)).toString();
+
+  /// The amount cells of both files (Outflow, Inflow, Budgeted), for the
+  /// decimal separator inference.
+  static Iterable<String> _amountCells(String register, String budget) sync* {
+    for (final (content, columns) in [
+      (register, ['Outflow', 'Inflow']),
+      (budget, ['Budgeted']),
+    ]) {
+      if (content.trim().isEmpty) {
+        continue;
+      }
+      final rows = const CsvToListConverter().convert(
+        content,
+        shouldParseNumbers: false,
+        eol: content.contains('\r\n') ? '\r\n' : '\n',
+      );
+      if (rows.isEmpty) {
+        continue;
+      }
+      final headers = rows.first.map((e) => e.toString()).toList();
+      final indices = [
+        for (final c in columns)
+          if (headers.contains(c)) headers.indexOf(c),
+      ];
+      for (final row in rows.skip(1)) {
+        for (final i in indices) {
+          if (row.length > i) {
+            yield row[i].toString();
+          }
+        }
+      }
+    }
   }
 
   /// The month of a Budget.csv row: "Jan 2025" (English month names,
@@ -402,22 +524,37 @@ class YnabImportService {
     final content = await yfullFile.readAsString();
     final json = jsonDecode(content) as Map<String, dynamic>;
 
-    return _parseYnab4Json(json);
+    return _parseYnab4Json(json, fingerprint: fingerprintOf(content));
   }
 
-  YnabImportData _parseYnab4Json(Map<String, dynamic> json) {
-    // YNAB4 JSON Structure:
+  /// YNAB 4 keeps its income categories under the internal master
+  /// category; rows in them are income (no category, To Be Budgeted).
+  static const ynab4InternalMasterCategoryId = 'MasterCategory/__Internal__';
+  static const ynab4IncomeCategoryIds = {
+    'Category/__ImmediateIncome__',
+    'Category/__DeferredIncome__',
+  };
+
+  YnabImportData _parseYnab4Json(
+    Map<String, dynamic> json, {
+    String? fingerprint,
+  }) {
+    // YNAB4 JSON Structure (Budget.yfull):
     // {
     //   "accounts": [...],
     //   "payees": [...],
-    //   "masterCategories": [...], // Groups
-    //   "subCategories": [...],    // Categories
-    //   "transactions": [...],
-    //   "subTransactions": [...],  // Splits
-    //   "monthlyBudgets": [...],   // Budget allocations
+    //   "masterCategories": [        // Groups, each with its categories
+    //     {..., "subCategories": [...]}
+    //   ],
+    //   "transactions": [            // each split parent with its lines
+    //     {..., "subTransactions": [...]}
+    //   ],
+    //   "monthlyBudgets": [...],     // Budget allocations
     //   "scheduledTransactions": [...],
     //   ...
     // }
+    // Older/flattened files list "subCategories" and "subTransactions" at
+    // the top level instead; both shapes are read.
 
     final accounts = <YnabAccount>[];
     final categoryGroups = <YnabCategoryGroup>[];
@@ -455,8 +592,24 @@ class YnabImportService {
     // 3. Categories
     final groupMap = <String, String>{}; // id -> name
 
+    final nestedSubCategories = <Map<String, dynamic>>[];
     for (final master in (json['masterCategories'] as List? ?? [])) {
       if (master['isTombstone'] == true) {
+        continue;
+      }
+      for (final sub in (master['subCategories'] as List? ?? [])) {
+        nestedSubCategories.add({
+          ...sub as Map<String, dynamic>,
+          'masterCategoryId': sub['masterCategoryId'] ?? master['entityId'],
+        });
+      }
+
+      // The internal master category (income, split marker) is not a
+      // group; its categories are still known so rows in them are read
+      // as income (see [isReadyToAssignCategory]).
+      final isInternal = master['entityId'] == ynab4InternalMasterCategoryId;
+      groupMap[master['entityId']] = master['name'];
+      if (isInternal) {
         continue;
       }
 
@@ -468,13 +621,16 @@ class YnabImportService {
         isHidden: master['isHidden'] == true,
       );
       categoryGroups.add(group);
-      groupMap[group.id] = group.name;
     }
 
     final categoryMap = <String, YnabCategory>{}; // id -> Category
 
-    for (final sub in (json['subCategories'] as List? ?? [])) {
-      if (sub['isTombstone'] == true) {
+    for (final sub in [
+      ...nestedSubCategories,
+      ...(json['subCategories'] as List? ?? []),
+    ]) {
+      if (sub['isTombstone'] == true ||
+          categoryMap.containsKey(sub['entityId'])) {
         continue;
       }
 
@@ -484,16 +640,36 @@ class YnabImportService {
         name: sub['name'],
         isHidden: sub['isHidden'] == true,
       );
-      categories.add(category);
       categoryMap[category.id] = category;
+      if (category.groupId == ynab4InternalMasterCategoryId ||
+          ynab4IncomeCategoryIds.contains(category.id)) {
+        continue;
+      }
+      categories.add(category);
     }
+    // Income categories of files that do not list the internal master
+    // category: known by id, so their rows are income.
+    for (final id in ynab4IncomeCategoryIds) {
+      categoryMap.putIfAbsent(
+        id,
+        () => YnabCategory(
+          id: id,
+          groupId: ynab4InternalMasterCategoryId,
+          name: 'Immediate Income SubCategory',
+        ),
+      );
+    }
+    groupMap.putIfAbsent(
+      ynab4InternalMasterCategoryId,
+      () => 'Internal Master Category',
+    );
 
     // YNAB4 keeps hidden categories under a hidden master category
     // ("Hidden Categories") that is not always listed among the master
     // categories. Such categories get a hidden group so their transactions
     // keep a category (YNAB's own group name, not an app string).
     for (final category in categories) {
-      if (!groupMap.containsKey(category.groupId)) {
+      if (!categoryGroups.any((g) => g.id == category.groupId)) {
         groupMap[category.groupId] = 'Hidden Categories';
         categoryGroups.add(
           YnabCategoryGroup(
@@ -506,10 +682,27 @@ class YnabImportService {
     }
 
     // 4. Transactions & Splits
-    // First, index splits by parentId
+    // First, index splits by parentId (nested in each transaction, or at
+    // the top level in flattened files)
     final splitsByParent = <String, List<YnabSplitItem>>{};
-    for (final split in (json['subTransactions'] as List? ?? [])) {
+    final allSplits = <Map<String, dynamic>>[
+      for (final tx in (json['transactions'] as List? ?? []))
+        for (final split in (tx['subTransactions'] as List? ?? []))
+          {
+            ...split as Map<String, dynamic>,
+            'entitiesTransactionId':
+                split['entitiesTransactionId'] ?? tx['entityId'],
+          },
+      for (final split in (json['subTransactions'] as List? ?? []))
+        split as Map<String, dynamic>,
+    ];
+    final seenSplits = <String>{};
+    for (final split in allSplits) {
       if (split['isTombstone'] == true) {
+        continue;
+      }
+      final splitId = split['entityId'];
+      if (splitId != null && !seenSplits.add(splitId as String)) {
         continue;
       }
       final parentId = split['entitiesTransactionId'];
@@ -634,6 +827,7 @@ class YnabImportService {
       budgetEntries: budgetEntries,
       source: 'YNAB4',
       importedAt: DateTime.now().toUtc(),
+      fingerprint: fingerprint,
     );
   }
 
@@ -933,10 +1127,11 @@ class YnabImportService {
   }
 
   /// Parses a YNAB CSV amount cell ("$1,234.56", "1.234,56 €", "") into
-  /// minor units. Unparsable or empty cells count as 0.
-  static int _parseCsvAmount(dynamic value) {
+  /// minor units with the export's [parser]. Unparsable or empty cells
+  /// count as 0.
+  static int _parseCsvAmount(dynamic value, MoneyParser parser) {
     final text = value?.toString() ?? '';
-    return const MoneyParser().tryParse(text) ?? 0;
+    return parser.tryParse(text) ?? 0;
   }
 
   /// YNAB4 JSON amounts are major-unit numbers.

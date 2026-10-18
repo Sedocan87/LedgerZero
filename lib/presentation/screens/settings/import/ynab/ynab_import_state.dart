@@ -48,6 +48,10 @@ class YnabImportState {
   /// What the import wrote; set on success.
   final YnabImportSummary? summary;
 
+  /// When this very export was imported before (by content fingerprint),
+  /// or `null`.
+  final DateTime? previousImportAt;
+
   const YnabImportState({
     this.currentStep = YnabImportStep.selectMethod,
     this.method,
@@ -61,6 +65,7 @@ class YnabImportState {
     this.isImporting = false,
     this.currency = 'USD',
     this.summary,
+    this.previousImportAt,
   });
 
   YnabImportState copyWith({
@@ -76,6 +81,7 @@ class YnabImportState {
     bool? isImporting,
     String? currency,
     YnabImportSummary? summary,
+    DateTime? previousImportAt,
     bool clearParsedData = false,
   }) {
     return YnabImportState(
@@ -91,6 +97,9 @@ class YnabImportState {
       isImporting: isImporting ?? this.isImporting,
       currency: currency ?? this.currency,
       summary: summary ?? this.summary,
+      previousImportAt: clearParsedData
+          ? null
+          : (previousImportAt ?? this.previousImportAt),
     );
   }
 }

@@ -29,6 +29,16 @@ class CsvSanitizer {
     return value;
   }
 
+  /// Undoes [cell] on import: a leading `'` is removed when the next
+  /// character is one of the triggers (so `'-Fees` comes back as `-Fees`
+  /// while a name that really starts with `'` is kept).
+  static String unquote(String value) {
+    if (value.length >= 2 && value[0] == "'" && _triggers.contains(value[1])) {
+      return value.substring(1);
+    }
+    return value;
+  }
+
   static List<Object?> row(List<Object?> row) => [for (final v in row) cell(v)];
 
   static List<List<Object?>> rows(List<List<Object?>> rows) => [

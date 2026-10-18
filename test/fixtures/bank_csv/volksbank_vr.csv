@@ -1,0 +1,4 @@
+Bezeichnung Auftragskonto;IBAN Auftragskonto;BIC Auftragskonto;Bankname Auftragskonto;Buchungstag;Valutadatum;Name Zahlungsbeteiligter;IBAN Zahlungsbeteiligter;BIC (SWIFT-Code) Zahlungsbeteiligter;Buchungstext;Verwendungszweck;Betrag;Waehrung;Saldo nach Buchung;Bemerkung;Kategorie;Steuerrelevant;Glaeubiger ID;Mandatsreferenz
+Girokonto;DE12345678901234567890;GENODEF1XXX;Volksbank Musterstadt;18.10.2026;18.10.2026;ALDI SUED;DE00111122223333444455;GENODEF1XXX;Lastschrift;ALDI SAGT DANKE;-45,67;EUR;1.188,89;;;;;
+Girokonto;DE12345678901234567890;GENODEF1XXX;Volksbank Musterstadt;15.10.2026;15.10.2026;Beispiel AG;DE00111122223333444477;DEUTDEFFXXX;Gutschrift;Gehalt;2.900,00;EUR;1.234,56;;;;;
+Girokonto;DE12345678901234567890;GENODEF1XXX;Volksbank Musterstadt;11.10.2026;11.10.2026;Telekom Deutschland GmbH;DE00111122223333444488;PBNKDEFFXXX;Lastschrift;Rechnung;-39,95;EUR;-1.665,44;;;;;

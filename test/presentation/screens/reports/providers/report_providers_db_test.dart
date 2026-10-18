@@ -132,4 +132,51 @@ void main() {
       expect(net.last, -1500);
     },
   );
+
+  test('a net refund is not spending: spending by category and budget vs '
+      'actual show the net outflow or nothing', () async {
+    await t.addAccount(id: 'a1');
+    final groceries = await t.categoryId('Groceries');
+    final dining = await t.categoryId('Dining Out');
+    // Groceries: refund 80 against 30 spent -> net +50, nothing spent.
+    await t.addTransaction(
+      accountId: 'a1',
+      amount: 8000,
+      categoryId: groceries,
+      date: DateTime.utc(2024, 2, 1),
+    );
+    await t.addTransaction(
+      accountId: 'a1',
+      amount: -3000,
+      categoryId: groceries,
+      date: DateTime.utc(2024, 2, 2),
+    );
+    // Dining: 30 spent, 10 refunded -> 20 spent.
+    await t.addTransaction(
+      accountId: 'a1',
+      amount: -3000,
+      categoryId: dining,
+      date: DateTime.utc(2024, 2, 3),
+    );
+    await t.addTransaction(
+      accountId: 'a1',
+      amount: 1000,
+      categoryId: dining,
+      date: DateTime.utc(2024, 2, 4),
+    );
+    await t.budgeting.setCategoryBudgetedAmount(
+      groceries,
+      10000,
+      DateTime.utc(2024, 2, 1),
+    );
+
+    final spending = await container.read(spendingByCategoryProvider.future);
+    expect(spending, {'Dining Out': 2000});
+
+    final items = await container.read(budgetVsActualProvider.future);
+    final byName = {for (final i in items) i.categoryName: i};
+    expect(byName['Groceries']!.actual, 0);
+    expect(byName['Groceries']!.budgeted, 10000);
+    expect(byName['Dining Out']!.actual, 2000);
+  });
 }

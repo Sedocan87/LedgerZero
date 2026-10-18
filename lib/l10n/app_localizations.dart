@@ -5674,13 +5674,13 @@ abstract class AppLocalizations {
   /// Subtitle of a YNAB tracking (off-budget) account in the import preview
   ///
   /// In en, this message translates to:
-  /// **'Tracking account – not imported'**
+  /// **'Tracking account – imported outside the budget'**
   String get ynabImportTrackingAccount;
 
-  /// YNAB import result: tracking (off-budget) accounts were skipped
+  /// YNAB import result: tracking (off-budget) accounts were imported as off-budget accounts
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 tracking account was not imported. Transfers between it and your budget accounts were imported as outflows and inflows of the budget accounts.} other{{count} tracking accounts were not imported. Transfers between them and your budget accounts were imported as outflows and inflows of the budget accounts.}}'**
+  /// **'{count, plural, =1{1 tracking account was imported outside the budget. Transfers between it and your budget accounts are linked; a category on the budget side stays there.} other{{count} tracking accounts were imported outside the budget. Transfers between them and your budget accounts are linked; a category on the budget side stays there.}}'**
   String ynabImportTrackingSkipped(int count);
 
   /// Login screen button shown when the key vault is missing; deletes all local data
@@ -7296,6 +7296,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your existing data on this phone was found and kept.'**
   String get setupExistingDataKept;
+
+  /// CSV import: dropdown label for the bank preset
+  ///
+  /// In en, this message translates to:
+  /// **'Bank format'**
+  String get csvBankFormat;
+
+  /// CSV import: bank preset dropdown entry for no preset
+  ///
+  /// In en, this message translates to:
+  /// **'None (columns by name)'**
+  String get csvBankFormatNone;
+
+  /// CSV import: a bank preset matched the file
+  ///
+  /// In en, this message translates to:
+  /// **'Recognised from the column headers: {name}'**
+  String csvBankFormatDetected(String name);
+
+  /// CSV import: the header was not the first line
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 line above the column headers was skipped.} other{{count} lines above the column headers were skipped.}}'**
+  String csvHeaderLinesSkipped(int count);
+
+  /// CSV import: two date formats fit the file
+  ///
+  /// In en, this message translates to:
+  /// **'Day and month could be swapped: both {format} and {other} fit every date. Check the dates in the preview.'**
+  String csvDateFormatAmbiguous(String format, String other);
+
+  /// CSV import validation error
+  ///
+  /// In en, this message translates to:
+  /// **'The file has no data rows below the column headers.'**
+  String get csvIssueNoRows;
+
+  /// CSV import validation warning; format is a date pattern like dd.MM.yyyy
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row has a date that does not match the format {format} and will be skipped.} other{{count} rows have dates that do not match the format {format} and will be skipped.}}'**
+  String csvIssueInvalidDatesSkipped(int count, String format);
+
+  /// CSV import validation error (too many unreadable amounts)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row has an unreadable amount.} other{{count} rows have unreadable amounts.}} Check the Amount column and the decimal separator.'**
+  String csvIssueInvalidAmountsBlocking(int count);
+
+  /// CSV import: expandable section with the optional column mappings
+  ///
+  /// In en, this message translates to:
+  /// **'More columns'**
+  String get csvMoreColumns;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Debit column (Soll)'**
+  String get csvFieldDebit;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Credit column (Haben)'**
+  String get csvFieldCredit;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Debit/credit flag (S/H)'**
+  String get csvFieldDebitCreditFlag;
+
+  /// CSV import mapping field: sender column of inflows
+  ///
+  /// In en, this message translates to:
+  /// **'Payee for inflows'**
+  String get csvFieldInflowPayee;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer (other account)'**
+  String get csvFieldTransfer;
+
+  /// Import review: dropdown entry that imports each row into the account its Account column names
+  ///
+  /// In en, this message translates to:
+  /// **'Account from file ({names})'**
+  String importAccountFromFile(String names);
+
+  /// Import review: shown under a row that may already exist
+  ///
+  /// In en, this message translates to:
+  /// **'An existing transaction without payee (e.g. a transfer) has the same date and amount.'**
+  String get possibleDuplicateWarning;
+
+  /// Import review banner
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row matches an existing transaction without payee by date and amount and is unchecked.} other{{count} rows match existing transactions without payee by date and amount and are unchecked.}}'**
+  String importPossibleDuplicates(int count);
+
+  /// Import review banner
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}'**
+  String importTransferLegs(int count);
+
+  /// YNAB import preview: dropdown label
+  ///
+  /// In en, this message translates to:
+  /// **'Date format in Register.csv'**
+  String get ynabImportDateFormat;
+
+  /// YNAB import preview: both date orders fit
+  ///
+  /// In en, this message translates to:
+  /// **'No day above 12 in the file: day and month could be swapped. Check a date and switch the format if needed.'**
+  String get ynabImportDateFormatAmbiguous;
+
+  /// YNAB import preview: switch under an account
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking account (outside the budget)'**
+  String get ynabImportTrackingSwitch;
+
+  /// YNAB import preview: explains the tracking switch (nYNAB CSV)
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.'**
+  String get ynabImportTrackingHint;
+
+  /// YNAB import preview stat row
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get ynabImportCategoriesCount;
+
+  /// YNAB import preview stat row: categories without register rows that are created too
+  ///
+  /// In en, this message translates to:
+  /// **'Categories only in Budget.csv'**
+  String get ynabImportCategoriesOnlyInBudget;
+
+  /// YNAB import preview warning
+  ///
+  /// In en, this message translates to:
+  /// **'This export was already imported on {date}. Importing it again duplicates its transactions.'**
+  String ynabImportAlreadyImported(String date);
 }
 
 class _AppLocalizationsDelegate

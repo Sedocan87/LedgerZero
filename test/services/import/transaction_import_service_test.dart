@@ -356,4 +356,144 @@ void main() {
     expect(rows.map((r) => r.isDuplicate), [false, false]);
     expect(rows.first.isSelected, isTrue);
   });
+
+  test('re-importing a file whose payees a rule rewrote or that differ in '
+      'case flags the duplicates (I4)', () async {
+    await t.payees.createPayee(const Payee(id: 'p-amazon', name: 'Amazon'));
+    await t.rules.createRule(
+      _rule(
+        'amazon',
+        priority: 0,
+        conditions: const [
+          RuleCondition(
+            type: RuleConditionType.description,
+            operator: RuleConditionOperator.contains,
+            value: 'amzn mktp',
+          ),
+        ],
+        actions: const [
+          RuleAction(type: RuleActionType.setPayee, value: 'p-amazon'),
+        ],
+      ),
+    );
+    final file = [
+      _row(-1000, payee: 'AMZN Mktp DE*2X4', description: 'AMZN MKTP DE*2X4'),
+      _row(-2000, payee: 'rewe sagt danke'),
+      _row(-300, payee: 'Coffee'),
+      _row(-300, payee: 'Coffee'),
+    ];
+    await service.importTransactions([
+      for (final r in file)
+        ImportTransaction(
+          date: r.date,
+          amount: r.amount,
+          payeeName: r.payeeName,
+          originalDescription: r.originalDescription,
+        ),
+    ], accountId);
+    // Stored under the rule's payee "Amazon", not the bank's text.
+    final stored = (await imported()).map((r) => r.payeeId).toSet();
+    expect(stored, contains('p-amazon'));
+
+    // Delete one coffee so the file has two against one stored row.
+    final coffees = (await imported()).where((r) => r.amount == -300).toList();
+    await t.transactions.deleteTransaction(coffees.first.id);
+
+    final again = [
+      _row(-1000, payee: 'AMZN Mktp DE*2X4', description: 'AMZN MKTP DE*2X4'),
+      _row(-2000, payee: 'REWE SAGT DANKE'),
+      _row(-300, payee: 'Coffee'),
+      _row(-300, payee: 'Coffee'),
+    ];
+    await service.markDuplicates(again, accountId);
+    expect(again.map((r) => r.isDuplicate), [true, true, true, false]);
+    expect(again[0].rulePayeeName, 'Amazon');
+  });
+
+  test('a hand-entered transfer without payee is a possible duplicate of '
+      'the bank row (I4)', () async {
+    final savings = (await t.addAccount(name: 'Savings')).id;
+    final out = await t.addTransaction(
+      accountId: accountId,
+      amount: -50000,
+      date: DateTime.utc(2025, 3, 1),
+      transferAccountId: savings,
+    );
+    await t.addTransaction(
+      accountId: savings,
+      amount: 50000,
+      date: DateTime.utc(2025, 3, 1),
+      transferAccountId: accountId,
+      transferTransactionId: out.id,
+    );
+    final rows = [
+      ImportTransaction(
+        date: DateTime.utc(2025, 3, 1),
+        amount: -50000,
+        payeeName: 'Uebertrag Sparkonto',
+      ),
+      ImportTransaction(
+        date: DateTime.utc(2025, 3, 1),
+        amount: -50000,
+        payeeName: 'Something else',
+      ),
+    ];
+    await service.markDuplicates(rows, accountId);
+    expect(rows.map((r) => r.isDuplicate), [false, false]);
+    // One existing row, so only one file row is a possible duplicate.
+    expect(rows.map((r) => r.isPossibleDuplicate), [true, false]);
+    expect(rows.first.isSelected, isFalse);
+  });
+
+  test('rows with their own account are checked and imported per account; '
+      'transfer legs naming each other are linked', () async {
+    final savings = (await t.addAccount(name: 'Savings')).id;
+    final rows = [
+      ImportTransaction(
+        date: DateTime.utc(2025, 3, 1),
+        amount: -50000,
+        accountName: 'Checking',
+        transferAccountName: 'Savings',
+      )..accountId = accountId,
+      ImportTransaction(
+        date: DateTime.utc(2025, 3, 1),
+        amount: 50000,
+        accountName: 'Savings',
+        transferAccountName: 'Checking',
+      )..accountId = savings,
+      ImportTransaction(
+        date: DateTime.utc(2025, 3, 2),
+        amount: -900,
+        payeeName: 'Kiosk',
+        accountName: 'Savings',
+        cleared: TransactionClearStatus.uncleared,
+      )..accountId = savings,
+    ];
+    final names = {'checking': accountId, 'savings': savings};
+    await service.importTransactions(rows, accountId, accountIdsByName: names);
+
+    final all = await t.transactions.getAllTransactions();
+    expect(all, hasLength(3));
+    final legOut = all.singleWhere((r) => r.amount == -50000);
+    final legIn = all.singleWhere((r) => r.amount == 50000);
+    expect(legOut.accountId, accountId);
+    expect(legIn.accountId, savings);
+    expect(legOut.transferAccountId, savings);
+    expect(legIn.transferAccountId, accountId);
+    expect(legOut.transferTransactionId, legIn.id);
+    expect(legIn.transferTransactionId, legOut.id);
+    expect(legOut.payeeId, isNull);
+    final kiosk = all.singleWhere((r) => r.amount == -900);
+    expect(kiosk.accountId, savings);
+    expect(kiosk.cleared, TransactionClearStatus.uncleared);
+
+    // A second run flags everything as duplicate, per account.
+    final again = [for (final r in rows) r.copy()..isSelected = true];
+    await service.markDuplicates(again, accountId);
+    expect(again.map((r) => r.isDuplicate || r.isPossibleDuplicate), [
+      true,
+      true,
+      true,
+    ]);
+  });
 }

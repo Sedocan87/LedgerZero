@@ -1,0 +1,4 @@
+"Date","Payee","Account number","Transaction type","Payment reference","Amount (EUR)","Amount (Foreign Currency)","Type Foreign Currency","Exchange Rate"
+"2026-10-17","Lidl","","MasterCard Payment","","-34.12","-34.12","EUR","1.0"
+"2026-10-15","Erika Musterfrau","DE00111122223333444455","Income","Gehalt","2200.00","","",""
+"2026-10-14","Spotify","","Direct Debit","Premium","-9.99","","",""

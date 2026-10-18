@@ -33,12 +33,17 @@ class TransactionExportService {
         'Amount',
         'Cleared',
         'Approved',
+        // The other account of a transfer leg, so a re-import links the
+        // two legs again (CsvImportService maps it to the Transfer field).
+        'Transfer',
       ],
     ];
 
     // A split is exported as its lines (each with its category); the parent
     // row is left out so the amounts add up exactly once and a re-import
     // gives the same balances. Lines without a payee show the parent's.
+    // A transfer leg has no payee; its Transfer column names the other
+    // account.
     final byId = {for (final t in transactions) t.id: t};
     final splitParentIds = {
       for (final t in transactions)
@@ -55,6 +60,9 @@ class TransactionExportService {
           ? (categoryNames[t.categoryId] ?? t.categoryId)
           : '';
       final account = accountNames[t.accountId] ?? t.accountId;
+      final transferAccount = t.transferAccountId == null
+          ? ''
+          : (accountNames[t.transferAccountId] ?? t.transferAccountId!);
 
       rows.add([
         CsvLiteral(DateFormat('yyyy-MM-dd').format(t.date)),
@@ -66,6 +74,7 @@ class TransactionExportService {
         CsvLiteral(Money.toDecimalString(t.amount)),
         CsvLiteral(t.cleared.name),
         CsvLiteral(t.approved ? 'Yes' : 'No'),
+        transferAccount,
       ]);
     }
     return const ListToCsvConverter().convert(CsvSanitizer.rows(rows));

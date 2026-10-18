@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_state.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_view_model.dart';
 
@@ -48,7 +49,13 @@ class YnabImportScreen extends ConsumerWidget {
             child: Column(
               children: [
                 Expanded(
-                  child: _buildStepContent(context, l10n, state, viewModel),
+                  child: _buildStepContent(
+                    context,
+                    ref,
+                    l10n,
+                    state,
+                    viewModel,
+                  ),
                 ),
                 if (state.error != null)
                   Padding(
@@ -109,6 +116,7 @@ class YnabImportScreen extends ConsumerWidget {
 
   Widget _buildStepContent(
     BuildContext context,
+    WidgetRef ref,
     AppLocalizations l10n,
     YnabImportState state,
     YnabImportViewModel viewModel,
@@ -119,7 +127,7 @@ class YnabImportScreen extends ConsumerWidget {
       case YnabImportStep.selectFiles:
         return _buildFileSelection(context, l10n, state, viewModel);
       case YnabImportStep.preview:
-        return _buildPreview(context, l10n, state, viewModel);
+        return _buildPreview(context, ref, l10n, state, viewModel);
       case YnabImportStep.importing:
         return _buildImporting(context, l10n);
       case YnabImportStep.success:
@@ -261,11 +269,19 @@ class YnabImportScreen extends ConsumerWidget {
 
   Widget _buildPreview(
     BuildContext context,
+    WidgetRef ref,
     AppLocalizations l10n,
     YnabImportState state,
     YnabImportViewModel viewModel,
   ) {
     final data = state.parsedData!;
+    final scheme = Theme.of(context).colorScheme;
+    final previous = state.previousImportAt;
+    final dateFormat = data.registerDateFormat;
+    final dateFormatChoices = {
+      ...data.dateFormatCandidates,
+      ?dateFormat,
+    }.toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -276,10 +292,61 @@ class YnabImportScreen extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           l10n.ynabImportPreviewSubtitle,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          style: TextStyle(color: scheme.onSurfaceVariant),
         ),
+        if (previous != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            key: const Key('ynab_already_imported'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: scheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: scheme.onErrorContainer),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.ynabImportAlreadyImported(
+                      ref.watch(appFormatterProvider).formatDate(previous),
+                    ),
+                    style: TextStyle(color: scheme.onErrorContainer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (dateFormat != null && dateFormatChoices.length > 1) ...[
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: const Key('ynab_date_format'),
+            initialValue: dateFormat,
+            isExpanded: true,
+            decoration: InputDecoration(labelText: l10n.ynabImportDateFormat),
+            items: [
+              for (final f in dateFormatChoices)
+                DropdownMenuItem(value: f, child: Text(f)),
+            ],
+            onChanged: state.isLoading
+                ? null
+                : (f) {
+                    if (f != null && f != dateFormat) {
+                      viewModel.setRegisterDateFormat(f);
+                    }
+                  },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              l10n.ynabImportDateFormatAmbiguous,
+              style: TextStyle(color: scheme.error, fontSize: 12),
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         Expanded(
           child: DefaultTabController(
@@ -297,11 +364,24 @@ class YnabImportScreen extends ConsumerWidget {
                     children: [
                       // Accounts Tab
                       ListView.builder(
-                        itemCount: data.accounts.length,
+                        itemCount: data.accounts.length + 1,
                         itemBuilder: (context, index) {
+                          if (index == data.accounts.length) {
+                            return Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                l10n.ynabImportTrackingHint,
+                                style: TextStyle(
+                                  color: scheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          }
                           final acc = data.accounts[index];
-                          return ListTile(
-                            leading: const Icon(Icons.account_balance_wallet),
+                          return SwitchListTile(
+                            key: Key('ynab_tracking_${acc.id}'),
+                            secondary: const Icon(Icons.account_balance_wallet),
                             title: Text(acc.name),
                             subtitle: Text(
                               acc.onBudget
@@ -313,6 +393,9 @@ class YnabImportScreen extends ConsumerWidget {
                                     )
                                   : l10n.ynabImportTrackingAccount,
                             ),
+                            value: !acc.onBudget,
+                            onChanged: (tracking) =>
+                                viewModel.setTracking(acc.id, tracking),
                           );
                         },
                       ),
@@ -386,6 +469,17 @@ class YnabImportScreen extends ConsumerWidget {
                 l10n.ynabImportTotalTransactions,
                 data.transactions.length,
               ),
+              _buildStatRow(
+                context,
+                l10n.ynabImportCategoriesCount,
+                data.categories.length,
+              ),
+              if (data.categoriesOnlyInBudget > 0)
+                _buildStatRow(
+                  context,
+                  l10n.ynabImportCategoriesOnlyInBudget,
+                  data.categoriesOnlyInBudget,
+                ),
               _buildStatRow(
                 context,
                 l10n.ynabImportBudgetEntries,
@@ -542,14 +636,12 @@ class YnabImportScreen extends ConsumerWidget {
               ],
             ),
           ),
-          if ((summary?.trackingAccountsSkipped ?? 0) > 0) ...[
+          if ((summary?.trackingAccounts ?? 0) > 0) ...[
             const SizedBox(height: 16),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Text(
-                l10n.ynabImportTrackingSkipped(
-                  summary!.trackingAccountsSkipped,
-                ),
+                l10n.ynabImportTrackingSkipped(summary!.trackingAccounts),
                 key: const Key('ynab_tracking_skipped'),
                 textAlign: TextAlign.center,
               ),

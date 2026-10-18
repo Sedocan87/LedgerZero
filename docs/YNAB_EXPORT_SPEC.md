@@ -27,19 +27,33 @@ are ignored. Rows shorter than the header are skipped.
   `MM/dd/yyyy`, `dd/MM/yyyy`, `yyyy-MM-dd`, `dd.MM.yyyy` that parses
   *every* row strictly (no roll-over: `13/05/2025` never becomes a date in
   2026). A file whose days never exceed 12 is read as `MM/dd/yyyy` (YNAB's
-  US default). If no format fits every row, the import stops with a
-  localised error naming the first value the best-fitting format rejects
-  (`YnabImportFailure.invalidDates`). Stored as UTC midnight of the
-  calendar day.
+  US default); every format that fits is listed in
+  `YnabImportData.dateFormatCandidates` and the preview lets the user
+  switch (`parseCsvExport(dateFormat:)` re-reads the file with the chosen
+  one; `registerDateFormat` names the one in use). If no format fits every
+  row, the import stops with a localised error naming the first value the
+  best-fitting format rejects (`YnabImportFailure.invalidDates`). Stored
+  as UTC midnight of the calendar day.
 - **Amount**: `Inflow - Outflow`, each cell parsed by `MoneyParser`
   (currency symbols and either decimal style accepted; empty = 0), stored in
-  minor units.
+  minor units. The decimal separator is inferred once from all amount
+  cells of both files (`inferDecimalSeparator`), so an export without
+  decimals (`€1.234`) is read as thousands.
 - **Cleared**: values starting with `R` are reconciled, `C` cleared,
   anything else uncleared.
 - **Accounts**: one per distinct `Account` name. The type is guessed from the
   name (`checking`, `saving`, `credit`/`card`, `cash`; default checking).
-  The CSV has no closed flag; all accounts are imported as open.
-- **Categories**: every distinct `Category Group` / `Category` pair.
+  The CSV has no closed flag; all accounts are imported as open. It has no
+  tracking flag either: an account whose rows are only `Starting Balance`
+  and transfer legs gets `onBudget: false` (the preview switch overrides
+  it per account).
+- **Categories**: every distinct `Category Group` / `Category` pair of the
+  register, plus every pair of Budget.csv that the register lacks
+  (`YnabImportData.categoriesOnlyInBudget` counts those).
+- **Fingerprint**: SHA-256 of the register text
+  (`YnabImportData.fingerprint`), kept in SharedPreferences by
+  `YnabImportHistory` after a successful import so the preview can warn
+  about a second import of the same export.
 - **Splits**: nYNAB writes one row per split line with the memo prefixed
   `Split (i/n)`. Consecutive rows of the same account and date with the same
   `n` and distinct `i` are grouped into one split transaction (marker removed
@@ -66,10 +80,17 @@ The folder must contain `Budget.ymeta` and a `data*` subfolder with a device
 folder holding `Budget.yfull` (JSON). Tombstoned entities are skipped.
 
 Read from `Budget.yfull`: `accounts` (name, type, `hidden` = closed,
-`onBudget`), `payees`, `masterCategories` (groups, `isHidden`),
-`subCategories` (`isHidden`), `transactions`,
-`subTransactions` (split lines), `scheduledTransactions`, `monthlyBudgets`.
-Amounts are major-unit numbers, converted to minor units.
+`onBudget`), `payees`, `masterCategories` (groups, `isHidden`) with their
+nested `subCategories` (`isHidden`), `transactions` with their nested
+`subTransactions` (split lines), `scheduledTransactions`, `monthlyBudgets`
+(with nested `monthlySubCategoryBudgets`). Flattened files that list
+`subCategories` or `subTransactions` at the top level are read as well.
+Amounts are major-unit numbers, converted to minor units. The internal
+master category `MasterCategory/__Internal__` is not a group: its
+`Category/__ImmediateIncome__` and `Category/__DeferredIncome__` are
+income (rows in them get no category and count towards To Be Budgeted)
+and `Category/__Split__` marks split parents. The fingerprint is the
+SHA-256 of `Budget.yfull`.
 
 - Account types: `Checking`, `Savings`, `CreditCard`/`LineOfCredit` (credit),
   `Cash`/`MerchantAccount`/`PayPal` (cash); everything else checking.
@@ -78,7 +99,8 @@ Amounts are major-unit numbers, converted to minor units.
   occurrence, `EveryOtherWeek` = every 2 weeks, `TwiceAMonth` = every 2 weeks
   as the closest match, `EveryOtherMonth`, `TwiceAYear`, `Yearly`,
   `EveryOtherYear`, `Daily`, `Weekly`, `Monthly`).
-- `onBudget: false` marks a tracking account (see section 4).
+- `onBudget: false` marks a tracking account (see section 4); the preview
+  switch can change it.
 - A subcategory whose master category is not listed (YNAB 4 keeps hidden
   categories under a hidden "Hidden Categories" master) gets a hidden group
   of that name.
@@ -97,21 +119,24 @@ The whole import runs in one unit of work: all or nothing.
 - **Accounts**: matched by name or created with starting balance 0 and the
   currency chosen on the import preview (default: the app's default
   currency from Settings). Closed accounts are imported as closed, with
-  their transactions. Tracking accounts (`onBudget: false`) are not
-  imported, nor are their own transactions; the result screen reports how
-  many were skipped (`YnabImportSummary.trackingAccountsSkipped`). YNAB's "Starting Balance" row is imported as an
-  uncategorised transaction.
+  their transactions. Tracking accounts (`onBudget: false`) are created
+  with "Include in budget" off and imported with their transactions, which
+  get no category (the budget ignores categories on off-budget rows); the
+  result screen reports how many (`YnabImportSummary.trackingAccounts`).
+  YNAB's "Starting Balance" row is imported as an uncategorised
+  transaction.
 - **Payees**: matched by name (case-insensitive) or created. Transfer payees
   never become payees.
 - **Transfers**: rows that pair up (same day, opposite amounts, accounts
-  pointing at each other, no category, not split) become two linked legs.
-  Unpaired transfer rows are imported as normal rows with `Transfer : X` in
-  the memo. This includes the budget-side leg of a transfer to or from a
-  tracking account: it becomes an outflow/inflow of the budget account,
-  keeping YNAB's category when it has one (YNAB requires one for outflows
-  to tracking accounts), otherwise uncategorised and counted towards To Be
-  Budgeted. The budget invariant (available + To Be Budgeted = account
-  balances) holds because only budget accounts exist.
+  pointing at each other, at most one of them categorised, not split)
+  become two linked legs. A transfer between a budget account and a
+  tracking account keeps YNAB's category on the budget-side leg (YNAB
+  requires one for outflows to tracking accounts): the app's cross-budget
+  rule, the money leaves that category; without a category the leg counts
+  towards To Be Budgeted. Between two budget accounts a category is
+  dropped (the budget ignores it). Unpaired transfer rows are imported as
+  normal rows with `Transfer : X` in the memo. The budget invariant
+  (available + To Be Budgeted = on-budget account balances) holds.
 - **Splits**: a parent (account-side amount, no category) plus one child per
   line; any difference to the parent goes into an uncategorised child. A split line
   that is a transfer becomes an uncategorised child with `Transfer : X` in
@@ -121,4 +146,4 @@ The whole import runs in one unit of work: all or nothing.
   the memo.
 - **Budgets**: one row per category and month with a deterministic id;
   existing rows for the same category and month are overwritten.
-- **Not imported**: goals, flags, account notes, tracking accounts.
+- **Not imported**: goals, flags, account notes.

@@ -37,7 +37,8 @@ YnabDataMapper _mapper(
   unitOfWork: t.unitOfWork,
 );
 
-/// Asserts SUM(available) + TBB == SUM(account balances) for [month].
+/// Asserts SUM(available) + TBB == SUM(on-budget account balances) for
+/// [month].
 Future<void> _expectInvariant(TestDatabase t, DateTime month) async {
   final categories = await t.categories.getAllCategories();
   var available = 0;
@@ -45,10 +46,13 @@ Future<void> _expectInvariant(TestDatabase t, DateTime month) async {
     available += await t.budgeting.calculateCategoryAvailable(c.id, month);
   }
   final tbb = await t.budgeting.calculateTBB(month);
-  final balances = (await t.accounts.getAccountBalances()).values.fold<int>(
-    0,
-    (a, b) => a + b,
-  );
+  final onBudget = {
+    for (final a in await t.accounts.getAllAccounts())
+      if (a.onBudget) a.id,
+  };
+  final balances = (await t.accounts.getAccountBalances()).entries
+      .where((e) => onBudget.contains(e.key))
+      .fold<int>(0, (sum, e) => sum + e.value);
   expect(available + tbb, balances, reason: 'available + TBB == balances');
 }
 
@@ -78,6 +82,7 @@ const _budgetCsv =
     '''"Month","Category Group/Category","Category Group","Category","Budgeted","Activity","Available"
 "Jan 2025","Everyday: Food","Everyday","Food","\$100.00","-\$50.00","\$50.00"
 "Jan 2025","Bills: Rent","Bills","Rent","\$400.00","-\$400.00","\$0.00"
+"Jan 2025","Savings: Vacation","Savings","Vacation","\$150.00","\$0.00","\$150.00"
 ''';
 
 void main() {
@@ -149,8 +154,15 @@ void main() {
       expect(balances[checking], 100000 - 20000 - 40000);
       expect(balances[card], -30000 + 20000 - 5000);
 
-      // TBB = +1000 - 300 (starting balance rows) - 500 budgeted.
-      expect(await t.budgeting.calculateTBB(january), 20000);
+      // TBB = +1000 - 300 (starting balance rows) - 650 budgeted (the
+      // Vacation fund exists only in Budget.csv and is created too).
+      expect(await t.budgeting.calculateTBB(january), 5000);
+      expect(data.categoriesOnlyInBudget, 1);
+      final vacation = await _categoryIdIn(t, 'Savings', 'Vacation');
+      expect(
+        await t.budgeting.calculateCategoryAvailable(vacation, january),
+        15000,
+      );
 
       final food = await _categoryIdIn(t, 'Everyday', 'Food');
       final rent = await _categoryIdIn(t, 'Bills', 'Rent');
@@ -379,7 +391,7 @@ void main() {
         final rows = await t.transactions.getAllTransactions();
 
         final legs = rows.where((r) => r.transferAccountId != null).toList();
-        expect(legs, hasLength(4));
+        expect(legs, hasLength(6));
         for (final leg in legs) {
           final other = rows.firstWhere(
             (r) => r.id == leg.transferTransactionId,
@@ -403,14 +415,13 @@ void main() {
         expect(toClosed.categoryId, isNull);
         expect(toClosed.memo, 'Transfer : Old Account');
 
-        // A categorised transfer keeps its category and is not linked.
-        final fun = await _categoryIdIn(t, 'Everyday', 'Fun');
+        // A transfer categorised on one side is linked too; between two
+        // budget accounts the category is dropped (the budget ignores it).
         final t7 = rows.singleWhere((r) => r.amount == -1500);
-        expect(t7.categoryId, fun);
-        expect(t7.transferAccountId, isNull);
+        expect(t7.transferAccountId, savings);
+        expect(t7.categoryId, isNull);
         final t8 = rows.singleWhere((r) => r.amount == 1500);
-        expect(t8.transferAccountId, isNull);
-        expect(t8.categoryId, isNull);
+        expect(t8.transferTransactionId, t7.id);
 
         final payees = await t.payees.getAllPayees();
         expect(payees.map((p) => p.name), ['Starting Balance']);
@@ -418,10 +429,11 @@ void main() {
         final balances = await t.accounts.getAccountBalances();
         expect(balances[checking], 100000 - 4000 - 5000 - 1500);
         expect(balances[savings], 4000 + 700 + 1500);
-        // +1000 start, +7 orphan, -50 orphan, +15 t8, -300 budgeted.
+        // +1000 start, +7 orphan, -50 orphan, -300 budgeted; the linked
+        // t7/t8 transfer moves nothing in or out of the budget.
         expect(
           await t.budgeting.calculateTBB(january),
-          100000 + 700 - 5000 + 1500 - 30000,
+          100000 + 700 - 5000 - 30000,
         );
         await _expectInvariant(t, january);
       },
@@ -495,9 +507,16 @@ void main() {
 ''';
 
     test('split lines become a parent plus categorised children', () async {
-      final data = await YnabImportService().parseCsvExport(
+      final parsed = await YnabImportService().parseCsvExport(
         registerCsvContent: register,
         budgetCsvContent: budget,
+      );
+      // Savings has only a transfer leg, so it is taken for a tracking
+      // account; the user keeps it on budget in the preview.
+      expect(parsed.accounts.singleWhere((a) => a.name == 'Savings').onBudget,
+          isFalse);
+      final data = parsed.copyWith(
+        accounts: [for (final a in parsed.accounts) a.copyWith(onBudget: true)],
       );
       await _mapper(t).importData(data, currency: 'USD');
 
@@ -790,8 +809,8 @@ void main() {
       );
     });
 
-    test('tracking accounts are skipped; transfers to them become budget '
-        'outflows/inflows; the budget invariant holds', () async {
+    test('tracking accounts are imported off budget; a categorised transfer '
+        'to one keeps the category on the budget leg (I6)', () async {
       final summary = await _mapper(t).importData(
         data(
           accounts: [
@@ -860,33 +879,63 @@ void main() {
               amount: -5000,
               transferAccountId: 'a',
             ),
+            // A categorised row inside the tracking account: no category.
+            YnabTransaction(
+              id: 'hi',
+              accountId: 'h',
+              date: DateTime.utc(2025, 1, 7),
+              amount: 1000,
+              payeeName: 'Interest',
+              categoryGroupName: 'Everyday',
+              categoryName: 'Home',
+            ),
           ],
         ),
         currency: 'USD',
       );
 
-      expect(summary.trackingAccountsSkipped, 2);
-      expect(summary.accounts, 1);
-      expect(summary.transactions, 3);
+      expect(summary.trackingAccounts, 2);
+      expect(summary.accounts, 3);
+      expect(summary.transactions, 7);
 
-      final accounts = await t.accounts.getAllAccounts();
-      expect(accounts.map((a) => a.name), ['Checking']);
+      final accounts = {
+        for (final a in await t.accounts.getAllAccounts()) a.name: a,
+      };
+      expect(
+        accounts.keys,
+        unorderedEquals(['Checking', 'House', 'Retirement']),
+      );
+      expect(accounts['Checking']!.onBudget, isTrue);
+      expect(accounts['House']!.onBudget, isFalse);
+      expect(accounts['Retirement']!.onBudget, isFalse);
+
       final rows = await t.transactions.getAllTransactions();
-      expect(rows, hasLength(3));
-      expect(rows.every((r) => r.transferAccountId == null), isTrue);
+      expect(rows, hasLength(7));
       final home = await _categoryIdIn(t, 'Everyday', 'Home');
       final out = rows.singleWhere((r) => r.amount == -20000);
-      expect(out.categoryId, home);
-      expect(out.memo, 'Transfer : House');
+      final into = rows.singleWhere((r) => r.amount == 20000);
+      expect(out.transferAccountId, accounts['House']!.id);
+      expect(out.transferTransactionId, into.id);
+      expect(into.transferTransactionId, out.id);
+      expect(out.categoryId, home, reason: 'budget-side leg keeps it');
+      expect(into.categoryId, isNull);
       final inflow = rows.singleWhere((r) => r.amount == 5000);
+      expect(inflow.transferAccountId, accounts['Retirement']!.id);
       expect(inflow.categoryId, isNull);
-      expect(inflow.memo, 'Transfer : Retirement');
+      final interest = rows.singleWhere((r) => r.amount == 1000);
+      expect(interest.categoryId, isNull);
 
-      expect(
-        (await t.accounts.getAccountBalances())[accounts.single.id],
-        100000 - 20000 + 5000,
-      );
+      final balances = await t.accounts.getAccountBalances();
+      expect(balances[accounts['Checking']!.id], 100000 - 20000 + 5000);
+      expect(balances[accounts['House']!.id], 30000000 + 20000 + 1000);
+      expect(balances[accounts['Retirement']!.id], -5000);
+      // Starting balance + the inflow from Retirement; the outflow to
+      // House left the Home category, not To Be Budgeted.
       expect(await t.budgeting.calculateTBB(january), 100000 + 5000);
+      expect(
+        await t.budgeting.calculateCategoryAvailable(home, january),
+        -20000,
+      );
       await _expectInvariant(t, january);
       await expectLedgerInvariant(t, january);
     });

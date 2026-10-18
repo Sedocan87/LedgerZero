@@ -1,27 +1,58 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show compute;
-import 'package:intl/intl.dart';
-import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/core/money/money_parser.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/picked_file.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/services/csv/bank_csv_presets.dart';
+import 'package:ledger_zero/services/csv/csv_date_formats.dart';
+import 'package:ledger_zero/services/csv/csv_fields.dart';
+import 'package:ledger_zero/services/csv/decimal_separator_inference.dart';
+import 'package:ledger_zero/services/export/csv_sanitizer.dart';
+
+export 'package:ledger_zero/services/csv/csv_fields.dart';
 
 class CsvImportData {
+  /// Header names as the file writes them (trimmed); duplicates are made
+  /// unique (`Währung`, `Währung (2)`), empty ones become `#n`.
   final List<String> headers;
+
+  /// Data rows (cells as strings). Rows whose cells are all empty are
+  /// dropped while parsing.
   final List<List<dynamic>> rows;
   final String delimiter;
+
+  /// 0-based line of the header in the file; lines above it (account
+  /// details, balances) were skipped.
+  final int headerLineIndex;
+
+  /// The bank preset whose header fingerprint matched, or `null`.
+  final BankCsvPreset? preset;
 
   CsvImportData({
     required this.headers,
     required this.rows,
     required this.delimiter,
+    this.headerLineIndex = 0,
+    this.preset,
   });
+
+  /// The values of the column [header] (rows too short for it skipped).
+  Iterable<String> columnValues(String? header) sync* {
+    final index = header == null ? -1 : headers.indexOf(header);
+    if (index == -1) {
+      return;
+    }
+    for (final row in rows) {
+      if (row.length > index) {
+        yield row[index].toString();
+      }
+    }
+  }
 }
 
 /// A problem found while validating a CSV import. The UI turns it into a
@@ -31,28 +62,45 @@ enum CsvIssueKind {
   amountColumnNotMapped,
   mappedColumnsMissing,
 
+  /// The file has no data rows.
+  noRows,
+
   /// [CsvIssue.count] rows have dates that do not match
-  /// [CsvIssue.dateFormat].
+  /// [CsvIssue.dateFormat]. A warning when the rows are few (they are
+  /// skipped), an error when they are more than [CsvImportService.skipLimit]
+  /// allows.
   invalidDates,
 
-  /// [CsvIssue.count] rows have unreadable amounts and are skipped.
+  /// [CsvIssue.count] rows have unreadable amounts; same rule as
+  /// [invalidDates].
   invalidAmounts,
 
-  /// [CsvIssue.count] dates are more than 60 days from the median date
-  /// (often a wrong date format or a typo in the file).
+  /// [CsvIssue.count] dates are more than a year from the median date
+  /// (a wrong date format or a typo in the file).
   dateOutliers,
+
+  /// Both [CsvIssue.dateFormat] and [CsvIssue.otherFormat] fit every date
+  /// (no day above 12): day and month may be swapped.
+  ambiguousDateFormat,
 }
 
 class CsvIssue {
   final CsvIssueKind kind;
   final int count;
   final String? dateFormat;
+  final String? otherFormat;
 
-  const CsvIssue(this.kind, {this.count = 0, this.dateFormat});
+  const CsvIssue(
+    this.kind, {
+    this.count = 0,
+    this.dateFormat,
+    this.otherFormat,
+  });
 
   @override
   String toString() =>
-      'CsvIssue(${kind.name}, count: $count, dateFormat: $dateFormat)';
+      'CsvIssue(${kind.name}, count: $count, dateFormat: $dateFormat, '
+      'otherFormat: $otherFormat)';
 }
 
 class CsvValidationResult {
@@ -60,10 +108,14 @@ class CsvValidationResult {
   final List<CsvIssue> errors;
   final List<CsvIssue> warnings;
 
+  /// Rows that will be skipped (unreadable date or amount).
+  final int skippedRows;
+
   CsvValidationResult({
     required this.isValid,
     required this.errors,
     required this.warnings,
+    this.skippedRows = 0,
   });
 }
 
@@ -80,8 +132,142 @@ class ImportException implements Exception {
   String toString() => 'ImportException(${failure.name}): $message';
 }
 
+/// Header keywords per field in order of preference (English and German
+/// bank exports). A header equal to a keyword scores highest, one
+/// containing it as a whole word next, one merely containing it lowest;
+/// headers containing a word of [_headerPenalties] for the field never
+/// match it.
+const Map<String, List<String>> _headerKeywords = {
+  CsvField.date: [
+    'date',
+    'datum',
+    'buchungstag',
+    'buchungsdatum',
+    'buchung',
+    'booking date',
+    'posting date',
+    'transaction date',
+    'completed date',
+    'started date',
+    'valuta',
+    'valutadatum',
+    'wertstellung',
+    'value date',
+  ],
+  CsvField.amount: [
+    'amount',
+    'betrag',
+    'betrag (eur)',
+    'betrag (€)',
+    'amount (eur)',
+    'umsatz in eur',
+    'umsatz',
+    'value',
+    'summe',
+  ],
+  CsvField.debit: ['soll', 'debit', 'ausgang', 'belastung', 'outflow'],
+  CsvField.credit: ['haben', 'credit', 'eingang', 'gutschrift', 'inflow'],
+  CsvField.debitCreditFlag: ['soll/haben', 's/h', 'debit/credit', 'dr/cr'],
+  CsvField.payee: [
+    'payee',
+    'partner name',
+    'beguenstigter/zahlungspflichtiger',
+    'begünstigter/zahlungspflichtiger',
+    'auftraggeber/empfänger',
+    'name zahlungsbeteiligter',
+    'zahlungsempfänger',
+    'empfänger',
+    'empfaenger',
+    'begünstigter',
+    'beguenstigter',
+    'auftraggeber',
+    'zahlungspflichtiger',
+    'merchant',
+    'description',
+    'desc',
+    'buchungstext',
+    'name',
+  ],
+  CsvField.inflowPayee: ['zahlungspflichtige', 'auftraggeber', 'sender'],
+  CsvField.memo: [
+    'memo',
+    'verwendungszweck',
+    'payment reference',
+    'reference',
+    'note',
+    'notiz',
+    'remark',
+    'vermerk',
+  ],
+  CsvField.category: ['category', 'kategorie', 'cat'],
+  CsvField.account: ['account', 'konto', 'account name', 'kontoname'],
+  CsvField.transfer: ['transfer', 'umbuchung'],
+  CsvField.cleared: ['cleared', 'status'],
+};
+
+/// Words that disqualify a header for a field (the Sparkasse export has
+/// `Lastschrift Ursprungsbetrag` before `Betrag`).
+const Map<String, List<String>> _headerPenalties = {
+  CsvField.date: ['erstellt', 'created', 'export'],
+  CsvField.amount: [
+    'ursprungsbetrag',
+    'auslagenersatz',
+    'saldo',
+    'kontostand',
+    'balance',
+    'währung',
+    'waehrung',
+    'currency',
+    'gebühr',
+    'fee',
+    'anzahl',
+    'original',
+    'foreign',
+    'fremd',
+    'exchange',
+    'kurs',
+  ],
+  CsvField.debit: ['ursprungsbetrag', 'soll/haben'],
+  CsvField.credit: [],
+  CsvField.debitCreditFlag: [],
+  CsvField.payee: ['iban', 'bic', 'kontonummer', 'account number', 'id'],
+  CsvField.inflowPayee: ['iban', 'bic'],
+  CsvField.memo: ['mandatsreferenz', 'kundenreferenz', 'gläubiger'],
+  CsvField.category: [],
+  CsvField.account: ['iban', 'number', 'nummer', 'nr'],
+  CsvField.transfer: [],
+  CsvField.cleared: [],
+};
+
+/// Fields whose header must equal a keyword or contain it as a whole word
+/// (a substring is not enough: `Auftragskonto` is not an account column).
+const Set<String> _wholeWordFields = {
+  CsvField.account,
+  CsvField.transfer,
+  CsvField.cleared,
+  CsvField.debitCreditFlag,
+  CsvField.debit,
+  CsvField.credit,
+};
+
 class CsvImportService {
-  Future<CsvImportData> parseCsvFile(PlatformFile file) async {
+  /// Unreadable rows (date or amount) up to this share of all rows, and at
+  /// least this many, are skipped with a warning; more are an error (the
+  /// settings are probably wrong). See [validateCsvData].
+  static const double skipLimitShare = 0.2;
+  static const int skipLimitMinimum = 3;
+
+  /// The number of unreadable rows that is still skipped with a warning
+  /// for a file of [rowCount] rows.
+  static int skipLimit(int rowCount) {
+    final share = (rowCount * skipLimitShare).floor();
+    return share > skipLimitMinimum ? share : skipLimitMinimum;
+  }
+
+  Future<CsvImportData> parseCsvFile(
+    PlatformFile file, {
+    int? headerLineIndex,
+  }) async {
     String content;
     try {
       // Bank exports that are not UTF-8 are almost always Windows-1252
@@ -94,15 +280,22 @@ class CsvImportService {
       );
     }
 
-    return compute(_parseCsvInternal, content);
+    return compute(_parseCsvInternal, _ParseRequest(content, headerLineIndex));
   }
 
-  static CsvImportData _parseCsvInternal(String content) {
+  /// Parses CSV text (see [parseCsvFile]); [headerLineIndex] forces the
+  /// header line instead of detecting it.
+  CsvImportData parseCsvContent(String content, {int? headerLineIndex}) =>
+      _parseCsvInternal(_ParseRequest(content, headerLineIndex));
+
+  static final RegExp _lineBreak = RegExp(r'\r\n|\r|\n');
+
+  static CsvImportData _parseCsvInternal(_ParseRequest request) {
+    final content = request.content;
     if (content.trim().isEmpty) {
       throw ImportException(ImportFailure.empty, 'The CSV file is empty');
     }
 
-    String delimiter = ',';
     // Detect EOL
     String? eol;
     if (content.contains('\r\n')) {
@@ -113,19 +306,30 @@ class CsvImportService {
       eol = '\r';
     }
 
-    // Simple heuristic: if more semicolons than commas in the first line, use semicolon
-    final idx = content.indexOf(RegExp(r'\r\n|\r|\n'));
-    final firstLine = idx == -1 ? content : content.substring(0, idx);
-
-    if (firstLine.split(';').length > firstLine.split(',').length) {
-      delimiter = ';';
+    // Lines with their start offsets (quoted fields never span the
+    // preamble, so splitting the first lines is safe).
+    final lineStarts = <int>[0];
+    final lines = <String>[];
+    var previous = 0;
+    for (final m in _lineBreak.allMatches(content)) {
+      lines.add(content.substring(previous, m.start));
+      previous = m.end;
+      lineStarts.add(m.end);
     }
+    lines.add(content.substring(previous));
+
+    var headerIndex = request.headerLineIndex ?? _detectHeaderLine(lines) ?? 0;
+    if (headerIndex >= lines.length) {
+      headerIndex = 0;
+    }
+    final delimiter = _delimiterOf(lines[headerIndex]);
+    final body = content.substring(lineStarts[headerIndex]);
 
     // Convert CSV
     final List<List<dynamic>> rawRows;
     try {
       rawRows = const CsvToListConverter().convert(
-        content,
+        body,
         fieldDelimiter: delimiter,
         eol: eol,
         shouldParseNumbers: false,
@@ -141,26 +345,229 @@ class CsvImportService {
       throw ImportException(ImportFailure.empty, 'No rows in the CSV file');
     }
 
-    // Assume first row is header
-    if (rawRows.length < 2) {
-      // Could be just headers?
-      if (rawRows.length == 1) {
-        // Valid CSV but no data
-        return CsvImportData(
-          headers: rawRows.first.map((e) => e.toString()).toList(),
-          rows: [],
-          delimiter: delimiter,
-        );
+    final headers = _uniqueHeaders(rawRows.first);
+    // Blank lines (the csv package yields [''] for them) and footer lines
+    // without content are dropped; other footer lines (balances) fail the
+    // date check and are skipped there.
+    final rows = [
+      for (final row in rawRows.skip(1))
+        if (row.any((cell) => cell.toString().trim().isNotEmpty)) row,
+    ];
+
+    return CsvImportData(
+      headers: headers,
+      rows: rows,
+      delimiter: delimiter,
+      headerLineIndex: headerIndex,
+      preset: BankCsvPreset.detect(headers),
+    );
+  }
+
+  /// Header names made unique and non-empty.
+  static List<String> _uniqueHeaders(List<dynamic> row) {
+    final seen = <String>{};
+    final headers = <String>[];
+    for (var i = 0; i < row.length; i++) {
+      var name = row[i].toString().trim();
+      if (name.isEmpty) {
+        name = '#${i + 1}';
       }
-      // Should not reach here if not empty
+      var unique = name;
+      var n = 2;
+      while (!seen.add(unique)) {
+        unique = '$name (${n++})';
+      }
+      headers.add(unique);
     }
+    return headers;
+  }
 
-    final List<String> headers = rawRows.first
-        .map((e) => e.toString())
-        .toList();
-    final List<List<dynamic>> rows = rawRows.skip(1).toList();
+  /// The delimiter used most in [line] (`;`, `,` or tab); comma when none
+  /// occurs.
+  static String _delimiterOf(String line) {
+    var best = ',';
+    var bestCount = ','.allMatches(line).length;
+    for (final candidate in [';', '\t']) {
+      final count = candidate.allMatches(line).length;
+      if (count > bestCount) {
+        best = candidate;
+        bestCount = count;
+      }
+    }
+    return best;
+  }
 
-    return CsvImportData(headers: headers, rows: rows, delimiter: delimiter);
+  /// Simple split of one line into trimmed, unquoted cells (for header
+  /// detection only; the real parse uses the csv package).
+  static List<String> _splitLine(String line, String delimiter) => [
+    for (final cell in line.split(delimiter))
+      cell.trim().replaceAll(RegExp('^"|"\$'), '').trim(),
+  ];
+
+  /// The first of the first 60 lines that looks like a header: a bank
+  /// preset matches it, or it names a date column and an amount column
+  /// (or debit and credit columns). `null` when none does.
+  static int? _detectHeaderLine(List<String> lines) {
+    final limit = lines.length < 60 ? lines.length : 60;
+    for (var i = 0; i < limit; i++) {
+      final line = lines[i];
+      if (line.trim().isEmpty) {
+        continue;
+      }
+      final cells = _splitLine(line, _delimiterOf(line));
+      if (cells.length < 2) {
+        continue;
+      }
+      if (BankCsvPreset.detect(cells) != null) {
+        return i;
+      }
+      final mapping = autoMapColumns(cells);
+      final hasAmount =
+          mapping[CsvField.amount] != null ||
+          (mapping[CsvField.debit] != null && mapping[CsvField.credit] != null);
+      if (mapping[CsvField.date] != null && hasAmount) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  /// Maps the fields of [CsvField.all] to [headers]: the bank [preset]'s
+  /// mapping when one matches, otherwise by header keywords (exact match
+  /// before whole word before substring; each header used once).
+  static Map<String, String?> autoMapColumns(
+    List<String> headers, {
+    BankCsvPreset? preset,
+  }) {
+    if (preset != null) {
+      return preset.mappingFor(headers);
+    }
+    final mapping = {for (final f in CsvField.all) f: null as String?};
+    final used = <String>{};
+    final normalized = [for (final h in headers) normalizeHeader(h)];
+
+    for (final field in CsvField.all) {
+      if ((field == CsvField.debit || field == CsvField.credit) &&
+          mapping[CsvField.amount] != null) {
+        // Separate debit/credit columns only when there is no amount.
+        continue;
+      }
+      if (field == CsvField.debitCreditFlag &&
+          mapping[CsvField.debit] != null &&
+          mapping[CsvField.credit] != null) {
+        continue;
+      }
+      if (field == CsvField.inflowPayee && mapping[CsvField.payee] == null) {
+        continue;
+      }
+      String? best;
+      var bestScore = 0;
+      var bestKeyword = 1 << 20;
+      for (var i = 0; i < headers.length; i++) {
+        if (used.contains(headers[i])) {
+          continue;
+        }
+        final h = normalized[i];
+        if ((h == 'dt' && field == CsvField.date) ||
+            (h == 'amt' && field == CsvField.amount)) {
+          best = headers[i];
+          bestScore = 3;
+          break;
+        }
+        if (_headerPenalties[field]!.any((p) => _containsWord(h, p))) {
+          continue;
+        }
+        final keywords = _headerKeywords[field]!;
+        for (var k = 0; k < keywords.length; k++) {
+          final keyword = keywords[k];
+          var score = 0;
+          if (h == keyword) {
+            score = 3;
+          } else if (_containsWord(h, keyword)) {
+            score = 2;
+          } else if (!_wholeWordFields.contains(field) && h.contains(keyword)) {
+            score = 1;
+          }
+          if (score > 0 &&
+              (score > bestScore || (score == bestScore && k < bestKeyword))) {
+            best = headers[i];
+            bestScore = score;
+            bestKeyword = k;
+          }
+        }
+      }
+      if (best != null) {
+        mapping[field] = best;
+        used.add(best);
+      }
+    }
+    // Debit without credit (or the reverse) is not an amount source.
+    if (mapping[CsvField.debit] == null || mapping[CsvField.credit] == null) {
+      mapping[CsvField.debit] = null;
+      mapping[CsvField.credit] = null;
+    }
+    return mapping;
+  }
+
+  static final RegExp _wordChar = RegExp(r'[\p{L}\p{N}]', unicode: true);
+
+  /// Whether [text] contains [word] bounded by non-letters (or the ends).
+  static bool _containsWord(String text, String word) {
+    var from = 0;
+    while (true) {
+      final at = text.indexOf(word, from);
+      if (at == -1) {
+        return false;
+      }
+      final end = at + word.length;
+      final startOk = at == 0 || !_wordChar.hasMatch(text[at - 1]);
+      final endOk = end == text.length || !_wordChar.hasMatch(text[end]);
+      if (startOk && endOk) {
+        return true;
+      }
+      from = at + 1;
+    }
+  }
+
+  /// Chooses the date format for the mapped date column of [data] (see
+  /// [detectCsvDateFormat]); [preset]'s format when one is in use.
+  CsvDateDetection detectDateFormat(
+    CsvImportData data,
+    Map<String, String?> columnMapping, {
+    bool preferDayFirst = false,
+    BankCsvPreset? preset,
+  }) {
+    if (preset != null) {
+      return CsvDateDetection(
+        format: preset.dateFormat,
+        fitsAll: true,
+        ambiguous: false,
+        candidates: [preset.dateFormat],
+      );
+    }
+    return detectCsvDateFormat(
+      data.columnValues(columnMapping[CsvField.date]),
+      preferDayFirst: preferDayFirst,
+    );
+  }
+
+  /// The decimal separator of the mapped amount column(s) (see
+  /// [inferDecimalSeparator]); [preset]'s when one is in use; [fallback]
+  /// (the app locale's) when the values give no hint.
+  String detectDecimalSeparator(
+    CsvImportData data,
+    Map<String, String?> columnMapping, {
+    required String fallback,
+    BankCsvPreset? preset,
+  }) {
+    if (preset != null) {
+      return preset.decimalSeparator;
+    }
+    return inferDecimalSeparator([
+      ...data.columnValues(columnMapping[CsvField.amount]),
+      ...data.columnValues(columnMapping[CsvField.debit]),
+      ...data.columnValues(columnMapping[CsvField.credit]),
+    ], fallback: fallback);
   }
 
   CsvValidationResult validateCsvData({
@@ -172,13 +579,17 @@ class CsvImportService {
     final errors = <CsvIssue>[];
     final warnings = <CsvIssue>[];
 
-    final dateCol = columnMapping['Date'];
-    final amountCol = columnMapping['Amount'];
+    final dateCol = columnMapping[CsvField.date];
+    final amountCol = columnMapping[CsvField.amount];
+    final debitCol = columnMapping[CsvField.debit];
+    final creditCol = columnMapping[CsvField.credit];
+    final hasAmountSource =
+        amountCol != null || (debitCol != null && creditCol != null);
 
     if (dateCol == null) {
       errors.add(const CsvIssue(CsvIssueKind.dateColumnNotMapped));
     }
-    if (amountCol == null) {
+    if (!hasAmountSource) {
       errors.add(const CsvIssue(CsvIssueKind.amountColumnNotMapped));
     }
 
@@ -190,11 +601,20 @@ class CsvImportService {
       );
     }
 
-    final dateIndex = data.headers.indexOf(dateCol!);
-    final amountIndex = data.headers.indexOf(amountCol!);
-
-    if (dateIndex == -1 || amountIndex == -1) {
+    final columns = _Columns(data.headers, columnMapping);
+    if (columns.date == -1 ||
+        (columns.amount == -1 &&
+            (columns.debit == -1 || columns.credit == -1))) {
       errors.add(const CsvIssue(CsvIssueKind.mappedColumnsMissing));
+      return CsvValidationResult(
+        isValid: false,
+        errors: errors,
+        warnings: warnings,
+      );
+    }
+
+    if (data.rows.isEmpty) {
+      errors.add(const CsvIssue(CsvIssueKind.noRows));
       return CsvValidationResult(
         isValid: false,
         errors: errors,
@@ -204,40 +624,33 @@ class CsvImportService {
 
     int invalidDateCount = 0;
     int invalidAmountCount = 0;
+    int skipped = 0;
     final amountParser = MoneyParser(
       decimalSeparator: decimalSeparator == ',' ? ',' : '.',
     );
     final validDates = <DateTime>[];
 
-    for (int i = 0; i < data.rows.length; i++) {
-      final row = data.rows[i];
-
-      // Validate Date
-      if (row.length > dateIndex) {
-        final dateStr = row[dateIndex].toString();
-        try {
-          final parsedDate = DateFormat(dateFormat).parseStrict(dateStr);
-          validDates.add(parsedDate);
-        } catch (e) {
-          invalidDateCount++;
-        }
-      } else {
+    for (final row in data.rows) {
+      final date = columns.dateOf(row, dateFormat);
+      if (date == null) {
         invalidDateCount++;
-      }
-
-      // Validate Amount
-      if (row.length > amountIndex) {
-        final amountStr = row[amountIndex].toString();
-        if (amountParser.tryParse(amountStr) == null) {
-          invalidAmountCount++;
-        }
       } else {
+        validDates.add(date);
+      }
+      final amount = columns.amountOf(row, amountParser);
+      if (amount == null) {
         invalidAmountCount++;
+      }
+      if (date == null || amount == null) {
+        skipped++;
       }
     }
 
+    final limit = skipLimit(data.rows.length);
+    bool blocks(int count) => count > limit || count == data.rows.length;
+
     if (invalidDateCount > 0) {
-      errors.add(
+      (blocks(invalidDateCount) ? errors : warnings).add(
         CsvIssue(
           CsvIssueKind.invalidDates,
           count: invalidDateCount,
@@ -247,22 +660,39 @@ class CsvImportService {
     }
 
     if (invalidAmountCount > 0) {
-      warnings.add(
+      (blocks(invalidAmountCount) ? errors : warnings).add(
         CsvIssue(CsvIssueKind.invalidAmounts, count: invalidAmountCount),
       );
     }
 
-    // Date outliers: dates far from the others usually mean the wrong date
-    // format was chosen (day and month swapped) or the file has a typo.
+    // Day and month swapped? Only when both orders fit every date.
+    if (data.preset == null) {
+      final detection = detectCsvDateFormat(
+        data.columnValues(dateCol),
+        preferDayFirst: isDayFirstFormat(dateFormat),
+      );
+      if (detection.ambiguous && detection.candidates.contains(dateFormat)) {
+        warnings.add(
+          CsvIssue(
+            CsvIssueKind.ambiguousDateFormat,
+            dateFormat: dateFormat,
+            otherFormat: detection.candidates.firstWhere(
+              (c) => c != dateFormat,
+            ),
+          ),
+        );
+      }
+    }
+
+    // Date outliers: a date more than a year from the median usually means
+    // a typo in the file (a bank export covers a bounded period).
     if (validDates.length >= 5) {
       validDates.sort();
       final medianDate = validDates[validDates.length ~/ 2];
       int outlierCount = 0;
 
       for (final date in validDates) {
-        final diff = date.difference(medianDate).inDays.abs();
-        // More than 60 days from the median: probably misread.
-        if (diff > 60) {
+        if (date.difference(medianDate).inDays.abs() > 366) {
           outlierCount++;
         }
       }
@@ -276,6 +706,7 @@ class CsvImportService {
       isValid: errors.isEmpty,
       errors: errors,
       warnings: warnings,
+      skippedRows: skipped,
     );
   }
 
@@ -287,86 +718,105 @@ class CsvImportService {
     required bool outflowIsNegative,
   }) {
     final transactions = <ImportTransaction>[];
-
-    final dateIndex = data.headers.indexOf(columnMapping['Date']!);
-    final amountIndex = data.headers.indexOf(columnMapping['Amount']!);
-    final payeeIndex = columnMapping['Payee'] != null
-        ? data.headers.indexOf(columnMapping['Payee']!)
-        : -1;
-    final memoIndex = columnMapping['Memo'] != null
-        ? data.headers.indexOf(columnMapping['Memo']!)
-        : -1;
-    final categoryIndex = columnMapping['Category'] != null
-        ? data.headers.indexOf(columnMapping['Category']!)
-        : -1;
-
-    final dateFmt = DateFormat(dateFormat);
+    final columns = _Columns(data.headers, columnMapping);
     final amountParser = MoneyParser(
       decimalSeparator: decimalSeparator == ',' ? ',' : '.',
     );
+    final payeePattern = data.preset?.payeeRegExp;
 
     for (final row in data.rows) {
-      try {
-        if (row.length <= dateIndex || row.length <= amountIndex) {
-          continue;
-        }
-
-        final dateStr = row[dateIndex].toString();
-        final amountStr = row[amountIndex].toString();
-
-        DateTime date;
-        try {
-          // Bank dates are calendar days: store as UTC midnight.
-          date = CalendarDate.fromLocalPick(dateFmt.parse(dateStr));
-        } catch (_) {
-          continue; // Skip invalid rows (should be caught by validation)
-        }
-
-        // Parse amount into minor units (both decimal styles accepted;
-        // the profile's separator resolves "1.234" / "1,234").
-        final parsedAmount = amountParser.tryParse(amountStr);
-        if (parsedAmount == null) {
-          continue; // Skip rows with invalid amounts
-        }
-        // Off: the file shows outflows as positive numbers (credit card
-        // statements), so every sign is flipped: charges become negative
-        // and refunds/payments (negative in the file) become inflows.
-        final amount = outflowIsNegative ? parsedAmount : -parsedAmount;
-
-        String? payeeName;
-        if (payeeIndex != -1 && row.length > payeeIndex) {
-          payeeName = row[payeeIndex].toString();
-        }
-
-        String? memo;
-        if (memoIndex != -1 && row.length > memoIndex) {
-          memo = row[memoIndex].toString();
-        }
-
-        String? categoryName;
-        if (categoryIndex != -1 && row.length > categoryIndex) {
-          final text = row[categoryIndex].toString().trim();
-          categoryName = text.isEmpty ? null : text;
-        }
-
-        transactions.add(
-          ImportTransaction(
-            date: date,
-            amount: amount,
-            payeeName: payeeName,
-            memo: memo,
-            originalDescription: payeeName,
-            categoryName: categoryName,
-          ),
-        );
-      } catch (e) {
-        continue;
+      final parsedDate = columns.dateOf(row, dateFormat);
+      if (parsedDate == null) {
+        continue; // Skipped (validation warned about it).
       }
+      // Bank dates are calendar days: store as UTC midnight.
+      final date = CalendarDate.fromLocalPick(parsedDate);
+
+      final parsedAmount = columns.amountOf(row, amountParser);
+      if (parsedAmount == null) {
+        continue; // Skip rows with invalid amounts
+      }
+      // Off: the file shows outflows as positive numbers (credit card
+      // statements), so every sign is flipped: charges become negative
+      // and refunds/payments (negative in the file) become inflows.
+      final amount = outflowIsNegative ? parsedAmount : -parsedAmount;
+
+      var payeeName = columns.text(row, columns.payee);
+      if (amount > 0 && columns.inflowPayee != -1) {
+        payeeName = columns.text(row, columns.inflowPayee) ?? payeeName;
+      }
+      if (payeeName != null && payeePattern != null) {
+        final extracted = payeePattern.firstMatch(payeeName)?.group(1)?.trim();
+        if (extracted != null && extracted.isNotEmpty) {
+          payeeName = extracted;
+        }
+      }
+
+      transactions.add(
+        ImportTransaction(
+          date: date,
+          amount: amount,
+          payeeName: payeeName,
+          memo: _nonEmpty(columns.text(row, columns.memo)),
+          originalDescription: columns.text(row, columns.payee),
+          categoryName: _nonEmpty(columns.text(row, columns.category)),
+          cleared: parseClearedCell(columns.text(row, columns.cleared)),
+          accountName: _nonEmpty(columns.text(row, columns.account)),
+          transferAccountName: _nonEmpty(columns.text(row, columns.transfer)),
+        ),
+      );
     }
 
     transactions.sort((a, b) => b.date.compareTo(a.date));
 
     return transactions;
+  }
+
+  static String? _nonEmpty(String? text) =>
+      text == null || text.trim().isEmpty ? null : text.trim();
+
+  /// The cleared state a `Cleared`/`Status` cell describes: our own export
+  /// (`cleared`, `uncleared`, `reconciled`), yes/no flags, DKB's
+  /// `Gebucht`/`Vorgemerkt`, Revolut's `COMPLETED`/`PENDING`. `null` for
+  /// an empty or unknown value (the row is then imported cleared).
+  static TransactionClearStatus? parseClearedCell(String? cell) {
+    final value = cell?.trim().toLowerCase() ?? '';
+    if (value.isEmpty) {
+      return null;
+    }
+    if (const {'reconciled', 'r', 'abgestimmt'}.contains(value)) {
+      return TransactionClearStatus.reconciled;
+    }
+    if (const {
+      'cleared',
+      'c',
+      'yes',
+      'y',
+      'true',
+      '1',
+      'x',
+      '*',
+      'gebucht',
+      'completed',
+      'booked',
+      'settled',
+    }.contains(value)) {
+      return TransactionClearStatus.cleared;
+    }
+    if (const {
+      'uncleared',
+      'u',
+      'no',
+      'n',
+      'false',
+      '0',
+      'vorgemerkt',
+      'pending',
+      'offen',
+    }.contains(value)) {
+      return TransactionClearStatus.uncleared;
+    }
+    return null;
   }
 
   /// Sets [ImportTransaction.categoryId] of every row whose file category
@@ -416,35 +866,178 @@ class CsvImportService {
   static String _categoryKey(String text) =>
       text.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
 
+  /// Payee names compared trimmed, lower-cased, inner whitespace collapsed.
+  static String normalizePayee(String? name) => _categoryKey(name ?? '');
+
+  /// Flags rows of [imported] that already exist in [existing].
+  ///
+  /// A row is a duplicate of an existing transaction on the same calendar
+  /// day with the same amount whose payee name (normalised) equals the
+  /// row's file payee or its [ImportTransaction.rulePayeeName] (the name a
+  /// rule rewrote it to). Each existing transaction matches at most one row
+  /// (two identical coffees in the file against one existing row flag
+  /// one). Rows left over that match an existing transaction *without*
+  /// payee (a hand-entered transfer, for instance) by day and amount are
+  /// [ImportTransaction.isPossibleDuplicate]. Both kinds are deselected.
   void checkForDuplicates({
     required List<ImportTransaction> imported,
     required List<Transaction> existing,
     required Map<String, String> payeeMap,
   }) {
-    final existingHashes = <String>{};
+    final byPayee = <String, int>{};
+    final withoutPayee = <String, int>{};
+    String day(DateTime d) => CalendarDate.normalize(d).toIso8601String();
 
     for (final tx in existing) {
-      final dateStr = DateFormat('yyyy-MM-dd').format(tx.date);
-      final amountStr = tx.amount.toString(); // minor units
-      final payeeName = tx.payeeId != null ? (payeeMap[tx.payeeId] ?? '') : '';
+      final key = '${day(tx.date)}|${tx.amount}';
+      final payeeName = tx.payeeId != null ? payeeMap[tx.payeeId] : null;
+      if (payeeName == null || payeeName.trim().isEmpty) {
+        withoutPayee[key] = (withoutPayee[key] ?? 0) + 1;
+      } else {
+        final full = '$key|${normalizePayee(payeeName)}';
+        byPayee[full] = (byPayee[full] ?? 0) + 1;
+      }
+    }
 
-      final raw = '$dateStr|$amountStr|$payeeName';
-      final hash = sha256.convert(utf8.encode(raw)).toString();
-      existingHashes.add(hash);
+    bool take(Map<String, int> counts, String key) {
+      final count = counts[key] ?? 0;
+      if (count <= 0) {
+        return false;
+      }
+      counts[key] = count - 1;
+      return true;
     }
 
     for (final tx in imported) {
-      final dateStr = DateFormat('yyyy-MM-dd').format(tx.date);
-      final amountStr = tx.amount.toString(); // minor units
-      final payeeName = tx.payeeName ?? '';
-
-      final raw = '$dateStr|$amountStr|$payeeName';
-      final hash = sha256.convert(utf8.encode(raw)).toString();
-
-      if (existingHashes.contains(hash)) {
+      tx.isDuplicate = false;
+      tx.isPossibleDuplicate = false;
+      final key = '${day(tx.date)}|${tx.amount}';
+      final names = {
+        normalizePayee(tx.payeeName),
+        normalizePayee(tx.rulePayeeName),
+      }..remove('');
+      var found = false;
+      for (final name in names) {
+        if (take(byPayee, '$key|$name')) {
+          found = true;
+          break;
+        }
+      }
+      if (!found && names.isEmpty) {
+        // A row without payee against an existing row without payee.
+        found = take(withoutPayee, key);
+      }
+      if (found) {
         tx.isDuplicate = true;
         tx.isSelected = false;
       }
     }
+
+    for (final tx in imported) {
+      if (tx.isDuplicate) {
+        continue;
+      }
+      final key = '${day(tx.date)}|${tx.amount}';
+      if (take(withoutPayee, key)) {
+        tx.isPossibleDuplicate = true;
+        tx.isSelected = false;
+      }
+    }
+  }
+}
+
+class _ParseRequest {
+  const _ParseRequest(this.content, this.headerLineIndex);
+  final String content;
+  final int? headerLineIndex;
+}
+
+/// Column indices of a mapping, with the cell readers shared by validation
+/// and conversion.
+class _Columns {
+  _Columns(List<String> headers, Map<String, String?> mapping)
+    : date = _indexOf(headers, mapping[CsvField.date]),
+      amount = _indexOf(headers, mapping[CsvField.amount]),
+      debit = _indexOf(headers, mapping[CsvField.debit]),
+      credit = _indexOf(headers, mapping[CsvField.credit]),
+      flag = _indexOf(headers, mapping[CsvField.debitCreditFlag]),
+      payee = _indexOf(headers, mapping[CsvField.payee]),
+      inflowPayee = _indexOf(headers, mapping[CsvField.inflowPayee]),
+      memo = _indexOf(headers, mapping[CsvField.memo]),
+      category = _indexOf(headers, mapping[CsvField.category]),
+      account = _indexOf(headers, mapping[CsvField.account]),
+      transfer = _indexOf(headers, mapping[CsvField.transfer]),
+      cleared = _indexOf(headers, mapping[CsvField.cleared]);
+
+  final int date;
+  final int amount;
+  final int debit;
+  final int credit;
+  final int flag;
+  final int payee;
+  final int inflowPayee;
+  final int memo;
+  final int category;
+  final int account;
+  final int transfer;
+  final int cleared;
+
+  static int _indexOf(List<String> headers, String? header) =>
+      header == null ? -1 : headers.indexOf(header);
+
+  /// The cell at [index], with the `'` the export sanitiser prefixes to
+  /// text starting with `=`, `+`, `-`, `@`, a tab or a carriage return
+  /// removed again; `null` when the column is unmapped or the row short.
+  String? text(List<dynamic> row, int index) {
+    if (index == -1 || row.length <= index) {
+      return null;
+    }
+    return CsvSanitizer.unquote(row[index].toString());
+  }
+
+  DateTime? dateOf(List<dynamic> row, String format) {
+    if (date == -1 || row.length <= date) {
+      return null;
+    }
+    return parseCsvDate(row[date].toString(), format);
+  }
+
+  /// The signed amount (minor units) of [row]: the amount column, or
+  /// `|credit| - |debit|`; a debit/credit flag column then decides the
+  /// sign. `null` when unreadable.
+  int? amountOf(List<dynamic> row, MoneyParser parser) {
+    int? value;
+    if (amount != -1) {
+      if (row.length <= amount) {
+        return null;
+      }
+      value = parser.tryParse(row[amount].toString());
+    } else {
+      if (row.length <= debit || row.length <= credit) {
+        return null;
+      }
+      final debitText = row[debit].toString().trim();
+      final creditText = row[credit].toString().trim();
+      final debitValue = debitText.isEmpty ? 0 : parser.tryParse(debitText);
+      final creditValue = creditText.isEmpty ? 0 : parser.tryParse(creditText);
+      if (debitValue == null ||
+          creditValue == null ||
+          (debitText.isEmpty && creditText.isEmpty)) {
+        return null;
+      }
+      value = creditValue.abs() - debitValue.abs();
+    }
+    if (value == null) {
+      return null;
+    }
+    if (flag != -1 && row.length > flag) {
+      final mark = row[flag].toString().trim().toUpperCase();
+      if (mark.startsWith('S') || mark.startsWith('D') || mark == '-') {
+        value = -value.abs();
+      } else if (mark.startsWith('H') || mark.startsWith('C') || mark == '+') {
+        value = value.abs();
+      }
+    }
+    return value;
   }
 }

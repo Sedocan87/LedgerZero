@@ -1,0 +1,10 @@
+"Volksbank Musterstadt eG"
+"Umsätze Girokonto"
+"Konto: 1234567890 / DE12345678901234567890"
+
+"Buchungstag";"Valuta";"Auftraggeber/Zahlungsempfänger";"Empfänger/Zahlungspflichtiger";"Konto-Nr.";"IBAN";"BLZ";"BIC";"Vorgang/Verwendungszweck";"Kundenreferenz";"Währung";"Umsatz";"Soll/Haben"
+"14.10.2026";"14.10.2026";"Erika Musterfrau";"Stadtwerke";"";"DE00111122223333444455";"";"GENODEF1XXX";"Abschlag Gas";"";"EUR";"95,00";"S"
+"08.10.2026";"08.10.2026";"Erika Musterfrau";"Beispiel AG";"";"DE00111122223333444477";"";"DEUTDEFFXXX";"Gehalt";"";"EUR";"2.400,00";"H"
+"01.10.2026";"01.10.2026";"Erika Musterfrau";"Fitnessstudio";"";"DE00111122223333444499";"";"GENODEF1XXX";"Beitrag Oktober";"";"EUR";"29,90";"S"
+;;;;;;;;;;;"Anfangssaldo";"S"
+;;;;;;;;;;;"Endsaldo";"H"

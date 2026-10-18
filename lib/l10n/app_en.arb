@@ -2700,13 +2700,13 @@
   "@ynabImportCurrency": {
     "description": "Label of the currency picker on the YNAB import preview"
   },
-  "ynabImportTrackingAccount": "Tracking account – not imported",
+  "ynabImportTrackingAccount": "Tracking account – imported outside the budget",
   "@ynabImportTrackingAccount": {
     "description": "Subtitle of a YNAB tracking (off-budget) account in the import preview"
   },
-  "ynabImportTrackingSkipped": "{count, plural, =1{1 tracking account was not imported. Transfers between it and your budget accounts were imported as outflows and inflows of the budget accounts.} other{{count} tracking accounts were not imported. Transfers between them and your budget accounts were imported as outflows and inflows of the budget accounts.}}",
+  "ynabImportTrackingSkipped": "{count, plural, =1{1 tracking account was imported outside the budget. Transfers between it and your budget accounts are linked; a category on the budget side stays there.} other{{count} tracking accounts were imported outside the budget. Transfers between them and your budget accounts are linked; a category on the budget side stays there.}}",
   "@ynabImportTrackingSkipped": {
-    "description": "YNAB import result: tracking (off-budget) accounts were skipped",
+    "description": "YNAB import result: tracking (off-budget) accounts were imported as off-budget accounts",
     "placeholders": {
       "count": {
         "type": "int"
@@ -3741,5 +3741,55 @@
   "setupExistingDataKept": "Your existing data on this phone was found and kept.",
   "@setupExistingDataKept": {
     "description": "Onboarding: existing database reused instead of deleted"
-  }
+  },
+  "csvBankFormat": "Bank format",
+  "@csvBankFormat": {"description": "CSV import: dropdown label for the bank preset"},
+  "csvBankFormatNone": "None (columns by name)",
+  "@csvBankFormatNone": {"description": "CSV import: bank preset dropdown entry for no preset"},
+  "csvBankFormatDetected": "Recognised from the column headers: {name}",
+  "@csvBankFormatDetected": {"description": "CSV import: a bank preset matched the file", "placeholders": {"name": {"type": "String"}}},
+  "csvHeaderLinesSkipped": "{count, plural, =1{1 line above the column headers was skipped.} other{{count} lines above the column headers were skipped.}}",
+  "@csvHeaderLinesSkipped": {"description": "CSV import: the header was not the first line", "placeholders": {"count": {"type": "int"}}},
+  "csvDateFormatAmbiguous": "Day and month could be swapped: both {format} and {other} fit every date. Check the dates in the preview.",
+  "@csvDateFormatAmbiguous": {"description": "CSV import: two date formats fit the file", "placeholders": {"format": {"type": "String"}, "other": {"type": "String"}}},
+  "csvIssueNoRows": "The file has no data rows below the column headers.",
+  "@csvIssueNoRows": {"description": "CSV import validation error"},
+  "csvIssueInvalidDatesSkipped": "{count, plural, =1{1 row has a date that does not match the format {format} and will be skipped.} other{{count} rows have dates that do not match the format {format} and will be skipped.}}",
+  "@csvIssueInvalidDatesSkipped": {"description": "CSV import validation warning; format is a date pattern like dd.MM.yyyy", "placeholders": {"count": {"type": "int"}, "format": {"type": "String"}}},
+  "csvIssueInvalidAmountsBlocking": "{count, plural, =1{1 row has an unreadable amount.} other{{count} rows have unreadable amounts.}} Check the Amount column and the decimal separator.",
+  "@csvIssueInvalidAmountsBlocking": {"description": "CSV import validation error (too many unreadable amounts)", "placeholders": {"count": {"type": "int"}}},
+  "csvMoreColumns": "More columns",
+  "@csvMoreColumns": {"description": "CSV import: expandable section with the optional column mappings"},
+  "csvFieldDebit": "Debit column (Soll)",
+  "@csvFieldDebit": {"description": "CSV import mapping field"},
+  "csvFieldCredit": "Credit column (Haben)",
+  "@csvFieldCredit": {"description": "CSV import mapping field"},
+  "csvFieldDebitCreditFlag": "Debit/credit flag (S/H)",
+  "@csvFieldDebitCreditFlag": {"description": "CSV import mapping field"},
+  "csvFieldInflowPayee": "Payee for inflows",
+  "@csvFieldInflowPayee": {"description": "CSV import mapping field: sender column of inflows"},
+  "csvFieldTransfer": "Transfer (other account)",
+  "@csvFieldTransfer": {"description": "CSV import mapping field"},
+  "importAccountFromFile": "Account from file ({names})",
+  "@importAccountFromFile": {"description": "Import review: dropdown entry that imports each row into the account its Account column names", "placeholders": {"names": {"type": "String"}}},
+  "possibleDuplicateWarning": "An existing transaction without payee (e.g. a transfer) has the same date and amount.",
+  "@possibleDuplicateWarning": {"description": "Import review: shown under a row that may already exist"},
+  "importPossibleDuplicates": "{count, plural, =1{1 row matches an existing transaction without payee by date and amount and is unchecked.} other{{count} rows match existing transactions without payee by date and amount and are unchecked.}}",
+  "@importPossibleDuplicates": {"description": "Import review banner", "placeholders": {"count": {"type": "int"}}},
+  "importTransferLegs": "{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}",
+  "@importTransferLegs": {"description": "Import review banner", "placeholders": {"count": {"type": "int"}}},
+  "ynabImportDateFormat": "Date format in Register.csv",
+  "@ynabImportDateFormat": {"description": "YNAB import preview: dropdown label"},
+  "ynabImportDateFormatAmbiguous": "No day above 12 in the file: day and month could be swapped. Check a date and switch the format if needed.",
+  "@ynabImportDateFormatAmbiguous": {"description": "YNAB import preview: both date orders fit"},
+  "ynabImportTrackingSwitch": "Tracking account (outside the budget)",
+  "@ynabImportTrackingSwitch": {"description": "YNAB import preview: switch under an account"},
+  "ynabImportTrackingHint": "Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.",
+  "@ynabImportTrackingHint": {"description": "YNAB import preview: explains the tracking switch (nYNAB CSV)"},
+  "ynabImportCategoriesCount": "Categories",
+  "@ynabImportCategoriesCount": {"description": "YNAB import preview stat row"},
+  "ynabImportCategoriesOnlyInBudget": "Categories only in Budget.csv",
+  "@ynabImportCategoriesOnlyInBudget": {"description": "YNAB import preview stat row: categories without register rows that are created too"},
+  "ynabImportAlreadyImported": "This export was already imported on {date}. Importing it again duplicates its transactions.",
+  "@ynabImportAlreadyImported": {"description": "YNAB import preview warning", "placeholders": {"date": {"type": "String"}}}
 }
