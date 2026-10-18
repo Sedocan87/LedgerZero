@@ -167,6 +167,9 @@ void main() {
           'INSERT INTO sync_row_versions (sync_table, row_id, version, '
           "device_id) VALUES ('accounts', 'chk', 1, 'other')",
         );
+        // ... and sync is still set up (the derived key is stored). After
+        // Disconnect the account may become personal again.
+        await t.db.syncDao.setValue('sync_key', 'c2VjcmV0');
       });
       await pump(tester, const AddEditAccountScreen(accountId: 'chk'));
 
