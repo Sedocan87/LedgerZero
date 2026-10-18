@@ -15,6 +15,10 @@ enum TransactionValidationError {
   /// The transaction (or its transfer counterpart) is in the partner's
   /// personal account.
   partnerAccount,
+
+  /// A transfer between accounts of different currencies (the app has no
+  /// exchange rates; both legs would carry the same number).
+  currencyMismatch,
 }
 
 /// Exception thrown when transaction validation fails.
@@ -76,6 +80,7 @@ class TransactionInput {
     this.cleared = TransactionClearStatus.uncleared,
     this.approved = true,
     this.transferAccountId,
+    this.counterpartCleared,
     this.splits = const [],
   });
 
@@ -93,11 +98,23 @@ class TransactionInput {
   final String? newPayeeName;
   final String? categoryId;
   final String? memo;
+
+  /// Cleared status of the row in [accountId] (for a transfer: of this
+  /// leg).
   final TransactionClearStatus cleared;
+
+  /// Whether the rows are approved. The form loads the stored value, so an
+  /// edit never approves a row by accident; quick-add and new rows default
+  /// to approved.
   final bool approved;
 
   /// Destination account; set for a transfer.
   final String? transferAccountId;
+
+  /// Cleared status of the transfer's other leg (in [transferAccountId]).
+  /// `null` keeps the counterpart's own status (a new counterpart starts
+  /// `uncleared`).
+  final TransactionClearStatus? counterpartCleared;
 
   /// Split lines; non-empty for a split transaction.
   final List<SplitLineInput> splits;
