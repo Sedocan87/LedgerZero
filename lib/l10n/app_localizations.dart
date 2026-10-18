@@ -7086,6 +7086,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.'**
   String get faqPersonalA;
+
+  /// Switch in the transaction form (edit mode): whether the row is approved (off = needs review).
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get txApproved;
+
+  /// Cleared switch of one transfer leg, labelled with its account name.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared in {account}'**
+  String clearedInAccount(String account);
+
+  /// Validation message when a transfer targets an account with another currency.
+  ///
+  /// In en, this message translates to:
+  /// **'Both accounts of a transfer must use the same currency.'**
+  String get txTransferCurrencyMismatch;
+
+  /// Net worth line per currency when accounts use several currencies; currency = ISO code.
+  ///
+  /// In en, this message translates to:
+  /// **'{currency} accounts'**
+  String netWorthPerCurrency(String currency);
 }
 
 class _AppLocalizationsDelegate

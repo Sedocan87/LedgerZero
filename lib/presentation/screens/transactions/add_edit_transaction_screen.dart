@@ -18,6 +18,7 @@ import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_dialogs.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_draft.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_form_body.dart';
@@ -34,7 +35,11 @@ export 'package:ledger_zero/presentation/screens/transactions/form/transaction_d
 /// [TransactionService] (transfer counterparts, split children, undo,
 /// reconciled-change confirmation). For an existing transfer the form
 /// always edits the outflow leg (opening the inflow leg follows its link),
-/// so "From" and "To" keep their meaning and the direction is preserved.
+/// so "From" and "To" keep their meaning and the direction is preserved;
+/// both legs' cleared flags are shown and saved. A new transaction starts
+/// with the Settings default account and category (unless the caller or a
+/// draft gives one); a payee's own default category replaces the Settings
+/// default.
 class AddEditTransactionScreen extends ConsumerStatefulWidget {
   final String? transactionId;
   final String? initialAccountId;
@@ -69,6 +74,13 @@ class _AddEditTransactionScreenState
   /// into or out of it): shown, not editable here.
   bool _readOnly = false;
 
+  /// The Settings default category, when it was applied to this form. It
+  /// counts as "empty" for payee defaults and rule suggestions.
+  String? _defaultCategoryId;
+
+  bool get _categoryEmpty =>
+      _form.categoryId == null || _form.categoryId == _defaultCategoryId;
+
   bool get _isEditing => widget.transactionId != null;
 
   @override
@@ -84,6 +96,7 @@ class _AddEditTransactionScreenState
         _form.applyDraft(draft);
       }
       _form.addListener(_scheduleAutosave);
+      unawaited(_applySettingsDefaults());
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -116,11 +129,13 @@ class _AddEditTransactionScreenState
       // A split line is edited as part of its split.
       t = await repo.getTransactionById(t.parentTransactionId!) ?? t;
     }
+    final counterpart = t.transferTransactionId == null
+        ? null
+        : await repo.getTransactionById(t.transferTransactionId!);
     // A transfer's category sits on its on-budget leg, which is the inflow
     // leg when money comes in from an off-budget account.
-    final counterpartCategory =
-        t.transferTransactionId != null && t.categoryId == null
-        ? (await repo.getTransactionById(t.transferTransactionId!))?.categoryId
+    final counterpartCategory = t.categoryId == null
+        ? counterpart?.categoryId
         : null;
     final accountRepo = ref.read(accountRepositoryProvider);
     var readOnly = false;
@@ -140,6 +155,7 @@ class _AddEditTransactionScreenState
       children: children,
       payeeName: payee?.name,
       fmt: ref.read(appFormatterProvider),
+      counterpart: counterpart,
     );
     if (counterpartCategory != null) {
       _form.categoryId = counterpartCategory;
@@ -147,6 +163,40 @@ class _AddEditTransactionScreenState
     }
     if (readOnly) {
       setState(() => _readOnly = true);
+    }
+  }
+
+  // --- Settings defaults (new transactions) ------------------------------
+
+  /// Fills an empty account from the Settings default account (if it is
+  /// open and not the partner's) and an empty category from the Settings
+  /// default category.
+  Future<void> _applySettingsDefaults() async {
+    final settings = ref.read(settingsProvider);
+    final accountId = settings.defaultAccountId;
+    if (accountId != null && _form.accountId == null) {
+      final account = await ref
+          .read(accountRepositoryProvider)
+          .getAccountById(accountId);
+      if (account != null &&
+          !account.isClosed &&
+          !account.isPartners &&
+          mounted &&
+          _form.accountId == null) {
+        _form.accountId = account.id;
+        _form.changed();
+      }
+    }
+    final categoryId = settings.defaultCategoryId;
+    if (categoryId != null && _form.categoryId == null && !_form.isTransfer) {
+      final category = await ref
+          .read(categoryRepositoryProvider)
+          .getCategoryById(categoryId);
+      if (category != null && mounted && _form.categoryId == null) {
+        _defaultCategoryId = category.id;
+        _form.categoryId = category.id;
+        _form.changed();
+      }
     }
   }
 
@@ -191,7 +241,7 @@ class _AddEditTransactionScreenState
       _form.accountId = payee.defaultAccountId;
       _form.changed();
     }
-    if (_form.categoryId == null && !_form.isSplit) {
+    if (_categoryEmpty && !_form.isSplit) {
       if (payee.autoCategoryId != null) {
         _form.categoryId = payee.autoCategoryId;
         _form.changed();
@@ -206,7 +256,7 @@ class _AddEditTransactionScreenState
     if (!_payeeFocus.hasFocus &&
         _form.payeeId == null &&
         name.isNotEmpty &&
-        _form.categoryId == null &&
+        _categoryEmpty &&
         !_form.isSplit &&
         !_form.isTransfer) {
       _suggestFromRules(name);
@@ -226,7 +276,7 @@ class _AddEditTransactionScreenState
             date: _form.date,
             amount: _form.signedAmount(fmt) ?? 0,
             payeeId: _form.payeeId,
-            categoryId: _form.categoryId,
+            categoryId: _categoryEmpty ? null : _form.categoryId,
             memo: _form.memoController.text.isEmpty
                 ? null
                 : _form.memoController.text,
@@ -236,7 +286,7 @@ class _AddEditTransactionScreenState
     if (!mounted) {
       return;
     }
-    if (_form.categoryId == null && suggestion.categoryId != null) {
+    if (_categoryEmpty && suggestion.categoryId != null) {
       _form.categoryId = suggestion.categoryId;
     }
     if (_form.memoController.text.isEmpty && suggestion.memo != null) {
@@ -305,6 +355,7 @@ class _AddEditTransactionScreenState
         context.pop(true);
       } else {
         _form.resetForNext();
+        unawaited(_applySettingsDefaults());
       }
     } on ValidationException catch (e) {
       if (mounted) {

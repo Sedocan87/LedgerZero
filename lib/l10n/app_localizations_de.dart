@@ -4244,4 +4244,21 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get faqPersonalA =>
       'Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam.';
+
+  @override
+  String get txApproved => 'Bestätigt';
+
+  @override
+  String clearedInAccount(String account) {
+    return 'Gebucht in $account';
+  }
+
+  @override
+  String get txTransferCurrencyMismatch =>
+      'Beide Konten einer Umbuchung müssen dieselbe Währung haben.';
+
+  @override
+  String netWorthPerCurrency(String currency) {
+    return 'Konten in $currency';
+  }
 }

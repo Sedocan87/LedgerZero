@@ -3525,5 +3525,31 @@
   "faqPersonalA": "Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.",
   "@faqPersonalA": {
     "description": "FAQ answer"
+  },
+  "txApproved": "Approved",
+  "@txApproved": {
+      "description": "Switch in the transaction form (edit mode): whether the row is approved (off = needs review)."
+  },
+  "clearedInAccount": "Cleared in {account}",
+  "@clearedInAccount": {
+      "description": "Cleared switch of one transfer leg, labelled with its account name.",
+      "placeholders": {
+          "account": {
+              "type": "String"
+          }
+      }
+  },
+  "txTransferCurrencyMismatch": "Both accounts of a transfer must use the same currency.",
+  "@txTransferCurrencyMismatch": {
+      "description": "Validation message when a transfer targets an account with another currency."
+  },
+  "netWorthPerCurrency": "{currency} accounts",
+  "@netWorthPerCurrency": {
+      "description": "Net worth line per currency when accounts use several currencies; currency = ISO code.",
+      "placeholders": {
+          "currency": {
+              "type": "String"
+          }
+      }
   }
 }

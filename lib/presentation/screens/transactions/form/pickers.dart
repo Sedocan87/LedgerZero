@@ -201,8 +201,12 @@ class _SearchablePickerSheetState<T>
 }
 
 /// Searchable sheet listing the open accounts (not the partner's personal
-/// ones); returns the picked one.
-Future<Account?> showAccountPicker(BuildContext context, {String? excludeId}) {
+/// ones), only those in [currency] when given; returns the picked one.
+Future<Account?> showAccountPicker(
+  BuildContext context, {
+  String? excludeId,
+  String? currency,
+}) {
   final l10n = AppLocalizations.of(context)!;
   return showSearchablePicker<Account>(
     context,
@@ -212,7 +216,9 @@ Future<Account?> showAccountPicker(BuildContext context, {String? excludeId}) {
         .whenData(
           (all) => [
             for (final account in all)
-              if (!account.isClosed && account.id != excludeId)
+              if (!account.isClosed &&
+                  account.id != excludeId &&
+                  (currency == null || account.currency == currency))
                 PickerOption(
                   value: account,
                   label: account.name,

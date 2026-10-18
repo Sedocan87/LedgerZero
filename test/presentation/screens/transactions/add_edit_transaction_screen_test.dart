@@ -374,4 +374,127 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('list'), findsOneWidget);
   });
+
+  group('audit fixes', () {
+    Future<String> saveRow(WidgetTester tester, TransactionInput input) async =>
+        (await tester.runAsync(() => service.save(input)))!.id;
+
+    Future<void> pumpEdit(WidgetTester tester, String id) async {
+      await pump(tester, AddEditTransactionScreen(transactionId: id));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> save(WidgetTester tester) async {
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.check));
+      await tester.pumpAndSettle();
+    }
+
+    dbTestWidgets('(L2) an edit keeps an unapproved row unapproved; the '
+        'Approved switch approves it', (tester) async {
+      final id = await saveRow(
+        tester,
+        TransactionInput(
+          accountId: 'checking',
+          date: DateTime.utc(2024, 3, 1),
+          amount: -500,
+          approved: false,
+        ),
+      );
+      await pumpEdit(tester, id);
+      await tester.enterText(find.widgetWithText(AppTextField, 'Memo'), 'ok');
+      await save(tester);
+      expect((await liveRows(tester)).single.approved, isFalse);
+
+      await pumpEdit(tester, id);
+      await tester.tap(find.byKey(const Key('transaction.approved')));
+      await tester.pumpAndSettle();
+      await save(tester);
+      expect((await liveRows(tester)).single.approved, isTrue);
+    });
+
+    dbTestWidgets('(L10) a transfer shows both legs\' cleared flags and '
+        'saves the counterpart\'s', (tester) async {
+      final outId = await saveRow(
+        tester,
+        TransactionInput(
+          accountId: 'checking',
+          date: DateTime.utc(2024, 3, 1),
+          amount: -50000,
+          transferAccountId: 'savings',
+        ),
+      );
+      final inId = (await liveRows(tester)).firstWhere((r) => r.id != outId).id;
+      await pumpEdit(tester, inId);
+      expect(find.text('Cleared in Checking'), findsOneWidget);
+      expect(find.text('Cleared in Savings'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('transaction.counterpartCleared')));
+      await tester.pumpAndSettle();
+      await save(tester);
+      final rows = {for (final r in await liveRows(tester)) r.id: r};
+      expect(rows[inId]!.cleared, TransactionClearStatus.cleared);
+      expect(rows[outId]!.cleared, TransactionClearStatus.uncleared);
+    });
+
+    dbTestWidgets('(U4) a new transaction starts with the Settings default '
+        'account and category', (tester) async {
+      await prefs.setString('settings_default_account', 'savings');
+      await prefs.setString('settings_default_category', groceries);
+      await pump(tester, const AddEditTransactionScreen());
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(fieldText(tester, 'Account'), 'Savings');
+      expect(fieldText(tester, 'Category'), 'Groceries');
+
+      await tester.enterText(find.widgetWithText(AppTextField, 'Amount'), '5');
+      await save(tester);
+      final saved = (await liveRows(tester)).single;
+      expect(saved.accountId, 'savings');
+      expect(saved.categoryId, groceries);
+    });
+
+    dbTestWidgets('(U4) a closed default account is ignored and a payee '
+        'default beats the default category', (tester) async {
+      final dining = await tester.runAsync(() => t.categoryId('Dining Out'));
+      await tester.runAsync(() async {
+        final savings = (await t.accounts.getAccountById('savings'))!;
+        await t.accounts.updateAccount(savings.copyWith(isClosed: true));
+        final shop = (await t.payees.getPayeeById('shop'))!;
+        await t.payees.updatePayee(shop.copyWith(autoCategoryId: dining));
+      });
+      await prefs.setString('settings_default_account', 'savings');
+      await prefs.setString('settings_default_category', groceries);
+      await pump(tester, const AddEditTransactionScreen());
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(fieldText(tester, 'Account'), '');
+      expect(fieldText(tester, 'Category'), 'Groceries');
+
+      await tester.enterText(find.byKey(const Key('payee_field')), 'Corner');
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Corner Shop'));
+      await tester.pumpAndSettle();
+      expect(fieldText(tester, 'Category'), 'Dining Out');
+    });
+
+    dbTestWidgets('(L4) the To account picker lists only accounts in the '
+        'same currency', (tester) async {
+      await tester.runAsync(
+        () => t.addAccount(id: 'euro', name: 'Euro', currency: 'EUR'),
+      );
+      await pump(
+        tester,
+        const AddEditTransactionScreen(initialAccountId: 'checking'),
+      );
+      await tester.tap(find.text('Transfer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(AppTextField, 'To Account'));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Savings'), findsOneWidget);
+      expect(find.widgetWithText(ListTile, 'Euro'), findsNothing);
+    });
+  });
 }

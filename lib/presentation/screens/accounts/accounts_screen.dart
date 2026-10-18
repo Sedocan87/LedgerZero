@@ -134,8 +134,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               onAction: () => context.push('/accounts/add?first=1'),
             );
           }
-          final currencies = accounts.map((a) => a.currency).toSet();
-          final showTotalBanner = accounts.length > 1 && currencies.length == 1;
+          final showTotalBanner = accounts.length > 1;
           // The partner's personal accounts come last, under their own
           // header.
           final own = accounts.where((a) => !a.isPartners).toList();
@@ -163,11 +162,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 88),
                 children: [
-                  if (showTotalBanner)
-                    _NetWorthBanner(
-                      accounts: accounts,
-                      currency: currencies.first,
-                    ),
+                  if (showTotalBanner) _NetWorthBanner(accounts: accounts),
                   for (final account in own) card(account),
                   if (partners.isNotEmpty) ...[
                     Padding(
@@ -229,11 +224,12 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
 /// Net worth of all accounts. With personal accounts in the household, a
 /// line below splits it into shared, this user's and the partner's part.
+/// Accounts in several currencies are never added up (there are no
+/// exchange rates): then one line per currency is shown instead.
 class _NetWorthBanner extends ConsumerWidget {
-  const _NetWorthBanner({required this.accounts, required this.currency});
+  const _NetWorthBanner({required this.accounts});
 
   final List<Account> accounts;
-  final String currency;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -241,12 +237,38 @@ class _NetWorthBanner extends ConsumerWidget {
     final fmt = ref.watch(appFormatterProvider);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    int sum(AccountOwner owner) => accounts
-        .where((a) => a.owner == owner)
-        .fold<int>(0, (total, a) => total + a.balance);
-    final total = accounts.fold<int>(0, (sum, a) => sum + a.balance);
-    final split = accounts.any((a) => a.isPersonal);
+    final currencies = <String>{for (final a in accounts) a.currency};
+    final currency = currencies.length == 1 ? currencies.first : null;
+    int sumOf(Iterable<Account> rows) =>
+        rows.fold<int>(0, (total, a) => total + a.balance);
+    int sum(AccountOwner owner) =>
+        sumOf(accounts.where((a) => a.owner == owner));
+    final total = sumOf(accounts);
+    final split = currency != null && accounts.any((a) => a.isPersonal);
     final onBanner = scheme.onPrimaryContainer;
+    Widget line(Key key, String label, int amount, String currencyCode) =>
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Row(
+            key: key,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: onBanner),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                fmt.formatMoney(amount, currencyCode: currencyCode),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: onBanner,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -278,21 +300,33 @@ class _NetWorthBanner extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        fmt.formatMoney(total, currencyCode: currency),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: onBanner,
-                          fontWeight: FontWeight.w800,
+                  if (currency != null) ...[
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          fmt.formatMoney(total, currencyCode: currency),
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: onBanner,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
+              if (currency == null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                for (final code in currencies.toList()..sort())
+                  line(
+                    Key('netWorth.currency.$code'),
+                    l10n.netWorthPerCurrency(code),
+                    sumOf(accounts.where((a) => a.currency == code)),
+                    code,
+                  ),
+              ],
               if (split) ...[
                 const SizedBox(height: AppSpacing.sm),
                 for (final (label, owner) in [
@@ -301,29 +335,11 @@ class _NetWorthBanner extends ConsumerWidget {
                   (l10n.netWorthPartner, AccountOwner.partner),
                 ])
                   if (accounts.any((a) => a.owner == owner))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Row(
-                        key: Key('netWorth.${owner.name}'),
-                        children: [
-                          Expanded(
-                            child: Text(
-                              label,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: onBanner,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            fmt.formatMoney(sum(owner), currencyCode: currency),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: onBanner,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
+                    line(
+                      Key('netWorth.${owner.name}'),
+                      label,
+                      sum(owner),
+                      currency,
                     ),
               ],
             ],
