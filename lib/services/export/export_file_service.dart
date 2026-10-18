@@ -10,25 +10,28 @@ import 'package:share_plus/share_plus.dart';
 
 /// Hands files to the system share sheet. Replaceable in tests.
 abstract class FileSharer {
-  Future<void> share(List<String> paths, {String? text, String? subject});
+  /// Returns false when the user dismissed the share sheet without choosing
+  /// a target (true when the platform cannot tell).
+  Future<bool> share(List<String> paths, {String? text, String? subject});
 }
 
 class SharePlusFileSharer implements FileSharer {
   const SharePlusFileSharer();
 
   @override
-  Future<void> share(
+  Future<bool> share(
     List<String> paths, {
     String? text,
     String? subject,
   }) async {
-    await SharePlus.instance.share(
+    final result = await SharePlus.instance.share(
       ShareParams(
         text: text,
         subject: subject,
         files: [for (final path in paths) XFile(path)],
       ),
     );
+    return result.status != ShareResultStatus.dismissed;
   }
 }
 
@@ -89,13 +92,14 @@ class ExportFileService {
   }
 
   /// Shares [file] and deletes it afterwards (also if sharing fails).
-  Future<void> shareAndDelete(
+  /// Returns false when the user dismissed the share sheet.
+  Future<bool> shareAndDelete(
     File file, {
     String? text,
     String? subject,
   }) async {
     try {
-      await ExternalUiGuard.run(
+      return await ExternalUiGuard.run(
         () => _sharer.share([file.path], text: text, subject: subject),
       );
     } finally {

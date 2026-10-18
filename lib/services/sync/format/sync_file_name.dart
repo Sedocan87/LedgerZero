@@ -78,6 +78,37 @@ class SyncFileName {
   /// ignored; Sync settings tells the user they can be deleted.
   static bool isLegacy(String remoteName) => remoteName.endsWith('.json.gz');
 
+  static final RegExp _requestPattern = RegExp(
+    r'^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
+    r'_req_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
+    r'\.lzsreq$',
+  );
+
+  /// `<target>_req_<requester>.lzsreq`: [requester] asks [target] to write
+  /// a snapshot (after it skipped one of [target]'s files; see
+  /// docs/SYNC_ARCHITECTURE.md "Quarantine"). The file carries no data.
+  static String request(String target, String requester) =>
+      '${target}_req_$requester.lzsreq';
+
+  /// Parses a snapshot request name (same checks as [tryParse]).
+  static ({String target, String requester})? tryParseRequest(
+    String remoteName,
+  ) {
+    if (remoteName.isEmpty || remoteName.length > 96) {
+      return null;
+    }
+    if (p.basename(remoteName) != remoteName ||
+        p.posix.basename(remoteName) != remoteName ||
+        p.windows.basename(remoteName) != remoteName) {
+      return null;
+    }
+    final match = _requestPattern.firstMatch(remoteName);
+    if (match == null) {
+      return null;
+    }
+    return (target: match.group(1)!, requester: match.group(2)!);
+  }
+
   @override
   bool operator ==(Object other) =>
       other is SyncFileName &&

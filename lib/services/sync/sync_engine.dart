@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
+import 'package:ledger_zero/services/security/crypto/aead.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:ledger_zero/services/sync/change_applier.dart';
 import 'package:ledger_zero/services/sync/change_generator.dart';
@@ -12,6 +13,7 @@ import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/personal_rows.dart';
+import 'package:ledger_zero/services/sync/sync_device_id.dart';
 import 'package:ledger_zero/services/sync/sync_local_state.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
@@ -112,6 +114,11 @@ class SyncRunReport {
   /// Devices whose next file is not available yet.
   final int waitingDevices;
 
+  /// A received file carries change timestamps more than
+  /// [SyncEngine.clockTolerance] in the future: another device's clock is
+  /// off, and its edits win every conflict until it is fixed.
+  final bool clockSkewSuspected;
+
   const SyncRunReport({
     required this.setup,
     this.uploaded = 0,
@@ -121,6 +128,7 @@ class SyncRunReport {
     this.newerSchemaPending = false,
     this.legacyFilesFound = false,
     this.waitingDevices = 0,
+    this.clockSkewSuspected = false,
   });
 }
 
@@ -137,7 +145,11 @@ class SyncRunReport {
 class SyncEngine {
   final AppDatabase _db;
   final SyncTransport transport;
-  final String deviceId;
+
+  /// Reconciled with the database's copy at the start of every run
+  /// ([SyncDeviceId.reconcile]).
+  String deviceId;
+  bool _deviceIdReconciled = false;
   final SyncOutbox _outbox;
   final SharedPreferences _prefs;
   final SyncEngineConfig config;
@@ -156,7 +168,27 @@ class SyncEngine {
 
   final Lock _lock = Lock();
 
+  /// Creation time of the folder's manifest, for telling leftovers of an
+  /// earlier folder from damaged files.
+  DateTime _manifestCreatedAt = DateTime.utc(1970);
+
   static const String lastSyncKey = 'sync_last_sync_time';
+
+  /// Change timestamps further in the future than this are reported.
+  static const Duration clockTolerance = Duration(minutes: 5);
+
+  /// Quarantine reasons (`sync_quarantine.reason`).
+  static const String reasonFailed = 'failed';
+
+  /// The file does not authenticate under the sync key (tampered, or an
+  /// incomplete upload): retried with backoff, then skipped with a snapshot
+  /// request.
+  static const String reasonUnreadable = 'unreadable';
+  static const String reasonNewerSchema = 'newer_schema';
+
+  /// Written before the current manifest and not readable with its key: a
+  /// leftover of an earlier sync folder. Ignored; the user can remove it.
+  static const String reasonForeign = 'foreign';
 
   SyncEngine({
     required this._db,
@@ -173,6 +205,19 @@ class SyncEngine {
   }
 
   DateTime get _now => _clock().toUtc();
+
+  /// Must run before the generator or applier are first used.
+  Future<void> _reconcileDeviceId() async {
+    if (_deviceIdReconciled) {
+      return;
+    }
+    final id = await SyncDeviceId.reconcile(_prefs, _state, deviceId);
+    if (id != deviceId) {
+      Logger.warning('Sync: using the device id stored in the database.');
+      deviceId = id;
+    }
+    _deviceIdReconciled = true;
+  }
 
   // ---------------------------------------------------------------------
   // Setup
@@ -191,6 +236,7 @@ class SyncEngine {
   /// First device: creates the manifest for [passphrase].
   Future<void> createSyncFolder(String passphrase) {
     return _lock.synchronized(() async {
+      await _reconcileDeviceId();
       if (await _readManifest(await transport.listFiles()) != null) {
         throw const SyncFolderExistsException();
       }
@@ -206,6 +252,7 @@ class SyncEngine {
         throw const SyncFolderExistsException();
       }
       await _adoptKey(manifest.syncId, key);
+      await _claimSeededRows();
     });
   }
 
@@ -213,6 +260,7 @@ class SyncEngine {
   /// Throws [WrongSyncPassphraseException].
   Future<void> joinSyncFolder(String passphrase) {
     return _lock.synchronized(() async {
+      await _reconcileDeviceId();
       final manifest = await _readManifest(await transport.listFiles());
       if (manifest == null) {
         throw const SyncFolderMissingException();
@@ -241,11 +289,33 @@ class SyncEngine {
         );
       }
       await _state.setSyncKey(syncId, key);
-      // Share everything this device has (merged by the conflict rule).
-      await _state.setFullUploadRequired(true);
+      // Share everything this device has (merged by the conflict rule); a
+      // folder that knows this device already gets only what it lacks.
+      await _state.setFullUpload(
+        previous == syncId ? FullUpload.reshare : FullUpload.everything,
+      );
     });
     if (previous != syncId) {
       await _outbox.clear();
+    }
+  }
+
+  /// The horizon of [FullUpload.reshare]: rows older than this are
+  /// re-shared only when newer than the folder's known version.
+  DateTime get _reshareHorizon => _now.subtract(config.tombstoneRetention);
+
+  /// The phone that sets up the folder keeps the names of its untouched
+  /// default categories: they get a fresh timestamp, so the other phones'
+  /// untouched seeds (same ids, same fixed timestamp, names in their own
+  /// language) lose deterministically instead of by device-id tiebreak.
+  Future<void> _claimSeededRows() async {
+    final seed = AppDatabase.seedTimestamp.toIso8601String();
+    final now = _now.toIso8601String();
+    for (final table in const ['category_groups', 'categories']) {
+      await _db.customStatement(
+        'UPDATE "$table" SET updated_at = ? WHERE updated_at = ?',
+        [now, seed],
+      );
     }
   }
 
@@ -283,6 +353,7 @@ class SyncEngine {
 
   Future<SyncRunReport> _run(SyncCancellation cancel) async {
     cancel.check();
+    await _reconcileDeviceId();
     var listing = await transport.listFiles();
     final manifest = await _readManifest(listing);
     if (manifest == null) {
@@ -303,7 +374,8 @@ class SyncEngine {
       Logger.info('Sync: rebuilding sync state after a restore.');
       await _db.syncDao.clearProgress();
       await _db.syncDao.clearQuarantine();
-      await _outbox.clear();
+      // The outbox was emptied by the restore itself; files written since
+      // (none while sync is paused) are kept.
       await _state.setOwnSequence(remote.maxSequence(deviceId));
     } else {
       final own = math.max(
@@ -323,17 +395,21 @@ class SyncEngine {
     await _db.syncDao.trimConflicts(config.maxConflicts);
 
     var uploaded = 0;
+    _manifestCreatedAt = manifest.createdAt;
     if (!rebootstrap) {
       cancel.check();
-      final fullUpload = await _state.fullUploadRequired();
+      final fullUpload = await _state.fullUpload();
       await _generator.generate(
         key: key,
         outbox: _outbox,
-        fullUpload: fullUpload,
+        fullUpload: fullUpload != FullUpload.none,
+        reshareHorizon: fullUpload == FullUpload.reshare
+            ? _reshareHorizon
+            : null,
         now: _now,
       );
-      if (fullUpload) {
-        await _state.setFullUploadRequired(false);
+      if (fullUpload != FullUpload.none) {
+        await _state.setFullUpload(FullUpload.none);
       }
       uploaded += await _uploadOutbox(cancel);
     }
@@ -343,14 +419,17 @@ class SyncEngine {
 
     if (rebootstrap) {
       // Rows only the restored database has are shared again; rows that
-      // are newer elsewhere already replaced the restored ones.
+      // are newer elsewhere already replaced the restored ones. Old rows
+      // the folder does not know stay here (their tombstones may be gone).
       cancel.check();
       await _generator.generate(
         key: key,
         outbox: _outbox,
         fullUpload: true,
+        reshareHorizon: _reshareHorizon,
         now: _now,
       );
+      await _state.setFullUpload(FullUpload.none);
       uploaded += await _uploadOutbox(cancel);
       await _prefs.remove(SyncRebootstrap.prefsKey);
     }
@@ -359,8 +438,9 @@ class SyncEngine {
     if (uploaded > 0 || applied.applied > 0) {
       listing = await transport.listFiles();
     }
-    await _maybeWriteSnapshot(key, cancel);
-    await _compact(_RemoteIndex.from(listing, deviceId));
+    final index = _RemoteIndex.from(listing, deviceId);
+    await _maybeWriteSnapshot(key, cancel, index);
+    await _compact(index);
 
     await _prefs.setString(lastSyncKey, _now.toIso8601String());
     return SyncRunReport(
@@ -372,6 +452,7 @@ class SyncEngine {
       newerSchemaPending: applied.newerSchema,
       legacyFilesFound: remote.legacyFound,
       waitingDevices: applied.waiting,
+      clockSkewSuspected: applied.futureTimestamps,
     );
   }
 
@@ -422,8 +503,10 @@ class SyncEngine {
         stats: stats,
       );
     }
+    await _repairSkipped(remote, key, progress, stats);
 
     var snapshotAttempted = false;
+    var gaveUp = false;
     while (true) {
       cancel.check();
       final stalled = <String>{};
@@ -432,8 +515,23 @@ class SyncEngine {
         if (blocked.contains(device)) {
           continue;
         }
-        final next = (progress[device] ?? 0) + 1;
         final files = remote.changes[device]!;
+        var next = (progress[device] ?? 0) + 1;
+        var q = quarantine[SyncFileName.changes(device, next)];
+        while (q != null &&
+            q.reason == reasonUnreadable &&
+            q.attempts >= config.maxQuarantineAttempts) {
+          // Still unreadable after every retry: the file will not get
+          // better. Continue with the device's next file and ask it for a
+          // snapshot, which carries the lost changes.
+          Logger.warning(
+            'Sync: giving up on ${q.filename}; requesting a snapshot.',
+          );
+          await _skip(q, quarantine, progress);
+          gaveUp = true;
+          next = (progress[device] ?? 0) + 1;
+          q = quarantine[SyncFileName.changes(device, next)];
+        }
         final file = files[next];
         if (file == null) {
           if (files.keys.any((s) => s > next)) {
@@ -442,9 +540,8 @@ class SyncEngine {
           continue;
         }
         final name = SyncFileName.changes(device, next);
-        final q = quarantine[name];
         if (q != null &&
-            q.reason == _reasonFailed &&
+            (q.reason == reasonFailed || q.reason == reasonUnreadable) &&
             q.nextAttempt.isAfter(_now)) {
           blocked.add(device);
           continue;
@@ -457,7 +554,7 @@ class SyncEngine {
             bytesCache,
           );
         } on SyncFileFormatException catch (e) {
-          await _quarantine(candidate, quarantine, e, stats);
+          await _quarantine(candidate, quarantine, e, stats, reasonFailed);
           blocked.add(device);
           bytesCache.remove(name);
           continue;
@@ -478,6 +575,10 @@ class SyncEngine {
         });
         if (satisfied) {
           ready.add((candidate, header));
+        }
+        if (header.maxVersion >
+            _now.add(clockTolerance).microsecondsSinceEpoch) {
+          stats.futureTimestamps = true;
         }
       }
 
@@ -504,9 +605,10 @@ class SyncEngine {
         final byVersion = a.$2.maxVersion.compareTo(b.$2.maxVersion);
         return byVersion != 0 ? byVersion : a.$1.device.compareTo(b.$1.device);
       });
-      final (candidate, _) = ready.first;
+      final (candidate, header) = ready.first;
       final ok = await _applyChangeFile(
         candidate,
+        header,
         bytesCache.remove(candidate.name)!,
         key,
         progress,
@@ -518,6 +620,9 @@ class SyncEngine {
       if (!ok) {
         blocked.add(candidate.device);
       }
+    }
+    if (gaveUp) {
+      await _repairSkipped(remote, key, progress, stats);
     }
     return stats;
   }
@@ -540,6 +645,7 @@ class SyncEngine {
 
   Future<bool> _applyChangeFile(
     _Candidate candidate,
+    SyncFileHeader header,
     Uint8List bytes,
     Uint8List key,
     Map<String, int> progress,
@@ -581,7 +687,7 @@ class SyncEngine {
         filename: candidate.name,
         deviceId: candidate.device,
         sequence: candidate.sequence,
-        reason: _reasonNewerSchema,
+        reason: reasonNewerSchema,
         error: 'schema ${e.header.schemaVersion}',
         attempts: const Value(0),
         firstSeen: quarantine[candidate.name]?.firstSeen ?? now,
@@ -590,50 +696,188 @@ class SyncEngine {
       );
       await _db.syncDao.putQuarantine(entry);
       return false;
+    } on AeadAuthenticationException catch (e) {
+      if (_isForeign(header)) {
+        // A leftover of an earlier sync folder (written before the current
+        // manifest, not readable with its key): nothing to apply, nothing
+        // to wait for.
+        Logger.warning('Sync: ${candidate.name} is from an old sync folder.');
+        await _recordForeign(candidate.name, header);
+        await _db.syncDao.setProgress(candidate.device, candidate.sequence);
+        progress[candidate.device] = candidate.sequence;
+        return true;
+      }
+      Logger.error('Sync: ${candidate.name} does not authenticate', e);
+      await _quarantine(candidate, quarantine, e, stats, reasonUnreadable);
+      return false;
     } catch (e, stack) {
       if (cancel.isCancelled) {
         rethrow;
       }
       Logger.error('Sync: could not apply ${candidate.name}', e, stack);
-      await _quarantine(candidate, quarantine, e, stats);
+      await _quarantine(candidate, quarantine, e, stats, reasonFailed);
       return false;
     }
   }
 
-  static const String _reasonFailed = 'failed';
-  static const String _reasonNewerSchema = 'newer_schema';
+  /// Unauthenticated, but good enough to tell leftovers from damage: a
+  /// file of the current folder is written after its manifest.
+  bool _isForeign(SyncFileHeader header) =>
+      header.createdAt.isBefore(_manifestCreatedAt);
+
+  Future<void> _recordForeign(String name, SyncFileHeader header) {
+    final now = _now;
+    return _db.syncDao.putQuarantine(
+      SyncQuarantineCompanion.insert(
+        filename: name,
+        deviceId: header.deviceId,
+        sequence: header.sequence,
+        reason: reasonForeign,
+        error: 'written before the current sync folder',
+        attempts: const Value(0),
+        firstSeen: now,
+        lastAttempt: now,
+        nextAttempt: DateTime.utc(9999),
+      ),
+    );
+  }
 
   Future<void> _quarantine(
     _Candidate candidate,
     Map<String, SyncQuarantineData> quarantine,
     Object error,
     _ApplyStats stats,
+    String reason,
   ) async {
     final now = _now;
     final existing = quarantine[candidate.name];
-    final attempts =
-        (existing?.reason == _reasonFailed ? existing!.attempts : 0) + 1;
+    final attempts = (existing?.reason == reason ? existing!.attempts : 0) + 1;
     final next = attempts >= config.maxQuarantineAttempts
         ? DateTime.utc(9999)
         : now.add(_backoff(attempts));
     final message = error.toString();
-    await _db.syncDao.putQuarantine(
-      SyncQuarantineCompanion.insert(
-        filename: candidate.name,
-        deviceId: candidate.device,
-        sequence: candidate.sequence,
-        reason: _reasonFailed,
-        error: message.length > 500 ? message.substring(0, 500) : message,
-        attempts: Value(attempts),
-        firstSeen: existing?.firstSeen ?? now,
-        lastAttempt: now,
-        nextAttempt: next,
-      ),
+    final entry = SyncQuarantineCompanion.insert(
+      filename: candidate.name,
+      deviceId: candidate.device,
+      sequence: candidate.sequence,
+      reason: reason,
+      error: message.length > 500 ? message.substring(0, 500) : message,
+      attempts: Value(attempts),
+      firstSeen: existing?.firstSeen ?? now,
+      lastAttempt: now,
+      nextAttempt: next,
+    );
+    await _db.syncDao.putQuarantine(entry);
+    quarantine[candidate.name] = SyncQuarantineData(
+      filename: candidate.name,
+      deviceId: candidate.device,
+      sequence: candidate.sequence,
+      reason: reason,
+      error: entry.error.value,
+      attempts: attempts,
+      firstSeen: existing?.firstSeen ?? now,
+      lastAttempt: now,
+      nextAttempt: next,
     );
     if (existing == null) {
       stats.quarantined++;
     }
   }
+
+  /// Advances past the quarantined file [q] and remembers that its device
+  /// owes this device a snapshot covering it.
+  Future<void> _skip(
+    SyncQuarantineData q,
+    Map<String, SyncQuarantineData> quarantine,
+    Map<String, int> progress,
+  ) async {
+    await _db.transaction(() async {
+      if ((progress[q.deviceId] ?? 0) < q.sequence) {
+        await _db.syncDao.setProgress(q.deviceId, q.sequence);
+      }
+      await _db.syncDao.deleteQuarantine(q.filename);
+      final needs = await _state.needsSnapshot();
+      needs[q.deviceId] = math.max(needs[q.deviceId] ?? 0, q.sequence);
+      await _state.setNeedsSnapshot(needs);
+    });
+    progress[q.deviceId] = math.max(progress[q.deviceId] ?? 0, q.sequence);
+    quarantine.remove(q.filename);
+  }
+
+  /// For every device whose file was skipped here: applies that device's
+  /// newest snapshot covering the skipped sequence (the rows the skipped
+  /// file carried are in it), or writes a request file asking the device
+  /// for one.
+  Future<void> _repairSkipped(
+    _RemoteIndex remote,
+    Uint8List key,
+    Map<String, int> progress,
+    _ApplyStats stats,
+  ) async {
+    final needs = await _state.needsSnapshot();
+    if (needs.isEmpty) {
+      return;
+    }
+    for (final entry in needs.entries.toList()) {
+      final device = entry.key;
+      final covering = remote.snapshotsNewestFirst.where(
+        (s) => s.$1.deviceId == device && s.$1.sequence >= entry.value,
+      );
+      var repaired = false;
+      for (final snapshot in covering) {
+        try {
+          final bytes = await transport.download(snapshot.$2);
+          final file = SyncFileCodec.decode(
+            bytes,
+            key,
+            maxSchemaVersion: _schema.schemaVersion,
+          );
+          if (file.header.kind != SyncFileKind.snapshot ||
+              file.header.fileName.name != snapshot.$1.name) {
+            throw const SyncFileFormatException('header does not match name');
+          }
+          final result = await _applier.apply(
+            file,
+            now: _now,
+            onCommit: () async {
+              for (final e in file.header.vector.entries) {
+                if (e.value > (progress[e.key] ?? 0)) {
+                  await _db.syncDao.setProgress(e.key, e.value);
+                }
+              }
+              needs.remove(device);
+              await _state.setNeedsSnapshot(needs);
+            },
+          );
+          for (final e in file.header.vector.entries) {
+            progress[e.key] = math.max(progress[e.key] ?? 0, e.value);
+          }
+          stats.applied += result.applied;
+          stats.conflicts += result.conflicts;
+          Logger.info('Sync: repaired skipped file with ${snapshot.$1.name}');
+          repaired = true;
+          break;
+        } on SyncFileNewerSchemaException {
+          stats.newerSchema = true;
+          repaired = true; // wait for the update, do not ask again
+          break;
+        } catch (e, stack) {
+          Logger.error('Sync: snapshot ${snapshot.$1.name} unusable', e, stack);
+        }
+      }
+      if (!repaired) {
+        final name = SyncFileName.request(device, deviceId);
+        if (!remote.hasRequest(name)) {
+          await transport.upload(name, _requestBytes);
+          Logger.info('Sync: requested a snapshot from $device');
+        }
+      }
+    }
+  }
+
+  static final Uint8List _requestBytes = Uint8List.fromList(
+    'ledgerzero-snapshot-request'.codeUnits,
+  );
 
   /// 5 min, 30 min, 3 h, 18 h, ...
   static Duration _backoff(int attempts) =>
@@ -698,6 +942,15 @@ class SyncEngine {
         return true;
       } on SyncFileNewerSchemaException {
         stats.newerSchema = true;
+      } on AeadAuthenticationException catch (e) {
+        final header = SyncFileCodec.readHeader(
+          await transport.download(snapshot.$2),
+        );
+        if (_isForeign(header)) {
+          await _recordForeign(snapshot.$1.name, header);
+        } else {
+          Logger.error('Sync: snapshot ${snapshot.$1.name} unusable', e);
+        }
       } catch (e, stack) {
         Logger.error('Sync: snapshot ${snapshot.$1.name} unusable', e, stack);
       }
@@ -712,14 +965,16 @@ class SyncEngine {
   Future<void> _maybeWriteSnapshot(
     Uint8List key,
     SyncCancellation cancel,
+    _RemoteIndex remote,
   ) async {
     final ownSeq = await _state.ownSequence();
     if (ownSeq == 0) {
       return;
     }
+    final requests = remote.requests[deviceId] ?? const <RemoteFile>[];
     final snapshots = await _state.ownSnapshots();
     final lastSeq = snapshots.keys.fold<int>(0, math.max);
-    if (ownSeq <= lastSeq) {
+    if (ownSeq <= lastSeq && requests.isEmpty) {
       return;
     }
     var since = snapshots[lastSeq] ?? await _state.snapshotClock();
@@ -727,18 +982,26 @@ class SyncEngine {
       await _state.setSnapshotClock(_now);
       since = _now;
     }
+    // Another device skipped one of this device's files and asked for a
+    // snapshot: write one now (it carries the rows the file had).
     final due =
+        requests.isNotEmpty ||
         ownSeq - lastSeq >= config.snapshotEveryFiles ||
         !_now.isBefore(since.add(config.snapshotEvery));
     if (!due || await _db.syncDao.pendingCount() > 0) {
       return;
     }
     cancel.check();
-    final bytes = await writeSnapshotBytes(key, ownSeq);
-    await transport.upload(SyncFileName.snapshot(deviceId, ownSeq), bytes);
-    snapshots[ownSeq] = _now;
-    await _state.setOwnSnapshots(snapshots);
-    Logger.info('Sync: wrote snapshot $ownSeq');
+    if (ownSeq > lastSeq || !remote.hasSnapshot(deviceId, ownSeq)) {
+      final bytes = await writeSnapshotBytes(key, ownSeq);
+      await transport.upload(SyncFileName.snapshot(deviceId, ownSeq), bytes);
+      snapshots[ownSeq] = _now;
+      await _state.setOwnSnapshots(snapshots);
+      Logger.info('Sync: wrote snapshot $ownSeq');
+    }
+    for (final request in requests) {
+      await transport.delete(request);
+    }
   }
 
   /// Encrypted snapshot of every synced row and tombstone as of [sequence]
@@ -858,19 +1121,46 @@ class SyncEngine {
   }
 
   /// Gives up on [filename]: its device continues with the next file. The
-  /// changes in the skipped file are not applied on this device.
+  /// changes in the skipped file reach this device with that device's next
+  /// snapshot, which is requested if none covers the file yet
+  /// ([_repairSkipped]).
   Future<void> skipQuarantined(String filename) async {
     final q = await _db.syncDao.getQuarantined(filename);
     if (q == null) {
       return;
     }
-    await _db.transaction(() async {
-      final progress = await _db.syncDao.getProgress();
-      if ((progress[q.deviceId] ?? 0) < q.sequence) {
-        await _db.syncDao.setProgress(q.deviceId, q.sequence);
+    await _skip(q, {}, await _db.syncDao.getProgress());
+  }
+
+  /// Deletes the files of an earlier sync folder ([reasonForeign]) from the
+  /// folder and forgets them.
+  Future<void> removeForeignFiles() {
+    return _lock.synchronized(() async {
+      final foreign = {
+        for (final q in await _db.syncDao.getQuarantine())
+          if (q.reason == reasonForeign) q.filename,
+      };
+      if (foreign.isEmpty) {
+        return;
       }
-      await _db.syncDao.deleteQuarantine(filename);
+      for (final file in await transport.listFiles()) {
+        if (foreign.contains(file.name)) {
+          await transport.delete(file);
+        }
+      }
+      for (final name in foreign) {
+        await _db.syncDao.deleteQuarantine(name);
+      }
     });
+  }
+
+  /// Keeps the files of an earlier sync folder but stops listing them.
+  Future<void> ignoreForeignFiles() async {
+    for (final q in await _db.syncDao.getQuarantine()) {
+      if (q.reason == reasonForeign) {
+        await _db.syncDao.deleteQuarantine(q.filename);
+      }
+    }
   }
 
   /// Local changes not uploaded yet (captured rows plus queued files).
@@ -894,6 +1184,7 @@ class _ApplyStats {
   int quarantined = 0;
   int waiting = 0;
   bool newerSchema = false;
+  bool futureTimestamps = false;
 }
 
 /// Validated view of a folder listing.
@@ -901,13 +1192,17 @@ class _RemoteIndex {
   /// device -> sequence -> copies (normally one).
   final Map<String, Map<int, List<RemoteFile>>> changes;
   final List<(SyncFileName, RemoteFile)> snapshots;
+
+  /// Snapshot requests: target device -> request files.
+  final Map<String, List<RemoteFile>> requests;
   final bool legacyFound;
 
-  _RemoteIndex(this.changes, this.snapshots, this.legacyFound);
+  _RemoteIndex(this.changes, this.snapshots, this.requests, this.legacyFound);
 
   factory _RemoteIndex.from(List<RemoteFile> files, String selfId) {
     final changes = <String, Map<int, List<RemoteFile>>>{};
     final snapshots = <(SyncFileName, RemoteFile)>[];
+    final requests = <String, List<RemoteFile>>{};
     var legacy = false;
     var rejected = 0;
     for (final file in files) {
@@ -916,7 +1211,10 @@ class _RemoteIndex {
       }
       final name = SyncFileName.tryParse(file.name);
       if (name == null) {
-        if (SyncFileName.isLegacy(file.name)) {
+        final request = SyncFileName.tryParseRequest(file.name);
+        if (request != null) {
+          requests.putIfAbsent(request.target, () => []).add(file);
+        } else if (SyncFileName.isLegacy(file.name)) {
           legacy = true;
         } else {
           rejected++;
@@ -935,8 +1233,11 @@ class _RemoteIndex {
     if (rejected > 0) {
       Logger.warning('Sync: ignored $rejected file(s) with invalid names.');
     }
-    return _RemoteIndex(changes, snapshots, legacy);
+    return _RemoteIndex(changes, snapshots, requests, legacy);
   }
+
+  bool hasRequest(String name) =>
+      requests.values.any((files) => files.any((f) => f.name == name));
 
   int maxSequence(String device) {
     var max = 0;

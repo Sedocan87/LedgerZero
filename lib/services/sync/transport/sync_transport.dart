@@ -33,7 +33,10 @@ abstract class SyncTransport {
 
   /// Stores [bytes] as [name]. Idempotent: retrying after a timeout never
   /// creates a second file of the same name. If a file of that name exists
-  /// with the same size it is kept; otherwise its content is replaced.
+  /// with the same size it is kept; otherwise its content is replaced —
+  /// except the manifest, which is never replaced once it exists (two
+  /// devices racing to create the folder must both end up with the earlier
+  /// one; an overwritten manifest would orphan every file in the folder).
   Future<void> upload(String name, Uint8List bytes);
 
   /// Deletes [file]. Deleting a file that no longer exists succeeds.

@@ -38,9 +38,10 @@ class BackupService {
   }) : _files = files ?? ExportFileService(),
        _kdf = kdf ?? KdfParams.recommended;
 
-  /// Writes an encrypted backup into the export directory and records the
-  /// backup time. The plaintext snapshot exists only in the app's temporary
-  /// directory while the backup is built and is deleted afterwards.
+  /// Writes an encrypted backup into the export directory. The plaintext
+  /// snapshot exists only in the app's temporary directory while the backup
+  /// is built and is deleted afterwards. The backup time is recorded by
+  /// [recordBackupCompleted] once the file actually left the phone.
   Future<File> createBackup({required String password}) async {
     if (password.isEmpty) {
       throw const BackupException('A backup password is required');
@@ -66,8 +67,15 @@ class BackupService {
     } finally {
       await _deleteDatabaseFiles(snapshot);
     }
-    await _backupScheduler?.recordBackupSuccess();
     return output;
+  }
+
+  /// Records now as the last backup time (for the backup reminder). Call
+  /// it after the share sheet handed the file on or the upload succeeded,
+  /// not when the file was merely written: a cancelled share sheet must not
+  /// silence the reminder.
+  Future<void> recordBackupCompleted() async {
+    await _backupScheduler?.recordBackupSuccess();
   }
 
   /// Writes an unencrypted copy of the open database to [target].

@@ -44,7 +44,10 @@ are deleted at the next run.
 
 * Name: `<deviceId>_<sequence, 12 digits>.lzsync` (snapshots `.lzsnap`).
   `deviceId` is a random v4 UUID per installation (SharedPreferences
-  `sync_device_id`); the sequence is per device, monotonic, stored in the
+  `sync_device_id`, with a copy in `sync_kv.device_id` that wins when the
+  two differ, so lost preferences do not orphan queued files; a restore
+  strips the id from the restored database so another phone's backup
+  never clones it); the sequence is per device, monotonic, stored in the
   encrypted database and never lower than the highest own sequence found in
   the folder (so a restored database cannot reuse a name).
 * Every remote name is validated with a strict regex and `basename` checks
@@ -62,7 +65,7 @@ Format details: [DELTA_FORMAT.md](DELTA_FORMAT.md).
 
 Each file is AES-256-GCM encrypted with the **sync key**. The key is derived
 from a user-chosen **sync passphrase** with Argon2id (the same parameters as
-the master password, `KdfParams.recommended()`), then HKDF-SHA256 bound to the
+the backup password, `KdfParams.recommended()`), then HKDF-SHA256 bound to the
 folder's random `syncId`. Salt, KDF parameters, `syncId` and a key-check
 value (a known constant encrypted with the key) are in
 `ledgerzero-sync-manifest.json` in the cloud folder.
@@ -83,7 +86,13 @@ value (a known constant encrypted with the key) are in
   inject rows.
 * Two devices creating the manifest at the same moment: both re-read the
   folder; the earliest manifest wins and the other device is told to enter
-  that passphrase.
+  that passphrase. Transports never replace an existing manifest (an
+  overwritten manifest would orphan every file in the folder).
+* Files that do not authenticate under the current key and were written
+  before the current manifest (header `createdAt`) are leftovers of an
+  earlier sync folder: they are skipped, never block anything, and Sync
+  settings lists them ("N files from an old sync folder") with *Remove*
+  (deleted from the folder) and *Ignore*.
 * Backups contain the database and therefore the derived sync key (they
   are encrypted with the backup password).
 
@@ -118,6 +127,13 @@ sent yet competes the same way — it does not win automatically.
   edit they delete). A delete wins over an older update and loses to a newer
   one. Tombstones are kept in `sync_row_versions` (deleted = 1) so a late,
   older update cannot resurrect the row; they are pruned after 180 days.
+  Because of that, a **re-share** (the full upload after a restore, or
+  after reconnecting to the same folder) sends a row older than 180 days
+  only if this device's version is newer than the version the folder is
+  known to have (`sync_row_versions`); a row that old which the folder
+  does not know stays local — it may have been deleted elsewhere long
+  enough ago for the tombstone to be gone. Joining a *new* folder shares
+  everything. Restoring a backup older than 180 days warns the user.
 * **Natural keys**: budgets (category, month) and report notes (date) are
   unique. If an incoming row has the same natural key as a local row with a
   different id, the same rule decides, and only one row is kept. (Budget ids
@@ -130,8 +146,13 @@ sent yet competes the same way — it does not win automatically.
   every known version), *Dismiss* removes the entry. Not recorded: a budget
   amount written by the automatic new-month fill (its `updated_at` is the
   first day of its month, 00:00 UTC; see BUDGET_INTERACTIONS.md).
-* Seeded default categories use deterministic ids and a fixed timestamp, so
-  they are identical on all devices and never conflict.
+* Seeded default categories use deterministic ids and a fixed timestamp.
+  Their names are in the app language, so in a bilingual household the two
+  phones seed different names under the same ids. The phone that creates
+  the sync folder stamps its untouched seeds with the current time: it
+  keeps its language, and the other phone's untouched seeds lose
+  deterministically (no conflict entries: nothing the user decided was
+  lost). A category renamed on either phone is newer and wins.
 
 ## 6. Foreign keys
 
@@ -152,13 +173,34 @@ was deleted on another device while this row was created or edited. Policy
 ## 7. Quarantine
 
 If a file cannot be decrypted, parsed or applied, its transaction is rolled
-back and the file is recorded in `sync_quarantine` (file name, error, first
-seen, attempts). Its device's high-water mark does not advance, so later
-files of that device wait; all other devices keep syncing. The file is
-retried automatically with backoff (5 min, 30 min, 3 h, 18 h; after 5
-attempts only on request). Sync settings shows "N change files could not be
-applied" with *Retry*, *Share diagnostics* (file names and errors only) and
-*Skip file* (advances past it; its changes are lost on this device).
+back and the file is recorded in `sync_quarantine` (file name, reason,
+error, first seen, attempts). Its device's high-water mark does not
+advance, so later files of that device wait; all other devices keep
+syncing. The file is retried automatically with backoff (5 min, 30 min,
+3 h, 18 h). Reasons:
+
+* `unreadable`: the file does not authenticate under the sync key (damaged
+  or incomplete upload). After the 5th failed attempt it is skipped
+  automatically (see below) instead of blocking the device forever.
+* `failed`: parse or apply error (most likely a bug); it stays blocked
+  until *Retry* or *Skip file*.
+* `foreign`: a leftover of an earlier folder (section 3); never blocks.
+* `newer_schema`: see below.
+
+Sync settings shows "N change files could not be applied" with *Retry*,
+*Share diagnostics* (file names and errors only) and *Skip file*.
+
+**Skipping** a file (by hand, or automatically for an unreadable one)
+advances past it and records in `sync_kv` (`needs_snapshot`) that its
+device owes this device a snapshot covering the skipped sequence. Every
+run first applies, for each such device, its newest snapshot that covers
+the sequence (the rows the file carried are in it, under the conflict
+rule) and then forgets the entry; if no snapshot covers it, this device
+writes a small request file `<device>_req_<me>.lzsreq` (no data,
+unauthenticated: a folder member could at most trigger extra snapshots).
+A device that finds a request for itself writes a snapshot on its next
+run and deletes the request. Skipped changes are therefore delayed, not
+lost — unless the sender never comes back.
 
 A file written by a newer app version (schema version above this app's) is
 not applied and not counted as a failure: Sync settings asks the user to
@@ -183,14 +225,22 @@ files are never deleted.
 
 ## 9. Restore
 
-A full restore empties `pending_sync_changes`, deletes the outbox and
-sets the SharedPreferences flag `sync_rebootstrap_required`. The next run:
-forgets all high-water marks, continues its sequence after the highest own
-file in the folder, applies the newest snapshot and every later file —
-including this device's own files from before the restore — **under the
-conflict rule** (restored rows win only where their `updated_at` is newer),
-then uploads every local row again (rows only the backup has are shared;
-rows that lost are already replaced) and clears the flag.
+A full restore pauses the sync controller (the running sync is cancelled
+and awaited; no run starts until the database is reopened), empties
+`pending_sync_changes`, sets the SharedPreferences flag
+`sync_rebootstrap_required` *before* the database files are swapped and
+deletes the outbox after the swap succeeded (on a rollback the flag is
+cleared). The next run: forgets all high-water marks, continues its
+sequence after the highest own file in the folder, applies the newest
+snapshot and every later file **under the conflict rule** (restored rows
+win only where their `updated_at` is newer; this device's own pre-restore
+files are covered by the snapshot and skipped like any file at or below
+the snapshot's sequences, otherwise re-applied), then re-shares the local
+rows under the retention rule of section 5 (rows only the backup has are
+shared, old rows the folder does not know stay local; rows that lost are
+already replaced) and clears the flag. Restoring a backup that carries
+another member id, or that is older than the tombstone retention, needs an
+explicit confirmation (see BACKUP_AND_EXPORT.md).
 
 ## 10. Lifecycle
 
@@ -207,7 +257,10 @@ and follows `appLockStateProvider`:
 * Every entry point catches its errors (no unhandled futures); retryable
   failures of automatic syncs are retried with backoff (30 s .. 4 min).
 * State for the UI: status, last sync, pending changes, conflicts,
-  quarantine, newer-schema and old-folder notices, setup state.
+  quarantine (failed, old-folder files), newer-schema and old-folder
+  notices, clock notices, setup state. The Home sync card shows the
+  counts of conflicts, failed files and old-folder files.
+* Pause/resume around a restore (section 9).
 
 ## 11. Transports
 
@@ -253,7 +306,16 @@ between their folders.
 * **Authentication.** Every request carries `X-LZ-Auth: v1 <device> <time>
   <nonce> <HMAC-SHA256>` under the pair key (method, path, device, time,
   nonce, body hash); the server rejects anything older than 2 minutes or
-  replayed, and signs its response (`X-LZ-Mac`). The files themselves stay
+  replayed, and signs its response (`X-LZ-Mac`). A request that is signed
+  under the pair key but outside the 2-minute window gets a signed 401
+  with the server's time (`X-LZ-Time`): the client reports the clock
+  difference (`clockSkew`; the join says "the other phone's clock differs
+  by N minutes") instead of "phone not found". The exchange response also
+  carries the sender's time, so the skew is logged and shown.
+* **Clocks.** The conflict rule depends on the phones' clocks. A change
+  file whose newest timestamp lies more than 5 minutes in the future
+  shows a notice in Sync settings ("check that its clock is automatic").
+  A full hybrid logical clock is out of scope. The files themselves stay
   AES-GCM encrypted with the sync key as on Drive. Phones paired with
   different codes (different manifests) refuse to exchange
   (`pairingMismatch`).
@@ -302,8 +364,23 @@ household member; see BUDGETING_RULES.md for what users see.
 * **Becoming shared.** Setting the owner to shared queues every
   transaction and scheduled transaction of the account
   (`AccountsDao.queueHistoryForSync`); the partner applies them as new
-  rows. The opposite is allowed only while the account has no entry in
-  `sync_row_versions` (it never went out).
+  rows. The opposite is refused by the repository
+  (`AccountSharedException`) while the account has an entry in
+  `sync_row_versions` *and* a sync folder is still set up (the derived
+  key is stored); after Disconnect it is allowed again.
+* **Only in this phone's backups.** Personal transactions exist on one
+  phone only, so without a backup (Settings > Backup & Export, encrypted
+  with a backup password) they are lost with the phone. The Backup screen
+  says so and nudges when personal accounts exist and the last backup is
+  older than 7 days. The account form's "Personal" help text says the
+  same.
+* **Restoring another member's backup** swaps identity: the backup's
+  `member_id` becomes this phone's, its personal accounts become "mine",
+  and the accounts that were mine become the partner's (read-only, their
+  transactions gone from this phone). The restore inspects the backup
+  first (`RestoreService.prepareRestore`) and asks for an explicit
+  confirmation when the backup's member id differs from this phone's and
+  this phone has a member id or shows personal accounts.
 * **Not covered.** One member with two phones: personal transactions do
   not reach the member's second phone (everyone in the folder can read
   every file, so they are never uploaded at all). Payees created for

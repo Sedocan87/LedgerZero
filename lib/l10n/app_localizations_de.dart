@@ -1693,7 +1693,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get syncQuarantineSkipConfirm =>
-      'Die Änderungen in dieser Datei werden auf diesem Gerät nicht übernommen. Möchten Sie die Datei überspringen?';
+      'Die Änderungen in dieser Datei werden jetzt nicht übernommen. Das Gerät, das sie geschrieben hat, wird um einen Schnappschuss gebeten, der sie später nachliefert. Datei überspringen?';
 
   @override
   String get syncConflictsTitle => 'Sync-Konflikte';
@@ -3807,7 +3807,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lanPhoneNotFound =>
-      'Das andere Telefon ist nicht erreichbar. Achten Sie darauf, dass beide Telefone im selben WLAN sind und LedgerZero auf dem anderen Telefon geöffnet ist.';
+      'Das andere Telefon ist nicht erreichbar. Prüfen Sie, ob beide Telefone im selben WLAN sind, ob LedgerZero auf dem anderen Telefon geöffnet ist, ob das Netzwerk Verbindungen zwischen Geräten zulässt (Gast- und manche Mesh-Netze blockieren das) und ob beide Uhren auf automatische Zeit eingestellt sind.';
 
   @override
   String get lanSetupFailed =>
@@ -4550,4 +4550,136 @@ class AppLocalizationsDe extends AppLocalizations {
   String ynabImportAlreadyImported(String date) {
     return 'Dieser Export wurde bereits am $date importiert. Ein erneuter Import verdoppelt seine Buchungen.';
   }
+
+  @override
+  String syncErrorClockSkew(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'Die Uhr des anderen Telefons weicht um $minutes Minuten ab. Stellen Sie auf beiden Telefonen Datum und Uhrzeit auf automatisch und versuchen Sie es erneut.',
+      one:
+          'Die Uhr des anderen Telefons weicht um 1 Minute ab. Stellen Sie auf beiden Telefonen Datum und Uhrzeit auf automatisch und versuchen Sie es erneut.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncClockNotice =>
+      'Eine Änderungsdatei eines anderen Geräts enthält Zeiten, die mehr als 5 Minuten in der Zukunft liegen. Prüfen Sie, ob dessen Uhr auf automatische Zeit eingestellt ist; bis dahin gewinnen seine Änderungen jeden Konflikt.';
+
+  @override
+  String syncForeignFilesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Dateien aus einem alten Sync-Ordner',
+      one: '1 Datei aus einem alten Sync-Ordner',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncForeignFilesExplanation =>
+      'Diese Dateien wurden geschrieben, bevor dieser Sync-Ordner eingerichtet wurde, und lassen sich mit seinem Schlüssel nicht lesen. Sie werden ignoriert. Entfernen Sie sie aus dem Ordner oder ignorieren Sie sie weiterhin.';
+
+  @override
+  String get syncForeignRemove => 'Entfernen';
+
+  @override
+  String get syncForeignIgnore => 'Ignorieren';
+
+  @override
+  String syncIndicatorConflicts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Konflikte',
+      one: '1 Konflikt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncIndicatorFailedFiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Dateien konnten nicht übernommen werden',
+      one: '1 Datei konnte nicht übernommen werden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncIndicatorForeignFiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Dateien aus einem alten Sync-Ordner',
+      one: '1 Datei aus einem alten Sync-Ordner',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncIndicatorSeeSettings => 'Siehe Sync-Einstellungen';
+
+  @override
+  String get syncJoinExistingDataTitle =>
+      'Daten dieses Telefons zusammenführen?';
+
+  @override
+  String syncJoinExistingDataMessage(int accounts, int transactions) {
+    String _temp0 = intl.Intl.pluralLogic(
+      accounts,
+      locale: localeName,
+      other: '$accounts Konten',
+      one: '1 Konto',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      transactions,
+      locale: localeName,
+      other: '$transactions Buchungen',
+      one: '1 Buchung',
+    );
+    return 'Dieses Telefon hat bereits $_temp0 und $_temp1. Sie werden in das gemeinsame Budget übernommen. Ein Konto, das auf beiden Telefonen unter demselben Namen existiert, erscheint danach doppelt; löschen Sie eines davon oder benennen Sie es um.';
+  }
+
+  @override
+  String get syncJoinExistingDataConfirm => 'Zusammenführen und beitreten';
+
+  @override
+  String get restoreMemberWarningTitle =>
+      'Sicherung eines anderen Haushaltsmitglieds';
+
+  @override
+  String get restoreMemberWarningMessage =>
+      'Buchungen persönlicher Konten gibt es nur in den Sicherungen des Telefons, zu dem sie gehören. Nach dieser Wiederherstellung gehören die persönlichen Konten aus der Sicherung Ihnen, und die persönlichen Konten, die jetzt Ihnen gehören, werden zu denen Ihres Partners: Ihre Buchungen sind dann nicht mehr auf diesem Telefon. Fahren Sie nur fort, wenn Sie genau das möchten.';
+
+  @override
+  String get restoreOldBackupWarningTitle => 'Alte Sicherung';
+
+  @override
+  String restoreOldBackupWarningMessage(int days) {
+    return 'Diese Sicherung ist älter als $days Tage. Einträge, die seitdem auf einem anderen Telefon gelöscht wurden, können wieder auftauchen, weil die Synchronisierung sich an diese Löschungen nicht mehr erinnert.';
+  }
+
+  @override
+  String get restoreAnywayAction => 'Trotzdem wiederherstellen';
+
+  @override
+  String get restoreSyncKeyNote =>
+      'Eine Sicherung enthält auch den Sync-Schlüssel: Wer die Sicherungsdatei und ihr Passwort hat, kann den Sync-Ordner des Haushalts lesen.';
+
+  @override
+  String get backupPersonalNote =>
+      'Buchungen persönlicher Konten sind nur in den Sicherungen dieses Telefons enthalten; sie werden nie auf das andere Telefon übertragen.';
+
+  @override
+  String get backupNudgeTitle => 'Jetzt sichern';
+
+  @override
+  String get backupNudgeMessage =>
+      'Sie haben persönliche Konten, und die letzte Sicherung ist älter als 7 Tage (oder es gibt keine). Deren Buchungen gibt es nur auf diesem Telefon.';
 }

@@ -171,6 +171,22 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
     return row != null;
   }
 
+  /// Whether a sync folder is set up on this device (the derived sync key
+  /// is stored; Disconnect forgets it).
+  Future<bool> syncConfigured() async {
+    final row = await customSelect(
+      "SELECT 1 FROM sync_kv WHERE key = 'sync_key' LIMIT 1",
+    ).getSingleOrNull();
+    return row != null;
+  }
+
+  /// Whether account [id] is shared with the household right now: it went
+  /// out to the sync folder and sync is still set up. Such an account
+  /// cannot become personal (the partner's phone has its transactions);
+  /// once sync is disconnected it can.
+  Future<bool> isSharedWithHousehold(String id) async =>
+      await wasSynced(id) && await syncConfigured();
+
   /// Queues every transaction and scheduled transaction of account [id] for
   /// upload, e.g. after a personal account became shared (they were held
   /// back until now).

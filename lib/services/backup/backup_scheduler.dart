@@ -53,6 +53,12 @@ class BackupScheduler {
   Future<void> _showBackupNotification() =>
       _notificationService.showBackupReminderNotification();
 
+  /// When the last backup left the phone, null if never.
+  DateTime? get lastBackup {
+    final ms = _prefs.getInt(_lastBackupKey);
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
   Future<void> recordBackupSuccess() async {
     await _prefs.setInt(_lastBackupKey, DateTime.now().millisecondsSinceEpoch);
   }

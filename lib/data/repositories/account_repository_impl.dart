@@ -59,6 +59,11 @@ class AccountRepositoryImpl implements AccountRepository {
         throw StateError('The partner\'s account ${account.id} is read-only');
       }
       final wasPersonal = await _accountsDao.ownerIdOf(account.id) != null;
+      if (!wasPersonal &&
+          account.isPersonal &&
+          await _accountsDao.isSharedWithHousehold(account.id)) {
+        throw AccountSharedException(account.id);
+      }
       await _accountsDao.transaction(() async {
         await _accountsDao.updateAccount(await _mapToCompanion(account));
         if (wasPersonal && !account.isPersonal) {
@@ -66,6 +71,8 @@ class AccountRepositoryImpl implements AccountRepository {
         }
       });
       Logger.info('Account updated successfully: ${account.id}');
+    } on AccountSharedException {
+      rethrow;
     } catch (e, stackTrace) {
       Logger.error('Failed to update account ${account.id}', e, stackTrace);
       throw DatabaseException('Failed to update account ${account.id}', e);
@@ -75,7 +82,7 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Future<bool> wasSynced(String id) async {
     try {
-      return await _accountsDao.wasSynced(id);
+      return await _accountsDao.isSharedWithHousehold(id);
     } catch (e, stackTrace) {
       Logger.error('Failed to read the sync state of $id', e, stackTrace);
       throw DatabaseException('Failed to read the sync state of $id', e);

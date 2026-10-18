@@ -2975,7 +2975,7 @@ abstract class AppLocalizations {
   /// No description provided for @syncQuarantineSkipConfirm.
   ///
   /// In en, this message translates to:
-  /// **'The changes in this file will not be applied on this device. Skip it?'**
+  /// **'The changes in this file are not applied now. The device that wrote it is asked for a snapshot, which brings them later. Skip it?'**
   String get syncQuarantineSkipConfirm;
 
   /// No description provided for @syncConflictsTitle.
@@ -6382,7 +6382,7 @@ abstract class AppLocalizations {
   /// No description provided for @lanPhoneNotFound.
   ///
   /// In en, this message translates to:
-  /// **'The other phone could not be reached. Make sure both phones are on the same Wi-Fi and LedgerZero is open on the other phone.'**
+  /// **'The other phone could not be reached. Check that both phones are on the same Wi-Fi, that LedgerZero is open on the other phone, that the network allows phones to talk to each other (guest and some mesh networks block this) and that both clocks are set to automatic time.'**
   String get lanPhoneNotFound;
 
   /// No description provided for @lanSetupFailed.
@@ -7446,6 +7446,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This export was already imported on {date}. Importing it again duplicates its transactions.'**
   String ynabImportAlreadyImported(String date);
+
+  /// Wi-Fi sync: the paired phone's clock is off
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =1{The other phone’s clock differs by 1 minute. Set both phones to automatic date and time, then try again.} other{The other phone’s clock differs by {minutes} minutes. Set both phones to automatic date and time, then try again.}}'**
+  String syncErrorClockSkew(int minutes);
+
+  /// Sync settings notice
+  ///
+  /// In en, this message translates to:
+  /// **'A change file from another device carries times more than 5 minutes in the future. Check that its clock is set to automatic time; until then its edits win every conflict.'**
+  String get syncClockNotice;
+
+  /// Sync settings: leftover files of an earlier folder
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file from an old sync folder} other{{count} files from an old sync folder}}'**
+  String syncForeignFilesTitle(int count);
+
+  /// Sync settings: leftover files of an earlier folder
+  ///
+  /// In en, this message translates to:
+  /// **'These files were written before this sync folder was set up and cannot be read with its key. They are ignored. Remove them from the folder, or keep ignoring them.'**
+  String get syncForeignFilesExplanation;
+
+  /// Button: delete the leftover files from the sync folder
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get syncForeignRemove;
+
+  /// Button: stop listing the leftover files
+  ///
+  /// In en, this message translates to:
+  /// **'Ignore'**
+  String get syncForeignIgnore;
+
+  /// Home sync card: attention line part
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 conflict} other{{count} conflicts}}'**
+  String syncIndicatorConflicts(int count);
+
+  /// Home sync card: attention line part
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file could not be applied} other{{count} files could not be applied}}'**
+  String syncIndicatorFailedFiles(int count);
+
+  /// Home sync card: attention line part
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file from an old sync folder} other{{count} files from an old sync folder}}'**
+  String syncIndicatorForeignFiles(int count);
+
+  /// Home sync card: where to resolve the listed issues
+  ///
+  /// In en, this message translates to:
+  /// **'See Sync settings'**
+  String get syncIndicatorSeeSettings;
+
+  /// Dialog title before joining a sync folder with existing local data
+  ///
+  /// In en, this message translates to:
+  /// **'Merge this phone’s data?'**
+  String get syncJoinExistingDataTitle;
+
+  /// Dialog text before joining a sync folder with existing local data
+  ///
+  /// In en, this message translates to:
+  /// **'This phone already has {accounts, plural, =1{1 account} other{{accounts} accounts}} and {transactions, plural, =1{1 transaction} other{{transactions} transactions}}. They will be merged into the shared budget. An account that exists on both phones under the same name will appear twice; delete or rename one of them afterwards.'**
+  String syncJoinExistingDataMessage(int accounts, int transactions);
+
+  /// Dialog button
+  ///
+  /// In en, this message translates to:
+  /// **'Merge and join'**
+  String get syncJoinExistingDataConfirm;
+
+  /// Restore warning dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Backup of another household member'**
+  String get restoreMemberWarningTitle;
+
+  /// Restore warning dialog text
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions of personal accounts exist only in the backups of the phone they belong to. After this restore, the personal accounts in the backup become yours, and the personal accounts that are yours on this phone now become your partner’s: their transactions will no longer be on this phone. Continue only if this is what you want.'**
+  String get restoreMemberWarningMessage;
+
+  /// Restore warning dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Old backup'**
+  String get restoreOldBackupWarningTitle;
+
+  /// Restore warning dialog text
+  ///
+  /// In en, this message translates to:
+  /// **'This backup is older than {days} days. Items that were deleted on another phone since then may come back, because sync no longer remembers those deletions.'**
+  String restoreOldBackupWarningMessage(int days);
+
+  /// Restore warning dialog button
+  ///
+  /// In en, this message translates to:
+  /// **'Restore anyway'**
+  String get restoreAnywayAction;
+
+  /// Backup screen note
+  ///
+  /// In en, this message translates to:
+  /// **'A backup also contains the sync key: anyone with the backup file and its password can read the household’s sync folder.'**
+  String get restoreSyncKeyNote;
+
+  /// Backup screen note shown when personal accounts exist
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions of personal accounts are only in this phone’s backups; they never sync to the other phone.'**
+  String get backupPersonalNote;
+
+  /// Backup screen nudge title and button
+  ///
+  /// In en, this message translates to:
+  /// **'Back up now'**
+  String get backupNudgeTitle;
+
+  /// Backup screen nudge text
+  ///
+  /// In en, this message translates to:
+  /// **'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.'**
+  String get backupNudgeMessage;
 }
 
 class _AppLocalizationsDelegate

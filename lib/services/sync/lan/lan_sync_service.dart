@@ -63,6 +63,10 @@ class LanSyncService {
   late final SyncTransport transport = _LanSyncTransport(this);
 
   bool get isPaired => _pairing != null;
+
+  /// Difference between the paired phone's clock and this one's (theirs
+  /// minus ours) as last measured; null before the first exchange.
+  Duration? get peerClockSkew => _replicator?.lastPeerSkew;
   LanPairing? get pairing => _pairing;
   bool get isRunning => _server != null;
   int? get port => _server?.port;
@@ -222,6 +226,12 @@ class LanSyncService {
       throw const SyncException(
         'paired phones use different sync folders',
         kind: SyncErrorKind.pairingMismatch,
+      );
+    } on LanClockSkewException catch (e) {
+      throw SyncException(
+        'clock skew of ${e.skew.inMinutes} min',
+        kind: SyncErrorKind.clockSkew,
+        originalError: e,
       );
     }
   }

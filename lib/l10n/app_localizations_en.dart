@@ -1672,7 +1672,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncQuarantineSkipConfirm =>
-      'The changes in this file will not be applied on this device. Skip it?';
+      'The changes in this file are not applied now. The device that wrote it is asked for a snapshot, which brings them later. Skip it?';
 
   @override
   String get syncConflictsTitle => 'Sync conflicts';
@@ -3777,7 +3777,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lanPhoneNotFound =>
-      'The other phone could not be reached. Make sure both phones are on the same Wi-Fi and LedgerZero is open on the other phone.';
+      'The other phone could not be reached. Check that both phones are on the same Wi-Fi, that LedgerZero is open on the other phone, that the network allows phones to talk to each other (guest and some mesh networks block this) and that both clocks are set to automatic time.';
 
   @override
   String get lanSetupFailed => 'Wi-Fi sync could not be set up.';
@@ -4517,4 +4517,134 @@ class AppLocalizationsEn extends AppLocalizations {
   String ynabImportAlreadyImported(String date) {
     return 'This export was already imported on $date. Importing it again duplicates its transactions.';
   }
+
+  @override
+  String syncErrorClockSkew(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other:
+          'The other phone’s clock differs by $minutes minutes. Set both phones to automatic date and time, then try again.',
+      one:
+          'The other phone’s clock differs by 1 minute. Set both phones to automatic date and time, then try again.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncClockNotice =>
+      'A change file from another device carries times more than 5 minutes in the future. Check that its clock is set to automatic time; until then its edits win every conflict.';
+
+  @override
+  String syncForeignFilesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files from an old sync folder',
+      one: '1 file from an old sync folder',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncForeignFilesExplanation =>
+      'These files were written before this sync folder was set up and cannot be read with its key. They are ignored. Remove them from the folder, or keep ignoring them.';
+
+  @override
+  String get syncForeignRemove => 'Remove';
+
+  @override
+  String get syncForeignIgnore => 'Ignore';
+
+  @override
+  String syncIndicatorConflicts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count conflicts',
+      one: '1 conflict',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncIndicatorFailedFiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files could not be applied',
+      one: '1 file could not be applied',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncIndicatorForeignFiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files from an old sync folder',
+      one: '1 file from an old sync folder',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncIndicatorSeeSettings => 'See Sync settings';
+
+  @override
+  String get syncJoinExistingDataTitle => 'Merge this phone’s data?';
+
+  @override
+  String syncJoinExistingDataMessage(int accounts, int transactions) {
+    String _temp0 = intl.Intl.pluralLogic(
+      accounts,
+      locale: localeName,
+      other: '$accounts accounts',
+      one: '1 account',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      transactions,
+      locale: localeName,
+      other: '$transactions transactions',
+      one: '1 transaction',
+    );
+    return 'This phone already has $_temp0 and $_temp1. They will be merged into the shared budget. An account that exists on both phones under the same name will appear twice; delete or rename one of them afterwards.';
+  }
+
+  @override
+  String get syncJoinExistingDataConfirm => 'Merge and join';
+
+  @override
+  String get restoreMemberWarningTitle => 'Backup of another household member';
+
+  @override
+  String get restoreMemberWarningMessage =>
+      'Transactions of personal accounts exist only in the backups of the phone they belong to. After this restore, the personal accounts in the backup become yours, and the personal accounts that are yours on this phone now become your partner’s: their transactions will no longer be on this phone. Continue only if this is what you want.';
+
+  @override
+  String get restoreOldBackupWarningTitle => 'Old backup';
+
+  @override
+  String restoreOldBackupWarningMessage(int days) {
+    return 'This backup is older than $days days. Items that were deleted on another phone since then may come back, because sync no longer remembers those deletions.';
+  }
+
+  @override
+  String get restoreAnywayAction => 'Restore anyway';
+
+  @override
+  String get restoreSyncKeyNote =>
+      'A backup also contains the sync key: anyone with the backup file and its password can read the household’s sync folder.';
+
+  @override
+  String get backupPersonalNote =>
+      'Transactions of personal accounts are only in this phone’s backups; they never sync to the other phone.';
+
+  @override
+  String get backupNudgeTitle => 'Back up now';
+
+  @override
+  String get backupNudgeMessage =>
+      'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.';
 }

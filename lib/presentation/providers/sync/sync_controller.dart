@@ -12,6 +12,8 @@ import 'package:ledger_zero/services/sync/connectivity_service.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
+import 'package:ledger_zero/services/sync/lan/lan_protocol.dart'
+    show LanClockSkewException;
 import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
@@ -43,6 +45,10 @@ enum LanSetupResult {
   /// The other phone could not be reached (not on the same Wi-Fi, app not
   /// open, or the network blocks phones from talking to each other).
   phoneNotFound,
+
+  /// The other phone's clock differs by more than two minutes
+  /// (`SyncState.peerClockSkew` has the difference).
+  clockSkew,
   failed,
 }
 
@@ -87,6 +93,9 @@ class SyncController extends StateNotifier<SyncState> {
 
   bool _unlocked = false;
   bool _foreground = true;
+
+  /// A restore is replacing the database: no run may start.
+  bool _pausedForRestore = false;
   static bool _legacyQueueRemoved = false;
   bool _disposed = false;
   SyncDependencies? _deps;
@@ -318,7 +327,7 @@ class SyncController extends StateNotifier<SyncState> {
   }
 
   void _requestAutoSync(String reason) {
-    if (!_unlocked || !_automatic || _disposed) {
+    if (!_unlocked || !_automatic || _disposed || _pausedForRestore) {
       return;
     }
     Logger.info('Sync requested ($reason)');
@@ -332,7 +341,35 @@ class SyncController extends StateNotifier<SyncState> {
   /// Manual sync (button, pull to refresh). Never throws.
   Future<void> syncNow() => _runSync(automatic: false);
 
+  /// Stops sync for the duration of a restore: cancels the running run,
+  /// waits until it has stopped and refuses new runs until [resume]. The
+  /// restore then replaces the database file and sets the re-bootstrap
+  /// flag without a run touching either.
+  Future<void> pause() async {
+    _pausedForRestore = true;
+    _cancellation?.cancel();
+    _debounceTimer?.cancel();
+    _retryTimer?.cancel();
+    final running = _running;
+    if (running != null) {
+      try {
+        await running;
+      } catch (_) {
+        // Reported by the run itself.
+      }
+    }
+  }
+
+  /// Ends [pause]; the reopened database syncs right away.
+  void resume() {
+    _pausedForRestore = false;
+    _requestAutoSync('restore');
+  }
+
   Future<void> _runSync({required bool automatic}) {
+    if (_pausedForRestore) {
+      return Future.value();
+    }
     final running = _running;
     if (running != null) {
       _rerun = true;
@@ -387,6 +424,9 @@ class SyncController extends StateNotifier<SyncState> {
           setup: setup,
           lastSyncTime: report.setup == SyncSetupStatus.ready ? _clock() : null,
           legacyFilesFound: report.legacyFilesFound,
+          clockSkewSuspected: report.clockSkewSuspected,
+          peerClockSkew: _lan?.peerClockSkew,
+          clearPeerClockSkew: _lan?.peerClockSkew == null,
         ),
       );
     } on SyncCancelledException {
@@ -404,6 +444,7 @@ class SyncController extends StateNotifier<SyncState> {
           errorMessage: _describe(e),
           errorKind: e is SyncException ? e.kind : null,
           clearError: e is! SyncException,
+          peerClockSkew: _lan?.peerClockSkew,
         ),
       );
       if (automatic && e is SyncException && e.retryable) {
@@ -718,6 +759,11 @@ class SyncController extends StateNotifier<SyncState> {
     } on SyncFolderMissingException {
       await lan.unpair();
       return LanSetupResult.phoneNotFound;
+    } on LanClockSkewException catch (e) {
+      Logger.warning('Joining Wi-Fi sync: clock skew ${e.skew.inMinutes} min');
+      _set(state.copyWith(peerClockSkew: e.skew));
+      await lan.unpair();
+      return LanSetupResult.clockSkew;
     } catch (e, stack) {
       Logger.error('Joining Wi-Fi sync failed', e, stack);
       await lan.unpair();
@@ -816,6 +862,24 @@ class SyncController extends StateNotifier<SyncState> {
       await syncNow();
     } catch (e) {
       Logger.warning('Skip failed: $e');
+    }
+  }
+
+  /// Deletes the files of an earlier sync folder from the folder.
+  Future<void> removeForeignFiles() async {
+    try {
+      await _currentEngine()?.removeForeignFiles();
+    } catch (e) {
+      Logger.warning('Removing old sync files failed: $e');
+    }
+  }
+
+  /// Stops listing the files of an earlier sync folder.
+  Future<void> ignoreForeignFiles() async {
+    try {
+      await _currentEngine()?.ignoreForeignFiles();
+    } catch (e) {
+      Logger.warning('Ignoring old sync files failed: $e');
     }
   }
 

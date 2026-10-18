@@ -62,6 +62,14 @@ class SyncState extends Equatable {
   /// The app is locked: sync is paused.
   final bool paused;
 
+  /// A received change file carries timestamps far in the future: another
+  /// device's clock is off (its edits win every conflict until fixed).
+  final bool clockSkewSuspected;
+
+  /// Wi-Fi sync: the paired phone's clock minus this phone's clock, as
+  /// last measured (null when unknown).
+  final Duration? peerClockSkew;
+
   const SyncState({
     this.status = SyncStatus.disconnected,
     this.selectedProvider = SyncProviderType.none,
@@ -80,11 +88,19 @@ class SyncState extends Equatable {
     this.newerSchemaPending = false,
     this.legacyFilesFound = false,
     this.paused = false,
+    this.clockSkewSuspected = false,
+    this.peerClockSkew,
   });
 
-  /// Quarantined files that failed (as opposed to newer-schema deferrals).
-  List<SyncQuarantineItem> get failedFiles =>
-      quarantine.where((q) => q.reason == 'failed').toList();
+  /// Quarantined files that failed to apply or do not authenticate (as
+  /// opposed to newer-schema deferrals and leftovers of an old folder).
+  List<SyncQuarantineItem> get failedFiles => quarantine
+      .where((q) => q.reason == 'failed' || q.reason == 'unreadable')
+      .toList();
+
+  /// Files of an earlier sync folder (not readable with the current key).
+  List<SyncQuarantineItem> get foreignFiles =>
+      quarantine.where((q) => q.reason == 'foreign').toList();
 
   SyncState copyWith({
     SyncStatus? status,
@@ -107,6 +123,9 @@ class SyncState extends Equatable {
     bool? newerSchemaPending,
     bool? legacyFilesFound,
     bool? paused,
+    bool? clockSkewSuspected,
+    Duration? peerClockSkew,
+    bool clearPeerClockSkew = false,
   }) {
     return SyncState(
       status: status ?? this.status,
@@ -126,6 +145,10 @@ class SyncState extends Equatable {
       newerSchemaPending: newerSchemaPending ?? this.newerSchemaPending,
       legacyFilesFound: legacyFilesFound ?? this.legacyFilesFound,
       paused: paused ?? this.paused,
+      clockSkewSuspected: clockSkewSuspected ?? this.clockSkewSuspected,
+      peerClockSkew: clearPeerClockSkew
+          ? null
+          : (peerClockSkew ?? this.peerClockSkew),
     );
   }
 
@@ -148,5 +171,7 @@ class SyncState extends Equatable {
     newerSchemaPending,
     legacyFilesFound,
     paused,
+    clockSkewSuspected,
+    peerClockSkew,
   ];
 }

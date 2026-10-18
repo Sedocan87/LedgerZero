@@ -15,7 +15,7 @@ class _RecordingSharer implements FileSharer {
   bool fail = false;
 
   @override
-  Future<void> share(
+  Future<bool> share(
     List<String> paths, {
     String? text,
     String? subject,
@@ -25,6 +25,7 @@ class _RecordingSharer implements FileSharer {
     if (fail) {
       throw Exception('share sheet failed');
     }
+    return true;
   }
 }
 

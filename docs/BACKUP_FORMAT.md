@@ -80,17 +80,35 @@ restored and are reported as "not a LedgerZero backup that can be restored".
    `user_version` between 1 and the current schema version. A backup from a
    newer version is refused.
 3. Older schemas are migrated by opening the file through `AppDatabase`.
-4. `pending_sync_changes` is emptied.
-5. A new database encrypted with the current device data key is built next
-   to the live file (`ATTACH ... KEY "x'..'"` + `sqlcipher_export`) and
-   checked.
-6. The connection is closed, the live file is moved to `<db>.previous`, the
-   new file is moved into place and reopened, and a query is run. On success
-   `<db>.previous` is deleted; on failure it is moved back and reopened.
-7. The temporary plain file is always deleted. Queued (not yet uploaded)
-   sync change files are deleted and `sync_rebootstrap_required` is set (see
-   [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)).
+4. `pending_sync_changes` is emptied and `sync_kv.device_id` removed (the
+   restoring phone keeps its own sync device id).
+5. The backup is inspected (member id, personal accounts, creation time)
+   so the app can warn before replacing the data
+   (`RestoreService.prepareRestore`; see BACKUP_AND_EXPORT.md).
+6. A new database encrypted with the current device data key is built next
+   to the live file (`<db>.restore-new`; `ATTACH ... KEY "x'..'"` +
+   `sqlcipher_export` on a background isolate) and checked.
+7. Sync is paused and `sync_rebootstrap_required` is set. The restore
+   marker `<db>.restoring` is written, the connection is closed, the live
+   file is moved to `<db>.previous`, the new file is moved into place and
+   reopened, and a query is run. On success `<db>.previous` and the marker
+   are deleted and the queued (not yet uploaded) sync change files are
+   discarded; on failure the previous file is moved back and reopened and
+   the flag is cleared (see [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)).
+8. The temporary plain file is always deleted.
+
+If the process dies between the move and the rename, the next open
+(`recoverInterruptedRestore`) finishes the swap deterministically: a live
+file that opens with the device key is kept; otherwise the staged file
+(verified before the swap) is moved into place; otherwise the previous
+file is moved back. A fresh database is never created while a previous or
+staged copy exists. The factory reset deletes every variant.
 
 Selective restore (merge transactions from a date range) decrypts and
 validates the same way and reads the plain file directly, without replacing
-the live database.
+the live database. It copies row families together (a split parent with
+its children, both legs of a transfer; a leg whose other account or leg is
+unavailable becomes a normal row), copies missing accounts, categories,
+groups and payees, leaves the partner's personal accounts out, and stamps
+every inserted row with `updated_at` = now so sync treats them as fresh
+edits.

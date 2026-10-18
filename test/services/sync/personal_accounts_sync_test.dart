@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 
 import '../../helpers/sync_simulation.dart';
@@ -182,5 +183,25 @@ void main() {
     await a.sync();
     expect(await a.t!.accounts.wasSynced('brk'), isTrue);
     expect(await a.t!.accounts.wasSynced('chk'), isTrue);
+  });
+
+  test('a synced shared account cannot become personal while sync is set '
+      'up; it can after disconnecting', () async {
+    await setUpAccounts();
+    await a.sync();
+    final chk = (await a.t!.accounts.getAccountById('chk'))!;
+    await expectLater(
+      a.t!.accounts.updateAccount(chk.copyWith(owner: AccountOwner.me)),
+      throwsA(isA<AccountSharedException>()),
+    );
+    expect(
+      (await a.t!.accounts.getAccountById('chk'))!.owner,
+      AccountOwner.shared,
+    );
+
+    await a.engine.forgetKey(); // Disconnect
+    expect(await a.t!.accounts.wasSynced('chk'), isFalse);
+    await a.t!.accounts.updateAccount(chk.copyWith(owner: AccountOwner.me));
+    expect((await a.t!.accounts.getAccountById('chk'))!.owner, AccountOwner.me);
   });
 }

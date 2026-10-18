@@ -19,8 +19,10 @@ import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
+import 'package:ledger_zero/services/sync/sync_device_id.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/sync_local_state.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../helpers/sync_simulation.dart';
 import '../../helpers/test_database.dart';
@@ -50,6 +52,7 @@ void main() {
     QueryExecutor? executor,
     Random? shuffle,
     DateTime Function()? clock,
+    String Function(String englishName)? seedName,
   }) async {
     final d = await SimDevice.create(
       folder,
@@ -57,6 +60,7 @@ void main() {
       executor: executor,
       shuffle: shuffle,
       clock: clock,
+      seedName: seedName,
     );
     devices.add(d);
     return d;
@@ -336,6 +340,38 @@ void main() {
       expect(await b.count('SELECT COUNT(*) FROM categories'), seeded);
       expect(await a.db.syncDao.getConflicts(), isEmpty);
       expect(await b.db.syncDao.getConflicts(), isEmpty);
+    });
+
+    test('bilingual household: the phone that set up the folder keeps '
+        'its category names, renames still win', () async {
+      final en = await device();
+      final de = await device(seedName: (name) => 'DE $name');
+      // The German phone sets up the folder; the English one joins.
+      await de.engine.createSyncFolder(passphrase);
+      await en.engine.joinSyncFolder(passphrase);
+      await syncAll([en, de], rounds: 3);
+
+      await expectConverged([en, de]);
+      final names = (await en.rows(
+        'SELECT name FROM categories',
+      )).map((r) => r['name'] as String);
+      expect(names.every((n) => n.startsWith('DE ')), isTrue);
+      expect(await en.db.syncDao.getConflicts(), isEmpty);
+      expect(await de.db.syncDao.getConflicts(), isEmpty);
+
+      // A later rename on the English phone is newer and wins everywhere.
+      final groceries = await en.t!.categoryId('DE Groceries');
+      await en.exec("UPDATE categories SET name = 'Food' WHERE id = ?", [
+        groceries,
+      ]);
+      await syncAll([en, de]);
+      await expectConverged([en, de]);
+      expect(
+        (await de.rows(
+          "SELECT name FROM categories WHERE id = '$groceries'",
+        )).single['name'],
+        'Food',
+      );
     });
 
     test(
@@ -629,7 +665,7 @@ void main() {
         expect(ids, ['a0', 'c0']);
         final q = await b.db.syncDao.getQuarantine();
         expect(q.single.filename, target.name);
-        expect(q.single.reason, 'failed');
+        expect(q.single.reason, SyncEngine.reasonUnreadable);
 
         // Retries wait for the backoff ...
         await b.sync();
@@ -666,6 +702,166 @@ void main() {
         expect(await b.count('SELECT COUNT(*) FROM accounts'), 1);
       },
     );
+
+    test('an unreadable file is skipped after the last retry and repaired '
+        'by a requested snapshot', () async {
+      const config = SyncEngineConfig(
+        kdfParams: fastKdf,
+        maxQuarantineAttempts: 1,
+      );
+      final a = await device(config: config);
+      final b = await device(config: config);
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await addAccount(a, 'lost', 'In the damaged file');
+      await a.sync();
+      await addAccount(a, 'later', 'In the next file');
+      await a.sync();
+      final aFiles = folder.syncFiles(device: a.deviceId);
+      final damaged = folder.single(aFiles[aFiles.length - 2].name);
+      damaged.bytes = Uint8List.fromList(damaged.bytes)
+        ..[damaged.bytes.length - 3] ^= 0x01;
+
+      await b.sync(); // quarantined (attempt 1 of 1)
+      expect(await b.count('SELECT COUNT(*) FROM accounts'), 0);
+      await b.sync(); // given up: skipped, snapshot requested
+      expect(await b.db.syncDao.getQuarantine(), isEmpty);
+      expect(
+        await b.count("SELECT COUNT(*) FROM accounts WHERE id='later'"),
+        1,
+      );
+      expect(await b.count("SELECT COUNT(*) FROM accounts WHERE id='lost'"), 0);
+      final request = SyncFileName.request(a.deviceId, b.deviceId);
+      expect(folder.names, contains(request));
+
+      await a.sync(); // honours the request
+      expect(folder.names, isNot(contains(request)));
+      expect(folder.syncFiles(kind: SyncFileKind.snapshot), isNotEmpty);
+      await b.sync(); // repaired from the snapshot
+      expect(await b.count("SELECT COUNT(*) FROM accounts WHERE id='lost'"), 1);
+      expect(await SyncLocalState(b.db.syncDao).needsSnapshot(), isEmpty);
+      await syncAll([a, b]);
+      await expectConverged([a, b]);
+    });
+
+    test('"skip file" asks the sender for a snapshot', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await addAccount(a, 'x', 'X');
+      await a.sync();
+      final target = folder.single(
+        folder.syncFiles(device: a.deviceId).last.name,
+      );
+      target.bytes = Uint8List.fromList(target.bytes)
+        ..[target.bytes.length - 3] ^= 0x01;
+      await b.sync();
+      final q = (await b.db.syncDao.getQuarantine()).single;
+      await b.engine.skipQuarantined(q.filename);
+      await b.sync();
+      expect(
+        folder.names,
+        contains(SyncFileName.request(a.deviceId, b.deviceId)),
+      );
+      await a.sync();
+      await b.sync();
+      expect(await b.count("SELECT COUNT(*) FROM accounts WHERE id='x'"), 1);
+    });
+
+    test(
+      'files of an earlier sync folder are ignored, not quarantined',
+      () async {
+        var now = DateTime.utc(2030, 1, 1);
+        final a = await device(clock: () => now);
+        final b = await device(clock: () => now);
+        await connect([a, b]);
+        await addAccount(a, 'old-a', 'Old A');
+        await addAccount(b, 'old-b', 'Old B');
+        await syncAll([a, b]);
+        final oldFiles = folder.syncFiles().map((f) => f.name).toSet();
+        expect(oldFiles, isNotEmpty);
+
+        // The user deletes only the manifest and sets the folder up again
+        // with a new passphrase; the old change files stay behind.
+        folder.files.removeWhere((_, f) => f.name == SyncFileName.manifest);
+        now = now.add(const Duration(hours: 1));
+        await a.engine.createSyncFolder('a brand new passphrase');
+        await b.engine.joinSyncFolder('a brand new passphrase');
+        await addAccount(a, 'new-a', 'New A');
+        await syncAll([a, b], rounds: 3);
+
+        await expectConverged([a, b]);
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='new-a'"),
+          1,
+        );
+        final foreign = await b.db.syncDao.getQuarantine();
+        expect(foreign, isNotEmpty);
+        expect(
+          foreign.every((q) => q.reason == SyncEngine.reasonForeign),
+          isTrue,
+        );
+        expect(foreign.every((q) => oldFiles.contains(q.filename)), isTrue);
+        expect(foreign.every((q) => q.deviceId == a.deviceId), isTrue);
+        // Nothing waits: A's new files were applied past the old ones.
+        expect((await b.sync()).waitingDevices, 0);
+
+        // Each device lists the other's old files; both remove them.
+        await b.engine.removeForeignFiles();
+        await a.engine.removeForeignFiles();
+        expect(await b.db.syncDao.getQuarantine(), isEmpty);
+        expect(await a.db.syncDao.getQuarantine(), isEmpty);
+        expect(folder.names.toSet().intersection(oldFiles), isEmpty);
+        await syncAll([a, b]);
+        await expectConverged([a, b]);
+      },
+    );
+
+    test('a file with timestamps far in the future is reported', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await a.exec(
+        'INSERT INTO accounts (id, name, type, currency, starting_balance, '
+        "is_closed, created_at, updated_at) VALUES ('f', 'F', 'checking', "
+        "'USD', 0, 0, '2025-01-01T00:00:00.000Z', '2099-01-01T00:00:00.000Z')",
+      );
+      await a.sync();
+      expect((await b.sync()).clockSkewSuspected, isTrue);
+      expect((await b.sync()).clockSkewSuspected, isFalse);
+    });
+
+    test('lost preferences do not mint a new device id', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'x', 'X');
+      await a.sync();
+      expect(a.prefs.getString(SyncDeviceId.prefsKey), a.deviceId);
+
+      // Preferences gone (new id minted), database kept, a change queued.
+      a.prefs.values.clear();
+      await addAccount(a, 'y', 'Y');
+      final minted = const Uuid().v4();
+      final engine = SyncEngine(
+        db: a.db,
+        transport: a.transport,
+        deviceId: minted,
+        outbox: a.outbox,
+        prefs: a.prefs,
+        config: a.config,
+      );
+      await engine.sync();
+
+      expect(engine.deviceId, a.deviceId);
+      expect(a.prefs.getString(SyncDeviceId.prefsKey), a.deviceId);
+      expect(folder.syncFiles(device: minted), isEmpty);
+      expect(folder.syncFiles(device: a.deviceId), hasLength(2));
+      await syncAll([a, b]);
+      expect(await b.count('SELECT COUNT(*) FROM accounts'), 2);
+    });
 
     test('a wrong passphrase is rejected', () async {
       final a = await device();
@@ -828,7 +1024,9 @@ void main() {
       await restored.customStatement('DELETE FROM pending_sync_changes');
       a = a.withDatabase(restored);
       devices.add(a);
-      await SyncRebootstrap(a.prefs, a.outbox).markRequired();
+      final rebootstrap = SyncRebootstrap(a.prefs, a.outbox);
+      await rebootstrap.markRequired();
+      await rebootstrap.discardOutbox();
       expect(
         await a.count("SELECT COUNT(*) FROM accounts WHERE id='after'"),
         0,
@@ -852,6 +1050,74 @@ void main() {
       final aFiles = folder.syncFiles(device: a.deviceId);
       expect(aFiles.map((f) => f.name).toSet().length, aFiles.length);
     });
+  });
+
+  group('tombstone retention', () {
+    test(
+      'restoring an old backup does not resurrect rows deleted long ago',
+      () async {
+        var now = DateTime.now().toUtc();
+        final tmp = await Directory.systemTemp.createTemp('lz_retention_');
+        addTearDown(() => tmp.delete(recursive: true));
+        final dbFile = File('${tmp.path}/a.sqlite');
+        final backup = File('${tmp.path}/backup.sqlite');
+        var a = await device(
+          executor: NativeDatabase(dbFile),
+          clock: () => now,
+        );
+        final b = await device(clock: () => now);
+        await connect([a, b]);
+        await addAccount(a, 'gone', 'Deleted long ago');
+        await addAccount(a, 'kept', 'Still here');
+        await syncAll([a, b]);
+        await a.exec('VACUUM INTO ?', [backup.path]);
+
+        await b.exec("DELETE FROM accounts WHERE id = 'gone'");
+        await syncAll([a, b]);
+        expect(
+          await a.count("SELECT COUNT(*) FROM accounts WHERE id='gone'"),
+          0,
+        );
+
+        // Long after the retention: both devices pruned the tombstone.
+        now = now.add(const Duration(days: 200));
+        await syncAll([a, b]);
+        expect(await b.db.syncDao.getTombstones(), isEmpty);
+
+        // A restores the backup from before the delete.
+        await a.db.close();
+        devices.remove(a);
+        await backup.copy(dbFile.path);
+        final restored = AppDatabase(NativeDatabase(dbFile));
+        await restored.customStatement('DELETE FROM pending_sync_changes');
+        a = a.withDatabase(restored);
+        devices.add(a);
+        final rebootstrap = SyncRebootstrap(a.prefs, a.outbox);
+        await rebootstrap.markRequired();
+        await rebootstrap.discardOutbox();
+        expect(
+          await a.count("SELECT COUNT(*) FROM accounts WHERE id='gone'"),
+          1,
+        );
+
+        await syncAll([a, b], rounds: 3);
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='gone'"),
+          0,
+        );
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='kept'"),
+          1,
+        );
+        // A new row that only the backup has is still shared.
+        await addAccount(a, 'fresh', 'Fresh');
+        await syncAll([a, b]);
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='fresh'"),
+          1,
+        );
+      },
+    );
   });
 
   group('three devices', () {

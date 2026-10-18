@@ -38,6 +38,13 @@ class ChangeGenerator {
   /// Writes change files for all pending changes (and, if [fullUpload], for
   /// every row of every synced table) to [outbox]. Returns their names.
   ///
+  /// With [reshareHorizon], a row the full upload adds (not captured
+  /// locally) whose `updated_at` is older than the horizon is sent only if
+  /// its version is newer than the version this device knows the folder
+  /// has (`sync_row_versions`); a row that old which the folder never saw
+  /// is not sent: it may have been deleted elsewhere long enough ago for
+  /// the tombstone to be pruned (see `FullUpload.reshare`).
+  ///
   /// Everything happens in one database transaction: the files are written
   /// first, then the pending changes are deleted and the sequence advanced.
   /// If the transaction fails the files are orphans with sequences above the
@@ -46,8 +53,10 @@ class ChangeGenerator {
     required Uint8List key,
     required SyncOutbox outbox,
     bool fullUpload = false,
+    DateTime? reshareHorizon,
     DateTime? now,
   }) async {
+    final horizon = reshareHorizon?.toUtc().microsecondsSinceEpoch;
     final committed = await _state.ownSequence();
     await outbox.removeAbove(_deviceId, committed);
 
@@ -119,6 +128,12 @@ class ChangeGenerator {
             return; // stays on this device (personal account)
           }
           final version = SyncSchema.versionOf(row['updated_at']);
+          if (!aggregate.local &&
+              horizon != null &&
+              version < horizon &&
+              (known == null || known.version >= version)) {
+            return; // old and not newer than what the folder knows
+          }
           // Rows edited here are this device's versions; rows that only
           // pass through a full upload keep the device that wrote them.
           final device =

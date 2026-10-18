@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
+import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -277,8 +278,11 @@ class GoogleDriveService implements SyncTransport {
     final files = existing.files ?? const <drive.File>[];
     if (files.isNotEmpty) {
       final current = files.first;
-      if (int.tryParse(current.size ?? '') == bytes.length) {
-        return; // already there (e.g. a retried create that succeeded)
+      if (int.tryParse(current.size ?? '') == bytes.length ||
+          fileName == SyncFileName.manifest) {
+        // Already there (e.g. a retried create that succeeded), or the
+        // manifest: the earlier one is canonical and must stay.
+        return;
       }
       await api.files.update(
         drive.File(),

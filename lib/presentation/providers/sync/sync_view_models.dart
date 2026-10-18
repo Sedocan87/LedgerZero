@@ -59,7 +59,8 @@ class SyncQuarantineItem extends Equatable {
   final String deviceId;
   final int sequence;
 
-  /// `failed` (decrypt/parse/apply error) or `newer_schema`.
+  /// `failed` (parse/apply error), `unreadable` (does not authenticate),
+  /// `newer_schema` or `foreign` (leftover of an earlier sync folder).
   final String reason;
   final String error;
   final int attempts;
