@@ -287,8 +287,10 @@ void main() {
 
     expect(await templateData(), {dining: 5000});
 
-    // Budgeted money and (uncategorised) activity flow into TBB.
-    expect(await t.budgeting.calculateTBB(m1), tbb1 + available1);
+    // Budgeted money and (uncategorised) activity flow into TBB. The
+    // 30000 budgeted for m2 had been taken out of m1's TBB as well (money
+    // assigned ahead), so m1 gets it back too.
+    expect(await t.budgeting.calculateTBB(m1), tbb1 + available1 + 30000);
     expect(await t.budgeting.calculateTBB(m2), tbb2 + available2);
     await expectLedgerInvariant(t, m1);
     await expectLedgerInvariant(t, m2);

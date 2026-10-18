@@ -26,7 +26,10 @@ void main() {
     prefs = await SharedPreferences.getInstance();
     t = TestDatabase();
     groceries = await t.categoryId('Groceries');
-    await t.addAccount(id: 'a', startingBalance: 100000);
+    // The money arrived the month before (an account created this month
+    // has nothing in the month before).
+    await t.addAccount(id: 'a');
+    await t.addTransaction(accountId: 'a', amount: 100000, date: previous);
   });
 
   tearDown(() => t.close());

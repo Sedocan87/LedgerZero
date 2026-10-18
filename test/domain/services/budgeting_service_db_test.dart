@@ -58,10 +58,13 @@ void main() {
         await t.budgeting.calculateCategoryActivity(groceries, march),
         -110,
       );
+      // February's overspending (-1) is reset at the month boundary and
+      // charged to March's To Be Budgeted instead.
       expect(
         await t.budgeting.calculateCategoryAvailable(groceries, march),
-        -111,
+        -110,
       );
+      expect(await t.budgeting.calculateTBB(march), -1);
     },
   );
 

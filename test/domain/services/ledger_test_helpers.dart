@@ -15,8 +15,12 @@ import '../../helpers/test_database.dart';
 /// Budget invariant for [month]:
 ///
 /// SUM(available of every category) + To Be Budgeted
-///   == SUM over on-budget accounts of (starting balance + non-deleted,
-///      non-split-child rows dated before the next month).
+///   + SUM(budgeted in the months after it)
+///   == SUM over on-budget accounts of (starting balance, once the account
+///      exists, + non-deleted, non-split-child rows dated before the next
+///      month).
+///
+/// See docs/BUDGETING_RULES.md, "The invariant".
 Future<void> expectLedgerInvariant(TestDatabase t, DateTime month) async {
   final categories = await t.categories.getAllCategories();
   var available = 0;
@@ -24,21 +28,48 @@ Future<void> expectLedgerInvariant(TestDatabase t, DateTime month) async {
     available += await t.budgeting.calculateCategoryAvailable(c.id, month);
   }
   final tbb = await t.budgeting.calculateTBB(month);
+  final budgetedAfter = await t.budgets.getTotalBudgetedAfterMonth(
+    CalendarDate.monthKey(month),
+  );
+  expect(
+    available + tbb + budgetedAfter,
+    await onBudgetBalancesThrough(t, month),
+    reason:
+        'SUM(available) + TBB + budgeted after must equal SUM(balances) '
+        'for $month (available $available, TBB $tbb, after $budgetedAfter)',
+  );
+}
+
+/// SUM of the on-budget account balances counting rows dated before the
+/// month after [month]. A starting balance counts from the month the
+/// account was created in, or from its first transaction if earlier.
+Future<int> onBudgetBalancesThrough(TestDatabase t, DateTime month) async {
+  final end = CalendarDate.endOfMonthUtc(month);
+  final firstDates = await t.budgets.getFirstTransactionDates();
+  var starting = 0;
+  for (final a in await t.accounts.getAllAccounts()) {
+    if (!a.onBudget) {
+      continue;
+    }
+    final created = a.createdAt?.toUtc();
+    final first = firstDates[a.id];
+    final start = created == null
+        ? null
+        : (first != null && first.isBefore(created) ? first : created);
+    if (start == null || start.isBefore(end)) {
+      starting += a.startingBalance;
+    }
+  }
   final row = await t.db
       .customSelect(
-        'SELECT COALESCE((SELECT SUM(starting_balance) FROM accounts '
-        'WHERE on_budget = 1), 0) + '
-        'COALESCE((SELECT SUM(amount) FROM transactions WHERE is_deleted = 0 '
-        'AND parent_transaction_id IS NULL AND date < ? AND account_id IN '
-        '(SELECT id FROM accounts WHERE on_budget = 1)), 0) AS total',
-        variables: [Variable.withDateTime(CalendarDate.endOfMonthUtc(month))],
+        'SELECT COALESCE((SELECT SUM(amount) FROM transactions WHERE '
+        'is_deleted = 0 AND parent_transaction_id IS NULL AND date < ? AND '
+        'account_id IN (SELECT id FROM accounts WHERE on_budget = 1)), 0) '
+        'AS total',
+        variables: [Variable.withDateTime(end)],
       )
       .getSingle();
-  expect(
-    available + tbb,
-    row.read<int>('total'),
-    reason: 'SUM(available) + TBB must equal SUM(balances) for $month',
-  );
+  return starting + row.read<int>('total');
 }
 
 /// No foreign key of the database is violated.

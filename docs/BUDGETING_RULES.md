@@ -21,8 +21,14 @@ day.
     transfer crosses the budget boundary (see below).
 *   **Budgeted** = money assigned to a category for a month (one row per
     category and month, id `UUIDv5("budget:<categoryId>:<yyyy-MM>")`).
-*   **Available(category, M)** = budgeted up to and including M + activity up
-    to the end of M. Positive balances and overspending roll over.
+*   **Available(category, M)** = max(0, Available(category, M - 1))
+    + budgeted in M + activity in M. A positive balance rolls over into the
+    next month. A negative balance (cash overspending) does not: the
+    category starts the next month at zero and the overspent amount is
+    taken out of that month's To Be Budgeted instead (the YNAB rule), so
+    TBB never overstates the cash that can still be assigned. Within the
+    month the category shows the negative amount, so it can still be
+    covered by moving money before the month ends.
 
 ## On-budget and off-budget accounts
 
@@ -74,9 +80,27 @@ accounts".
 
 ## To Be Budgeted (TBB)
 
-`TBB(M) = sum of the on-budget accounts' starting balances`
+`TBB(M) = sum of the starting balances of the on-budget accounts that exist by M`
 `       + sum of the transactions that flow into TBB, up to the end of M`
 `       - sum of everything budgeted up to and including M`
+`       - sum of everything budgeted in the months after M`
+`       - sum of the cash overspending of the months before M`
+
+*   **Money assigned ahead is gone now.** Budgeting 1,000 for November while
+    October is showing takes the 1,000 out of October's TBB (it cannot be
+    assigned twice), and November's TBB does not go negative for it: the
+    money was there. Every month's TBB therefore counts all budgets,
+    earlier, current and later.
+*   **Overspending is charged to the next month.** A category that ends
+    month M at -50 starts M + 1 at zero, and TBB(M + 1) is 50 lower. Each
+    month's overspending is charged once; covering it in the same month
+    (moving money into the category) avoids the charge.
+*   **Starting balances are dated.** An account's starting balance counts
+    from the month the account was created in, or from the month of its
+    first transaction if that is earlier (imported or backdated history),
+    so a month before the account existed shows nothing of it. There is no
+    separate "opening date": the creation time (`accounts.created_at`) and
+    the transactions are the record.
 
 A transaction flows into TBB when it is **not deleted, uncategorised, in an
 on-budget account, not a split parent, and not a transfer leg unless the
@@ -108,16 +132,25 @@ other account is off budget**. Both signs count:
 
 For every month M:
 
-`sum over categories of Available(M) + TBB(M) = sum of the on-budget
-account balances (counting transactions up to the end of M)`
+`sum over categories of Available(M) + TBB(M) + sum budgeted after M
+ = sum of the on-budget account balances (starting balances of the
+   accounts that exist by M, plus transactions up to the end of M)`
+
+Why it holds: summing the available rule over the months gives
+`Available(M) = budgeted through M + activity through M + overspending
+before M` per category (each reset adds back what was negative). Adding
+TBB(M) cancels the budgets through M and the overspending, leaving
+starting balances + rows flowing into TBB + category activity, which is
+the account balances, minus the budgets after M.
 
 This is checked by `test/domain/services/budget_invariant_test.dart` on a
 real database with several accounts (including a credit card with a
 negative starting balance), income, categorised and uncategorised spending,
 transfers in both directions, an income split and an expense split, a
-deleted row, a reconciliation adjustment and budgets in two months, and
-with an off-budget account (its own rows, categorised ones included, and
-transfers to and from it).
+deleted row, a reconciliation adjustment and budgets in two months, with
+an off-budget account (its own rows, categorised ones included, and
+transfers to and from it), with money assigned to a later month and with
+overspent categories.
 
 ## Setting money aside
 
@@ -208,7 +241,8 @@ Offered in the budget row's quick actions (long-press a category):
 *   **Budget Last Month's Spending** (`lastMonthSpent`): assigns the amount
     spent last month.
 *   **Budget Average Spent** (`averageSpent`): assigns the average spending
-    of the last 3 months.
+    of the last 3 months, averaged over the months that had any activity
+    (a category that is one month old is not divided by three).
 
 Each records an undo action. The service also has `underfunded` (assign
 what the goal still needs); it is not offered in the app because goals

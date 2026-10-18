@@ -171,6 +171,59 @@ class BudgetRepositoryImpl implements BudgetRepository {
     }
   }
 
+  @override
+  Future<List<Budget>> getBudgetsUpToMonth(
+    String endMonth, {
+    String? categoryId,
+  }) async {
+    try {
+      final rows = await _budgetsDao.getBudgetsUpToMonth(
+        endMonth,
+        categoryId: categoryId,
+      );
+      return rows.map(_mapToDomain).toList();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to fetch budgets up to $endMonth', e, stackTrace);
+      throw DatabaseException('Failed to fetch budgets up to $endMonth', e);
+    }
+  }
+
+  @override
+  Future<int> getTotalBudgetedAfterMonth(String endMonth) async {
+    try {
+      return await _budgetsDao.getTotalBudgetedAfterMonth(endMonth);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to calculate budgeted after month', e, stackTrace);
+      throw DatabaseException('Failed to calculate budgeted after month', e);
+    }
+  }
+
+  @override
+  Future<Map<String, Map<String, int>>> getMonthlyCategoryActivity(
+    DateTime endExclusive, {
+    String? categoryId,
+  }) async {
+    try {
+      return await _budgetsDao.getMonthlyCategoryActivitySums(
+        endExclusive,
+        categoryId: categoryId,
+      );
+    } catch (e, stackTrace) {
+      Logger.error('Failed to calculate monthly activity', e, stackTrace);
+      throw DatabaseException('Failed to calculate monthly activity', e);
+    }
+  }
+
+  @override
+  Future<Map<String, DateTime>> getFirstTransactionDates() async {
+    try {
+      return await _budgetsDao.getFirstTransactionDates();
+    } catch (e, stackTrace) {
+      Logger.error('Failed to read first transaction dates', e, stackTrace);
+      throw DatabaseException('Failed to read first transaction dates', e);
+    }
+  }
+
   Budget _mapToDomain(db.Budget b) {
     return Budget(
       id: b.id,
