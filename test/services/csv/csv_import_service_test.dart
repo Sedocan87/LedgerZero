@@ -5,6 +5,7 @@ import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'dart:convert';
 
 // parseCsvFile runs its parser through compute(), which runs inline in
@@ -268,5 +269,62 @@ void main() {
         false,
       ]);
     });
+  });
+
+  test('duplicate detection is a multiset over normalised payee names', () {
+    final service = CsvImportService();
+    ImportTransaction row(String payee, {String? rulePayee}) =>
+        ImportTransaction(
+          date: DateTime.utc(2023, 1, 1),
+          amount: -300,
+          payeeName: payee,
+          rulePayeeName: rulePayee,
+        );
+    final imported = [
+      row('  COFFEE  shop'),
+      row('Coffee Shop'),
+      row('AMZN MKTP', rulePayee: 'Amazon'),
+      row('Nobody'),
+    ];
+    final existing = [
+      Transaction(
+        id: '1',
+        accountId: 'a1',
+        date: DateTime.utc(2023, 1, 1),
+        amount: -300,
+        payeeId: 'p-coffee',
+      ),
+      Transaction(
+        id: '2',
+        accountId: 'a1',
+        date: DateTime.utc(2023, 1, 1),
+        amount: -300,
+        payeeId: 'p-amazon',
+      ),
+      // A transfer leg: no payee.
+      Transaction(
+        id: '3',
+        accountId: 'a1',
+        date: DateTime.utc(2023, 1, 1),
+        amount: -300,
+        transferAccountId: 'a2',
+      ),
+    ];
+    service.checkForDuplicates(
+      imported: imported,
+      existing: existing,
+      payeeMap: {'p-coffee': 'coffee shop', 'p-amazon': 'Amazon'},
+    );
+    // One stored coffee: only the first file coffee is a duplicate.
+    expect(imported.map((r) => r.isDuplicate), [true, false, true, false]);
+    // The leftover coffee takes the payee-less transfer as a possible
+    // duplicate; "Nobody" finds nothing.
+    expect(imported.map((r) => r.isPossibleDuplicate), [
+      false,
+      true,
+      false,
+      false,
+    ]);
+    expect(imported.map((r) => r.isSelected), [false, false, false, true]);
   });
 }
