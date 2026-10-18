@@ -63,6 +63,7 @@ final categoryServiceProvider = Provider<CategoryService>((ref) {
     maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
     ruleRepository: ref.watch(ruleRepositoryProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    undoService: ref.watch(undoServiceProvider),
   );
 });
 
@@ -72,6 +73,7 @@ final accountServiceProvider = Provider<AccountService>((ref) {
     maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
     ruleRepository: ref.watch(ruleRepositoryProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    undoService: ref.watch(undoServiceProvider),
   );
 });
 
@@ -81,6 +83,7 @@ final payeeServiceProvider = Provider<PayeeService>((ref) {
     maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
     ruleRepository: ref.watch(ruleRepositoryProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    undoService: ref.watch(undoServiceProvider),
   );
 });
 
@@ -102,6 +105,7 @@ final scheduledTransactionServiceProvider =
         ref.watch(notificationServiceProvider),
         unitOfWork: ref.watch(unitOfWorkProvider),
         ruleMatchingService: ref.watch(ruleMatchingServiceProvider),
+        accountRepository: ref.watch(accountRepositoryProvider),
         showAmountsInNotifications: () =>
             ref.read(privacySettingsProvider).notificationAmounts,
         remindersEnabled: () =>
@@ -127,5 +131,8 @@ final ruleMatchingServiceProvider = Provider<RuleMatchingService>((ref) {
     ref.watch(payeeRepositoryProvider),
     ref.watch(transactionRepositoryProvider),
     ref.watch(ruleRepositoryProvider),
+    ref.watch(categoryRepositoryProvider),
+    ref.watch(accountRepositoryProvider),
+    ref.watch(unitOfWorkProvider),
   );
 });

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
@@ -14,6 +15,14 @@ import 'package:ledger_zero/domain/services/category_service.dart';
 
 import '../../helpers/test_database.dart';
 import 'ledger_test_helpers.dart';
+
+/// Something on the undo stack.
+class _NoopAction implements ReversibleAction {
+  @override
+  Future<void> undo() async {}
+  @override
+  Future<void> redo() async {}
+}
 
 void main() {
   late TestDatabase t;
@@ -371,5 +380,20 @@ void main() {
       expect(await t.categories.getCategoryGroupById('empty'), isNull);
       await expectNoForeignKeyViolations(t);
     });
+  });
+
+  test('(L13) deleting clears the undo stack', () async {
+    final undo = UndoService()..addAction(_NoopAction());
+    final withUndo = CategoryService(
+      categoryRepository: t.categories,
+      maintenance: t.maintenance,
+      ruleRepository: t.rules,
+      unitOfWork: t.unitOfWork,
+      undoService: undo,
+    );
+    expect(undo.canUndo, isTrue);
+    await withUndo.deleteCategory(groceries, reassignTo: null);
+    expect(undo.canUndo, isFalse);
+    expect(undo.canRedo, isFalse);
   });
 }

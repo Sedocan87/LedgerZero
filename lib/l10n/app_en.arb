@@ -3612,5 +3612,61 @@
   "budgetAmountNegative": "A budgeted amount cannot be negative.",
   "@budgetAmountNegative": {
     "description": "Shown when the budget calculator result is below zero"
+  },
+  "txApproved": "Approved",
+  "@txApproved": {
+      "description": "Switch in the transaction form (edit mode): whether the row is approved (off = needs review)."
+  },
+  "clearedInAccount": "Cleared in {account}",
+  "@clearedInAccount": {
+      "description": "Cleared switch of one transfer leg, labelled with its account name.",
+      "placeholders": {
+          "account": {
+              "type": "String"
+          }
+      }
+  },
+  "txTransferCurrencyMismatch": "Both accounts of a transfer must use the same currency.",
+  "@txTransferCurrencyMismatch": {
+      "description": "Validation message when a transfer targets an account with another currency."
+  },
+  "netWorthPerCurrency": "{currency} accounts",
+  "@netWorthPerCurrency": {
+      "description": "Net worth line per currency when accounts use several currencies; currency = ISO code.",
+      "placeholders": {
+          "currency": {
+              "type": "String"
+          }
+      }
+  },
+  "scheduledAccountClosed": "Account closed: nothing is booked",
+  "@scheduledAccountClosed": {
+      "description": "Marker on a scheduled transaction whose account is closed."
+  },
+  "closeAccountSchedulesWarning": "{count, plural, =1{1 scheduled transaction uses this account. While the account is closed, nothing is booked for it.} other{{count} scheduled transactions use this account. While the account is closed, nothing is booked for them.}}",
+  "@closeAccountSchedulesWarning": {
+      "description": "Confirmation before closing an account that scheduled transactions book into; count = active schedules.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "scheduledEndBeforeNext": "The end date must not be before the next date.",
+  "@scheduledEndBeforeNext": {
+      "description": "Validation message of the scheduled transaction form."
+  },
+  "rulesImportDroppedActions": "{count, plural, =1{1 action pointed at a category, payee or account that does not exist here and was dropped.} other{{count} actions pointed at categories, payees or accounts that do not exist here and were dropped.}}",
+  "@rulesImportDroppedActions": {
+      "description": "Snackbar after a rule import when actions with unknown target ids were dropped.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "ruleAmountValueLabel": "Amount (negative = outflow)",
+  "@ruleAmountValueLabel": {
+      "description": "Label of the value field of an amount condition in the rule editor; the comparison uses the signed amount."
   }
 }

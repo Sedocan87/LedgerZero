@@ -4269,4 +4269,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get budgetAmountNegative => 'A budgeted amount cannot be negative.';
+
+  @override
+  String get txApproved => 'Approved';
+
+  @override
+  String clearedInAccount(String account) {
+    return 'Cleared in $account';
+  }
+
+  @override
+  String get txTransferCurrencyMismatch =>
+      'Both accounts of a transfer must use the same currency.';
+
+  @override
+  String netWorthPerCurrency(String currency) {
+    return '$currency accounts';
+  }
+
+  @override
+  String get scheduledAccountClosed => 'Account closed: nothing is booked';
+
+  @override
+  String closeAccountSchedulesWarning(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count scheduled transactions use this account. While the account is closed, nothing is booked for them.',
+      one:
+          '1 scheduled transaction uses this account. While the account is closed, nothing is booked for it.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scheduledEndBeforeNext =>
+      'The end date must not be before the next date.';
+
+  @override
+  String rulesImportDroppedActions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count actions pointed at categories, payees or accounts that do not exist here and were dropped.',
+      one:
+          '1 action pointed at a category, payee or account that does not exist here and was dropped.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ruleAmountValueLabel => 'Amount (negative = outflow)';
 }

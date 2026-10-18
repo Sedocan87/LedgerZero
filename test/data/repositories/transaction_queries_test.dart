@@ -105,4 +105,64 @@ void main() {
       expect(range.map((r) => r.id), ['byPayee']);
     });
   });
+
+  group('search finds splits through their lines (L8)', () {
+    setUp(() async {
+      await t.addTransaction(accountId: account, amount: -3000, id: 'split');
+      await t.addTransaction(
+        accountId: account,
+        amount: -2000,
+        id: 'line1',
+        parentTransactionId: 'split',
+        categoryId: await t.categoryId('Groceries'),
+      );
+      await t.addTransaction(
+        accountId: account,
+        amount: -1000,
+        id: 'line2',
+        parentTransactionId: 'split',
+      );
+      await t.db.customStatement(
+        "UPDATE transactions SET memo = 'bananas' WHERE id = 'line2'",
+      );
+      await t.addTransaction(
+        accountId: account,
+        amount: -700,
+        id: 'gone-line',
+        parentTransactionId: 'split',
+        isDeleted: true,
+      );
+      await t.db.customStatement(
+        "UPDATE transactions SET memo = 'deleted apples' WHERE id = 'gone-line'",
+      );
+    });
+
+    Future<Set<String>> listSearch(String? text, {int? amount}) async {
+      final rows = await t.transactions.getTransactions(
+        filter: TransactionFilter(
+          searchText: text,
+          searchAmount: amount,
+          excludeSplitChildren: true,
+        ),
+      );
+      return rows.map((r) => r.id).toSet();
+    }
+
+    test('a line memo, category or amount matches the parent', () async {
+      expect(await listSearch('bananas'), {'split'});
+      expect(await listSearch('grocer'), {'split'});
+      expect(await listSearch('20.00', amount: 2000), {'split'});
+    });
+
+    test('a deleted line does not match', () async {
+      expect(await listSearch('apples'), isEmpty);
+    });
+
+    test('lines themselves stay hidden from the list', () async {
+      final rows = await t.transactions.getTransactions(
+        filter: const TransactionFilter(excludeSplitChildren: true),
+      );
+      expect(rows.map((r) => r.id), ['split']);
+    });
+  });
 }

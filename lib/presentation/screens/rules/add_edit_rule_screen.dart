@@ -419,7 +419,8 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                     signed: true,
                   ),
                   decoration: InputDecoration(
-                    labelText: l10n.ruleValueLabel,
+                    // Compared with the signed amount: -12.50 is an outflow.
+                    labelText: l10n.ruleAmountValueLabel,
                     errorText: valueError,
                   ),
                 )

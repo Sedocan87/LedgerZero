@@ -2,6 +2,7 @@ import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/services/transaction_service_types.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
@@ -41,9 +42,20 @@ typedef TransactionSavedHook =
 ///   instead of To Be Budgeted. Any other transfer has no category.
 /// * Deleting any row of a transfer or split deletes the whole group;
 ///   undo restores the whole group.
+/// * Categories exist only in the budget: a row in an off-budget account
+///   is stored without a category (quick-add and card capture may pass
+///   one), except for the cross-budget transfer rule above.
+/// * A transfer between accounts of different currencies is rejected
+///   ([TransactionValidationError.currencyMismatch]).
+/// * Only rows whose content actually changed are written (and recorded
+///   for undo): editing the memo of a split leaves its children's
+///   `updatedAt` alone, so a concurrent edit on the partner's phone is not
+///   overwritten by last-writer-wins sync.
 /// * Changing or deleting a reconciled row requires
 ///   `allowReconciledChange: true` (the UI asks the user first), otherwise
-///   [ReconciledTransactionException] is thrown.
+///   [ReconciledTransactionException] is thrown; a reconciled row that the
+///   edit does not touch (e.g. the other transfer leg when only this leg's
+///   cleared flag changes) needs no confirmation.
 /// * Every write runs in one [UnitOfWork] and records one undo action.
 class TransactionService {
   TransactionService({
@@ -185,26 +197,24 @@ class TransactionService {
       existing?.accountId,
       existing?.transferAccountId,
     ]);
+    final account = await _accountRepository.getAccountById(input.accountId);
+    if (input.isTransfer) {
+      await _ensureSameCurrency(account, input.transferAccountId!);
+    }
     final before = <String, Transaction?>{
       ?existing?.id: existing,
       ?counterpart?.id: counterpart,
       for (final c in children) c.id: c,
     };
-    if (!allowReconciledChange) {
-      final reconciled = before.values
-          .whereType<Transaction>()
-          .where((t) => t.cleared == TransactionClearStatus.reconciled)
-          .map((t) => t.id)
-          .toList();
-      if (reconciled.isNotEmpty) {
-        throw ReconciledTransactionException(reconciled);
-      }
-    }
 
     final payeeId = input.isTransfer ? null : await _resolvePayee(input);
     final primaryId = existing?.id ?? _uuid.v4();
     final written = <Transaction>[];
     final transferCategory = await _transferCategory(input);
+    // Categories only exist in the budget (an off-budget account's rows
+    // never count as category activity, see docs/BUDGETING_RULES.md).
+    final onBudget = account?.onBudget ?? true;
+    final categoryId = onBudget ? input.categoryId : null;
 
     // Transfer counterpart.
     String? counterpartId;
@@ -219,9 +229,11 @@ class TransactionService {
           amount: -input.amount,
           memo: input.memo,
           // The cleared state belongs to the counterpart's own account.
-          cleared: sameAccount
-              ? counterpart!.cleared
-              : TransactionClearStatus.uncleared,
+          cleared:
+              input.counterpartCleared ??
+              (sameAccount
+                  ? counterpart!.cleared
+                  : TransactionClearStatus.uncleared),
           approved: input.approved,
           categoryId: transferCategory.counterpart,
           transferAccountId: input.accountId,
@@ -242,7 +254,7 @@ class TransactionService {
       payeeId: payeeId,
       categoryId: input.isTransfer
           ? transferCategory.primary
-          : (input.isSplit ? null : input.categoryId),
+          : (input.isSplit ? null : categoryId),
       memo: input.memo,
       cleared: input.cleared,
       approved: input.approved,
@@ -267,7 +279,7 @@ class TransactionService {
           date: date,
           amount: line.amount,
           payeeId: payeeId,
-          categoryId: line.categoryId,
+          categoryId: onBudget ? line.categoryId : null,
           memo: line.memo,
           cleared: input.cleared,
           approved: input.approved,
@@ -283,21 +295,67 @@ class TransactionService {
       }
     }
 
-    await _transactionRepository.upsertTransactions(written);
+    // Only rows whose content changed are written and recorded for undo;
+    // untouched rows keep their `updatedAt` (sync is last-writer-wins).
+    final changed = [
+      for (final t in written)
+        if (!_sameContent(before[t.id], t)) t,
+    ];
+    if (!allowReconciledChange) {
+      final reconciled = [
+        for (final t in changed)
+          if (before[t.id]?.cleared == TransactionClearStatus.reconciled) t.id,
+      ];
+      if (reconciled.isNotEmpty) {
+        throw ReconciledTransactionException(reconciled);
+      }
+    }
+    await _transactionRepository.upsertTransactions(changed);
 
-    // Learning: the payee remembers the last category used with it. Rules
-    // are never created implicitly and history is never rewritten.
-    if (payeeId != null && primary.categoryId != null) {
+    // Learning: on a new transaction the payee remembers the category used
+    // with it. Edits do not relearn (a one-off correction must not replace
+    // the payee's default), rules are never created implicitly and history
+    // is never rewritten.
+    if (existing == null && payeeId != null && primary.categoryId != null) {
       await _learnPayeeCategory(payeeId, primary.categoryId!);
     }
 
     final action = TransactionChangeSetAction(
       _transactionRepository,
       _unitOfWork,
-      before: before,
-      after: {for (final t in written) t.id: t},
+      before: {for (final t in changed) t.id: before[t.id]},
+      after: {for (final t in changed) t.id: t},
     );
     return TransactionSaveResult(primaryId, action);
+  }
+
+  /// Whether [stored] and [next] hold the same content (timestamps aside).
+  static bool _sameContent(Transaction? stored, Transaction next) =>
+      stored != null &&
+      stored.accountId == next.accountId &&
+      stored.date == next.date &&
+      stored.amount == next.amount &&
+      stored.payeeId == next.payeeId &&
+      stored.categoryId == next.categoryId &&
+      stored.memo == next.memo &&
+      stored.cleared == next.cleared &&
+      stored.approved == next.approved &&
+      stored.isDeleted == next.isDeleted &&
+      stored.transferAccountId == next.transferAccountId &&
+      stored.transferTransactionId == next.transferTransactionId &&
+      stored.parentTransactionId == next.parentTransactionId;
+
+  /// Both accounts of a transfer must use the same currency: the app has
+  /// no exchange rates, so the legs would carry the same number in two
+  /// currencies.
+  Future<void> _ensureSameCurrency(Account? from, String toId) async {
+    final to = await _accountRepository.getAccountById(toId);
+    if (from != null && to != null && from.currency != to.currency) {
+      throw ValidationException(
+        'Transfer between ${from.currency} and ${to.currency} accounts',
+        TransactionValidationError.currencyMismatch,
+      );
+    }
   }
 
   /// Where the category of a transfer [input] goes: on the leg in the
@@ -538,10 +596,18 @@ class TransactionService {
         if (t == null) {
           continue;
         }
+        // A split changes as a whole: from a line (e.g. in a category's
+        // activity list) the change reaches the parent and its siblings.
+        final root = !includeSplitChildren || t.parentTransactionId == null
+            ? t
+            : (await _transactionRepository.getTransactionById(
+                    t.parentTransactionId!,
+                  ) ??
+                  t);
         final targets = [
-          t,
+          root,
           if (includeSplitChildren)
-            ...await _transactionRepository.getSplitTransactions(t.id),
+            ...await _transactionRepository.getSplitTransactions(root.id),
         ];
         for (final row in targets) {
           final updated = change(row);
@@ -578,8 +644,9 @@ class TransactionService {
     return action;
   }
 
-  /// Sets the cleared status of one row (a split's children follow their
-  /// parent). Leaving `reconciled` needs [allowReconciledChange].
+  /// Sets the cleared status of one row (a split changes as a whole, also
+  /// when one of its lines is given). Leaving `reconciled` needs
+  /// [allowReconciledChange].
   Future<TransactionChangeSetAction?> updateClearingStatus(
     String id,
     TransactionClearStatus status, {
@@ -597,24 +664,28 @@ class TransactionService {
   /// Rejects a transaction (marks as unapproved).
   Future<void> rejectTransaction(String id) => bulkReject([id]);
 
-  /// Approves multiple transactions.
+  /// Approves multiple transactions (a split as a whole).
   Future<TransactionChangeSetAction?> bulkApprove(List<String> ids) =>
       _updateRows(
         ids,
         (t) => t.copyWith(approved: true),
         allowReconciledChange: true,
+        includeSplitChildren: true,
       );
 
-  /// Rejects (unapproves) multiple transactions.
+  /// Rejects (unapproves) multiple transactions (a split as a whole).
   Future<TransactionChangeSetAction?> bulkReject(List<String> ids) =>
       _updateRows(
         ids,
         (t) => t.copyWith(approved: false),
         allowReconciledChange: true,
+        includeSplitChildren: true,
       );
 
-  /// Sets the category of the given rows. Transfer legs and split parents
-  /// are skipped (they never carry a category).
+  /// Sets the category of the given rows. Split parents are skipped (their
+  /// lines carry the categories), and so are transfer legs unless the
+  /// transfer crosses the budget boundary and the row is its on-budget leg
+  /// (the leg that may carry a category, see [_transferCategory]).
   Future<TransactionChangeSetAction?> bulkCategorize(
     List<String> ids,
     String categoryId,
@@ -622,8 +693,17 @@ class TransactionService {
     final eligible = <String>[];
     for (final id in ids) {
       final t = await _transactionRepository.getTransactionById(id);
-      if (t == null || t.transferAccountId != null) {
+      if (t == null) {
         continue;
+      }
+      if (t.transferAccountId != null) {
+        final from = await _accountRepository.getAccountById(t.accountId);
+        final to = await _accountRepository.getAccountById(
+          t.transferAccountId!,
+        );
+        if (from == null || to == null || !from.onBudget || to.onBudget) {
+          continue;
+        }
       }
       if (await _transactionRepository.isSplitParent(id)) {
         continue;

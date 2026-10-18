@@ -8,12 +8,14 @@ import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
+import 'package:ledger_zero/domain/services/transaction_service_types.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/picker_field.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/pickers.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/transaction_dialogs.dart';
 import 'package:ledger_zero/presentation/widgets/recurrence/recurrence_selector.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
@@ -153,6 +155,16 @@ class _AddEditScheduledTransactionScreenState
 
       if (mounted) {
         context.pop();
+      }
+    } on ValidationException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              transactionValidationMessage(AppLocalizations.of(context)!, e),
+            ),
+          ),
+        );
       }
     } catch (e, stack) {
       Logger.error('Failed to save scheduled transaction', e, stack);

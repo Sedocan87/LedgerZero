@@ -4,6 +4,7 @@ import 'package:ledger_zero/domain/repositories/reference_maintenance_repository
 import 'package:ledger_zero/domain/repositories/rule_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/domain/services/rule_reference_cleanup.dart';
+import 'package:ledger_zero/domain/services/undo_service.dart';
 
 /// Account lifecycle operations that touch other tables.
 class AccountService {
@@ -12,12 +13,19 @@ class AccountService {
     required this._maintenance,
     required this._ruleRepository,
     required this._unitOfWork,
-  });
+    UndoService? undoService,
+  }) : // A named parameter cannot be a private initializing formal.
+       // ignore: prefer_initializing_formals
+       _undoService = undoService;
 
   final AccountRepository _accountRepository;
   final ReferenceMaintenanceRepository _maintenance;
   final RuleRepository _ruleRepository;
   final UnitOfWork _unitOfWork;
+
+  /// Cleared after a delete: recorded transaction snapshots may reference
+  /// the deleted entity, and undoing them would fail on a foreign key.
+  final UndoService? _undoService;
 
   /// Closes (or reopens) an account. Closing keeps all history; it is the
   /// recommended alternative to deleting.
@@ -43,19 +51,21 @@ class AccountService {
   /// Returns the number of transfer legs in other accounts that were
   /// converted into normal transactions.
   Future<int> deleteAccount(String id) {
-    return _unitOfWork.run(() async {
-      final converted = await _maintenance.detachTransfersInto(id);
-      await _maintenance.deleteTransactionsOfAccount(id);
-      await _maintenance.deleteScheduledTransactionsOfAccount(id);
-      await _maintenance.clearPayeeDefaultAccount(id);
-      await replaceRuleActionReferences(
-        _ruleRepository,
-        type: RuleActionType.setAccount,
-        fromId: id,
-        toId: null,
-      );
-      await _accountRepository.deleteAccount(id);
-      return converted;
-    });
+    return _unitOfWork
+        .run(() async {
+          final converted = await _maintenance.detachTransfersInto(id);
+          await _maintenance.deleteTransactionsOfAccount(id);
+          await _maintenance.deleteScheduledTransactionsOfAccount(id);
+          await _maintenance.clearPayeeDefaultAccount(id);
+          await replaceRuleActionReferences(
+            _ruleRepository,
+            type: RuleActionType.setAccount,
+            fromId: id,
+            toId: null,
+          );
+          await _accountRepository.deleteAccount(id);
+          return converted;
+        })
+        .whenComplete(() => _undoService?.clear());
   }
 }

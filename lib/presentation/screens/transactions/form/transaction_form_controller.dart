@@ -50,6 +50,14 @@ class TransactionFormController extends ChangeNotifier {
   String? categoryId;
   TransactionClearStatus cleared = TransactionClearStatus.uncleared;
 
+  /// Cleared status of the transfer's other leg (the "To" account).
+  TransactionClearStatus counterpartCleared = TransactionClearStatus.uncleared;
+
+  /// Whether the row is approved. Loaded from the stored row, so an edit
+  /// never approves a captured or scheduled row by accident; new rows are
+  /// approved.
+  bool approved = true;
+
   bool isSplit = false;
   final List<SplitItem> splits = [];
 
@@ -61,6 +69,9 @@ class TransactionFormController extends ChangeNotifier {
 
   /// Cleared status the edited row had when it was loaded.
   TransactionClearStatus? loadedCleared;
+
+  /// Cleared status the counterpart leg had when it was loaded.
+  TransactionClearStatus? loadedCounterpartCleared;
 
   bool get isTransfer => formType == TransactionFormType.transfer;
   bool get isEditing => editingId != null;
@@ -102,13 +113,25 @@ class TransactionFormController extends ChangeNotifier {
   }
 
   void setCleared(bool value) {
-    cleared = !value
-        ? TransactionClearStatus.uncleared
-        : (loadedCleared == TransactionClearStatus.reconciled
-              ? TransactionClearStatus.reconciled
-              : TransactionClearStatus.cleared);
+    cleared = _toggled(value, loadedCleared);
     notifyListeners();
   }
+
+  /// The switch of the transfer's other leg.
+  void setCounterpartCleared(bool value) {
+    counterpartCleared = _toggled(value, loadedCounterpartCleared);
+    notifyListeners();
+  }
+
+  /// Switching on returns to `reconciled` when the row was reconciled.
+  static TransactionClearStatus _toggled(
+    bool value,
+    TransactionClearStatus? loaded,
+  ) => !value
+      ? TransactionClearStatus.uncleared
+      : (loaded == TransactionClearStatus.reconciled
+            ? TransactionClearStatus.reconciled
+            : TransactionClearStatus.cleared);
 
   /// The user picked [payee] from the suggestions.
   void selectPayee(Payee payee) {
@@ -173,15 +196,20 @@ class TransactionFormController extends ChangeNotifier {
   );
 
   /// Fills the form from a stored transaction (the outflow leg for a
-  /// transfer) and its split [children].
+  /// transfer, with its [counterpart]) and its split [children].
   void load(
     Transaction t, {
     required List<Transaction> children,
     required String? payeeName,
     required AppFormatter fmt,
+    Transaction? counterpart,
   }) {
     editingId = t.id;
     loadedCleared = t.cleared;
+    loadedCounterpartCleared = counterpart?.cleared;
+    counterpartCleared =
+        counterpart?.cleared ?? TransactionClearStatus.uncleared;
+    approved = t.approved;
     formType = t.transferAccountId != null
         ? TransactionFormType.transfer
         : (t.amount > 0
@@ -228,6 +256,8 @@ class TransactionFormController extends ChangeNotifier {
     categoryId = null;
     transferAccountId = null;
     cleared = TransactionClearStatus.uncleared;
+    counterpartCleared = TransactionClearStatus.uncleared;
+    approved = true;
     isSplit = false;
     isRecurring = false;
     _replaceSplits(const []);
@@ -306,7 +336,9 @@ class TransactionFormController extends ChangeNotifier {
         categoryId: isSplit || !categoryAllowed ? null : categoryId,
         memo: memoController.text.isEmpty ? null : memoController.text,
         cleared: cleared,
+        approved: approved,
         transferAccountId: isTransfer ? transferAccountId : null,
+        counterpartCleared: isTransfer ? counterpartCleared : null,
         splits: lines,
       ),
       error: null,

@@ -8,6 +8,7 @@ import 'package:ledger_zero/domain/repositories/reference_maintenance_repository
 import 'package:ledger_zero/domain/repositories/rule_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/domain/services/rule_reference_cleanup.dart';
+import 'package:ledger_zero/domain/services/undo_service.dart';
 
 /// Thrown when a category group still holds categories and no target group
 /// was given.
@@ -27,12 +28,19 @@ class CategoryService {
     required this._maintenance,
     required this._ruleRepository,
     required this._unitOfWork,
-  });
+    UndoService? undoService,
+  }) : // A named parameter cannot be a private initializing formal.
+       // ignore: prefer_initializing_formals
+       _undoService = undoService;
 
   final CategoryRepository _categoryRepository;
   final ReferenceMaintenanceRepository _maintenance;
   final RuleRepository _ruleRepository;
   final UnitOfWork _unitOfWork;
+
+  /// Cleared after a delete: recorded transaction snapshots may reference
+  /// the deleted entity, and undoing them would fail on a foreign key.
+  final UndoService? _undoService;
 
   /// Number of (non-deleted) transactions using [categoryId].
   Future<int> countTransactions(String categoryId) =>
@@ -54,17 +62,19 @@ class CategoryService {
     if (reassignTo == id) {
       throw ArgumentError.value(reassignTo, 'reassignTo', 'same category');
     }
-    return _unitOfWork.run(() async {
-      await _maintenance.moveBudgets(id, reassignTo);
-      await _maintenance.reassignCategoryReferences(id, reassignTo);
-      await replaceRuleActionReferences(
-        _ruleRepository,
-        type: RuleActionType.setCategory,
-        fromId: id,
-        toId: reassignTo,
-      );
-      await _categoryRepository.deleteCategory(id);
-    });
+    return _unitOfWork
+        .run(() async {
+          await _maintenance.moveBudgets(id, reassignTo);
+          await _maintenance.reassignCategoryReferences(id, reassignTo);
+          await replaceRuleActionReferences(
+            _ruleRepository,
+            type: RuleActionType.setCategory,
+            fromId: id,
+            toId: reassignTo,
+          );
+          await _categoryRepository.deleteCategory(id);
+        })
+        .whenComplete(() => _undoService?.clear());
   }
 
   /// Number of categories in [groupId].

@@ -4302,4 +4302,58 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get budgetAmountNegative =>
       'Ein budgetierter Betrag kann nicht negativ sein.';
+
+  @override
+  String get txApproved => 'Bestätigt';
+
+  @override
+  String clearedInAccount(String account) {
+    return 'Gebucht in $account';
+  }
+
+  @override
+  String get txTransferCurrencyMismatch =>
+      'Beide Konten einer Umbuchung müssen dieselbe Währung haben.';
+
+  @override
+  String netWorthPerCurrency(String currency) {
+    return 'Konten in $currency';
+  }
+
+  @override
+  String get scheduledAccountClosed =>
+      'Konto geschlossen: Es wird nichts gebucht';
+
+  @override
+  String closeAccountSchedulesWarning(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count geplante Transaktionen nutzen dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.',
+      one:
+          '1 geplante Transaktion nutzt dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scheduledEndBeforeNext =>
+      'Das Enddatum darf nicht vor dem nächsten Datum liegen.';
+
+  @override
+  String rulesImportDroppedActions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Aktionen verwiesen auf Kategorien, Empfänger oder Konten, die es hier nicht gibt, und wurden entfernt.',
+      one:
+          '1 Aktion verwies auf eine Kategorie, einen Empfänger oder ein Konto, das es hier nicht gibt, und wurde entfernt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ruleAmountValueLabel => 'Betrag (negativ = Ausgabe)';
 }

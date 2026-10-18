@@ -128,9 +128,11 @@ class TransactionFormBody extends ConsumerWidget {
                 label: l10n.toAccount,
                 text: accounts[c.transferAccountId]?.name ?? '',
                 onTap: () async {
+                  // No exchange rates: only accounts in the same currency.
                   final picked = await showAccountPicker(
                     context,
                     excludeId: c.accountId,
+                    currency: accounts[c.accountId]?.currency,
                   );
                   if (picked != null) {
                     c.transferAccountId = picked.id;
@@ -270,11 +272,45 @@ class TransactionFormBody extends ConsumerWidget {
               onChanged: (_) => c.changed(),
             ),
             const SizedBox(height: 16),
-            SwitchListTile(
-              title: Text(l10n.cleared),
-              value: c.cleared != TransactionClearStatus.uncleared,
-              onChanged: c.setCleared,
-            ),
+            if (c.isTransfer) ...[
+              // Each leg clears in its own account.
+              SwitchListTile(
+                key: const Key('transaction.cleared'),
+                title: Text(
+                  l10n.clearedInAccount(
+                    accounts[c.accountId]?.name ?? l10n.fromAccount,
+                  ),
+                ),
+                value: c.cleared != TransactionClearStatus.uncleared,
+                onChanged: c.setCleared,
+              ),
+              SwitchListTile(
+                key: const Key('transaction.counterpartCleared'),
+                title: Text(
+                  l10n.clearedInAccount(
+                    accounts[c.transferAccountId]?.name ?? l10n.toAccount,
+                  ),
+                ),
+                value: c.counterpartCleared != TransactionClearStatus.uncleared,
+                onChanged: c.setCounterpartCleared,
+              ),
+            ] else
+              SwitchListTile(
+                key: const Key('transaction.cleared'),
+                title: Text(l10n.cleared),
+                value: c.cleared != TransactionClearStatus.uncleared,
+                onChanged: c.setCleared,
+              ),
+            if (c.isEditing)
+              SwitchListTile(
+                key: const Key('transaction.approved'),
+                title: Text(l10n.txApproved),
+                value: c.approved,
+                onChanged: (value) {
+                  c.approved = value;
+                  c.changed();
+                },
+              ),
             if (!c.isEditing && !c.isSplit && !c.isTransfer)
               _RecurrenceSection(controller: c),
             const SizedBox(height: 24),

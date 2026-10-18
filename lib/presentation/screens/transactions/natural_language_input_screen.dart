@@ -12,6 +12,7 @@ import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_draft.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
@@ -178,10 +179,15 @@ class _NaturalLanguageInputScreenState
 
     accountsAsync.whenData((accounts) {
       if (!_accountInitialized && accounts.isNotEmpty) {
-        // Default to first checking account or just first account
+        // The Settings default account, else the first checking account,
+        // else the first account.
+        final defaultId = ref.read(settingsProvider).defaultAccountId;
         final defaultAccount = accounts.firstWhere(
-          (a) => a.type == AccountType.checking,
-          orElse: () => accounts.first,
+          (a) => a.id == defaultId && !a.isClosed,
+          orElse: () => accounts.firstWhere(
+            (a) => a.type == AccountType.checking,
+            orElse: () => accounts.first,
+          ),
         );
 
         // Use simple setState via a post-frame callback to avoid build errors

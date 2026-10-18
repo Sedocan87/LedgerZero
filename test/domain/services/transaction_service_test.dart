@@ -778,4 +778,306 @@ void main() {
     expect(leg.categoryId, isNull);
     expect(leg.accountId, checking);
   });
+
+  group('audit fixes: untouched rows, currencies, budget boundary', () {
+    Future<TransactionSaveResult> transfer({
+      String? id,
+      TransactionClearStatus cleared = TransactionClearStatus.uncleared,
+      TransactionClearStatus? counterpartCleared,
+      String memo = 'move',
+    }) => service.save(
+      TransactionInput(
+        id: id,
+        accountId: checking,
+        date: day,
+        amount: -5000,
+        memo: memo,
+        cleared: cleared,
+        counterpartCleared: counterpartCleared,
+        transferAccountId: savings,
+      ),
+    );
+
+    test(
+      '(S6) editing one leg leaves the untouched counterpart alone',
+      () async {
+        final created = await transfer();
+        final leg = await row(created.id);
+        final other = await row(leg.transferTransactionId!);
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+
+        // Only this leg's cleared flag changes.
+        final edit = await transfer(
+          id: created.id,
+          cleared: TransactionClearStatus.cleared,
+        );
+        final otherAfter = await row(other.id);
+        expect(otherAfter.updatedAt, other.updatedAt);
+        expect(otherAfter.cleared, TransactionClearStatus.uncleared);
+        expect((await row(created.id)).cleared, TransactionClearStatus.cleared);
+        // The undo action only covers what changed.
+        expect(edit.action.ids, {created.id});
+
+        // Nothing changed at all: nothing is written.
+        final stored = await row(created.id);
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        final again = await transfer(
+          id: created.id,
+          cleared: TransactionClearStatus.cleared,
+        );
+        expect(again.action.ids, isEmpty);
+        expect((await row(created.id)).updatedAt, stored.updatedAt);
+      },
+    );
+
+    test('(S6) a reconciled counterpart the edit does not touch needs no '
+        'confirmation', () async {
+      final created = await transfer();
+      final leg = await row(created.id);
+      await service.markAsReconciled([leg.transferTransactionId!]);
+      // Only this leg's cleared flag: fine without confirmation.
+      await transfer(id: created.id, cleared: TransactionClearStatus.cleared);
+      // The memo is shared by both legs: that touches the reconciled leg.
+      await expectLater(
+        transfer(
+          id: created.id,
+          cleared: TransactionClearStatus.cleared,
+          memo: 'x',
+        ),
+        throwsA(isA<ReconciledTransactionException>()),
+      );
+    });
+
+    test('(S6) editing the parent memo leaves split children alone', () async {
+      final groceries = await t.categoryId('Groceries');
+      final created = await service.save(
+        TransactionInput(
+          accountId: checking,
+          date: day,
+          amount: -100,
+          memo: 'shop',
+          splits: [
+            SplitLineInput(amount: -60, categoryId: groceries),
+            const SplitLineInput(amount: -40),
+          ],
+        ),
+      );
+      final children = await t.transactions.getSplitTransactions(created.id);
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      final edit = await service.save(
+        TransactionInput(
+          id: created.id,
+          accountId: checking,
+          date: day,
+          amount: -100,
+          memo: 'weekly shop',
+          splits: [
+            for (final c in children)
+              SplitLineInput(
+                id: c.id,
+                amount: c.amount,
+                categoryId: c.categoryId,
+              ),
+          ],
+        ),
+      );
+      expect(edit.action.ids, {created.id});
+      for (final c in children) {
+        expect((await row(c.id)).updatedAt, c.updatedAt);
+      }
+      await undo.undo();
+      expect((await row(created.id)).memo, 'shop');
+      expect(
+        await t.transactions.getSplitTransactions(created.id),
+        hasLength(2),
+      );
+    });
+
+    test(
+      '(L10) the counterpart cleared flag can be set from the edited leg',
+      () async {
+        final created = await transfer(
+          counterpartCleared: TransactionClearStatus.cleared,
+        );
+        final leg = await row(created.id);
+        expect(leg.cleared, TransactionClearStatus.uncleared);
+        expect(
+          (await row(leg.transferTransactionId!)).cleared,
+          TransactionClearStatus.cleared,
+        );
+        // Omitted: the counterpart keeps its own status.
+        await transfer(id: created.id, memo: 'changed');
+        expect(
+          (await row(leg.transferTransactionId!)).cleared,
+          TransactionClearStatus.cleared,
+        );
+      },
+    );
+
+    test('(L4) a transfer between currencies is rejected', () async {
+      final euro = (await t.addAccount(name: 'Euro', currency: 'EUR')).id;
+      await expectLater(
+        service.save(
+          TransactionInput(
+            accountId: checking,
+            date: day,
+            amount: -5000,
+            transferAccountId: euro,
+          ),
+        ),
+        throwsA(
+          isA<ValidationException>().having(
+            (e) => e.code,
+            'code',
+            TransactionValidationError.currencyMismatch,
+          ),
+        ),
+      );
+      expect(await t.transactions.getAllTransactions(), isEmpty);
+    });
+
+    test(
+      '(L12) an off-budget account stores no category and learns none',
+      () async {
+        final groceries = await t.categoryId('Groceries');
+        final dining = await t.categoryId('Dining Out');
+        final tracking = (await t.addAccount(
+          name: 'Depot',
+          onBudget: false,
+        )).id;
+        final created = await service.save(
+          TransactionInput(
+            accountId: tracking,
+            date: day,
+            amount: -100,
+            newPayeeName: 'Broker',
+            categoryId: groceries,
+          ),
+        );
+        expect((await row(created.id)).categoryId, isNull);
+        expect((await t.payees.getAllPayees()).single.autoCategoryId, isNull);
+
+        final split = await service.save(
+          TransactionInput(
+            accountId: tracking,
+            date: day,
+            amount: -100,
+            splits: [
+              SplitLineInput(amount: -60, categoryId: groceries),
+              SplitLineInput(amount: -40, categoryId: dining),
+            ],
+          ),
+        );
+        for (final c in await t.transactions.getSplitTransactions(split.id)) {
+          expect(c.categoryId, isNull);
+        }
+        // The cross-budget transfer rule still puts the category on the
+        // on-budget leg.
+        final out = await service.save(
+          TransactionInput(
+            accountId: checking,
+            date: day,
+            amount: -100,
+            categoryId: groceries,
+            transferAccountId: tracking,
+          ),
+        );
+        expect((await row(out.id)).categoryId, groceries);
+      },
+    );
+
+    test(
+      '(L9) clearing or approving a split line changes the whole split',
+      () async {
+        final created = await service.save(
+          TransactionInput(
+            accountId: checking,
+            date: day,
+            amount: -100,
+            approved: false,
+            splits: const [
+              SplitLineInput(amount: -60),
+              SplitLineInput(amount: -40),
+            ],
+          ),
+        );
+        final children = await t.transactions.getSplitTransactions(created.id);
+        await service.updateClearingStatus(
+          children.first.id,
+          TransactionClearStatus.cleared,
+        );
+        await service.approveTransaction(children.last.id);
+        for (final id in [created.id, children.first.id, children.last.id]) {
+          final r = await row(id);
+          expect(r.cleared, TransactionClearStatus.cleared, reason: id);
+          expect(r.approved, isTrue, reason: id);
+        }
+      },
+    );
+
+    test('(L11) the on-budget leg of a cross-budget transfer can be '
+        'categorised', () async {
+      final groceries = await t.categoryId('Groceries');
+      final tracking = (await t.addAccount(name: 'Depot', onBudget: false)).id;
+      final out = await service.save(
+        TransactionInput(
+          accountId: checking,
+          date: day,
+          amount: -100,
+          transferAccountId: tracking,
+        ),
+      );
+      final inside = await service.save(
+        TransactionInput(
+          accountId: checking,
+          date: day,
+          amount: -100,
+          transferAccountId: savings,
+        ),
+      );
+      final outLeg = await row(out.id);
+      await service.bulkCategorize([
+        out.id,
+        outLeg.transferTransactionId!,
+        inside.id,
+      ], groceries);
+      expect((await row(out.id)).categoryId, groceries);
+      expect((await row(outLeg.transferTransactionId!)).categoryId, isNull);
+      expect((await row(inside.id)).categoryId, isNull);
+    });
+
+    test(
+      'the payee default category is learnt on create, not on edit',
+      () async {
+        final groceries = await t.categoryId('Groceries');
+        final dining = await t.categoryId('Dining Out');
+        final created = await service.save(
+          TransactionInput(
+            accountId: checking,
+            date: day,
+            amount: -100,
+            newPayeeName: 'Market',
+            categoryId: groceries,
+          ),
+        );
+        final payee = (await t.payees.getAllPayees()).single;
+        expect(payee.autoCategoryId, groceries);
+        await service.save(
+          TransactionInput(
+            id: created.id,
+            accountId: checking,
+            date: day,
+            amount: -100,
+            payeeId: payee.id,
+            categoryId: dining,
+          ),
+        );
+        expect((await row(created.id)).categoryId, dining);
+        expect(
+          (await t.payees.getPayeeById(payee.id))!.autoCategoryId,
+          groceries,
+        );
+      },
+    );
+  });
 }

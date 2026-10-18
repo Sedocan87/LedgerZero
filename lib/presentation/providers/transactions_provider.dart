@@ -139,7 +139,8 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
     _subscription?.cancel();
 
     // Splits are listed once, by their parent (its lines show up when
-    // filtering by category).
+    // filtering by category); a search also finds a split through its
+    // lines' memo, category and amount.
     var currentFilter = state.filter.copyWith(excludeSplitChildren: true);
     final query = state.searchQuery.trim();
     if (query.isNotEmpty) {

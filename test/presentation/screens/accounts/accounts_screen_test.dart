@@ -105,4 +105,47 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('(L4) accounts in several currencies get one net worth line '
+      'per currency and no single total', (tester) async {
+    const usd = Account(
+      id: '1',
+      name: 'Checking',
+      type: AccountType.checking,
+      balance: 100000,
+      currency: 'USD',
+    );
+    const eur = Account(
+      id: '2',
+      name: 'Euro',
+      type: AccountType.savings,
+      balance: 5000,
+      currency: 'EUR',
+    );
+    final fakeRepo = FakeAccountRepository(Stream.value([usd, eur]));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(fakeRepo),
+          appFormatterProvider.overrideWithValue(
+            AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AccountsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Net Worth'), findsOneWidget);
+    expect(find.byKey(const Key('netWorth.currency.USD')), findsOneWidget);
+    expect(find.byKey(const Key('netWorth.currency.EUR')), findsOneWidget);
+    expect(find.text('€50.00'), findsNWidgets(2)); // card + banner line
+    // Never one figure across currencies.
+    expect(find.text('\$1,050.00'), findsNothing);
+    expect(find.text('€1,050.00'), findsNothing);
+  });
 }

@@ -7170,6 +7170,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A budgeted amount cannot be negative.'**
   String get budgetAmountNegative;
+
+  /// Switch in the transaction form (edit mode): whether the row is approved (off = needs review).
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get txApproved;
+
+  /// Cleared switch of one transfer leg, labelled with its account name.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared in {account}'**
+  String clearedInAccount(String account);
+
+  /// Validation message when a transfer targets an account with another currency.
+  ///
+  /// In en, this message translates to:
+  /// **'Both accounts of a transfer must use the same currency.'**
+  String get txTransferCurrencyMismatch;
+
+  /// Net worth line per currency when accounts use several currencies; currency = ISO code.
+  ///
+  /// In en, this message translates to:
+  /// **'{currency} accounts'**
+  String netWorthPerCurrency(String currency);
+
+  /// Marker on a scheduled transaction whose account is closed.
+  ///
+  /// In en, this message translates to:
+  /// **'Account closed: nothing is booked'**
+  String get scheduledAccountClosed;
+
+  /// Confirmation before closing an account that scheduled transactions book into; count = active schedules.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 scheduled transaction uses this account. While the account is closed, nothing is booked for it.} other{{count} scheduled transactions use this account. While the account is closed, nothing is booked for them.}}'**
+  String closeAccountSchedulesWarning(int count);
+
+  /// Validation message of the scheduled transaction form.
+  ///
+  /// In en, this message translates to:
+  /// **'The end date must not be before the next date.'**
+  String get scheduledEndBeforeNext;
+
+  /// Snackbar after a rule import when actions with unknown target ids were dropped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 action pointed at a category, payee or account that does not exist here and was dropped.} other{{count} actions pointed at categories, payees or accounts that do not exist here and were dropped.}}'**
+  String rulesImportDroppedActions(int count);
+
+  /// Label of the value field of an amount condition in the rule editor; the comparison uses the signed amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (negative = outflow)'**
+  String get ruleAmountValueLabel;
 }
 
 class _AppLocalizationsDelegate
