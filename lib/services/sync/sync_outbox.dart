@@ -108,6 +108,16 @@ class SyncOutbox {
     }
   }
 
+  /// Deletes every local sync file: the outbox and the Wi-Fi sync folder
+  /// (`<documents>/sync`). Used by the factory reset.
+  static Future<void> deleteAllSyncFiles([Directory? documents]) async {
+    final docs = documents ?? await getApplicationDocumentsDirectory();
+    final dir = Directory(p.join(docs.path, 'sync'));
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+  }
+
   /// Removes the plaintext delta queue of sync format v1 (`deltas/`).
   static Future<void> removeLegacyQueue([Directory? documents]) async {
     try {
