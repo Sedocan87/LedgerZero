@@ -228,7 +228,20 @@ class RestoreService {
   }
 
   /// Merges transactions in [start]..[end] from a backup into the current
-  /// database (missing accounts, categories, groups and payees are copied).
+  /// database, as new local edits.
+  ///
+  /// * Row families travel together: a split parent with all its children,
+  ///   both legs of a transfer (parents are inserted first). A transfer leg
+  ///   whose other account or other leg is not available becomes a normal
+  ///   uncategorised row.
+  /// * Missing accounts (transfer accounts included), categories, groups
+  ///   and payees are copied from the backup.
+  /// * Rows of the partner's personal accounts are left out, and nothing
+  ///   is copied into them.
+  /// * Every inserted row gets `updated_at` = now, so sync treats it as a
+  ///   fresh edit (an older timestamp would lose against the partner's
+  ///   newer version or tombstone and leave the phones diverged).
+  /// Rows whose id already exists are left untouched.
   Future<void> selectiveRestore(
     File backupFile,
     DateTime start,
@@ -247,24 +260,24 @@ class RestoreService {
       final tempDb = AppDatabase(NativeDatabase(plain));
       final db = _currentDb();
       try {
-        final transactionsToImport = await (tempDb.select(
+        final inRange = await (tempDb.select(
           tempDb.transactions,
         )..where((t) => t.date.isBetweenValues(start, end))).get();
-
+        final family = await _collectFamilies(tempDb, inRange);
         Logger.info(
-          'Found ${transactionsToImport.length} transactions to merge',
+          'Found ${inRange.length} transactions to merge '
+          '(${family.length} with their families)',
         );
-
+        final merge = _SelectiveMerge(
+          db,
+          tempDb,
+          localMemberId: await db.syncDao.getValue(AppDatabase.memberIdKey),
+          now: DateTime.now().toUtc(),
+        );
         await db.transaction(() async {
-          for (final tx in transactionsToImport) {
-            final exists = await (db.select(
-              db.transactions,
-            )..where((t) => t.id.equals(tx.id))).getSingleOrNull();
-            if (exists != null) {
-              continue;
-            }
-            await _ensureDependenciesExist(db, tempDb, tx);
-            await db.into(db.transactions).insert(tx);
+          await db.customStatement('PRAGMA defer_foreign_keys = ON');
+          for (final tx in merge.parentsFirst(family.values)) {
+            await merge.insertTransaction(tx, family);
           }
         });
       } finally {
@@ -276,6 +289,46 @@ class RestoreService {
     } finally {
       await _deleteDirectory(work);
     }
+  }
+
+  /// [seeds] plus everything that must travel with them: split parents and
+  /// children, the other leg of a transfer.
+  static Future<Map<String, Transaction>> _collectFamilies(
+    AppDatabase tempDb,
+    List<Transaction> seeds,
+  ) async {
+    final result = <String, Transaction>{};
+    final queue = [...seeds];
+    Future<Transaction?> fetch(String id) => (tempDb.select(
+      tempDb.transactions,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
+    while (queue.isNotEmpty) {
+      final tx = queue.removeLast();
+      if (result.containsKey(tx.id)) {
+        continue;
+      }
+      result[tx.id] = tx;
+      final parent = tx.parentTransactionId;
+      if (parent != null && !result.containsKey(parent)) {
+        final row = await fetch(parent);
+        if (row != null) {
+          queue.add(row);
+        }
+      }
+      queue.addAll(
+        await (tempDb.select(
+          tempDb.transactions,
+        )..where((t) => t.parentTransactionId.equals(tx.id))).get(),
+      );
+      final leg = tx.transferTransactionId;
+      if (leg != null && !result.containsKey(leg)) {
+        final row = await fetch(leg);
+        if (row != null) {
+          queue.add(row);
+        }
+      }
+    }
+    return result;
   }
 
   int get _currentSchemaVersion => AppDatabase.currentSchemaVersion;
@@ -380,67 +433,6 @@ class RestoreService {
       }
     } catch (_) {}
   }
-
-  Future<void> _ensureDependenciesExist(
-    AppDatabase db,
-    AppDatabase tempDb,
-    Transaction tx,
-  ) async {
-    final accountExists = await (db.select(
-      db.accounts,
-    )..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
-    if (accountExists == null) {
-      final account = await (tempDb.select(
-        tempDb.accounts,
-      )..where((a) => a.id.equals(tx.accountId))).getSingleOrNull();
-      if (account != null) {
-        await db.into(db.accounts).insert(account);
-      }
-    }
-
-    if (tx.categoryId != null) {
-      final catExists = await (db.select(
-        db.categories,
-      )..where((c) => c.id.equals(tx.categoryId!))).getSingleOrNull();
-      if (catExists == null) {
-        final cat = await (tempDb.select(
-          tempDb.categories,
-        )..where((c) => c.id.equals(tx.categoryId!))).getSingleOrNull();
-        if (cat != null) {
-          if (cat.categoryGroupId != null) {
-            final groupExists =
-                await (db.select(db.categoryGroups)
-                      ..where((g) => g.id.equals(cat.categoryGroupId!)))
-                    .getSingleOrNull();
-            if (groupExists == null) {
-              final group =
-                  await (tempDb.select(tempDb.categoryGroups)
-                        ..where((g) => g.id.equals(cat.categoryGroupId!)))
-                      .getSingleOrNull();
-              if (group != null) {
-                await db.into(db.categoryGroups).insert(group);
-              }
-            }
-          }
-          await db.into(db.categories).insert(cat);
-        }
-      }
-    }
-
-    if (tx.payeeId != null) {
-      final payeeExists = await (db.select(
-        db.payees,
-      )..where((p) => p.id.equals(tx.payeeId!))).getSingleOrNull();
-      if (payeeExists == null) {
-        final payee = await (tempDb.select(
-          tempDb.payees,
-        )..where((p) => p.id.equals(tx.payeeId!))).getSingleOrNull();
-        if (payee != null) {
-          await db.into(db.payees).insert(payee);
-        }
-      }
-    }
-  }
 }
 
 /// Facts about a backup and the current data that decide which warnings a
@@ -506,5 +498,165 @@ class PreparedRestore {
   Future<void> discard() async {
     _done = true;
     await RestoreService._deleteDirectory(_work);
+  }
+}
+
+/// One selective restore: copies rows from [tempDb] (the backup) into [db].
+class _SelectiveMerge {
+  _SelectiveMerge(
+    this.db,
+    this.tempDb, {
+    required this.localMemberId,
+    required this.now,
+  });
+
+  final AppDatabase db;
+  final AppDatabase tempDb;
+  final String? localMemberId;
+  final DateTime now;
+
+  /// Ids of transactions that were inserted or already exist locally.
+  final Set<String> _available = {};
+
+  /// Ids that were left out (partner's account, or a parent left out).
+  final Set<String> _skipped = {};
+
+  /// Accounts already checked: id -> usable here (exists or was copied).
+  final Map<String, bool> _accounts = {};
+
+  Iterable<Transaction> parentsFirst(Iterable<Transaction> rows) =>
+      rows.toList()..sort(
+        (a, b) => (a.parentTransactionId == null ? 0 : 1).compareTo(
+          b.parentTransactionId == null ? 0 : 1,
+        ),
+      );
+
+  Future<void> insertTransaction(
+    Transaction tx,
+    Map<String, Transaction> family,
+  ) async {
+    if (await _exists(db.transactions, tx.id)) {
+      _available.add(tx.id);
+      return;
+    }
+    final parent = tx.parentTransactionId;
+    if (parent != null && !_available.contains(parent)) {
+      _skipped.add(tx.id); // its parent was left out
+      return;
+    }
+    if (!await _ensureAccount(tx.accountId)) {
+      _skipped.add(tx.id); // the partner's account, or unknown
+      return;
+    }
+    var row = tx;
+    final transferAccount = row.transferAccountId;
+    final leg = row.transferTransactionId;
+    if (transferAccount != null || leg != null) {
+      final otherAccountOk =
+          transferAccount != null && await _ensureAccount(transferAccount);
+      final otherLegOk =
+          leg != null &&
+          (_available.contains(leg) ||
+              (family.containsKey(leg) && !_skipped.contains(leg)) ||
+              await _exists(db.transactions, leg));
+      if (!otherAccountOk || !otherLegOk) {
+        // Half a transfer is a normal, uncategorised row.
+        row = row.copyWith(
+          transferAccountId: const Value(null),
+          transferTransactionId: const Value(null),
+        );
+      }
+    }
+    if (row.categoryId != null && !await _ensureCategory(row.categoryId!)) {
+      row = row.copyWith(categoryId: const Value(null));
+    }
+    if (row.payeeId != null && !await _ensurePayee(row.payeeId!)) {
+      row = row.copyWith(payeeId: const Value(null));
+    }
+    await db
+        .into(db.transactions)
+        .insert(
+          row.copyWith(
+            createdAt: Value(row.createdAt ?? now),
+            updatedAt: Value(now),
+          ),
+        );
+    _available.add(tx.id);
+  }
+
+  Future<bool> _exists(TableInfo<Table, dynamic> table, String id) async {
+    final row = await db
+        .customSelect(
+          'SELECT 1 FROM "${table.actualTableName}" WHERE id = ?',
+          variables: [Variable.withString(id)],
+        )
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  /// Whether rows may be written into account [id] here. The partner's
+  /// personal accounts (owner set, not this member) are never touched.
+  Future<bool> _ensureAccount(String id) async {
+    final cached = _accounts[id];
+    if (cached != null) {
+      return cached;
+    }
+    final local = await (db.select(
+      db.accounts,
+    )..where((a) => a.id.equals(id))).getSingleOrNull();
+    if (local != null) {
+      return _accounts[id] = !_partners(local.ownerId);
+    }
+    final backup = await (tempDb.select(
+      tempDb.accounts,
+    )..where((a) => a.id.equals(id))).getSingleOrNull();
+    if (backup == null || _partners(backup.ownerId)) {
+      return _accounts[id] = false;
+    }
+    await db.into(db.accounts).insert(backup.copyWith(updatedAt: Value(now)));
+    return _accounts[id] = true;
+  }
+
+  bool _partners(String? ownerId) =>
+      ownerId != null && ownerId != localMemberId;
+
+  /// Whether category [id] is available here (existed or was copied).
+  Future<bool> _ensureCategory(String id) async {
+    if (await _exists(db.categories, id)) {
+      return true;
+    }
+    final cat = await (tempDb.select(
+      tempDb.categories,
+    )..where((c) => c.id.equals(id))).getSingleOrNull();
+    if (cat == null) {
+      return false;
+    }
+    final group = cat.categoryGroupId;
+    if (group != null && !await _exists(db.categoryGroups, group)) {
+      final row = await (tempDb.select(
+        tempDb.categoryGroups,
+      )..where((g) => g.id.equals(group))).getSingleOrNull();
+      if (row != null) {
+        await db
+            .into(db.categoryGroups)
+            .insert(row.copyWith(updatedAt: Value(now)));
+      }
+    }
+    await db.into(db.categories).insert(cat.copyWith(updatedAt: Value(now)));
+    return true;
+  }
+
+  Future<bool> _ensurePayee(String id) async {
+    if (await _exists(db.payees, id)) {
+      return true;
+    }
+    final payee = await (tempDb.select(
+      tempDb.payees,
+    )..where((p) => p.id.equals(id))).getSingleOrNull();
+    if (payee == null) {
+      return false;
+    }
+    await db.into(db.payees).insert(payee.copyWith(updatedAt: Value(now)));
+    return true;
   }
 }

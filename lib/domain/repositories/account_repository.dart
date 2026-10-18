@@ -1,5 +1,16 @@
 import 'package:ledger_zero/domain/entities/account.dart';
 
+/// A shared account that has already synced to the household cannot be
+/// made personal while sync is set up: the partner's phone has its
+/// transactions. Disconnect sync first, or keep the account shared.
+class AccountSharedException implements Exception {
+  const AccountSharedException(this.accountId);
+  final String accountId;
+  @override
+  String toString() =>
+      'AccountSharedException: $accountId is shared with the household';
+}
+
 /// Repository interface for managing [Account] entities.
 ///
 /// Every [Account] returned carries its computed [Account.balance]
@@ -21,9 +32,10 @@ abstract class AccountRepository {
   /// shared queues its transactions for sync (they were held back).
   Future<void> updateAccount(Account account);
 
-  /// Whether account [id] has already synced to the household. A synced
-  /// shared account cannot become personal any more: the partner's phone
-  /// already has its transactions.
+  /// Whether account [id] is shared with the household: it has synced and
+  /// sync is still set up. Such an account cannot become personal (the
+  /// partner's phone already has its transactions; [updateAccount] throws
+  /// [AccountSharedException]); after disconnecting sync it can.
   Future<bool> wasSynced(String id);
 
   /// Deletes an account by its unique identifier.
