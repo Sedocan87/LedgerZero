@@ -68,7 +68,7 @@ void main() {
     // update names the table so the accounts stream re-emits).
     await t.db.customUpdate(
       'UPDATE accounts SET owner_id = ?, on_budget = 0 WHERE id = ?',
-      variables: [Variable('partner-member'), Variable('p1')],
+      variables: const [Variable('partner-member'), Variable('p1')],
       updates: {t.db.accounts},
     );
     await c.read(settingsProvider.notifier).setDefaultAccountId('p1');
