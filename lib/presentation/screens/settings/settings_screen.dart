@@ -9,8 +9,10 @@ import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart';
+import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
+import 'package:ledger_zero/presentation/screens/settings/app_cache.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
 import 'dart:async';
@@ -38,10 +40,11 @@ class SettingsScreen extends ConsumerWidget {
 
     Future<void> clearCache(BuildContext context) async {
       try {
-        final cacheDir = await getTemporaryDirectory();
-        if (cacheDir.existsSync()) {
-          cacheDir.deleteSync(recursive: true);
-        }
+        // Only the app's own files, not the whole temporary directory.
+        await clearAppCache(
+          tempDir: await getTemporaryDirectory(),
+          exports: ref.read(exportFileServiceProvider),
+        );
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
