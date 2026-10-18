@@ -3542,5 +3542,9 @@
   "budgetBasicsSubtitle": "How envelope budgeting works in LedgerZero",
   "@budgetBasicsSubtitle": {
     "description": "Help screen: subtitle of the Budgeting basics entry"
+  },
+  "factoryResetFailed": "The reset could not be completed. Restart the app and try again, or clear the app's storage in the Android settings.",
+  "@factoryResetFailed": {
+    "description": "Snack bar when the factory reset throws"
   }
 }

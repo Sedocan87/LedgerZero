@@ -5,6 +5,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+
+/// Incremented when a factory reset has cleared SharedPreferences. The
+/// preference-backed notifiers (settings, theme, tutorial, privacy, new
+/// month fill) watch it and reload, so they do not keep the old values
+/// until the next start. It bumps itself when onboarding is undone, which
+/// only a factory reset does (Settings or the lock screen), and can be
+/// bumped explicitly with [SettingsGeneration.bump].
+class SettingsGeneration extends Notifier<int> {
+  @override
+  int build() {
+    ref.listen(authProvider.select((s) => s.isOnboarded), (previous, next) {
+      if (previous == true && !next) {
+        state++;
+      }
+    });
+    return 0;
+  }
+
+  void bump() => state++;
+}
+
+final settingsGenerationProvider = NotifierProvider<SettingsGeneration, int>(
+  SettingsGeneration.new,
+);
 
 /// The device locales in the user's order, as a provider so tests can
 /// override them. Used for the app language (`resolveAppLocale`) and the
@@ -142,6 +167,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
   @override
   SettingsState build() {
     _prefs = ref.watch(sharedPreferencesProvider);
+    ref.watch(settingsGenerationProvider); // reload after a factory reset
     return _loadState();
   }
 

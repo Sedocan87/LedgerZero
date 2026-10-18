@@ -4216,4 +4216,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get budgetBasicsSubtitle =>
       'How envelope budgeting works in LedgerZero';
+
+  @override
+  String get factoryResetFailed =>
+      'The reset could not be completed. Restart the app and try again, or clear the app\'s storage in the Android settings.';
 }

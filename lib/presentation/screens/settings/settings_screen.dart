@@ -79,15 +79,28 @@ class SettingsScreen extends ConsumerWidget {
         ),
       );
 
-      if (confirmed == true) {
+      if (confirmed != true) {
+        return;
+      }
+      try {
         await ref.read(factoryResetServiceProvider).reset();
-
+      } catch (e, st) {
+        Logger.error('Factory reset failed', e, st);
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.factoryResetSuccess)));
-          context.go('/onboarding');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              key: const Key('settings.factoryResetFailed'),
+              content: Text(l10n.factoryResetFailed),
+            ),
+          );
         }
+        return;
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.factoryResetSuccess)));
+        context.go('/onboarding');
       }
     }
 

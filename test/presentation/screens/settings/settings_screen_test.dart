@@ -13,6 +13,7 @@ import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/screens/rules/rules_screen.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 
 import '../../../helpers/test_database.dart';
 
@@ -261,4 +262,54 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('a failing factory reset shows an error instead of crashing', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          factoryResetServiceProvider.overrideWithValue(_FailingFactoryReset()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Factory Reset'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Factory Reset'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Factory Reset'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const Key('settings.factoryResetFailed')),
+      findsOneWidget,
+    );
+    expect(find.byType(SettingsScreen), findsOneWidget);
+  });
+}
+
+class _FailingFactoryReset extends Fake implements FactoryResetService {
+  @override
+  Future<void> reset() async => throw StateError('disk full');
 }

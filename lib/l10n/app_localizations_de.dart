@@ -4248,4 +4248,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get budgetBasicsSubtitle =>
       'So funktioniert das Umschlagprinzip in LedgerZero';
+
+  @override
+  String get factoryResetFailed =>
+      'Das Zurücksetzen konnte nicht abgeschlossen werden. Starten Sie die App neu und versuchen Sie es erneut, oder löschen Sie den App-Speicher in den Android-Einstellungen.';
 }

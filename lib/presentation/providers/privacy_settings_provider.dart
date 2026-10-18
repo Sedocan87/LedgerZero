@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 
 const String kNotificationAmountsKey = 'privacy_notification_amounts';
@@ -24,6 +25,7 @@ class PrivacySettingsNotifier extends Notifier<PrivacySettings> {
   @override
   PrivacySettings build() {
     final prefs = ref.watch(sharedPreferencesProvider);
+    ref.watch(settingsGenerationProvider); // reload after a factory reset
     final crashReports = prefs.getBool(kCrashReportsEnabledKey) ?? false;
     LocalErrorReportingService.crashReportsEnabled = crashReports;
     return PrivacySettings(

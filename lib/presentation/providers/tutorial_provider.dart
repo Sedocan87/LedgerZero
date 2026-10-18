@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final tutorialProvider = StateNotifierProvider<TutorialNotifier, Set<String>>((
   ref,
 ) {
   final prefs = ref.watch(sharedPreferencesProvider);
+  ref.watch(settingsGenerationProvider); // reload after a factory reset
   return TutorialNotifier(prefs);
 });
 

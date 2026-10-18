@@ -7086,6 +7086,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'How envelope budgeting works in LedgerZero'**
   String get budgetBasicsSubtitle;
+
+  /// Snack bar when the factory reset throws
+  ///
+  /// In en, this message translates to:
+  /// **'The reset could not be completed. Restart the app and try again, or clear the app\'s storage in the Android settings.'**
+  String get factoryResetFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 
 class ThemeState {
   final ThemeMode mode;
@@ -34,6 +35,7 @@ class ThemeNotifier extends Notifier<ThemeState> {
   @override
   ThemeState build() {
     final prefs = ref.watch(sharedPreferencesProvider);
+    ref.watch(settingsGenerationProvider); // reload after a factory reset
     final savedTheme = prefs.getString(_themeKey);
     final isHighContrast = prefs.getBool(_highContrastKey) ?? false;
     final reducedMotion = prefs.getBool(_reducedMotionKey) ?? false;

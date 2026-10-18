@@ -1171,5 +1171,6 @@
   "budgetCurrencyLabel": "Budgetwährung",
   "budgetCurrencyHelper": "Ihr Budget und alle Konten darin verwenden diese Währung. Konten außerhalb des Budgets können jede Währung haben.",
   "accountCurrencyLockedHelper": "Konten im Budget verwenden die Budgetwährung ({currency}). Schalten Sie „Im Budget berücksichtigen“ aus, um ein Konto in einer anderen Währung anzulegen.",
-  "budgetBasicsSubtitle": "So funktioniert das Umschlagprinzip in LedgerZero"
+  "budgetBasicsSubtitle": "So funktioniert das Umschlagprinzip in LedgerZero",
+  "factoryResetFailed": "Das Zurücksetzen konnte nicht abgeschlossen werden. Starten Sie die App neu und versuchen Sie es erneut, oder löschen Sie den App-Speicher in den Android-Einstellungen."
 }
