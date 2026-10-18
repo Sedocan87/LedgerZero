@@ -17,7 +17,10 @@ Each rule consists of:
 
 Supported conditions include:
 -   **Payee**: Matches the payee name (e.g., "Uber").
--   **Amount**: Matches the transaction amount.
+-   **Amount**: Compares the *signed* amount in minor units: an outflow is
+    negative, so "Amount less than -50.00" matches spending above 50 and
+    "Amount greater than 0" matches inflows. The rule editor's field is
+    labelled "Amount (negative = outflow)".
 -   **Description (Memo)**: Matches the memo or description field.
 
 ### Operators
@@ -73,11 +76,28 @@ priority 0, the highest priority.
     and overwrites existing values, except that transfer legs, split lines
     and split parents keep their account, transfer legs and split parents
     never get a category, and reconciled transactions keep their status.
+    It runs in one unit of work, skips the transactions of the partner's
+    personal accounts, and never moves a transaction into a closed account
+    or the partner's account. The progress dialog cannot be dismissed.
+-   **Unknown targets**: an action whose category, payee or account does
+    not exist on this phone is ignored wherever rules run
+    (`RuleMatchingService.withValidReferences`). Importing rules drops such
+    actions right away and reports how many; a rule left without actions
+    is imported inactive.
 -   Saving a transaction with a payee and a category only remembers that
     category as the payee's default; it never creates a rule and never
     changes other transactions.
 
 Use the "Rule conflicts" warning in the Rules screen to identify rules that might be fighting each other.
+
+### Suggested rules
+
+"Suggest rules from history" proposes a payee-to-category rule for every
+payee with at least three categorised transactions of which 80% share one
+category. A suggestion you already have as a rule (same payee, same
+category) is not shown. Accepting a suggestion appends it *below* your
+existing rules (lowest priority), so it never overrides what you set up;
+the dialog stays open so you can accept several.
 
 ## Best Practices
 

@@ -3568,5 +3568,18 @@
   "scheduledEndBeforeNext": "The end date must not be before the next date.",
   "@scheduledEndBeforeNext": {
       "description": "Validation message of the scheduled transaction form."
+  },
+  "rulesImportDroppedActions": "{count, plural, =1{1 action pointed at a category, payee or account that does not exist here and was dropped.} other{{count} actions pointed at categories, payees or accounts that do not exist here and were dropped.}}",
+  "@rulesImportDroppedActions": {
+      "description": "Snackbar after a rule import when actions with unknown target ids were dropped.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "ruleAmountValueLabel": "Amount (negative = outflow)",
+  "@ruleAmountValueLabel": {
+      "description": "Label of the value field of an amount condition in the rule editor; the comparison uses the signed amount."
   }
 }

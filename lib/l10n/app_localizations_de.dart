@@ -4282,4 +4282,20 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get scheduledEndBeforeNext =>
       'Das Enddatum darf nicht vor dem nächsten Datum liegen.';
+
+  @override
+  String rulesImportDroppedActions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Aktionen verwiesen auf Kategorien, Empfänger oder Konten, die es hier nicht gibt, und wurden entfernt.',
+      one:
+          '1 Aktion verwies auf eine Kategorie, einen Empfänger oder ein Konto, das es hier nicht gibt, und wurde entfernt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ruleAmountValueLabel => 'Betrag (negativ = Ausgabe)';
 }

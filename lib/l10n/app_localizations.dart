@@ -7128,6 +7128,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The end date must not be before the next date.'**
   String get scheduledEndBeforeNext;
+
+  /// Snackbar after a rule import when actions with unknown target ids were dropped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 action pointed at a category, payee or account that does not exist here and was dropped.} other{{count} actions pointed at categories, payees or accounts that do not exist here and were dropped.}}'**
+  String rulesImportDroppedActions(int count);
+
+  /// Label of the value field of an amount condition in the rule editor; the comparison uses the signed amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (negative = outflow)'**
+  String get ruleAmountValueLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -3,9 +3,12 @@ import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
+import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/rule_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
+import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 
 class RulePerformanceStats {
   final int processedCount;
@@ -52,15 +55,33 @@ enum RuleApplyMode {
 /// original description of an imported row); `amount` compares the signed
 /// amount in minor units. String comparisons are case-insensitive; `regex`
 /// uses a case-insensitive regular expression.
+///
+/// Actions whose target does not exist on this phone (an imported rule
+/// naming another phone's category, payee or account) or that would move
+/// a transaction into a closed or the partner's account are ignored (see
+/// [withValidReferences]); [loadActiveRules] and
+/// [applyRulesToAllTransactions] filter them, so a rule can never cause a
+/// foreign-key failure on import or catch-up.
 class RuleMatchingService {
   final PayeeRepository _payeeRepository;
   final TransactionRepository _transactionRepository;
   final RuleRepository? _ruleRepository;
 
+  /// Validate category / account targets; without them only payees are
+  /// checked.
+  final CategoryRepository? _categoryRepository;
+  final AccountRepository? _accountRepository;
+
+  /// "Apply to all" runs in one unit of work when given.
+  final UnitOfWork? _unitOfWork;
+
   RuleMatchingService(
     this._payeeRepository,
     this._transactionRepository, [
     this._ruleRepository,
+    this._categoryRepository,
+    this._accountRepository,
+    this._unitOfWork,
   ]);
 
   /// [rules] sorted by the priority convention (stable for equal values).
@@ -73,14 +94,74 @@ class RuleMatchingService {
     return [for (final e in indexed) e.value];
   }
 
-  /// The active rules from the repository, sorted by priority.
+  /// The active rules from the repository, sorted by priority, without
+  /// actions whose target does not exist ([withValidReferences]).
   Future<List<Rule>> loadActiveRules() async {
     final repository = _ruleRepository;
     if (repository == null) {
       return const [];
     }
     final rules = await repository.getRules();
-    return sortByPriority(rules.where((r) => r.isActive));
+    return withValidReferences(sortByPriority(rules.where((r) => r.isActive)));
+  }
+
+  /// [rules] without the actions that cannot be applied here: a category,
+  /// payee or account id that does not exist, or an account that is closed
+  /// or the partner's. The stored rules are left as they are (the Rules
+  /// screen shows them; deleting the entity rewrites them).
+  Future<List<Rule>> withValidReferences(List<Rule> rules) async {
+    final cache = <String, bool>{};
+    Future<bool> usable(RuleAction action) async {
+      final key = '${action.type.name}:${action.value}';
+      final cached = cache[key];
+      if (cached != null) {
+        return cached;
+      }
+      final bool result;
+      switch (action.type) {
+        case RuleActionType.setCategory:
+          final categories = _categoryRepository;
+          result =
+              categories == null ||
+              await categories.getCategoryById(action.value) != null;
+        case RuleActionType.setPayee:
+          result = await _payeeRepository.getPayeeById(action.value) != null;
+        case RuleActionType.setAccount:
+          final accounts = _accountRepository;
+          if (accounts == null) {
+            result = true;
+          } else {
+            final account = await accounts.getAccountById(action.value);
+            result =
+                account != null && !account.isClosed && !account.isPartners;
+          }
+        case RuleActionType.setMemo:
+        case RuleActionType.markCleared:
+        case RuleActionType.markApproved:
+          result = true;
+      }
+      return cache[key] = result;
+    }
+
+    final result = <Rule>[];
+    for (final rule in rules) {
+      final actions = <RuleAction>[
+        for (final action in rule.actions)
+          if (await usable(action)) action,
+      ];
+      if (actions.length != rule.actions.length) {
+        Logger.warning(
+          'Rule ${rule.id}: ${rule.actions.length - actions.length} '
+          'action(s) with unknown targets ignored',
+        );
+      }
+      result.add(
+        actions.length == rule.actions.length
+            ? rule
+            : rule.copyWith(actions: actions),
+      );
+    }
+    return result;
   }
 
   /// Applies [rules] to one transaction according to [mode].
@@ -178,39 +259,58 @@ class RuleMatchingService {
   }
 
   /// Bulk applies rules to all existing transactions in the database (the
-  /// explicit "apply to all" command, [RuleApplyMode.overwrite]).
+  /// explicit "apply to all" command, [RuleApplyMode.overwrite]), in one
+  /// unit of work. Rows in the partner's personal accounts are left alone
+  /// (they live on the partner's phone), and actions with unknown or
+  /// unbookable targets are ignored ([withValidReferences]).
   Future<RulePerformanceStats> applyRulesToAllTransactions(
     List<Rule> rules,
   ) async {
     final stopwatch = Stopwatch()..start();
     try {
-      final allTransactions = await _transactionRepository.getAllTransactions();
-      final modified = <Transaction>[];
-      for (final original in allTransactions) {
-        final updated = await apply(
-          original,
-          rules,
-          isSplitParent: await _transactionRepository.isSplitParent(
-            original.id,
-          ),
-        );
-        if (original != updated) {
-          modified.add(updated.copyWith(updatedAt: DateTime.now().toUtc()));
+      final usable = await withValidReferences(rules);
+      final partnerAccountIds = <String>{
+        for (final a in await _accountRepository?.getAllAccounts() ?? const [])
+          if (a.isPartners) a.id,
+      };
+      Future<({int processed, int modified})> run() async {
+        final allTransactions = await _transactionRepository
+            .getAllTransactions();
+        final modified = <Transaction>[];
+        for (final original in allTransactions) {
+          if (partnerAccountIds.contains(original.accountId)) {
+            continue;
+          }
+          final updated = await apply(
+            original,
+            usable,
+            isSplitParent: await _transactionRepository.isSplitParent(
+              original.id,
+            ),
+          );
+          if (original != updated) {
+            modified.add(updated.copyWith(updatedAt: DateTime.now().toUtc()));
+          }
         }
-      }
-      if (modified.isNotEmpty) {
-        await _transactionRepository.batchUpdateTransactions(modified);
+        if (modified.isNotEmpty) {
+          await _transactionRepository.batchUpdateTransactions(modified);
+        }
+        return (processed: allTransactions.length, modified: modified.length);
       }
 
+      final unitOfWork = _unitOfWork;
+      final counts = unitOfWork == null
+          ? await run()
+          : await unitOfWork.run(run);
       stopwatch.stop();
       final duration = stopwatch.elapsedMilliseconds;
       Logger.info(
-        'Applied rules to ${allTransactions.length} transactions. '
-        'Modified ${modified.length}. Duration: ${duration}ms',
+        'Applied rules to ${counts.processed} transactions. '
+        'Modified ${counts.modified}. Duration: ${duration}ms',
       );
       return RulePerformanceStats(
-        processedCount: allTransactions.length,
-        modifiedCount: modified.length,
+        processedCount: counts.processed,
+        modifiedCount: counts.modified,
         durationMs: duration,
       );
     } catch (e) {

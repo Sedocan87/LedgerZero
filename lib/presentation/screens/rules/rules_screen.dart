@@ -61,11 +61,25 @@ class RulesScreen extends ConsumerWidget {
               } else if (value == 'import') {
                 try {
                   final service = ref.read(ruleImportExportServiceProvider);
-                  final count = await service.importRules();
+                  final result = await service.importRules();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.rulesImported(count))),
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.rulesImported(result.imported)),
+                      ),
                     );
+                    if (result.droppedActions > 0) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            l10n.rulesImportDroppedActions(
+                              result.droppedActions,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
                   }
                 } catch (e, st) {
                   Logger.error('Importing rules failed', e, st);
@@ -106,24 +120,14 @@ class RulesScreen extends ConsumerWidget {
                 );
 
                 if (confirm == true && context.mounted) {
+                  final progress = _ProgressDialog.show(context);
                   try {
-                    // Loading indicator, closed below.
-                    unawaited(
-                      showDialog<void>(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) =>
-                            const Center(child: CircularProgressIndicator()),
-                      ),
-                    );
-
                     final service = ref.read(ruleMatchingServiceProvider);
                     final stats = await service.applyRulesToAllTransactions(
                       rules,
                     );
-
+                    progress.close();
                     if (context.mounted) {
-                      Navigator.pop(context); // Close loading
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(l10n.rulesApplied(stats.modifiedCount)),
@@ -132,8 +136,8 @@ class RulesScreen extends ConsumerWidget {
                     }
                   } catch (e, st) {
                     Logger.error('Applying rules failed', e, st);
+                    progress.close();
                     if (context.mounted) {
-                      Navigator.pop(context); // Close loading
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l10n.errorOccurred)),
                       );
@@ -141,26 +145,19 @@ class RulesScreen extends ConsumerWidget {
                   }
                 }
               } else if (value == 'suggest') {
-                unawaited(
-                  showDialog<void>(
-                    context: context,
-                    builder: (context) =>
-                        const Center(child: CircularProgressIndicator()),
-                  ),
-                );
-
+                final progress = _ProgressDialog.show(context);
                 try {
                   final suggestions = await ref
                       .read(ruleLearningServiceProvider)
                       .suggestRules();
+                  progress.close();
                   if (context.mounted) {
-                    Navigator.pop(context); // close loader
                     _showSuggestionsDialog(context, ref, suggestions);
                   }
                 } catch (e, st) {
                   Logger.error('Suggesting rules failed', e, st);
+                  progress.close();
                   if (context.mounted) {
-                    Navigator.pop(context);
                     ScaffoldMessenger.of(
                       context,
                     ).showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
@@ -344,52 +341,99 @@ class RulesScreen extends ConsumerWidget {
       return;
     }
 
-    showDialog(
+    // Accepting one suggestion removes it from the list; the dialog stays
+    // open until every suggestion is accepted or the user closes it.
+    final remaining = [...suggestions];
+    showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.rulesSuggestedTitle),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: suggestions.length,
-            itemBuilder: (ctx, i) {
-              final rule = suggestions[i];
-              return Card(
-                child: ListTile(
-                  title: Text(rule.name),
-                  subtitle: Text(rule.description ?? ''),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.add),
-                    tooltip: l10n.add,
-                    onPressed: () async {
-                      try {
-                        await ref.read(ruleRepositoryProvider).createRule(rule);
-                        if (ctx.mounted) {
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          key: const Key('rules.suggestions'),
+          title: Text(l10n.rulesSuggestedTitle),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: remaining.length,
+              itemBuilder: (ctx, i) {
+                final rule = remaining[i];
+                return Card(
+                  child: ListTile(
+                    title: Text(rule.name),
+                    subtitle: Text(rule.description ?? ''),
+                    trailing: IconButton(
+                      key: Key('rules.suggestion.accept.${rule.id}'),
+                      icon: const Icon(Icons.add),
+                      tooltip: l10n.add,
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(ruleLearningServiceProvider)
+                              .acceptSuggestion(rule);
+                          if (!ctx.mounted) {
+                            return;
+                          }
                           ScaffoldMessenger.of(ctx).showSnackBar(
                             SnackBar(content: Text(l10n.ruleAdded)),
                           );
-                          Navigator.pop(
-                            ctx,
-                          ); // Close dialog to refresh or simple dismiss
+                          setState(() => remaining.remove(rule));
+                          if (remaining.isEmpty) {
+                            Navigator.pop(ctx);
+                          }
+                        } catch (e) {
+                          Logger.error('Error adding suggested rule', e);
                         }
-                      } catch (e) {
-                        Logger.error('Error adding suggested rule', e);
-                      }
-                    },
+                      },
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.close),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.close),
-          ),
-        ],
       ),
     );
+  }
+}
+
+/// A modal progress indicator that neither the barrier nor Back can
+/// dismiss, so the pop that closes it can never pop the Rules screen
+/// itself. [close] pops it only while it is still open.
+class _ProgressDialog {
+  _ProgressDialog._(this._navigator);
+
+  final NavigatorState _navigator;
+  bool _open = true;
+
+  static _ProgressDialog show(BuildContext context) {
+    final handle = _ProgressDialog._(Navigator.of(context));
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const PopScope(
+          canPop: false,
+          child: Center(
+            key: Key('rules.progress'),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ).whenComplete(() => handle._open = false),
+    );
+    return handle;
+  }
+
+  void close() {
+    if (!_open) {
+      return;
+    }
+    _open = false;
+    _navigator.pop();
   }
 }
