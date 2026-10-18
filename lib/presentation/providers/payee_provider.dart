@@ -7,9 +7,14 @@ import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 
-final payeeSearchQueryProvider = StateProvider<String>((ref) => '');
+/// The payees screen's search text. Both this and [filteredPayeesProvider]
+/// are autoDispose: leaving the screen drops the filter, so it never comes
+/// back filtered behind an empty search box.
+final payeeSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
 
-final filteredPayeesProvider = Provider<AsyncValue<List<Payee>>>((ref) {
+final filteredPayeesProvider = Provider.autoDispose<AsyncValue<List<Payee>>>((
+  ref,
+) {
   final payeesAsync = ref.watch(payeesProvider);
   final query = ref.watch(payeeSearchQueryProvider).toLowerCase();
 

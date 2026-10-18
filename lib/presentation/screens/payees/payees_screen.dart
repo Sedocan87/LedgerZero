@@ -19,18 +19,19 @@ class PayeesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l10n.payees),
         actions: [
+          // Nothing to export: disabled (it silently did nothing before).
           IconButton(
+            key: const Key('payees.export'),
             icon: const Icon(Icons.download),
             tooltip: l10n.exportCsv,
-            onPressed: () {
-              payeesAsync.whenData((payees) {
-                if (payees.isNotEmpty) {
-                  PayeeExportService().exportPayees(
-                    payees,
-                    shareText: l10n.payeesShareText,
-                  );
-                }
-              });
+            onPressed: switch (payeesAsync.valueOrNull) {
+              final payees? when payees.isNotEmpty => () {
+                PayeeExportService().exportPayees(
+                  payees,
+                  shareText: l10n.payeesShareText,
+                );
+              },
+              _ => null,
             },
           ),
         ],

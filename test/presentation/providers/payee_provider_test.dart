@@ -95,6 +95,31 @@ void main() {
       expect(listEquals(result.value, [payees[1]]), isTrue);
     });
   });
+
+  test(
+    'the search query is dropped once nobody listens (leaving the screen)',
+    () async {
+      when(
+        mockPayeeRepository.watchAllPayees(),
+      ).thenAnswer((_) => Stream.value(const [Payee(id: '1', name: 'Alpha')]));
+      final container = ProviderContainer(
+        overrides: [
+          payeeRepositoryProvider.overrideWithValue(mockPayeeRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // The screen watches the filtered list and types a query.
+      final screen = container.listen(filteredPayeesProvider, (_, _) {});
+      container.read(payeeSearchQueryProvider.notifier).state = 'alp';
+      expect(container.read(payeeSearchQueryProvider), 'alp');
+
+      // Leaving the screen; coming back starts with an empty query.
+      screen.close();
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(payeeSearchQueryProvider), '');
+    },
+  );
 }
 
 bool listEquals(List<Payee>? a, List<Payee>? b) {

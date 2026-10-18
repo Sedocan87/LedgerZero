@@ -13,7 +13,10 @@ class AccountSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accountsAsync = ref.watch(writableAccountsProvider);
+    // Open accounts only, as the transaction form's picker.
+    final accountsAsync = ref
+        .watch(writableAccountsProvider)
+        .whenData((all) => all.where((a) => !a.isClosed).toList());
     final l10n = AppLocalizations.of(context)!;
 
     return DraggableScrollableSheet(
