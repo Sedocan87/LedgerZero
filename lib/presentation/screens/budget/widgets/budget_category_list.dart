@@ -135,8 +135,16 @@ class BudgetCategoryList extends ConsumerWidget {
                   child: FocusTraversalGroup(
                     child: ExpansionTile(
                       key: PageStorageKey('group_${groupVM.group.id}'),
-                      title: BudgetGroupRow(group: groupVM.group),
-                      initiallyExpanded: true,
+                      title: BudgetGroupRow(
+                        group: groupVM.group,
+                        title: groupVM.isHiddenGroup
+                            ? AppLocalizations.of(
+                                context,
+                              )!.hiddenCategoriesGroup
+                            : null,
+                      ),
+                      // Hidden categories with money stay reachable, folded.
+                      initiallyExpanded: !groupVM.isHiddenGroup,
                       tilePadding: const EdgeInsets.symmetric(
                         horizontal: 16.0,
                         vertical: 2.0,

@@ -1,6 +1,7 @@
 // Goal targets, auto-assign rules, templates and month bulk operations of
 // BudgetingService on a real in-memory database.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 
@@ -135,5 +136,66 @@ void main() {
 
     await t.budgeting.deleteTemplate(template.id);
     expect(await t.budgeting.getAllTemplates(), isEmpty);
+  });
+
+  test(
+    'month operations skip hidden categories, like the new-month fill',
+    () async {
+      final hidden = await t.categoryId('Electric');
+      final electric = (await t.categories.getCategoryById(hidden))!;
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 40000, jan);
+      await t.budgeting.setCategoryBudgetedAmount(hidden, 5000, jan);
+      await t.budgeting.setCategoryBudgetedAmount(hidden, 7000, feb);
+      await t.categories.updateCategory(electric.copyWith(isHidden: true));
+
+      // Save as template: only visible categories.
+      await t.budgeting.saveBudgetTemplate('Usual', jan);
+      final template = (await t.budgeting.getAllTemplates()).single;
+      expect(template.data, {groceries: 40000});
+
+      // Copy from the month before: the hidden category is not copied.
+      final copied = await t.budgeting.copyBudgetFromPreviousMonth(feb);
+      expect(copied.after, {groceries: 40000});
+      expect(copied.before, {groceries: 0});
+      expect(await budgeted(hidden, feb), 7000);
+
+      // Apply a template whose entry is hidden (or gone): skipped, the rest
+      // is written.
+      await t.budgetTemplates.createTemplate(
+        BudgetTemplate(
+          id: 'tpl',
+          name: 'Old',
+          data: {groceries: 1000, hidden: 2000, 'deleted-category': 3000},
+        ),
+      );
+      final applied = await t.budgeting.applyBudgetTemplate('tpl', mar);
+      expect(applied.after, {groceries: 1000});
+      expect(await budgeted(hidden, mar), 0);
+
+      // Reset: the hidden category keeps its amount.
+      final reset = await t.budgeting.resetBudget(feb);
+      expect(reset.before, {groceries: 40000});
+      expect(reset.after, {groceries: 0});
+      expect(await budgeted(hidden, feb), 7000);
+      await expectLedgerInvariant(t, feb);
+    },
+  );
+
+  test('a month operation reports only what it changed', () async {
+    await t.budgeting.setCategoryBudgetedAmount(groceries, 40000, jan);
+    await t.budgeting.setCategoryBudgetedAmount(groceries, 40000, feb);
+    await t.budgeting.setCategoryBudgetedAmount(dining, 15000, jan);
+    final copied = await t.budgeting.copyBudgetFromPreviousMonth(feb);
+    expect(copied.before, {dining: 0});
+    expect(copied.after, {dining: 15000});
+
+    // Undo writes the old amounts back; a category that no longer exists
+    // is skipped instead of failing the whole restore.
+    final restored = await t.budgeting.setCategoryBudgetedAmounts({
+      ...copied.before,
+      'deleted-category': 1,
+    }, feb);
+    expect(restored.after, {dining: 0});
+    expect(await budgeted(dining, feb), 0);
   });
 }

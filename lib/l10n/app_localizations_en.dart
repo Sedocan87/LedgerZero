@@ -4212,4 +4212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get faqPersonalA =>
       'Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.';
+
+  @override
+  String get hiddenCategoriesGroup => 'Hidden categories';
 }

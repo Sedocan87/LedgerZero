@@ -7086,6 +7086,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.'**
   String get faqPersonalA;
+
+  /// Collapsed budget section listing hidden categories that still have money budgeted or available
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden categories'**
+  String get hiddenCategoriesGroup;
 }
 
 class _AppLocalizationsDelegate

@@ -523,13 +523,26 @@ class BudgetingService {
 
   // --- Budget Templates ---
 
+  /// Ids of the categories that take part in month operations (copy,
+  /// templates, reset, fill): every category that exists and is not
+  /// hidden.
+  Future<Set<String>> _visibleCategoryIds() async => {
+    for (final c in await _categoryRepository.getAllCategories())
+      if (!c.isHidden) c.id,
+  };
+
+  /// Stores the positive budgets of the visible categories of [month] as a
+  /// template.
   Future<void> saveBudgetTemplate(String name, DateTime month) async {
     final monthString = CalendarDate.monthKey(month);
     final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
+    final visible = await _visibleCategoryIds();
 
     final Map<String, int> data = {};
     for (final budget in budgets) {
-      if (budget.categoryId != null && budget.budgeted > 0) {
+      if (budget.categoryId != null &&
+          budget.budgeted > 0 &&
+          visible.contains(budget.categoryId)) {
         data[budget.categoryId!] = budget.budgeted;
       }
     }
@@ -544,18 +557,23 @@ class BudgetingService {
     await _budgetTemplateRepository.createTemplate(template);
   }
 
-  Future<void> applyBudgetTemplate(String templateId, DateTime month) async {
+  /// Writes the template's amounts into [month] (a merge: categories not
+  /// in the template keep their amounts). Entries of hidden or deleted
+  /// categories are skipped. Returns what changed, for undo.
+  Future<BudgetMonthChange> applyBudgetTemplate(
+    String templateId,
+    DateTime month,
+  ) async {
     final template = await _budgetTemplateRepository.getTemplateById(
       templateId,
     );
     if (template == null) {
-      return;
+      return BudgetMonthChange.none(month);
     }
-
-    await _unitOfWork.run(() async {
-      for (final entry in template.data.entries) {
-        await _writeBudget(entry.key, month, (_) => entry.value);
-      }
+    final visible = await _visibleCategoryIds();
+    return _writeMonth(month, {
+      for (final MapEntry(key: id, value: amount) in template.data.entries)
+        if (visible.contains(id)) id: amount,
     });
   }
 
@@ -569,21 +587,65 @@ class BudgetingService {
 
   // --- Bulk Operations ---
 
-  Future<void> copyBudgetFromPreviousMonth(DateTime month) async {
-    final prevMonth = DateTime.utc(month.year, month.month - 1, 1);
-    final prevMonthString = CalendarDate.monthKey(prevMonth);
-
-    final prevBudgets = await _budgetRepository.getBudgetsForMonth(
-      prevMonthString,
-    );
-
-    await _unitOfWork.run(() async {
-      for (final budget in prevBudgets) {
-        if (budget.categoryId != null && budget.budgeted > 0) {
-          await _writeBudget(budget.categoryId!, month, (_) => budget.budgeted);
-        }
-      }
+  /// Sets the visible categories budgeted in the month before [month] to
+  /// the same amounts in [month] (other categories keep theirs). Returns
+  /// what changed, for undo.
+  Future<BudgetMonthChange> copyBudgetFromPreviousMonth(DateTime month) async {
+    final previous = await budgetsOfPreviousMonth(month);
+    final visible = await _visibleCategoryIds();
+    return _writeMonth(month, {
+      for (final MapEntry(key: id, value: amount) in previous.entries)
+        if (visible.contains(id)) id: amount,
     });
+  }
+
+  /// Sets the budgets of [month] to [amounts] (category -> amount) in one
+  /// unit of work, e.g. to undo or redo a month operation. Categories that
+  /// no longer exist are skipped, so one deleted category does not stop
+  /// the rest from being restored. Returns what changed.
+  Future<BudgetMonthChange> setCategoryBudgetedAmounts(
+    Map<String, int> amounts,
+    DateTime month,
+  ) async {
+    final existing = {
+      for (final c in await _categoryRepository.getAllCategories()) c.id,
+    };
+    return _writeMonth(month, {
+      for (final MapEntry(key: id, value: amount) in amounts.entries)
+        if (existing.contains(id)) id: amount,
+    });
+  }
+
+  /// Writes [amounts] into [month] in one unit of work, touching only the
+  /// categories whose amount differs, and returns the old and new amounts
+  /// of those.
+  Future<BudgetMonthChange> _writeMonth(
+    DateTime month,
+    Map<String, int> amounts,
+  ) async {
+    final current = {
+      for (final b in await _budgetRepository.getBudgetsForMonth(
+        CalendarDate.monthKey(month),
+      ))
+        if (b.categoryId != null) b.categoryId!: b.budgeted,
+    };
+    final before = <String, int>{};
+    final after = <String, int>{};
+    for (final MapEntry(key: id, value: amount) in amounts.entries) {
+      final old = current[id] ?? 0;
+      if (old != amount) {
+        before[id] = old;
+        after[id] = amount;
+      }
+    }
+    if (after.isNotEmpty) {
+      await _unitOfWork.run(() async {
+        for (final MapEntry(key: id, value: amount) in after.entries) {
+          await _writeBudget(id, month, (_) => amount);
+        }
+      });
+    }
+    return BudgetMonthChange(month: month, before: before, after: after);
   }
 
   /// Adds [amount] to the budget of [categoryId] in [month].
@@ -744,10 +806,7 @@ class BudgetingService {
     Map<String, int> amounts, {
     DateTime? stampedAt,
   }) async {
-    final visible = {
-      for (final c in await _categoryRepository.getAllCategories())
-        if (!c.isHidden) c.id,
-    };
+    final visible = await _visibleCategoryIds();
     final existing = {
       for (final b in await _budgetRepository.getBudgetsForMonth(
         CalendarDate.monthKey(month),
@@ -790,16 +849,20 @@ class BudgetingService {
     });
   }
 
-  Future<void> resetBudget(DateTime month) async {
-    final monthString = CalendarDate.monthKey(month);
-    final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
-
-    await _unitOfWork.run(() async {
-      for (final budget in budgets) {
-        if (budget.categoryId != null && budget.budgeted != 0) {
-          await _writeBudget(budget.categoryId!, month, (_) => 0);
-        }
-      }
+  /// Sets every visible category of [month] to zero (hidden categories
+  /// keep their amounts, like in every month operation). Returns what
+  /// changed, for undo.
+  Future<BudgetMonthChange> resetBudget(DateTime month) async {
+    final budgets = await _budgetRepository.getBudgetsForMonth(
+      CalendarDate.monthKey(month),
+    );
+    final visible = await _visibleCategoryIds();
+    return _writeMonth(month, {
+      for (final b in budgets)
+        if (b.categoryId != null &&
+            b.budgeted != 0 &&
+            visible.contains(b.categoryId))
+          b.categoryId!: 0,
     });
   }
 
@@ -904,6 +967,27 @@ class BudgetingService {
 
     return results;
   }
+}
+
+/// What a month operation (copy from the month before, apply a template,
+/// reset) changed in [month]: the amounts before and after, for the
+/// categories whose amount changed. Undo writes [before], redo [after].
+class BudgetMonthChange {
+  final DateTime month;
+  final Map<String, int> before;
+  final Map<String, int> after;
+
+  const BudgetMonthChange({
+    required this.month,
+    required this.before,
+    required this.after,
+  });
+
+  const BudgetMonthChange.none(this.month)
+    : before = const {},
+      after = const {};
+
+  bool get isEmpty => after.isEmpty;
 }
 
 /// Result of [BudgetingService._rollTo].

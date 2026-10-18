@@ -288,6 +288,67 @@ class MockBudgetRepository extends _i1.Mock implements _i5.BudgetRepository {
             ),
           )
           as _i3.Future<Map<String, int>>);
+
+  @override
+  _i3.Future<List<_i6.Budget>> getBudgetsUpToMonth(
+    String? endMonth, {
+    String? categoryId,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #getBudgetsUpToMonth,
+              [endMonth],
+              {#categoryId: categoryId},
+            ),
+            returnValue: _i3.Future<List<_i6.Budget>>.value(<_i6.Budget>[]),
+            returnValueForMissingStub: _i3.Future<List<_i6.Budget>>.value(
+              <_i6.Budget>[],
+            ),
+          )
+          as _i3.Future<List<_i6.Budget>>);
+
+  @override
+  _i3.Future<int> getTotalBudgetedAfterMonth(String? endMonth) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTotalBudgetedAfterMonth, [endMonth]),
+            returnValue: _i3.Future<int>.value(0),
+            returnValueForMissingStub: _i3.Future<int>.value(0),
+          )
+          as _i3.Future<int>);
+
+  @override
+  _i3.Future<Map<String, Map<String, int>>> getMonthlyCategoryActivity(
+    DateTime? endExclusive, {
+    String? categoryId,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #getMonthlyCategoryActivity,
+              [endExclusive],
+              {#categoryId: categoryId},
+            ),
+            returnValue: _i3.Future<Map<String, Map<String, int>>>.value(
+              <String, Map<String, int>>{},
+            ),
+            returnValueForMissingStub:
+                _i3.Future<Map<String, Map<String, int>>>.value(
+                  <String, Map<String, int>>{},
+                ),
+          )
+          as _i3.Future<Map<String, Map<String, int>>>);
+
+  @override
+  _i3.Future<Map<String, DateTime>> getFirstTransactionDates() =>
+      (super.noSuchMethod(
+            Invocation.method(#getFirstTransactionDates, []),
+            returnValue: _i3.Future<Map<String, DateTime>>.value(
+              <String, DateTime>{},
+            ),
+            returnValueForMissingStub: _i3.Future<Map<String, DateTime>>.value(
+              <String, DateTime>{},
+            ),
+          )
+          as _i3.Future<Map<String, DateTime>>);
 }
 
 /// A class which mocks [CategoryRepository].

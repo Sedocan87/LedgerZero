@@ -11,7 +11,12 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
   `selectedBudgetMonthProvider`.
 * To Be Budgeted banner (`ToBeBudgetedBanner`), from `tbbProvider(month)`.
 * Category groups and rows (`BudgetGroupRow`, `BudgetCategoryRow`) from
-  `budgetViewModelProvider`.
+  `budgetViewModelProvider`. Hidden categories are not listed; a hidden
+  category that still has money budgeted or available (or activity) in the
+  month appears in a last, collapsed **Hidden categories** section, because
+  that money still counts in To Be Budgeted and must stay reachable (edit
+  the amount or move the money out). The footer totals include that
+  section.
 * App bar: search (filters categories by name), view mode toggle, manage
   categories (`/budget/categories`), and a menu with save as template, apply
   template, copy from previous month and reset budget.
@@ -46,7 +51,9 @@ The first four record an undo action like a manual edit. The goal-based
 ## Moving money
 
 `MoveMoneyModal` asks for source category, target category and a positive
-amount; source and target must differ. `BudgetingService.moveMoney`
+amount; source and target must differ. Hidden categories are not offered,
+except the one the modal was opened from (so money can be moved out of a
+hidden category from the Hidden categories section). `BudgetingService.moveMoney`
 decrements the source's and increments the target's budget for the selected
 month in one unit of work, so TBB does not change. The source may go
 negative. A `MoveMoneyAction` is pushed on the undo stack and a snackbar

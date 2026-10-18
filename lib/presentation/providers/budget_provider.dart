@@ -176,15 +176,35 @@ class BudgetCategoryViewModel {
   });
 }
 
+/// Id of the pseudo-group that collects hidden categories with money.
+const hiddenBudgetGroupId = 'budget.hidden-categories';
+
 /// ViewModel for a category group section in the budget screen.
 class BudgetGroupViewModel {
   final CategoryGroup group;
   final List<BudgetCategoryViewModel> categories;
 
-  const BudgetGroupViewModel({required this.group, required this.categories});
+  /// The collapsed "Hidden categories" section: hidden categories that
+  /// still have money budgeted or available (it counts in To Be Budgeted,
+  /// so it must stay reachable). [group] is a placeholder; the screen
+  /// shows a localised title.
+  final bool isHiddenGroup;
+
+  const BudgetGroupViewModel({
+    required this.group,
+    required this.categories,
+    this.isHiddenGroup = false,
+  });
+
+  const BudgetGroupViewModel.hidden(this.categories)
+    : group = const CategoryGroup(id: hiddenBudgetGroupId, name: ''),
+      isHiddenGroup = true;
 }
 
-/// Provider that builds the list of budget groups and categories with their calculated amounts.
+/// Provider that builds the list of budget groups and categories with their
+/// calculated amounts. Hidden categories are left out, except those that
+/// still have money budgeted or available (or activity) in the month: they
+/// form a last, collapsed "Hidden categories" section.
 final budgetViewModelProvider =
     FutureProvider.autoDispose<List<BudgetGroupViewModel>>((ref) async {
       final month = ref.watch(selectedBudgetMonthProvider);
@@ -221,11 +241,25 @@ final budgetViewModelProvider =
       final sortedGroups = List<CategoryGroup>.from(groups)
         ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
 
+      BudgetCategoryViewModel viewModelOf(Category category) {
+        final catPerf = performanceData[category.id];
+        return BudgetCategoryViewModel(
+          category: category,
+          budgeted: budgetMap[category.id]?.budgeted ?? 0,
+          activity: catPerf?['activity'] ?? 0,
+          available: catPerf?['available'] ?? 0,
+          goalTarget: goalTargets[category.id] ?? 0,
+        );
+      }
+
+      bool matchesSearch(Category c) =>
+          searchQuery.isEmpty || c.name.toLowerCase().contains(searchQuery);
+
       final List<BudgetGroupViewModel> result = [];
 
       for (final group in sortedGroups) {
         var groupCategories = categories
-            .where((c) => c.categoryGroupId == group.id)
+            .where((c) => c.categoryGroupId == group.id && !c.isHidden)
             .toList();
 
         // Apply search filter
@@ -244,31 +278,29 @@ final budgetViewModelProvider =
           (a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0),
         );
 
-        final categoryViewModels = groupCategories.map((category) {
-          // Get budgeted amount from batch fetched map
-          final budget = budgetMap[category.id];
-          final budgeted = budget?.budgeted ?? 0;
-
-          // Get calculated activity and available from batch data
-          final catPerf = performanceData[category.id];
-          final activity = catPerf?['activity'] ?? 0;
-          final available = catPerf?['available'] ?? 0;
-
-          // Get calculated goal target
-          final goalTarget = goalTargets[category.id] ?? 0;
-
-          return BudgetCategoryViewModel(
-            category: category,
-            budgeted: budgeted,
-            activity: activity,
-            available: available,
-            goalTarget: goalTarget,
-          );
-        }).toList();
-
         result.add(
-          BudgetGroupViewModel(group: group, categories: categoryViewModels),
+          BudgetGroupViewModel(
+            group: group,
+            categories: groupCategories.map(viewModelOf).toList(),
+          ),
         );
+      }
+
+      // Hidden categories with money: their budgets and balances still
+      // count towards To Be Budgeted, so they stay visible, collapsed.
+      final hiddenWithMoney =
+          [
+                for (final c in categories)
+                  if (c.isHidden && matchesSearch(c)) viewModelOf(c),
+              ]
+              .where(
+                (vm) =>
+                    vm.budgeted != 0 || vm.available != 0 || vm.activity != 0,
+              )
+              .toList()
+            ..sort((a, b) => a.category.name.compareTo(b.category.name));
+      if (hiddenWithMoney.isNotEmpty) {
+        result.add(BudgetGroupViewModel.hidden(hiddenWithMoney));
       }
 
       return result;

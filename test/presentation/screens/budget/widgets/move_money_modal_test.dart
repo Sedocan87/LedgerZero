@@ -77,4 +77,54 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('hidden categories are not offered, except a preselected one', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final t = TestDatabase();
+    addTearDown(t.close);
+    final month = DateTime.utc(2024, 5);
+    final groceries = await t.categoryId('Groceries');
+    for (final name in ['Electric', 'Water']) {
+      final c = (await t.categories.getCategoryById(await t.categoryId(name)))!;
+      await t.categories.updateCategory(c.copyWith(isHidden: true));
+    }
+    final electric = await t.categoryId('Electric');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(t.db),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          selectedBudgetMonthProvider.overrideWith((ref) => month),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: MoveMoneyModal(
+              initialFromCategoryId: electric,
+              initialToCategoryId: groceries,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final items = tester
+        .widgetList<DropdownButton<String>>(find.byType(DropdownButton<String>))
+        .expand((d) => d.items ?? const <DropdownMenuItem<String>>[])
+        .map((i) => i.value)
+        .toSet();
+    expect(items, contains(groceries));
+    expect(items, contains(electric));
+    expect(items, isNot(contains(await t.categoryId('Water'))));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
 }

@@ -30,6 +30,12 @@ import 'package:mockito/mockito.dart' as _i1;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
+class _FakeBudgetMonthChange_0 extends _i1.SmartFake
+    implements _i2.BudgetMonthChange {
+  _FakeBudgetMonthChange_0(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
 /// A class which mocks [BudgetingService].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -230,13 +236,26 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
           as _i3.Future<void>);
 
   @override
-  _i3.Future<void> applyBudgetTemplate(String? templateId, DateTime? month) =>
+  _i3.Future<_i2.BudgetMonthChange> applyBudgetTemplate(
+    String? templateId,
+    DateTime? month,
+  ) =>
       (super.noSuchMethod(
             Invocation.method(#applyBudgetTemplate, [templateId, month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#applyBudgetTemplate, [templateId, month]),
+              ),
+            ),
+            returnValueForMissingStub: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#applyBudgetTemplate, [templateId, month]),
+              ),
+            ),
           )
-          as _i3.Future<void>);
+          as _i3.Future<_i2.BudgetMonthChange>);
 
   @override
   _i3.Future<List<_i5.BudgetTemplate>> getAllTemplates() =>
@@ -262,13 +281,53 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
           as _i3.Future<void>);
 
   @override
-  _i3.Future<void> copyBudgetFromPreviousMonth(DateTime? month) =>
+  _i3.Future<_i2.BudgetMonthChange> copyBudgetFromPreviousMonth(
+    DateTime? month,
+  ) =>
       (super.noSuchMethod(
             Invocation.method(#copyBudgetFromPreviousMonth, [month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#copyBudgetFromPreviousMonth, [month]),
+              ),
+            ),
+            returnValueForMissingStub: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#copyBudgetFromPreviousMonth, [month]),
+              ),
+            ),
           )
-          as _i3.Future<void>);
+          as _i3.Future<_i2.BudgetMonthChange>);
+
+  @override
+  _i3.Future<_i2.BudgetMonthChange> setCategoryBudgetedAmounts(
+    Map<String, int>? amounts,
+    DateTime? month,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#setCategoryBudgetedAmounts, [amounts, month]),
+            returnValue: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#setCategoryBudgetedAmounts, [
+                  amounts,
+                  month,
+                ]),
+              ),
+            ),
+            returnValueForMissingStub: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#setCategoryBudgetedAmounts, [
+                  amounts,
+                  month,
+                ]),
+              ),
+            ),
+          )
+          as _i3.Future<_i2.BudgetMonthChange>);
 
   @override
   _i3.Future<void> addToCategoryBudget(
@@ -381,13 +440,23 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
           as _i3.Future<void>);
 
   @override
-  _i3.Future<void> resetBudget(DateTime? month) =>
+  _i3.Future<_i2.BudgetMonthChange> resetBudget(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#resetBudget, [month]),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
+            returnValue: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#resetBudget, [month]),
+              ),
+            ),
+            returnValueForMissingStub: _i3.Future<_i2.BudgetMonthChange>.value(
+              _FakeBudgetMonthChange_0(
+                this,
+                Invocation.method(#resetBudget, [month]),
+              ),
+            ),
           )
-          as _i3.Future<void>);
+          as _i3.Future<_i2.BudgetMonthChange>);
 
   @override
   _i3.Future<Map<String, Map<String, int>>> calculateBatchCategoryPerformance(
