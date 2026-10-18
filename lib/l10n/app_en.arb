@@ -3529,5 +3529,22 @@
   "categoryNotFound": "This category no longer exists. It may have been deleted on this or your partner’s phone.",
   "@categoryNotFound": {
     "description": "Category editor: the category to edit was not found"
+  },
+  "budgetCurrencyLabel": "Budget currency",
+  "@budgetCurrencyLabel": {
+    "description": "Account form: currency field label when this account sets the budget currency"
+  },
+  "budgetCurrencyHelper": "Your budget and every account in it use this currency. Accounts outside the budget can use any currency.",
+  "@budgetCurrencyHelper": {
+    "description": "Account form: helper text under the budget currency field"
+  },
+  "accountCurrencyLockedHelper": "Accounts in the budget use the budget currency ({currency}). Switch off “Include in budget” for an account in another currency.",
+  "@accountCurrencyLockedHelper": {
+    "description": "Account form: helper text when the currency is fixed to the budget currency",
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -27,11 +27,6 @@ Locale resolveAppLocale(Locale? chosen, [List<Locale>? deviceLocales]) {
   return basicLocaleListResolution(preferred, supported);
 }
 
-/// The device locales, as a provider so tests can override them.
-final deviceLocalesProvider = Provider<List<Locale>>(
-  (ref) => WidgetsBinding.instance.platformDispatcher.locales,
-);
-
 /// The active app locale (Settings, else the device locales).
 final appLocaleProvider = Provider<Locale>((ref) {
   final chosen = ref.watch(settingsProvider.select((s) => s.language));

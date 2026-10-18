@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 /// The currencies LedgerZero offers in its pickers.
 ///
 /// Every amount is stored as an `int` of hundredths of the currency unit
@@ -52,4 +54,25 @@ int currencyDecimalDigits(String? code) {
   // so imported accounts in those currencies still display sensibly.
   const zeroDecimal = {'KRW', 'VND', 'ISK', 'CLP', 'HUF', 'TWD', 'UGX'};
   return zeroDecimal.contains(upper) ? 0 : 2;
+}
+
+/// The budget currency to propose on a fresh install: the currency of the
+/// first device locale (in the user's order, e.g. `de_DE` -> EUR, `en_US`
+/// -> USD, `de_CH` -> CHF) whose currency the app supports, else
+/// [defaultCurrencyCode]. A locale without a country uses the language's
+/// default country (`de` -> EUR). [localeTags] are `Locale.toString()`
+/// values (`de_DE`); unparseable tags are skipped.
+String defaultCurrencyForLocales(Iterable<String> localeTags) {
+  for (final tag in localeTags) {
+    final String? code;
+    try {
+      code = NumberFormat.simpleCurrency(locale: tag).currencyName;
+    } catch (_) {
+      continue;
+    }
+    if (code != null && supportedCurrencyCodes.contains(code.toUpperCase())) {
+      return code.toUpperCase();
+    }
+  }
+  return defaultCurrencyCode;
 }

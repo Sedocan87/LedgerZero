@@ -34,6 +34,47 @@ void main() {
     expect(s.syncStatusNotifications, isTrue);
   });
 
+  test('a fresh install proposes the currency of the device locale', () async {
+    Future<String> currencyFor(List<Locale> locales) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final c = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          deviceLocalesProvider.overrideWithValue(locales),
+        ],
+      );
+      addTearDown(c.dispose);
+      return c.read(settingsProvider).currency;
+    }
+
+    expect(await currencyFor(const [Locale('de', 'DE')]), 'EUR');
+    expect(await currencyFor(const [Locale('de')]), 'EUR');
+    expect(await currencyFor(const [Locale('de', 'CH')]), 'CHF');
+    expect(await currencyFor(const [Locale('en', 'GB')]), 'GBP');
+    expect(await currencyFor(const [Locale('en', 'US')]), 'USD');
+    // Unsupported currency (INR): the next locale, else USD.
+    expect(
+      await currencyFor(const [Locale('en', 'IN'), Locale('de', 'AT')]),
+      'EUR',
+    );
+    expect(await currencyFor(const [Locale('en', 'IN')]), 'USD');
+    expect(await currencyFor(const []), 'USD');
+  });
+
+  test('a stored currency wins over the device locale', () async {
+    SharedPreferences.setMockInitialValues({'settings_currency': 'USD'});
+    final prefs = await SharedPreferences.getInstance();
+    final c = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        deviceLocalesProvider.overrideWithValue(const [Locale('de', 'DE')]),
+      ],
+    );
+    addTearDown(c.dispose);
+    expect(c.read(settingsProvider).currency, 'USD');
+  });
+
   test('restores saved values', () async {
     final s = (await start({
       'settings_currency': 'EUR',

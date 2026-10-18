@@ -72,6 +72,17 @@ accounts".
 *   The first account created after onboarding is the budget's account and
     is never personal.
 
+## Budget currency
+
+*   The budget has one currency (Settings > Currency). On a fresh install
+    it is proposed from the device locale (`de_DE` -> EUR, `en_US` -> USD,
+    `de_CH` -> CHF; an unsupported currency falls back to USD).
+*   The first on-budget account sets it: its currency field is labelled
+    "Budget currency" and saving stores it in Settings.
+*   Every later on-budget account is fixed to the budget currency (the form
+    explains why); accounts outside the budget may use any currency, so TBB
+    never sums different currencies.
+
 ## To Be Budgeted (TBB)
 
 `TBB(M) = sum of the on-budget accounts' starting balances`

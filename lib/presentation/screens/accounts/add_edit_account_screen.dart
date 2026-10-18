@@ -12,8 +12,10 @@ import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
+import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/leave_budget_dialog.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.dart';
@@ -69,6 +71,18 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   bool _isLoading = false;
   Account? _existingAccount;
   bool _isFormDirty = false;
+
+  /// Whether another open account is in the budget (read in `build`). The
+  /// first on-budget account sets the budget currency; every later one
+  /// uses it.
+  bool _otherOnBudgetExists = false;
+
+  /// This account sets the budget currency: it is in the budget and no
+  /// other open account is.
+  bool get _setsBudgetCurrency => _onBudget && !_otherOnBudgetExists;
+
+  /// The currency is fixed to the budget currency.
+  bool get _currencyLocked => _onBudget && _otherOnBudgetExists;
 
   /// The supported currencies, plus the selected one if it is not supported
   /// (e.g. an existing account created with another currency).
@@ -434,6 +448,13 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         await repository.createAccount(newAccount);
         await _clearDraft();
       }
+      // The budget's account decides the budget currency (Settings).
+      if (_setsBudgetCurrency &&
+          _selectedCurrency != ref.read(settingsProvider).currency) {
+        await ref
+            .read(settingsProvider.notifier)
+            .setCurrency(_selectedCurrency);
+      }
 
       if (mounted) {
         // Clear dirty flag so we can pop
@@ -550,6 +571,25 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     final isEditing = widget.accountId != null;
     final fmt = ref.watch(appFormatterProvider);
     final l10n = AppLocalizations.of(context)!;
+    final budgetCurrency = ref.watch(
+      settingsProvider.select((s) => s.currency),
+    );
+    _otherOnBudgetExists =
+        ref
+            .watch(accountsProvider)
+            .valueOrNull
+            ?.any(
+              (a) => a.onBudget && !a.isClosed && a.id != widget.accountId,
+            ) ??
+        false;
+    // Locked: only the budget currency (plus the account's own one when an
+    // older account differs, so it can be corrected).
+    final currencies = _currencyLocked
+        ? [
+            budgetCurrency,
+            if (_selectedCurrency != budgetCurrency) _selectedCurrency,
+          ]
+        : _currencies;
 
     return PopScope(
       canPop: !_isFormDirty,
@@ -700,7 +740,12 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                           onChanged: _personal
                               ? null
                               : (value) {
-                                  setState(() => _onBudget = value);
+                                  setState(() {
+                                    _onBudget = value;
+                                    if (value && _otherOnBudgetExists) {
+                                      _selectedCurrency = budgetCurrency;
+                                    }
+                                  });
                                   _onFieldChange();
                                 },
                         ),
@@ -739,60 +784,63 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                           ),
                         const SizedBox(height: AppSpacing.sm),
 
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: AppTextField(
-                                label: l10n.startingBalanceLabel,
-                                hint: fmt.formatAmountForInput(0),
-                                helperText: l10n.startingBalanceHelper,
-                                controller: _balanceController,
-                                focusNode: _balanceFocus,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                      signed: true,
-                                    ),
-                                textInputAction: TextInputAction.done,
-                                onChanged: (_) => _onFieldChange(),
-                                onFieldSubmitted: (_) => _saveAccount(),
-                                validator: (value) {
-                                  if (value != null &&
-                                      value.trim().isNotEmpty) {
-                                    if (fmt.parseAmount(value) == null) {
-                                      return l10n.invalidNumber;
-                                    }
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              flex: 1,
-                              child: DropdownButtonFormField<String>(
-                                key: ValueKey(_selectedCurrency),
-                                initialValue: _selectedCurrency,
-                                decoration: InputDecoration(
-                                  labelText: l10n.currency,
-                                ),
-                                items: _currencies.map((currency) {
-                                  return DropdownMenuItem(
-                                    value: currency,
-                                    child: Text(currency),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() => _selectedCurrency = value);
-                                    _onFieldChange();
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
+                        AppTextField(
+                          label: l10n.startingBalanceLabel,
+                          hint: fmt.formatAmountForInput(0),
+                          helperText: l10n.startingBalanceHelper,
+                          controller: _balanceController,
+                          focusNode: _balanceFocus,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                            signed: true,
+                          ),
+                          textInputAction: TextInputAction.done,
+                          onChanged: (_) => _onFieldChange(),
+                          onFieldSubmitted: (_) => _saveAccount(),
+                          validator: (value) {
+                            if (value != null && value.trim().isNotEmpty) {
+                              if (fmt.parseAmount(value) == null) {
+                                return l10n.invalidNumber;
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // The first on-budget account sets the budget
+                        // currency; later on-budget accounts are fixed to
+                        // it; off-budget accounts may use any currency.
+                        DropdownButtonFormField<String>(
+                          key: ValueKey(
+                            'currency-$_selectedCurrency-$_currencyLocked',
+                          ),
+                          initialValue: _selectedCurrency,
+                          decoration: InputDecoration(
+                            labelText: _setsBudgetCurrency
+                                ? l10n.budgetCurrencyLabel
+                                : l10n.currency,
+                            helperText: _setsBudgetCurrency
+                                ? l10n.budgetCurrencyHelper
+                                : _currencyLocked
+                                ? l10n.accountCurrencyLockedHelper(
+                                    budgetCurrency,
+                                  )
+                                : null,
+                            helperMaxLines: 3,
+                          ),
+                          items: currencies.map((currency) {
+                            return DropdownMenuItem(
+                              value: currency,
+                              child: Text(currency),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _selectedCurrency = value);
+                              _onFieldChange();
+                            }
+                          },
                         ),
                         const SizedBox(height: AppSpacing.md),
 

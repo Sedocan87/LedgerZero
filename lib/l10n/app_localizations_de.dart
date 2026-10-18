@@ -4248,4 +4248,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get categoryNotFound =>
       'Diese Kategorie gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht.';
+
+  @override
+  String get budgetCurrencyLabel => 'Budgetwährung';
+
+  @override
+  String get budgetCurrencyHelper =>
+      'Ihr Budget und alle Konten darin verwenden diese Währung. Konten außerhalb des Budgets können jede Währung haben.';
+
+  @override
+  String accountCurrencyLockedHelper(String currency) {
+    return 'Konten im Budget verwenden die Budgetwährung ($currency). Schalten Sie „Im Budget berücksichtigen“ aus, um ein Konto in einer anderen Währung anzulegen.';
+  }
 }

@@ -1,7 +1,23 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+
+/// The device locales in the user's order, as a provider so tests can
+/// override them. Used for the app language (`resolveAppLocale`) and the
+/// proposed budget currency on a fresh install.
+final deviceLocalesProvider = Provider<List<Locale>>((ref) {
+  try {
+    // The binding's dispatcher (honours test values).
+    return WidgetsBinding.instance.platformDispatcher.locales;
+  } catch (_) {
+    // No binding yet (pure unit tests, isolates).
+    return PlatformDispatcher.instance.locales;
+  }
+});
 
 enum AppDateFormat {
   iso8601('yyyy-MM-dd'),
@@ -130,7 +146,13 @@ class SettingsNotifier extends Notifier<SettingsState> {
   }
 
   SettingsState _loadState() {
-    final currency = _prefs.getString(_keyCurrency) ?? 'USD';
+    // Fresh install: the currency of the device locale until the first
+    // account (the budget's account) stores one.
+    final currency =
+        _prefs.getString(_keyCurrency) ??
+        defaultCurrencyForLocales(
+          ref.watch(deviceLocalesProvider).map((l) => l.toString()),
+        );
     final dateFormatIdx = _prefs.getInt(_keyDateFormat) ?? 0;
     final numberFormatIdx =
         _prefs.getInt(_keyNumberFormat) ?? AppNumberFormat.system.index;

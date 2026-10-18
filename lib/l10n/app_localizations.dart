@@ -7092,6 +7092,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This category no longer exists. It may have been deleted on this or your partner’s phone.'**
   String get categoryNotFound;
+
+  /// Account form: currency field label when this account sets the budget currency
+  ///
+  /// In en, this message translates to:
+  /// **'Budget currency'**
+  String get budgetCurrencyLabel;
+
+  /// Account form: helper text under the budget currency field
+  ///
+  /// In en, this message translates to:
+  /// **'Your budget and every account in it use this currency. Accounts outside the budget can use any currency.'**
+  String get budgetCurrencyHelper;
+
+  /// Account form: helper text when the currency is fixed to the budget currency
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts in the budget use the budget currency ({currency}). Switch off “Include in budget” for an account in another currency.'**
+  String accountCurrencyLockedHelper(String currency);
 }
 
 class _AppLocalizationsDelegate

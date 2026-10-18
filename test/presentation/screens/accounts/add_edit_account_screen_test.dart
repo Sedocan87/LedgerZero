@@ -7,13 +7,18 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/add_edit_account_screen.dart';
+import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MockAccountRepository implements AccountRepository {
-  MockAccountRepository({this.existing});
+  MockAccountRepository({this.existing, this.accounts = const []});
 
   final Account? existing;
+
+  /// What [watchAllAccounts] emits (the other accounts).
+  final List<Account> accounts;
   Account? created;
   Account? updated;
 
@@ -29,7 +34,7 @@ class MockAccountRepository implements AccountRepository {
   @override
   Future<List<Account>> getAllAccounts() async => [];
   @override
-  Stream<List<Account>> watchAllAccounts() => Stream.value([]);
+  Stream<List<Account>> watchAllAccounts() => Stream.value(accounts);
   @override
   Stream<Account?> watchAccount(String id) => Stream.value(null);
   @override
@@ -241,8 +246,11 @@ void main() {
     MockAccountRepository repo, {
     String? accountId,
     bool firstAccount = false,
+    bool keepPrefs = false,
   }) async {
-    SharedPreferences.setMockInitialValues({});
+    if (!keepPrefs) {
+      SharedPreferences.setMockInitialValues({});
+    }
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
@@ -341,5 +349,98 @@ void main() {
     await pumpForm(tester, MockAccountRepository(), firstAccount: true);
     await chooseType(tester, 'Savings');
     expect(includedInBudget(tester), isTrue);
+  });
+
+  Future<void> chooseCurrency(WidgetTester tester, String code) async {
+    await tapAndSettle(tester, find.byType(DropdownButtonFormField<String>));
+    await tester.tap(find.text(code).last);
+    await tester.pumpAndSettle();
+  }
+
+  List<String> offeredCurrencies(WidgetTester tester) => tester
+      .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
+      .items!
+      .map((i) => i.value!)
+      .toList();
+
+  testWidgets('the first on-budget account sets the budget currency', (
+    tester,
+  ) async {
+    final repo = MockAccountRepository();
+    await pumpForm(tester, repo, firstAccount: true);
+    expect(find.text('Budget currency'), findsOneWidget);
+    expect(offeredCurrencies(tester), supportedCurrencyCodes);
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Giro');
+    await chooseCurrency(tester, 'CHF');
+    await tapAndSettle(
+      tester,
+      find.widgetWithText(ElevatedButton, 'Create Account'),
+    );
+
+    expect(repo.created!.currency, 'CHF');
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AddEditAccountScreen)),
+    );
+    expect(container.read(settingsProvider).currency, 'CHF');
+    expect(
+      container.read(sharedPreferencesProvider).getString('settings_currency'),
+      'CHF',
+    );
+  });
+
+  testWidgets('a later on-budget account is fixed to the budget currency; '
+      'off-budget accounts may use any', (tester) async {
+    SharedPreferences.setMockInitialValues({'settings_currency': 'EUR'});
+    final repo = MockAccountRepository(
+      accounts: const [
+        Account(
+          id: 'a1',
+          name: 'Giro',
+          type: AccountType.checking,
+          currency: 'EUR',
+        ),
+      ],
+    );
+    await pumpForm(tester, repo, keepPrefs: true);
+    await tester.enterText(find.byType(TextFormField).at(0), 'Card');
+
+    expect(find.text('Budget currency'), findsNothing);
+    expect(offeredCurrencies(tester), ['EUR']);
+    expect(find.textContaining('budget currency (EUR)'), findsOneWidget);
+
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    expect(offeredCurrencies(tester), supportedCurrencyCodes);
+    await chooseCurrency(tester, 'USD');
+
+    // Back into the budget: the budget currency again.
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    expect(offeredCurrencies(tester), ['EUR']);
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tapAndSettle(
+      tester,
+      find.widgetWithText(ElevatedButton, 'Create Account'),
+    );
+    expect(repo.created!.currency, 'EUR');
+  });
+
+  testWidgets('a closed on-budget account does not fix the currency', (
+    tester,
+  ) async {
+    final repo = MockAccountRepository(
+      accounts: const [
+        Account(
+          id: 'a1',
+          name: 'Old',
+          type: AccountType.checking,
+          currency: 'EUR',
+          isClosed: true,
+        ),
+      ],
+    );
+    await pumpForm(tester, repo);
+    expect(find.text('Budget currency'), findsOneWidget);
   });
 }

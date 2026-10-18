@@ -1172,5 +1172,8 @@
   "faqSavingA": "Lassen Sie das Spar- oder Depotkonto außerhalb des Budgets. Budgetieren Sie jeden Monat den Betrag in einer Kategorie von „Sparen & Geldanlage“ und legen Sie dann eine Umbuchung vom Girokonto auf das Sparkonto mit dieser Kategorie an. Die Kategorie ist ausgegeben, „Zu budgetieren“ bleibt gleich.",
   "faqPersonalQ": "Kann ich ein Konto für mich behalten?",
   "faqPersonalA": "Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam.",
-  "categoryNotFound": "Diese Kategorie gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht."
+  "categoryNotFound": "Diese Kategorie gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht.",
+  "budgetCurrencyLabel": "Budgetwährung",
+  "budgetCurrencyHelper": "Ihr Budget und alle Konten darin verwenden diese Währung. Konten außerhalb des Budgets können jede Währung haben.",
+  "accountCurrencyLockedHelper": "Konten im Budget verwenden die Budgetwährung ({currency}). Schalten Sie „Im Budget berücksichtigen“ aus, um ein Konto in einer anderen Währung anzulegen."
 }

@@ -4216,4 +4216,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get categoryNotFound =>
       'This category no longer exists. It may have been deleted on this or your partner’s phone.';
+
+  @override
+  String get budgetCurrencyLabel => 'Budget currency';
+
+  @override
+  String get budgetCurrencyHelper =>
+      'Your budget and every account in it use this currency. Accounts outside the budget can use any currency.';
+
+  @override
+  String accountCurrencyLockedHelper(String currency) {
+    return 'Accounts in the budget use the budget currency ($currency). Switch off “Include in budget” for an account in another currency.';
+  }
 }
