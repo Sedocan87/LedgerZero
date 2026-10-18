@@ -7092,6 +7092,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The reset could not be completed. Restart the app and try again, or clear the app\'s storage in the Android settings.'**
   String get factoryResetFailed;
+
+  /// Start-up error screen title (shown when the app's preferences cannot be read)
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero could not start'**
+  String get startupFailedTitle;
+
+  /// Start-up error screen message
+  ///
+  /// In en, this message translates to:
+  /// **'The app\'s settings could not be read. Try again; if it keeps failing, restart your phone.'**
+  String get startupFailedBody;
 }
 
 class _AppLocalizationsDelegate

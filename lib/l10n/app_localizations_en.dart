@@ -4220,4 +4220,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get factoryResetFailed =>
       'The reset could not be completed. Restart the app and try again, or clear the app\'s storage in the Android settings.';
+
+  @override
+  String get startupFailedTitle => 'LedgerZero could not start';
+
+  @override
+  String get startupFailedBody =>
+      'The app\'s settings could not be read. Try again; if it keeps failing, restart your phone.';
 }

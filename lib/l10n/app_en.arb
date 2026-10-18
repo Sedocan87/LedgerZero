@@ -3546,5 +3546,13 @@
   "factoryResetFailed": "The reset could not be completed. Restart the app and try again, or clear the app's storage in the Android settings.",
   "@factoryResetFailed": {
     "description": "Snack bar when the factory reset throws"
+  },
+  "startupFailedTitle": "LedgerZero could not start",
+  "@startupFailedTitle": {
+    "description": "Start-up error screen title (shown when the app's preferences cannot be read)"
+  },
+  "startupFailedBody": "The app's settings could not be read. Try again; if it keeps failing, restart your phone.",
+  "@startupFailedBody": {
+    "description": "Start-up error screen message"
   }
 }
