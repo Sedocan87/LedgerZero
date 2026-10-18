@@ -1,5 +1,7 @@
 package com.ledgerzero.app
 
+import android.app.KeyguardManager
+import android.content.Context
 import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
@@ -22,6 +24,12 @@ import io.flutter.plugin.common.MethodChannel
  * credential; below API 30 BIOMETRIC_STRONG cannot be combined with
  * DEVICE_CREDENTIAL, so a weak biometric or the device credential is used
  * there.
+ *
+ * Errors: "unavailable" is reported only when the device has no screen
+ * lock any more (`KeyguardManager.isDeviceSecure`), which is the one case
+ * where the app lock cannot work; everything else (sensor busy, hardware
+ * unavailable, lockout) is "failed" with the system's message, and the
+ * Dart side stays locked.
  */
 class AppLockChannel(
     private val activity: FragmentActivity,
@@ -47,6 +55,7 @@ class AppLockChannel(
         try {
             when (call.method) {
                 "canAuthenticate" -> result.success(canAuthenticate())
+                "isDeviceSecure" -> result.success(isDeviceSecure())
                 "authenticate" -> authenticate(call, result)
                 else -> result.notImplemented()
             }
@@ -60,9 +69,18 @@ class AppLockChannel(
         BiometricManager.from(activity).canAuthenticate(authenticators) ==
             BiometricManager.BIOMETRIC_SUCCESS
 
+    /** Whether the device has a PIN, pattern or password. */
+    private fun isDeviceSecure(): Boolean {
+        val keyguard = activity.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        return keyguard?.isDeviceSecure ?: false
+    }
+
+    /** "unavailable" only without a screen lock; otherwise "failed". */
+    private fun failureCode(): String = if (isDeviceSecure()) "failed" else "unavailable"
+
     private fun authenticate(call: MethodCall, result: MethodChannel.Result) {
         if (!canAuthenticate()) {
-            result.error("unavailable", null, null)
+            result.error(failureCode(), "The system prompt cannot be shown right now", null)
             return
         }
         var replied = false
@@ -85,7 +103,7 @@ class AppLockChannel(
                     BiometricPrompt.ERROR_NO_BIOMETRICS,
                     BiometricPrompt.ERROR_HW_NOT_PRESENT,
                     BiometricPrompt.ERROR_HW_UNAVAILABLE,
-                    BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL -> "unavailable"
+                    BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL -> failureCode()
                     else -> "failed"
                 }
                 reply { result.error(code, errString.toString(), null) }

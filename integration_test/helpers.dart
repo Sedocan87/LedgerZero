@@ -40,6 +40,9 @@ class ScriptedAppLock implements AppLockAuthenticator {
   int prompts = 0;
 
   @override
+  String? lastFailure;
+
+  @override
   Future<bool> canAuthenticate() async => true;
 
   @override

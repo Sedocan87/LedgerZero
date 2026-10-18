@@ -12,10 +12,13 @@ enum AppLockResult {
   /// The user dismissed the prompt.
   cancelled,
 
-  /// The device has no screen lock (and no biometric) any more.
+  /// The device has no screen lock any more (the native side checks
+  /// `KeyguardManager.isDeviceSecure`); the app lock cannot work.
   unavailable,
 
-  /// Too many attempts or another error.
+  /// Too many attempts, a sensor that is not available right now, or
+  /// another error ([AppLockAuthenticator.lastFailure]); the app stays
+  /// locked and the user can try again.
   failed,
 }
 
@@ -29,16 +32,25 @@ abstract class AppLockAuthenticator {
   Future<bool> canAuthenticate();
 
   Future<AppLockResult> authenticate({required String title, String? subtitle});
+
+  /// The system's reason for the last [AppLockResult.failed], if any.
+  String? get lastFailure;
 }
 
 class PlatformAppLockAuthenticator implements AppLockAuthenticator {
-  const PlatformAppLockAuthenticator();
+  PlatformAppLockAuthenticator({bool? isAndroid})
+    : _isAndroid = isAndroid ?? Platform.isAndroid;
 
   static const _channel = MethodChannel('com.ledgerzero.app/app_lock');
 
+  final bool _isAndroid;
+
+  @override
+  String? lastFailure;
+
   @override
   Future<bool> canAuthenticate() async {
-    if (!Platform.isAndroid) {
+    if (!_isAndroid) {
       return false;
     }
     try {
@@ -55,7 +67,7 @@ class PlatformAppLockAuthenticator implements AppLockAuthenticator {
     required String title,
     String? subtitle,
   }) async {
-    if (!Platform.isAndroid) {
+    if (!_isAndroid) {
       return AppLockResult.unavailable;
     }
     try {
@@ -63,21 +75,29 @@ class PlatformAppLockAuthenticator implements AppLockAuthenticator {
         'title': title,
         'subtitle': subtitle,
       });
+      lastFailure = null;
       return AppLockResult.success;
     } on PlatformException catch (e) {
-      return switch (e.code) {
-        'cancelled' => AppLockResult.cancelled,
-        'unavailable' => AppLockResult.unavailable,
-        _ => AppLockResult.failed,
-      };
+      switch (e.code) {
+        case 'cancelled':
+          return AppLockResult.cancelled;
+        case 'unavailable':
+          // Only reported without a screen lock (AppLockChannel.kt).
+          return AppLockResult.unavailable;
+        default:
+          lastFailure = e.message ?? e.code;
+          return AppLockResult.failed;
+      }
     } on MissingPluginException {
-      return AppLockResult.unavailable;
+      // A build without the native channel must not unlock without asking.
+      lastFailure = 'app lock channel missing';
+      return AppLockResult.failed;
     }
   }
 }
 
 final appLockAuthenticatorProvider = Provider<AppLockAuthenticator>(
-  (ref) => const PlatformAppLockAuthenticator(),
+  (ref) => PlatformAppLockAuthenticator(),
 );
 
 /// SharedPreferences flag: the app lock is on.
