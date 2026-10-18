@@ -87,6 +87,9 @@ class SyncController extends StateNotifier<SyncState> {
 
   bool _unlocked = false;
   bool _foreground = true;
+
+  /// A restore is replacing the database: no run may start.
+  bool _pausedForRestore = false;
   static bool _legacyQueueRemoved = false;
   bool _disposed = false;
   SyncDependencies? _deps;
@@ -318,7 +321,7 @@ class SyncController extends StateNotifier<SyncState> {
   }
 
   void _requestAutoSync(String reason) {
-    if (!_unlocked || !_automatic || _disposed) {
+    if (!_unlocked || !_automatic || _disposed || _pausedForRestore) {
       return;
     }
     Logger.info('Sync requested ($reason)');
@@ -332,7 +335,35 @@ class SyncController extends StateNotifier<SyncState> {
   /// Manual sync (button, pull to refresh). Never throws.
   Future<void> syncNow() => _runSync(automatic: false);
 
+  /// Stops sync for the duration of a restore: cancels the running run,
+  /// waits until it has stopped and refuses new runs until [resume]. The
+  /// restore then replaces the database file and sets the re-bootstrap
+  /// flag without a run touching either.
+  Future<void> pause() async {
+    _pausedForRestore = true;
+    _cancellation?.cancel();
+    _debounceTimer?.cancel();
+    _retryTimer?.cancel();
+    final running = _running;
+    if (running != null) {
+      try {
+        await running;
+      } catch (_) {
+        // Reported by the run itself.
+      }
+    }
+  }
+
+  /// Ends [pause]; the reopened database syncs right away.
+  void resume() {
+    _pausedForRestore = false;
+    _requestAutoSync('restore');
+  }
+
   Future<void> _runSync({required bool automatic}) {
+    if (_pausedForRestore) {
+      return Future.value();
+    }
     final running = _running;
     if (running != null) {
       _rerun = true;

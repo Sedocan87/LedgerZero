@@ -54,8 +54,12 @@ class _ProviderDatabaseLifecycle implements DatabaseLifecycle {
   final Ref _ref;
   _ProviderDatabaseLifecycle(this._ref);
 
+  /// Sync is paused first: a run must neither write the database nor
+  /// generate change files while the file is swapped and the re-bootstrap
+  /// flag is set.
   @override
   Future<void> close() async {
+    await _ref.read(syncControllerProvider.notifier).pause();
     if (_ref.exists(databaseProvider)) {
       try {
         await closeDatabaseOnce(_ref.read(databaseProvider));
@@ -68,7 +72,9 @@ class _ProviderDatabaseLifecycle implements DatabaseLifecycle {
   @override
   Future<AppDatabase> reopen() async {
     _ref.read(databaseGenerationProvider.notifier).state++;
-    return _ref.read(databaseProvider);
+    final db = _ref.read(databaseProvider);
+    _ref.read(syncControllerProvider.notifier).resume();
+    return db;
   }
 }
 

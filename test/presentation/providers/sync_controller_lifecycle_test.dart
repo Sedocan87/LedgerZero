@@ -304,6 +304,36 @@ void main() {
     expect(c.state.conflicts, isEmpty);
   });
 
+  test(
+    'pause waits for the running sync and blocks new runs until resume',
+    () async {
+      final c = controller(frequency: SyncFrequency.manual);
+      await c.onLockStateChanged(AppLockState.unlocked);
+      engine.gate = Completer<void>();
+      final first = c.syncNow();
+      await settle();
+      expect(engine.runs, 1);
+
+      var paused = false;
+      final pausing = c.pause().then((_) => paused = true);
+      await settle();
+      expect(paused, isFalse); // still waiting for the run
+      expect(engine.cancellations.single.isCancelled, isTrue);
+      engine.gate!.complete();
+      await pausing;
+      await first;
+
+      await c.syncNow();
+      await settle();
+      expect(engine.runs, 1); // nothing runs while paused
+
+      c.resume();
+      await c.syncNow();
+      await settle();
+      expect(engine.runs, 2);
+    },
+  );
+
   test('a provider saved by an older version (iCloud) means no sync', () async {
     final c = controller(provider: 'iCloud');
     expect(c.state.selectedProvider, SyncProviderType.none);
