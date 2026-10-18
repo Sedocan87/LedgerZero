@@ -69,10 +69,7 @@ void main() {
   });
 
   group('card', () {
-    Future<void> pump(WidgetTester tester) async {
-      await tester.runAsync(
-        () => t.budgeting.setCategoryBudgetedAmount(groceries, 30000, previous),
-      );
+    Future<void> pumpCard(WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -95,6 +92,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+    }
+
+    Future<void> pump(WidgetTester tester) async {
+      await tester.runAsync(
+        () => t.budgeting.setCategoryBudgetedAmount(groceries, 30000, previous),
+      );
+      await pumpCard(tester);
     }
 
     Future<void> unmount(WidgetTester tester) async {
@@ -126,6 +130,39 @@ void main() {
         ),
       );
       expect(budget!.budgeted, 70000);
+      await unmount(tester);
+    });
+
+    testWidgets('assigning marks the month handled: the card does not come '
+        'back with income this month, and Undo brings it back', (tester) async {
+      // 200 left over from the month before, 3,000 income this month.
+      await tester.runAsync(() async {
+        await t.budgeting.setCategoryBudgetedAmount(groceries, 99800, previous);
+        await t.addTransaction(accountId: 'a', amount: 300000, date: month);
+      });
+      await pumpCard(tester);
+      expect(find.textContaining(r'$2.00 from '), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('budget.leftoverAssign')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Savings'));
+      await tester.pumpAndSettle();
+      expect(card, findsNothing);
+      expect(prefs.getStringList(LeftoverCard.dismissedKey), [
+        CalendarDate.monthKey(month),
+      ]);
+
+      // A later edit that would recreate the offer does not show it again.
+      await tester.runAsync(
+        () => t.budgeting.setCategoryBudgetedAmount(groceries, 99700, previous),
+      );
+      await tester.pumpAndSettle();
+      expect(card, findsNothing);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+      expect(prefs.getStringList(LeftoverCard.dismissedKey), isEmpty);
       await unmount(tester);
     });
 

@@ -118,8 +118,11 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   month, when the month before was budgeted and left money unassigned that
   is still in To Be Budgeted: *Budget for savings…* (category picker with
   the Savings & Investments group first; snack bar with Undo) or *Keep for
-  (month)*, which hides it for the month. Not shown for a new budget: a
-  starting balance counts in every month and is no leftover.
+  (month)*. Both hide the card for the month (remembered in
+  SharedPreferences, `leftover_card_dismissed`), so a later edit does not
+  bring the same offer back; Undo of the assignment shows it again. Not
+  shown for a new budget: an account created this month has nothing in
+  the month before.
 * **New-month card**: for the current or a later month with nothing budgeted
   whose previous month has budgets. It shows the total, To Be Budgeted after
   filling and the income still expected, and offers *Fill like (previous
