@@ -303,7 +303,8 @@ class SyncEngine {
       Logger.info('Sync: rebuilding sync state after a restore.');
       await _db.syncDao.clearProgress();
       await _db.syncDao.clearQuarantine();
-      await _outbox.clear();
+      // The outbox was emptied by the restore itself; files written since
+      // (none while sync is paused) are kept.
       await _state.setOwnSequence(remote.maxSequence(deviceId));
     } else {
       final own = math.max(

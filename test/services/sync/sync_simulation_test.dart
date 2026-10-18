@@ -828,7 +828,9 @@ void main() {
       await restored.customStatement('DELETE FROM pending_sync_changes');
       a = a.withDatabase(restored);
       devices.add(a);
-      await SyncRebootstrap(a.prefs, a.outbox).markRequired();
+      final rebootstrap = SyncRebootstrap(a.prefs, a.outbox);
+      await rebootstrap.markRequired();
+      await rebootstrap.discardOutbox();
       expect(
         await a.count("SELECT COUNT(*) FROM accounts WHERE id='after'"),
         0,

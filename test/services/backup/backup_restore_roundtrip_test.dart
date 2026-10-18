@@ -196,6 +196,83 @@ void main() {
     },
   );
 
+  group('interrupted swap (process killed during the restore)', () {
+    /// Lays out the files as they are right after the live database was
+    /// moved aside and before the staged file was renamed: marker set,
+    /// `.previous` holds the old data, `.restore-new` the verified copy.
+    Future<void> interruptedSwap({bool stagedUsable = true}) async {
+      final files = RestoreFiles(liveFile);
+      var db = lifecycle.open();
+      await addAccount(db, 'old', 'Before Restore');
+      await lifecycle.close();
+      if (stagedUsable) {
+        db = AppDatabase(openEncryptedConnection(deviceKey, file: files.staged));
+        await addAccount(db, 'new', 'From Backup');
+        await db.close();
+      } else {
+        files.staged.writeAsBytesSync(List.filled(4096, 7));
+      }
+      files.marker.writeAsStringSync('1');
+      await moveDatabaseFileSet(liveFile, files.previous);
+      expect(liveFile.existsSync(), isFalse);
+    }
+
+    Future<List<String>> accountIds() async {
+      final db = lifecycle.open();
+      final ids = (await db.select(db.accounts).get()).map((a) => a.id);
+      return ids.toList();
+    }
+
+    void expectClean() {
+      final files = RestoreFiles(liveFile);
+      expect(files.previous.existsSync(), isFalse);
+      expect(files.staged.existsSync(), isFalse);
+      expect(files.marker.existsSync(), isFalse);
+    }
+
+    test('the staged database is moved into place', () async {
+      await interruptedSwap();
+      expect(await accountIds(), ['new']);
+      expectClean();
+    });
+
+    test('an unusable staged file rolls back to the previous', () async {
+      await interruptedSwap(stagedUsable: false);
+      expect(await accountIds(), ['old']);
+      expectClean();
+    });
+
+    test('a missing live file never becomes a fresh database while a '
+        'previous copy exists', () async {
+      final db = lifecycle.open();
+      await addAccount(db, 'old', 'Before Restore');
+      await lifecycle.close();
+      await moveDatabaseFileSet(liveFile, RestoreFiles(liveFile).previous);
+      expect(await accountIds(), ['old']);
+      expectClean();
+    });
+
+    test('a readable live file with a stale marker is kept', () async {
+      final files = RestoreFiles(liveFile);
+      final db = lifecycle.open();
+      await addAccount(db, 'live', 'Live');
+      await lifecycle.close();
+      files.marker.writeAsStringSync('1');
+      files.previous.writeAsBytesSync(List.filled(4096, 1));
+      expect(await accountIds(), ['live']);
+      expectClean();
+    });
+
+    test('deleteDatabaseFiles removes every variant', () async {
+      await interruptedSwap();
+      await deleteDatabaseFiles(liveFile);
+      expect(
+        dir.listSync().where((e) => e.path.contains('ledger_zero.db')),
+        isEmpty,
+      );
+    });
+  });
+
   test('a backup from another device restores into this device key', () async {
     // Made on device A with key A.
     final otherFile = File('${dir.path}/other.db');

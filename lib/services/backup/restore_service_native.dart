@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/services/backup/backup_format.dart';
@@ -36,13 +38,17 @@ abstract class DatabaseLifecycle {
 ///    by opening the file through [AppDatabase];
 /// 3. empty `pending_sync_changes` (see [SyncRebootstrap]);
 /// 4. build a new database encrypted with the current data key
-///    (`ATTACH ... KEY` + `sqlcipher_export`) next to the live file and
-///    check it opens with that key;
-/// 5. close the connection, move the live file to `<db>.previous`, move the
-///    new file into place, reopen through [DatabaseLifecycle] and run a
-///    query; on failure the previous file is moved back and reopened, on
-///    success it is deleted (only one previous copy ever exists);
-/// 6. delete the temporary plain file (always), mark sync for re-bootstrap.
+///    (`ATTACH ... KEY` + `sqlcipher_export`, on a background isolate) next
+///    to the live file and check it opens with that key;
+/// 5. mark sync for re-bootstrap, write the restore marker
+///    (`<db>.restoring`), close the connection, move the live file to
+///    `<db>.previous`, move the new file into place, reopen through
+///    [DatabaseLifecycle] and run a query; on failure the previous file is
+///    moved back, reopened and the re-bootstrap flag cleared; on success
+///    the previous file and the marker are deleted (only one previous copy
+///    ever exists). If the process dies between the move and the rename,
+///    the next open finishes the swap (`recoverInterruptedRestore`);
+/// 6. delete the temporary plain file (always).
 class RestoreService {
   final AppDatabase Function() _currentDb;
   final DatabaseLifecycle? _lifecycle;
@@ -80,26 +86,112 @@ class RestoreService {
     if (lifecycle == null || databaseFile == null || dataKey == null) {
       throw StateError('RestoreService is not configured for full restores');
     }
+    final prepared = await prepareRestore(backupFile, password: password);
+    await prepared.commit();
+  }
+
+  /// Decrypts and validates [backupFile] without touching the live
+  /// database, so the caller can inspect [PreparedRestore.info] (member id,
+  /// age) and warn the user before [PreparedRestore.commit] replaces the
+  /// data. [PreparedRestore.discard] cleans up without restoring.
+  Future<PreparedRestore> prepareRestore(
+    File backupFile, {
+    required String password,
+  }) async {
+    final lifecycle = _lifecycle;
+    final databaseFile = _databaseFile;
+    final dataKey = _dataKey;
+    if (lifecycle == null || databaseFile == null || dataKey == null) {
+      throw StateError('RestoreService is not configured for full restores');
+    }
     final work = await _workDirectory('restore');
-    final dbFile = await databaseFile();
-    final staged = File('${dbFile.path}.restore-new');
     try {
       final plain = File(p.join(work.path, 'restored.sqlite'));
-      await BackupFormat.decryptFile(
+      final backupInfo = await BackupFormat.decryptFile(
         input: backupFile,
         output: plain,
         password: password,
       );
       await prepareRestoredDatabase(plain);
-      await _deleteDatabaseFiles(staged);
-      _buildEncryptedCopy(plain, staged, RawSqlCipherKey(dataKey()));
-      await _swapIn(staged, dbFile, lifecycle);
+      final info = await _inspect(plain, backupInfo);
+      return PreparedRestore._(this, work, plain, info);
+    } catch (e) {
+      Logger.error('Restore failed', e.runtimeType);
+      await _deleteDirectory(work);
+      rethrow;
+    }
+  }
+
+  /// What the user should know before the restore replaces the data.
+  Future<RestoreInfo> _inspect(File plain, BackupInfo backupInfo) async {
+    String? backupMember;
+    var backupPersonal = 0;
+    final db = sqlite.sqlite3.open(plain.path);
+    try {
+      backupMember =
+          db
+                  .select('SELECT value FROM sync_kv WHERE key = ?', [
+                    AppDatabase.memberIdKey,
+                  ])
+                  .firstOrNull
+                  ?.values
+                  .first
+              as String?;
+      backupPersonal =
+          db
+                  .select(
+                    'SELECT COUNT(*) FROM accounts WHERE owner_id IS NOT NULL',
+                  )
+                  .first
+                  .values
+                  .first
+              as int;
+    } finally {
+      db.close();
+    }
+    final current = _currentDb();
+    final localMember = await current.syncDao.getValue(
+      AppDatabase.memberIdKey,
+    );
+    final localPersonal =
+        (await current
+                .customSelect(
+                  'SELECT COUNT(*) AS c FROM accounts WHERE owner_id IS NOT NULL',
+                )
+                .getSingle())
+            .read<int>('c');
+    return RestoreInfo(
+      createdAt: backupInfo.createdAt,
+      backupMemberId: backupMember,
+      localMemberId: localMember,
+      backupPersonalAccounts: backupPersonal,
+      localPersonalAccounts: localPersonal,
+    );
+  }
+
+  Future<void> _commit(Directory work, File plain) async {
+    final lifecycle = _lifecycle!;
+    final dbFile = await _databaseFile!();
+    final staged = RestoreFiles(dbFile).staged;
+    try {
+      await deleteDatabaseFileSet(staged);
+      final keyBytes = Uint8List.fromList(_dataKey!());
+      await Isolate.run(() => _buildEncryptedCopy(plain, staged, keyBytes));
+      // The flag goes first: sync is paused by the lifecycle, and a run that
+      // starts after the reopen must already see it.
       await _rebootstrap?.markRequired();
+      try {
+        await _swapIn(staged, dbFile, lifecycle);
+      } catch (_) {
+        await _rebootstrap?.clear();
+        rethrow;
+      }
+      await _rebootstrap?.discardOutbox();
     } catch (e) {
       Logger.error('Restore failed', e.runtimeType);
       rethrow;
     } finally {
-      await _deleteDatabaseFiles(staged);
+      await deleteDatabaseFileSet(staged);
       await _deleteDirectory(work);
     }
   }
@@ -218,11 +310,14 @@ class RestoreService {
     }
   }
 
+  /// Runs on a background isolate: `sqlcipher_export` of a whole database
+  /// would otherwise block the UI long enough for an ANR.
   static void _buildEncryptedCopy(
     File plain,
     File target,
-    RawSqlCipherKey key,
+    Uint8List keyBytes,
   ) {
+    final key = RawSqlCipherKey(keyBytes);
     final db = sqlite.sqlite3.open(plain.path);
     try {
       SqlCipher.exportTo(db, target, key);
@@ -246,22 +341,28 @@ class RestoreService {
     File dbFile,
     DatabaseLifecycle lifecycle,
   ) async {
-    final previous = File('${dbFile.path}.previous');
+    final files = RestoreFiles(dbFile);
+    final previous = files.previous;
     await lifecycle.close();
-    await _deleteDatabaseFiles(previous);
-    await _moveDatabaseFiles(dbFile, previous);
+    await deleteDatabaseFileSet(previous);
+    // From here until the marker is removed the live file may be missing;
+    // `recoverInterruptedRestore` finishes the swap at the next open.
+    await files.marker.writeAsString('1', flush: true);
+    await moveDatabaseFileSet(dbFile, previous);
     try {
       await staged.rename(dbFile.path);
       final reopened = await lifecycle.reopen();
       await reopened.customSelect('SELECT count(*) FROM accounts').get();
     } catch (e) {
       await lifecycle.close();
-      await _deleteDatabaseFiles(dbFile);
-      await _moveDatabaseFiles(previous, dbFile);
+      await deleteDatabaseFileSet(dbFile);
+      await moveDatabaseFileSet(previous, dbFile);
+      await deleteDatabaseFileSet(files.marker);
       await lifecycle.reopen();
       rethrow;
     }
-    await _deleteDatabaseFiles(previous);
+    await deleteDatabaseFileSet(previous);
+    await deleteDatabaseFileSet(files.marker);
   }
 
   Future<Directory> _workDirectory(String name) async {
@@ -271,26 +372,6 @@ class RestoreService {
     );
     await dir.create(recursive: true);
     return dir;
-  }
-
-  static Future<void> _moveDatabaseFiles(File from, File to) async {
-    for (final suffix in const ['', '-wal', '-shm']) {
-      final f = File('${from.path}$suffix');
-      if (await f.exists()) {
-        await f.rename('${to.path}$suffix');
-      }
-    }
-  }
-
-  static Future<void> _deleteDatabaseFiles(File file) async {
-    for (final suffix in const ['', '-wal', '-shm', '-journal']) {
-      final f = File('${file.path}$suffix');
-      try {
-        if (await f.exists()) {
-          await f.delete();
-        }
-      } catch (_) {}
-    }
   }
 
   static Future<void> _deleteDirectory(Directory dir) async {
@@ -360,5 +441,71 @@ class RestoreService {
         }
       }
     }
+  }
+}
+
+/// Facts about a backup and the current data that decide which warnings a
+/// full restore needs (see docs/BACKUP_AND_EXPORT.md).
+class RestoreInfo {
+  const RestoreInfo({
+    required this.createdAt,
+    required this.backupMemberId,
+    required this.localMemberId,
+    required this.backupPersonalAccounts,
+    required this.localPersonalAccounts,
+  });
+
+  /// When the backup was made (null for format v1 files).
+  final DateTime? createdAt;
+
+  /// The household member id stored in the backup (`sync_kv.member_id`).
+  final String? backupMemberId;
+  final String? localMemberId;
+  final int backupPersonalAccounts;
+  final int localPersonalAccounts;
+
+  /// The restore changes who "I" am in the household: the backup carries
+  /// another member id (or none) while this phone already has one or shows
+  /// personal accounts. Afterwards the accounts personal to the backup's
+  /// member are "mine" and today's own accounts become the partner's, with
+  /// their transactions gone.
+  bool get changesMember =>
+      backupMemberId != localMemberId &&
+      (localMemberId != null || localPersonalAccounts > 0);
+
+  /// The backup is older than the sync tombstone retention: rows deleted
+  /// elsewhere since may not be deleted again by sync.
+  bool isOlderThan(Duration retention, {DateTime? now}) {
+    final created = createdAt;
+    if (created == null) {
+      return false;
+    }
+    return (now ?? DateTime.now()).toUtc().difference(created) > retention;
+  }
+}
+
+/// A decrypted, validated backup waiting for [commit] or [discard].
+class PreparedRestore {
+  PreparedRestore._(this._service, this._work, this._plain, this.info);
+
+  final RestoreService _service;
+  final Directory _work;
+  final File _plain;
+  final RestoreInfo info;
+  bool _done = false;
+
+  /// Replaces the live database with the backup.
+  Future<void> commit() async {
+    if (_done) {
+      throw StateError('restore already finished');
+    }
+    _done = true;
+    await _service._commit(_work, _plain);
+  }
+
+  /// Deletes the decrypted copy without restoring.
+  Future<void> discard() async {
+    _done = true;
+    await RestoreService._deleteDirectory(_work);
   }
 }
