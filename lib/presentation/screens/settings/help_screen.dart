@@ -22,6 +22,15 @@ class HelpScreen extends StatelessWidget {
             },
           ),
           ListTile(
+            key: const Key('help.budgetBasics'),
+            leading: const Icon(Icons.pie_chart),
+            title: Text(l10n.budgetBasicsTitle),
+            subtitle: Text(l10n.budgetBasicsSubtitle),
+            onTap: () {
+              context.pushNamed('budget-basics');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.book),
             title: Text(l10n.userGuide),
             subtitle: Text(l10n.userGuideSubtitle),

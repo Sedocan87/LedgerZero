@@ -615,10 +615,6 @@
   "notificationBudgetAlertTitle": "Kategorie überzogen",
   "notificationBudgetAlertBodyGeneric": "Eine Budgetkategorie ist in diesem Monat überzogen. Tippen Sie hier, um Ihr Budget zu prüfen.",
   "notificationBudgetAlertBodyAmount": "{category} ist in diesem Monat um {amount} überzogen.",
-  "onboardingCompleteTitle": "Alles bereit!",
-  "onboardingCompleteMessage": "Fügen Sie als Nächstes das Konto hinzu, von dem Sie bezahlen, zum Beispiel Ihr Girokonto. Sein Kontostand ist das Geld, das Sie budgetieren können.",
-  "onboardingCreateFirstAccount": "Erstes Konto anlegen",
-  "onboardingSkipForNow": "Später",
   "firstAccountTitle": "Beginnen Sie mit einem Konto",
   "firstAccountExplanation": "Geben Sie den aktuellen Kontostand eines Kontos ein, das Sie täglich nutzen. Dieser Betrag wird zu „Zu budgetieren“ und kann Ihren Kategorien zugewiesen werden. Weitere Konten können Sie später hinzufügen.",
   "budgetNoAccountsMessage": "Legen Sie zuerst ein Konto an: Sein Kontostand ist das Geld, das Sie Ihren Kategorien zuweisen.",
@@ -870,7 +866,6 @@
   "budgetBasicsTipZeroBody": "Verteilen Sie Geld, bis „Zu budgetieren“ bei null steht.",
   "budgetBasicsTipFlexTitle": "Flexibel bleiben",
   "budgetBasicsTipFlexBody": "Zu viel ausgegeben? Kein Problem: Verschieben Sie Geld aus einer anderen Kategorie.",
-  "budgetBasicsReady": "Los geht's!",
   "categoryGroupRequired": "Bitte wählen Sie eine Kategoriegruppe",
   "categoryUsage": "{count, plural, =0{In keiner Transaktion verwendet} =1{In 1 Transaktion verwendet} other{In {count} Transaktionen verwendet}}",
   "nameRequired": "Bitte geben Sie einen Namen ein",
@@ -1175,5 +1170,6 @@
   "categoryNotFound": "Diese Kategorie gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht.",
   "budgetCurrencyLabel": "Budgetwährung",
   "budgetCurrencyHelper": "Ihr Budget und alle Konten darin verwenden diese Währung. Konten außerhalb des Budgets können jede Währung haben.",
-  "accountCurrencyLockedHelper": "Konten im Budget verwenden die Budgetwährung ({currency}). Schalten Sie „Im Budget berücksichtigen“ aus, um ein Konto in einer anderen Währung anzulegen."
+  "accountCurrencyLockedHelper": "Konten im Budget verwenden die Budgetwährung ({currency}). Schalten Sie „Im Budget berücksichtigen“ aus, um ein Konto in einer anderen Währung anzulegen.",
+  "budgetBasicsSubtitle": "So funktioniert das Umschlagprinzip in LedgerZero"
 }

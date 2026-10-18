@@ -17,8 +17,7 @@ import 'package:ledger_zero/presentation/screens/categories/add_edit_category_sc
 import 'package:ledger_zero/presentation/screens/categories/categories_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/import/csv_import_screen.dart';
-import 'package:ledger_zero/presentation/screens/onboarding/budget_setup_screen.dart';
-import 'package:ledger_zero/presentation/screens/onboarding/completion_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/budget_basics_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/payees/payees_screen.dart';
 import 'package:ledger_zero/presentation/screens/reports/reports_screen.dart';
@@ -173,8 +172,7 @@ void main() {
     'CSV import': () => const CsvImportScreen(),
     'YNAB import': () => const YnabImportScreen(),
     'Onboarding': () => const OnboardingScreen(),
-    'Budget setup': () => const BudgetSetupScreen(),
-    'Onboarding complete': () => const CompletionScreen(),
+    'Budget basics': () => const BudgetBasicsScreen(),
   };
 
   for (final entry in screens.entries) {

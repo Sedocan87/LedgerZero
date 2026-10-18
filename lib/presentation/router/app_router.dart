@@ -39,9 +39,7 @@ import 'package:ledger_zero/presentation/screens/settings/help_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/faq_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/user_guide_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
-
-import 'package:ledger_zero/presentation/screens/onboarding/budget_setup_screen.dart';
-import 'package:ledger_zero/presentation/screens/onboarding/completion_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/budget_basics_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/natural_language_input_screen.dart';
@@ -92,11 +90,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isGoingToLogin = state.matchedLocation == '/login';
 
       if (!isOnboarded) {
-        // The steps after the security step need the open database; if it
+        // The step after the security step needs the open database; if it
         // is not open (the app was restarted mid-onboarding), start over.
         final needsSession =
-            state.matchedLocation.startsWith('/onboarding/budget-setup') ||
-            state.matchedLocation.startsWith('/onboarding/completion');
+            state.matchedLocation.startsWith('/onboarding/first-account') ||
+            state.matchedLocation.startsWith('/onboarding/budget-setup');
         if (needsSession && !isAuthenticated) {
           return '/onboarding';
         }
@@ -136,15 +134,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SecuritySetupScreen(),
           ),
 
+          // Onboarding ends with the first account (its currency is the
+          // budget currency); saving it marks onboarding done and opens the
+          // budget. The budget explainer lives in Help > Budgeting basics.
+          GoRoute(
+            path: 'first-account',
+            name: 'first-account',
+            builder: (context, state) => const AddEditAccountScreen(
+              firstAccount: true,
+              finishesOnboarding: true,
+            ),
+          ),
+          // The security step still navigates to 'budget-setup'.
           GoRoute(
             path: 'budget-setup',
             name: 'budget-setup',
-            builder: (context, state) => const BudgetSetupScreen(),
-          ),
-          GoRoute(
-            path: 'completion',
-            name: 'completion',
-            builder: (context, state) => const CompletionScreen(),
+            redirect: (context, state) => '/onboarding/first-account',
           ),
         ],
       ),
@@ -233,6 +238,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'faq',
                 name: 'faq',
                 builder: (context, state) => const FaqScreen(),
+              ),
+              GoRoute(
+                path: 'budget-basics',
+                name: 'budget-basics',
+                builder: (context, state) => const BudgetBasicsScreen(),
               ),
               GoRoute(
                 path: 'user-guide',

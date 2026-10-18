@@ -105,11 +105,8 @@ void main() {
     await waitFor(tester, find.text('Your data stays on this phone'));
     await tapWhenShown(tester, find.widgetWithText(ElevatedButton, 'Continue'));
 
-    // Budget basics and completion.
-    await tapWhenShown(tester, find.text("I'm ready!"));
-    await tapWhenShown(tester, find.text('Create your first account'));
-
-    // First account: 1,000.00 starting balance.
+    // The last onboarding step is the first account: 1,000.00 starting
+    // balance in the budget currency.
     await waitFor(tester, find.text('Create Account'));
     await tester.enterText(find.byType(TextFormField).at(0), 'Checking');
     await tester.enterText(find.byType(TextFormField).at(1), '1000');
@@ -117,6 +114,8 @@ void main() {
       tester,
       find.widgetWithText(ElevatedButton, 'Create Account'),
     );
+    // No salary yet: skip the question.
+    await tapWhenShown(tester, find.text('Skip'));
     // The first account leads to the budget.
     await waitFor(tester, find.text('Groceries'));
     await dismissTutorial(tester);

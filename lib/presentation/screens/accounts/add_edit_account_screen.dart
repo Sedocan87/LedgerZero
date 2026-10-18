@@ -12,10 +12,12 @@ import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
+import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/leave_budget_dialog.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.dart';
@@ -38,11 +40,16 @@ class AddEditAccountScreen extends ConsumerStatefulWidget {
   /// continues to the budget once it is saved.
   final bool firstAccount;
 
+  /// The last onboarding step: saving marks onboarding done (which rebuilds
+  /// the router) before opening the budget. Implies [firstAccount].
+  final bool finishesOnboarding;
+
   const AddEditAccountScreen({
     super.key,
     this.accountId,
     this.firstAccount = false,
-  });
+    this.finishesOnboarding = false,
+  }) : assert(!finishesOnboarding || firstAccount);
 
   @override
   ConsumerState<AddEditAccountScreen> createState() =>
@@ -470,7 +477,17 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
             return;
           }
           // The starting balance is now To Be Budgeted: assign it.
-          context.go('/budget');
+          if (widget.finishesOnboarding) {
+            // Finishing onboarding rebuilds the router (it follows the
+            // auth state); navigate once the new one is in place.
+            ref.read(authProvider.notifier).setOnboarded(true);
+            final router = ref.read(routerProvider);
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => router.go('/budget'),
+            );
+          } else {
+            context.go('/budget');
+          }
         } else {
           Navigator.of(context).pop();
         }

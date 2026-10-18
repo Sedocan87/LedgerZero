@@ -2158,19 +2158,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get onboardingCompleteTitle => 'Alles bereit!';
-
-  @override
-  String get onboardingCompleteMessage =>
-      'Fügen Sie als Nächstes das Konto hinzu, von dem Sie bezahlen, zum Beispiel Ihr Girokonto. Sein Kontostand ist das Geld, das Sie budgetieren können.';
-
-  @override
-  String get onboardingCreateFirstAccount => 'Erstes Konto anlegen';
-
-  @override
-  String get onboardingSkipForNow => 'Später';
-
-  @override
   String get firstAccountTitle => 'Beginnen Sie mit einem Konto';
 
   @override
@@ -3082,9 +3069,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get budgetBasicsTipFlexBody =>
       'Zu viel ausgegeben? Kein Problem: Verschieben Sie Geld aus einer anderen Kategorie.';
-
-  @override
-  String get budgetBasicsReady => 'Los geht\'s!';
 
   @override
   String get categoryGroupRequired => 'Bitte wählen Sie eine Kategoriegruppe';
@@ -4260,4 +4244,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String accountCurrencyLockedHelper(String currency) {
     return 'Konten im Budget verwenden die Budgetwährung ($currency). Schalten Sie „Im Budget berücksichtigen“ aus, um ein Konto in einer anderen Währung anzulegen.';
   }
+
+  @override
+  String get budgetBasicsSubtitle =>
+      'So funktioniert das Umschlagprinzip in LedgerZero';
 }

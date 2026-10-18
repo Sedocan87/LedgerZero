@@ -18,7 +18,7 @@ in `build` (rebuilds when the setting changes), `animationsEnabledOf(context)`
 where there is no `WidgetRef` (page transitions), or
 `ThemeNotifier.shouldAnimate` for a one-off check
 (`lib/presentation/providers/theme_provider.dart`). Page transitions in the
-router, the tutorial overlay and the onboarding completion screen use them.
+router and the tutorial overlay use them.
 Charts are drawn without animation.
 
 ## Screen readers

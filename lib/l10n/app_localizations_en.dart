@@ -2136,19 +2136,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onboardingCompleteTitle => 'You\'re all set!';
-
-  @override
-  String get onboardingCompleteMessage =>
-      'Next, add the account you pay from, such as your checking account. Its balance becomes the money you can budget.';
-
-  @override
-  String get onboardingCreateFirstAccount => 'Create your first account';
-
-  @override
-  String get onboardingSkipForNow => 'Skip for now';
-
-  @override
   String get firstAccountTitle => 'Start with one account';
 
   @override
@@ -3056,9 +3043,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get budgetBasicsTipFlexBody =>
       'Overspent? No problem: move money from another category.';
-
-  @override
-  String get budgetBasicsReady => 'I\'m ready!';
 
   @override
   String get categoryGroupRequired => 'Please select a category group';
@@ -4228,4 +4212,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String accountCurrencyLockedHelper(String currency) {
     return 'Accounts in the budget use the budget currency ($currency). Switch off “Include in budget” for an account in another currency.';
   }
+
+  @override
+  String get budgetBasicsSubtitle =>
+      'How envelope budgeting works in LedgerZero';
 }

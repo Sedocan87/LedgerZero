@@ -200,6 +200,48 @@ void main() {
     },
   );
 
+  testWidgets('onboarding ends with the first account: saving it marks the app '
+      'onboarded and opens the budget', (tester) async {
+    final c = await pumpRouter(tester, onboarded: false);
+    // The security step opened the session, then goes to 'budget-setup'.
+    unlock(c);
+    c.read(routerProvider).goNamed('budget-setup');
+    await tester.pumpAndSettle();
+    expect(location(c), '/onboarding/first-account');
+    final form = tester.widget<AddEditAccountScreen>(
+      find.byType(AddEditAccountScreen),
+    );
+    expect(form.firstAccount, isTrue);
+    expect(form.finishesOnboarding, isTrue);
+    expect(find.text('Budget currency'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Checking');
+    // The focused field would scroll the form back after ensureVisible.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    final save = find.widgetWithText(ElevatedButton, 'Create Account');
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    // No salary yet: the app asks; skip it.
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+
+    expect(c.read(authProvider).isOnboarded, isTrue);
+    expect(location(c), '/budget');
+    expect(find.byType(AddEditAccountScreen), findsNothing);
+    await unmount(tester, c);
+  });
+
+  testWidgets('the first-account step needs the open session', (tester) async {
+    final c = await pumpRouter(tester, onboarded: false);
+    c.read(routerProvider).go('/onboarding/first-account');
+    await tester.pumpAndSettle();
+    expect(location(c), '/onboarding');
+    await unmount(tester, c);
+  });
+
   testWidgets('a rebuilt router disposes the previous one', (tester) async {
     final c = await pumpRouter(tester, onboarded: true);
     final before = c.read(routerProvider);

@@ -3734,30 +3734,6 @@ abstract class AppLocalizations {
   /// **'{category} is overspent by {amount} this month.'**
   String notificationBudgetAlertBodyAmount(String category, String amount);
 
-  /// No description provided for @onboardingCompleteTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'You\'re all set!'**
-  String get onboardingCompleteTitle;
-
-  /// No description provided for @onboardingCompleteMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Next, add the account you pay from, such as your checking account. Its balance becomes the money you can budget.'**
-  String get onboardingCompleteMessage;
-
-  /// No description provided for @onboardingCreateFirstAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Create your first account'**
-  String get onboardingCreateFirstAccount;
-
-  /// No description provided for @onboardingSkipForNow.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip for now'**
-  String get onboardingSkipForNow;
-
   /// No description provided for @firstAccountTitle.
   ///
   /// In en, this message translates to:
@@ -5274,12 +5250,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Overspent? No problem: move money from another category.'**
   String get budgetBasicsTipFlexBody;
-
-  /// Button that finishes the budgeting explanation
-  ///
-  /// In en, this message translates to:
-  /// **'I\'m ready!'**
-  String get budgetBasicsReady;
 
   /// Validation when saving a category without group
   ///
@@ -7110,6 +7080,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accounts in the budget use the budget currency ({currency}). Switch off “Include in budget” for an account in another currency.'**
   String accountCurrencyLockedHelper(String currency);
+
+  /// Help screen: subtitle of the Budgeting basics entry
+  ///
+  /// In en, this message translates to:
+  /// **'How envelope budgeting works in LedgerZero'**
+  String get budgetBasicsSubtitle;
 }
 
 class _AppLocalizationsDelegate

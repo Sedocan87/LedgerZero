@@ -1,23 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
-class BudgetSetupScreen extends StatelessWidget {
-  const BudgetSetupScreen({super.key});
+/// The envelope-budgeting explainer (Help > Budgeting basics). It used to
+/// be an onboarding step; onboarding now goes straight to the first
+/// account.
+class BudgetBasicsScreen extends StatelessWidget {
+  const BudgetBasicsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.budgetBasicsTitle),
-        actions: [
-          TextButton(
-            onPressed: () => context.goNamed('completion'),
-            child: Text(l10n.skip),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(l10n.budgetBasicsTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -70,14 +64,12 @@ class BudgetSetupScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => context.goNamed('completion'),
+                key: const Key('budgetBasics.done'),
+                onPressed: () => Navigator.of(context).maybePop(),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: Text(
-                  l10n.budgetBasicsReady,
-                  style: const TextStyle(fontSize: 18),
-                ),
+                child: Text(l10n.gotIt, style: const TextStyle(fontSize: 18)),
               ),
             ],
           ),

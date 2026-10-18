@@ -1137,10 +1137,6 @@
       }
     }
   },
-  "onboardingCompleteTitle": "You're all set!",
-  "onboardingCompleteMessage": "Next, add the account you pay from, such as your checking account. Its balance becomes the money you can budget.",
-  "onboardingCreateFirstAccount": "Create your first account",
-  "onboardingSkipForNow": "Skip for now",
   "firstAccountTitle": "Start with one account",
   "firstAccountExplanation": "Enter the current balance of an account you use every day. That amount becomes To Be Budgeted, ready to assign to your categories. You can add more accounts later.",
   "budgetNoAccountsMessage": "Add an account first: its balance is the money you assign to your categories.",
@@ -2334,10 +2330,6 @@
   "budgetBasicsTipFlexBody": "Overspent? No problem: move money from another category.",
   "@budgetBasicsTipFlexBody": {
     "description": "Budgeting tip"
-  },
-  "budgetBasicsReady": "I'm ready!",
-  "@budgetBasicsReady": {
-    "description": "Button that finishes the budgeting explanation"
   },
   "categoryGroupRequired": "Please select a category group",
   "@categoryGroupRequired": {
@@ -3546,5 +3538,9 @@
         "type": "String"
       }
     }
+  },
+  "budgetBasicsSubtitle": "How envelope budgeting works in LedgerZero",
+  "@budgetBasicsSubtitle": {
+    "description": "Help screen: subtitle of the Budgeting basics entry"
   }
 }
