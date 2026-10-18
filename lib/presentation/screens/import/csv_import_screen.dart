@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
+import 'package:ledger_zero/core/money/money_parser.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/services/csv/bank_csv_presets.dart';
+import 'package:ledger_zero/services/csv/csv_date_formats.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/domain/entities/import_profile.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
@@ -32,26 +35,29 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   bool _isLoading = false;
 
   // Configuration
-  String _dateFormat = 'yyyy-MM-dd';
+  String _dateFormat = csvDateFormats.first;
   String _decimalSeparator = '.';
   bool _outflowIsNegative = true;
 
-  final Map<String, String?> _columnMapping = {
-    'Date': null,
-    'Amount': null,
-    'Payee': null,
-    'Memo': null,
-    'Category': null,
+  /// The bank preset in use (chosen by the user or recognised from the
+  /// headers), or `null` for the generic keyword mapping.
+  BankCsvPreset? _preset;
+  bool _presetDetected = false;
+
+  /// What the date-format detection found for the mapped date column.
+  CsvDateDetection? _dateDetection;
+
+  Map<String, String?> _columnMapping = {
+    for (final field in CsvField.all) field: null,
   };
 
-  final List<String> _dateFormats = [
-    'yyyy-MM-dd',
-    'MM/dd/yyyy',
-    'dd/MM/yyyy',
-    'yyyy.MM.dd',
-    'dd.MM.yyyy',
-    'MM-dd-yyyy',
-  ];
+  /// The app language decides the default decimal separator (German: `,`)
+  /// and which day/month order wins when a file fits both.
+  String get _localeDecimalSeparator => MoneyParser.forLocale(
+    ref.read(appLocaleProvider).languageCode,
+  ).decimalSeparator;
+
+  bool get _preferDayFirst => ref.read(appLocaleProvider).languageCode != 'en';
 
   Future<void> _pickFile() async {
     final l10n = AppLocalizations.of(context)!;
@@ -77,7 +83,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
           setState(() {
             _csvData = data;
             _isLoading = false;
-            _autoMapColumns(data.headers);
+            _applyPreset(data.preset, detected: data.preset != null);
           });
         } on ImportException catch (e) {
           Logger.warning('Reading the CSV failed: $e');
@@ -112,76 +118,47 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     }
   }
 
-  /// Header keywords per field, English and German bank exports
-  /// (e.g. Sparkasse, DKB, ING: "Buchungstag", "Betrag",
-  /// "Beguenstigter/Zahlungspflichtiger", "Verwendungszweck").
-  static const _headerKeywords = {
-    'Date': ['date', 'datum', 'buchungstag', 'valuta', 'wertstellung'],
-    'Amount': ['amount', 'value', 'betrag', 'umsatz'],
-    'Payee': [
-      'payee',
-      'description',
-      'merchant',
-      'desc',
-      'empfänger',
-      'empfaenger',
-      'begünstigter',
-      'beguenstigter',
-      'auftraggeber',
-      'zahlungspflichtiger',
-      'name',
-    ],
-    'Memo': ['memo', 'note', 'remark', 'verwendungszweck', 'notiz', 'vermerk'],
-    'Category': ['category', 'cat', 'kategorie'],
-  };
-
-  void _autoMapColumns(List<String> headers) {
-    _columnMapping.updateAll((key, value) => null);
-
-    for (var header in headers) {
-      final h = header.toLowerCase();
-      if (h == 'dt' || h == 'amt') {
-        _columnMapping[h == 'dt' ? 'Date' : 'Amount'] ??= header;
-        continue;
-      }
-      for (final entry in _headerKeywords.entries) {
-        if (_columnMapping[entry.key] == null && entry.value.any(h.contains)) {
-          _columnMapping[entry.key] = header;
-          break;
-        }
-      }
+  /// Applies [preset] (or the generic keyword mapping for `null`) to the
+  /// loaded file: column mapping, date format, decimal separator and
+  /// outflow sign. Called inside `setState`.
+  void _applyPreset(BankCsvPreset? preset, {required bool detected}) {
+    final data = _csvData;
+    if (data == null) {
+      return;
     }
-    _autoDetectDateFormat();
+    _preset = preset;
+    _presetDetected = detected;
+    _columnMapping = CsvImportService.autoMapColumns(
+      data.headers,
+      preset: preset,
+    );
+    _outflowIsNegative = preset?.outflowIsNegative ?? true;
+    _detectFormats();
   }
 
-  void _autoDetectDateFormat() {
-    if (_csvData == null || _columnMapping['Date'] == null) {
+  /// Chooses the date format and decimal separator for the current
+  /// mapping: the preset's, else detected from the column values (the app
+  /// language breaks ties). Called inside `setState`.
+  void _detectFormats() {
+    final data = _csvData;
+    if (data == null) {
       return;
     }
-
-    final dateHeader = _columnMapping['Date']!;
-    final dateIndex = _csvData!.headers.indexOf(dateHeader);
-    if (dateIndex == -1) {
-      return;
-    }
-
-    // Check first few non-empty rows
-    for (var row in _csvData!.rows.take(5)) {
-      if (row.length <= dateIndex) {
-        continue;
-      }
-      final val = row[dateIndex].toString();
-      // Try formats
-      for (var fmt in _dateFormats) {
-        try {
-          DateFormat(fmt).parse(val);
-          setState(() => _dateFormat = fmt);
-          return;
-        } catch (e) {
-          // Ignore
-        }
-      }
-    }
+    final service = ref.read(csvImportServiceProvider);
+    final detection = service.detectDateFormat(
+      data,
+      _columnMapping,
+      preferDayFirst: _preferDayFirst,
+      preset: _preset,
+    );
+    _dateDetection = _preset == null ? detection : null;
+    _dateFormat = detection.format;
+    _decimalSeparator = service.detectDecimalSeparator(
+      data,
+      _columnMapping,
+      fallback: _localeDecimalSeparator,
+      preset: _preset,
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -217,11 +194,11 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         dateFormat: _dateFormat,
         decimalSeparator: _decimalSeparator,
         outflowIsNegative: _outflowIsNegative,
-        dateColumn: _columnMapping['Date'],
-        amountColumn: _columnMapping['Amount'],
-        payeeColumn: _columnMapping['Payee'],
-        memoColumn: _columnMapping['Memo'],
-        categoryColumn: _columnMapping['Category'],
+        dateColumn: _columnMapping[CsvField.date],
+        amountColumn: _columnMapping[CsvField.amount],
+        payeeColumn: _columnMapping[CsvField.payee],
+        memoColumn: _columnMapping[CsvField.memo],
+        categoryColumn: _columnMapping[CsvField.category],
         createdAt: DateTime.now().toUtc(),
       );
 
@@ -239,28 +216,23 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       _dateFormat = profile.dateFormat;
       _decimalSeparator = profile.decimalSeparator;
       _outflowIsNegative = profile.outflowIsNegative;
+      _preset = null;
+      _presetDetected = false;
+      _dateDetection = null;
 
       // Apply mappings if headers exist in current CSV
-      if (_csvData != null) {
-        if (profile.dateColumn != null &&
-            _csvData!.headers.contains(profile.dateColumn)) {
-          _columnMapping['Date'] = profile.dateColumn;
-        }
-        if (profile.amountColumn != null &&
-            _csvData!.headers.contains(profile.amountColumn)) {
-          _columnMapping['Amount'] = profile.amountColumn;
-        }
-        if (profile.payeeColumn != null &&
-            _csvData!.headers.contains(profile.payeeColumn)) {
-          _columnMapping['Payee'] = profile.payeeColumn;
-        }
-        if (profile.memoColumn != null &&
-            _csvData!.headers.contains(profile.memoColumn)) {
-          _columnMapping['Memo'] = profile.memoColumn;
-        }
-        if (profile.categoryColumn != null &&
-            _csvData!.headers.contains(profile.categoryColumn)) {
-          _columnMapping['Category'] = profile.categoryColumn;
+      final headers = _csvData?.headers;
+      if (headers != null) {
+        for (final (field, column) in [
+          (CsvField.date, profile.dateColumn),
+          (CsvField.amount, profile.amountColumn),
+          (CsvField.payee, profile.payeeColumn),
+          (CsvField.memo, profile.memoColumn),
+          (CsvField.category, profile.categoryColumn),
+        ]) {
+          if (column != null && headers.contains(column)) {
+            _columnMapping[field] = column;
+          }
         }
       }
     });
@@ -446,6 +418,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   }
 
   Widget _buildConfigurationCard(ThemeData theme, AppLocalizations l10n) {
+    final data = _csvData!;
+    final detection = _dateDetection;
+    final dateFormats = {...csvDateFormats, _dateFormat}.toList();
+    final noteStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -455,6 +433,41 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             Text(l10n.configuration, style: theme.textTheme.titleLarge),
             const Divider(),
             const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              key: const Key('csv_bank_preset'),
+              isExpanded: true,
+              decoration: InputDecoration(labelText: l10n.csvBankFormat),
+              initialValue: _preset?.id ?? '',
+              items: [
+                DropdownMenuItem(
+                  value: '',
+                  child: Text(l10n.csvBankFormatNone),
+                ),
+                for (final preset in bankCsvPresets)
+                  DropdownMenuItem(value: preset.id, child: Text(preset.name)),
+              ],
+              onChanged: (id) => setState(() {
+                _applyPreset(BankCsvPreset.byId(id), detected: false);
+              }),
+            ),
+            if (_presetDetected && _preset != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l10n.csvBankFormatDetected(_preset!.name),
+                  key: const Key('csv_preset_detected'),
+                  style: noteStyle,
+                ),
+              ),
+            if (data.headerLineIndex > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l10n.csvHeaderLinesSkipped(data.headerLineIndex),
+                  style: noteStyle,
+                ),
+              ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -464,7 +477,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                     isExpanded: true,
                     decoration: InputDecoration(labelText: l10n.dateFormat),
                     initialValue: _dateFormat,
-                    items: _dateFormats
+                    items: dateFormats
                         .map((f) => DropdownMenuItem(value: f, child: Text(f)))
                         .toList(),
                     onChanged: (v) => setState(() => _dateFormat = v!),
@@ -487,6 +500,20 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 ),
               ],
             ),
+            if (detection != null &&
+                detection.ambiguous &&
+                detection.candidates.contains(_dateFormat))
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l10n.csvDateFormatAmbiguous(
+                    _dateFormat,
+                    detection.candidates.firstWhere((c) => c != _dateFormat),
+                  ),
+                  key: const Key('csv_date_ambiguous'),
+                  style: noteStyle?.copyWith(color: theme.colorScheme.error),
+                ),
+              ),
             const SizedBox(height: 16),
             SwitchListTile(
               title: Text(l10n.negativeValuesAreOutflows),
@@ -500,7 +527,76 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     );
   }
 
+  String _fieldLabel(AppLocalizations l10n, String field) => switch (field) {
+    CsvField.date => l10n.date,
+    CsvField.amount => l10n.amount,
+    CsvField.payee => l10n.payee,
+    CsvField.memo => l10n.memo,
+    CsvField.category => l10n.category,
+    CsvField.debit => l10n.csvFieldDebit,
+    CsvField.credit => l10n.csvFieldCredit,
+    CsvField.debitCreditFlag => l10n.csvFieldDebitCreditFlag,
+    CsvField.inflowPayee => l10n.csvFieldInflowPayee,
+    CsvField.account => l10n.account,
+    CsvField.transfer => l10n.csvFieldTransfer,
+    CsvField.cleared => l10n.cleared,
+    _ => field,
+  };
+
+  Widget _buildMappingRow(
+    ThemeData theme,
+    AppLocalizations l10n,
+    String field,
+  ) {
+    final required = field == CsvField.date || field == CsvField.amount;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              _fieldLabel(l10n, field),
+              style: TextStyle(
+                fontWeight: required ? FontWeight.bold : FontWeight.normal,
+                color: required ? theme.colorScheme.primary : null,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              hint: Text(l10n.selectColumn),
+              value: _columnMapping[field],
+              items: [
+                DropdownMenuItem<String>(value: null, child: Text(l10n.ignore)),
+                ..._csvData!.headers.map(
+                  (h) => DropdownMenuItem(value: h, child: Text(h)),
+                ),
+              ],
+              onChanged: (v) => setState(() {
+                _columnMapping[field] = v;
+                if (field == CsvField.date ||
+                    field == CsvField.amount ||
+                    field == CsvField.debit ||
+                    field == CsvField.credit) {
+                  _detectFormats();
+                }
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMappingCard(ThemeData theme, AppLocalizations l10n) {
+    final secondary = [
+      for (final f in CsvField.all)
+        if (!CsvField.primary.contains(f)) f,
+    ];
+    final secondaryMapped = secondary.any((f) => _columnMapping[f] != null);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -510,70 +606,18 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             Text(l10n.columnMapping, style: theme.textTheme.titleLarge),
             const Divider(),
             const SizedBox(height: 8),
-            ..._columnMapping.keys.map((field) {
-              // Localize field names
-              String localizedField = field;
-              if (field == 'Date') {
-                localizedField = l10n.date;
-              }
-              if (field == 'Amount') {
-                localizedField = l10n.amount;
-              }
-              if (field == 'Payee') {
-                localizedField = l10n.payee;
-              }
-              if (field == 'Memo') {
-                localizedField = l10n.memo;
-              }
-              if (field == 'Category') {
-                localizedField = l10n.category;
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 100,
-                      child: Text(
-                        localizedField,
-                        style: TextStyle(
-                          fontWeight: ['Date', 'Amount'].contains(field)
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: ['Date', 'Amount'].contains(field)
-                              ? theme.colorScheme.primary
-                              : null,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        hint: Text(l10n.selectColumn),
-                        value: _columnMapping[field],
-                        items: [
-                          DropdownMenuItem<String>(
-                            value: null,
-                            child: Text(l10n.ignore),
-                          ),
-                          ..._csvData!.headers.map(
-                            (h) => DropdownMenuItem(value: h, child: Text(h)),
-                          ),
-                        ],
-                        onChanged: (v) => setState(() {
-                          _columnMapping[field] = v;
-                          if (field == 'Date') {
-                            _autoDetectDateFormat();
-                          }
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+            for (final field in CsvField.primary)
+              _buildMappingRow(theme, l10n, field),
+            ExpansionTile(
+              key: const Key('csv_more_columns'),
+              title: Text(l10n.csvMoreColumns),
+              tilePadding: EdgeInsets.zero,
+              initiallyExpanded: secondaryMapped,
+              children: [
+                for (final field in secondary)
+                  _buildMappingRow(theme, l10n, field),
+              ],
+            ),
           ],
         ),
       ),
@@ -602,10 +646,14 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                     .map((h) => DataColumn(label: Text(h)))
                     .toList(),
                 rows: previewRows.map((row) {
+                  // Short rows are padded, long ones cut, so every row has
+                  // one cell per header.
+                  final cells = [
+                    for (var i = 0; i < _csvData!.headers.length; i++)
+                      i < row.length ? row[i].toString() : '',
+                  ];
                   return DataRow(
-                    cells: row
-                        .map((cell) => DataCell(Text(cell.toString())))
-                        .toList(),
+                    cells: cells.map((cell) => DataCell(Text(cell))).toList(),
                   );
                 }).toList(),
               ),
@@ -616,18 +664,35 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     );
   }
 
-  String _issueText(AppLocalizations l10n, CsvIssue issue) =>
-      switch (issue.kind) {
-        CsvIssueKind.dateColumnNotMapped => l10n.csvIssueDateNotMapped,
-        CsvIssueKind.amountColumnNotMapped => l10n.csvIssueAmountNotMapped,
-        CsvIssueKind.mappedColumnsMissing => l10n.csvIssueColumnsMissing,
-        CsvIssueKind.invalidDates => l10n.csvIssueInvalidDates(
-          issue.count,
-          issue.dateFormat ?? _dateFormat,
-        ),
-        CsvIssueKind.invalidAmounts => l10n.csvIssueInvalidAmounts(issue.count),
-        CsvIssueKind.dateOutliers => l10n.csvIssueDateOutliers(issue.count),
-      };
+  String _issueText(
+    AppLocalizations l10n,
+    CsvIssue issue, {
+    required bool blocking,
+  }) => switch (issue.kind) {
+    CsvIssueKind.dateColumnNotMapped => l10n.csvIssueDateNotMapped,
+    CsvIssueKind.amountColumnNotMapped => l10n.csvIssueAmountNotMapped,
+    CsvIssueKind.mappedColumnsMissing => l10n.csvIssueColumnsMissing,
+    CsvIssueKind.noRows => l10n.csvIssueNoRows,
+    CsvIssueKind.invalidDates =>
+      blocking
+          ? l10n.csvIssueInvalidDates(
+              issue.count,
+              issue.dateFormat ?? _dateFormat,
+            )
+          : l10n.csvIssueInvalidDatesSkipped(
+              issue.count,
+              issue.dateFormat ?? _dateFormat,
+            ),
+    CsvIssueKind.invalidAmounts =>
+      blocking
+          ? l10n.csvIssueInvalidAmountsBlocking(issue.count)
+          : l10n.csvIssueInvalidAmounts(issue.count),
+    CsvIssueKind.dateOutliers => l10n.csvIssueDateOutliers(issue.count),
+    CsvIssueKind.ambiguousDateFormat => l10n.csvDateFormatAmbiguous(
+      issue.dateFormat ?? _dateFormat,
+      issue.otherFormat ?? '',
+    ),
+  };
 
   void _validateAndImport() {
     final l10n = AppLocalizations.of(context)!;
@@ -651,7 +716,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final issue in result.errors)
-                Text(l10n.bulletItem(_issueText(l10n, issue))),
+                Text(l10n.bulletItem(_issueText(l10n, issue, blocking: true))),
             ],
           ),
           actions: [
@@ -673,7 +738,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final issue in result.warnings)
-                Text(l10n.bulletItem(_issueText(l10n, issue))),
+                Text(l10n.bulletItem(_issueText(l10n, issue, blocking: false))),
             ],
           ),
           actions: [
@@ -714,7 +779,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       // The file's Category column is matched to existing categories.
       // Duplicates are checked on the review screen, against the account
       // the user picks there.
-      if (_columnMapping['Category'] != null) {
+      if (_columnMapping[CsvField.category] != null) {
         service.assignCategories(
           imported: transactions,
           categories: await categoryRepo.getAllCategories(),

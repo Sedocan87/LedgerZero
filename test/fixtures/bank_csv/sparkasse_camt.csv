@@ -1,0 +1,5 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE12345678901234567890";"18.10.26";"18.10.26";"FOLGELASTSCHRIFT";"Miete Oktober";"DE98ZZZ09999999999";"MANDAT-1";"";"";"";"";"Hausverwaltung Müller GmbH";"DE00111122223333444455";"GENODEF1XXX";"-850,00";"EUR";"Umsatz gebucht"
+"DE12345678901234567890";"16.10.26";"16.10.26";"KARTENZAHLUNG";"2026-10-15T18:22 Debitk.1 2027-12";"";"";"";"";"";"";"REWE SAGT DANKE 1234";"DE00111122223333444466";"COBADEFFXXX";"-23,45";"EUR";"Umsatz gebucht"
+"DE12345678901234567890";"15.10.26";"15.10.26";"LOHN GEHALT";"Gehalt 10/2026";"";"";"";"";"";"";"Beispiel AG";"DE00111122223333444477";"DEUTDEFFXXX";"2.750,00";"EUR";"Umsatz gebucht"
+"DE12345678901234567890";"02.10.26";"02.10.26";"ONLINE-UEBERWEISUNG";"Rechnung 4711";"";"";"";"";"";"";"Max Mustermann";"DE00111122223333444488";"GENODEF1XXX";"-120,00";"EUR";"Umsatz gebucht"

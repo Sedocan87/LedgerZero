@@ -4244,4 +4244,113 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get faqPersonalA =>
       'Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam.';
+
+  @override
+  String get csvBankFormat => 'Bankformat';
+
+  @override
+  String get csvBankFormatNone => 'Keines (Spalten nach Namen)';
+
+  @override
+  String csvBankFormatDetected(String name) {
+    return 'An den Spaltenüberschriften erkannt: $name';
+  }
+
+  @override
+  String csvHeaderLinesSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen oberhalb der Spaltenüberschriften wurden übersprungen.',
+      one: '1 Zeile oberhalb der Spaltenüberschriften wurde übersprungen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csvDateFormatAmbiguous(String format, String other) {
+    return 'Tag und Monat könnten vertauscht sein: Sowohl $format als auch $other passen zu allen Daten. Prüfen Sie die Daten in der Vorschau.';
+  }
+
+  @override
+  String get csvIssueNoRows =>
+      'Die Datei enthält unterhalb der Spaltenüberschriften keine Datenzeilen.';
+
+  @override
+  String csvIssueInvalidDatesSkipped(int count, String format) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen haben ein Datum, das nicht zum Format $format passt, und werden übersprungen.',
+      one:
+          '1 Zeile hat ein Datum, das nicht zum Format $format passt, und wird übersprungen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String csvIssueInvalidAmountsBlocking(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Zeilen haben unlesbare Beträge.',
+      one: '1 Zeile hat einen unlesbaren Betrag.',
+    );
+    return '$_temp0 Prüfen Sie die Betragsspalte und das Dezimaltrennzeichen.';
+  }
+
+  @override
+  String get csvMoreColumns => 'Weitere Spalten';
+
+  @override
+  String get csvFieldDebit => 'Soll-Spalte';
+
+  @override
+  String get csvFieldCredit => 'Haben-Spalte';
+
+  @override
+  String get csvFieldDebitCreditFlag => 'Soll/Haben-Kennzeichen (S/H)';
+
+  @override
+  String get csvFieldInflowPayee => 'Empfänger bei Eingängen';
+
+  @override
+  String get csvFieldTransfer => 'Umbuchung (anderes Konto)';
+
+  @override
+  String importAccountFromFile(String names) {
+    return 'Konto aus der Datei ($names)';
+  }
+
+  @override
+  String get possibleDuplicateWarning =>
+      'Eine vorhandene Buchung ohne Empfänger (z. B. eine Umbuchung) hat dasselbe Datum und denselben Betrag.';
+
+  @override
+  String importPossibleDuplicates(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen entsprechen nach Datum und Betrag vorhandenen Buchungen ohne Empfänger und sind abgewählt.',
+      one:
+          '1 Zeile entspricht nach Datum und Betrag einer vorhandenen Buchung ohne Empfänger und ist abgewählt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importTransferLegs(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen sind Umbuchungen und werden mit ihren Gegenstücken verknüpft, wenn beide Konten importiert werden.',
+      one:
+          '1 Zeile ist eine Umbuchung und wird mit ihrem Gegenstück verknüpft, wenn beide Konten importiert werden.',
+    );
+    return '$_temp0';
+  }
 }

@@ -7086,6 +7086,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes. Switch on “Personal” when you create the account. Your partner then sees only its name and balance; its transactions stay on your phone. Do this before the first sync: an account that has already synced stays shared.'**
   String get faqPersonalA;
+
+  /// CSV import: dropdown label for the bank preset
+  ///
+  /// In en, this message translates to:
+  /// **'Bank format'**
+  String get csvBankFormat;
+
+  /// CSV import: bank preset dropdown entry for no preset
+  ///
+  /// In en, this message translates to:
+  /// **'None (columns by name)'**
+  String get csvBankFormatNone;
+
+  /// CSV import: a bank preset matched the file
+  ///
+  /// In en, this message translates to:
+  /// **'Recognised from the column headers: {name}'**
+  String csvBankFormatDetected(String name);
+
+  /// CSV import: the header was not the first line
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 line above the column headers was skipped.} other{{count} lines above the column headers were skipped.}}'**
+  String csvHeaderLinesSkipped(int count);
+
+  /// CSV import: two date formats fit the file
+  ///
+  /// In en, this message translates to:
+  /// **'Day and month could be swapped: both {format} and {other} fit every date. Check the dates in the preview.'**
+  String csvDateFormatAmbiguous(String format, String other);
+
+  /// CSV import validation error
+  ///
+  /// In en, this message translates to:
+  /// **'The file has no data rows below the column headers.'**
+  String get csvIssueNoRows;
+
+  /// CSV import validation warning; format is a date pattern like dd.MM.yyyy
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row has a date that does not match the format {format} and will be skipped.} other{{count} rows have dates that do not match the format {format} and will be skipped.}}'**
+  String csvIssueInvalidDatesSkipped(int count, String format);
+
+  /// CSV import validation error (too many unreadable amounts)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row has an unreadable amount.} other{{count} rows have unreadable amounts.}} Check the Amount column and the decimal separator.'**
+  String csvIssueInvalidAmountsBlocking(int count);
+
+  /// CSV import: expandable section with the optional column mappings
+  ///
+  /// In en, this message translates to:
+  /// **'More columns'**
+  String get csvMoreColumns;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Debit column (Soll)'**
+  String get csvFieldDebit;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Credit column (Haben)'**
+  String get csvFieldCredit;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Debit/credit flag (S/H)'**
+  String get csvFieldDebitCreditFlag;
+
+  /// CSV import mapping field: sender column of inflows
+  ///
+  /// In en, this message translates to:
+  /// **'Payee for inflows'**
+  String get csvFieldInflowPayee;
+
+  /// CSV import mapping field
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer (other account)'**
+  String get csvFieldTransfer;
+
+  /// Import review: dropdown entry that imports each row into the account its Account column names
+  ///
+  /// In en, this message translates to:
+  /// **'Account from file ({names})'**
+  String importAccountFromFile(String names);
+
+  /// Import review: shown under a row that may already exist
+  ///
+  /// In en, this message translates to:
+  /// **'An existing transaction without payee (e.g. a transfer) has the same date and amount.'**
+  String get possibleDuplicateWarning;
+
+  /// Import review banner
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row matches an existing transaction without payee by date and amount and is unchecked.} other{{count} rows match existing transactions without payee by date and amount and are unchecked.}}'**
+  String importPossibleDuplicates(int count);
+
+  /// Import review banner
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}'**
+  String importTransferLegs(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -1,0 +1,10 @@
+"Kontonummer:";"DE12345678901234567890 / Girokonto";
+
+"Von:";"01.10.2026";
+"Bis:";"18.10.2026";
+"Kontostand vom 18.10.2026:";"1.234,56 EUR";
+
+"Buchungstag";"Wertstellung";"Buchungstext";"Auftraggeber / Begünstigter";"Verwendungszweck";"Kontonummer";"BLZ";"Betrag (EUR)";"Gläubiger-ID";"Mandatsreferenz";"Kundenreferenz";
+"17.10.2026";"17.10.2026";"Lastschrift";"Amazon Payments Europe";"Bestellung 123-456";"DE00111122223333444455";"AMAZDEFFXXX";"-39,99";"";"";"";
+"12.10.2026";"12.10.2026";"Gutschrift";"Beispiel AG";"Gehalt";"DE00111122223333444477";"DEUTDEFFXXX";"2.300,00";"";"";"";
+"04.10.2026";"04.10.2026";"Kartenzahlung";"DM Drogerie";"Kartenzahlung";"";"";"-17,25";"";"";"";

@@ -1,0 +1,15 @@
+Umsatzanzeige;Datei erstellt am: 18.10.2026 10:15
+;
+IBAN;DE12 3456 7890 1234 5678 90
+Kontoname;Girokonto
+Bank;ING
+Kunde;Erika Musterfrau
+Zeitraum;01.10.2026 - 18.10.2026
+Saldo;1.234,56;EUR
+;
+Sortierung;Buchung absteigend
+;
+Buchung;Valuta;Auftraggeber/Empfänger;Buchungstext;Verwendungszweck;Saldo;Währung;Betrag;Währung
+17.10.2026;17.10.2026;Deutsche Bahn;Lastschrift;Fahrkarte;1.234,56;EUR;-49,90;EUR
+10.10.2026;10.10.2026;Arbeitgeber GmbH;Gehalt/Rente;Gehalt 10/2026;1.284,46;EUR;3.100,00;EUR
+03.10.2026;03.10.2026;Café Zentral;Lastschrift;Kartenzahlung;-1.815,54;EUR;-7,80;EUR

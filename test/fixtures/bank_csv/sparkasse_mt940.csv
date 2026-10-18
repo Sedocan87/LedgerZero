@@ -1,0 +1,4 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Beguenstigter/Zahlungspflichtiger";"Kontonummer";"BLZ";"Betrag";"Waehrung";"Info"
+"1234567890";"09.03.26";"09.03.26";"LASTSCHRIFT";"Strom März";"Stadtwerke";"9876543";"37050198";"-65,30";"EUR";"Umsatz gebucht"
+"1234567890";"05.03.26";"05.03.26";"GUTSCHRIFT";"Rückerstattung";"Versicherung AG";"1111111";"37050198";"42,00";"EUR";"Umsatz gebucht"
+"1234567890";"01.03.26";"01.03.26";"KARTENZAHLUNG";"EDEKA";"EDEKA Markt";"2222222";"37050198";"-18,90";"EUR";"Umsatz gebucht"

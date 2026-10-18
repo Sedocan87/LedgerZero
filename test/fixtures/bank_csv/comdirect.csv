@@ -1,0 +1,10 @@
+;
+"Umsätze Girokonto";"Zeitraum: 30 Tage";
+"Neuer Kontostand";"1.234,56 EUR";
+
+"Buchungstag";"Wertstellung (Valuta)";"Vorgang";"Buchungstext";"Umsatz in EUR";
+"16.10.2026";"16.10.2026";"Lastschrift / Belastung";"Auftraggeber: Stadtwerke Köln Buchungstext: Abschlag Strom Ref. ABC";"-80,00";
+"12.10.2026";"12.10.2026";"Übertrag / Überweisung";"Empfänger: Max Mustermann Buchungstext: Rückzahlung";"-150,00";
+"05.10.2026";"05.10.2026";"Gutschrift";"Auftraggeber: Finanzamt Köln Buchungstext: Steuererstattung 2025";"312,40";
+
+"Alter Kontostand";"1.152,16 EUR";

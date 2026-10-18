@@ -8,9 +8,14 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/services/import/transaction_import_service.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+
+/// The account dropdown value that imports each row into the account its
+/// file names ([ImportTransaction.accountName]).
+const importAccountFromFileValue = '__account_from_file__';
 
 /// Review of parsed CSV rows: pick the target account (duplicates are
 /// detected against that account and re-checked when it changes), see
@@ -33,25 +38,19 @@ class _ImportConfirmationScreenState
   bool _checkingDuplicates = false;
   bool _isImporting = false;
 
+  /// Open accounts by normalised name (for the file's Account and Transfer
+  /// columns).
+  Map<String, String> _accountIdsByName = const {};
+
+  /// The distinct account names the file carries that all name an existing
+  /// open account; empty when the file has none or one is unknown.
+  List<String> _fileAccountNames = const [];
+
   @override
   void initState() {
     super.initState();
     // Own copies: the route's objects are never mutated.
-    _transactions = [
-      for (final t in widget.transactions)
-        ImportTransaction(
-          date: t.date,
-          amount: t.amount,
-          payeeName: t.payeeName,
-          memo: t.memo,
-          originalDescription: t.originalDescription,
-          categoryName: t.categoryName,
-          categoryId: t.categoryId,
-          accountId: t.accountId,
-          isSelected: t.isSelected,
-          isDuplicate: t.isDuplicate,
-        ),
-    ];
+    _transactions = [for (final t in widget.transactions) t.copy()];
     _loadAccounts();
   }
 
@@ -64,9 +63,25 @@ class _ImportConfirmationScreenState
       if (!mounted) {
         return;
       }
+      final byName = {
+        for (final a in accounts) CsvImportService.normalizePayee(a.name): a.id,
+      };
+      final fileNames = {
+        for (final t in _transactions)
+          if (t.accountName != null) t.accountName!,
+      }.toList();
+      final allKnown =
+          fileNames.isNotEmpty &&
+          fileNames.every(
+            (n) => byName.containsKey(CsvImportService.normalizePayee(n)),
+          );
       setState(() {
         _accounts = accounts;
-        _accountId = accounts.firstOrNull?.id;
+        _accountIdsByName = byName;
+        _fileAccountNames = allKnown ? fileNames : const [];
+        _accountId = allKnown
+            ? importAccountFromFileValue
+            : accounts.firstOrNull?.id;
       });
       if (_accountId != null) {
         await _checkDuplicates(_accountId!);
@@ -79,13 +94,33 @@ class _ImportConfirmationScreenState
     }
   }
 
+  /// Sets each row's own account for the "account from file" choice, or
+  /// clears it so every row goes into the chosen account.
+  void _applyRowAccounts(String accountId) {
+    final fromFile = accountId == importAccountFromFileValue;
+    for (final t in _transactions) {
+      t.accountId = fromFile && t.accountName != null
+          ? _accountIdsByName[CsvImportService.normalizePayee(t.accountName!)]
+          : null;
+    }
+  }
+
+  /// The account every row without its own account goes into.
+  String? get _defaultAccountId => _accountId == importAccountFromFileValue
+      ? _accounts?.firstOrNull?.id
+      : _accountId;
+
   /// Duplicates only count within the account the rows go into.
   Future<void> _checkDuplicates(String accountId) async {
     setState(() => _checkingDuplicates = true);
+    _applyRowAccounts(accountId);
+    final defaultAccount = _defaultAccountId;
     try {
-      await ref
-          .read(transactionImportServiceProvider)
-          .markDuplicates(_transactions, accountId);
+      if (defaultAccount != null) {
+        await ref
+            .read(transactionImportServiceProvider)
+            .markDuplicates(_transactions, defaultAccount);
+      }
     } catch (e, st) {
       Logger.error('Duplicate check failed', e, st);
     } finally {
@@ -116,16 +151,23 @@ class _ImportConfirmationScreenState
     final fmt = ref.watch(appFormatterProvider);
     final categoryNames = ref.watch(categoryMapProvider).valueOrNull ?? {};
     final accounts = _accounts;
+    final fromFile = _accountId == importAccountFromFileValue;
     final currency = accounts
-        ?.where((a) => a.id == _accountId)
+        ?.where((a) => a.id == _defaultAccountId)
         .firstOrNull
         ?.currency;
     final selected = _transactions.where((t) => t.isSelected).toList();
     final total = Money.sum(selected.map((t) => t.amount));
     final duplicateCount = _transactions.where((t) => t.isDuplicate).length;
+    final possibleCount = _transactions
+        .where((t) => t.isPossibleDuplicate)
+        .length;
     final unmatchedCount = _transactions
         .where((t) => t.hasUnmatchedCategory)
         .length;
+    final transferCount = fromFile
+        ? _transactions.where((t) => t.transferAccountName != null).length
+        : 0;
     final busy = _isImporting || _checkingDuplicates;
 
     return Stack(
@@ -154,6 +196,16 @@ class _ImportConfirmationScreenState
                         isExpanded: true,
                         initialValue: _accountId,
                         items: [
+                          if (_fileAccountNames.isNotEmpty)
+                            DropdownMenuItem(
+                              value: importAccountFromFileValue,
+                              child: Text(
+                                l10n.importAccountFromFile(
+                                  _fileAccountNames.join(', '),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           for (final a in accounts)
                             DropdownMenuItem(value: a.id, child: Text(a.name)),
                         ],
@@ -162,9 +214,18 @@ class _ImportConfirmationScreenState
                       ),
                     if (duplicateCount > 0)
                       _Banner(text: l10n.deduplicationComplete(duplicateCount)),
+                    if (possibleCount > 0)
+                      _Banner(
+                        text: l10n.importPossibleDuplicates(possibleCount),
+                      ),
                     if (unmatchedCount > 0)
                       _Banner(
                         text: l10n.importUnmatchedCategories(unmatchedCount),
+                      ),
+                    if (transferCount > 0)
+                      _Banner(
+                        text: l10n.importTransferLegs(transferCount),
+                        warning: false,
                       ),
                   ],
                 ),
@@ -177,10 +238,11 @@ class _ImportConfirmationScreenState
                     final category = tx.categoryId == null
                         ? null
                         : categoryNames[tx.categoryId];
+                    final flagged = tx.isDuplicate || tx.isPossibleDuplicate;
                     return CheckboxListTile(
                       value: tx.isSelected,
                       onChanged: busy ? null : (v) => _toggleSelection(index),
-                      tileColor: tx.isDuplicate
+                      tileColor: flagged
                           ? theme.colorScheme.errorContainer.withValues(
                               alpha: 0.3,
                             )
@@ -190,7 +252,13 @@ class _ImportConfirmationScreenState
                         children: [
                           Expanded(
                             child: Text(
-                              tx.payeeName ?? l10n.unknownPayee,
+                              tx.payeeName ??
+                                  (tx.transferAccountName != null
+                                      ? l10n.labelValue(
+                                          l10n.transfer,
+                                          tx.transferAccountName!,
+                                        )
+                                      : l10n.unknownPayee),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -208,7 +276,14 @@ class _ImportConfirmationScreenState
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(fmt.formatDate(tx.date)),
+                          Text(
+                            fromFile && tx.accountName != null
+                                ? l10n.labelValue(
+                                    fmt.formatDate(tx.date),
+                                    tx.accountName!,
+                                  )
+                                : fmt.formatDate(tx.date),
+                          ),
                           if (category != null) Text(category),
                           if (tx.hasUnmatchedCategory)
                             Text(
@@ -229,9 +304,17 @@ class _ImportConfirmationScreenState
                                 fontSize: 12,
                               ),
                             ),
+                          if (tx.isPossibleDuplicate)
+                            Text(
+                              l10n.possibleDuplicateWarning,
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
                         ],
                       ),
-                      secondary: tx.isDuplicate || tx.hasUnmatchedCategory
+                      secondary: flagged || tx.hasUnmatchedCategory
                           ? const Icon(Icons.warning, color: Colors.amber)
                           : const Icon(Icons.receipt),
                     );
@@ -269,8 +352,10 @@ class _ImportConfirmationScreenState
                     const SizedBox(width: 16),
                     FilledButton(
                       onPressed:
-                          selected.isNotEmpty && !busy && _accountId != null
-                          ? () => _performImport(selected, _accountId!)
+                          selected.isNotEmpty &&
+                              !busy &&
+                              _defaultAccountId != null
+                          ? () => _performImport(selected, _defaultAccountId!)
                           : null,
                       child: Text(l10n.import),
                     ),
@@ -302,6 +387,7 @@ class _ImportConfirmationScreenState
       final count = await importService.importTransactions(
         transactions,
         accountId,
+        accountIdsByName: _accountIdsByName,
       );
 
       if (!mounted) {
@@ -342,31 +428,38 @@ class _ImportConfirmationScreenState
 }
 
 class _Banner extends StatelessWidget {
-  const _Banner({required this.text});
+  const _Banner({required this.text, this.warning = true});
 
   final String text;
+  final bool warning;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final background = warning
+        ? scheme.errorContainer
+        : scheme.secondaryContainer;
+    final foreground = warning
+        ? scheme.onErrorContainer
+        : scheme.onSecondaryContainer;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: scheme.errorContainer,
+          color: background,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Icon(Icons.warning, color: scheme.onErrorContainer),
+            Icon(
+              warning ? Icons.warning : Icons.info_outline,
+              color: foreground,
+            ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                text,
-                style: TextStyle(color: scheme.onErrorContainer),
-              ),
+              child: Text(text, style: TextStyle(color: foreground)),
             ),
           ],
         ),
