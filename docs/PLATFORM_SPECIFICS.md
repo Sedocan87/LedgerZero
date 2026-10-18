@@ -12,6 +12,20 @@ This document outlines the platform-specific implementations, configurations, an
 - The app uses Material Design 3 widgets.
 - **Font Scaling**: Text-heavy areas use scrollable containers so larger system text sizes do not break the layout. See [ACCESSIBILITY.md](ACCESSIBILITY.md).
 
+## Locale, language and currency
+
+* **App language**: `resolveAppLocale` (`lib/presentation/providers/l10n_provider.dart`)
+  is the single rule: the language chosen in Settings, else the first
+  supported locale in the device's locale list (all entries, in the user's
+  order), else English. `MaterialApp.locale`, `appFormatterProvider`
+  (amounts, dates) and `appLocalizationsProvider` (notifications, exports)
+  all use it, so UI text and number formatting never disagree.
+* **Budget currency**: on a fresh install Settings proposes the currency of
+  the device locale (`defaultCurrencyForLocales`, `lib/core/money/currency.dart`:
+  `de_DE` -> EUR, `en_US` -> USD, `de_CH` -> CHF; unsupported currencies
+  fall back to USD). The first on-budget account stores it; see
+  [BUDGETING_RULES.md](BUDGETING_RULES.md#budget-currency).
+
 ## Permissions & Capabilities
 
 ### Android

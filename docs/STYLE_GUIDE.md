@@ -49,7 +49,8 @@ Material icons; prefer it over `Icons.*` for concepts it covers.
 | `LoadErrorView` | Error state of a screen or section (`compact: true` for a one-line version); localised message, optional retry, logs details. |
 | `ErrorView` | Full-screen error with a live-region announcement (used by `LoadErrorView`). |
 | `EmptyState` | Empty list/screen with title, description, optional icon and action. |
-| `OfflineIndicator` | Connectivity banner in the tab shell. |
+| `OfflineIndicator` | Small "Offline mode" chip in the tab shell, shown only while a network sync provider (Drive, Wi-Fi pairing) is configured and there is no network. |
+| `SettingsAction` | The app bar button that opens Settings; every tab's app bar carries it. |
 
 Other shared widgets: pickers in `lib/presentation/widgets/pickers/`
 (account, category, payee), recurrence selector in
