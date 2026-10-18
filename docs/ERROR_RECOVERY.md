@@ -16,6 +16,8 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
    - If you uploaded backups, the `LedgerZero/Backups` folder on Google Drive contains encrypted backups (`.lzbk`).
    - Uninstall and reinstall the app, then complete onboarding.
    - Go to **Settings > Backup & Export**, tap **Restore from file**, pick the `.lzbk` file and enter its backup password.
+   - A restore that was interrupted (the app was killed while it replaced
+     the database) is finished automatically at the next start.
 
 2. **Manual Extraction (Advanced)**:
    - The database is `db.sqlite` in the app's documents directory (`/data/data/com.ledgerzero.app/app_flutter/`).
@@ -43,36 +45,62 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
    - *Retry* tries again now (e.g. after an incomplete upload finished).
    - *Share diagnostics* shares file names, attempts and error messages (no
      financial data) for support.
-   - *Skip file* continues with that device's next file; the changes in the
-     skipped file are not applied on this device (edit them again on the
-     device that made them if needed).
-5. **"Update the app to sync"**: another device runs a newer LedgerZero
+   - *Skip file* continues with that device's next file. The changes in the
+     skipped file arrive later with that device's next snapshot: the app
+     asks the other device for one, and it writes one the next time it
+     syncs. A file that cannot be read at all is skipped automatically
+     after the last retry, the same way.
+5. **"N files from an old sync folder"**: the folder still contains files
+   written before it was set up again (they cannot be read with the
+   current passphrase). They are ignored; tap *Remove* to delete them from
+   the folder or *Ignore* to stop listing them.
+6. **"Update the app to sync"**: another device runs a newer LedgerZero
    version. Update this device; the waiting files are then applied.
-6. **Sync conflicts**: edits on this device that lost against newer edits
-   elsewhere are listed under *Sync conflicts* (Keep mine / Dismiss).
-7. **Rebuild this device's sync state**: restoring a backup (Settings >
-   Backup & Export) rebuilds the sync state automatically from the latest snapshot and
-   the change files in the cloud. A fresh install that joins the folder does
-   the same.
+7. **Sync conflicts**: edits on this device that lost against newer edits
+   elsewhere are listed under *Sync conflicts* (Keep mine / Dismiss). The
+   Home screen's sync card also shows how many conflicts and files need
+   attention.
+8. **Clocks**: Wi-Fi sync refuses a phone whose clock differs by more than
+   two minutes ("the other phone's clock differs by N minutes"); set both
+   phones to automatic date and time. A notice in Sync settings tells you
+   when another device's change files carry times from the future: its
+   edits win every conflict until its clock is fixed.
+9. **Rebuild this device's sync state**: restoring a backup (Settings >
+   Backup & Export) rebuilds the sync state automatically from the latest
+   snapshot and the change files in the cloud. A fresh install that joins
+   the folder does the same.
+10. **Resetting the sync folder** (new passphrase, or starting over): do it
+    on one device and delete the **whole** folder content first — not only
+    the manifest. Old change files left behind cannot be read with the new
+    key; they show up as "files from an old sync folder" and can be
+    removed from Sync settings. Then set up sync on one device and join on
+    the others. Wi-Fi sync: tap *Turn off* on both phones and pair again.
 
-## 3. Password/Encryption Key Loss
+## 3. App Lock and Database Key
+
+There is no master password. The database key lives in the phone's
+KeyStore; the app lock uses the phone's own screen lock (fingerprint,
+face, PIN, pattern or password).
 
 ### Symptoms
-- Cannot unlock the app.
+- The app lock does not accept you: use the phone's PIN, pattern or
+  password, the same way the lock screen does.
+- "The key data of this app is missing".
 
 ### Recovery Steps
-1. **Recovery Key**:
-   - On the login screen tap **Use recovery key** and enter the recovery key shown during setup. You then set a new master password; the recovery key keeps working.
-2. **No Recovery Key?**:
-   - **The data on this device is unrecoverable.**
-   - Uninstall and reinstall the app.
-   - If you have a backup *and* know its backup password (chosen when the backup was made; not necessarily your master password), restore it in Settings > Backup & Export.
-3. **"The key data of this app is missing"** (the secure storage holding the
-   wrapped data key was emptied): neither the password nor the recovery key
-   can unlock the data. The login screen then offers **Reset app**; after typing the
-   confirmation word it performs the factory reset (database and its
-   WAL/SHM files, key vault entries, preferences, exported files) and
-   returns to onboarding, where you can set up the app and restore a backup.
+1. **"The key data of this app is missing"** (the KeyStore entry holding the
+   database key was removed, e.g. after a security reset of the phone): the
+   data on this phone cannot be opened any more. The lock screen offers
+   **Reset app**; after typing the confirmation word it performs the
+   factory reset (database with its WAL/SHM files and any restore leftover,
+   key entries, preferences, exported files, local sync files and the
+   Wi-Fi pairing) and returns to onboarding, where you can set up the app
+   and restore a backup.
+2. **Backup**: restore it in Settings > Backup & Export with its backup
+   password (chosen when the backup was made). Without a backup the data on
+   this phone is gone; with sync, the shared data comes back from the sync
+   folder after joining it again (personal transactions do not — they exist
+   only in this phone's backups).
    See [ENCRYPTION_TROUBLESHOOTING.md](ENCRYPTION_TROUBLESHOOTING.md).
 
 ## 4. Application Crashes

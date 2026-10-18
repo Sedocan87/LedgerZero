@@ -5,8 +5,19 @@ LedgerZero prioritizes data sovereignty. This means you have full control over y
 ## 1. Full Database Backup
 
 A full backup is a snapshot of your entire database (accounts, transactions,
-budgets, rules, settings stored in the database). It is the recommended way
-to protect your data against loss.
+budgets, categories, payees, scheduled transactions, rules, import profiles,
+report notes and the local sync state). App settings live in the phone's
+preferences and are not part of it. It is the recommended way to protect
+your data against loss.
+
+**Personal accounts:** the transactions of your personal accounts never
+sync to the other phone, so they exist only on this phone and in this
+phone's backups. The Backup screen reminds you of this and shows a
+"Back up now" notice when you have personal accounts and the last backup
+is older than 7 days (or there is none).
+
+**Sync key:** a backup contains the derived sync key. Anyone with the
+backup file *and* its password can read the household's sync folder.
 
 ### How to Create a Backup
 1. Navigate to **Settings > Backup & Export**.
@@ -17,7 +28,8 @@ to protect your data against loss.
    the backup is still created.
 4. Tap **Export backup** and use the share sheet to save the `.lzbk` file
    (e.g. to Files, a computer or a USB drive). The temporary copy inside the
-   app is deleted afterwards.
+   app is deleted afterwards. "Last backup" (for the reminder) is recorded
+   only when the share sheet was not dismissed or the upload succeeded.
 
 ### Encryption
 Backups are **always** encrypted: AES-256-GCM with a key derived from the
@@ -37,15 +49,28 @@ Backups are compressed with gzip before encryption.
 2. Under **Restore backup**, tap **Restore from file** and pick a `.lzbk` file.
 3. Confirm that all data on this device will be replaced, then enter the
    backup password.
-4. The backup is checked, upgraded if it comes from an older version, and
+4. The backup is checked and, before anything is replaced, you are warned
+   when
+   * it belongs to **another household member** (its member id differs
+     from this phone's while this phone has a member id or shows personal
+     accounts): afterwards the personal accounts in the backup are yours
+     and the accounts that are yours now become your partner's, with their
+     transactions gone from this phone;
+   * it is **older than 180 days**: items deleted on another phone since
+     then may come back, because sync no longer remembers those deletions.
+5. The backup is upgraded if it comes from an older version and
    re-encrypted with this device's key. The app reopens the data directly;
-   no restart is needed. If anything fails, your current data is kept.
-5. If you use sync, the device resynchronises after a restore: changes made
+   no restart is needed. If anything fails, your current data is kept; if
+   the app is killed in the middle, the next start finishes the restore.
+6. If you use sync, the device resynchronises after a restore: changes made
    on your other devices after the backup was created will sync back in.
 
 **Merge transactions from a backup (date range)** copies the transactions of
-a date range (and any missing accounts, categories and payees) into the
-current data without replacing it.
+a date range — together with the other leg of a transfer and the parts of
+a split — and any missing accounts, categories and payees into the current
+data without replacing it. Transactions in your partner's personal
+accounts are left out. The merged rows count as new edits and sync to the
+other phone.
 
 ## 3. Data Portability (JSON Export)
 
@@ -105,14 +130,18 @@ You can export charts and reports as images or PDF documents.
    - **Image:** Captures the current chart as a PNG image.
    - **CSV:** Exports the underlying data points to CSV.
 
-## 6. Automatic Backups
+## 6. Backup Reminder
 
-LedgerZero can remind you to backup your data regularly.
+LedgerZero does not make backups by itself (Android does not let an app
+write to your file storage without interaction). It can remind you to make
+one.
 
-### Configure Reminders
+### Configure the reminder
 1. Navigate to **Settings > Backup & Export**.
 2. Tap **Backup reminder**.
 3. Select your preferred frequency: Daily, Weekly, Monthly, or Never
    (default: Weekly).
 
-Note: LedgerZero does not currently perform background backups automatically due to OS restrictions on accessing user file storage without interaction. The reminder notification will prompt you to open the app and initiate a backup.
+The reminder notification prompts you to open the app and create a backup.
+It counts from the last backup that actually left the phone (shared or
+uploaded).
