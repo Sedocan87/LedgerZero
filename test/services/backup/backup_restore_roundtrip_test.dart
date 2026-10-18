@@ -11,7 +11,9 @@ import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/services/backup/backup_format.dart';
 import 'package:ledger_zero/services/backup/backup_service.dart';
 import 'package:ledger_zero/services/backup/restore_service.dart';
+import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
+import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,6 +51,11 @@ class _FileLifecycle implements DatabaseLifecycle {
     }
     return open();
   }
+}
+
+class _SilentNotifications extends Fake implements NotificationService {
+  @override
+  Future<void> showBackupReminderNotification() async {}
 }
 
 void main() {
@@ -206,7 +213,9 @@ void main() {
       await addAccount(db, 'old', 'Before Restore');
       await lifecycle.close();
       if (stagedUsable) {
-        db = AppDatabase(openEncryptedConnection(deviceKey, file: files.staged));
+        db = AppDatabase(
+          openEncryptedConnection(deviceKey, file: files.staged),
+        );
         await addAccount(db, 'new', 'From Backup');
         await db.close();
       } else {
@@ -271,6 +280,21 @@ void main() {
         isEmpty,
       );
     });
+  });
+
+  test('the last backup time is recorded when the backup left the phone, '
+      'not when the file was written', () async {
+    final db = lifecycle.open();
+    final service = BackupService(
+      db,
+      files: files(),
+      kdf: fastKdf,
+      backupScheduler: BackupScheduler(prefs, _SilentNotifications()),
+    );
+    await service.createBackup(password: 'backup pw');
+    expect(prefs.getInt('last_backup_timestamp'), isNull);
+    await service.recordBackupCompleted();
+    expect(prefs.getInt('last_backup_timestamp'), isNotNull);
   });
 
   test('a backup from another device restores into this device key', () async {

@@ -70,11 +70,13 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       _passwordController.clear();
       _confirmPasswordController.clear();
 
+      var completed = false;
       if (_uploadToCloud && target != null) {
         try {
           await ExternalUiGuard.run(
             () => backupService.uploadBackupToCloud(file, target),
           );
+          completed = true;
           messenger.showSnackBar(SnackBar(content: Text(l10n.backupUploaded)));
         } catch (_) {
           messenger.showSnackBar(
@@ -83,7 +85,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         }
       }
       // Hand the encrypted file to the share sheet; it is deleted after.
-      await files.shareAndDelete(file, subject: l10n.backupShareSubject);
+      final shared = await files.shareAndDelete(
+        file,
+        subject: l10n.backupShareSubject,
+      );
+      // "Last backup" counts only when the file actually left the phone.
+      if (shared || completed) {
+        await backupService.recordBackupCompleted();
+      }
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.backupFailed)));
     } finally {
