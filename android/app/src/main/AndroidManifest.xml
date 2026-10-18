@@ -89,6 +89,7 @@
         <package android:name="com.starfinanz.smob.android.sfinanzstatus" />
         <package android:name="de.commerzbanking.mobil" />
         <package android:name="de.comdirect.android" />
+        <package android:name="com.dkbcodefactory.banking" />
         <package android:name="de.dkb.portalapp" />
         <package android:name="de.traderepublic.app" />
         <package android:name="com.db.pwcc.dbmobile" />

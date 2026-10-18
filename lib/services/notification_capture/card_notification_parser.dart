@@ -9,7 +9,7 @@ enum CaptureKind {
   inflow,
 
   /// Not a booking: declined payment, confirmation code, balance or
-  /// statement notice. Dropped.
+  /// statement notice. Skipped (see [CardNotificationParse.ignoredPhrase]).
   ignored,
 
   /// No amount found. Kept for the user to add by hand.
@@ -23,11 +23,15 @@ class CardNotificationParse {
     this.amount,
     this.currency,
     this.merchant,
+    this.isInflow = false,
+    this.ignoredPhrase,
   });
 
   final CaptureKind kind;
 
-  /// Amount in minor units, always positive (see [signedAmount]).
+  /// Amount in minor units, always positive (see [signedAmount]). Also set
+  /// for an [CaptureKind.ignored] notification that named one, so the user
+  /// can still add it.
   final int? amount;
 
   /// ISO 4217 code, or the symbol when it does not name one currency
@@ -37,16 +41,23 @@ class CardNotificationParse {
   /// Merchant or counterparty, when one was found.
   final String? merchant;
 
+  /// Whether money came in (also for an ignored notification).
+  final bool isInflow;
+
+  /// For [CaptureKind.ignored]: the phrase that marked the notification as
+  /// not a booking ("declined"); `null` for a balance notice.
+  final String? ignoredPhrase;
+
   /// [amount] with the ledger sign (negative for an outflow).
-  int? get signedAmount => switch (kind) {
-    CaptureKind.outflow => -amount!,
-    CaptureKind.inflow => amount,
-    _ => null,
+  int? get signedAmount => switch (amount) {
+    null => null,
+    final amount => isInflow ? amount : -amount,
   };
 
   @override
   String toString() =>
-      'CardNotificationParse($kind, $amount $currency, $merchant)';
+      'CardNotificationParse($kind, $amount $currency, $merchant'
+      '${ignoredPhrase == null ? '' : ', "$ignoredPhrase"'})';
 }
 
 /// Reads amount, direction and merchant from the text of a bank, card or
@@ -76,17 +87,17 @@ class CardNotificationParser {
       if (text.trim().isNotEmpty) text.trim(),
     ].join('\n');
 
-    if (_containsAny(full, _ignoredPhrases)) {
-      return const CardNotificationParse(CaptureKind.ignored);
-    }
-
+    final ignoredPhrase = _firstContained(full, _ignoredPhrases);
     final amounts = _amounts(full);
-    if (amounts.isEmpty) {
+    if (amounts.isEmpty && ignoredPhrase == null) {
       return const CardNotificationParse(CaptureKind.unreadable);
     }
     final booking = amounts.where((a) => !a.isBalance).firstOrNull;
     if (booking == null) {
-      return const CardNotificationParse(CaptureKind.ignored);
+      return CardNotificationParse(
+        CaptureKind.ignored,
+        ignoredPhrase: ignoredPhrase,
+      );
     }
 
     final inflow = switch (booking.sign) {
@@ -94,7 +105,11 @@ class CardNotificationParser {
       '+' => true,
       _ => _containsAny(full, _inflowPhrases),
     };
-    final kind = inflow ? CaptureKind.inflow : CaptureKind.outflow;
+    final kind = ignoredPhrase != null
+        ? CaptureKind.ignored
+        : inflow
+        ? CaptureKind.inflow
+        : CaptureKind.outflow;
 
     return CardNotificationParse(
       kind,
@@ -104,6 +119,8 @@ class CardNotificationParser {
           _merchantAfterKeyword(full, inflow: inflow) ??
           _merchantFromTitle(title, appLabel) ??
           _merchantAfterAmount(full, booking),
+      isInflow: inflow,
+      ignoredPhrase: ignoredPhrase,
     );
   }
 
@@ -477,17 +494,21 @@ class CardNotificationParser {
     return name;
   }
 
-  static bool _containsAny(String text, List<String> phrases) {
+  static bool _containsAny(String text, List<String> phrases) =>
+      _firstContained(text, phrases) != null;
+
+  /// The first of [phrases] that occurs in [text] as whole words.
+  static String? _firstContained(String text, List<String> phrases) {
     for (final phrase in phrases) {
       if (RegExp(
         '(?<![\\p{L}\\p{N}])${RegExp.escape(phrase)}(?![\\p{L}\\p{N}])',
         caseSensitive: false,
         unicode: true,
       ).hasMatch(text)) {
-        return true;
+        return phrase;
       }
     }
-    return false;
+    return null;
   }
 }
 

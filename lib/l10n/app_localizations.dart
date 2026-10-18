@@ -5950,7 +5950,7 @@ abstract class AppLocalizations {
   /// Prominent disclosure shown before opening the system notification access screen (Google Play policy)
   ///
   /// In en, this message translates to:
-  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until LedgerZero next runs. You can revoke access at any time in the system settings.'**
+  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.'**
   String get cardNotificationsDisclosureBody;
 
   /// No description provided for @cardNotificationsContinue.
@@ -6082,7 +6082,7 @@ abstract class AppLocalizations {
   /// No description provided for @cardNotificationsHowItWorks.
   ///
   /// In en, this message translates to:
-  /// **'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped.'**
+  /// **'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped. Captured notifications lists the last 30 days, so you can add a skipped or deleted payment again.'**
   String get cardNotificationsHowItWorks;
 
   /// No description provided for @cardNotificationsAdded.
@@ -6090,6 +6090,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 card payment added} other{{count} card payments added}}'**
   String cardNotificationsAdded(int count);
+
+  /// No description provided for @cardNotificationsLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured notifications'**
+  String get cardNotificationsLogTitle;
+
+  /// No description provided for @cardNotificationsLogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add skipped or deleted payments again (last 30 days)'**
+  String get cardNotificationsLogSubtitle;
+
+  /// No description provided for @cardNotificationsLogIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications from the apps you watch, kept encrypted on this device for 30 days. Select payments to add them again as transactions for you to review. Notifications from before an app was added cannot be read.'**
+  String get cardNotificationsLogIntro;
+
+  /// No description provided for @cardNotificationsLogAllApps.
+  ///
+  /// In en, this message translates to:
+  /// **'All apps'**
+  String get cardNotificationsLogAllApps;
+
+  /// No description provided for @cardNotificationsLogToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get cardNotificationsLogToday;
+
+  /// No description provided for @cardNotificationsLogLast7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 7 days'**
+  String get cardNotificationsLogLast7Days;
+
+  /// No description provided for @cardNotificationsLogLast30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get cardNotificationsLogLast30Days;
+
+  /// No description provided for @cardNotificationsLogPickDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose dates'**
+  String get cardNotificationsLogPickDates;
+
+  /// No description provided for @cardNotificationsLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing captured in this period.'**
+  String get cardNotificationsLogEmpty;
+
+  /// No description provided for @cardNotificationsLogSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get cardNotificationsLogSelectAll;
+
+  /// No description provided for @cardNotificationsLogAddSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Add} other{Add {count}}}'**
+  String cardNotificationsLogAddSelected(int count);
+
+  /// No description provided for @cardNotificationsStatusAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get cardNotificationsStatusAdded;
+
+  /// No description provided for @cardNotificationsStatusAddedDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Added, but the transaction was deleted since'**
+  String get cardNotificationsStatusAddedDeleted;
+
+  /// No description provided for @cardNotificationsStatusSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped: contains “{phrase}”'**
+  String cardNotificationsStatusSkipped(String phrase);
+
+  /// No description provided for @cardNotificationsStatusSkippedBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped: looks like a balance notice'**
+  String get cardNotificationsStatusSkippedBalance;
+
+  /// No description provided for @cardNotificationsStatusDismissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismissed'**
+  String get cardNotificationsStatusDismissed;
+
+  /// No description provided for @cardNotificationsStatusFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Was showing when the app was added'**
+  String get cardNotificationsStatusFound;
+
+  /// No description provided for @cardNotificationsLikelyDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'A transaction with this amount already exists'**
+  String get cardNotificationsLikelyDuplicate;
+
+  /// No description provided for @cardNotificationsShowingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 notification from {app} was already showing.} other{{count} notifications from {app} were already showing.}}'**
+  String cardNotificationsShowingFound(int count, String app);
+
+  /// No description provided for @cardNotificationsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get cardNotificationsReview;
 
   /// No description provided for @appLockTitle.
   ///

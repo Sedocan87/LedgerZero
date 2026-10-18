@@ -30,12 +30,29 @@ iOS 17+) can call; not built yet.
      merchant the notification text is the memo. These writes are not on
      the undo stack.
    * declined payments, codes/confirmations, statements and balance
-     notices are dropped.
+     notices are skipped.
    * anything else (no amount, no account linked, other currency) waits in
      the "Waiting for you" list, where the user can open it in the
      transaction form or dismiss it.
 4. The transaction list marks captured rows as not approved; swiping
    approves, tapping edits.
+5. Handled notifications are not deleted but kept in the log with their
+   status (`added` with the transaction id, `skipped`, `dismissed`).
+   Settings > Card notifications > Captured notifications lists the last
+   30 days by app and date range, with why each was skipped ("contains
+   “declined”") and whether a transaction with the same amount within a
+   day already exists in the linked account. Selected entries are booked
+   again (`NotificationCaptureService.addAgain`), skipped ones included;
+   "Select all" leaves out skipped ones and likely duplicates. Entries
+   without amount, account or matching currency open in the form.
+6. When an app is added, its notifications still showing are logged as
+   `found` (`CardNotificationListener.captureShowing`) and offered in the
+   log, not booked: the user may have entered them already.
+
+Android gives a listener only notifications posted while it is bound plus
+the ones still showing; the system notification history is not readable by
+apps. Payments from before an app was added therefore cannot be imported
+from notifications (use the bank's CSV export).
 
 ## Parsing
 
@@ -62,19 +79,22 @@ understood, add its text (anonymised) as a test case and adjust the rules.
 ## Storage and privacy
 
 * `CaptureStore` keeps the watched apps (package, label, account id) and
-  the queue in the app's private SharedPreferences. The queue is encrypted
+  the log in the app's private SharedPreferences. The log is encrypted
   with AES-256-GCM using a key in the Android KeyStore created without user
   authentication (the listener writes while the app is closed). It
-  protects the queue at rest against file extraction, not against code
+  protects the log at rest against file extraction, not against code
   running as the app on a rooted device.
-* Queue limits: 200 entries, 90 days. Duplicate detection keeps SHA-256
-  fingerprints of (notification key, title, text) for 2 minutes, because
-  apps re-post or update notifications.
+* Log limits: 500 entries (handled ones dropped first); pending entries
+  90 days, handled ones 30 days after the notification. Duplicate
+  detection keeps SHA-256 fingerprints of (notification key, title, text)
+  for 2 minutes, because apps re-post or update notifications; `found`
+  entries are also checked against the fingerprints in the log.
+* Stopping to watch an app deletes its log entries.
 * The app picker lists apps with a notification showing, apps that
   notified while the process was alive (package names in memory only, never
   content), and installed known bank/wallet apps (`KNOWN_APPS`, each also
   declared under `<queries>` in the manifest).
-* Nothing leaves the device. Factory reset deletes sources, queue and key.
+* Nothing leaves the device. Factory reset deletes sources, log and key.
   Captures are not part of backups or sync until they are transactions.
 
 ## Testing on the emulator

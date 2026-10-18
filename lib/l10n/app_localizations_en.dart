@@ -3503,7 +3503,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardNotificationsDisclosureBody =>
-      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until LedgerZero next runs. You can revoke access at any time in the system settings.';
+      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.';
 
   @override
   String get cardNotificationsContinue => 'Continue';
@@ -3578,7 +3578,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardNotificationsHowItWorks =>
-      'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped.';
+      'Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped. Captured notifications lists the last 30 days, so you can add a skipped or deleted payment again.';
 
   @override
   String cardNotificationsAdded(int count) {
@@ -3590,6 +3590,90 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get cardNotificationsLogTitle => 'Captured notifications';
+
+  @override
+  String get cardNotificationsLogSubtitle =>
+      'Add skipped or deleted payments again (last 30 days)';
+
+  @override
+  String get cardNotificationsLogIntro =>
+      'Notifications from the apps you watch, kept encrypted on this device for 30 days. Select payments to add them again as transactions for you to review. Notifications from before an app was added cannot be read.';
+
+  @override
+  String get cardNotificationsLogAllApps => 'All apps';
+
+  @override
+  String get cardNotificationsLogToday => 'Today';
+
+  @override
+  String get cardNotificationsLogLast7Days => 'Last 7 days';
+
+  @override
+  String get cardNotificationsLogLast30Days => 'Last 30 days';
+
+  @override
+  String get cardNotificationsLogPickDates => 'Choose dates';
+
+  @override
+  String get cardNotificationsLogEmpty => 'Nothing captured in this period.';
+
+  @override
+  String get cardNotificationsLogSelectAll => 'Select all';
+
+  @override
+  String cardNotificationsLogAddSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add $count',
+      zero: 'Add',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardNotificationsStatusAdded => 'Added';
+
+  @override
+  String get cardNotificationsStatusAddedDeleted =>
+      'Added, but the transaction was deleted since';
+
+  @override
+  String cardNotificationsStatusSkipped(String phrase) {
+    return 'Skipped: contains “$phrase”';
+  }
+
+  @override
+  String get cardNotificationsStatusSkippedBalance =>
+      'Skipped: looks like a balance notice';
+
+  @override
+  String get cardNotificationsStatusDismissed => 'Dismissed';
+
+  @override
+  String get cardNotificationsStatusFound =>
+      'Was showing when the app was added';
+
+  @override
+  String get cardNotificationsLikelyDuplicate =>
+      'A transaction with this amount already exists';
+
+  @override
+  String cardNotificationsShowingFound(int count, String app) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications from $app were already showing.',
+      one: '1 notification from $app was already showing.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardNotificationsReview => 'Review';
 
   @override
   String get appLockTitle => 'App lock';

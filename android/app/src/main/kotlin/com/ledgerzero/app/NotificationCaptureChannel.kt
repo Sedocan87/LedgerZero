@@ -43,6 +43,7 @@ class NotificationCaptureChannel(
             "com.starfinanz.smob.android.sfinanzstatus",
             "de.commerzbanking.mobil",
             "de.comdirect.android",
+            "com.dkbcodefactory.banking",
             "de.dkb.portalapp",
             "de.traderepublic.app",
             "com.db.pwcc.dbmobile",
@@ -89,6 +90,20 @@ class NotificationCaptureChannel(
                 }
                 "candidateApps" -> result.success(candidateApps().toString())
                 "pending" -> result.success(store.pending().toString())
+                "log" -> result.success(store.log().toString())
+                "setStatus" -> {
+                    store.setStatus(
+                        call.argument<List<String>>("ids")?.toSet() ?: emptySet(),
+                        call.argument<String>("status") ?: CaptureStore.STATUS_PENDING,
+                        call.argument<String>("transactionId"),
+                    )
+                    result.success(null)
+                }
+                "captureShowing" -> result.success(
+                    CardNotificationListener.connected
+                        ?.captureShowing(call.argument<String>("packageName") ?: "")
+                        ?: 0,
+                )
                 "remove" -> {
                     store.remove(call.argument<List<String>>("ids")?.toSet() ?: emptySet())
                     result.success(null)

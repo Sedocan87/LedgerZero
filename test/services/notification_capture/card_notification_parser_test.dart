@@ -199,6 +199,23 @@ void main() {
       expect(parse('Available balance: €230.00').kind, CaptureKind.ignored);
     });
 
+    test('an ignored notification keeps its reason, amount and merchant', () {
+      final declined = parse(r'Your payment of $50.00 at Shell was declined');
+      expect(declined.ignoredPhrase, 'declined');
+      expect(declined.amount, 5000);
+      expect(declined.signedAmount, -5000);
+      expect(declined.merchant, 'Shell');
+
+      final code = parse('Your verification code is 123456');
+      expect(code.ignoredPhrase, 'verification code');
+      expect(code.amount, isNull);
+
+      final balance = parse('Available balance: €230.00');
+      expect(balance.kind, CaptureKind.ignored);
+      expect(balance.ignoredPhrase, isNull);
+      expect(balance.amount, isNull);
+    });
+
     test('statements are ignored', () {
       expect(
         parse(r'Your statement is ready. Minimum payment $25.00').kind,

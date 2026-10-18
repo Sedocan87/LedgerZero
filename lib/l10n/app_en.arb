@@ -2863,7 +2863,7 @@
   "cardNotificationsGrantAccess": "Grant access",
   "cardNotificationsManageAccess": "Manage in system settings",
   "cardNotificationsDisclosureTitle": "Allow LedgerZero to read notifications?",
-  "cardNotificationsDisclosureBody": "Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured payments are kept encrypted on this device until LedgerZero next runs. You can revoke access at any time in the system settings.",
+  "cardNotificationsDisclosureBody": "Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.",
   "@cardNotificationsDisclosureBody": {
     "description": "Prominent disclosure shown before opening the system notification access screen (Google Play policy)"
   },
@@ -2902,7 +2902,7 @@
   "cardNotificationsAddManually": "Add",
   "cardNotificationsDismiss": "Dismiss",
   "cardNotificationsHowItWorksTitle": "How it works",
-  "cardNotificationsHowItWorks": "Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped.",
+  "cardNotificationsHowItWorks": "Captured payments appear in Transactions marked as not approved. Swipe left to approve one, or tap it to correct it. Payments captured while LedgerZero is closed are added the next time it starts. Declined payments, codes and balance notices are skipped. Captured notifications lists the last 30 days, so you can add a skipped or deleted payment again.",
   "cardNotificationsAdded": "{count, plural, =1{1 card payment added} other{{count} card payments added}}",
   "@cardNotificationsAdded": {
     "placeholders": {
@@ -2911,6 +2911,50 @@
       }
     }
   },
+  "cardNotificationsLogTitle": "Captured notifications",
+  "cardNotificationsLogSubtitle": "Add skipped or deleted payments again (last 30 days)",
+  "cardNotificationsLogIntro": "Notifications from the apps you watch, kept encrypted on this device for 30 days. Select payments to add them again as transactions for you to review. Notifications from before an app was added cannot be read.",
+  "cardNotificationsLogAllApps": "All apps",
+  "cardNotificationsLogToday": "Today",
+  "cardNotificationsLogLast7Days": "Last 7 days",
+  "cardNotificationsLogLast30Days": "Last 30 days",
+  "cardNotificationsLogPickDates": "Choose dates",
+  "cardNotificationsLogEmpty": "Nothing captured in this period.",
+  "cardNotificationsLogSelectAll": "Select all",
+  "cardNotificationsLogAddSelected": "{count, plural, =0{Add} other{Add {count}}}",
+  "@cardNotificationsLogAddSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardNotificationsStatusAdded": "Added",
+  "cardNotificationsStatusAddedDeleted": "Added, but the transaction was deleted since",
+  "cardNotificationsStatusSkipped": "Skipped: contains “{phrase}”",
+  "@cardNotificationsStatusSkipped": {
+    "placeholders": {
+      "phrase": {
+        "type": "String"
+      }
+    }
+  },
+  "cardNotificationsStatusSkippedBalance": "Skipped: looks like a balance notice",
+  "cardNotificationsStatusDismissed": "Dismissed",
+  "cardNotificationsStatusFound": "Was showing when the app was added",
+  "cardNotificationsLikelyDuplicate": "A transaction with this amount already exists",
+  "cardNotificationsShowingFound": "{count, plural, =1{1 notification from {app} was already showing.} other{{count} notifications from {app} were already showing.}}",
+  "@cardNotificationsShowingFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "cardNotificationsReview": "Review",
   "appLockTitle": "App lock",
   "appLockSubtitle": "Ask for your fingerprint, face or screen lock when opening LedgerZero",
   "appLockNeedsScreenLock": "Set up a screen lock in the Android settings to use the app lock.",

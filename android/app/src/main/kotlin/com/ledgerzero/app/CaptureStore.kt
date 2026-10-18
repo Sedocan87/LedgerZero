@@ -21,13 +21,17 @@ import javax.crypto.spec.GCMParameterSpec
  * * Sources: the apps the user chose to watch (package, label, linked
  *   account id) as JSON. The listener only looks at notifications from
  *   these packages.
- * * Queue: captured notifications (title, text, time) waiting for the
- *   Flutter side. The listener runs even when the app (and its database)
- *   is closed, so it writes here and the Dart side turns entries into
- *   transactions when the app next starts. The queue is encrypted with an
- *   AES-256-GCM key in the Android KeyStore (no user authentication); only
- *   IV + ciphertext reach SharedPreferences.
- *   At most [MAX_QUEUE] entries are kept, none older than [MAX_AGE_MS].
+ * * Log: captured notifications (title, text, time, status). The
+ *   listener runs even when the app (and its database) is closed, so it
+ *   writes `pending` entries here and the Dart side turns them into
+ *   transactions when the app next starts. Dart then sets the status
+ *   (`added`, `skipped`, `dismissed`; `found` for notifications that were
+ *   already showing when their app was added) and the entry stays for
+ *   [MAX_LOG_AGE_MS], so the user can add a payment again. The log is
+ *   encrypted with an AES-256-GCM key in the Android KeyStore (no user
+ *   authentication); only IV + ciphertext reach SharedPreferences.
+ *   At most [MAX_ENTRIES] entries are kept (handled ones are dropped
+ *   first); pending ones for [MAX_PENDING_AGE_MS].
  * * Seen: SHA-256 fingerprints (notification key, title, text) of recent
  *   captures with their time, so a notification that is re-posted or
  *   updated with the same text within [REPOST_WINDOW_MS] is not captured
@@ -42,14 +46,20 @@ class CaptureStore private constructor(context: Context) {
     companion object {
         private const val PREFS = "ledgerzero_capture"
         private const val PREF_SOURCES = "sources"
+        // The log; named after the queue it was before it kept handled
+        // entries (entries without a status are pending).
         private const val PREF_QUEUE = "queue"
         private const val PREF_SEEN = "seen"
         private const val KEY_ALIAS = "ledgerzero_capture_key"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        private const val MAX_QUEUE = 200
+        private const val MAX_ENTRIES = 500
         private const val MAX_SEEN = 100
-        private const val MAX_AGE_MS = 90L * 24 * 60 * 60 * 1000
+        private const val MAX_PENDING_AGE_MS = 90L * 24 * 60 * 60 * 1000
+        private const val MAX_LOG_AGE_MS = 30L * 24 * 60 * 60 * 1000
+
+        const val STATUS_PENDING = "pending"
+        const val STATUS_FOUND = "found"
         private const val REPOST_WINDOW_MS = 2L * 60 * 1000
 
         @Volatile
@@ -97,13 +107,13 @@ class CaptureStore private constructor(context: Context) {
     }
 
     // ---------------------------------------------------------------------
-    // Queue
+    // Log
     // ---------------------------------------------------------------------
 
     /**
-     * Queues a notification unless the same one ([key], title, text) was
-     * captured less than [REPOST_WINDOW_MS] before. Returns whether it was
-     * queued.
+     * Logs a notification with [status] unless the same one ([key], title,
+     * text) was captured less than [REPOST_WINDOW_MS] before or, for
+     * [STATUS_FOUND], is in the log already. Returns whether it was logged.
      */
     fun append(
         packageName: String,
@@ -112,6 +122,7 @@ class CaptureStore private constructor(context: Context) {
         title: String?,
         text: String,
         postedAt: Long,
+        status: String = STATUS_PENDING,
     ): Boolean = synchronized(lock) {
         val fingerprint = sha256("$key|$title|$text")
         val now = System.currentTimeMillis()
@@ -129,6 +140,9 @@ class CaptureStore private constructor(context: Context) {
             }
         }
         val queue = readQueue()
+        if (status == STATUS_FOUND && queue.any { it.optString("f") == fingerprint }) {
+            return false
+        }
         queue.add(
             JSONObject()
                 .put("id", UUID.randomUUID().toString())
@@ -136,7 +150,9 @@ class CaptureStore private constructor(context: Context) {
                 .put("appLabel", appLabel)
                 .put("title", title ?: JSONObject.NULL)
                 .put("text", text)
-                .put("postedAt", postedAt),
+                .put("postedAt", postedAt)
+                .put("status", status)
+                .put("f", fingerprint),
         )
         writeQueue(queue)
         val newSeen = JSONArray().put(JSONObject().put("f", fingerprint).put("t", now))
@@ -148,14 +164,31 @@ class CaptureStore private constructor(context: Context) {
     }
 
     fun pending(): JSONArray = synchronized(lock) {
+        JSONArray().apply { readQueue().filter(::isPending).forEach { put(it) } }
+    }
+
+    /** Every logged entry, oldest first. */
+    fun log(): JSONArray = synchronized(lock) {
         JSONArray().apply { readQueue().forEach { put(it) } }
+    }
+
+    /** Sets the status (and the booked transaction's id, if given). */
+    fun setStatus(ids: Set<String>, status: String, transactionId: String?) = synchronized(lock) {
+        val queue = readQueue()
+        for (entry in queue) {
+            if (ids.contains(entry.optString("id"))) {
+                entry.put("status", status)
+                entry.put("transactionId", transactionId ?: JSONObject.NULL)
+            }
+        }
+        writeQueue(queue)
     }
 
     fun remove(ids: Set<String>) = synchronized(lock) {
         writeQueue(readQueue().filterNot { ids.contains(it.optString("id")) })
     }
 
-    /** Removes everything: sources, queue, fingerprints and the key. */
+    /** Removes everything: sources, log, fingerprints and the key. */
     fun clear() = synchronized(lock) {
         prefs.edit().clear().apply()
         watched = null
@@ -165,7 +198,10 @@ class CaptureStore private constructor(context: Context) {
         }
     }
 
-    /** The queue without entries older than [MAX_AGE_MS]. */
+    private fun isPending(entry: JSONObject): Boolean =
+        entry.optString("status", STATUS_PENDING).let { it.isEmpty() || it == STATUS_PENDING }
+
+    /** The log without expired entries, oldest first. */
     private fun readQueue(): MutableList<JSONObject> {
         val blob = prefs.getString(PREF_QUEUE, null) ?: return mutableListOf()
         val array = try {
@@ -175,10 +211,13 @@ class CaptureStore private constructor(context: Context) {
             prefs.edit().remove(PREF_QUEUE).apply()
             return mutableListOf()
         }
-        val cutoff = System.currentTimeMillis() - MAX_AGE_MS
+        val now = System.currentTimeMillis()
         return (0 until array.length())
             .mapNotNull { array.optJSONObject(it) }
-            .filter { it.optLong("postedAt") >= cutoff }
+            .filter {
+                val maxAge = if (isPending(it)) MAX_PENDING_AGE_MS else MAX_LOG_AGE_MS
+                it.optLong("postedAt") >= now - maxAge
+            }
             .toMutableList()
     }
 
@@ -187,8 +226,15 @@ class CaptureStore private constructor(context: Context) {
             prefs.edit().remove(PREF_QUEUE).apply()
             return
         }
+        var kept = entries
+        if (kept.size > MAX_ENTRIES) {
+            // Oldest handled entries go first, then the oldest pending ones.
+            val excess = kept.size - MAX_ENTRIES
+            val handled = kept.filterNot(::isPending).take(excess).toSet()
+            kept = kept.filterNot { handled.contains(it) }.takeLast(MAX_ENTRIES)
+        }
         val array = JSONArray()
-        entries.takeLast(MAX_QUEUE).forEach { array.put(it) }
+        kept.forEach { array.put(it) }
         prefs.edit().putString(PREF_QUEUE, encrypt(array.toString())).apply()
     }
 

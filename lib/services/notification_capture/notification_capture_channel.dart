@@ -64,8 +64,29 @@ class CandidateApp {
   final CandidateAppOrigin origin;
 }
 
-/// A notification captured while the app was closed or busy, waiting to
-/// become a transaction.
+/// What became of a [CapturedNotification].
+enum CaptureStatus {
+  /// Not handled yet, or waiting for the user (no amount, no account,
+  /// other currency).
+  pending,
+
+  /// Booked as a transaction.
+  added,
+
+  /// Not a booking (declined payment, code, balance notice).
+  skipped,
+
+  /// The user dismissed it while it was waiting.
+  dismissed,
+
+  /// It was already showing when its app was added; the user adds it from
+  /// the log.
+  found,
+}
+
+/// A captured notification: waiting to become a transaction while
+/// [CaptureStatus.pending], afterwards kept for 30 days in the log so the
+/// user can add it again.
 class CapturedNotification {
   const CapturedNotification({
     required this.id,
@@ -74,6 +95,8 @@ class CapturedNotification {
     this.title,
     required this.text,
     required this.postedAt,
+    this.status = CaptureStatus.pending,
+    this.transactionId,
   });
 
   final String id;
@@ -82,6 +105,24 @@ class CapturedNotification {
   final String? title;
   final String text;
   final DateTime postedAt;
+  final CaptureStatus status;
+
+  /// The transaction it was booked as ([CaptureStatus.added]), when known.
+  final String? transactionId;
+
+  CapturedNotification copyWith({
+    CaptureStatus? status,
+    String? transactionId,
+  }) => CapturedNotification(
+    id: id,
+    packageName: packageName,
+    appLabel: appLabel,
+    title: title,
+    text: text,
+    postedAt: postedAt,
+    status: status ?? this.status,
+    transactionId: transactionId,
+  );
 
   factory CapturedNotification.fromJson(Map<String, Object?> json) =>
       CapturedNotification(
@@ -93,6 +134,11 @@ class CapturedNotification {
         postedAt: DateTime.fromMillisecondsSinceEpoch(
           (json['postedAt'] as num).toInt(),
         ),
+        status: CaptureStatus.values.firstWhere(
+          (s) => s.name == json['status'],
+          orElse: () => CaptureStatus.pending,
+        ),
+        transactionId: json['transactionId'] as String?,
       );
 }
 
@@ -121,6 +167,21 @@ abstract class NotificationCaptureChannel {
 
   /// Captured notifications not yet turned into transactions, oldest first.
   Future<List<CapturedNotification>> pending();
+
+  /// Every captured notification still kept (handled ones for 30 days),
+  /// oldest first.
+  Future<List<CapturedNotification>> log();
+
+  /// Records what became of the notifications [ids].
+  Future<void> setStatus(
+    Iterable<String> ids,
+    CaptureStatus status, {
+    String? transactionId,
+  });
+
+  /// Logs the notifications of [packageName] showing now as
+  /// [CaptureStatus.found]; returns how many were new.
+  Future<int> captureShowing(String packageName);
 
   Future<void> remove(Iterable<String> ids);
 
@@ -217,6 +278,44 @@ class PlatformNotificationCaptureChannel implements NotificationCaptureChannel {
       for (final json in await _list('pending'))
         CapturedNotification.fromJson(json),
     ]..sort((a, b) => a.postedAt.compareTo(b.postedAt));
+  }
+
+  @override
+  Future<List<CapturedNotification>> log() async {
+    if (!isSupported) {
+      return const [];
+    }
+    return [
+      for (final json in await _list('log'))
+        CapturedNotification.fromJson(json),
+    ]..sort((a, b) => a.postedAt.compareTo(b.postedAt));
+  }
+
+  @override
+  Future<void> setStatus(
+    Iterable<String> ids,
+    CaptureStatus status, {
+    String? transactionId,
+  }) async {
+    if (!isSupported || ids.isEmpty) {
+      return;
+    }
+    await _channel.invokeMethod<void>('setStatus', {
+      'ids': ids.toList(),
+      'status': status.name,
+      'transactionId': transactionId,
+    });
+  }
+
+  @override
+  Future<int> captureShowing(String packageName) async {
+    if (!isSupported) {
+      return 0;
+    }
+    return await _channel.invokeMethod<int>('captureShowing', {
+          'packageName': packageName,
+        }) ??
+        0;
   }
 
   @override

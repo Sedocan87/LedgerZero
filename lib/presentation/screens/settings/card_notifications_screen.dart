@@ -16,9 +16,35 @@ import 'package:ledger_zero/services/notification_capture/card_notification_pars
 import 'package:ledger_zero/services/notification_capture/notification_capture_channel.dart';
 import 'package:ledger_zero/services/notification_capture/notification_capture_service.dart';
 
+/// The transaction form's draft for captured notification [n]: what was
+/// read, the notification text as memo, and the app's account.
+TransactionDraft captureDraft(
+  WidgetRef ref,
+  CapturedNotification n,
+  CardNotificationParse parse,
+  String? accountId,
+) {
+  final amount = parse.amount;
+  return TransactionDraft(
+    amountText: amount == null
+        ? ''
+        : ref.read(appFormatterProvider).formatAmountForInput(amount),
+    memo: [
+      n.title,
+      n.text,
+    ].whereType<String>().where((s) => s.trim().isNotEmpty).join(': '),
+    date: CalendarDate.normalize(n.postedAt),
+    accountId: accountId,
+    payeeName: parse.merchant,
+    formType: parse.isInflow
+        ? TransactionFormType.income
+        : TransactionFormType.expense,
+  );
+}
+
 /// Settings > Card notifications (Android only): notification access, the
-/// watched apps with their accounts, and captured notifications that could
-/// not be booked.
+/// watched apps with their accounts, captured notifications that could
+/// not be booked, and the way to the log of the last 30 days.
 class CardNotificationsScreen extends ConsumerStatefulWidget {
   const CardNotificationsScreen({super.key});
 
@@ -202,7 +228,30 @@ class _CardNotificationsScreenState
         accountId: accountId,
       ),
     ]);
+    // Payments that came before the app was watched are offered, not
+    // booked: the user may have entered them already.
+    final found = await _service.captureShowing(app.packageName);
     await _reload(process: true);
+    if (found > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            )!.cardNotificationsShowingFound(found, app.label),
+          ),
+          action: SnackBarAction(
+            label: AppLocalizations.of(context)!.cardNotificationsReview,
+            onPressed: () => _openLog(app.packageName),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _openLog([String? packageName]) async {
+    await context.pushNamed('card-notification-log', extra: packageName);
+    await _reload();
   }
 
   /// Asks for the account payments of [appLabel] are booked to.
@@ -254,31 +303,23 @@ class _CardNotificationsScreenState
     await _reload();
   }
 
-  /// Opens the transaction form with what was read; the capture is dropped
-  /// once the transaction is saved.
+  /// Opens the transaction form with what was read; the capture is marked
+  /// added once the transaction is saved.
   Future<void> _addManually(HeldCapture held) async {
     final source = _sources
         .where((s) => s.packageName == held.notification.packageName)
         .firstOrNull;
-    final parse = held.parse;
-    final amount = parse.amount;
     final saved = await context.pushNamed<bool>(
       'add-transaction',
-      extra: TransactionDraft(
-        amountText: amount == null
-            ? ''
-            : ref.read(appFormatterProvider).formatAmountForInput(amount),
-        memo: _notificationText(held.notification),
-        date: CalendarDate.normalize(held.notification.postedAt),
-        accountId: source?.accountId,
-        payeeName: parse.merchant,
-        formType: parse.kind == CaptureKind.inflow
-            ? TransactionFormType.income
-            : TransactionFormType.expense,
+      extra: captureDraft(
+        ref,
+        held.notification,
+        held.parse,
+        source?.accountId,
       ),
     );
     if (saved == true) {
-      await _service.dismiss([held.notification.id]);
+      await _service.markAdded(held.notification.id);
       await _reload();
     }
   }
@@ -287,11 +328,6 @@ class _CardNotificationsScreenState
     await _service.dismiss([held.notification.id]);
     await _reload();
   }
-
-  static String _notificationText(CapturedNotification n) => [
-    n.title,
-    n.text,
-  ].whereType<String>().where((s) => s.trim().isNotEmpty).join(': ');
 
   @override
   Widget build(BuildContext context) {
@@ -404,6 +440,20 @@ class _CardNotificationsScreenState
                           onAdd: () => _addManually(held),
                           onDismiss: () => _dismiss(held),
                         ),
+                    ],
+                  ),
+                if (_sources.isNotEmpty)
+                  SettingsSection(
+                    title: l10n.cardNotificationsLogTitle,
+                    children: [
+                      ListTile(
+                        key: const Key('cardNotifications.log'),
+                        leading: const Icon(Icons.history),
+                        title: Text(l10n.cardNotificationsLogTitle),
+                        subtitle: Text(l10n.cardNotificationsLogSubtitle),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: _openLog,
+                      ),
                     ],
                   ),
                 SettingsSection(

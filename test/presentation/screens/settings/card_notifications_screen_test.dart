@@ -7,6 +7,7 @@ import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
+import 'package:ledger_zero/presentation/screens/settings/card_notification_log_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/card_notifications_screen.dart';
 import 'package:ledger_zero/services/notification_capture/card_notification_parser.dart';
 import 'package:ledger_zero/services/notification_capture/notification_capture_channel.dart';
@@ -15,11 +16,31 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/fake_notification_capture_channel.dart';
 
-/// Holds every queued notification as unreadable; no database needed.
+/// Holds every queued notification as unreadable; no database needed. The
+/// log is [history] as given.
 class _FakeService implements NotificationCaptureService {
   _FakeService(this.channel);
 
   final FakeNotificationCaptureChannel channel;
+  List<LoggedCapture> log = [];
+  final List<String> addedAgain = [];
+
+  @override
+  Future<int> captureShowing(String packageName) =>
+      channel.captureShowing(packageName);
+
+  @override
+  Future<List<LoggedCapture>> history({
+    DateTime? from,
+    DateTime? toExclusive,
+    String? packageName,
+  }) async => List.of(log);
+
+  @override
+  Future<int> addAgain(Iterable<String> ids) async {
+    addedAgain.addAll(ids);
+    return ids.length;
+  }
 
   @override
   bool get isSupported => true;
@@ -51,6 +72,7 @@ class _FakeService implements NotificationCaptureService {
 
 void main() {
   late FakeNotificationCaptureChannel channel;
+  late _FakeService service;
 
   const visa = Account(
     id: 'acc-visa',
@@ -60,7 +82,10 @@ void main() {
     startingBalance: 0,
   );
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    Widget home = const CardNotificationsScreen(),
+  }) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
@@ -68,27 +93,28 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           notificationCaptureChannelProvider.overrideWithValue(channel),
-          notificationCaptureServiceProvider.overrideWithValue(
-            _FakeService(channel),
-          ),
+          notificationCaptureServiceProvider.overrideWithValue(service),
           accountsProvider.overrideWith((ref) => Stream.value([visa])),
         ],
-        child: const MaterialApp(
-          localizationsDelegates: [
+        child: MaterialApp(
+          localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: [Locale('en')],
-          home: CardNotificationsScreen(),
+          supportedLocales: const [Locale('en')],
+          home: home,
         ),
       ),
     );
     await tester.pumpAndSettle();
   }
 
-  setUp(() => channel = FakeNotificationCaptureChannel());
+  setUp(() {
+    channel = FakeNotificationCaptureChannel();
+    service = _FakeService(channel);
+  });
 
   testWidgets('access is requested only after the disclosure', (tester) async {
     channel.accessGranted = false;
@@ -167,5 +193,99 @@ void main() {
 
     expect(channel.queue, isEmpty);
     expect(find.text('Waiting for you'), findsNothing);
+  });
+
+  testWidgets('notifications already showing are offered for review', (
+    tester,
+  ) async {
+    channel.candidates = [
+      const CandidateApp(
+        packageName: 'de.bank.app',
+        label: 'My Bank',
+        origin: CandidateAppOrigin.active,
+      ),
+    ];
+    channel.showing['de.bank.app'] = [
+      CapturedNotification(
+        id: 'n1',
+        packageName: 'de.bank.app',
+        appLabel: 'My Bank',
+        text: 'You spent €4.20 at Kiosk',
+        postedAt: DateTime(2026, 10, 14),
+      ),
+    ];
+    await pump(tester);
+
+    await tester.tap(find.text('Add app'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('My Bank'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visa'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('1 notification from My Bank was already showing.'),
+      findsOneWidget,
+    );
+    expect(channel.queue.single.status, CaptureStatus.found);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('cardNotifications.log')),
+      200,
+    );
+    expect(find.byKey(const Key('cardNotifications.log')), findsOneWidget);
+  });
+
+  testWidgets('the log adds the selected payments', (tester) async {
+    channel.sources = [
+      const CaptureSource(
+        packageName: 'de.bank.app',
+        label: 'My Bank',
+        accountId: 'acc-visa',
+      ),
+    ];
+    LoggedCapture entry(
+      String id,
+      CaptureStatus status, {
+      bool duplicate = false,
+    }) => LoggedCapture(
+      CapturedNotification(
+        id: id,
+        packageName: 'de.bank.app',
+        appLabel: 'My Bank',
+        text: 'Your payment of €3.55 at Kiosk was declined',
+        postedAt: DateTime(2026, 10, 14, 9, 28),
+        status: status,
+      ),
+      const CardNotificationParse(
+        CaptureKind.ignored,
+        amount: 355,
+        currency: 'EUR',
+        merchant: 'Kiosk',
+        ignoredPhrase: 'declined',
+      ),
+      likelyDuplicate: duplicate,
+    );
+    service.log = [
+      entry('skipped', CaptureStatus.skipped),
+      entry('found', CaptureStatus.found),
+      entry('dup', CaptureStatus.found, duplicate: true),
+    ];
+    await pump(tester, home: const CardNotificationLogScreen());
+
+    expect(find.textContaining('Skipped: contains “declined”'), findsOneWidget);
+    expect(
+      find.text('A transaction with this amount already exists'),
+      findsOneWidget,
+    );
+
+    // Select all leaves out skipped notifications and likely duplicates.
+    await tester.tap(find.text('Select all'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add 1'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cardNotificationLog.add')));
+    await tester.pumpAndSettle();
+
+    expect(service.addedAgain, ['found']);
+    expect(find.text('1 card payment added'), findsOneWidget);
   });
 }

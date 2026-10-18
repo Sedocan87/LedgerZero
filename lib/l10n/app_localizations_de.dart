@@ -3532,7 +3532,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardNotificationsDisclosureBody =>
-      'Android fragt Sie gleich, ob LedgerZero auf Benachrichtigungen zugreifen darf. Android erteilt diesen Zugriff für alle Apps, LedgerZero liest aber nur Benachrichtigungen der Bank-, Karten- oder Wallet-Apps, die Sie auswählen, und übernimmt daraus nur Betrag, Händler und Zeitpunkt einer Zahlung. Benachrichtigungen werden nirgendwohin gesendet. Erfasste Zahlungen bleiben verschlüsselt auf diesem Gerät, bis LedgerZero das nächste Mal läuft. Sie können den Zugriff jederzeit in den Systemeinstellungen widerrufen.';
+      'Android fragt Sie gleich, ob LedgerZero auf Benachrichtigungen zugreifen darf. Android erteilt diesen Zugriff für alle Apps, LedgerZero liest aber nur Benachrichtigungen der Bank-, Karten- oder Wallet-Apps, die Sie auswählen, und übernimmt daraus nur Betrag, Händler und Zeitpunkt einer Zahlung. Benachrichtigungen werden nirgendwohin gesendet. Erfasste Benachrichtigungen bleiben 30 Tage verschlüsselt auf diesem Gerät, damit Sie eine Zahlung erneut hinzufügen können. Sie können den Zugriff jederzeit in den Systemeinstellungen widerrufen.';
 
   @override
   String get cardNotificationsContinue => 'Weiter';
@@ -3608,7 +3608,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardNotificationsHowItWorks =>
-      'Erfasste Zahlungen erscheinen unter Transaktionen als nicht genehmigt. Wischen Sie nach links, um eine zu genehmigen, oder tippen Sie darauf, um sie zu korrigieren. Zahlungen, die erfasst werden, während LedgerZero geschlossen ist, werden beim nächsten Start hinzugefügt. Abgelehnte Zahlungen, Codes und Kontostandsmeldungen werden übersprungen.';
+      'Erfasste Zahlungen erscheinen unter Transaktionen als nicht genehmigt. Wischen Sie nach links, um eine zu genehmigen, oder tippen Sie darauf, um sie zu korrigieren. Zahlungen, die erfasst werden, während LedgerZero geschlossen ist, werden beim nächsten Start hinzugefügt. Abgelehnte Zahlungen, Codes und Kontostandsmeldungen werden übersprungen. Unter „Erfasste Benachrichtigungen“ finden Sie die letzten 30 Tage und können eine übersprungene oder gelöschte Zahlung erneut hinzufügen.';
 
   @override
   String cardNotificationsAdded(int count) {
@@ -3620,6 +3620,91 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get cardNotificationsLogTitle => 'Erfasste Benachrichtigungen';
+
+  @override
+  String get cardNotificationsLogSubtitle =>
+      'Übersprungene oder gelöschte Zahlungen erneut hinzufügen (letzte 30 Tage)';
+
+  @override
+  String get cardNotificationsLogIntro =>
+      'Benachrichtigungen der beobachteten Apps, 30 Tage verschlüsselt auf diesem Gerät gespeichert. Wählen Sie Zahlungen aus, um sie erneut als Transaktionen zur Prüfung hinzuzufügen. Benachrichtigungen von vor dem Hinzufügen einer App können nicht gelesen werden.';
+
+  @override
+  String get cardNotificationsLogAllApps => 'Alle Apps';
+
+  @override
+  String get cardNotificationsLogToday => 'Heute';
+
+  @override
+  String get cardNotificationsLogLast7Days => 'Letzte 7 Tage';
+
+  @override
+  String get cardNotificationsLogLast30Days => 'Letzte 30 Tage';
+
+  @override
+  String get cardNotificationsLogPickDates => 'Zeitraum wählen';
+
+  @override
+  String get cardNotificationsLogEmpty =>
+      'In diesem Zeitraum wurde nichts erfasst.';
+
+  @override
+  String get cardNotificationsLogSelectAll => 'Alle auswählen';
+
+  @override
+  String cardNotificationsLogAddSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hinzufügen',
+      zero: 'Hinzufügen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardNotificationsStatusAdded => 'Hinzugefügt';
+
+  @override
+  String get cardNotificationsStatusAddedDeleted =>
+      'Hinzugefügt, die Transaktion wurde inzwischen gelöscht';
+
+  @override
+  String cardNotificationsStatusSkipped(String phrase) {
+    return 'Übersprungen: enthält „$phrase“';
+  }
+
+  @override
+  String get cardNotificationsStatusSkippedBalance =>
+      'Übersprungen: sieht nach einer Kontostandsmeldung aus';
+
+  @override
+  String get cardNotificationsStatusDismissed => 'Verworfen';
+
+  @override
+  String get cardNotificationsStatusFound =>
+      'Wurde beim Hinzufügen der App angezeigt';
+
+  @override
+  String get cardNotificationsLikelyDuplicate =>
+      'Eine Transaktion mit diesem Betrag gibt es schon';
+
+  @override
+  String cardNotificationsShowingFound(int count, String app) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Benachrichtigungen von $app wurden bereits angezeigt.',
+      one: '1 Benachrichtigung von $app wurde bereits angezeigt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardNotificationsReview => 'Ansehen';
 
   @override
   String get appLockTitle => 'App-Sperre';

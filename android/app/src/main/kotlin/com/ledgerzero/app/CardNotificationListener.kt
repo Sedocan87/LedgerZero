@@ -90,16 +90,38 @@ class CardNotificationListener : NotificationListenerService() {
             return
         }
         rememberApp(sbn)
-        val store = CaptureStore.get(this)
-        if (!store.watchedPackages().contains(sbn.packageName)) {
+        if (!CaptureStore.get(this).watchedPackages().contains(sbn.packageName)) {
             return
         }
+        if (log(sbn, CaptureStore.STATUS_PENDING)) {
+            CaptureStore.onCaptured?.invoke()
+        }
+    }
+
+    /**
+     * Logs the notifications of [packageName] showing now as
+     * [CaptureStore.STATUS_FOUND] (they arrived before the app was
+     * watched); the user adds them from the log. Returns how many.
+     */
+    fun captureShowing(packageName: String): Int {
+        val active = try {
+            activeNotifications
+        } catch (_: SecurityException) {
+            null
+        } ?: return 0
+        return active.count {
+            it.packageName == packageName && log(it, CaptureStore.STATUS_FOUND)
+        }
+    }
+
+    /** Logs title and text of [sbn]; false when skipped or already logged. */
+    private fun log(sbn: StatusBarNotification, status: String): Boolean {
         val notification = sbn.notification
         if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 ||
             notification.flags and Notification.FLAG_ONGOING_EVENT != 0 ||
             notification.flags and Notification.FLAG_FOREGROUND_SERVICE != 0
         ) {
-            return
+            return false
         }
         val extras = notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
@@ -111,19 +133,17 @@ class CardNotificationListener : NotificationListenerService() {
                 ?: extras.getCharSequence(Notification.EXTRA_TEXT)
             )?.toString()?.trim()
         if (text.isNullOrEmpty() && title.isNullOrEmpty()) {
-            return
+            return false
         }
-        val queued = store.append(
+        return CaptureStore.get(this).append(
             packageName = sbn.packageName,
             appLabel = appLabel(this, sbn.packageName, notification),
             key = sbn.key,
             title = title,
             text = text ?: "",
             postedAt = sbn.postTime,
+            status = status,
         )
-        if (queued) {
-            CaptureStore.onCaptured?.invoke()
-        }
     }
 
     private fun rememberApp(sbn: StatusBarNotification) {

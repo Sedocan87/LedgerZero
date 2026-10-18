@@ -17,6 +17,7 @@ final notificationCaptureServiceProvider = Provider<NotificationCaptureService>(
   (ref) => NotificationCaptureService(
     channel: ref.watch(notificationCaptureChannelProvider),
     transactions: ref.watch(transactionServiceProvider),
+    transactionRepository: ref.watch(transactionRepositoryProvider),
     accounts: ref.watch(accountRepositoryProvider),
     payees: ref.watch(payeeRepositoryProvider),
     parser: CardNotificationParser(
