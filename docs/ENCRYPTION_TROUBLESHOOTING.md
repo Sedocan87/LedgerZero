@@ -30,6 +30,31 @@ phone has a screen lock.
 * "An update is still being completed": unlock once with your password; the
   recovery key works afterwards.
 
+## "LedgerZero could not read its key ... just now"
+
+The phone's secure key store did not answer (this happens transiently
+right after an app update or while the phone is still starting). Tap
+**Retry**; if it keeps failing, restart the phone. After three failed
+tries, or when the key store reports that it no longer holds the key (some
+phones wipe it after a system update or a change to the screen lock), the
+screen says so and offers **Reset app** next to **Retry**. The data on
+this phone cannot be opened without that key: reset, then restore a backup
+or sync again from your other phone.
+
+## "LedgerZero could not open its database file just now"
+
+The database file could not be read (storage busy or full). The key is not
+in question. Tap **Retry** or restart the phone; the reset is offered only
+after three failed tries.
+
+## "Unlocking did not work: ..."
+
+The system prompt failed for a reason other than a removed screen lock
+(sensor busy, too many attempts, hardware unavailable). The app stays
+locked; the system's message is shown. Wait a moment and tap **Unlock**
+again, or use the PIN/pattern/password option of the prompt. Only when the
+phone has no screen lock at all any more is the app lock turned off.
+
 ## "LedgerZero cannot open your data"
 
 The key stored on this phone is missing or does not match the database

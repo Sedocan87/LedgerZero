@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
@@ -18,6 +19,7 @@ import 'package:ledger_zero/services/security/device_key_store.dart';
 import 'package:ledger_zero/services/security/key_vault.dart';
 import 'package:ledger_zero/services/security/secure_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../../../helpers/security_fakes.dart';
 
@@ -145,6 +147,36 @@ void main() {
       expect(
         base64Decode(storedDeviceKey()!),
         container.read(sessionProvider).key!.bytes,
+      );
+    });
+
+    testWidgets('an existing database that the device key opens is kept, '
+        'not deleted', (tester) async {
+      final dek = await storeDeviceKey();
+      final dbFile = File('${dir.path}/db.sqlite');
+      await tester.runAsync(() async {
+        final db = sqlite3.open(dbFile.path);
+        SqlCipher.applyKey(db, RawSqlCipherKey(Uint8List.fromList(dek)));
+        db.execute('CREATE TABLE marker (x INTEGER)');
+        db.close();
+      });
+      final container = await pumpApp(tester, const SecuritySetupScreen());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Continue'));
+      await waitUntil(
+        tester,
+        () => container.read(authProvider).isAuthenticated,
+      );
+
+      expect(container.read(authProvider).isOnboarded, isTrue);
+      expect(container.read(sessionProvider).key!.bytes, dek);
+      expect(base64Decode(storedDeviceKey()!), dek);
+      expect(await tester.runAsync(dbFile.exists), isTrue);
+      expect(shows('budget setup'), isFalse);
+      expect(
+        find.text('Your existing data on this phone was found and kept.'),
+        findsOneWidget,
       );
     });
 
@@ -291,6 +323,115 @@ void main() {
       );
     });
 
+    testWidgets('a key store that keeps failing offers the reset after three '
+        'tries, keeping "Retry"', (tester) async {
+      await storeDeviceKey();
+      final failing = _FailingSecureStore(store, failures: 1000);
+      await pumpApp(tester, const LockScreen(), secureStore: failing);
+      for (var attempt = 1; attempt <= 2; attempt++) {
+        await waitUntil(
+          tester,
+          () => find.byKey(const Key('lock_retry')).evaluate().isNotEmpty,
+        );
+        expect(find.byKey(const Key('login_reset_app')), findsNothing);
+        await tester.tap(find.byKey(const Key('lock_retry')));
+        await tester.pump();
+      }
+      await waitUntil(
+        tester,
+        () => find.byKey(const Key('login_reset_app')).evaluate().isNotEmpty,
+      );
+      expect(find.byKey(const Key('lock_retry')), findsOneWidget);
+      expect(find.textContaining('no longer holds it'), findsNothing);
+      // Nothing was deleted.
+      expect(storedDeviceKey(), isNotNull);
+    });
+
+    testWidgets('a key store error that is known to be permanent explains '
+        'and offers the reset at once', (tester) async {
+      await storeDeviceKey();
+      final failing = _FailingSecureStore(
+        store,
+        failures: 1000,
+        error: Exception(
+          'PlatformException(Exception encountered, read, '
+          'javax.crypto.BadPaddingException: error:1e000065)',
+        ),
+      );
+      await pumpApp(tester, const LockScreen(), secureStore: failing);
+      await waitUntil(
+        tester,
+        () => find.byKey(const Key('login_reset_app')).evaluate().isNotEmpty,
+      );
+      expect(find.byKey(const Key('lock_retry')), findsOneWidget);
+      expect(find.textContaining('no longer holds it'), findsOneWidget);
+      expect(storedDeviceKey(), isNotNull);
+    });
+
+    testWidgets('a database file that cannot be read is retried, not reset', (
+      tester,
+    ) async {
+      await storeDeviceKey();
+      final dbFile = File('${dir.path}/db.sqlite')..writeAsStringSync('x');
+      await tester.runAsync(
+        () => Process.run('chmod', ['000', dbFile.path]),
+      );
+      addTearDown(() => Process.run('chmod', ['644', dbFile.path]));
+      final container = await pumpApp(tester, const LockScreen());
+      await waitUntil(
+        tester,
+        () => find.byKey(const Key('lock_retry')).evaluate().isNotEmpty,
+      );
+      expect(find.textContaining('database file'), findsOneWidget);
+      expect(find.byKey(const Key('login_reset_app')), findsNothing);
+      expect(container.read(appLockStateProvider), AppLockState.locked);
+      expect(await tester.runAsync(dbFile.exists), isTrue);
+    });
+
+    testWidgets('a wrong key offers "Retry" next to the reset', (
+      tester,
+    ) async {
+      await storeDeviceKey();
+      // A database keyed with another key.
+      await tester.runAsync(() async {
+        final db = sqlite3.open('${dir.path}/db.sqlite');
+        SqlCipher.applyKey(db, RawSqlCipherKey(secureRandomBytes(32)));
+        db.execute('CREATE TABLE marker (x INTEGER)');
+        db.close();
+      });
+      await pumpApp(tester, const LockScreen());
+      await waitUntil(
+        tester,
+        () => find.byKey(const Key('login_reset_app')).evaluate().isNotEmpty,
+      );
+      expect(find.byKey(const Key('lock_retry')), findsOneWidget);
+    });
+
+    testWidgets('a failed prompt keeps the app locked and shows the reason', (
+      tester,
+    ) async {
+      await prefs.setBool(kAppLockEnabledKey, true);
+      appLock.result = AppLockResult.failed;
+      appLock.lastFailure = 'Too many attempts';
+      await storeDeviceKey();
+      final container = await pumpApp(tester, const LockScreen());
+
+      await waitUntil(
+        tester,
+        () => find.byKey(const Key('lock_auth_failed')).evaluate().isNotEmpty,
+      );
+      expect(find.textContaining('Too many attempts'), findsOneWidget);
+      expect(container.read(authProvider).isAuthenticated, isFalse);
+      expect(container.read(appLockEnabledProvider), isTrue);
+
+      appLock.result = AppLockResult.success;
+      await tester.tap(find.byKey(const Key('lock_unlock')));
+      await waitUntil(
+        tester,
+        () => container.read(authProvider).isAuthenticated,
+      );
+    });
+
     testWidgets('a removed screen lock turns the app lock off instead of '
         'locking the user out', (tester) async {
       await prefs.setBool(kAppLockEnabledKey, true);
@@ -401,18 +542,20 @@ void main() {
   });
 }
 
-/// Throws on the first [failures] reads, then reads from [inner].
+/// Throws [error] on the first [failures] reads, then reads from [inner].
 class _FailingSecureStore implements SecureStore {
-  _FailingSecureStore(this.inner, {required this.failures});
+  _FailingSecureStore(this.inner, {required this.failures, Object? error})
+    : error = error ?? Exception('keystore busy');
 
   final SecureStore inner;
+  final Object error;
   int failures;
 
   @override
   Future<String?> read(String key) async {
     if (failures > 0) {
       failures--;
-      throw Exception('keystore busy');
+      throw error;
     }
     return inner.read(key);
   }

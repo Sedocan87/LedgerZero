@@ -1,13 +1,17 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/connection.dart';
+import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/crypto/secure_random.dart';
+import 'package:ledger_zero/services/security/device_key_store.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 
 /// Onboarding step 1: explains where the data lives and offers the app
@@ -15,8 +19,11 @@ import 'package:ledger_zero/services/security/external_ui_guard.dart';
 ///
 /// "Continue" creates the database key in [DeviceKeyStore] (removing any
 /// half-created database and key material from an earlier attempt or an
-/// older version) and opens the session. Turning the app lock on asks for
-/// the fingerprint/face or device PIN once, so the user knows it works.
+/// older version) and opens the session. When a database exists that the
+/// stored device key opens (the onboarding flag was lost, not the data),
+/// nothing is deleted: the session opens on it and onboarding is finished
+/// at once. Turning the app lock on asks for the fingerprint/face or
+/// device PIN once, so the user knows it works.
 class SecuritySetupScreen extends ConsumerStatefulWidget {
   const SecuritySetupScreen({super.key});
 
@@ -69,17 +76,35 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
 
   Future<void> _continue() async {
     setState(() => _isLoading = true);
+    var keptExisting = false;
     try {
       final session = ref.read(sessionProvider.notifier);
       await session.close();
-      // A database left by an abandoned earlier onboarding is keyed with a
-      // key that no longer exists.
-      await deleteDatabaseFiles();
-      await ref.read(legacyKeyMigrationProvider).deleteLeftovers();
-      final dek = await ref.read(deviceKeyStoreProvider).create();
-      session.open(dek);
-      zeroBytes(dek);
+      final keyStore = ref.read(deviceKeyStoreProvider);
+      final existing = await _existingDataKey(keyStore);
+      if (existing != null) {
+        // Real data from before: the onboarding flag was lost, not the
+        // database. One tap must not destroy it.
+        Logger.warning(
+          'Onboarding found an existing database that the device key '
+          'opens; keeping it',
+        );
+        session.open(existing);
+        zeroBytes(existing);
+        keptExisting = true;
+      } else {
+        // A database left by an abandoned earlier onboarding is keyed with
+        // a key that no longer exists.
+        await deleteDatabaseFiles();
+        await ref.read(legacyKeyMigrationProvider).deleteLeftovers();
+        final dek = await keyStore.create();
+        session.open(dek);
+        zeroBytes(dek);
+      }
       await ref.read(appLockEnabledProvider.notifier).set(_useAppLock);
+      if (keptExisting) {
+        ref.read(authProvider.notifier).setOnboarded(true);
+      }
       ref.read(authProvider.notifier).setAuthenticated(true);
     } catch (e, stackTrace) {
       Logger.error('Onboarding key setup failed', e, stackTrace);
@@ -95,11 +120,49 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
       return;
     }
     setState(() => _isLoading = false);
+    if (keptExisting) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.setupExistingDataKept)),
+      );
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (!mounted) {
+        return;
+      }
+      if (keptExisting) {
+        context.go('/');
+      } else {
         context.goNamed('budget-setup');
       }
     });
+  }
+
+  /// The stored device key when a database file exists and opens with it;
+  /// `null` when there is no data to keep (or no key).
+  static Future<Uint8List?> _existingDataKey(DeviceKeyStore keyStore) async {
+    final file = await databaseFile();
+    if (!file.existsSync()) {
+      return null;
+    }
+    final Uint8List? dek;
+    try {
+      dek = await keyStore.read();
+    } catch (e, stackTrace) {
+      Logger.warning('Onboarding could not read the device key', e, stackTrace);
+      return null;
+    }
+    if (dek == null) {
+      return null;
+    }
+    try {
+      if (SqlCipher.canOpen(file, RawSqlCipherKey(dek))) {
+        return dek;
+      }
+    } catch (e, stackTrace) {
+      Logger.warning('Onboarding could not check the database', e, stackTrace);
+    }
+    zeroBytes(dek);
+    return null;
   }
 
   @override
