@@ -5704,13 +5704,13 @@ abstract class AppLocalizations {
   /// Subtitle of a YNAB tracking (off-budget) account in the import preview
   ///
   /// In en, this message translates to:
-  /// **'Tracking account – not imported'**
+  /// **'Tracking account – imported outside the budget'**
   String get ynabImportTrackingAccount;
 
-  /// YNAB import result: tracking (off-budget) accounts were skipped
+  /// YNAB import result: tracking (off-budget) accounts were imported as off-budget accounts
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 tracking account was not imported. Transfers between it and your budget accounts were imported as outflows and inflows of the budget accounts.} other{{count} tracking accounts were not imported. Transfers between them and your budget accounts were imported as outflows and inflows of the budget accounts.}}'**
+  /// **'{count, plural, =1{1 tracking account was imported outside the budget. Transfers between it and your budget accounts are linked; a category on the budget side stays there.} other{{count} tracking accounts were imported outside the budget. Transfers between them and your budget accounts are linked; a category on the budget side stays there.}}'**
   String ynabImportTrackingSkipped(int count);
 
   /// Login screen button shown when the key vault is missing; deletes all local data
@@ -7194,6 +7194,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}'**
   String importTransferLegs(int count);
+
+  /// YNAB import preview: dropdown label
+  ///
+  /// In en, this message translates to:
+  /// **'Date format in Register.csv'**
+  String get ynabImportDateFormat;
+
+  /// YNAB import preview: both date orders fit
+  ///
+  /// In en, this message translates to:
+  /// **'No day above 12 in the file: day and month could be swapped. Check a date and switch the format if needed.'**
+  String get ynabImportDateFormatAmbiguous;
+
+  /// YNAB import preview: switch under an account
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking account (outside the budget)'**
+  String get ynabImportTrackingSwitch;
+
+  /// YNAB import preview: explains the tracking switch (nYNAB CSV)
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.'**
+  String get ynabImportTrackingHint;
+
+  /// YNAB import preview stat row
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get ynabImportCategoriesCount;
+
+  /// YNAB import preview stat row: categories without register rows that are created too
+  ///
+  /// In en, this message translates to:
+  /// **'Categories only in Budget.csv'**
+  String get ynabImportCategoriesOnlyInBudget;
+
+  /// YNAB import preview warning
+  ///
+  /// In en, this message translates to:
+  /// **'This export was already imported on {date}. Importing it again duplicates its transactions.'**
+  String ynabImportAlreadyImported(String date);
 }
 
 class _AppLocalizationsDelegate

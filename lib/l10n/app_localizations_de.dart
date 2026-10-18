@@ -3382,7 +3382,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ynabImportTrackingAccount =>
-      'Tracking-Konto – wird nicht importiert';
+      'Tracking-Konto – wird außerhalb des Budgets importiert';
 
   @override
   String ynabImportTrackingSkipped(int count) {
@@ -3390,9 +3390,9 @@ class AppLocalizationsDe extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          '$count Tracking-Konten wurden nicht importiert. Überweisungen zwischen diesen Konten und Ihren Budgetkonten wurden als Ausgänge und Eingänge der Budgetkonten importiert.',
+          '$count Tracking-Konten wurden außerhalb des Budgets importiert. Umbuchungen zwischen ihnen und Ihren Budgetkonten sind verknüpft; eine Kategorie auf der Budgetseite bleibt erhalten.',
       one:
-          '1 Tracking-Konto wurde nicht importiert. Überweisungen zwischen diesem Konto und Ihren Budgetkonten wurden als Ausgänge und Eingänge der Budgetkonten importiert.',
+          '1 Tracking-Konto wurde außerhalb des Budgets importiert. Umbuchungen zwischen ihm und Ihren Budgetkonten sind verknüpft; eine Kategorie auf der Budgetseite bleibt erhalten.',
     );
     return '$_temp0';
   }
@@ -4352,5 +4352,31 @@ class AppLocalizationsDe extends AppLocalizations {
           '1 Zeile ist eine Umbuchung und wird mit ihrem Gegenstück verknüpft, wenn beide Konten importiert werden.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String get ynabImportDateFormat => 'Datumsformat in Register.csv';
+
+  @override
+  String get ynabImportDateFormatAmbiguous =>
+      'Kein Tag über 12 in der Datei: Tag und Monat könnten vertauscht sein. Prüfen Sie ein Datum und wechseln Sie das Format bei Bedarf.';
+
+  @override
+  String get ynabImportTrackingSwitch =>
+      'Tracking-Konto (außerhalb des Budgets)';
+
+  @override
+  String get ynabImportTrackingHint =>
+      'Konten mit nur einem Anfangssaldo und Umbuchungen sind als Tracking-Konten voreingestellt; ihr Geld bleibt außerhalb des Budgets.';
+
+  @override
+  String get ynabImportCategoriesCount => 'Kategorien';
+
+  @override
+  String get ynabImportCategoriesOnlyInBudget => 'Kategorien nur in Budget.csv';
+
+  @override
+  String ynabImportAlreadyImported(String date) {
+    return 'Dieser Export wurde bereits am $date importiert. Ein erneuter Import verdoppelt seine Buchungen.';
   }
 }

@@ -7,8 +7,9 @@ class YnabAccount {
   final String name;
   final AccountType type;
 
-  /// `false` for a YNAB tracking (off-budget) account, which is not
-  /// imported (see `YnabDataMapper`).
+  /// `false` for a YNAB tracking (off-budget) account, imported as an
+  /// off-budget account (see `YnabDataMapper`). YNAB 4 states it; for the
+  /// nYNAB CSV it is inferred and the user can change it in the preview.
   final bool onBudget;
   final bool isClosed;
 
@@ -24,6 +25,15 @@ class YnabAccount {
     this.isClosed = false,
     this.balance = 0,
   });
+
+  YnabAccount copyWith({bool? onBudget}) => YnabAccount(
+    id: id,
+    name: name,
+    type: type,
+    onBudget: onBudget ?? this.onBudget,
+    isClosed: isClosed,
+    balance: balance,
+  );
 }
 
 /// Represents a raw transaction imported from YNAB
@@ -185,6 +195,20 @@ class YnabImportData {
   final String source; // 'CSV' or 'YNAB4'
   final DateTime importedAt;
 
+  /// nYNAB CSV: the date format the register was read with, and every
+  /// format that fits all of its dates (more than one when day and month
+  /// are ambiguous; the user may switch).
+  final String? registerDateFormat;
+  final List<String> dateFormatCandidates;
+
+  /// Categories that appear only in Budget.csv (no register row), created
+  /// so their budgeted amounts are not lost.
+  final int categoriesOnlyInBudget;
+
+  /// SHA-256 of the export's content, to recognise a second import of the
+  /// same file.
+  final String? fingerprint;
+
   YnabImportData({
     required this.accounts,
     required this.categoryGroups,
@@ -194,5 +218,42 @@ class YnabImportData {
     required this.budgetEntries,
     required this.source,
     required this.importedAt,
+    this.registerDateFormat,
+    this.dateFormatCandidates = const [],
+    this.categoriesOnlyInBudget = 0,
+    this.fingerprint,
   });
+
+  YnabImportData copyWith({List<YnabAccount>? accounts}) => YnabImportData(
+    accounts: accounts ?? this.accounts,
+    categoryGroups: categoryGroups,
+    categories: categories,
+    transactions: transactions,
+    scheduledTransactions: scheduledTransactions,
+    budgetEntries: budgetEntries,
+    source: source,
+    importedAt: importedAt,
+    registerDateFormat: registerDateFormat,
+    dateFormatCandidates: dateFormatCandidates,
+    categoriesOnlyInBudget: categoriesOnlyInBudget,
+    fingerprint: fingerprint,
+  );
+
+  /// The first and last transaction day, or `null` without transactions.
+  ({DateTime first, DateTime last})? get dateRange {
+    if (transactions.isEmpty) {
+      return null;
+    }
+    var first = transactions.first.date;
+    var last = first;
+    for (final t in transactions) {
+      if (t.date.isBefore(first)) {
+        first = t.date;
+      }
+      if (t.date.isAfter(last)) {
+        last = t.date;
+      }
+    }
+    return (first: first, last: last);
+  }
 }

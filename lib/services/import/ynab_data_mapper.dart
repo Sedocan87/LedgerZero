@@ -30,15 +30,15 @@ import 'package:uuid/uuid.dart';
 ///   complete. All new accounts get the currency passed to [importData]
 ///   (the user's choice on the import screen, default: the app's default
 ///   currency); YNAB exports carry no currency.
-/// * Tracking (off-budget) accounts are not imported (yet; LedgerZero has
-///   off-budget accounts since schema v19, see ROADMAP.md). Their own
-///   transactions are skipped. A transfer between an
-///   on-budget and a tracking account is the moment money leaves or enters
-///   the budget, so its on-budget leg is imported as a normal row: with
-///   YNAB's category if it had one (YNAB requires one for such outflows),
-///   otherwise uncategorised (counting towards To Be Budgeted); its memo
-///   names the transfer. [YnabImportSummary.trackingAccountsSkipped] reports
-///   how many accounts were left out.
+/// * Tracking (off-budget) accounts are imported as off-budget accounts
+///   with their transactions (uncategorised: a category on an off-budget
+///   row is ignored by the budget, see BUDGETING_RULES.md). A transfer
+///   between a budget account and a tracking account is the moment money
+///   leaves or enters the budget: its two legs are linked like any
+///   transfer and the category YNAB put on the budget-side leg stays
+///   there (the app's cross-budget rule: the money leaves that category
+///   instead of To Be Budgeted). [YnabImportSummary.trackingAccounts]
+///   reports how many such accounts were created.
 /// * Hidden YNAB category groups and categories are imported as hidden
 ///   categories (groups cannot be hidden in LedgerZero, so every category of
 ///   a hidden group is hidden), so their transactions keep their category.
@@ -48,9 +48,9 @@ import 'package:uuid/uuid.dart';
 ///   so it counts towards To Be Budgeted exactly once; a credit card's
 ///   negative starting balance reduces it the same way.
 /// * Transfers become two legs linked both ways (decision D4); see
-///   [_pairTransfers]. A transfer row whose other leg is missing (e.g. its
-///   account was skipped) or that carries a category is imported as a
-///   normal row without a transfer link.
+///   [_pairTransfers]. A transfer row whose other leg is missing, or whose
+///   both legs carry a category, is imported as a normal row without a
+///   transfer link.
 /// * A split becomes a parent (account-side amount, no category, no
 ///   transfer link) plus one child per line. Children always add up to
 ///   their parent; a difference is put into an uncategorised child.
@@ -97,7 +97,10 @@ class YnabDataMapper {
         group == 'internal master category' ||
         category.startsWith('inflow:') ||
         category == 'ready to assign' ||
-        category == 'to be budgeted';
+        category == 'to be budgeted' ||
+        // YNAB 4's income categories (Budget.yfull names them so).
+        category == 'immediate income subcategory' ||
+        category == 'deferred income subcategory';
   }
 
   /// Imports [data]; new accounts get [currency] (ISO code).
@@ -111,15 +114,25 @@ class YnabDataMapper {
       // 1. Categories & Groups: "Group:Category" -> LedgerZero id
       final categoryNameMap = await _importCategories(data);
 
-      // 2. Accounts (tracking accounts are skipped)
+      // 2. Accounts (tracking accounts off budget)
       final accountIdMap = await _importAccounts(data, currency);
+      final onBudgetIds = {
+        for (final a in data.accounts)
+          if (a.onBudget && accountIdMap.containsKey(a.id)) accountIdMap[a.id]!,
+      };
 
       // 3. Transactions (and Payees)
       final payees = _PayeeResolver(
         _payeeRepo,
         await _payeeRepo.getAllPayees(),
       );
-      await _importTransactions(data, accountIdMap, categoryNameMap, payees);
+      await _importTransactions(
+        data,
+        accountIdMap,
+        onBudgetIds,
+        categoryNameMap,
+        payees,
+      );
 
       // 4. Scheduled Transactions
       await _importScheduledTransactions(
@@ -132,14 +145,13 @@ class YnabDataMapper {
       // 5. Budget Allocations
       await _importBudgets(data, categoryNameMap);
 
-      final onBudget = data.accounts.where((a) => a.onBudget).toList();
       return YnabImportSummary(
-        accounts: onBudget.length,
+        accounts: data.accounts.length,
         categories: data.categories.length,
         transactions: data.transactions
             .where((t) => accountIdMap.containsKey(t.accountId))
             .length,
-        trackingAccountsSkipped: data.accounts.length - onBudget.length,
+        trackingAccounts: data.accounts.where((a) => !a.onBudget).length,
       );
     });
 
@@ -270,12 +282,9 @@ class YnabDataMapper {
     final accNameMap = {for (var a in existingAccounts) a.name: a.id};
 
     for (final yAcc in data.accounts) {
-      if (!yAcc.onBudget) {
-        // Tracking account: not imported (see the class comment).
-        continue;
-      }
       // Closed accounts are imported too (as closed), with their
       // transactions: they hold history and the other legs of transfers.
+      // Tracking accounts become off-budget accounts.
       String accId;
       if (accNameMap.containsKey(yAcc.name)) {
         accId = accNameMap[yAcc.name]!;
@@ -289,6 +298,7 @@ class YnabDataMapper {
             currency: currency,
             startingBalance: 0,
             isClosed: yAcc.isClosed,
+            onBudget: yAcc.onBudget,
             createdAt: DateTime.now().toUtc(),
             updatedAt: DateTime.now().toUtc(),
           ),
@@ -303,6 +313,7 @@ class YnabDataMapper {
   Future<void> _importTransactions(
     YnabImportData data,
     Map<String, String> accountMap,
+    Set<String> onBudgetIds,
     Map<String, String> categoryNameMap,
     _PayeeResolver payees,
   ) async {
@@ -310,6 +321,13 @@ class YnabDataMapper {
     final transactions = data.transactions;
     final partnerOf = _pairTransfers(data, accountMap, categoryNameMap);
     final legIds = {for (final i in partnerOf.keys) i: const Uuid().v4()};
+
+    /// The category of [tx] as stored: none in an off-budget account (the
+    /// budget ignores it anyway; see BUDGETING_RULES.md).
+    String? categoryOf(YnabTransaction tx, String accId) =>
+        onBudgetIds.contains(accId)
+        ? _categoryFor(tx.categoryGroupName, tx.categoryName, categoryNameMap)
+        : null;
 
     final transactionsToInsert = <Transaction>[];
 
@@ -323,14 +341,21 @@ class YnabDataMapper {
 
       final partner = partnerOf[i];
       if (partner != null) {
-        // Transfer leg (decision D4): no payee, no category, linked to the
-        // other leg both ways.
+        // Transfer leg (decision D4): no payee, linked to the other leg
+        // both ways. A category stays only on the budget-side leg of a
+        // transfer that crosses the budget boundary (YNAB puts it there;
+        // the money then leaves that category, as the app's own transfer
+        // form does).
+        final otherAccId = accountMap[transactions[partner].accountId]!;
+        final crossesBudget =
+            onBudgetIds.contains(accId) != onBudgetIds.contains(otherAccId);
         transactionsToInsert.add(
           Transaction(
             id: legIds[i]!,
             accountId: accId,
             date: tx.date,
             amount: tx.amount,
+            categoryId: crossesBudget ? categoryOf(tx, accId) : null,
             memo: _nonEmpty(tx.memo),
             cleared: cleared,
             approved: true,
@@ -398,11 +423,13 @@ class YnabDataMapper {
           transactionsToInsert.add(
             child(
               amount: split.amount,
-              categoryId: _categoryFor(
-                split.categoryGroupName,
-                split.categoryName,
-                categoryNameMap,
-              ),
+              categoryId: onBudgetIds.contains(accId)
+                  ? _categoryFor(
+                      split.categoryGroupName,
+                      split.categoryName,
+                      categoryNameMap,
+                    )
+                  : null,
               payeeId: await payees.resolve(split.payeeName) ?? payeeId,
               memo: target == null
                   ? _nonEmpty(split.memo)
@@ -433,11 +460,7 @@ class YnabDataMapper {
             date: tx.date,
             amount: tx.amount,
             payeeId: payeeId,
-            categoryId: _categoryFor(
-              tx.categoryGroupName,
-              tx.categoryName,
-              categoryNameMap,
-            ),
+            categoryId: categoryOf(tx, accId),
             memo: memo,
             cleared: cleared,
             approved: true,
@@ -498,11 +521,13 @@ class YnabDataMapper {
 
   /// Pairs the two legs of every transfer: index -> index of the other leg.
   ///
-  /// Candidates are unsplit, uncategorised rows whose account and target
-  /// account are both imported (and differ). Two candidates form a pair
-  /// when they are on the same day, have opposite amounts and their
-  /// accounts point at each other; pairing is greedy and one-to-one, in
-  /// data order. Rows left without a partner are imported as normal rows.
+  /// Candidates are unsplit rows whose account and target account are both
+  /// imported (and differ). Two candidates form a pair when they are on
+  /// the same day, have opposite amounts, their accounts point at each
+  /// other and at most one of them carries a category (YNAB categorises
+  /// the budget-side leg of a transfer to a tracking account); pairing is
+  /// greedy and one-to-one, in data order. Rows left without a partner are
+  /// imported as normal rows.
   static Map<int, int> _pairTransfers(
     YnabImportData data,
     Map<String, String> accountMap,
@@ -513,6 +538,9 @@ class YnabDataMapper {
     final waiting = <String, List<int>>{};
     String key(String account, String target, DateTime day, int amount) =>
         '$account|$target|${day.toIso8601String()}|$amount';
+    bool categorised(YnabTransaction tx) =>
+        _categoryFor(tx.categoryGroupName, tx.categoryName, categoryNameMap) !=
+        null;
 
     for (var i = 0; i < data.transactions.length; i++) {
       final tx = data.transactions[i];
@@ -525,18 +553,15 @@ class YnabDataMapper {
       if (accId == null || targetId == null || accId == targetId) {
         continue;
       }
-      if (_categoryFor(
-            tx.categoryGroupName,
-            tx.categoryName,
-            categoryNameMap,
-          ) !=
-          null) {
-        continue;
-      }
       final day = CalendarDate.normalize(tx.date);
       final counterpart = waiting[key(targetId, accId, day, -tx.amount)];
-      if (counterpart != null && counterpart.isNotEmpty) {
-        final other = counterpart.removeAt(0);
+      final other = counterpart
+          ?.where(
+            (j) => !(categorised(tx) && categorised(data.transactions[j])),
+          )
+          .firstOrNull;
+      if (other != null) {
+        counterpart!.remove(other);
         partnerOf[i] = other;
         partnerOf[other] = i;
       } else {
@@ -675,16 +700,16 @@ class YnabImportSummary {
     required this.accounts,
     required this.categories,
     required this.transactions,
-    required this.trackingAccountsSkipped,
+    required this.trackingAccounts,
   });
 
-  /// Imported (on-budget) accounts.
+  /// Imported accounts, tracking ones included.
   final int accounts;
   final int categories;
 
   /// Transactions of imported accounts (a split counts once).
   final int transactions;
 
-  /// Tracking (off-budget) accounts that were not imported.
-  final int trackingAccountsSkipped;
+  /// Tracking accounts, imported as off-budget accounts.
+  final int trackingAccounts;
 }

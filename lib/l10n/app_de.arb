@@ -941,8 +941,8 @@
   "importCategoryNotFound": "Kategorie „{name}“ nicht gefunden – ohne Kategorie",
   "ynabImportErrorInvalidDates": "Die Datumsangaben in Register.csv passen zu keinem einheitlichen Datumsformat (MM/dd/yyyy, dd/MM/yyyy, yyyy-MM-dd oder dd.MM.yyyy). Erstes unlesbares Datum: „{value}“. Exportieren Sie das Budget erneut aus YNAB oder korrigieren Sie die Datumsspalte.",
   "ynabImportCurrency": "Währung der importierten Konten",
-  "ynabImportTrackingAccount": "Tracking-Konto – wird nicht importiert",
-  "ynabImportTrackingSkipped": "{count, plural, =1{1 Tracking-Konto wurde nicht importiert. Überweisungen zwischen diesem Konto und Ihren Budgetkonten wurden als Ausgänge und Eingänge der Budgetkonten importiert.} other{{count} Tracking-Konten wurden nicht importiert. Überweisungen zwischen diesen Konten und Ihren Budgetkonten wurden als Ausgänge und Eingänge der Budgetkonten importiert.}}",
+  "ynabImportTrackingAccount": "Tracking-Konto – wird außerhalb des Budgets importiert",
+  "ynabImportTrackingSkipped": "{count, plural, =1{1 Tracking-Konto wurde außerhalb des Budgets importiert. Umbuchungen zwischen ihm und Ihren Budgetkonten sind verknüpft; eine Kategorie auf der Budgetseite bleibt erhalten.} other{{count} Tracking-Konten wurden außerhalb des Budgets importiert. Umbuchungen zwischen ihnen und Ihren Budgetkonten sind verknüpft; eine Kategorie auf der Budgetseite bleibt erhalten.}}",
   "loginResetApp": "App zurücksetzen",
   "loginResetAppTitle": "LedgerZero zurücksetzen?",
   "loginResetAppBody": "Ohne den Schlüsseltresor lassen sich Ihre Daten nicht entsperren. Das Zurücksetzen löscht die verschlüsselte Datenbank, alle Schlüssel, Einstellungen und exportierten Dateien auf diesem Gerät und startet die Einrichtung neu; anschließend können Sie eine Sicherung wiederherstellen. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung {word} ein.",
@@ -1189,5 +1189,12 @@
   "importAccountFromFile": "Konto aus der Datei ({names})",
   "possibleDuplicateWarning": "Eine vorhandene Buchung ohne Empfänger (z. B. eine Umbuchung) hat dasselbe Datum und denselben Betrag.",
   "importPossibleDuplicates": "{count, plural, =1{1 Zeile entspricht nach Datum und Betrag einer vorhandenen Buchung ohne Empfänger und ist abgewählt.} other{{count} Zeilen entsprechen nach Datum und Betrag vorhandenen Buchungen ohne Empfänger und sind abgewählt.}}",
-  "importTransferLegs": "{count, plural, =1{1 Zeile ist eine Umbuchung und wird mit ihrem Gegenstück verknüpft, wenn beide Konten importiert werden.} other{{count} Zeilen sind Umbuchungen und werden mit ihren Gegenstücken verknüpft, wenn beide Konten importiert werden.}}"
+  "importTransferLegs": "{count, plural, =1{1 Zeile ist eine Umbuchung und wird mit ihrem Gegenstück verknüpft, wenn beide Konten importiert werden.} other{{count} Zeilen sind Umbuchungen und werden mit ihren Gegenstücken verknüpft, wenn beide Konten importiert werden.}}",
+  "ynabImportDateFormat": "Datumsformat in Register.csv",
+  "ynabImportDateFormatAmbiguous": "Kein Tag über 12 in der Datei: Tag und Monat könnten vertauscht sein. Prüfen Sie ein Datum und wechseln Sie das Format bei Bedarf.",
+  "ynabImportTrackingSwitch": "Tracking-Konto (außerhalb des Budgets)",
+  "ynabImportTrackingHint": "Konten mit nur einem Anfangssaldo und Umbuchungen sind als Tracking-Konten voreingestellt; ihr Geld bleibt außerhalb des Budgets.",
+  "ynabImportCategoriesCount": "Kategorien",
+  "ynabImportCategoriesOnlyInBudget": "Kategorien nur in Budget.csv",
+  "ynabImportAlreadyImported": "Dieser Export wurde bereits am {date} importiert. Ein erneuter Import verdoppelt seine Buchungen."
 }

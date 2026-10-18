@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
+import 'package:ledger_zero/services/import/ynab_data_mapper.dart';
 import 'package:ledger_zero/services/import/ynab_import_service.dart';
 
 const _header =
@@ -530,4 +531,220 @@ void main() {
       );
     },
   );
+
+  test('YNAB4: nested subCategories / subTransactions and the internal income '
+      'categories (I7)', () async {
+    final dir = await Directory.systemTemp.createTemp('ynab4_nested');
+    addTearDown(() => dir.delete(recursive: true));
+    await _writeYnab4Bundle(dir, {
+      'accounts': [
+        {
+          'entityId': 'A1',
+          'accountName': 'Checking',
+          'accountType': 'Checking',
+          'onBudget': true,
+        },
+      ],
+      'payees': [
+        {'entityId': 'P1', 'name': 'Employer'},
+      ],
+      'masterCategories': [
+        {
+          'entityId': 'MasterCategory/__Internal__',
+          'name': 'Internal Master Category',
+          'subCategories': [
+            {
+              'entityId': 'Category/__ImmediateIncome__',
+              'masterCategoryId': 'MasterCategory/__Internal__',
+              'name': 'Immediate Income SubCategory',
+            },
+            {
+              'entityId': 'Category/__DeferredIncome__',
+              'masterCategoryId': 'MasterCategory/__Internal__',
+              'name': 'Deferred Income SubCategory',
+            },
+            {
+              'entityId': 'Category/__Split__',
+              'masterCategoryId': 'MasterCategory/__Internal__',
+              'name': 'Split SubCategory',
+            },
+          ],
+        },
+        {
+          'entityId': 'M1',
+          'name': 'Everyday',
+          'subCategories': [
+            {'entityId': 'C1', 'masterCategoryId': 'M1', 'name': 'Food'},
+            {'entityId': 'C2', 'masterCategoryId': 'M1', 'name': 'Fun'},
+          ],
+        },
+      ],
+      'transactions': [
+        {
+          'entityId': 'T1',
+          'accountId': 'A1',
+          'date': '2025-01-02',
+          'payeeId': 'P1',
+          'categoryId': 'Category/__ImmediateIncome__',
+          'amount': 2500.0,
+          'cleared': 'Cleared',
+        },
+        {
+          'entityId': 'T2',
+          'accountId': 'A1',
+          'date': '2025-01-03',
+          'categoryId': 'Category/__DeferredIncome__',
+          'amount': 100.0,
+        },
+        {
+          'entityId': 'T3',
+          'accountId': 'A1',
+          'date': '2025-01-15',
+          'categoryId': 'Category/__Split__',
+          'amount': -80.0,
+          'subTransactions': [
+            {'entityId': 'S1', 'categoryId': 'C1', 'amount': -60.0},
+            {'entityId': 'S2', 'categoryId': 'C2', 'amount': -20.0},
+          ],
+        },
+      ],
+      'monthlyBudgets': [
+        {
+          'month': '2025-01-01',
+          'monthlySubCategoryBudgets': [
+            {'categoryId': 'C1', 'budgeted': 300.0},
+          ],
+        },
+      ],
+    });
+
+    final data = await service.parseYnab4(dir.path);
+    // Only real groups and categories are listed.
+    expect(data.categoryGroups.map((g) => g.name), ['Everyday']);
+    expect(data.categories.map((c) => c.name), ['Food', 'Fun']);
+
+    final byId = {for (final t in data.transactions) t.id: t};
+    for (final id in ['T1', 'T2']) {
+      final tx = byId[id]!;
+      expect(
+        YnabDataMapper.isReadyToAssignCategory(
+          tx.categoryGroupName,
+          tx.categoryName,
+        ),
+        isTrue,
+        reason: '$id is income',
+      );
+    }
+    final split = byId['T3']!;
+    expect(split.amount, -8000);
+    expect(split.splits.map((s) => s.amount), [-6000, -2000]);
+    expect(split.splits.map((s) => s.categoryName), ['Food', 'Fun']);
+    expect(data.budgetEntries.single.categoryName, 'Food');
+    expect(data.budgetEntries.single.budgeted, 30000);
+    expect(data.fingerprint, isNotNull);
+  });
+
+  group('parseCsvExport amounts and formats', () {
+    test(
+      'amounts without decimals in the 1.234 style are thousands (I14)',
+      () async {
+        final data = await service.parseCsvExport(
+          registerCsvContent: [
+            _header,
+            _row('Checking', '01/05/2025', 'Rent', '', '', '', '€1.234', '€0'),
+            _row('Checking', '01/06/2025', 'Shop', '', '', '', '€12,50', '€0'),
+          ].join('\n'),
+          budgetCsvContent: '',
+        );
+        expect(data.transactions.map((t) => t.amount), [-123400, -1250]);
+      },
+    );
+
+    test('an ambiguous register reports its candidates and can be read '
+        'with the other order', () async {
+      final register = [
+        _header,
+        _row('Checking', '05/03/2025', 'Shop', '', '', '', '1', ''),
+      ].join('\n');
+      final auto = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent: '',
+      );
+      expect(auto.registerDateFormat, 'MM/dd/yyyy');
+      expect(auto.dateFormatCandidates, ['MM/dd/yyyy', 'dd/MM/yyyy']);
+      expect(auto.transactions.single.date, DateTime.utc(2025, 5, 3));
+
+      final dayFirst = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent: '',
+        dateFormat: 'dd/MM/yyyy',
+      );
+      expect(dayFirst.registerDateFormat, 'dd/MM/yyyy');
+      expect(dayFirst.transactions.single.date, DateTime.utc(2025, 3, 5));
+      expect(dayFirst.fingerprint, auto.fingerprint);
+      expect(auto.fingerprint, YnabImportService.fingerprintOf(register));
+    });
+
+    test('accounts with only a starting balance and transfer legs are '
+        'tracking accounts by default', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          _header,
+          _row(
+            'Checking',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '\$100.00',
+          ),
+          _row(
+            'Checking',
+            '01/02/2025',
+            'Shop',
+            'Everyday',
+            'Food',
+            '',
+            '\$10.00',
+            '',
+          ),
+          _row(
+            'Checking',
+            '01/03/2025',
+            'Transfer : House',
+            'Everyday',
+            'Home',
+            '',
+            '\$20.00',
+            '',
+          ),
+          _row(
+            'House',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '\$300000.00',
+          ),
+          _row(
+            'House',
+            '01/03/2025',
+            'Transfer : Checking',
+            '',
+            '',
+            '',
+            '',
+            '\$20.00',
+          ),
+        ].join('\n'),
+        budgetCsvContent: '',
+      );
+      final onBudget = {for (final a in data.accounts) a.name: a.onBudget};
+      expect(onBudget, {'Checking': true, 'House': false});
+    });
+  });
 }
