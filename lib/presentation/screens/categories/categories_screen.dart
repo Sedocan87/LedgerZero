@@ -1,7 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:ledger_zero/core/utils/picked_file.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/services/csv/category_csv_service.dart';
@@ -205,10 +204,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       if (picked == null) {
         return;
       }
-      final content = await picked.readAsText();
       final result = await ref
           .read(categoryCsvServiceProvider)
-          .importCsv(content);
+          .importCsvBytes(await picked.readAsBytes());
       messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.categoriesImported(result.categoriesCreated)),

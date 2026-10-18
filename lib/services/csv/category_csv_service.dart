@@ -1,5 +1,6 @@
 import 'package:csv/csv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/utils/text_decoding.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
@@ -53,14 +54,24 @@ class CategoryCsvService {
     return const ListToCsvConverter().convert(CsvSanitizer.rows(rows));
   }
 
+  /// Decodes a picked file (UTF-8, else Windows-1252 as spreadsheets on
+  /// German Windows save it) and imports it; see [importCsv].
+  Future<CategoryCsvImportResult> importCsvBytes(List<int> bytes) =>
+      importCsv(decodeText(bytes, windows1252Fallback: true));
+
   /// Creates the groups and categories of [content] that do not exist yet
   /// (matched by name, case-insensitively, categories within their group),
   /// in one unit of work. A header row is optional; without one the columns
-  /// are group, category, hidden.
+  /// are group, category, hidden. Comma, semicolon (German spreadsheets)
+  /// and tab delimiters are read, whichever the first line uses most.
   Future<CategoryCsvImportResult> importCsv(String content) async {
-    final normalized = content.replaceFirst('﻿', '').replaceAll('\r\n', '\n');
-    final rows = const CsvToListConverter(
+    final normalized = content
+        .replaceFirst('\ufeff', '')
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n');
+    final rows = CsvToListConverter(
       eol: '\n',
+      fieldDelimiter: _delimiterOf(normalized),
       shouldParseNumbers: false,
     ).convert(normalized).where((r) => r.any((c) => '$c'.trim().isNotEmpty));
     if (rows.isEmpty || rows.first.length < 2) {
@@ -137,6 +148,23 @@ class CategoryCsvService {
       );
     });
   }
+}
+
+/// The delimiter the first non-empty line uses most (`,`, `;` or tab).
+String _delimiterOf(String content) {
+  final line = content
+      .split('\n')
+      .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '');
+  var best = ',';
+  var bestCount = ','.allMatches(line).length;
+  for (final candidate in [';', '\t']) {
+    final count = candidate.allMatches(line).length;
+    if (count > bestCount) {
+      best = candidate;
+      bestCount = count;
+    }
+  }
+  return best;
 }
 
 final categoryCsvServiceProvider = Provider<CategoryCsvService>((ref) {
