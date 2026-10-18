@@ -4322,4 +4322,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ruleAmountValueLabel => 'Amount (negative = outflow)';
+
+  @override
+  String cardNotificationsStatusFailed(String error) {
+    return 'Not added: $error';
+  }
+
+  @override
+  String get cardNotificationsStatusDuplicate =>
+      'Not added: a transaction with this amount already exists';
+
+  @override
+  String get cardNotificationsAddAnyway => 'Add anyway';
+
+  @override
+  String cardNotificationsProcessError(String error) {
+    return 'Captured notifications could not be processed: $error';
+  }
+
+  @override
+  String get cardNotificationsLogDelete => 'Delete listed entries';
+
+  @override
+  String cardNotificationsLogDeleteConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Delete the $count listed entries from the log? Notifications waiting for you are kept.',
+      one:
+          'Delete the listed entry from the log? Notifications waiting for you are kept.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsStorageReset(String date) {
+    return 'The capture storage was reset on $date because this phone\'s key store no longer held its key. Notifications captured before then were lost; check your bank app for payments from before that date.';
+  }
+
+  @override
+  String get cardNotificationsListenerDisconnected =>
+      'Access is granted, but Android has not connected LedgerZero\'s notification listener, so nothing is captured. Turn notification access off and on again in the system settings, or restart the phone.';
+
+  @override
+  String get lockScreenReadErrorPersistent =>
+      'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone.';
+
+  @override
+  String get lockScreenOpenError =>
+      'LedgerZero could not open its database file just now. Your data is not affected. Try again; if it keeps failing, restart the phone.';
+
+  @override
+  String lockScreenAuthFailed(String reason) {
+    return 'Unlocking did not work: $reason';
+  }
+
+  @override
+  String get setupExistingDataKept =>
+      'Your existing data on this phone was found and kept.';
 }

@@ -1194,5 +1194,17 @@
   "closeAccountSchedulesWarning": "{count, plural, =1{1 geplante Transaktion nutzt dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.} other{{count} geplante Transaktionen nutzen dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.}}",
   "scheduledEndBeforeNext": "Das Enddatum darf nicht vor dem nächsten Datum liegen.",
   "rulesImportDroppedActions": "{count, plural, =1{1 Aktion verwies auf eine Kategorie, einen Empfänger oder ein Konto, das es hier nicht gibt, und wurde entfernt.} other{{count} Aktionen verwiesen auf Kategorien, Empfänger oder Konten, die es hier nicht gibt, und wurden entfernt.}}",
-  "ruleAmountValueLabel": "Betrag (negativ = Ausgabe)"
+  "ruleAmountValueLabel": "Betrag (negativ = Ausgabe)",
+  "cardNotificationsStatusFailed": "Nicht hinzugefügt: {error}",
+  "cardNotificationsStatusDuplicate": "Nicht hinzugefügt: Eine Transaktion mit diesem Betrag gibt es schon",
+  "cardNotificationsAddAnyway": "Trotzdem hinzufügen",
+  "cardNotificationsProcessError": "Erfasste Benachrichtigungen konnten nicht verarbeitet werden: {error}",
+  "cardNotificationsLogDelete": "Angezeigte Einträge löschen",
+  "cardNotificationsLogDeleteConfirm": "{count, plural, =1{Den angezeigten Eintrag aus dem Protokoll löschen? Benachrichtigungen, die auf Sie warten, bleiben erhalten.} other{Die {count} angezeigten Einträge aus dem Protokoll löschen? Benachrichtigungen, die auf Sie warten, bleiben erhalten.}}",
+  "cardNotificationsStorageReset": "Der Erfassungsspeicher wurde am {date} zurückgesetzt, weil der Schlüsselspeicher dieses Telefons seinen Schlüssel nicht mehr hatte. Davor erfasste Benachrichtigungen sind verloren; prüfen Sie Ihre Bank-App auf Zahlungen von vor diesem Datum.",
+  "cardNotificationsListenerDisconnected": "Der Zugriff ist erteilt, aber Android hat den Benachrichtigungsdienst von LedgerZero nicht verbunden, daher wird nichts erfasst. Schalten Sie den Benachrichtigungszugriff in den Systemeinstellungen aus und wieder ein oder starten Sie das Telefon neu.",
+  "lockScreenReadErrorPersistent": "LedgerZero kann seinen Schlüssel nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen: Der Schlüsselspeicher hat ihn nicht mehr (das kann auf manchen Telefonen nach einem Systemupdate oder einer Änderung der Displaysperre passieren). Ihre Daten auf diesem Telefon lassen sich ohne diesen Schlüssel nicht öffnen. Versuchen Sie es erneut oder starten Sie das Telefon neu; hilft das nicht, setzen Sie die App zurück und stellen Sie eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon.",
+  "lockScreenOpenError": "LedgerZero konnte seine Datenbankdatei gerade nicht öffnen. Ihre Daten sind nicht betroffen. Versuchen Sie es erneut; wenn es weiterhin fehlschlägt, starten Sie das Telefon neu.",
+  "lockScreenAuthFailed": "Entsperren hat nicht geklappt: {reason}",
+  "setupExistingDataKept": "Ihre vorhandenen Daten auf diesem Telefon wurden gefunden und behalten."
 }

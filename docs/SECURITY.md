@@ -12,8 +12,8 @@ key design is described in detail in [ENCRYPTION.md](ENCRYPTION.md).
 | Data key | Stored by flutter_secure_storage 10 (AES-GCM under an Android KeyStore key that needs no user authentication), so the database opens whenever the app runs, also behind the app lock. There is no master password. |
 | Backups (`.lzbk`) | Always encrypted (AES-256-GCM, Argon2id from a backup password, streamed in authenticated chunks). See [BACKUP_FORMAT.md](BACKUP_FORMAT.md). |
 | Exports (CSV, JSON, PDF, PNG, diagnostic log) | Plaintext by design. Written to the app's cache directory (not backed up), deleted once the share sheet completes (on Android 60 s later, because the receiving app may still be reading), and swept at start-up/resume if older than one hour. |
-| Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, queued until the app next runs: AES-256-GCM with an Android KeyStore key that needs no user authentication, max. 200 entries / 90 days. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
-| Diagnostic logs / crash reports | Off by default. When enabled, stored in the app cache directory, with SQL parameters, e-mail addresses, payloads and numbers removed. Shared only by the user, after a preview of the exact text. |
+| Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, kept as a log until the app next runs and for 30 days after they were handled: AES-256-GCM with an Android KeyStore key that needs no user authentication, max. 500 entries (pending ones for 90 days). If the KeyStore key is lost, the log is started over and the user is told the date. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
+| Diagnostic logs / crash reports | Warnings and errors are always written to the app cache directory (so a release build can explain afterwards why something did not happen, e.g. a card notification that could not be booked); info/debug lines only with logging enabled; crash reports only when the user turns them on. All of it with SQL parameters, e-mail addresses, payloads and numbers removed. Never uploaded; shared only by the user, after a preview of the exact text. |
 
 Android: `android:allowBackup="false"`, so Google's auto backup never copies
 the database or key storage. Android's file-based encryption protects all of
@@ -26,16 +26,28 @@ it while the phone has not been unlocked since a restart.
   (BiometricPrompt, BIOMETRIC_STRONG or DEVICE_CREDENTIAL; below API 30
   BIOMETRIC_WEAK or DEVICE_CREDENTIAL). It gates the UI; it does not
   release a key. Turning it on needs a screen lock and one successful
-  prompt; if the screen lock is later removed, the app turns the lock off
-  instead of locking the user out.
+  prompt; if the screen lock is later removed (`KeyguardManager.
+  isDeviceSecure` false), the app turns the lock off instead of locking the
+  user out. Every other failure of the prompt (sensor unavailable, lockout,
+  missing channel) keeps the app locked and shows the system's reason with
+  "Unlock" to try again.
 * **Session**: the start-up screen opens the database with the device key
   (`sessionProvider`), then shows the app lock. The session stays open while
   the lock is showing (sync and card capture keep running) and is closed
   only for a factory reset; closing zeroes the key bytes.
-* **Auto-lock** (only with the app lock on): Immediate (default) locks as
-  soon as the app is inactive or in the background; timed modes lock after
-  1–30 minutes in the background (monotonic clock and wall clock, the
-  larger wins).
+* **Auto-lock** (only with the app lock on): after 1 minute in the
+  background by default; "Immediate" locks as soon as the app is hidden or
+  paused (not on `inactive`: the notification shade or a system dialog
+  over the app does not lock); timed modes lock after 1–30 minutes in the
+  background (monotonic clock and wall clock, the larger wins). OS screens
+  the app opens itself (file picker, share sheet, the lock prompt) do not
+  lock, for at most 2 minutes each.
+* **Start-up failures**: a key store or database file that fails to open
+  is retried; the destructive "Reset app" is offered only when the key is
+  missing or does not match the database, or after three failed retries
+  (or a key store error that is known to be permanent: the KeyStore
+  wrapping key was wiped). Onboarding never deletes a database that the
+  stored device key opens.
 * **Older installs** with a master password unlock once with the password,
   recovery key or biometrics; the data key then moves to the device key
   store and the vault is deleted (see [ENCRYPTION.md](ENCRYPTION.md)).

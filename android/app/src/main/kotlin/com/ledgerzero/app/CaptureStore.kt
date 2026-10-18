@@ -37,6 +37,12 @@ import javax.crypto.spec.GCMParameterSpec
  *   updated with the same text within [REPOST_WINDOW_MS] is not captured
  *   twice. (`Notification.when` is not part of it: many apps reset it on
  *   every update.)
+ * * Storage reset: when the KeyStore key is gone or no longer usable (a
+ *   vendor KeyStore reset, a restored device) the log cannot be read; it
+ *   is started over with a new key and the time is kept in
+ *   [PREF_STORAGE_RESET] until the Dart side has shown it to the user
+ *   ([storageResetAt], [acknowledgeStorageReset]). The log is never
+ *   dropped silently.
  *
  * All access is serialised on [lock]; the listener and the method channel
  * run in the same process.
@@ -50,6 +56,7 @@ class CaptureStore private constructor(context: Context) {
         // entries (entries without a status are pending).
         private const val PREF_QUEUE = "queue"
         private const val PREF_SEEN = "seen"
+        private const val PREF_STORAGE_RESET = "storageResetAt"
         private const val KEY_ALIAS = "ledgerzero_capture_key"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
@@ -172,16 +179,32 @@ class CaptureStore private constructor(context: Context) {
         JSONArray().apply { readQueue().forEach { put(it) } }
     }
 
-    /** Sets the status (and the booked transaction's id, if given). */
-    fun setStatus(ids: Set<String>, status: String, transactionId: String?) = synchronized(lock) {
+    /**
+     * Sets the status (and the booked transaction's id, or the error of a
+     * failed booking, if given).
+     */
+    fun setStatus(
+        ids: Set<String>,
+        status: String,
+        transactionId: String?,
+        error: String? = null,
+    ) = synchronized(lock) {
         val queue = readQueue()
         for (entry in queue) {
             if (ids.contains(entry.optString("id"))) {
                 entry.put("status", status)
                 entry.put("transactionId", transactionId ?: JSONObject.NULL)
+                entry.put("error", error ?: JSONObject.NULL)
             }
         }
         writeQueue(queue)
+    }
+
+    /** When the log was last started over because its key was lost; 0 if never or acknowledged. */
+    fun storageResetAt(): Long = synchronized(lock) { prefs.getLong(PREF_STORAGE_RESET, 0L) }
+
+    fun acknowledgeStorageReset() = synchronized(lock) {
+        prefs.edit().remove(PREF_STORAGE_RESET).apply()
     }
 
     fun remove(ids: Set<String>) = synchronized(lock) {
@@ -192,9 +215,26 @@ class CaptureStore private constructor(context: Context) {
     fun clear() = synchronized(lock) {
         prefs.edit().clear().apply()
         watched = null
-        val ks = keyStore()
-        if (ks.containsAlias(KEY_ALIAS)) {
-            ks.deleteEntry(KEY_ALIAS)
+        deleteKey()
+    }
+
+    /** Drops the unreadable log and records when, so the user can be told. */
+    private fun resetStorage() {
+        prefs.edit()
+            .remove(PREF_QUEUE)
+            .putLong(PREF_STORAGE_RESET, System.currentTimeMillis())
+            .apply()
+    }
+
+    private fun deleteKey() {
+        try {
+            val ks = keyStore()
+            if (ks.containsAlias(KEY_ALIAS)) {
+                ks.deleteEntry(KEY_ALIAS)
+            }
+        } catch (_: Exception) {
+            // Nothing to delete, or the key store refuses; a new key is
+            // generated under the same alias either way.
         }
     }
 
@@ -207,8 +247,9 @@ class CaptureStore private constructor(context: Context) {
         val array = try {
             JSONArray(decrypt(blob))
         } catch (e: Exception) {
-            // Key lost (e.g. restored device) or corrupt data: start over.
-            prefs.edit().remove(PREF_QUEUE).apply()
+            // Key lost (e.g. restored device) or corrupt data: start over,
+            // but tell the user (storageResetAt).
+            resetStorage()
             return mutableListOf()
         }
         val now = System.currentTimeMillis()
@@ -245,8 +286,16 @@ class CaptureStore private constructor(context: Context) {
     private fun keyStore(): KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     private fun key(): SecretKey {
-        val ks = keyStore()
-        (ks.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        try {
+            (keyStore().getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        } catch (e: Exception) {
+            // UnrecoverableKeyException / KeyStoreException: the key exists
+            // but cannot be used any more (vendor KeyStore reset). The old
+            // log is unreadable either way; start over with a new key and
+            // record it for the user.
+            deleteKey()
+            resetStorage()
+        }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(
             KeyGenParameterSpec.Builder(

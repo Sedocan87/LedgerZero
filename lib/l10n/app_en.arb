@@ -3668,5 +3668,78 @@
   "ruleAmountValueLabel": "Amount (negative = outflow)",
   "@ruleAmountValueLabel": {
       "description": "Label of the value field of an amount condition in the rule editor; the comparison uses the signed amount."
+  },
+  "cardNotificationsStatusFailed": "Not added: {error}",
+  "@cardNotificationsStatusFailed": {
+    "description": "Capture log status of a notification whose booking threw",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cardNotificationsStatusDuplicate": "Not added: a transaction with this amount already exists",
+  "@cardNotificationsStatusDuplicate": {
+    "description": "Capture log status"
+  },
+  "cardNotificationsAddAnyway": "Add anyway",
+  "@cardNotificationsAddAnyway": {
+    "description": "Button on a duplicate capture log entry"
+  },
+  "cardNotificationsProcessError": "Captured notifications could not be processed: {error}",
+  "@cardNotificationsProcessError": {
+    "description": "Error banner on the card notification screens",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cardNotificationsLogDelete": "Delete listed entries",
+  "@cardNotificationsLogDelete": {
+    "description": "Menu action in the capture log"
+  },
+  "cardNotificationsLogDeleteConfirm": "{count, plural, =1{Delete the listed entry from the log? Notifications waiting for you are kept.} other{Delete the {count} listed entries from the log? Notifications waiting for you are kept.}}",
+  "@cardNotificationsLogDeleteConfirm": {
+    "description": "Confirmation before deleting capture log entries",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardNotificationsStorageReset": "The capture storage was reset on {date} because this phone's key store no longer held its key. Notifications captured before then were lost; check your bank app for payments from before that date.",
+  "@cardNotificationsStorageReset": {
+    "description": "Notice on the card notifications screen",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "cardNotificationsListenerDisconnected": "Access is granted, but Android has not connected LedgerZero's notification listener, so nothing is captured. Turn notification access off and on again in the system settings, or restart the phone.",
+  "@cardNotificationsListenerDisconnected": {
+    "description": "Warning on the card notifications screen"
+  },
+  "lockScreenReadErrorPersistent": "LedgerZero cannot read its key from this phone's secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone.",
+  "@lockScreenReadErrorPersistent": {
+    "description": "Lock screen: the key store keeps failing"
+  },
+  "lockScreenOpenError": "LedgerZero could not open its database file just now. Your data is not affected. Try again; if it keeps failing, restart the phone.",
+  "@lockScreenOpenError": {
+    "description": "Lock screen: transient database open error"
+  },
+  "lockScreenAuthFailed": "Unlocking did not work: {reason}",
+  "@lockScreenAuthFailed": {
+    "description": "Lock screen: the system prompt failed",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "setupExistingDataKept": "Your existing data on this phone was found and kept.",
+  "@setupExistingDataKept": {
+    "description": "Onboarding: existing database reused instead of deleted"
   }
 }

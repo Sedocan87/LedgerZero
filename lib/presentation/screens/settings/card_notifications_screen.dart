@@ -42,6 +42,43 @@ TransactionDraft captureDraft(
   );
 }
 
+/// A line of error text at the top of a card notification screen.
+class CaptureErrorBanner extends StatelessWidget {
+  const CaptureErrorBanner({super.key, required this.text, this.onDismiss});
+
+  final String text;
+  final VoidCallback? onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      key: const Key('cardNotifications.errorBanner'),
+      color: scheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 8, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(color: scheme.onErrorContainer),
+              ),
+            ),
+            if (onDismiss != null)
+              IconButton(
+                icon: const Icon(Icons.close),
+                color: scheme.onErrorContainer,
+                tooltip: AppLocalizations.of(context)!.ok,
+                onPressed: onDismiss,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Settings > Card notifications (Android only): notification access, the
 /// watched apps with their accounts, captured notifications that could
 /// not be booked, and the way to the log of the last 30 days.
@@ -58,6 +95,9 @@ class _CardNotificationsScreenState
     with WidgetsBindingObserver {
   bool _loading = true;
   bool _accessGranted = false;
+  bool _listenerConnected = true;
+  DateTime? _storageReset;
+  String? _error;
   List<CaptureSource> _sources = const [];
   List<HeldCapture> _held = const [];
   StreamSubscription<void>? _capturedSubscription;
@@ -93,12 +133,21 @@ class _CardNotificationsScreenState
   /// Reads access, sources and held captures; with [process], books what
   /// can be booked first and reports it.
   Future<void> _reload({bool process = false}) async {
-    try {
-      var added = 0;
-      if (process) {
+    String? error;
+    var added = 0;
+    if (process) {
+      try {
         added = (await _service.processPending()).added;
+      } catch (e, stackTrace) {
+        // The settings must still show; the error is shown with them.
+        Logger.error('Booking captured notifications failed', e, stackTrace);
+        error = NotificationCaptureService.describeError(e);
       }
+    }
+    try {
       final granted = await _channel.isAccessGranted();
+      final connected = !granted || await _channel.isListenerConnected();
+      final storageReset = await _channel.storageResetAt();
       final sources = await _channel.getSources();
       final held = await _service.held();
       if (!mounted) {
@@ -106,24 +155,37 @@ class _CardNotificationsScreenState
       }
       setState(() {
         _accessGranted = granted;
+        _listenerConnected = connected;
+        _storageReset = storageReset;
         _sources = sources;
         _held = held;
-        _loading = false;
       });
-      if (added > 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.cardNotificationsAdded(added),
-            ),
-          ),
-        );
-      }
     } catch (e, stackTrace) {
       Logger.error('Loading card notification settings failed', e, stackTrace);
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      error ??= NotificationCaptureService.describeError(e);
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _error = error;
+      _loading = false;
+    });
+    if (added > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.cardNotificationsAdded(added),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _acknowledgeStorageReset() async {
+    await _channel.acknowledgeStorageReset();
+    if (mounted) {
+      setState(() => _storageReset = null);
     }
   }
 
@@ -343,6 +405,17 @@ class _CardNotificationsScreenState
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
+                if (_error != null)
+                  CaptureErrorBanner(
+                    text: l10n.cardNotificationsProcessError(_error!),
+                  ),
+                if (_storageReset != null)
+                  CaptureErrorBanner(
+                    text: l10n.cardNotificationsStorageReset(
+                      formatter.formatDate(_storageReset!),
+                    ),
+                    onDismiss: _acknowledgeStorageReset,
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
                   child: Text(l10n.cardNotificationsIntro),
@@ -370,6 +443,15 @@ class _CardNotificationsScreenState
                               child: Text(l10n.cardNotificationsGrantAccess),
                             ),
                     ),
+                    if (_accessGranted && !_listenerConnected)
+                      ListTile(
+                        key: const Key('cardNotifications.disconnected'),
+                        leading: Icon(Icons.link_off, color: scheme.error),
+                        title: Text(
+                          l10n.cardNotificationsListenerDisconnected,
+                          style: TextStyle(color: scheme.error),
+                        ),
+                      ),
                     if (_accessGranted)
                       ListTile(
                         leading: const Icon(Icons.settings),

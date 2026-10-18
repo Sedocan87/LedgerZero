@@ -34,6 +34,9 @@ enum _Phase {
 
   /// The key store failed to answer (it may work on the next try).
   readError,
+
+  /// Opening the database file threw (I/O; it may work on the next try).
+  openError,
 }
 
 /// Start-up and the app lock.
@@ -47,6 +50,13 @@ enum _Phase {
 /// The system prompt only opens while the app is in the foreground: a lock
 /// that happened on the way to the background asks when the user returns,
 /// never over another app or the home screen.
+///
+/// Failures: a key store or file error is retried ("Retry"); the
+/// destructive reset is offered only when the key is missing or does not
+/// open the database, or when a transient error has repeated
+/// [maxTransientFailures] times or is known to be permanent (the KeyStore
+/// wrapping key is gone). A failed prompt keeps the app locked and shows
+/// the system's reason; only a removed screen lock turns the lock off.
 class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
 
@@ -58,6 +68,17 @@ class _LockScreenState extends ConsumerState<LockScreen>
     with WidgetsBindingObserver {
   _Phase _phase = _Phase.starting;
   bool _prompting = false;
+
+  /// Starts in a row that ended in [_Phase.readError] or
+  /// [_Phase.openError]; after [maxTransientFailures] (or a key store error
+  /// that is known to be permanent) the reset is offered as well.
+  int _transientFailures = 0;
+  bool _keyStoreLost = false;
+
+  /// The system's reason for the last failed prompt.
+  String? _authFailure;
+
+  static const int maxTransientFailures = 3;
 
   /// The prompt is due but the app is not in the foreground.
   bool _promptOnResume = false;
@@ -101,6 +122,8 @@ class _LockScreenState extends ConsumerState<LockScreen>
           dek = await _readKey();
         } catch (e, stackTrace) {
           Logger.error('Reading the database key failed', e, stackTrace);
+          _transientFailures++;
+          _keyStoreLost = _keyStoreLost || isPermanentKeyStoreError(e);
           _setPhase(_Phase.readError);
           return;
         }
@@ -110,22 +133,57 @@ class _LockScreenState extends ConsumerState<LockScreen>
           );
           return;
         }
-        if (!await _opensDatabase(dek)) {
+        final bool opens;
+        try {
+          opens = await _opensDatabase(dek);
+        } catch (e, stackTrace) {
+          // The file could not be opened at all (I/O), which says nothing
+          // about the key: retryable, not the destructive reset.
+          zeroBytes(dek);
+          Logger.error('Opening the database file failed', e, stackTrace);
+          _transientFailures++;
+          _setPhase(_Phase.openError);
+          return;
+        }
+        if (!opens) {
           zeroBytes(dek);
           _setPhase(_Phase.keyError);
           return;
         }
         ref.read(sessionProvider.notifier).open(dek);
         zeroBytes(dek);
+        _transientFailures = 0;
         // An interrupted migration may have left the old entries behind.
         unawaited(migration.deleteLeftovers());
       }
       await _passLock();
     } catch (e, stackTrace) {
       Logger.error('Opening the database failed', e, stackTrace);
-      _setPhase(_Phase.keyError);
+      _transientFailures++;
+      _setPhase(_Phase.openError);
     }
   }
+
+  /// Whether [error] from the key store says the wrapping key is gone for
+  /// good (the Android KeyStore was wiped, e.g. by a vendor's screen-lock
+  /// change), rather than being busy.
+  @visibleForTesting
+  static bool isPermanentKeyStoreError(Object error) {
+    final text = error.toString();
+    return const [
+      'BadPaddingException',
+      'AEADBadTagException',
+      'UnrecoverableKeyException',
+      'KeyStoreException',
+      'InvalidKeyException',
+      'KeyPermanentlyInvalidatedException',
+    ].any(text.contains);
+  }
+
+  /// The transient error has repeated often enough (or is known to be
+  /// permanent) to offer the reset next to "Retry".
+  bool get _offerReset =>
+      _keyStoreLost || _transientFailures >= maxTransientFailures;
 
   /// The device key; a failing key store is asked up to three times (it
   /// can fail transiently right after an app update), so a temporary error
@@ -174,14 +232,16 @@ class _LockScreenState extends ConsumerState<LockScreen>
       return;
     }
     final l10n = AppLocalizations.of(context)!;
-    setState(() => _prompting = true);
+    final authenticator = ref.read(appLockAuthenticatorProvider);
+    setState(() {
+      _prompting = true;
+      _authFailure = null;
+    });
     final result = await ExternalUiGuard.run(
-      () => ref
-          .read(appLockAuthenticatorProvider)
-          .authenticate(
-            title: l10n.appLockPromptTitle,
-            subtitle: l10n.appLockPromptSubtitle,
-          ),
+      () => authenticator.authenticate(
+        title: l10n.appLockPromptTitle,
+        subtitle: l10n.appLockPromptSubtitle,
+      ),
     );
     if (!mounted) {
       return;
@@ -191,9 +251,9 @@ class _LockScreenState extends ConsumerState<LockScreen>
       case AppLockResult.success:
         _unlockUi();
       case AppLockResult.unavailable:
-        // The screen lock was removed in the system settings (which needs
-        // the old one): the app lock cannot work, so it is turned off
-        // instead of locking the user out.
+        // Reported only when the screen lock was removed in the system
+        // settings (which needs the old one): the app lock cannot work,
+        // so it is turned off instead of locking the user out.
         await ref.read(appLockEnabledProvider.notifier).set(false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -202,8 +262,10 @@ class _LockScreenState extends ConsumerState<LockScreen>
         }
         _unlockUi();
       case AppLockResult.cancelled:
-      case AppLockResult.failed:
         break;
+      case AppLockResult.failed:
+        // Sensor busy, lockout, ...: stay locked and say why.
+        setState(() => _authFailure = authenticator.lastFailure ?? '');
     }
   }
 
@@ -276,7 +338,16 @@ class _LockScreenState extends ConsumerState<LockScreen>
                 onReset: _resetApp,
               ),
               _Phase.keyError => _buildKeyError(l10n),
-              _Phase.readError => _buildReadError(l10n),
+              _Phase.readError => _buildTransientError(
+                l10n,
+                _keyStoreLost
+                    ? l10n.lockScreenReadErrorPersistent
+                    : l10n.lockScreenReadError,
+              ),
+              _Phase.openError => _buildTransientError(
+                l10n,
+                l10n.lockScreenOpenError,
+              ),
             },
           ),
         ),
@@ -305,11 +376,22 @@ class _LockScreenState extends ConsumerState<LockScreen>
           icon: const Icon(Icons.fingerprint),
           label: Text(l10n.loginUnlock),
         ),
+        if (_authFailure != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            l10n.lockScreenAuthFailed(_authFailure!),
+            key: const Key('lock_auth_failed'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildReadError(AppLocalizations l10n) {
+  /// A failure that may pass: "Retry", and the reset once it keeps
+  /// failing (see [_offerReset]).
+  Widget _buildTransientError(AppLocalizations l10n, String message) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -319,16 +401,10 @@ class _LockScreenState extends ConsumerState<LockScreen>
           color: Theme.of(context).colorScheme.error,
         ),
         const SizedBox(height: 24),
-        Text(l10n.lockScreenReadError, textAlign: TextAlign.center),
+        Text(message, textAlign: TextAlign.center),
         const SizedBox(height: 24),
-        ElevatedButton(
-          key: const Key('lock_retry'),
-          onPressed: _retry,
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: Text(l10n.retry),
-        ),
+        _retryButton(l10n),
+        if (_offerReset) ...[const SizedBox(height: 16), _resetButton(l10n)],
       ],
     );
   }
@@ -342,14 +418,29 @@ class _LockScreenState extends ConsumerState<LockScreen>
         const SizedBox(height: 24),
         Text(l10n.lockScreenKeyError, textAlign: TextAlign.center),
         const SizedBox(height: 24),
-        OutlinedButton.icon(
-          key: const Key('login_reset_app'),
-          onPressed: _resetApp,
-          icon: const Icon(Icons.restart_alt),
-          label: Text(l10n.loginResetApp),
-          style: OutlinedButton.styleFrom(foregroundColor: error),
-        ),
+        _retryButton(l10n),
+        const SizedBox(height: 16),
+        _resetButton(l10n),
       ],
     );
   }
+
+  Widget _retryButton(AppLocalizations l10n) => ElevatedButton(
+    key: const Key('lock_retry'),
+    onPressed: _retry,
+    style: ElevatedButton.styleFrom(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+    ),
+    child: Text(l10n.retry),
+  );
+
+  Widget _resetButton(AppLocalizations l10n) => OutlinedButton.icon(
+    key: const Key('login_reset_app'),
+    onPressed: _resetApp,
+    icon: const Icon(Icons.restart_alt),
+    label: Text(l10n.loginResetApp),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Theme.of(context).colorScheme.error,
+    ),
+  );
 }

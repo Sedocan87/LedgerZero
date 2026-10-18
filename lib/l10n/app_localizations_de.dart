@@ -4356,4 +4356,63 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ruleAmountValueLabel => 'Betrag (negativ = Ausgabe)';
+
+  @override
+  String cardNotificationsStatusFailed(String error) {
+    return 'Nicht hinzugefügt: $error';
+  }
+
+  @override
+  String get cardNotificationsStatusDuplicate =>
+      'Nicht hinzugefügt: Eine Transaktion mit diesem Betrag gibt es schon';
+
+  @override
+  String get cardNotificationsAddAnyway => 'Trotzdem hinzufügen';
+
+  @override
+  String cardNotificationsProcessError(String error) {
+    return 'Erfasste Benachrichtigungen konnten nicht verarbeitet werden: $error';
+  }
+
+  @override
+  String get cardNotificationsLogDelete => 'Angezeigte Einträge löschen';
+
+  @override
+  String cardNotificationsLogDeleteConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count angezeigten Einträge aus dem Protokoll löschen? Benachrichtigungen, die auf Sie warten, bleiben erhalten.',
+      one:
+          'Den angezeigten Eintrag aus dem Protokoll löschen? Benachrichtigungen, die auf Sie warten, bleiben erhalten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsStorageReset(String date) {
+    return 'Der Erfassungsspeicher wurde am $date zurückgesetzt, weil der Schlüsselspeicher dieses Telefons seinen Schlüssel nicht mehr hatte. Davor erfasste Benachrichtigungen sind verloren; prüfen Sie Ihre Bank-App auf Zahlungen von vor diesem Datum.';
+  }
+
+  @override
+  String get cardNotificationsListenerDisconnected =>
+      'Der Zugriff ist erteilt, aber Android hat den Benachrichtigungsdienst von LedgerZero nicht verbunden, daher wird nichts erfasst. Schalten Sie den Benachrichtigungszugriff in den Systemeinstellungen aus und wieder ein oder starten Sie das Telefon neu.';
+
+  @override
+  String get lockScreenReadErrorPersistent =>
+      'LedgerZero kann seinen Schlüssel nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen: Der Schlüsselspeicher hat ihn nicht mehr (das kann auf manchen Telefonen nach einem Systemupdate oder einer Änderung der Displaysperre passieren). Ihre Daten auf diesem Telefon lassen sich ohne diesen Schlüssel nicht öffnen. Versuchen Sie es erneut oder starten Sie das Telefon neu; hilft das nicht, setzen Sie die App zurück und stellen Sie eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon.';
+
+  @override
+  String get lockScreenOpenError =>
+      'LedgerZero konnte seine Datenbankdatei gerade nicht öffnen. Ihre Daten sind nicht betroffen. Versuchen Sie es erneut; wenn es weiterhin fehlschlägt, starten Sie das Telefon neu.';
+
+  @override
+  String lockScreenAuthFailed(String reason) {
+    return 'Entsperren hat nicht geklappt: $reason';
+  }
+
+  @override
+  String get setupExistingDataKept =>
+      'Ihre vorhandenen Daten auf diesem Telefon wurden gefunden und behalten.';
 }

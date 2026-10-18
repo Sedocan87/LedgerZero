@@ -7224,6 +7224,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Amount (negative = outflow)'**
   String get ruleAmountValueLabel;
+
+  /// Capture log status of a notification whose booking threw
+  ///
+  /// In en, this message translates to:
+  /// **'Not added: {error}'**
+  String cardNotificationsStatusFailed(String error);
+
+  /// Capture log status
+  ///
+  /// In en, this message translates to:
+  /// **'Not added: a transaction with this amount already exists'**
+  String get cardNotificationsStatusDuplicate;
+
+  /// Button on a duplicate capture log entry
+  ///
+  /// In en, this message translates to:
+  /// **'Add anyway'**
+  String get cardNotificationsAddAnyway;
+
+  /// Error banner on the card notification screens
+  ///
+  /// In en, this message translates to:
+  /// **'Captured notifications could not be processed: {error}'**
+  String cardNotificationsProcessError(String error);
+
+  /// Menu action in the capture log
+  ///
+  /// In en, this message translates to:
+  /// **'Delete listed entries'**
+  String get cardNotificationsLogDelete;
+
+  /// Confirmation before deleting capture log entries
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Delete the listed entry from the log? Notifications waiting for you are kept.} other{Delete the {count} listed entries from the log? Notifications waiting for you are kept.}}'**
+  String cardNotificationsLogDeleteConfirm(int count);
+
+  /// Notice on the card notifications screen
+  ///
+  /// In en, this message translates to:
+  /// **'The capture storage was reset on {date} because this phone\'s key store no longer held its key. Notifications captured before then were lost; check your bank app for payments from before that date.'**
+  String cardNotificationsStorageReset(String date);
+
+  /// Warning on the card notifications screen
+  ///
+  /// In en, this message translates to:
+  /// **'Access is granted, but Android has not connected LedgerZero\'s notification listener, so nothing is captured. Turn notification access off and on again in the system settings, or restart the phone.'**
+  String get cardNotificationsListenerDisconnected;
+
+  /// Lock screen: the key store keeps failing
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone.'**
+  String get lockScreenReadErrorPersistent;
+
+  /// Lock screen: transient database open error
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero could not open its database file just now. Your data is not affected. Try again; if it keeps failing, restart the phone.'**
+  String get lockScreenOpenError;
+
+  /// Lock screen: the system prompt failed
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocking did not work: {reason}'**
+  String lockScreenAuthFailed(String reason);
+
+  /// Onboarding: existing database reused instead of deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Your existing data on this phone was found and kept.'**
+  String get setupExistingDataKept;
 }
 
 class _AppLocalizationsDelegate
