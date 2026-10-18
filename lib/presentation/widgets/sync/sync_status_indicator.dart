@@ -48,6 +48,17 @@ class SyncStatusIndicator extends ConsumerWidget {
         break;
     }
 
+    // Conflicts and files that need a decision are shown here on Home, not
+    // only deep in Settings.
+    final failed = state.failedFiles.length;
+    final foreign = state.foreignFiles.length;
+    final attention = [
+      if (state.conflicts.isNotEmpty)
+        l10n.syncIndicatorConflicts(state.conflicts.length),
+      if (failed > 0) l10n.syncIndicatorFailedFiles(failed),
+      if (foreign > 0) l10n.syncIndicatorForeignFiles(foreign),
+    ];
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -78,6 +89,19 @@ class SyncStatusIndicator extends ConsumerWidget {
                             fmt.formatDateTime(state.lastSyncTime!),
                           ),
                           style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      if (attention.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            key: const ValueKey('syncAttention'),
+                            '${attention.join(' · ')} — '
+                            '${l10n.syncIndicatorSeeSettings}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                          ),
                         ),
                     ],
                   ),

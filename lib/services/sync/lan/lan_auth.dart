@@ -51,20 +51,38 @@ class LanAuth {
     required String path,
     required List<int> body,
   }) {
+    return switch (check(
+      value: value,
+      method: method,
+      path: path,
+      body: body,
+    )) {
+      LanAuthOk(:final deviceId, :final nonce) => (
+        deviceId: deviceId,
+        nonce: nonce,
+      ),
+      _ => null,
+    };
+  }
+
+  /// Like [verify], but tells a request signed under the pair key whose
+  /// clock differs by more than [maxSkew] ([LanAuthSkewed]) from one that
+  /// is not authentic or replayed ([LanAuthRejected]). The signature is
+  /// checked first, so only a paired phone learns about the skew.
+  LanAuthCheck check({
+    required String? value,
+    required String method,
+    required String path,
+    required List<int> body,
+  }) {
     final parts = value?.split(' ');
     if (parts == null || parts.length != 5 || parts[0] != 'v1') {
-      return null;
+      return const LanAuthRejected();
     }
     final [_, deviceId, tsText, nonce, mac] = parts;
     final ts = int.tryParse(tsText);
     if (ts == null) {
-      return null;
-    }
-    final skew = _clock()
-        .difference(DateTime.fromMillisecondsSinceEpoch(ts * 1000))
-        .abs();
-    if (skew > maxSkew) {
-      return null;
+      return const LanAuthRejected();
     }
     final expected = _mac([
       'v1',
@@ -76,16 +94,22 @@ class LanAuth {
       _hash(body),
     ]);
     if (!constantTimeEquals(utf8.encode(expected), utf8.encode(mac))) {
-      return null;
+      return const LanAuthRejected();
+    }
+    final skew = _clock().difference(
+      DateTime.fromMillisecondsSinceEpoch(ts * 1000),
+    );
+    if (skew.abs() > maxSkew) {
+      return LanAuthSkewed(deviceId: deviceId, nonce: nonce, skew: skew);
     }
     if (!_seenNonces.add(nonce)) {
-      return null;
+      return const LanAuthRejected();
     }
     _nonceOrder.add(nonce);
     if (_nonceOrder.length > _maxNonces) {
       _seenNonces.remove(_nonceOrder.removeAt(0));
     }
-    return (deviceId: deviceId, nonce: nonce);
+    return LanAuthOk(deviceId: deviceId, nonce: nonce);
   }
 
   /// [responseHeader] for a response to the request with [nonce].
@@ -113,8 +137,39 @@ class LanAuth {
   String beaconTag(String deviceId, int port, int minute) =>
       _mac(['beacon', deviceId, '$port', '$minute']);
 
+  /// Seconds since the epoch of this phone's clock (for the skew header).
+  int get nowSeconds => _clock().millisecondsSinceEpoch ~/ 1000;
+
   String _mac(List<String> fields) =>
       base64Url.encode(_hmac.convert(utf8.encode(fields.join('\n'))).bytes);
 
   static String _hash(List<int> body) => sha256.convert(body).toString();
+}
+
+/// Outcome of [LanAuth.check].
+sealed class LanAuthCheck {
+  const LanAuthCheck();
+}
+
+class LanAuthOk extends LanAuthCheck {
+  const LanAuthOk({required this.deviceId, required this.nonce});
+  final String deviceId;
+  final String nonce;
+}
+
+/// Signed under the pair key, but the sender's clock is off by [skew]
+/// (this phone's time minus the sender's).
+class LanAuthSkewed extends LanAuthCheck {
+  const LanAuthSkewed({
+    required this.deviceId,
+    required this.nonce,
+    required this.skew,
+  });
+  final String deviceId;
+  final String nonce;
+  final Duration skew;
+}
+
+class LanAuthRejected extends LanAuthCheck {
+  const LanAuthRejected();
 }

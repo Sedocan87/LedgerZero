@@ -381,6 +381,92 @@ void main() {
     });
   });
 
+  group('clock skew', () {
+    final key = Uint8List.fromList(List.generate(32, (i) => i));
+
+    test('a request signed under the pair key with a wrong clock is told '
+        'apart from a forged one', () {
+      final skewed = LanAuth(
+        key,
+        clock: () => DateTime.now().subtract(const Duration(minutes: 5)),
+      );
+      final signed = skewed.sign(
+        method: 'GET',
+        path: '/v1/files/x',
+        deviceId: 'dev',
+        body: const [],
+      );
+      final check = LanAuth(key).check(
+        value: signed.value,
+        method: 'GET',
+        path: '/v1/files/x',
+        body: const [],
+      );
+      expect(check, isA<LanAuthSkewed>());
+      expect((check as LanAuthSkewed).skew.inMinutes, 5);
+      expect(
+        LanAuth(Uint8List(32)).check(
+          value: signed.value,
+          method: 'GET',
+          path: '/v1/files/x',
+          body: const [],
+        ),
+        isA<LanAuthRejected>(),
+      );
+    });
+
+    test('the client learns the other phone\'s clock difference', () async {
+      final dir = await Directory.systemTemp.createTemp('lz_skew_');
+      addTearDown(() => dir.delete(recursive: true));
+      final server = LanServer(
+        folder: LocalSyncFolder(() async => Directory('${dir.path}/lan')),
+        auth: LanAuth(
+          key,
+          clock: () => DateTime.now().add(const Duration(minutes: 7)),
+        ),
+        deviceId: '00000000-0000-4000-8000-000000000001',
+        deviceName: () => 'Fast clock',
+        peers: LanPeers(InMemoryPrefs()),
+        preferredPort: 0,
+        bindAddress: InternetAddress.loopbackIPv4,
+      );
+      await server.start();
+      addTearDown(server.stop);
+      final client = LanClient(
+        auth: LanAuth(key),
+        deviceId: '00000000-0000-4000-8000-000000000002',
+      );
+      const mine = LanFolderState(
+        deviceId: '00000000-0000-4000-8000-000000000002',
+        deviceName: 'Me',
+        port: null,
+        files: {},
+        deleted: {},
+        manifestHash: null,
+      );
+      await expectLater(
+        client.exchange(LanEndpoint('127.0.0.1', server.port!), mine),
+        throwsA(
+          isA<LanClockSkewException>().having(
+            (e) => e.skew.inMinutes,
+            'skew',
+            7,
+          ),
+        ),
+      );
+    });
+
+    test('the exchange response carries the peer\'s time', () async {
+      await pairBoth();
+      await b.engine.sync();
+      expect(b.service.peerClockSkew, isNotNull);
+      expect(
+        b.service.peerClockSkew!.abs(),
+        lessThan(const Duration(minutes: 1)),
+      );
+    });
+  });
+
   test('discovery accepts beacons of paired phones only', () async {
     final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     final port = probe.port;

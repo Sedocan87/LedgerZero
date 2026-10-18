@@ -12,6 +12,8 @@ import 'package:ledger_zero/services/sync/connectivity_service.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
+import 'package:ledger_zero/services/sync/lan/lan_protocol.dart'
+    show LanClockSkewException;
 import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
@@ -43,6 +45,10 @@ enum LanSetupResult {
   /// The other phone could not be reached (not on the same Wi-Fi, app not
   /// open, or the network blocks phones from talking to each other).
   phoneNotFound,
+
+  /// The other phone's clock differs by more than two minutes
+  /// (`SyncState.peerClockSkew` has the difference).
+  clockSkew,
   failed,
 }
 
@@ -418,6 +424,9 @@ class SyncController extends StateNotifier<SyncState> {
           setup: setup,
           lastSyncTime: report.setup == SyncSetupStatus.ready ? _clock() : null,
           legacyFilesFound: report.legacyFilesFound,
+          clockSkewSuspected: report.clockSkewSuspected,
+          peerClockSkew: _lan?.peerClockSkew,
+          clearPeerClockSkew: _lan?.peerClockSkew == null,
         ),
       );
     } on SyncCancelledException {
@@ -435,6 +444,7 @@ class SyncController extends StateNotifier<SyncState> {
           errorMessage: _describe(e),
           errorKind: e is SyncException ? e.kind : null,
           clearError: e is! SyncException,
+          peerClockSkew: _lan?.peerClockSkew,
         ),
       );
       if (automatic && e is SyncException && e.retryable) {
@@ -749,6 +759,11 @@ class SyncController extends StateNotifier<SyncState> {
     } on SyncFolderMissingException {
       await lan.unpair();
       return LanSetupResult.phoneNotFound;
+    } on LanClockSkewException catch (e) {
+      Logger.warning('Joining Wi-Fi sync: clock skew ${e.skew.inMinutes} min');
+      _set(state.copyWith(peerClockSkew: e.skew));
+      await lan.unpair();
+      return LanSetupResult.clockSkew;
     } catch (e, stack) {
       Logger.error('Joining Wi-Fi sync failed', e, stack);
       await lan.unpair();
@@ -847,6 +862,24 @@ class SyncController extends StateNotifier<SyncState> {
       await syncNow();
     } catch (e) {
       Logger.warning('Skip failed: $e');
+    }
+  }
+
+  /// Deletes the files of an earlier sync folder from the folder.
+  Future<void> removeForeignFiles() async {
+    try {
+      await _currentEngine()?.removeForeignFiles();
+    } catch (e) {
+      Logger.warning('Removing old sync files failed: $e');
+    }
+  }
+
+  /// Stops listing the files of an earlier sync folder.
+  Future<void> ignoreForeignFiles() async {
+    try {
+      await _currentEngine()?.ignoreForeignFiles();
+    } catch (e) {
+      Logger.warning('Ignoring old sync files failed: $e');
     }
   }
 

@@ -36,6 +36,10 @@ enum SyncErrorKind {
   /// with different codes); pair them again.
   pairingMismatch,
 
+  /// Wi-Fi sync: the other phone's clock differs by more than two minutes;
+  /// set both phones to automatic time.
+  clockSkew,
+
   /// Anything else (the details are logged).
   other,
 }

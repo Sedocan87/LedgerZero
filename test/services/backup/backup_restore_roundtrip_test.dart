@@ -299,6 +299,108 @@ void main() {
     expect(prefs.getInt('last_backup_timestamp'), isNotNull);
   });
 
+  group('restore warnings (prepareRestore)', () {
+    Future<File> partnerBackup() async {
+      final otherFile = File('${dir.path}/partner.db');
+      final other = AppDatabase(
+        openEncryptedConnection(secureRandomBytes(32), file: otherFile),
+      );
+      await other.syncDao.setValue(AppDatabase.memberIdKey, 'member-partner');
+      await other
+          .into(other.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              id: 'p1',
+              name: 'Partner Brokerage',
+              type: 'investment',
+              ownerId: const Value('member-partner'),
+            ),
+          );
+      final backup = await backupService(
+        other,
+      ).createBackup(password: 'shared pw');
+      await other.close();
+      return backup;
+    }
+
+    test('the partner\'s backup on a phone with its own member id warns; '
+        'discard keeps the data', () async {
+      final backup = await partnerBackup();
+      final db = lifecycle.open();
+      await db.syncDao.setValue(AppDatabase.memberIdKey, 'member-me');
+      await addAccount(db, 'mine', 'Mine');
+
+      final prepared = await restoreService().prepareRestore(
+        backup,
+        password: 'shared pw',
+      );
+      expect(prepared.info.changesMember, isTrue);
+      expect(prepared.info.backupMemberId, 'member-partner');
+      expect(prepared.info.localMemberId, 'member-me');
+      expect(prepared.info.backupPersonalAccounts, 1);
+      expect(prepared.info.createdAt, isNotNull);
+      expect(prepared.info.isOlderThan(const Duration(days: 180)), isFalse);
+      expect(
+        prepared.info.isOlderThan(
+          Duration.zero,
+          now: DateTime.now().add(const Duration(days: 1)),
+        ),
+        isTrue,
+      );
+
+      await prepared.discard();
+      expect((await db.select(db.accounts).get()).single.id, 'mine');
+      expect(prefs.getBool(SyncRebootstrap.prefsKey), isNull);
+      expect(
+        tempDir
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => !f.path.endsWith('.lzbk')),
+        isEmpty,
+      );
+    });
+
+    test('no warning on a phone without member id or personal accounts; '
+        'commit restores', () async {
+      final backup = await partnerBackup();
+      final db = lifecycle.open();
+      await addAccount(db, 'shared', 'Shared');
+      final prepared = await restoreService().prepareRestore(
+        backup,
+        password: 'shared pw',
+      );
+      expect(prepared.info.changesMember, isFalse);
+      await prepared.commit();
+      final restored = lifecycle.db!;
+      expect((await restored.select(restored.accounts).get()).single.id, 'p1');
+      expect(prefs.getBool(SyncRebootstrap.prefsKey), isTrue);
+    });
+
+    test(
+      'a phone showing the partner\'s accounts (no own member id) warns',
+      () async {
+        final backup = await partnerBackup();
+        final db = lifecycle.open();
+        await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                id: 'theirs',
+                name: 'Theirs',
+                type: 'checking',
+                ownerId: const Value('member-someone'),
+              ),
+            );
+        final prepared = await restoreService().prepareRestore(
+          backup,
+          password: 'shared pw',
+        );
+        expect(prepared.info.changesMember, isTrue);
+        await prepared.discard();
+      },
+    );
+  });
+
   test('a backup from another device restores into this device key', () async {
     // Made on device A with key A.
     final otherFile = File('${dir.path}/other.db');

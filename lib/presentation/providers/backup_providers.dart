@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/database.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
@@ -31,6 +33,27 @@ final backupCloudTargetProvider = Provider<BackupCloudTarget?>((ref) {
     return BackupCloudTarget.googleDrive;
   }
   return null;
+});
+
+/// Whether this phone has personal accounts of its own member. Their
+/// transactions never sync, so only this phone's backups hold them.
+final ownPersonalAccountsProvider = FutureProvider.autoDispose<bool>((
+  ref,
+) async {
+  final accounts = await ref.watch(accountRepositoryProvider).getAllAccounts();
+  return accounts.any((a) => a.owner == AccountOwner.me);
+});
+
+/// The last backup is older than this (or missing) while personal accounts
+/// exist: the Backup screen shows a "Back up now" nudge.
+const Duration backupNudgeAfter = Duration(days: 7);
+
+final backupNudgeProvider = FutureProvider.autoDispose<bool>((ref) async {
+  if (!await ref.watch(ownPersonalAccountsProvider.future)) {
+    return false;
+  }
+  final last = ref.watch(backupSchedulerProvider).lastBackup;
+  return last == null || DateTime.now().difference(last) > backupNudgeAfter;
 });
 
 final backupServiceProvider = Provider<BackupService>((ref) {

@@ -20,10 +20,15 @@ class LanFolderState {
     required this.files,
     required this.deleted,
     required this.manifestHash,
+    this.time,
   });
 
   final String deviceId;
   final String deviceName;
+
+  /// The sender's clock when it answered (UTC), so the other phone can
+  /// log and show the skew between the clocks.
+  final DateTime? time;
 
   /// Where its own server listens (null: not listening).
   final int? port;
@@ -44,6 +49,7 @@ class LanFolderState {
     'f': files.toList(),
     'x': deleted.toList(),
     'm': manifestHash,
+    't': time?.toUtc().toIso8601String(),
   };
 
   factory LanFolderState.fromJson(Map<String, Object?> json) => LanFolderState(
@@ -59,6 +65,7 @@ class LanFolderState {
         if (f is String && LocalSyncFolder.isSyncFileName(f)) f,
     },
     manifestHash: json['m'] as String?,
+    time: DateTime.tryParse(json['t'] as String? ?? '')?.toUtc(),
   );
 
   static Future<LanFolderState> of(
@@ -83,8 +90,21 @@ class LanFolderState {
       manifestHash: manifest == null
           ? null
           : sha256.convert(manifest).toString(),
+      time: DateTime.now().toUtc(),
     );
   }
+}
+
+/// The other phone's clock differs from this one's by more than
+/// `LanAuth.maxSkew`: its server refused the request (or this one would).
+class LanClockSkewException implements Exception {
+  const LanClockSkewException(this.skew);
+
+  /// Other phone's time minus this phone's time.
+  final Duration skew;
+
+  @override
+  String toString() => 'LanClockSkewException: ${skew.inMinutes} min';
 }
 
 bool _ownedBy(String name, String deviceId) =>
@@ -149,6 +169,9 @@ class LanServer {
   static const int defaultPort = 47321;
   static const int maxBody = 64 * 1024 * 1024;
 
+  /// On a 401 for clock skew: the server's time, seconds since the epoch.
+  static const String timeHeader = 'x-lz-time';
+
   HttpServer? _server;
 
   int? get port => _server?.port;
@@ -186,17 +209,34 @@ class LanServer {
         return;
       }
       final path = request.uri.path;
-      final caller = auth.verify(
+      final check = auth.check(
         value: request.headers.value(LanAuth.header),
         method: request.method,
         path: path,
         body: body,
       );
-      if (caller == null || caller.deviceId == deviceId) {
+      if (check is LanAuthSkewed && check.deviceId != deviceId) {
+        // A paired phone with a wrong clock: tell it the time here, signed,
+        // so it can show the user what to fix.
+        response.statusCode = HttpStatus.unauthorized;
+        response.headers.set(timeHeader, '${auth.nowSeconds}');
+        response.headers.set(
+          LanAuth.responseHeader,
+          auth.signResponse(
+            status: HttpStatus.unauthorized,
+            nonce: check.nonce,
+            body: const [],
+          ),
+        );
+        await response.close();
+        return;
+      }
+      if (check is! LanAuthOk || check.deviceId == deviceId) {
         response.statusCode = HttpStatus.unauthorized;
         await response.close();
         return;
       }
+      final caller = check;
       final (status, out) = await _route(request, path, body, caller.deviceId);
       response.statusCode = status;
       response.headers.set(
@@ -377,6 +417,14 @@ class LanClient {
       )) {
         throw const HttpException('response not authentic');
       }
+      final theirTime = int.tryParse(
+        response.headers.value(LanServer.timeHeader) ?? '',
+      );
+      if (response.statusCode == HttpStatus.unauthorized && theirTime != null) {
+        throw LanClockSkewException(
+          Duration(seconds: theirTime - auth.nowSeconds),
+        );
+      }
       return (response.statusCode, bytes);
     } finally {
       client.close(force: true);
@@ -402,6 +450,10 @@ class LanReplicator {
   final String Function() deviceName;
   final int? Function() localPort;
 
+  /// The last measured difference between a paired phone's clock and this
+  /// one's (theirs minus ours), from the exchange response.
+  Duration? lastPeerSkew;
+
   /// Exchanges files with every paired phone that has an address. Returns
   /// how many could be reached. Unreachable phones are skipped silently.
   Future<int> syncWithPeers() async {
@@ -421,6 +473,16 @@ class LanReplicator {
     try {
       final mine = await _state();
       final theirs = await client.exchange(endpoint, mine);
+      final theirTime = theirs.time;
+      if (theirTime != null) {
+        final skew = theirTime.difference(DateTime.now().toUtc());
+        lastPeerSkew = skew;
+        if (skew.abs() > const Duration(minutes: 1)) {
+          Logger.warning(
+            'Wi-Fi sync: ${peer.name} clock differs by ${skew.inSeconds} s',
+          );
+        }
+      }
       if (mine.manifestHash != null &&
           theirs.manifestHash != null &&
           mine.manifestHash != theirs.manifestHash) {
@@ -456,6 +518,9 @@ class LanReplicator {
       );
       return true;
     } on LanManifestMismatchException {
+      rethrow;
+    } on LanClockSkewException catch (e) {
+      lastPeerSkew = e.skew;
       rethrow;
     } catch (e) {
       Logger.info('Wi-Fi sync: ${peer.name} not reachable ($e)');

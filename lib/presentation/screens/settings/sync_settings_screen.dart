@@ -4,6 +4,7 @@ import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync/lan_pairing_screens.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
@@ -200,6 +201,9 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                     SyncErrorKind.storageFull => l10n.syncErrorStorageFull,
                     SyncErrorKind.pairingMismatch =>
                       l10n.syncErrorPairingMismatch,
+                    SyncErrorKind.clockSkew => l10n.syncErrorClockSkew(
+                      (state.peerClockSkew?.inMinutes ?? 0).abs(),
+                    ),
                     SyncErrorKind.other || null => l10n.syncError,
                   },
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -321,9 +325,53 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
     );
   }
 
+  /// Joining a folder merges this phone's data into the shared budget;
+  /// accounts of the same name on both phones end up twice. Asks first when
+  /// there is anything to merge. Returns whether to go on.
+  Future<bool> _confirmMergeExistingData() async {
+    final l10n = AppLocalizations.of(context)!;
+    final accounts = await ref.read(accountRepositoryProvider).getAllAccounts();
+    final transactions = await ref
+        .read(transactionRepositoryProvider)
+        .getAllTransactions();
+    if (accounts.isEmpty && transactions.isEmpty) {
+      return true;
+    }
+    if (!mounted) {
+      return false;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.syncJoinExistingDataTitle),
+        content: Text(
+          l10n.syncJoinExistingDataMessage(
+            accounts.length,
+            transactions.length,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const Key('sync_join_merge_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.syncJoinExistingDataConfirm),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
   Future<void> _joinLan() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    if (!await _confirmMergeExistingData() || !mounted) {
+      return;
+    }
     final code = await LanScanCodeScreen.show(context);
     if (code == null || code.isEmpty || !mounted) {
       return;
@@ -345,6 +393,10 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
             LanSetupResult.ok => l10n.lanJoined,
             LanSetupResult.invalidCode => l10n.lanInvalidCode,
             LanSetupResult.phoneNotFound => l10n.lanPhoneNotFound,
+            LanSetupResult.clockSkew => l10n.syncErrorClockSkew(
+              (ref.read(syncControllerProvider).peerClockSkew?.inMinutes ?? 0)
+                  .abs(),
+            ),
             LanSetupResult.failed => l10n.lanSetupFailed,
           }),
         ),
@@ -383,13 +435,21 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
               const SizedBox(height: 12),
               FilledButton(
                 key: const ValueKey('syncPassphraseButton'),
-                onPressed: () => SyncPassphraseDialog.show(
-                  context,
-                  create: create,
-                  submit: create
-                      ? controller.createPassphrase
-                      : controller.enterPassphrase,
-                ),
+                onPressed: () async {
+                  if (!create && !await _confirmMergeExistingData()) {
+                    return;
+                  }
+                  if (!context.mounted) {
+                    return;
+                  }
+                  await SyncPassphraseDialog.show(
+                    context,
+                    create: create,
+                    submit: create
+                        ? controller.createPassphrase
+                        : controller.enterPassphrase,
+                  );
+                },
                 child: Text(
                   create
                       ? l10n.syncPassphraseSetButton
@@ -411,11 +471,49 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
   ) {
     final l10n = AppLocalizations.of(context)!;
     final failed = state.failedFiles;
+    final foreign = state.foreignFiles;
     return [
       if (state.newerSchemaPending)
         _notice(context, Icons.system_update, l10n.syncUpdateAppRequired),
       if (state.legacyFilesFound)
         _notice(context, Icons.info_outline, l10n.syncLegacyFolderFound),
+      if (state.clockSkewSuspected)
+        _notice(context, Icons.schedule, l10n.syncClockNotice),
+      if (foreign.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Card(
+            key: const ValueKey('syncForeignFiles'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.syncForeignFilesTitle(foreign.length),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.syncForeignFilesExplanation),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      FilledButton(
+                        onPressed: () => controller.removeForeignFiles(),
+                        child: Text(l10n.syncForeignRemove),
+                      ),
+                      OutlinedButton(
+                        onPressed: () => controller.ignoreForeignFiles(),
+                        child: Text(l10n.syncForeignIgnore),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       if (failed.isNotEmpty)
         Card(
           child: Padding(

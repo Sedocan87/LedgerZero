@@ -1,7 +1,9 @@
 import 'package:ledger_zero/services/sync/lan/local_sync_folder.dart';
 import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
 import 'package:ledger_zero/services/sync/lan/lan_peers.dart';
+import 'package:ledger_zero/services/sync/lan/lan_auth.dart';
 import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
+import 'package:ledger_zero/services/sync/lan/lan_protocol.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:drift/drift.dart' show Value;
@@ -411,6 +413,35 @@ void main() {
         endpoints: const [LanEndpoint('127.0.0.1', 9)],
       ).encode();
       expect(await c.joinLanSync(unreachable), LanSetupResult.phoneNotFound);
+      expect(lan.isPaired, isFalse);
+    });
+
+    test('joining a phone whose clock is off reports the skew', () async {
+      final pairing = LanPairing.generate();
+      final skewed = LanServer(
+        folder: LocalSyncFolder(() async => Directory('${dir.path}/other')),
+        auth: LanAuth(
+          pairing.pairKey,
+          clock: () => DateTime.now().subtract(const Duration(minutes: 10)),
+        ),
+        deviceId: '00000000-0000-4000-8000-000000000002',
+        deviceName: () => 'Other',
+        peers: LanPeers(InMemoryPrefs()),
+        preferredPort: 0,
+        bindAddress: InternetAddress.loopbackIPv4,
+      );
+      await skewed.start();
+      addTearDown(skewed.stop);
+      final c = lanController();
+      await c.onLockStateChanged(AppLockState.unlocked);
+      final code = LanPairingCode(
+        pairing: pairing,
+        deviceId: '00000000-0000-4000-8000-000000000002',
+        deviceName: 'Other',
+        endpoints: [LanEndpoint('127.0.0.1', skewed.port!)],
+      ).encode();
+      expect(await c.joinLanSync(code), LanSetupResult.clockSkew);
+      expect(c.state.peerClockSkew!.inMinutes, -10);
       expect(lan.isPaired, isFalse);
     });
   });

@@ -15,6 +15,8 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/widgets/filtered_export_dialog.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/services/backup/restore_service.dart';
+import 'package:ledger_zero/services/sync/sync_engine.dart'
+    show SyncEngineConfig;
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 
@@ -43,6 +45,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _passwordFocus = FocusNode();
   bool _isLoading = false;
   bool _uploadToCloud = false;
 
@@ -50,6 +53,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -179,9 +183,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isLoading = true);
     try {
-      await ref
+      final prepared = await ref
           .read(restoreServiceProvider)
-          .restoreBackup(file, password: password);
+          .prepareRestore(file, password: password);
+      if (!mounted || !await _confirmRestoreWarnings(prepared.info)) {
+        await prepared.discard();
+        return;
+      }
+      await prepared.commit();
       if (!mounted) {
         return;
       }
@@ -210,6 +219,54 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  /// Warnings a backup needs before it replaces the data: another
+  /// member's backup swaps who owns the personal accounts; a backup older
+  /// than the sync retention can bring back rows deleted elsewhere.
+  Future<bool> _confirmRestoreWarnings(RestoreInfo info) async {
+    final l10n = AppLocalizations.of(context)!;
+    final warnings = <(String, String)>[
+      if (info.changesMember)
+        (l10n.restoreMemberWarningTitle, l10n.restoreMemberWarningMessage),
+      if (info.isOlderThan(const SyncEngineConfig().tombstoneRetention))
+        (
+          l10n.restoreOldBackupWarningTitle,
+          l10n.restoreOldBackupWarningMessage(
+            const SyncEngineConfig().tombstoneRetention.inDays,
+          ),
+        ),
+    ];
+    for (final (title, message) in warnings) {
+      if (!mounted) {
+        return false;
+      }
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              key: const Key('restore_anyway'),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(dialogContext).colorScheme.error,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.restoreAnywayAction),
+            ),
+          ],
+        ),
+      );
+      if (go != true) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<void> _selectiveRestore() async {
@@ -398,6 +455,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cloudTarget = ref.watch(backupCloudTargetProvider);
+    final personal = ref.watch(ownPersonalAccountsProvider).value ?? false;
+    final nudge = ref.watch(backupNudgeProvider).value ?? false;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.backupAndExport)),
       body: SingleChildScrollView(
@@ -405,12 +464,37 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (nudge) ...[
+              Card(
+                key: const ValueKey('backupNudge'),
+                color: Theme.of(context).colorScheme.errorContainer,
+                child: ListTile(
+                  leading: const Icon(Icons.warning_amber),
+                  title: Text(l10n.backupNudgeTitle),
+                  subtitle: Text(l10n.backupNudgeMessage),
+                  trailing: TextButton(
+                    onPressed: () => _passwordFocus.requestFocus(),
+                    child: Text(l10n.backupNudgeTitle),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Text(
               l10n.backupCreateTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(l10n.backupCreateExplanation),
+            const SizedBox(height: 8),
+            Text(l10n.restoreSyncKeyNote),
+            if (personal) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.backupPersonalNote,
+                key: const ValueKey('backupPersonalNote'),
+              ),
+            ],
             const SizedBox(height: 16),
             Card(
               child: Padding(
@@ -420,10 +504,13 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      NewPasswordFields(
-                        controller: _passwordController,
-                        confirmController: _confirmPasswordController,
-                        label: l10n.backupPasswordLabel,
+                      Focus(
+                        focusNode: _passwordFocus,
+                        child: NewPasswordFields(
+                          controller: _passwordController,
+                          confirmController: _confirmPasswordController,
+                          label: l10n.backupPasswordLabel,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       SwitchListTile(
