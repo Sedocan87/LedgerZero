@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
@@ -162,6 +163,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final themeState = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
+    // Drops a default account/category that was deleted, closed or hidden.
+    ref.watch(settingsDefaultsGuardProvider);
 
     // Start-up work needs the database, not the unlocked UI: it runs as soon
     // as the lock screen has opened the session.

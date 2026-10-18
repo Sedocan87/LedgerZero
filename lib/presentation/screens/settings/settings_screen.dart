@@ -8,6 +8,7 @@ import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
@@ -299,10 +300,15 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
-              // Default Account
+              // Default Account: the accounts the transaction form may
+              // preselect (open, not the partner's personal account).
               Consumer(
                 builder: (context, ref, _) {
-                  final accountsAsync = ref.watch(accountsProvider);
+                  final accountsAsync = ref
+                      .watch(writableAccountsProvider)
+                      .whenData(
+                        (all) => all.where(isEligibleDefaultAccount).toList(),
+                      );
                   return accountsAsync.when(
                     data: (accounts) => ListTile(
                       leading: const Icon(Icons.account_balance_wallet),
@@ -366,10 +372,14 @@ class SettingsScreen extends ConsumerWidget {
                   );
                 },
               ),
-              // Default Category
+              // Default Category (hidden ones are not offered).
               Consumer(
                 builder: (context, ref, _) {
-                  final categoriesAsync = ref.watch(categoriesProvider);
+                  final categoriesAsync = ref
+                      .watch(categoriesProvider)
+                      .whenData(
+                        (all) => all.where(isEligibleDefaultCategory).toList(),
+                      );
                   return categoriesAsync.when(
                     data: (categories) => ListTile(
                       leading: const Icon(Icons.category),
