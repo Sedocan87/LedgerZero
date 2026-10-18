@@ -33,12 +33,17 @@ enum AutoAssignRule {
 /// * Category activity = SUM(amount) of the category's non-deleted rows
 ///   (split children included; split parents and transfer legs never carry
 ///   a category).
-/// * Available(category, M) = budgeted up to M + activity up to end of M.
-/// * TBB(M) = SUM(starting balances) + SUM(rows flowing into To Be Budgeted
-///   up to end of M: uncategorised, not a transfer leg, not a split parent,
-///   both signs) - SUM(budgeted up to M).
-/// * Invariant: SUM(available(M)) + TBB(M) == SUM(account balances counting
-///   transactions up to end of M).
+/// * Available(category, M) = max(0, Available(category, M - 1))
+///   + budgeted in M + activity in M: a positive balance rolls over, a
+///   negative one (cash overspending) is reset to zero and charged to the
+///   next month's To Be Budgeted instead.
+/// * TBB(M) = SUM(starting balances of the on-budget accounts that exist
+///   by M) + SUM(rows flowing into To Be Budgeted up to end of M:
+///   uncategorised, not a transfer leg, not a split parent, both signs)
+///   - SUM(budgeted in any month, before, in or after M)
+///   - SUM(overspending of the months before M).
+/// * Invariant: SUM(available(M)) + TBB(M) + SUM(budgeted after M)
+///   == SUM(account balances counting transactions up to end of M).
 class BudgetingService {
   final TransactionRepository _transactionRepository;
   final BudgetRepository _budgetRepository;
@@ -58,11 +63,17 @@ class BudgetingService {
 
   /// Calculates "To Be Budgeted" (TBB) at the end of [targetMonth]:
   ///
-  /// TBB = SUM(starting balances of the on-budget accounts)
+  /// TBB = SUM(starting balances of the on-budget accounts that exist by
+  ///       the month, see [_startingBalancesThrough])
   ///     + SUM(uncategorised, non-split-parent rows of on-budget accounts up
   ///       to the end of the month, both signs, transfer legs only when the
   ///       other account is off-budget)
-  ///     - SUM(budgeted up to and including the month).
+  ///     - SUM(budgeted up to and including the month)
+  ///     - SUM(budgeted in the months after it: money assigned to a future
+  ///       month is no longer available now)
+  ///     - SUM(cash overspending of the months before it: a negative
+  ///       category balance is not carried into the next month's category
+  ///       but taken out of To Be Budgeted, see [_rollTo]).
   ///
   /// Uncategorised outflows (and reconciliation adjustments) therefore
   /// reduce TBB, starting balances are budgetable, transfers between
@@ -70,18 +81,123 @@ class BudgetingService {
   /// accounts only matter when money moves to or from them.
   Future<int> calculateTBB(DateTime targetMonth) async {
     final nextMonthStart = CalendarDate.endOfMonthUtc(targetMonth);
+    final monthKey = CalendarDate.monthKey(targetMonth);
 
-    final startingBalances = await _accountRepository
-        .getBudgetStartingBalance();
+    final startingBalances = await _startingBalancesThrough(targetMonth);
     final readyToAssign = await _transactionRepository.getReadyToAssignSum(
       CalendarDate.beginningOfTime,
       nextMonthStart,
     );
-    final totalBudgeted = await _budgetRepository.getTotalBudgetedByMonthRange(
-      CalendarDate.monthKey(targetMonth),
+    final roll = await _rollTo(targetMonth);
+    final budgetedAfter = await _budgetRepository.getTotalBudgetedAfterMonth(
+      monthKey,
     );
 
-    return startingBalances + readyToAssign - totalBudgeted;
+    return startingBalances +
+        readyToAssign -
+        roll.budgetedThrough -
+        budgetedAfter -
+        roll.overspentBefore;
+  }
+
+  /// Sum of the starting balances of the on-budget accounts that exist by
+  /// the end of [month]. An account exists from the earlier of the month
+  /// it was created in and the month of its first transaction (imported or
+  /// backdated history), so a month before the account shows nothing of
+  /// it; an account without a creation time always counts.
+  Future<int> _startingBalancesThrough(DateTime month) async {
+    final accounts = await _accountRepository.getAllAccounts();
+    final firstDates = await _budgetRepository.getFirstTransactionDates();
+    final end = CalendarDate.endOfMonthUtc(month);
+    var total = 0;
+    for (final account in accounts) {
+      if (!account.onBudget) {
+        continue;
+      }
+      final created = account.createdAt?.toUtc();
+      final first = firstDates[account.id];
+      final start = created == null
+          ? null
+          : (first != null && first.isBefore(created) ? first : created);
+      if (start == null || start.isBefore(end)) {
+        total += account.startingBalance;
+      }
+    }
+    return total;
+  }
+
+  /// Rolls every category (or only [categoryId]) forward month by month
+  /// from the first month with a budget or activity up to [month]:
+  ///
+  /// `available(M) = max(0, available(M - 1)) + budgeted(M) + activity(M)`
+  ///
+  /// A negative balance at the end of a month (cash overspending) does not
+  /// reduce the category in the next month; it is counted in
+  /// [_Rollover.overspentBefore] and taken out of To Be Budgeted there
+  /// instead. Two grouped queries and an in-memory loop, whatever the
+  /// number of months and categories.
+  Future<_Rollover> _rollTo(DateTime month, {String? categoryId}) async {
+    final monthKey = CalendarDate.monthKey(month);
+    final budgets = await _budgetRepository.getBudgetsUpToMonth(
+      monthKey,
+      categoryId: categoryId,
+    );
+    final activity = await _budgetRepository.getMonthlyCategoryActivity(
+      CalendarDate.endOfMonthUtc(month),
+      categoryId: categoryId,
+    );
+
+    final budgetedByMonth = <String, Map<String, int>>{};
+    var budgetedThrough = 0;
+    for (final b in budgets) {
+      final id = b.categoryId;
+      if (id == null) {
+        continue;
+      }
+      budgetedThrough += b.budgeted;
+      final ofMonth = budgetedByMonth.putIfAbsent(b.month, () => {});
+      ofMonth[id] = (ofMonth[id] ?? 0) + b.budgeted;
+    }
+
+    final months = {...budgetedByMonth.keys, ...activity.keys}.toList()..sort();
+    final available = <String, int>{};
+    var overspentBefore = 0;
+    if (months.isEmpty) {
+      return _Rollover(
+        available: available,
+        overspentBefore: 0,
+        budgetedThrough: budgetedThrough,
+      );
+    }
+    final first = CalendarDate.parseMonthKey(months.first);
+    final count = _monthsDifference(first, month) + 1;
+    for (var i = 0; i < count; i++) {
+      if (i > 0) {
+        // Month boundary: last month's overspending leaves the category.
+        for (final entry in available.entries.toList()) {
+          if (entry.value < 0) {
+            overspentBefore -= entry.value;
+            available[entry.key] = 0;
+          }
+        }
+      }
+      final key = CalendarDate.monthKey(
+        DateTime.utc(first.year, first.month + i, 1),
+      );
+      for (final MapEntry(key: id, value: amount)
+          in (budgetedByMonth[key] ?? const <String, int>{}).entries) {
+        available[id] = (available[id] ?? 0) + amount;
+      }
+      for (final MapEntry(key: id, value: amount)
+          in (activity[key] ?? const <String, int>{}).entries) {
+        available[id] = (available[id] ?? 0) + amount;
+      }
+    }
+    return _Rollover(
+      available: available,
+      overspentBefore: overspentBefore,
+      budgetedThrough: budgetedThrough,
+    );
   }
 
   /// Total income for [month]: uncategorised inflows that are not transfer
@@ -128,31 +244,15 @@ class BudgetingService {
     );
   }
 
-  /// Calculates the available amount for a specific [categoryId] up to the end of [month].
-  ///
-  /// Available = Total Budgeted (all time up to month) + Total Activity (all time up to month).
-  /// This automatically handles positive carry-over and negative rollover (overspending).
+  /// Calculates the available amount for a specific [categoryId] at the end
+  /// of [month]: budgeted plus activity, rolled forward month by month with
+  /// positive balances carried over and overspending reset (see [_rollTo]).
   Future<int> calculateCategoryAvailable(
     String categoryId,
     DateTime month,
   ) async {
-    // 1. Calculate end of the target month
-    final endOfTargetMonth = CalendarDate.endOfMonthUtc(month); // exclusive
-    final startOfTime = CalendarDate.beginningOfTime;
-
-    // 2. Fetch all transactions for this category up to end of target month
-    final totalActivity = await _transactionRepository.getCategoryActivitySum(
-      categoryId,
-      startOfTime,
-      endOfTargetMonth,
-    );
-
-    // 3. Fetch all budgets
-    final targetMonthString = CalendarDate.monthKey(month);
-    final totalBudgeted = await _budgetRepository
-        .getTotalBudgetedByCategoryAndMonthRange(categoryId, targetMonthString);
-
-    return totalBudgeted + totalActivity;
+    final roll = await _rollTo(month, categoryId: categoryId);
+    return roll.available[categoryId] ?? 0;
   }
 
   /// Assigns a budgeted amount to a specific category for a specific month.
@@ -328,26 +428,30 @@ class BudgetingService {
     return budgeted / target;
   }
 
-  /// Calculates the average spending for a category over the last [months] count (excluding current month).
+  /// Average spending of a category over the [months] months before
+  /// [referenceMonth]: total net spending divided by the number of those
+  /// months that had any activity (at least 1), so a category that is one
+  /// month old is not averaged over three.
   Future<int> getAverageSpent(
     String categoryId,
     int months,
     DateTime referenceMonth,
   ) async {
-    final endDate = CalendarDate.startOfMonthUtc(referenceMonth); // exclusive
-    final startDate = DateTime.utc(
-      referenceMonth.year,
-      referenceMonth.month - months,
-      1,
+    var total = 0;
+    var monthsWithData = 0;
+    for (var i = 1; i <= months; i++) {
+      final activity = await calculateCategoryActivity(
+        categoryId,
+        DateTime.utc(referenceMonth.year, referenceMonth.month - i, 1),
+      );
+      if (activity != 0) {
+        monthsWithData++;
+        total += activity;
+      }
+    }
+    return _netSpending(
+      Money.divideRounded(total, math.max(1, monthsWithData)),
     );
-
-    final totalSpent = await _transactionRepository.getCategoryActivitySum(
-      categoryId,
-      startDate,
-      endDate,
-    );
-
-    return _netSpending(Money.divideRounded(totalSpent, months));
   }
 
   /// Gets the spending in the previous month.
@@ -419,13 +523,26 @@ class BudgetingService {
 
   // --- Budget Templates ---
 
+  /// Ids of the categories that take part in month operations (copy,
+  /// templates, reset, fill): every category that exists and is not
+  /// hidden.
+  Future<Set<String>> _visibleCategoryIds() async => {
+    for (final c in await _categoryRepository.getAllCategories())
+      if (!c.isHidden) c.id,
+  };
+
+  /// Stores the positive budgets of the visible categories of [month] as a
+  /// template.
   Future<void> saveBudgetTemplate(String name, DateTime month) async {
     final monthString = CalendarDate.monthKey(month);
     final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
+    final visible = await _visibleCategoryIds();
 
     final Map<String, int> data = {};
     for (final budget in budgets) {
-      if (budget.categoryId != null && budget.budgeted > 0) {
+      if (budget.categoryId != null &&
+          budget.budgeted > 0 &&
+          visible.contains(budget.categoryId)) {
         data[budget.categoryId!] = budget.budgeted;
       }
     }
@@ -440,18 +557,23 @@ class BudgetingService {
     await _budgetTemplateRepository.createTemplate(template);
   }
 
-  Future<void> applyBudgetTemplate(String templateId, DateTime month) async {
+  /// Writes the template's amounts into [month] (a merge: categories not
+  /// in the template keep their amounts). Entries of hidden or deleted
+  /// categories are skipped. Returns what changed, for undo.
+  Future<BudgetMonthChange> applyBudgetTemplate(
+    String templateId,
+    DateTime month,
+  ) async {
     final template = await _budgetTemplateRepository.getTemplateById(
       templateId,
     );
     if (template == null) {
-      return;
+      return BudgetMonthChange.none(month);
     }
-
-    await _unitOfWork.run(() async {
-      for (final entry in template.data.entries) {
-        await _writeBudget(entry.key, month, (_) => entry.value);
-      }
+    final visible = await _visibleCategoryIds();
+    return _writeMonth(month, {
+      for (final MapEntry(key: id, value: amount) in template.data.entries)
+        if (visible.contains(id)) id: amount,
     });
   }
 
@@ -465,21 +587,65 @@ class BudgetingService {
 
   // --- Bulk Operations ---
 
-  Future<void> copyBudgetFromPreviousMonth(DateTime month) async {
-    final prevMonth = DateTime.utc(month.year, month.month - 1, 1);
-    final prevMonthString = CalendarDate.monthKey(prevMonth);
-
-    final prevBudgets = await _budgetRepository.getBudgetsForMonth(
-      prevMonthString,
-    );
-
-    await _unitOfWork.run(() async {
-      for (final budget in prevBudgets) {
-        if (budget.categoryId != null && budget.budgeted > 0) {
-          await _writeBudget(budget.categoryId!, month, (_) => budget.budgeted);
-        }
-      }
+  /// Sets the visible categories budgeted in the month before [month] to
+  /// the same amounts in [month] (other categories keep theirs). Returns
+  /// what changed, for undo.
+  Future<BudgetMonthChange> copyBudgetFromPreviousMonth(DateTime month) async {
+    final previous = await budgetsOfPreviousMonth(month);
+    final visible = await _visibleCategoryIds();
+    return _writeMonth(month, {
+      for (final MapEntry(key: id, value: amount) in previous.entries)
+        if (visible.contains(id)) id: amount,
     });
+  }
+
+  /// Sets the budgets of [month] to [amounts] (category -> amount) in one
+  /// unit of work, e.g. to undo or redo a month operation. Categories that
+  /// no longer exist are skipped, so one deleted category does not stop
+  /// the rest from being restored. Returns what changed.
+  Future<BudgetMonthChange> setCategoryBudgetedAmounts(
+    Map<String, int> amounts,
+    DateTime month,
+  ) async {
+    final existing = {
+      for (final c in await _categoryRepository.getAllCategories()) c.id,
+    };
+    return _writeMonth(month, {
+      for (final MapEntry(key: id, value: amount) in amounts.entries)
+        if (existing.contains(id)) id: amount,
+    });
+  }
+
+  /// Writes [amounts] into [month] in one unit of work, touching only the
+  /// categories whose amount differs, and returns the old and new amounts
+  /// of those.
+  Future<BudgetMonthChange> _writeMonth(
+    DateTime month,
+    Map<String, int> amounts,
+  ) async {
+    final current = {
+      for (final b in await _budgetRepository.getBudgetsForMonth(
+        CalendarDate.monthKey(month),
+      ))
+        if (b.categoryId != null) b.categoryId!: b.budgeted,
+    };
+    final before = <String, int>{};
+    final after = <String, int>{};
+    for (final MapEntry(key: id, value: amount) in amounts.entries) {
+      final old = current[id] ?? 0;
+      if (old != amount) {
+        before[id] = old;
+        after[id] = amount;
+      }
+    }
+    if (after.isNotEmpty) {
+      await _unitOfWork.run(() async {
+        for (final MapEntry(key: id, value: amount) in after.entries) {
+          await _writeBudget(id, month, (_) => amount);
+        }
+      });
+    }
+    return BudgetMonthChange(month: month, before: before, after: after);
   }
 
   /// Adds [amount] to the budget of [categoryId] in [month].
@@ -640,10 +806,7 @@ class BudgetingService {
     Map<String, int> amounts, {
     DateTime? stampedAt,
   }) async {
-    final visible = {
-      for (final c in await _categoryRepository.getAllCategories())
-        if (!c.isHidden) c.id,
-    };
+    final visible = await _visibleCategoryIds();
     final existing = {
       for (final b in await _budgetRepository.getBudgetsForMonth(
         CalendarDate.monthKey(month),
@@ -686,16 +849,20 @@ class BudgetingService {
     });
   }
 
-  Future<void> resetBudget(DateTime month) async {
-    final monthString = CalendarDate.monthKey(month);
-    final budgets = await _budgetRepository.getBudgetsForMonth(monthString);
-
-    await _unitOfWork.run(() async {
-      for (final budget in budgets) {
-        if (budget.categoryId != null && budget.budgeted != 0) {
-          await _writeBudget(budget.categoryId!, month, (_) => 0);
-        }
-      }
+  /// Sets every visible category of [month] to zero (hidden categories
+  /// keep their amounts, like in every month operation). Returns what
+  /// changed, for undo.
+  Future<BudgetMonthChange> resetBudget(DateTime month) async {
+    final budgets = await _budgetRepository.getBudgetsForMonth(
+      CalendarDate.monthKey(month),
+    );
+    final visible = await _visibleCategoryIds();
+    return _writeMonth(month, {
+      for (final b in budgets)
+        if (b.categoryId != null &&
+            b.budgeted != 0 &&
+            visible.contains(b.categoryId))
+          b.categoryId!: 0,
     });
   }
 
@@ -706,46 +873,25 @@ class BudgetingService {
   /// Calculates activity and available amounts for all categories in a specific [month].
   ///
   /// Returns a map where the key is categoryId and the value is another map with 'activity' and 'available' keys.
-  /// This is an optimized batch operation.
+  /// Three grouped queries (activity in the month, activity per month,
+  /// budgets up to the month) and one in-memory rollover ([_rollTo]).
   Future<Map<String, Map<String, int>>> calculateBatchCategoryPerformance(
     DateTime month,
   ) async {
-    // 1. Current Month Activity
     final startOfMonth = CalendarDate.startOfMonthUtc(month);
     final endOfMonth = CalendarDate.endOfMonthUtc(month); // exclusive
 
     final currentActivityMap = await _transactionRepository
         .getCategoryActivitySums(startOfMonth, endOfMonth);
+    final roll = await _rollTo(month);
 
-    // 2. All time activity (for Available calculation)
-    final startOfTime = CalendarDate.beginningOfTime;
-    // Available includes current month's activity
-    final allTimeActivityMap = await _transactionRepository
-        .getCategoryActivitySums(startOfTime, endOfMonth);
-
-    // 3. All time budgeted (for Available calculation)
-    final monthString = CalendarDate.monthKey(month);
-    final allTimeBudgetedMap = await _budgetRepository
-        .getAllTimeBudgetedSumsUpToMonth(monthString);
-
-    // Combine results
     final Map<String, Map<String, int>> result = {};
-
-    final allKeys = {
-      ...currentActivityMap.keys,
-      ...allTimeActivityMap.keys,
-      ...allTimeBudgetedMap.keys,
-    };
-
-    for (var catId in allKeys) {
-      final activity = currentActivityMap[catId] ?? 0;
-      final totalActivity = allTimeActivityMap[catId] ?? 0;
-      final totalBudgeted = allTimeBudgetedMap[catId] ?? 0;
-      final available = totalBudgeted + totalActivity;
-
-      result[catId] = {'activity': activity, 'available': available};
+    for (final catId in {...currentActivityMap.keys, ...roll.available.keys}) {
+      result[catId] = {
+        'activity': currentActivityMap[catId] ?? 0,
+        'available': roll.available[catId] ?? 0,
+      };
     }
-
     return result;
   }
 
@@ -821,4 +967,45 @@ class BudgetingService {
 
     return results;
   }
+}
+
+/// What a month operation (copy from the month before, apply a template,
+/// reset) changed in [month]: the amounts before and after, for the
+/// categories whose amount changed. Undo writes [before], redo [after].
+class BudgetMonthChange {
+  final DateTime month;
+  final Map<String, int> before;
+  final Map<String, int> after;
+
+  const BudgetMonthChange({
+    required this.month,
+    required this.before,
+    required this.after,
+  });
+
+  const BudgetMonthChange.none(this.month)
+    : before = const {},
+      after = const {};
+
+  bool get isEmpty => after.isEmpty;
+}
+
+/// Result of [BudgetingService._rollTo].
+class _Rollover {
+  /// categoryId -> available at the end of the month (categories with
+  /// neither budgets nor activity are absent).
+  final Map<String, int> available;
+
+  /// Overspending (positive minor units) of all months before the month,
+  /// charged to its To Be Budgeted.
+  final int overspentBefore;
+
+  /// Everything budgeted up to and including the month.
+  final int budgetedThrough;
+
+  const _Rollover({
+    required this.available,
+    required this.overspentBefore,
+    required this.budgetedThrough,
+  });
 }

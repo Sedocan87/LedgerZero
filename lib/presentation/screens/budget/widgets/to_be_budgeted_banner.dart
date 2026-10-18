@@ -22,6 +22,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
     final fmt = ref.watch(appFormatterProvider);
     final scheme = Theme.of(context).colorScheme;
 
+    // While recomputing after a write, the previous value is shown.
     final tbbValue = tbbAsync.valueOrNull ?? 0;
     final isNegative = tbbValue < 0;
     final accentColor = isNegative ? scheme.error : Colors.green.shade700;
@@ -80,6 +81,7 @@ class ToBeBudgetedBanner extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       tbbAsync.when(
+                        skipLoadingOnReload: true,
                         data: (tbb) {
                           final formatted = fmt.formatMoney(tbb);
                           final textWidget = AmountText(

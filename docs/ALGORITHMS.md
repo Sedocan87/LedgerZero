@@ -14,26 +14,51 @@ and the aggregate queries in `lib/data/database/daos/transactions_dao.dart`.
 ## To Be Budgeted (`calculateTBB`)
 
 ```
-TBB(M) = AccountRepository.getTotalStartingBalance()
+TBB(M) = startingBalancesThrough(M)
        + TransactionRepository.getReadyToAssignSum(beginningOfTime, endOfMonth(M))
-       - BudgetRepository.getTotalBudgetedByMonthRange(M)   // all budget rows with month <= M
+       - budgeted through M            // rollover: every budget row with month <= M
+       - BudgetRepository.getTotalBudgetedAfterMonth(M)   // rows with month > M
+       - overspending before M         // rollover, see below
 ```
 
-`getReadyToAssignSum` sums rows that are not deleted, have no category, are
-not a transfer leg (`transfer_account_id IS NULL`) and are not a split
-parent (no non-deleted child row). Both signs count.
+* `startingBalancesThrough(M)`: the starting balances of the on-budget
+  accounts whose start month is `<= M`. The start month is the earlier of
+  `accounts.created_at` and the account's first non-deleted transaction
+  (`BudgetRepository.getFirstTransactionDates`, one grouped query); an
+  account without `created_at` always counts.
+* `getReadyToAssignSum` sums rows that are not deleted, have no category,
+  belong to an on-budget account, are not a split parent (no non-deleted
+  child row) and are not a transfer leg unless the other account is
+  off-budget. Both signs count.
+* Budgets of every month count: money assigned to a later month is not
+  available in M (`getTotalBudgetedAfterMonth`).
+* Overspending before M is what the rollover charges to TBB.
 
-## Activity and available
+## Rollover (`_rollTo`), activity and available
 
-* `calculateCategoryActivity(c, M)`: `getCategoryActivitySum(c, start(M), end(M))`,
-  the sum of non-deleted rows carrying category `c` (split lines included).
-* `calculateCategoryAvailable(c, M)`: budgeted for `c` in all months `<= M`
-  plus activity of `c` from `beginningOfTime` to `end(M)`. Rollover of
-  positive balances and overspending follows from summing all history.
-* The budget screen uses the batch variant
-  `calculateBatchCategoryPerformance(M)`: three grouped queries
-  (activity in M, activity up to end of M, budgeted up to M) combined per
-  category, instead of one query per category.
+Available is computed month by month, in memory, from the first month that
+has a budget row or category activity up to M:
+
+```
+available(c, m) = max(0, available(c, m - 1)) + budgeted(c, m) + activity(c, m)
+overspending before M = SUM over m < M, c of max(0, -available(c, m))
+```
+
+Two grouped queries feed it, whatever the number of months and categories:
+`BudgetRepository.getBudgetsUpToMonth(M)` (every budget row with
+`month <= M`) and `BudgetRepository.getMonthlyCategoryActivity(end(M))`
+(`yyyy-MM` -> category -> signed sum of the categorised activity rows:
+non-deleted, on-budget account, split lines included, transfer legs only
+when the transfer crosses the budget boundary). Both live in `BudgetsDao`;
+the activity filter mirrors `TransactionsDao.getCategoryActivitySums`.
+
+* `calculateCategoryActivity(c, M)`: `getCategoryActivitySum(c, start(M), end(M))`.
+* `calculateCategoryAvailable(c, M)`: the rollover restricted to `c`.
+* `calculateBatchCategoryPerformance(M)` (budget screen): activity in M
+  (one grouped query) plus the rollover for all categories.
+* `calculateTBB(M)` uses the same rollover for "budgeted through M" and
+  "overspending before M", so the invariant in BUDGETING_RULES.md holds by
+  construction.
 
 ## Writing budgets
 
@@ -87,7 +112,7 @@ Sets the month's budgeted amount to:
 | Rule | Amount |
 | --- | --- |
 | `underfunded` | the goal target above |
-| `averageSpent` | `abs(divideRounded(activity of the 3 previous months, 3))` |
+| `averageSpent` | `abs(divideRounded(activity of the 3 previous months, number of those months with activity, at least 1))` |
 | `lastMonthSpent` | `abs(activity of M - 1)` |
 | `lastMonthBudgeted` | budgeted in M - 1 (0 if none) |
 
@@ -98,8 +123,15 @@ cannot be set yet.
 
 ## Month-level operations
 
-* `copyBudgetFromPreviousMonth(M)`: copies every positive budget of M - 1
-  into M (overwriting M's value for those categories).
-* `resetBudget(M)`: sets every non-zero budget of M to 0.
-* `saveBudgetTemplate(name, M)`: stores the positive budgets of M as a
-  template; `applyBudgetTemplate(id, M)` writes them into M.
+All go through one helper that reads the month's rows, keeps only the
+categories whose amount would change, writes those in one unit of work and
+returns a `BudgetMonthChange` (category -> amount before and after) for
+undo. Hidden and deleted categories are skipped (`_visibleCategoryIds`).
+
+* `copyBudgetFromPreviousMonth(M)`: every positive budget of M - 1 into M
+  (overwriting M's value for those categories, leaving the others).
+* `applyBudgetTemplate(id, M)`: the template's entries into M (a merge).
+* `resetBudget(M)`: every non-zero budget of M to 0.
+* `saveBudgetTemplate(name, M)`: stores the positive budgets of M.
+* `setCategoryBudgetedAmounts(amounts, M)`: writes a map of amounts (undo
+  and redo of the above); categories that no longer exist are skipped.

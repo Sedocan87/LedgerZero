@@ -8,10 +8,21 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
 ## Layout
 
 * Month selector (previous/next month); the month is held in
-  `selectedBudgetMonthProvider`.
+  `selectedBudgetMonthProvider`. It defaults to the current month and
+  follows the calendar: `todayProvider` re-reads the clock at midnight and
+  when the budget or home screen sees the app resume, and a selection that
+  still showed the month that was current moves to the new one (a month
+  the user navigated to stays). The home screen's month
+  (`selectedHomeMonthProvider`) and the home banner's To Be Budgeted work
+  the same way.
 * To Be Budgeted banner (`ToBeBudgetedBanner`), from `tbbProvider(month)`.
 * Category groups and rows (`BudgetGroupRow`, `BudgetCategoryRow`) from
-  `budgetViewModelProvider`.
+  `budgetViewModelProvider`. Hidden categories are not listed; a hidden
+  category that still has money budgeted or available (or activity) in the
+  month appears in a last, collapsed **Hidden categories** section, because
+  that money still counts in To Be Budgeted and must stay reachable (edit
+  the amount or move the money out). The footer totals include that
+  section.
 * App bar: search (filters categories by name), view mode toggle, manage
   categories (`/budget/categories`), and a menu with save as template, apply
   template, copy from previous month and reset budget.
@@ -27,9 +38,12 @@ View modes (`BudgetViewMode`):
    (`BudgetCalculator`) opens with the current value; it accepts an amount
    or an arithmetic expression.
 2. On submit, `BudgetingService.setCategoryBudgetedAmount` writes the
-   month's budget row (created with its deterministic id if missing).
+   month's budget row (created with its deterministic id if missing). A
+   negative result is rejected with a message (it would raise To Be
+   Budgeted).
 3. A `BudgetChangeAction` is pushed on the undo stack and a snackbar offers
-   Undo.
+   Undo. If the undo fails (the category was deleted meanwhile), the
+   generic error snackbar is shown.
 
 ## Quick actions (long-press a category row)
 
@@ -46,7 +60,9 @@ The first four record an undo action like a manual edit. The goal-based
 ## Moving money
 
 `MoveMoneyModal` asks for source category, target category and a positive
-amount; source and target must differ. `BudgetingService.moveMoney`
+amount; source and target must differ. Hidden categories are not offered,
+except the one the modal was opened from (so money can be moved out of a
+hidden category from the Hidden categories section). `BudgetingService.moveMoney`
 decrements the source's and increments the target's budget for the selected
 month in one unit of work, so TBB does not change. The source may go
 negative. A `MoveMoneyAction` is pushed on the undo stack and a snackbar
@@ -78,11 +94,23 @@ appears.
 
 ## Month menu
 
-* **Save as template / Apply template**: stores or applies the positive
-  budgets of a month.
-* **Copy from previous month**: copies the positive budgets of the previous
-  month.
-* **Reset budget**: sets all of the month's budgets to 0.
+All three operations skip hidden categories (like the new-month fill),
+touch only the categories whose amount changes, record one
+`BudgetMonthChangeAction` on the undo stack and show a snack bar with Undo
+(undo restores the previous amounts of the changed categories in one unit
+of work; a category deleted in the meantime is skipped). Copy and apply
+ask before overwriting a month that already has budgets ("Replace budgeted
+amounts?"); reset always asks.
+
+* **Save as template**: stores the positive budgets of the month's visible
+  categories.
+* **Apply template**: a *merge*: only the categories in the template are
+  set to the template's amounts, every other category keeps its amount
+  (the dialog says so). Entries whose category was deleted or hidden are
+  skipped.
+* **Copy from previous month**: sets every category budgeted in the month
+  before to that amount; other categories keep theirs.
+* **Reset budget**: sets every visible category of the month to 0.
 * **Fill automatically…**: the setting described below.
 
 ## Filling a new month
@@ -96,8 +124,11 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   month, when the month before was budgeted and left money unassigned that
   is still in To Be Budgeted: *Budget for savings…* (category picker with
   the Savings & Investments group first; snack bar with Undo) or *Keep for
-  (month)*, which hides it for the month. Not shown for a new budget: a
-  starting balance counts in every month and is no leftover.
+  (month)*. Both hide the card for the month (remembered in
+  SharedPreferences, `leftover_card_dismissed`), so a later edit does not
+  bring the same offer back; Undo of the assignment shows it again. Not
+  shown for a new budget: an account created this month has nothing in
+  the month before.
 * **New-month card**: for the current or a later month with nothing budgeted
   whose previous month has budgets. It shows the total, To Be Budgeted after
   filling and the income still expected, and offers *Fill like (previous
@@ -126,8 +157,24 @@ All numbers are recomputed when anything relevant is written: the budget
 providers watch `ledgerChangesProvider`, which fires after every committed
 write to transactions, accounts, budgets, categories, category groups or
 payees (local edits, scheduled-transaction catch-up, imports and changes
-applied by sync alike). Everything works offline; cloud sync is described in
+applied by sync alike). While they recompute, the list, the To Be Budgeted
+banner and the home cards keep showing their previous values
+(`skipLoadingOnReload`), so an edit never replaces the screen with a
+spinner or flashes a zero, and the list keeps its scroll position and
+focus. Everything works offline; cloud sync is described in
 [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md).
+
+## Income line
+
+Under To Be Budgeted: what reached To Be Budgeted this month and what the
+recurring income (salary) still expects, with the next date. "Expected"
+counts only occurrences from today on; one whose date has passed is either
+booked already (and counts as received) or overdue, never expected.
+
+## Tutorial
+
+The first-run tutorial (`BudgetTutorialManager`) starts after the category
+list has its first data, so its last step can point at the list.
 
 ## In-app help
 

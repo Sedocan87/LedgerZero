@@ -1,11 +1,10 @@
 // The budget identity (decision D3) on a real database:
 //
-//   SUM over categories of available(M) + TBB(M)
+//   SUM over categories of available(M) + TBB(M) + budgeted after M
 //     == SUM of on-budget account balances counting transactions up to
-//        end of M
+//        end of M (a starting balance counts once the account exists)
 //
 // plus targeted regression tests for the ledger-math findings.
-import 'package:drift/drift.dart' show Variable;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
@@ -20,6 +19,7 @@ import 'package:flutter/material.dart' show DateTimeRange;
 
 import '../../helpers/test_database.dart';
 import '../../helpers/l10n_override.dart';
+import 'ledger_test_helpers.dart';
 
 void main() {
   late TestDatabase t;
@@ -55,31 +55,18 @@ void main() {
     return total;
   }
 
-  /// SUM of on-budget account balances counting rows dated before the next
-  /// month.
-  Future<int> sumBalancesAt(DateTime month) async {
-    final row = await t.db
-        .customSelect(
-          'SELECT COALESCE((SELECT SUM(starting_balance) FROM accounts '
-          'WHERE on_budget = 1), 0) + '
-          'COALESCE((SELECT SUM(amount) FROM transactions WHERE is_deleted = 0 '
-          'AND parent_transaction_id IS NULL AND date < ? AND account_id IN '
-          '(SELECT id FROM accounts WHERE on_budget = 1)), 0) AS total',
-          variables: [Variable.withDateTime(CalendarDate.endOfMonthUtc(month))],
-        )
-        .getSingle();
-    return row.read<int>('total');
-  }
-
   Future<void> expectInvariant(DateTime month) async {
     final available = await sumAvailable(month);
     final tbb = await t.budgeting.calculateTBB(month);
+    final after = await t.budgets.getTotalBudgetedAfterMonth(
+      CalendarDate.monthKey(month),
+    );
     expect(
-      available + tbb,
-      await sumBalancesAt(month),
+      available + tbb + after,
+      await onBudgetBalancesThrough(t, month),
       reason:
           'invariant at ${CalendarDate.monthKey(month)} '
-          '(available $available, TBB $tbb)',
+          '(available $available, TBB $tbb, budgeted after $after)',
     );
   }
 
@@ -220,8 +207,12 @@ void main() {
 
     // Hand-computed TBB for January:
     // starting balances 1000 - 300 = 700; ready-to-assign rows: income
-    // 2000 + uncategorised split line 700 = 2700; budgeted 300.
-    expect(await t.budgeting.calculateTBB(jan), 70000 + 270000 - 30000);
+    // 2000 + uncategorised split line 700 = 2700; budgeted 300 in January
+    // and 200 in February (assigned ahead, so not available in January).
+    expect(
+      await t.budgeting.calculateTBB(jan),
+      70000 + 270000 - 30000 - 20000,
+    );
     // Income for January excludes the split parent and the transfer.
     expect(await t.budgeting.calculateTotalIncomeForMonth(jan), 270000);
     // Spending for January: 150 + 80 + 70 + 50 (split lines, not parent).
@@ -263,10 +254,35 @@ void main() {
           type: AccountType.credit,
           startingBalance: -20000,
         );
-        expect(await t.budgeting.calculateTBB(jan), 30000);
-        await expectInvariant(jan);
+        final thisMonth = CalendarDate.startOfMonthUtc(CalendarDate.today());
+        expect(await t.budgeting.calculateTBB(thisMonth), 30000);
+        await expectInvariant(thisMonth);
       },
     );
+
+    test('a starting balance counts from the month the account was created '
+        'in, or from its first transaction if earlier (B9)', () async {
+      final checking = (await t.addAccount(
+        name: 'Checking',
+        startingBalance: 50000,
+      )).id;
+      final thisMonth = CalendarDate.startOfMonthUtc(CalendarDate.today());
+      final lastMonth = DateTime.utc(thisMonth.year, thisMonth.month - 1, 1);
+      // Before the account existed: nothing of it.
+      expect(await t.budgeting.calculateTBB(jan), 0);
+      expect(await t.budgeting.calculateTBB(lastMonth), 0);
+      expect(await t.budgeting.calculateTBB(thisMonth), 50000);
+      await expectInvariant(jan);
+
+      // Backdated history moves the start back to that month.
+      await t.addTransaction(accountId: checking, amount: -1000, date: feb);
+      expect(await t.budgeting.calculateTBB(jan), 0);
+      expect(await t.budgeting.calculateTBB(feb), 49000);
+      expect(await t.budgeting.calculateTBB(lastMonth), 49000);
+      await expectInvariant(jan);
+      await expectInvariant(feb);
+      await expectInvariant(thisMonth);
+    });
 
     test('a reconciliation adjustment flows into TBB', () async {
       final checking = (await t.addAccount(
@@ -284,6 +300,133 @@ void main() {
       expect(await t.budgeting.calculateTBB(jan), 9000);
       await expectInvariant(jan);
     });
+  });
+
+  group('future months (B1)', () {
+    late String groceries;
+    late String rent;
+    final mar = DateTime.utc(2024, 3, 1);
+
+    setUp(() async {
+      groceries = await t.categoryId('Groceries');
+      rent = await t.categoryId('Rent/Mortgage');
+      final checking = (await t.addAccount(name: 'Checking')).id;
+      await t.addTransaction(accountId: checking, amount: 100000, date: jan);
+    });
+
+    test('money assigned in the next month leaves this month\'s TBB', () async {
+      expect(await t.budgeting.calculateTBB(jan), 100000);
+      await t.budgeting.setCategoryBudgetedAmount(rent, 100000, feb);
+      expect(await t.budgeting.calculateTBB(jan), 0);
+      // The next month is not short: the money was there.
+      expect(await t.budgeting.calculateTBB(feb), 0);
+      expect(await t.budgeting.calculateTBB(mar), 0);
+      await expectInvariant(jan);
+      await expectInvariant(feb);
+      await expectInvariant(mar);
+    });
+
+    test('assigning more than there is shows in every month', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 60000, jan);
+      await t.budgeting.setCategoryBudgetedAmount(rent, 60000, feb);
+      expect(await t.budgeting.calculateTBB(jan), -20000);
+      expect(await t.budgeting.calculateTBB(feb), -20000);
+      await expectInvariant(jan);
+      await expectInvariant(feb);
+    });
+
+    test('income of the next month is only available there', () async {
+      final checking = (await t.accounts.getAllAccounts()).single.id;
+      await t.addTransaction(accountId: checking, amount: 50000, date: feb);
+      await t.budgeting.setCategoryBudgetedAmount(rent, 120000, feb);
+      expect(await t.budgeting.calculateTBB(jan), -20000);
+      expect(await t.budgeting.calculateTBB(feb), 30000);
+      await expectInvariant(jan);
+      await expectInvariant(feb);
+    });
+  });
+
+  group('overspending (B5)', () {
+    late String groceries;
+    late String dining;
+    late String checking;
+    final mar = DateTime.utc(2024, 3, 1);
+
+    setUp(() async {
+      groceries = await t.categoryId('Groceries');
+      dining = await t.categoryId('Dining Out');
+      checking = (await t.addAccount(name: 'Checking')).id;
+      await t.addTransaction(accountId: checking, amount: 100000, date: jan);
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await t.addTransaction(
+        accountId: checking,
+        amount: -25000,
+        categoryId: groceries,
+        date: DateTime.utc(2024, 1, 10),
+      );
+    });
+
+    test('a negative balance is reset next month and charged to TBB', () async {
+      expect(
+        await t.budgeting.calculateCategoryAvailable(groceries, jan),
+        -5000,
+      );
+      expect(await t.budgeting.calculateTBB(jan), 80000);
+      // February: the category starts at zero, TBB pays the 50.
+      expect(await t.budgeting.calculateCategoryAvailable(groceries, feb), 0);
+      expect(await t.budgeting.calculateTBB(feb), 75000);
+      expect(await t.budgeting.calculateTBB(mar), 75000);
+      final batch = await t.budgeting.calculateBatchCategoryPerformance(feb);
+      expect(batch[groceries], {'activity': 0, 'available': 0});
+      await expectInvariant(jan);
+      await expectInvariant(feb);
+      await expectInvariant(mar);
+    });
+
+    test(
+      'covering the overspending in the same month costs nothing extra',
+      () async {
+        await t.budgeting.setCategoryBudgetedAmount(groceries, 25000, jan);
+        expect(await t.budgeting.calculateCategoryAvailable(groceries, jan), 0);
+        expect(await t.budgeting.calculateTBB(feb), 75000);
+        await expectInvariant(feb);
+      },
+    );
+
+    test(
+      'positive balances still roll over; overspending is charged once',
+      () async {
+        await t.budgeting.setCategoryBudgetedAmount(dining, 10000, jan);
+        await t.budgeting.setCategoryBudgetedAmount(groceries, 30000, feb);
+        await t.addTransaction(
+          accountId: checking,
+          amount: -40000,
+          categoryId: groceries,
+          date: DateTime.utc(2024, 2, 10),
+        );
+        // Dining: 100 in January rolls into February and March.
+        expect(
+          await t.budgeting.calculateCategoryAvailable(dining, mar),
+          10000,
+        );
+        // Groceries: -50 in January (charged in February), -100 in February
+        // (charged in March), 0 in March.
+        expect(
+          await t.budgeting.calculateCategoryAvailable(groceries, feb),
+          -10000,
+        );
+        expect(await t.budgeting.calculateCategoryAvailable(groceries, mar), 0);
+        // TBB: 1000 - 200 - 100 (Jan) - 300 (Feb) = 400 in Jan;
+        // minus 50 overspent in Jan = 350 in Feb; minus 100 = 250 in Mar.
+        expect(await t.budgeting.calculateTBB(jan), 40000);
+        expect(await t.budgeting.calculateTBB(feb), 35000);
+        expect(await t.budgeting.calculateTBB(mar), 25000);
+        expect(await t.budgeting.calculateTBB(DateTime.utc(2024, 4)), 25000);
+        await expectInvariant(jan);
+        await expectInvariant(feb);
+        await expectInvariant(mar);
+      },
+    );
   });
 
   group('off-budget accounts', () {
@@ -452,7 +595,9 @@ void main() {
 
     test('switching an account off budget recalculates TBB', () async {
       final wallet = await t.addAccount(name: 'Wallet', startingBalance: 7000);
-      expect(await t.budgeting.calculateTBB(jan), 317000);
+      // The wallet has history in January, so its balance counts there.
+      await t.addTransaction(accountId: wallet.id, amount: 500, date: jan);
+      expect(await t.budgeting.calculateTBB(jan), 317500);
       await t.accounts.updateAccount(wallet.copyWith(onBudget: false));
       expect(await t.budgeting.calculateTBB(jan), 310000);
       await expectInvariant(jan);

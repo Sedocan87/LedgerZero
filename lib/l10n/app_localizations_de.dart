@@ -4259,4 +4259,47 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get startupFailedBody =>
       'Die Einstellungen der App konnten nicht gelesen werden. Versuchen Sie es erneut; hilft das nicht, starten Sie Ihr Telefon neu.';
+
+  @override
+  String get hiddenCategoriesGroup => 'Ausgeblendete Kategorien';
+
+  @override
+  String get budgetOverwriteTitle => 'Budgetierte Beträge ersetzen?';
+
+  @override
+  String get budgetOverwriteConfirm => 'Ersetzen';
+
+  @override
+  String budgetCopyConfirmation(String month, String previous) {
+    return '$month hat bereits budgetierte Beträge. Beim Kopieren erhält jede im $previous budgetierte Kategorie diesen Betrag; alle anderen Kategorien behalten ihre Beträge. Sie können das rückgängig machen.';
+  }
+
+  @override
+  String budgetApplyTemplateConfirmation(String month, String template) {
+    return '$month hat bereits budgetierte Beträge. Beim Anwenden von „$template“ erhalten die Kategorien der Vorlage deren Beträge; alle anderen Kategorien behalten ihre Beträge. Sie können das rückgängig machen.';
+  }
+
+  @override
+  String get applyTemplateDescription =>
+      'Nur die Kategorien der Vorlage werden geändert; alle anderen Kategorien behalten ihre Beträge.';
+
+  @override
+  String budgetCopiedFrom(String previous) {
+    return 'Aus $previous kopiert';
+  }
+
+  @override
+  String budgetTemplateApplied(String template) {
+    return '„$template“ angewendet';
+  }
+
+  @override
+  String get budgetResetDone => 'Budget zurückgesetzt';
+
+  @override
+  String get budgetNothingChanged => 'Nichts zu ändern';
+
+  @override
+  String get budgetAmountNegative =>
+      'Ein budgetierter Betrag kann nicht negativ sein.';
 }

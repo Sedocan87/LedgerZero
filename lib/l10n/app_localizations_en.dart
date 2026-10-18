@@ -4227,4 +4227,46 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get startupFailedBody =>
       'The app\'s settings could not be read. Try again; if it keeps failing, restart your phone.';
+
+  @override
+  String get hiddenCategoriesGroup => 'Hidden categories';
+
+  @override
+  String get budgetOverwriteTitle => 'Replace budgeted amounts?';
+
+  @override
+  String get budgetOverwriteConfirm => 'Replace';
+
+  @override
+  String budgetCopyConfirmation(String month, String previous) {
+    return '$month already has budgeted amounts. Copying sets every category budgeted in $previous to that amount; the other categories keep theirs. You can undo this.';
+  }
+
+  @override
+  String budgetApplyTemplateConfirmation(String month, String template) {
+    return '$month already has budgeted amounts. Applying “$template” sets its categories to the template’s amounts; the other categories keep theirs. You can undo this.';
+  }
+
+  @override
+  String get applyTemplateDescription =>
+      'Only the categories in the template change; all other categories keep their amounts.';
+
+  @override
+  String budgetCopiedFrom(String previous) {
+    return 'Copied from $previous';
+  }
+
+  @override
+  String budgetTemplateApplied(String template) {
+    return '“$template” applied';
+  }
+
+  @override
+  String get budgetResetDone => 'Budget reset';
+
+  @override
+  String get budgetNothingChanged => 'Nothing to change';
+
+  @override
+  String get budgetAmountNegative => 'A budgeted amount cannot be negative.';
 }

@@ -157,4 +157,34 @@ void main() {
       budgetingService.autoAssign('1', month, AutoAssignRule.lastMonthSpent),
     );
   });
+
+  testWidgets('a negative result is rejected with a message', (tester) async {
+    final formatter = AppFormatter(
+      locale: 'en',
+      currency: 'USD',
+      decimalSeparator: '.',
+    );
+    final budgetingService = await pumpRow(tester, formatter);
+
+    await tester.tap(find.text('\$100.00').first);
+    await tester.pumpAndSettle();
+    for (final key in ['5', '-', '2', '0']) {
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(BudgetCalculator),
+              matching: find.text(key),
+            )
+            .last,
+      );
+      await tester.pump();
+    }
+    expect(find.text('5-20'), findsOneWidget);
+
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('A budgeted amount cannot be negative.'), findsOneWidget);
+    verifyNever(budgetingService.setCategoryBudgetedAmount(any, any, any));
+  });
 }

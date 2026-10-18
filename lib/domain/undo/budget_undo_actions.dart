@@ -62,3 +62,26 @@ class MoveMoneyAction implements ReversibleAction {
   Future<void> redo() =>
       _budgetingService.moveMoney(fromCategoryId, toCategoryId, amount, month);
 }
+
+/// A month operation (copy from the month before, apply a template, reset)
+/// as one undoable step: undo writes the amounts the changed categories had
+/// before, redo the amounts after, each in one unit of work
+/// ([BudgetingService.setCategoryBudgetedAmounts]). A category deleted in
+/// the meantime is skipped, the rest is still restored.
+class BudgetMonthChangeAction implements ReversibleAction {
+  final BudgetingService _budgetingService;
+  final BudgetMonthChange change;
+
+  BudgetMonthChangeAction({
+    required this._budgetingService,
+    required this.change,
+  });
+
+  @override
+  Future<void> undo() =>
+      _budgetingService.setCategoryBudgetedAmounts(change.before, change.month);
+
+  @override
+  Future<void> redo() =>
+      _budgetingService.setCategoryBudgetedAmounts(change.after, change.month);
+}

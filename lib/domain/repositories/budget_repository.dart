@@ -38,4 +38,26 @@ abstract class BudgetRepository {
   /// Calculates total budgeted amount (minor units) for all categories up to (and including) [endMonth].
   /// Returns a map where key is categoryId and value is the sum.
   Future<Map<String, int>> getAllTimeBudgetedSumsUpToMonth(String endMonth);
+
+  /// Every budget row with `month <= endMonth` (optionally of one
+  /// category), for the month-by-month rollover.
+  Future<List<Budget>> getBudgetsUpToMonth(
+    String endMonth, {
+    String? categoryId,
+  });
+
+  /// Total budgeted (minor units) in all months after [endMonth].
+  Future<int> getTotalBudgetedAfterMonth(String endMonth);
+
+  /// Category activity per month: `yyyy-MM` -> (categoryId -> signed sum,
+  /// minor units) of the categorised activity rows (on-budget accounts,
+  /// split lines included) dated before [endExclusive], optionally of one
+  /// category. Months without activity are absent.
+  Future<Map<String, Map<String, int>>> getMonthlyCategoryActivity(
+    DateTime endExclusive, {
+    String? categoryId,
+  });
+
+  /// accountId -> date of the account's earliest non-deleted transaction.
+  Future<Map<String, DateTime>> getFirstTransactionDates();
 }

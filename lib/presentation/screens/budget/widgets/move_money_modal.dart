@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/undo/budget_undo_actions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
@@ -134,9 +135,24 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
     }
   }
 
+  /// Visible categories only; a hidden one is listed when it is the
+  /// preselected source or target (money can still be moved out of it).
+  bool _listed(Category c) =>
+      !c.isHidden || c.id == _fromCategoryId || c.id == _toCategoryId;
+
   @override
   Widget build(BuildContext context) {
-    final categoriesAsync = ref.watch(categoryGroupsWithCategoriesProvider);
+    final categoriesAsync = ref
+        .watch(categoryGroupsWithCategoriesProvider)
+        .whenData(
+          (groups) => [
+            for (final g in groups)
+              CategoryGroupWithCategories(
+                group: g.group,
+                categories: g.categories.where(_listed).toList(),
+              ),
+          ],
+        );
 
     return Padding(
       padding: EdgeInsets.only(

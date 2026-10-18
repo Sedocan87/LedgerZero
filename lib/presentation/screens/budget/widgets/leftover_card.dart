@@ -15,8 +15,9 @@ import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 /// At the start of a month: money the month before left unassigned
 /// ([leftoverProvider]). It stays in To Be Budgeted either way; the card
 /// offers to budget it for savings (any category, the Savings & Investments
-/// group listed first) or to keep it for this month, which hides the card
-/// for the month.
+/// group listed first) or to keep it for this month. Both hide the card
+/// for the month (a later edit does not bring the same offer back; undoing
+/// the assignment does).
 class LeftoverCard extends ConsumerStatefulWidget {
   const LeftoverCard({super.key});
 
@@ -40,8 +41,17 @@ class _LeftoverCardState extends ConsumerState<LeftoverCard> {
     };
   }
 
-  Future<void> _keep(DateTime month) async {
-    setState(() => _dismissed.add(CalendarDate.monthKey(month)));
+  Future<void> _keep(DateTime month) => _setHandled(month, true);
+
+  /// Remembers that the month's leftover was kept or assigned (persisted,
+  /// like the other one-time cards).
+  Future<void> _setHandled(DateTime month, bool handled) async {
+    final key = CalendarDate.monthKey(month);
+    if (mounted) {
+      setState(() => handled ? _dismissed.add(key) : _dismissed.remove(key));
+    } else {
+      handled ? _dismissed.add(key) : _dismissed.remove(key);
+    }
     final kept = (_dismissed.toList()..sort()).reversed.take(24).toList();
     await ref
         .read(sharedPreferencesProvider)
@@ -64,6 +74,10 @@ class _LeftoverCardState extends ConsumerState<LeftoverCard> {
     final budgeting = ref.read(budgetingServiceProvider);
     try {
       await budgeting.addToCategoryBudget(category.id, amount, month);
+      // Handled: the card must not come back with the same offer after
+      // the next edit (e.g. income arriving keeps the leftover unassigned
+      // in To Be Budgeted's eyes).
+      await _setHandled(month, true);
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -71,8 +85,21 @@ class _LeftoverCardState extends ConsumerState<LeftoverCard> {
           ),
           action: SnackBarAction(
             label: l10n.undo,
-            onPressed: () =>
-                budgeting.addToCategoryBudget(category.id, -amount, month),
+            onPressed: () async {
+              try {
+                await budgeting.addToCategoryBudget(
+                  category.id,
+                  -amount,
+                  month,
+                );
+                await _setHandled(month, false);
+              } catch (e, stack) {
+                Logger.error('Undoing the leftover failed', e, stack);
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.errorOccurred)),
+                );
+              }
+            },
           ),
         ),
       );

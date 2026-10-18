@@ -14,7 +14,10 @@ final String savingsGroupId = DeterministicId.defaultGroup(
 class BudgetGroupRow extends StatelessWidget {
   final CategoryGroup group;
 
-  const BudgetGroupRow({super.key, required this.group});
+  /// Shown instead of the group's name (the "Hidden categories" section).
+  final String? title;
+
+  const BudgetGroupRow({super.key, required this.group, this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -31,12 +34,18 @@ class BudgetGroupRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             alignment: Alignment.center,
-            child: Icon(Icons.folder_outlined, size: 16, color: scheme.primary),
+            child: Icon(
+              title == null
+                  ? Icons.folder_outlined
+                  : Icons.visibility_off_outlined,
+              size: 16,
+              color: scheme.primary,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              group.name,
+              title ?? group.name,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: scheme.onSurface,

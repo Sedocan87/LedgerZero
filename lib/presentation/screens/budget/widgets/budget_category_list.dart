@@ -25,7 +25,10 @@ class BudgetCategoryList extends ConsumerWidget {
     final budgetViewModelAsync = ref.watch(budgetViewModelProvider);
     final scheme = Theme.of(context).colorScheme;
 
+    // After a ledger write the provider recomputes; keep showing the rows
+    // (and their scroll position and focus) instead of a spinner.
     return budgetViewModelAsync.when(
+      skipLoadingOnReload: true,
       data: (groups) {
         if (groups.isEmpty && ref.watch(budgetSearchQueryProvider).isNotEmpty) {
           return SliverFillRemaining(
@@ -135,8 +138,16 @@ class BudgetCategoryList extends ConsumerWidget {
                   child: FocusTraversalGroup(
                     child: ExpansionTile(
                       key: PageStorageKey('group_${groupVM.group.id}'),
-                      title: BudgetGroupRow(group: groupVM.group),
-                      initiallyExpanded: true,
+                      title: BudgetGroupRow(
+                        group: groupVM.group,
+                        title: groupVM.isHiddenGroup
+                            ? AppLocalizations.of(
+                                context,
+                              )!.hiddenCategoriesGroup
+                            : null,
+                      ),
+                      // Hidden categories with money stay reachable, folded.
+                      initiallyExpanded: !groupVM.isHiddenGroup,
                       tilePadding: const EdgeInsets.symmetric(
                         horizontal: 16.0,
                         vertical: 2.0,

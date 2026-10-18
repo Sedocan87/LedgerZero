@@ -7104,6 +7104,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The app\'s settings could not be read. Try again; if it keeps failing, restart your phone.'**
   String get startupFailedBody;
+
+  /// Collapsed budget section listing hidden categories that still have money budgeted or available
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden categories'**
+  String get hiddenCategoriesGroup;
+
+  /// Title of the confirmation shown when copying or applying a template onto a month that already has budgets
+  ///
+  /// In en, this message translates to:
+  /// **'Replace budgeted amounts?'**
+  String get budgetOverwriteTitle;
+
+  /// Confirm button of that dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get budgetOverwriteConfirm;
+
+  /// Body of the confirmation before copying the previous month's budgets onto a non-empty month
+  ///
+  /// In en, this message translates to:
+  /// **'{month} already has budgeted amounts. Copying sets every category budgeted in {previous} to that amount; the other categories keep theirs. You can undo this.'**
+  String budgetCopyConfirmation(String month, String previous);
+
+  /// Body of the confirmation before applying a template onto a non-empty month
+  ///
+  /// In en, this message translates to:
+  /// **'{month} already has budgeted amounts. Applying “{template}” sets its categories to the template’s amounts; the other categories keep theirs. You can undo this.'**
+  String budgetApplyTemplateConfirmation(String month, String template);
+
+  /// Explanation at the top of the apply-template dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Only the categories in the template change; all other categories keep their amounts.'**
+  String get applyTemplateDescription;
+
+  /// Snack bar after copying the previous month's budgets, with Undo
+  ///
+  /// In en, this message translates to:
+  /// **'Copied from {previous}'**
+  String budgetCopiedFrom(String previous);
+
+  /// Snack bar after applying a template, with Undo
+  ///
+  /// In en, this message translates to:
+  /// **'“{template}” applied'**
+  String budgetTemplateApplied(String template);
+
+  /// Snack bar after resetting a month's budgets, with Undo
+  ///
+  /// In en, this message translates to:
+  /// **'Budget reset'**
+  String get budgetResetDone;
+
+  /// Snack bar when a month operation found nothing to write
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to change'**
+  String get budgetNothingChanged;
+
+  /// Shown when the budget calculator result is below zero
+  ///
+  /// In en, this message translates to:
+  /// **'A budgeted amount cannot be negative.'**
+  String get budgetAmountNegative;
 }
 
 class _AppLocalizationsDelegate

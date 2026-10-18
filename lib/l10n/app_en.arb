@@ -3554,5 +3554,63 @@
   "startupFailedBody": "The app's settings could not be read. Try again; if it keeps failing, restart your phone.",
   "@startupFailedBody": {
     "description": "Start-up error screen message"
+  },
+  "hiddenCategoriesGroup": "Hidden categories",
+  "@hiddenCategoriesGroup": {
+    "description": "Collapsed budget section listing hidden categories that still have money budgeted or available"
+  },
+  "budgetOverwriteTitle": "Replace budgeted amounts?",
+  "@budgetOverwriteTitle": {
+    "description": "Title of the confirmation shown when copying or applying a template onto a month that already has budgets"
+  },
+  "budgetOverwriteConfirm": "Replace",
+  "@budgetOverwriteConfirm": {
+    "description": "Confirm button of that dialog"
+  },
+  "budgetCopyConfirmation": "{month} already has budgeted amounts. Copying sets every category budgeted in {previous} to that amount; the other categories keep theirs. You can undo this.",
+  "@budgetCopyConfirmation": {
+    "description": "Body of the confirmation before copying the previous month's budgets onto a non-empty month",
+    "placeholders": {
+      "month": {"type": "String", "example": "October 2026"},
+      "previous": {"type": "String", "example": "September"}
+    }
+  },
+  "budgetApplyTemplateConfirmation": "{month} already has budgeted amounts. Applying “{template}” sets its categories to the template’s amounts; the other categories keep theirs. You can undo this.",
+  "@budgetApplyTemplateConfirmation": {
+    "description": "Body of the confirmation before applying a template onto a non-empty month",
+    "placeholders": {
+      "month": {"type": "String", "example": "October 2026"},
+      "template": {"type": "String", "example": "Usual month"}
+    }
+  },
+  "applyTemplateDescription": "Only the categories in the template change; all other categories keep their amounts.",
+  "@applyTemplateDescription": {
+    "description": "Explanation at the top of the apply-template dialog"
+  },
+  "budgetCopiedFrom": "Copied from {previous}",
+  "@budgetCopiedFrom": {
+    "description": "Snack bar after copying the previous month's budgets, with Undo",
+    "placeholders": {
+      "previous": {"type": "String", "example": "September"}
+    }
+  },
+  "budgetTemplateApplied": "“{template}” applied",
+  "@budgetTemplateApplied": {
+    "description": "Snack bar after applying a template, with Undo",
+    "placeholders": {
+      "template": {"type": "String", "example": "Usual month"}
+    }
+  },
+  "budgetResetDone": "Budget reset",
+  "@budgetResetDone": {
+    "description": "Snack bar after resetting a month's budgets, with Undo"
+  },
+  "budgetNothingChanged": "Nothing to change",
+  "@budgetNothingChanged": {
+    "description": "Snack bar when a month operation found nothing to write"
+  },
+  "budgetAmountNegative": "A budgeted amount cannot be negative.",
+  "@budgetAmountNegative": {
+    "description": "Shown when the budget calculator result is below zero"
   }
 }

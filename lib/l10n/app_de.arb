@@ -1174,5 +1174,16 @@
   "budgetBasicsSubtitle": "So funktioniert das Umschlagprinzip in LedgerZero",
   "factoryResetFailed": "Das Zurücksetzen konnte nicht abgeschlossen werden. Starten Sie die App neu und versuchen Sie es erneut, oder löschen Sie den App-Speicher in den Android-Einstellungen.",
   "startupFailedTitle": "LedgerZero konnte nicht starten",
-  "startupFailedBody": "Die Einstellungen der App konnten nicht gelesen werden. Versuchen Sie es erneut; hilft das nicht, starten Sie Ihr Telefon neu."
+  "startupFailedBody": "Die Einstellungen der App konnten nicht gelesen werden. Versuchen Sie es erneut; hilft das nicht, starten Sie Ihr Telefon neu.",
+  "hiddenCategoriesGroup": "Ausgeblendete Kategorien",
+  "budgetOverwriteTitle": "Budgetierte Beträge ersetzen?",
+  "budgetOverwriteConfirm": "Ersetzen",
+  "budgetCopyConfirmation": "{month} hat bereits budgetierte Beträge. Beim Kopieren erhält jede im {previous} budgetierte Kategorie diesen Betrag; alle anderen Kategorien behalten ihre Beträge. Sie können das rückgängig machen.",
+  "budgetApplyTemplateConfirmation": "{month} hat bereits budgetierte Beträge. Beim Anwenden von „{template}“ erhalten die Kategorien der Vorlage deren Beträge; alle anderen Kategorien behalten ihre Beträge. Sie können das rückgängig machen.",
+  "applyTemplateDescription": "Nur die Kategorien der Vorlage werden geändert; alle anderen Kategorien behalten ihre Beträge.",
+  "budgetCopiedFrom": "Aus {previous} kopiert",
+  "budgetTemplateApplied": "„{template}“ angewendet",
+  "budgetResetDone": "Budget zurückgesetzt",
+  "budgetNothingChanged": "Nichts zu ändern",
+  "budgetAmountNegative": "Ein budgetierter Betrag kann nicht negativ sein."
 }
