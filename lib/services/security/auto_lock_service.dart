@@ -42,8 +42,9 @@ class AutoLockService {
   /// How long to wait for `resumed` after an OS screen closed. A full-screen
   /// OS activity (the device PIN screen of the app lock) reports its result
   /// before the app is resumed; without the grace period the app would lock
-  /// again right after a successful unlock.
-  static const Duration resumeGrace = Duration(seconds: 1);
+  /// again right after a successful unlock. Three seconds: a slow PIN
+  /// screen on a busy phone can take more than one to hand back.
+  static const Duration resumeGrace = Duration(seconds: 3);
   StreamSubscription<void>? _guardSubscription;
   AppLifecycleState? _lastState;
 

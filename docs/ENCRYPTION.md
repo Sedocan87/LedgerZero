@@ -67,15 +67,33 @@ locking the user out (removing a screen lock needs the old one).
   (`AppLockState.locked/unlocked`); services that need it (sync) follow it.
   The UI lock is separate (`authProvider`).
 * Auto-lock (`lib/services/security/auto_lock_service.dart`, only with the
-  app lock on and after onboarding): "Immediate" locks the UI on
-  `inactive`/`hidden`/`paused`; a timeout locks via a timer while the
-  process runs and is re-checked on resume using the larger of a monotonic
-  stopwatch and the wall clock. File pickers, share sheets, system prompts
-  and Google sign-in run inside `ExternalUiGuard.run` and do not trigger the
-  lock.
+  app lock on and after onboarding; default 1 minute): "Immediate" locks
+  the UI on `hidden`/`paused`, deliberately not on `inactive` (notification
+  shade, system dialogs, app switcher, which FLAG_SECURE already covers); a
+  timeout locks via a timer while the process runs and is re-checked on
+  resume using the larger of a monotonic stopwatch and the wall clock. File
+  pickers, share sheets, system prompts and Google sign-in run inside
+  `ExternalUiGuard.run` and do not trigger the lock; a guard ends after 2
+  minutes at the latest, so a platform call that never answers cannot
+  switch the auto-lock off. After a guard ends the service waits 3 s
+  (`resumeGrace`) for `resumed` before applying the lock, because the
+  device-PIN screen reports its result before the app is resumed.
 * No DEK: if a master-password vault exists, the one-time migration below
   runs; otherwise the lock screen offers a factory reset (then restore a
   backup or sync again).
+* The key store throws (`resetOnError: false`, so flutter_secure_storage
+  reports instead of erasing): the lock screen retries three times with a
+  short delay, then shows "Retry"; after three such starts, or at once when
+  the error names a permanent KeyStore condition (`BadPaddingException`,
+  `AEADBadTagException`, `UnrecoverableKeyException`, `KeyStoreException`,
+  `InvalidKeyException`, `KeyPermanentlyInvalidatedException`), it explains
+  that the key store no longer holds the key and offers the reset next to
+  "Retry". An I/O error while checking the database file is handled the
+  same way (retryable first); only a key that does not open the file leads
+  straight to the reset, which now also has "Retry".
+* Onboarding's "Continue" checks for an existing database that the stored
+  DEK opens before deleting anything; when found, it opens the session on
+  it, marks onboarding done and goes to Home (`SecuritySetupScreen`).
 
 ## Opening the database (fail closed)
 

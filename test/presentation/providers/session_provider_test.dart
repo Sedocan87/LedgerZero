@@ -207,6 +207,36 @@ void main() {
       service.dispose();
     });
 
+    test('a guard whose platform call never answers ends after the timeout '
+        'and the lock applies again', () async {
+      final service = buildService(Stopwatch());
+      void Function()? expire;
+      ExternalUiGuard.timerFactory = (duration, callback) {
+        expect(duration, ExternalUiGuard.timeout);
+        expire = callback;
+        return Timer(const Duration(days: 1), () {});
+      };
+      addTearDown(() => ExternalUiGuard.timerFactory = Timer.new);
+      final never = Completer<void>();
+      unawaited(ExternalUiGuard.run(() => never.future));
+      expect(ExternalUiGuard.isActive, isTrue);
+
+      service.didChangeAppLifecycleState(AppLifecycleState.paused);
+      await pumpEventQueue();
+      expect(uiLocked(), isFalse);
+
+      expire!();
+      expect(ExternalUiGuard.isActive, isFalse);
+      service.didChangeAppLifecycleState(AppLifecycleState.paused);
+      await pumpEventQueue();
+      expect(uiLocked(), isTrue);
+      // The late answer does not end the guard twice.
+      never.complete();
+      await pumpEventQueue();
+      expect(ExternalUiGuard.isActive, isFalse);
+      service.dispose();
+    });
+
     test('a full-screen OS prompt that reports before the app resumes does not '
         'lock (device PIN screen of the app lock)', () async {
       void Function()? grace;
