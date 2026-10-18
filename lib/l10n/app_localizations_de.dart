@@ -4261,4 +4261,25 @@ class AppLocalizationsDe extends AppLocalizations {
   String netWorthPerCurrency(String currency) {
     return 'Konten in $currency';
   }
+
+  @override
+  String get scheduledAccountClosed =>
+      'Konto geschlossen: Es wird nichts gebucht';
+
+  @override
+  String closeAccountSchedulesWarning(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count geplante Transaktionen nutzen dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.',
+      one:
+          '1 geplante Transaktion nutzt dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scheduledEndBeforeNext =>
+      'Das Enddatum darf nicht vor dem nächsten Datum liegen.';
 }

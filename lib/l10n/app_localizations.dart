@@ -7110,6 +7110,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{currency} accounts'**
   String netWorthPerCurrency(String currency);
+
+  /// Marker on a scheduled transaction whose account is closed.
+  ///
+  /// In en, this message translates to:
+  /// **'Account closed: nothing is booked'**
+  String get scheduledAccountClosed;
+
+  /// Confirmation before closing an account that scheduled transactions book into; count = active schedules.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 scheduled transaction uses this account. While the account is closed, nothing is booked for it.} other{{count} scheduled transactions use this account. While the account is closed, nothing is booked for them.}}'**
+  String closeAccountSchedulesWarning(int count);
+
+  /// Validation message of the scheduled transaction form.
+  ///
+  /// In en, this message translates to:
+  /// **'The end date must not be before the next date.'**
+  String get scheduledEndBeforeNext;
 }
 
 class _AppLocalizationsDelegate

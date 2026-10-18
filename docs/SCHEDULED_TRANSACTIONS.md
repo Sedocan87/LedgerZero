@@ -17,7 +17,7 @@ are nullable):
 | Column | Meaning |
 | --- | --- |
 | `account_id`, `payee_id`, `category_id` | Copied to each occurrence. Schedules cannot be transfers or splits. |
-| `amount` | Minor units, signed (negative = outflow). Never 0 or empty: the form and `ScheduledTransactionService.saveScheduledTransaction` reject it (`ValidationException`, `TransactionValidationError.zeroAmount`, as for transactions). |
+| `amount` | Minor units, signed (negative = outflow). Never 0 or empty: the form and `ScheduledTransactionService.saveScheduledTransaction` reject it (`ValidationException`, `TransactionValidationError.zeroAmount`, as for transactions). The same validation rejects an end date before the next date (`scheduleEndBeforeNextDate`) and an interval below 1 (`scheduleInvalidInterval`); the form shows the message. |
 | `memo` | Copied to each occurrence. |
 | `frequency` | `daily`, `weekly`, `monthly`, `yearly` (default monthly). |
 | `interval` | Every N periods (default 1). |
@@ -61,7 +61,21 @@ local calendar day):
    localised "Scheduled transaction" memo is used.
 
 Missed occurrences are caught up: a monthly schedule not processed for
-three months creates three transactions on their original dates.
+three months creates three transactions on their original dates. One run
+books at most 31 occurrences per schedule
+(`ScheduledTransactionService.maxOccurrencesPerRun`); a next date set far
+back (the form allows a year) is caught up over the following runs instead
+of flooding the list with hundreds of unapproved rows at once.
+
+Schedules that book nothing:
+
+* A schedule whose account is closed (or is the partner's personal
+  account) is skipped and left unchanged; it books again once the account
+  is reopened. The schedules list marks it ("Account closed: nothing is
+  booked"), and closing an account that active schedules target asks the
+  user to confirm (account screen).
+* A schedule whose next date lies after its end date is finished
+  (`next_date = NULL`) without booking.
 
 `approved` does not affect balances or budget numbers; unapproved
 occurrences count immediately and are only marked in the list.

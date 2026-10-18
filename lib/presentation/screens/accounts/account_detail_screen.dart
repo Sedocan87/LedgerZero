@@ -55,6 +55,9 @@ class AccountDetailScreen extends ConsumerWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    if (closed && !await _confirmClosingWithSchedules(context, ref)) {
+      return;
+    }
     try {
       await ref.read(accountServiceProvider).setClosed(accountId, closed);
       if (closed) {
@@ -66,6 +69,43 @@ class AccountDetailScreen extends ConsumerWidget {
       Logger.error('Closing account $accountId failed', e, st);
       messenger.showSnackBar(SnackBar(content: Text(l10n.accountUpdateFailed)));
     }
+  }
+
+  /// Scheduled transactions book nothing into a closed account: when some
+  /// target this one, the user is told and asked to confirm.
+  Future<bool> _confirmClosingWithSchedules(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final schedules = await ref
+        .read(scheduledTransactionRepositoryProvider)
+        .getAllScheduledTransactions();
+    final active = schedules
+        .where((s) => s.accountId == accountId && s.nextDate != null)
+        .length;
+    if (active == 0 || !context.mounted) {
+      return true;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('closeAccount.schedulesWarning'),
+        title: Text(l10n.closeAccount),
+        content: Text(l10n.closeAccountSchedulesWarning(active)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.closeAccount),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
   }
 
   /// Offers closing (recommended) or permanently deleting the account.

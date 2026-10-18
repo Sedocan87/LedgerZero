@@ -102,6 +102,7 @@ final scheduledTransactionServiceProvider =
         ref.watch(notificationServiceProvider),
         unitOfWork: ref.watch(unitOfWorkProvider),
         ruleMatchingService: ref.watch(ruleMatchingServiceProvider),
+        accountRepository: ref.watch(accountRepositoryProvider),
         showAmountsInNotifications: () =>
             ref.read(privacySettingsProvider).notificationAmounts,
         remindersEnabled: () =>

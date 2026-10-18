@@ -130,6 +130,17 @@ void main() {
 
     await tester.tap(find.text('Close account instead'));
     await tester.pumpAndSettle();
+    // (L3) A schedule books into this account: the user is told first.
+    expect(
+      find.byKey(const Key('closeAccount.schedulesWarning')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('1 scheduled transaction uses this account'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Close Account'));
+    await tester.pumpAndSettle();
 
     expect((await t.accounts.getAccountById('b'))!.isClosed, isTrue);
     expect(await countRows(t, 'transactions', 'account_id = ?', ['b']), 2);
@@ -169,6 +180,36 @@ void main() {
     await expectLedgerInvariant(t, DateTime.utc(2026, 3));
     await expectNoForeignKeyViolations(t);
 
+    await unmount(tester);
+  });
+
+  testWidgets('(L3) closing from the menu warns about schedules and cancel '
+      'keeps the account open', (tester) async {
+    await pumpScreen(tester, 'b');
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Close Account'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('closeAccount.schedulesWarning')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect((await t.accounts.getAccountById('b'))!.isClosed, isFalse);
+
+    // An account without schedules closes without the question.
+    await unmount(tester);
+    await pumpScreen(tester, 'a');
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Close Account'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('closeAccount.schedulesWarning')),
+      findsNothing,
+    );
+    expect((await t.accounts.getAccountById('a'))!.isClosed, isTrue);
     await unmount(tester);
   });
 }

@@ -1175,5 +1175,8 @@
   "txApproved": "Bestätigt",
   "clearedInAccount": "Gebucht in {account}",
   "txTransferCurrencyMismatch": "Beide Konten einer Umbuchung müssen dieselbe Währung haben.",
-  "netWorthPerCurrency": "Konten in {currency}"
+  "netWorthPerCurrency": "Konten in {currency}",
+  "scheduledAccountClosed": "Konto geschlossen: Es wird nichts gebucht",
+  "closeAccountSchedulesWarning": "{count, plural, =1{1 geplante Transaktion nutzt dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.} other{{count} geplante Transaktionen nutzen dieses Konto. Solange das Konto geschlossen ist, wird dafür nichts gebucht.}}",
+  "scheduledEndBeforeNext": "Das Enddatum darf nicht vor dem nächsten Datum liegen."
 }

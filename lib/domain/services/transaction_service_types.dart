@@ -19,6 +19,12 @@ enum TransactionValidationError {
   /// A transfer between accounts of different currencies (the app has no
   /// exchange rates; both legs would carry the same number).
   currencyMismatch,
+
+  /// A schedule whose end date lies before its next date.
+  scheduleEndBeforeNextDate,
+
+  /// A schedule with an interval below 1.
+  scheduleInvalidInterval,
 }
 
 /// Exception thrown when transaction validation fails.

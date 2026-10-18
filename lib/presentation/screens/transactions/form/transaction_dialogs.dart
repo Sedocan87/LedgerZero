@@ -81,6 +81,9 @@ String transactionValidationMessage(
     TransactionValidationError.partnerAccount => l10n.txPartnerAccount,
     TransactionValidationError.currencyMismatch =>
       l10n.txTransferCurrencyMismatch,
+    TransactionValidationError.scheduleEndBeforeNextDate =>
+      l10n.scheduledEndBeforeNext,
+    TransactionValidationError.scheduleInvalidInterval => l10n.invalidAmount,
     TransactionValidationError.notFound || null => l10n.txSaveFailed,
   };
 }

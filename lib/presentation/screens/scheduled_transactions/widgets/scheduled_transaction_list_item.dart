@@ -12,6 +12,9 @@ class ScheduledTransactionListItem extends ConsumerWidget {
 
   /// Currency of the account; `null` uses the Settings currency.
   final String? currencyCode;
+
+  /// The account is closed: nothing is booked for this schedule.
+  final bool accountClosed;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onSkip;
@@ -23,6 +26,7 @@ class ScheduledTransactionListItem extends ConsumerWidget {
     this.categoryName,
     this.accountName,
     this.currencyCode,
+    this.accountClosed = false,
     this.onTap,
     this.onDelete,
     this.onSkip,
@@ -127,6 +131,14 @@ class ScheduledTransactionListItem extends ConsumerWidget {
               Text(frequencyText, style: theme.textTheme.bodySmall),
             ],
           ),
+          if (accountClosed)
+            Text(
+              l10n.scheduledAccountClosed,
+              key: Key('scheduled.accountClosed.${transaction.id}'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
         ],
       ),
       trailing: PopupMenuButton<String>(

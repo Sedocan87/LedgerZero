@@ -22,6 +22,10 @@ class ScheduledTransactionsScreen extends ConsumerWidget {
         ref.watch(accountsProvider).valueOrNull ?? const <Account>[];
     final accountNames = {for (final a in accounts) a.id: a.name};
     final accountCurrencies = {for (final a in accounts) a.id: a.currency};
+    final closedAccountIds = {
+      for (final a in accounts)
+        if (a.isClosed) a.id,
+    };
     final payeeNames = {
       for (final p in ref.watch(payeesProvider).valueOrNull ?? const <Payee>[])
         p.id: p.name,
@@ -86,6 +90,7 @@ class ScheduledTransactionsScreen extends ConsumerWidget {
                   categoryMap: categoryNames,
                   accountMap: accountNames,
                   accountCurrencies: accountCurrencies,
+                  closedAccountIds: closedAccountIds,
                 ),
                 _TransactionList(
                   transactions: transactions,
@@ -93,6 +98,7 @@ class ScheduledTransactionsScreen extends ConsumerWidget {
                   categoryMap: categoryNames,
                   accountMap: accountNames,
                   accountCurrencies: accountCurrencies,
+                  closedAccountIds: closedAccountIds,
                 ),
               ],
             );
@@ -121,6 +127,7 @@ class _TransactionList extends ConsumerWidget {
   final Map<String, String>? categoryMap;
   final Map<String, String>? accountMap;
   final Map<String, String> accountCurrencies;
+  final Set<String> closedAccountIds;
 
   const _TransactionList({
     required this.transactions,
@@ -128,6 +135,7 @@ class _TransactionList extends ConsumerWidget {
     this.categoryMap,
     this.accountMap,
     this.accountCurrencies = const {},
+    this.closedAccountIds = const {},
   });
 
   @override
@@ -148,6 +156,7 @@ class _TransactionList extends ConsumerWidget {
           categoryName: categoryMap?[transaction.categoryId],
           accountName: accountMap?[transaction.accountId],
           currencyCode: accountCurrencies[transaction.accountId],
+          accountClosed: closedAccountIds.contains(transaction.accountId),
           onTap: () {
             context.pushNamed(
               'edit-scheduled-transaction',

@@ -115,4 +115,43 @@ void main() {
     expect(find.text(l10n.scheduledActionFailed), findsOneWidget);
     expect(find.textContaining('disk full'), findsNothing);
   });
+
+  testWidgets('(L3) a schedule whose account is closed is marked', (
+    tester,
+  ) async {
+    await pumpTestWidget(
+      tester,
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        scheduledTransactionRepositoryProvider.overrideWithValue(repo),
+        scheduledTransactionsProvider.overrideWith(
+          (ref) => Stream.value([
+            ScheduledTransaction(
+              id: 's1',
+              accountId: 'acc1',
+              amount: -5000,
+              frequency: RecurrenceFrequency.monthly,
+              interval: 1,
+              nextDate: DateTime.utc(2024, 1, 15),
+            ),
+          ]),
+        ),
+        accountsProvider.overrideWith(
+          (ref) => Stream.value(const [
+            Account(
+              id: 'acc1',
+              name: 'Old',
+              type: AccountType.checking,
+              isClosed: true,
+            ),
+          ]),
+        ),
+        payeesProvider.overrideWith((ref) => Stream.value(const [])),
+        categoriesProvider.overrideWith((ref) => Stream.value(const [])),
+      ],
+      child: const ScheduledTransactionsScreen(),
+    );
+    expect(find.byKey(const Key('scheduled.accountClosed.s1')), findsOneWidget);
+    expect(find.text(l10n.scheduledAccountClosed), findsOneWidget);
+  });
 }

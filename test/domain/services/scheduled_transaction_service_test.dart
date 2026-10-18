@@ -104,6 +104,7 @@ void main() {
     ruleMatchingService: withRules
         ? RuleMatchingService(t.payees, t.transactions, t.rules)
         : null,
+    accountRepository: t.accounts,
   );
 
   setUp(() async {
@@ -730,5 +731,88 @@ void main() {
       expect((await reload()).nextDate, isNull);
       expect(notifications.cancelled, contains(id));
     });
+  });
+
+  group('closed accounts, end date and catch-up cap (L3, L7)', () {
+    test('a closed account takes no bookings until it is reopened', () async {
+      await addSchedule(nextDate: DateTime.utc(2024, 3, 15));
+      final account = (await t.accounts.getAccountById(accountId))!;
+      await t.accounts.updateAccount(account.copyWith(isClosed: true));
+
+      expect(await service.processDueTransactions(today: today), 0);
+      expect(await occurrences(), isEmpty);
+      expect((await reload()).nextDate, DateTime.utc(2024, 3, 15));
+
+      await t.accounts.updateAccount(account.copyWith(isClosed: false));
+      expect(await service.processDueTransactions(today: today), 3);
+    });
+
+    test("the partner's personal account takes no bookings", () async {
+      // As it arrives from the partner's phone: owned by another member.
+      final partner = (await t.addAccount(name: 'Partner')).id;
+      await t.db.customStatement(
+        'UPDATE accounts SET owner_id = ?, on_budget = 0 WHERE id = ?',
+        ['partner-member', partner],
+      );
+      expect((await t.accounts.getAccountById(partner))!.isPartners, isTrue);
+      await addSchedule(nextDate: today, account: partner);
+      expect(await service.processDueTransactions(today: today), 0);
+      expect(await occurrences(), isEmpty);
+    });
+
+    test('a next date after the end date finishes the schedule without '
+        'booking', () async {
+      await addSchedule(
+        nextDate: DateTime.utc(2024, 5, 10),
+        endDate: DateTime.utc(2024, 5, 1),
+      );
+      expect(await service.processDueTransactions(today: today), 0);
+      expect(await occurrences(), isEmpty);
+      expect((await reload()).nextDate, isNull);
+    });
+
+    test('saving an end date before the next date is rejected', () async {
+      await expectLater(
+        service.saveScheduledTransaction(
+          isNew: true,
+          ScheduledTransaction(
+            id: 'bad',
+            accountId: accountId,
+            amount: -100,
+            frequency: RecurrenceFrequency.monthly,
+            nextDate: DateTime.utc(2024, 5, 10),
+            endDate: DateTime.utc(2024, 5, 1),
+          ),
+        ),
+        throwsA(
+          isA<ValidationException>().having(
+            (e) => e.code,
+            'code',
+            TransactionValidationError.scheduleEndBeforeNextDate,
+          ),
+        ),
+      );
+      expect(
+        await t.scheduledTransactions.getScheduledTransactionById('bad'),
+        isNull,
+      );
+    });
+
+    test(
+      'one run books at most 31 occurrences; the next run continues',
+      () async {
+        await addSchedule(
+          nextDate: DateTime.utc(2024, 3, 1),
+          frequency: RecurrenceFrequency.daily,
+        );
+        // 1 March .. 15 May = 76 due days.
+        expect(await service.processDueTransactions(today: today), 31);
+        expect((await reload()).nextDate, DateTime.utc(2024, 4, 1));
+        expect(await service.processDueTransactions(today: today), 31);
+        expect(await service.processDueTransactions(today: today), 14);
+        expect((await occurrences()).length, 76);
+        expect((await reload()).nextDate, DateTime.utc(2024, 5, 16));
+      },
+    );
   });
 }

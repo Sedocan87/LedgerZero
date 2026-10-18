@@ -7,6 +7,7 @@ import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
@@ -23,17 +24,31 @@ import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 /// insert-or-ignore. A crash, a second run or a second device therefore
 /// never duplicates an occurrence (and an occurrence the user deleted is
 /// not resurrected).
+///
+/// A schedule whose account is closed (or the partner's personal account)
+/// books nothing while that is the case; the schedules list marks it. A
+/// schedule whose next date lies after its end date is finished without
+/// booking. One run books at most [maxOccurrencesPerRun] occurrences per
+/// schedule (a next date set far back is caught up over several runs
+/// instead of flooding the list at once).
 /// Title and body of a reminder. [amountText] is null unless the user opted
 /// in to amounts in notifications.
 typedef ScheduledReminderText =
     ({String title, String body}) Function(String? amountText);
 
 class ScheduledTransactionService {
+  /// Most occurrences one run books per schedule.
+  static const int maxOccurrencesPerRun = 31;
+
   final ScheduledTransactionRepository _scheduledTransactionRepository;
   final TransactionRepository _transactionRepository;
   final NotificationService _notificationService;
   final UnitOfWork _unitOfWork;
   final RuleMatchingService? _ruleMatchingService;
+
+  /// Tells closed and partner accounts apart from bookable ones; without
+  /// it every account is bookable.
+  final AccountRepository? _accountRepository;
   final ScheduledReminderText? _reminderText;
   final bool Function() _showAmounts;
   final bool Function() _remindersEnabled;
@@ -52,12 +67,16 @@ class ScheduledTransactionService {
     this._notificationService, {
     required this._unitOfWork,
     this._ruleMatchingService,
+    AccountRepository? accountRepository,
     this._reminderText,
     bool Function()? showAmountsInNotifications,
     bool Function()? remindersEnabled,
     this._formatAmount,
     this._defaultMemo,
-  }) : _showAmounts = showAmountsInNotifications ?? _never,
+  }) : // A named parameter cannot be a private initializing formal.
+       // ignore: prefer_initializing_formals
+       _accountRepository = accountRepository,
+       _showAmounts = showAmountsInNotifications ?? _never,
        _remindersEnabled = remindersEnabled ?? _always;
 
   static bool _never() => false;
@@ -71,12 +90,32 @@ class ScheduledTransactionService {
   /// Rejects a schedule that would materialise transactions without an
   /// amount: like [TransactionService], a zero (or missing) amount is a
   /// [ValidationException] with [TransactionValidationError.zeroAmount].
+  /// An end date before the next date
+  /// ([TransactionValidationError.scheduleEndBeforeNextDate]) and an
+  /// interval below 1 ([TransactionValidationError.scheduleInvalidInterval])
+  /// are rejected as well.
   static void validate(ScheduledTransaction schedule) {
     final amount = schedule.amount;
     if (amount == null || amount == 0) {
       throw ValidationException(
         'Scheduled transaction amount cannot be zero',
         TransactionValidationError.zeroAmount,
+      );
+    }
+    final next = schedule.nextDate;
+    final end = schedule.endDate;
+    if (next != null &&
+        end != null &&
+        CalendarDate.normalize(end).isBefore(CalendarDate.normalize(next))) {
+      throw ValidationException(
+        'End date cannot be before next date',
+        TransactionValidationError.scheduleEndBeforeNextDate,
+      );
+    }
+    if (schedule.interval != null && schedule.interval! < 1) {
+      throw ValidationException(
+        'Interval must be at least 1',
+        TransactionValidationError.scheduleInvalidInterval,
       );
     }
   }
@@ -227,15 +266,49 @@ class ScheduledTransactionService {
       );
       return (schedule: scheduled, created: 0);
     }
+    // Past its end: finished without booking.
+    final end = scheduled.endDate;
+    if (end != null &&
+        CalendarDate.normalize(
+          scheduled.nextDate!,
+        ).isAfter(CalendarDate.normalize(end))) {
+      final finished = scheduled.copyWith(clearNextDate: true);
+      await _scheduledTransactionRepository.updateScheduledTransaction(
+        finished,
+      );
+      return (schedule: finished, created: 0);
+    }
+    // A closed account (or the partner's) takes no bookings; the schedule
+    // waits unchanged and is marked in the list.
+    final accounts = _accountRepository;
+    if (accounts != null) {
+      final account = await accounts.getAccountById(scheduled.accountId!);
+      if (account == null || account.isClosed || account.isPartners) {
+        Logger.warning(
+          'Skipping scheduled transaction $scheduledId: its account is '
+          'closed or not bookable',
+        );
+        return (schedule: scheduled, created: 0);
+      }
+    }
 
     var current = scheduled;
     var created = 0;
+    var booked = 0;
     while (current.nextDate != null &&
         !CalendarDate.normalize(current.nextDate!).isAfter(today)) {
+      if (booked >= maxOccurrencesPerRun) {
+        Logger.warning(
+          'Scheduled transaction $scheduledId: $maxOccurrencesPerRun '
+          'occurrences booked in one run; the rest follows on the next run',
+        );
+        break;
+      }
       final occurrence = await _buildOccurrence(current, rules, fallbackMemo);
       if (await _transactionRepository.insertTransactionOrIgnore(occurrence)) {
         created++;
       }
+      booked++;
       current = current.advanced();
     }
 

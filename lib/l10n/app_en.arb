@@ -3551,5 +3551,22 @@
               "type": "String"
           }
       }
+  },
+  "scheduledAccountClosed": "Account closed: nothing is booked",
+  "@scheduledAccountClosed": {
+      "description": "Marker on a scheduled transaction whose account is closed."
+  },
+  "closeAccountSchedulesWarning": "{count, plural, =1{1 scheduled transaction uses this account. While the account is closed, nothing is booked for it.} other{{count} scheduled transactions use this account. While the account is closed, nothing is booked for them.}}",
+  "@closeAccountSchedulesWarning": {
+      "description": "Confirmation before closing an account that scheduled transactions book into; count = active schedules.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "scheduledEndBeforeNext": "The end date must not be before the next date.",
+  "@scheduledEndBeforeNext": {
+      "description": "Validation message of the scheduled transaction form."
   }
 }
