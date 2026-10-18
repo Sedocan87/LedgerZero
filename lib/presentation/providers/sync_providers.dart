@@ -90,12 +90,13 @@ final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
   final db = ref.watch(databaseProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
   final outbox = ref.watch(syncOutboxProvider);
-  final deviceId = ref.watch(syncDeviceIdProvider);
   return SyncDependencies(
+    // Read at engine creation: a run may have reconciled the id with the
+    // database's copy (SyncDeviceId.reconcile) since the app started.
     engineFor: (transport) => SyncEngine(
       db: db,
       transport: transport,
-      deviceId: deviceId,
+      deviceId: SyncDeviceId.of(prefs),
       outbox: outbox,
       prefs: prefs,
     ),

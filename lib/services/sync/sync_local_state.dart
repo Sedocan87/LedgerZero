@@ -17,6 +17,7 @@ class SyncLocalState {
   static const String _fullUpload = 'full_upload_required';
   static const String _snapshots = 'own_snapshots';
   static const String _snapshotClock = 'snapshot_clock_started';
+  static const String deviceIdKey = 'device_id';
 
   Future<Uint8List?> syncKey() async {
     final value = await _dao.getValue(_syncKey);
@@ -24,6 +25,11 @@ class SyncLocalState {
   }
 
   Future<String?> syncId() => _dao.getValue(_syncId);
+
+  /// The device id as last used with this database (see `SyncDeviceId`).
+  Future<String?> deviceId() => _dao.getValue(deviceIdKey);
+
+  Future<void> setDeviceId(String id) => _dao.setValue(deviceIdKey, id);
 
   Future<void> setSyncKey(String syncId, Uint8List key) async {
     await _dao.setValue(_syncId, syncId);

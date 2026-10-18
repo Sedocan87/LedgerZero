@@ -12,6 +12,7 @@ import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/personal_rows.dart';
+import 'package:ledger_zero/services/sync/sync_device_id.dart';
 import 'package:ledger_zero/services/sync/sync_local_state.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
@@ -137,7 +138,11 @@ class SyncRunReport {
 class SyncEngine {
   final AppDatabase _db;
   final SyncTransport transport;
-  final String deviceId;
+
+  /// Reconciled with the database's copy at the start of every run
+  /// ([SyncDeviceId.reconcile]).
+  String deviceId;
+  bool _deviceIdReconciled = false;
   final SyncOutbox _outbox;
   final SharedPreferences _prefs;
   final SyncEngineConfig config;
@@ -174,6 +179,19 @@ class SyncEngine {
 
   DateTime get _now => _clock().toUtc();
 
+  /// Must run before the generator or applier are first used.
+  Future<void> _reconcileDeviceId() async {
+    if (_deviceIdReconciled) {
+      return;
+    }
+    final id = await SyncDeviceId.reconcile(_prefs, _state, deviceId);
+    if (id != deviceId) {
+      Logger.warning('Sync: using the device id stored in the database.');
+      deviceId = id;
+    }
+    _deviceIdReconciled = true;
+  }
+
   // ---------------------------------------------------------------------
   // Setup
   // ---------------------------------------------------------------------
@@ -191,6 +209,7 @@ class SyncEngine {
   /// First device: creates the manifest for [passphrase].
   Future<void> createSyncFolder(String passphrase) {
     return _lock.synchronized(() async {
+      await _reconcileDeviceId();
       if (await _readManifest(await transport.listFiles()) != null) {
         throw const SyncFolderExistsException();
       }
@@ -213,6 +232,7 @@ class SyncEngine {
   /// Throws [WrongSyncPassphraseException].
   Future<void> joinSyncFolder(String passphrase) {
     return _lock.synchronized(() async {
+      await _reconcileDeviceId();
       final manifest = await _readManifest(await transport.listFiles());
       if (manifest == null) {
         throw const SyncFolderMissingException();
@@ -283,6 +303,7 @@ class SyncEngine {
 
   Future<SyncRunReport> _run(SyncCancellation cancel) async {
     cancel.check();
+    await _reconcileDeviceId();
     var listing = await transport.listFiles();
     final manifest = await _readManifest(listing);
     if (manifest == null) {

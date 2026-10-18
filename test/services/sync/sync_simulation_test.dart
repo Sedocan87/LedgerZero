@@ -19,8 +19,10 @@ import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
+import 'package:ledger_zero/services/sync/sync_device_id.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/sync_local_state.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../helpers/sync_simulation.dart';
 import '../../helpers/test_database.dart';
@@ -666,6 +668,36 @@ void main() {
         expect(await b.count('SELECT COUNT(*) FROM accounts'), 1);
       },
     );
+
+    test('lost preferences do not mint a new device id', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'x', 'X');
+      await a.sync();
+      expect(a.prefs.getString(SyncDeviceId.prefsKey), a.deviceId);
+
+      // Preferences gone (new id minted), database kept, a change queued.
+      a.prefs.values.clear();
+      await addAccount(a, 'y', 'Y');
+      final minted = const Uuid().v4();
+      final engine = SyncEngine(
+        db: a.db,
+        transport: a.transport,
+        deviceId: minted,
+        outbox: a.outbox,
+        prefs: a.prefs,
+        config: a.config,
+      );
+      await engine.sync();
+
+      expect(engine.deviceId, a.deviceId);
+      expect(a.prefs.getString(SyncDeviceId.prefsKey), a.deviceId);
+      expect(folder.syncFiles(device: minted), isEmpty);
+      expect(folder.syncFiles(device: a.deviceId), hasLength(2));
+      await syncAll([a, b]);
+      expect(await b.count('SELECT COUNT(*) FROM accounts'), 2);
+    });
 
     test('a wrong passphrase is rejected', () async {
       final a = await device();

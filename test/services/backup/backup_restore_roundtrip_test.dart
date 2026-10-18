@@ -179,6 +179,8 @@ void main() {
           .getSingle();
       expect(pending.data['c'], 0);
       expect(prefs.getBool(SyncRebootstrap.prefsKey), isTrue);
+      // The device id of the backing phone is never cloned.
+      expect(await db.syncDao.getValue('device_id'), isNull);
 
       await lifecycle.close();
       expect(

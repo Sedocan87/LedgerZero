@@ -9,6 +9,7 @@ import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/services/backup/backup_format.dart';
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
+import 'package:ledger_zero/services/sync/sync_local_state.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -150,9 +151,7 @@ class RestoreService {
       db.close();
     }
     final current = _currentDb();
-    final localMember = await current.syncDao.getValue(
-      AppDatabase.memberIdKey,
-    );
+    final localMember = await current.syncDao.getValue(AppDatabase.memberIdKey);
     final localPersonal =
         (await current
                 .customSelect(
@@ -215,6 +214,10 @@ class RestoreService {
     final db = sqlite.sqlite3.open(plain.path);
     try {
       db.execute('DELETE FROM pending_sync_changes');
+      // Never clone the backing phone's device id (see SyncDeviceId).
+      db.execute('DELETE FROM sync_kv WHERE key = ?', [
+        SyncLocalState.deviceIdKey,
+      ]);
       db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
     } on sqlite.SqliteException {
       // Table absent in very old schemas.
@@ -312,11 +315,7 @@ class RestoreService {
 
   /// Runs on a background isolate: `sqlcipher_export` of a whole database
   /// would otherwise block the UI long enough for an ANR.
-  static void _buildEncryptedCopy(
-    File plain,
-    File target,
-    Uint8List keyBytes,
-  ) {
+  static void _buildEncryptedCopy(File plain, File target, Uint8List keyBytes) {
     final key = RawSqlCipherKey(keyBytes);
     final db = sqlite.sqlite3.open(plain.path);
     try {
