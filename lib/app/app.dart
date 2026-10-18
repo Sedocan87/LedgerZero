@@ -194,8 +194,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       darkTheme: darkTheme,
       themeMode: themeState.mode,
       routerConfig: router,
-      // Language chosen in Settings; null follows the device.
-      locale: ref.watch(settingsProvider).language,
+      // Settings, else the device locales: the same resolution as the
+      // formatter and the notifications (resolveAppLocale).
+      locale: ref.watch(appLocaleProvider),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => PrivacyShield(

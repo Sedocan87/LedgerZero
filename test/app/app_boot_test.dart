@@ -11,6 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/app/app.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
@@ -75,6 +77,28 @@ void main() {
     expect(find.text('Next'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets(
+    'UI text and the formatter resolve the same locale from the device list',
+    (tester) async {
+      // French first (unsupported), then German: the UI is German, so the
+      // formatter must be too (not English from the first locale only).
+      tester.platformDispatcher.localesTestValue = const [
+        Locale('fr', 'FR'),
+        Locale('de', 'DE'),
+      ];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      await boot(tester, {});
+      expect(find.text('Weiter'), findsOneWidget);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(OnboardingScreen)),
+      );
+      expect(container.read(appLocaleProvider), const Locale('de'));
+      expect(container.read(appFormatterProvider).locale, 'de');
+      expect(container.read(appFormatterProvider).decimalSeparator, ',');
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('a returning user with the app lock starts at the lock screen', (
     tester,

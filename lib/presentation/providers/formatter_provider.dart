@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 
 /// Formats and parses amounts and dates according to the user's settings
@@ -38,17 +39,17 @@ class AppFormatter {
          decimalSeparator: decimalSeparator,
        );
 
-  /// Builds a formatter from [settings]. [platformLocale] is used when the
-  /// user did not choose a language.
+  /// Builds a formatter from [settings]. The language is resolved with
+  /// [resolveAppLocale] (Settings, else the first supported one of
+  /// [deviceLocales], else English), the same way the UI text is.
   factory AppFormatter.fromSettings(
     SettingsState settings, {
-    Locale? platformLocale,
+    List<Locale> deviceLocales = const [],
   }) {
-    final languageCode =
-        settings.language?.languageCode ?? platformLocale?.languageCode;
-    final locale = supportedLanguageCodes.contains(languageCode)
-        ? languageCode!
-        : 'en';
+    final locale = resolveAppLocale(
+      settings.language,
+      deviceLocales,
+    ).languageCode;
     return AppFormatter(
       locale: locale,
       currency: settings.currency,
@@ -163,11 +164,18 @@ class AppFormatter {
 }
 
 /// The app-wide formatter for amounts and dates, rebuilt whenever a
-/// relevant setting changes.
+/// relevant setting changes. Its language is [appLocaleProvider], so
+/// amounts and dates follow the same locale as the UI text.
 final appFormatterProvider = Provider<AppFormatter>((ref) {
   final settings = ref.watch(settingsProvider);
-  return AppFormatter.fromSettings(
-    settings,
-    platformLocale: WidgetsBinding.instance.platformDispatcher.locale,
+  final locale = ref.watch(appLocaleProvider);
+  return AppFormatter(
+    locale: locale.languageCode,
+    currency: settings.currency,
+    decimalSeparator:
+        settings.numberFormat.decimalSeparator ??
+        decimalSeparatorForLocale(locale.languageCode),
+    dateFormat: settings.dateFormat,
+    firstDayOfWeekSetting: settings.firstDayOfWeek,
   );
 });
