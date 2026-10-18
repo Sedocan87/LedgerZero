@@ -19,9 +19,13 @@ Shown when you continue from the mapping screen.
 |---|---|---|
 | "Choose the column that contains the date." / "...the amount." | Date or Amount is set to *Ignore*. | Map both on the Column Mapping card. |
 | "The selected columns are not in this file." | A loaded profile refers to headers this file does not have. | Map the columns again (header names must match exactly, including case). |
-| "N rows have dates that do not match the format ..." | Wrong **Date Format**. | Pick the format that matches the file (e.g. `dd.MM.yyyy` for German banks). |
-| "N rows have unreadable amounts and will be skipped." (warning) | The amount cell is empty or not a number. | Check the Amount mapping and the **Decimal Separator**. You can continue; those rows are left out. |
-| "N dates are far from the others..." (warning) | Some dates are more than 60 days from the median, e.g. a wrong day/month order or a file covering several months. | Check the dates on the review screen. |
+| "The file has no data rows below the column headers." | Only a header was found. | Check that the export contains transactions and that the right line was taken as the header. |
+| "N rows have dates that do not match the format ... and will be skipped." (warning) | A few rows (footer lines such as `Kontostand`, or a typo) have no readable date. | You can continue; those rows are left out. |
+| "N rows have dates that do not match the format ..." (error) | More than 20 % of the rows (and more than 3) do not fit the **Date Format**. | Pick the format that matches the file (e.g. `dd.MM.yyyy` or `dd.MM.yy` for German banks), or the right **Bank format**. |
+| "N rows have unreadable amounts and will be skipped." (warning) | A few amount cells are empty or not a number. | You can continue; those rows are left out. |
+| "N rows have unreadable amounts. Check the Amount column and the decimal separator." (error) | Most amount cells cannot be read: wrong column (e.g. `Lastschrift Ursprungsbetrag` instead of `Betrag`) or wrong **Decimal Separator**. | Map Amount to the signed amount column (or Debit and Credit under **More columns**) and set the separator. |
+| "Day and month could be swapped: both ... fit every date." (warning) | No day above 12 in the file, so `dd/MM` and `MM/dd` both fit; the app language chose. | Check a date on the review screen and switch the **Date Format** if needed. |
+| "N dates are far from the others..." (warning) | A date more than a year from the median, usually a typo in the file. | Check the dates on the review screen. |
 
 ## Wrong numbers or signs
 
@@ -29,14 +33,30 @@ Shown when you continue from the mapping screen.
   set **Decimal Separator** to match the file (German banks: Comma).
 - **Spending imported as income**: the file lists spending as positive
   numbers. Turn off **Negative values are outflows**.
-- **Separate debit/credit columns**: not supported. Combine them into one
-  signed Amount column in a spreadsheet first.
+- **Separate debit/credit columns** (`Soll`/`Haben`): leave Amount on
+  *Ignore* and map Debit and Credit under **More columns**. A file with one
+  unsigned amount column and an `S`/`H` column maps the latter as the
+  debit/credit flag.
+- **Two-digit years** (`18.10.26`, Sparkasse): use `dd.MM.yy`; `dd.MM.yyyy`
+  rejects them instead of importing the year 26.
 
 ## Header is not the first line
 
-Some bank exports start with account details or a title before the column
-headers. LedgerZero always uses the first row as the header. Delete the lines
-above the header in a text editor or spreadsheet and save as CSV.
+Bank exports that start with account details, a title or a balance before
+the column headers (DKB, ING, comdirect, Volksbank, Deutsche Bank) are
+handled: the first line that names a date and an amount column (or matches
+a bank preset) is the header, and the Configuration card says how many
+lines above it were skipped. If the wrong line was taken, delete the lines
+above the header in a text editor and import again.
+
+## My bank's format is not recognised
+
+The **Bank format** dropdown lists the built-in presets (Sparkasse, DKB,
+ING, comdirect, N26, Volksbank/Raiffeisenbank, Deutsche Bank, Revolut).
+If the headers of a newer export changed, pick the preset by hand or leave
+it at "None" and map the columns yourself; the mapping can be saved as an
+import profile. Separate debit and credit columns (`Soll`/`Haben`) and a
+debit/credit flag column are under **More columns**.
 
 ## Garbled characters
 
@@ -48,12 +68,16 @@ German bank exports (umlauts and the `€` sign). Files in other encodings
 ## Duplicates
 
 Rows with the same date, amount and payee name as an existing transaction
-are marked as possible duplicates and unchecked on the review screen. The
-comparison covers the transactions of the account chosen at the top of the
-review screen in the file's date range, and runs again when you pick another
-account. A
-payee spelled differently by the bank (e.g. `UBER *TRIP` vs `Uber Trip`) is
-not detected; uncheck such rows by hand.
+are marked as duplicates and unchecked on the review screen. The payee is
+compared ignoring case and spacing, and the name a rule would set for the
+row counts too, so a file imported before a rule renamed its payees is
+still recognised. The comparison covers the transactions of the account
+chosen at the top of the review screen in the file's date range, and runs
+again when you pick another account. A row whose date and amount match an
+existing transaction without payee (a transfer you entered by hand) is
+marked as a *possible* duplicate and unchecked; check it if it is a
+different transaction. A payee spelled differently by the bank (e.g.
+`UBER *TRIP` vs `Uber Trip`) is not detected; uncheck such rows by hand.
 
 ## Category not found
 
