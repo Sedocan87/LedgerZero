@@ -24,6 +24,11 @@ class _FakeService implements NotificationCaptureService {
   final FakeNotificationCaptureChannel channel;
   List<LoggedCapture> log = [];
   final List<String> addedAgain = [];
+  final List<String> retried = [];
+  final List<String> deleted = [];
+
+  /// Thrown by [processPending] (a broken native store).
+  Object? processError;
 
   @override
   Future<int> captureShowing(String packageName) =>
@@ -46,7 +51,23 @@ class _FakeService implements NotificationCaptureService {
   bool get isSupported => true;
 
   @override
-  Future<CaptureRunResult> processPending() async => const CaptureRunResult();
+  Future<CaptureRunResult> processPending() async {
+    if (processError != null) {
+      throw processError!;
+    }
+    return const CaptureRunResult();
+  }
+
+  @override
+  Future<CaptureRunResult> retry(Iterable<String> ids) async {
+    retried.addAll(ids);
+    return const CaptureRunResult(added: 1);
+  }
+
+  @override
+  Future<void> deleteHistory(Iterable<String> ids) async {
+    deleted.addAll(ids);
+  }
 
   @override
   Future<List<HeldCapture>> held() async => [
@@ -233,6 +254,137 @@ void main() {
       200,
     );
     expect(find.byKey(const Key('cardNotifications.log')), findsOneWidget);
+  });
+
+  testWidgets('a failing booking run still shows the settings, with the '
+      'error', (tester) async {
+    channel.sources = [
+      const CaptureSource(
+        packageName: 'de.bank.app',
+        label: 'My Bank',
+        accountId: 'acc-visa',
+      ),
+    ];
+    service.processError = StateError('disk full');
+    await pump(tester);
+
+    expect(find.byKey(const Key('cardNotifications.errorBanner')), findsOneWidget);
+    expect(
+      find.textContaining('StateError: Bad state: disk full'),
+      findsOneWidget,
+    );
+    expect(find.text('My Bank'), findsOneWidget);
+    expect(find.text('Granted'), findsOneWidget);
+  });
+
+  testWidgets('a listener that is not connected is pointed out', (
+    tester,
+  ) async {
+    channel.listenerConnected = false;
+    await pump(tester);
+    expect(
+      find.byKey(const Key('cardNotifications.disconnected')),
+      findsOneWidget,
+    );
+
+    channel.listenerConnected = true;
+    await pump(tester, home: const CardNotificationsScreen(key: Key('again')));
+    expect(find.byKey(const Key('cardNotifications.disconnected')), findsNothing);
+  });
+
+  testWidgets('a storage reset is shown once, with its date', (tester) async {
+    channel.storageReset = DateTime(2026, 10, 18, 9, 30);
+    await pump(tester);
+
+    expect(find.textContaining('reset on'), findsOneWidget);
+    expect(find.textContaining('2026'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(channel.storageReset, isNull);
+    expect(find.textContaining('reset on'), findsNothing);
+  });
+
+  testWidgets('the log shows the error of a failing run and still lists '
+      'the entries', (tester) async {
+    service.processError = StateError('disk full');
+    service.log = [
+      LoggedCapture(
+        CapturedNotification(
+          id: 'n1',
+          packageName: 'de.bank.app',
+          appLabel: 'My Bank',
+          text: 'You spent €3.55 at Kiosk',
+          postedAt: DateTime(2026, 10, 14, 9, 28),
+          status: CaptureStatus.added,
+          transactionId: 'tx1',
+        ),
+        const CardNotificationParse(
+          CaptureKind.outflow,
+          amount: 355,
+          currency: 'EUR',
+          merchant: 'Kiosk',
+        ),
+      ),
+    ];
+    await pump(tester, home: const CardNotificationLogScreen());
+
+    expect(
+      find.textContaining('StateError: Bad state: disk full'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Kiosk'), findsWidgets);
+    expect(find.text('Nothing captured in this period.'), findsNothing);
+  });
+
+  testWidgets('failed entries show their error and can be retried; '
+      'duplicates can be added anyway; listed entries can be deleted', (
+    tester,
+  ) async {
+    LoggedCapture entry(String id, CaptureStatus status, {String? error}) =>
+        LoggedCapture(
+          CapturedNotification(
+            id: id,
+            packageName: 'de.bank.app',
+            appLabel: 'My Bank',
+            text: 'You spent €3.55 at Kiosk',
+            postedAt: DateTime(2026, 10, 14, 9, 28),
+            status: status,
+            error: error,
+          ),
+          const CardNotificationParse(
+            CaptureKind.outflow,
+            amount: 355,
+            currency: 'EUR',
+            merchant: 'Kiosk',
+          ),
+          likelyDuplicate: status == CaptureStatus.duplicate,
+        );
+    service.log = [
+      entry('failed', CaptureStatus.failed, error: 'StateError: disk full'),
+      entry('dup', CaptureStatus.duplicate),
+    ];
+    await pump(tester, home: const CardNotificationLogScreen());
+
+    expect(find.textContaining('Not added: StateError: disk full'), findsOneWidget);
+    expect(
+      find.textContaining('a transaction with this amount already exists'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(service.retried, ['failed']);
+
+    await tester.tap(find.text('Add anyway'));
+    await tester.pumpAndSettle();
+    expect(service.addedAgain, ['dup']);
+
+    await tester.tap(find.byKey(const Key('cardNotificationLog.delete')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Delete the 2 listed entries'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cardNotificationLog.deleteConfirm')));
+    await tester.pumpAndSettle();
+    expect(service.deleted, ['failed', 'dup']);
   });
 
   testWidgets('the log adds the selected payments', (tester) async {

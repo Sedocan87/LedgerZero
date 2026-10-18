@@ -1171,5 +1171,17 @@
   "faqSavingQ": "Wie lege ich Geld fürs Sparen oder Anlegen zurück?",
   "faqSavingA": "Lassen Sie das Spar- oder Depotkonto außerhalb des Budgets. Budgetieren Sie jeden Monat den Betrag in einer Kategorie von „Sparen & Geldanlage“ und legen Sie dann eine Umbuchung vom Girokonto auf das Sparkonto mit dieser Kategorie an. Die Kategorie ist ausgegeben, „Zu budgetieren“ bleibt gleich.",
   "faqPersonalQ": "Kann ich ein Konto für mich behalten?",
-  "faqPersonalA": "Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam."
+  "faqPersonalA": "Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam.",
+  "cardNotificationsStatusFailed": "Nicht hinzugefügt: {error}",
+  "cardNotificationsStatusDuplicate": "Nicht hinzugefügt: Eine Transaktion mit diesem Betrag gibt es schon",
+  "cardNotificationsAddAnyway": "Trotzdem hinzufügen",
+  "cardNotificationsProcessError": "Erfasste Benachrichtigungen konnten nicht verarbeitet werden: {error}",
+  "cardNotificationsLogDelete": "Angezeigte Einträge löschen",
+  "cardNotificationsLogDeleteConfirm": "{count, plural, =1{Den angezeigten Eintrag aus dem Protokoll löschen? Benachrichtigungen, die auf Sie warten, bleiben erhalten.} other{Die {count} angezeigten Einträge aus dem Protokoll löschen? Benachrichtigungen, die auf Sie warten, bleiben erhalten.}}",
+  "cardNotificationsStorageReset": "Der Erfassungsspeicher wurde am {date} zurückgesetzt, weil der Schlüsselspeicher dieses Telefons seinen Schlüssel nicht mehr hatte. Davor erfasste Benachrichtigungen sind verloren; prüfen Sie Ihre Bank-App auf Zahlungen von vor diesem Datum.",
+  "cardNotificationsListenerDisconnected": "Der Zugriff ist erteilt, aber Android hat den Benachrichtigungsdienst von LedgerZero nicht verbunden, daher wird nichts erfasst. Schalten Sie den Benachrichtigungszugriff in den Systemeinstellungen aus und wieder ein oder starten Sie das Telefon neu.",
+  "lockScreenReadErrorPersistent": "LedgerZero kann seinen Schlüssel nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen: Der Schlüsselspeicher hat ihn nicht mehr (das kann auf manchen Telefonen nach einem Systemupdate oder einer Änderung der Displaysperre passieren). Ihre Daten auf diesem Telefon lassen sich ohne diesen Schlüssel nicht öffnen. Versuchen Sie es erneut oder starten Sie das Telefon neu; hilft das nicht, setzen Sie die App zurück und stellen Sie eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon.",
+  "lockScreenOpenError": "LedgerZero konnte seine Datenbankdatei gerade nicht öffnen. Ihre Daten sind nicht betroffen. Versuchen Sie es erneut; wenn es weiterhin fehlschlägt, starten Sie das Telefon neu.",
+  "lockScreenAuthFailed": "Entsperren hat nicht geklappt: {reason}",
+  "setupExistingDataKept": "Ihre vorhandenen Daten auf diesem Telefon wurden gefunden und behalten."
 }
