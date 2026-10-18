@@ -11,6 +11,11 @@ class FakeNotificationCaptureChannel implements NotificationCaptureChannel {
   final Map<String, List<CapturedNotification>> showing = {};
   List<CandidateApp> candidates = [];
   bool accessGranted = true;
+  bool listenerConnected = true;
+
+  /// Errors [setStatus] throws for the given ids (a broken native store).
+  Map<String, Object> failSetStatusFor = {};
+  DateTime? storageReset;
   int accessSettingsOpened = 0;
 
   @override
@@ -50,13 +55,21 @@ class FakeNotificationCaptureChannel implements NotificationCaptureChannel {
     Iterable<String> ids,
     CaptureStatus status, {
     String? transactionId,
+    String? error,
   }) async {
     final set = ids.toSet();
+    for (final id in set) {
+      final failure = failSetStatusFor[id];
+      if (failure != null && status != CaptureStatus.failed) {
+        throw failure;
+      }
+    }
     for (var i = 0; i < queue.length; i++) {
       if (set.contains(queue[i].id)) {
         queue[i] = queue[i].copyWith(
           status: status,
           transactionId: transactionId,
+          error: error,
         );
       }
     }
@@ -81,5 +94,16 @@ class FakeNotificationCaptureChannel implements NotificationCaptureChannel {
   Future<void> clear() async {
     sources = [];
     queue.clear();
+  }
+
+  @override
+  Future<bool> isListenerConnected() async => listenerConnected;
+
+  @override
+  Future<DateTime?> storageResetAt() async => storageReset;
+
+  @override
+  Future<void> acknowledgeStorageReset() async {
+    storageReset = null;
   }
 }

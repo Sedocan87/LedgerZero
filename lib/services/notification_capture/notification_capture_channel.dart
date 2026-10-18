@@ -82,6 +82,16 @@ enum CaptureStatus {
   /// It was already showing when its app was added; the user adds it from
   /// the log.
   found,
+
+  /// Booking it threw ([CapturedNotification.error]); the user can retry
+  /// from the log.
+  failed,
+
+  /// Not booked: a transaction with the same amount within a day already
+  /// exists in the linked account (the bank and the wallet app both
+  /// notified, or an authorisation was followed by the booking). The user
+  /// can add it anyway from the log.
+  duplicate,
 }
 
 /// A captured notification: waiting to become a transaction while
@@ -97,6 +107,7 @@ class CapturedNotification {
     required this.postedAt,
     this.status = CaptureStatus.pending,
     this.transactionId,
+    this.error,
   });
 
   final String id;
@@ -110,9 +121,13 @@ class CapturedNotification {
   /// The transaction it was booked as ([CaptureStatus.added]), when known.
   final String? transactionId;
 
+  /// For [CaptureStatus.failed]: the error class and message.
+  final String? error;
+
   CapturedNotification copyWith({
     CaptureStatus? status,
     String? transactionId,
+    String? error,
   }) => CapturedNotification(
     id: id,
     packageName: packageName,
@@ -122,6 +137,7 @@ class CapturedNotification {
     postedAt: postedAt,
     status: status ?? this.status,
     transactionId: transactionId,
+    error: error,
   );
 
   factory CapturedNotification.fromJson(Map<String, Object?> json) =>
@@ -139,6 +155,7 @@ class CapturedNotification {
           orElse: () => CaptureStatus.pending,
         ),
         transactionId: json['transactionId'] as String?,
+        error: json['error'] as String?,
       );
 }
 
@@ -172,11 +189,13 @@ abstract class NotificationCaptureChannel {
   /// oldest first.
   Future<List<CapturedNotification>> log();
 
-  /// Records what became of the notifications [ids].
+  /// Records what became of the notifications [ids] (with the booked
+  /// transaction's id, or the error for [CaptureStatus.failed]).
   Future<void> setStatus(
     Iterable<String> ids,
     CaptureStatus status, {
     String? transactionId,
+    String? error,
   });
 
   /// Logs the notifications of [packageName] showing now as
@@ -187,6 +206,18 @@ abstract class NotificationCaptureChannel {
 
   /// Deletes sources, queue and the queue key (factory reset).
   Future<void> clear();
+
+  /// Whether the system has bound the listener (it may be granted access
+  /// but not connected, e.g. after an app update).
+  Future<bool> isListenerConnected();
+
+  /// When the native log had to be started over because its key store
+  /// key was lost (notifications captured before then are gone); `null`
+  /// when that never happened or the user has seen the notice.
+  Future<DateTime?> storageResetAt();
+
+  /// The user has seen the [storageResetAt] notice.
+  Future<void> acknowledgeStorageReset();
 
   /// Fires when a notification was captured while the app is running.
   Stream<void> get captured;
@@ -296,6 +327,7 @@ class PlatformNotificationCaptureChannel implements NotificationCaptureChannel {
     Iterable<String> ids,
     CaptureStatus status, {
     String? transactionId,
+    String? error,
   }) async {
     if (!isSupported || ids.isEmpty) {
       return;
@@ -304,6 +336,7 @@ class PlatformNotificationCaptureChannel implements NotificationCaptureChannel {
       'ids': ids.toList(),
       'status': status.name,
       'transactionId': transactionId,
+      'error': error,
     });
   }
 
@@ -330,6 +363,32 @@ class PlatformNotificationCaptureChannel implements NotificationCaptureChannel {
   Future<void> clear() async {
     if (isSupported) {
       await _channel.invokeMethod<void>('clear');
+    }
+  }
+
+  @override
+  Future<bool> isListenerConnected() async {
+    if (!isSupported) {
+      return false;
+    }
+    return await _channel.invokeMethod<bool>('isListenerConnected') ?? false;
+  }
+
+  @override
+  Future<DateTime?> storageResetAt() async {
+    if (!isSupported) {
+      return null;
+    }
+    final millis = await _channel.invokeMethod<int>('storageResetAt');
+    return millis == null || millis <= 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(millis);
+  }
+
+  @override
+  Future<void> acknowledgeStorageReset() async {
+    if (isSupported) {
+      await _channel.invokeMethod<void>('acknowledgeStorageReset');
     }
   }
 

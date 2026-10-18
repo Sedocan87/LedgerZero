@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import androidx.core.app.NotificationManagerCompat
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -36,6 +37,9 @@ class NotificationCaptureChannel(
          */
         private val KNOWN_APPS = listOf(
             "com.google.android.apps.walletnfcrel",
+            // Pixels post Google Wallet's tap-to-pay notifications from
+            // Google Play services, not from the Wallet app.
+            "com.google.android.gms",
             "com.paypal.android.p2pmobile",
             "com.revolut.revolut",
             "de.number26.android",
@@ -56,6 +60,11 @@ class NotificationCaptureChannel(
             "com.konylabs.capitalone",
             "com.americanexpress.android.acctsvcs.us",
         )
+
+        /** Picker labels that say what is captured better than the app's own name. */
+        private val KNOWN_LABELS = mapOf(
+            "com.google.android.gms" to "Google Wallet (tap to pay via Google Play services)",
+        )
     }
 
     private val store = CaptureStore.get(activity)
@@ -66,6 +75,28 @@ class NotificationCaptureChannel(
         channel.setMethodCallHandler(this)
         CaptureStore.onCaptured = {
             mainHandler.post { channel.invokeMethod("captured", null) }
+        }
+        requestRebind()
+    }
+
+    /**
+     * After an app update the system may leave the listener unbound until
+     * the next reboot; asking for a rebind at start brings it back.
+     */
+    private fun requestRebind() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !isAccessGranted()) {
+            return
+        }
+        if (CardNotificationListener.connected != null) {
+            return
+        }
+        try {
+            NotificationListenerService.requestRebind(
+                ComponentName(activity, CardNotificationListener::class.java),
+            )
+        } catch (_: Exception) {
+            // Not granted after all, or the system refuses; the settings
+            // screen shows that the listener is not connected.
         }
     }
 
@@ -79,6 +110,12 @@ class NotificationCaptureChannel(
         try {
             when (call.method) {
                 "isAccessGranted" -> result.success(isAccessGranted())
+                "isListenerConnected" -> result.success(CardNotificationListener.connected != null)
+                "storageResetAt" -> result.success(store.storageResetAt())
+                "acknowledgeStorageReset" -> {
+                    store.acknowledgeStorageReset()
+                    result.success(null)
+                }
                 "openAccessSettings" -> {
                     openAccessSettings()
                     result.success(null)
@@ -96,6 +133,7 @@ class NotificationCaptureChannel(
                         call.argument<List<String>>("ids")?.toSet() ?: emptySet(),
                         call.argument<String>("status") ?: CaptureStore.STATUS_PENDING,
                         call.argument<String>("transactionId"),
+                        call.argument<String>("error"),
                     )
                     result.success(null)
                 }
@@ -160,7 +198,8 @@ class NotificationCaptureChannel(
             }
             try {
                 val info = pm.getApplicationInfo(pkg, 0)
-                apps[pkg] = pm.getApplicationLabel(info).toString() to "known"
+                val label = KNOWN_LABELS[pkg] ?: pm.getApplicationLabel(info).toString()
+                apps[pkg] = label to "known"
             } catch (_: Exception) {
                 // Not installed.
             }

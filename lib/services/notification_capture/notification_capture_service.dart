@@ -60,17 +60,39 @@ class LoggedCapture {
   CaptureStatus get status => notification.status;
 
   /// Whether [NotificationCaptureService.addAgain] can book it. Pending
-  /// ones are booked (or held) by [NotificationCaptureService.processPending].
-  bool get canAdd => blocker == null && status != CaptureStatus.pending;
+  /// ones are booked (or held) by [NotificationCaptureService.processPending];
+  /// an added one whose transaction still exists would only be doubled.
+  bool get canAdd =>
+      blocker == null &&
+      status != CaptureStatus.pending &&
+      !(status == CaptureStatus.added && !transactionDeleted);
+
+  /// Whether [NotificationCaptureService.retry] runs it through the
+  /// pipeline again.
+  bool get canRetry => status == CaptureStatus.failed;
 }
 
 /// What one [NotificationCaptureService.processPending] run did.
 class CaptureRunResult {
-  const CaptureRunResult({this.added = 0, this.ignored = 0, this.held = 0});
+  const CaptureRunResult({
+    this.added = 0,
+    this.ignored = 0,
+    this.held = 0,
+    this.failed = 0,
+    this.duplicates = 0,
+  });
 
   final int added;
   final int ignored;
   final int held;
+
+  /// Entries whose booking threw; they are marked
+  /// [CaptureStatus.failed] with the error and can be retried from the log.
+  final int failed;
+
+  /// Entries not booked because a transaction with the same amount already
+  /// existed ([CaptureStatus.duplicate]).
+  final int duplicates;
 }
 
 /// Turns captured card notifications into transactions.
@@ -85,9 +107,18 @@ class CaptureRunResult {
 /// it. Declined payments, codes and balance notices are skipped; anything
 /// else is held for the user (see [held]) in the native queue.
 ///
+/// A payment whose amount already exists in the linked account within a
+/// day (the wallet app and the bank both notified, or an authorisation was
+/// followed by the booking) is logged as [CaptureStatus.duplicate] instead
+/// of booked; the user can add it anyway from the log.
+///
+/// Every entry is handled on its own: when booking one throws, it is
+/// marked [CaptureStatus.failed] with the error (and the error is written
+/// to the diagnostic log) and the run goes on with the next one.
+///
 /// Handled notifications stay in the native log for 30 days with their
 /// status, so the user can add a skipped or deleted payment again
-/// ([history], [addAgain]).
+/// ([history], [addAgain]) or retry a failed one ([retry]).
 ///
 /// Captured transactions are not added to the undo stack.
 class NotificationCaptureService {
@@ -106,6 +137,12 @@ class NotificationCaptureService {
   final AccountRepository _accounts;
   final PayeeRepository _payees;
   final CardNotificationParser _parser;
+
+  /// Apps that post many notifications that are not payments (Google Play
+  /// services carries Google Wallet's tap-to-pay notifications on Pixels,
+  /// but also everything else): their notifications without an amount
+  /// are skipped instead of waiting for the user.
+  static const noisyPackages = {'com.google.android.gms'};
 
   Future<CaptureRunResult>? _running;
   bool _runAgain = false;
@@ -142,6 +179,9 @@ class NotificationCaptureService {
     final result = <HeldCapture>[];
     for (final n in await _channel.pending()) {
       final parse = _parse(n);
+      if (_isNoise(n, parse)) {
+        continue;
+      }
       final reason = _holdReason(parse, sources[n.packageName], accounts);
       if (reason != null) {
         result.add(HeldCapture(n, parse, reason));
@@ -164,17 +204,28 @@ class NotificationCaptureService {
   Future<int> captureShowing(String packageName) =>
       _channel.captureShowing(packageName);
 
-  /// Stops watching [packageName] and deletes its captured notifications.
+  /// Stops watching [packageName]. Its notifications still waiting are
+  /// dropped; handled ones stay in the log (see [deleteHistory]).
   Future<void> removeSource(String packageName) async {
     final sources = await _channel.getSources();
     await _channel.setSources([
       for (final s in sources)
         if (s.packageName != packageName) s,
     ]);
+    final pending = await _channel.pending();
+    await _channel.remove([
+      for (final n in pending)
+        if (n.packageName == packageName) n.id,
+    ]);
+  }
+
+  /// Deletes the logged (handled) notifications [ids]; pending ones stay.
+  Future<void> deleteHistory(Iterable<String> ids) async {
+    final wanted = ids.toSet();
     final log = await _channel.log();
     await _channel.remove([
       for (final n in log)
-        if (n.packageName == packageName) n.id,
+        if (wanted.contains(n.id) && n.status != CaptureStatus.pending) n.id,
     ]);
   }
 
@@ -200,20 +251,11 @@ class NotificationCaptureService {
     }
     final sources = await _sourcesByPackage();
     final accounts = await _accountsById();
-    final dates = entries.map((n) => CalendarDate.normalize(n.postedAt));
-    final earliest = dates.reduce((a, b) => a.isBefore(b) ? a : b);
-    final latest = dates.reduce((a, b) => a.isAfter(b) ? a : b);
-    final nearby = await _transactionRepository.getTransactionsByDateRange(
-      earliest.subtract(const Duration(days: 1)),
-      latest.add(const Duration(days: 2)),
-      excludeSplitChildren: true,
-    );
+    final nearby = await _nearbyTransactions(entries);
     final result = <LoggedCapture>[];
     for (final n in entries.reversed) {
       final parse = _parse(n);
       final account = _accountFor(sources[n.packageName], accounts);
-      final date = CalendarDate.normalize(n.postedAt);
-      final amount = parse.signedAmount;
       var transactionDeleted = false;
       if (n.status == CaptureStatus.added && n.transactionId != null) {
         transactionDeleted =
@@ -226,14 +268,7 @@ class NotificationCaptureService {
           parse,
           blocker: _blocker(parse, account),
           likelyDuplicate:
-              account != null &&
-              amount != null &&
-              nearby.any(
-                (t) =>
-                    t.accountId == account.id &&
-                    t.amount == amount &&
-                    t.date.difference(date).inDays.abs() <= 1,
-              ),
+              account != null && _hasDuplicate(n, parse, account, nearby),
           transactionDeleted: transactionDeleted,
         ),
       );
@@ -242,8 +277,8 @@ class NotificationCaptureService {
   }
 
   /// Books the logged notifications [ids] that can be booked (see
-  /// [LoggedCapture.canAdd]), also skipped ones, as unapproved
-  /// transactions. Returns how many were added.
+  /// [LoggedCapture.canAdd]), also skipped ones and likely duplicates ("add
+  /// anyway"), as unapproved transactions. Returns how many were added.
   Future<int> addAgain(Iterable<String> ids) async {
     final wanted = ids.toSet();
     final sources = await _sourcesByPackage();
@@ -253,20 +288,38 @@ class NotificationCaptureService {
       if (!wanted.contains(n.id) || n.status == CaptureStatus.pending) {
         continue;
       }
+      if (n.status == CaptureStatus.added &&
+          n.transactionId != null &&
+          await _transactionRepository.getTransactionById(n.transactionId!) !=
+              null) {
+        // Its transaction still exists; adding would double it.
+        continue;
+      }
       final parse = _parse(n);
       final account = _accountFor(sources[n.packageName], accounts);
       if (_blocker(parse, account) != null) {
         continue;
       }
-      final transactionId = await _book(n, parse, account!);
+      final transaction = await _book(n, parse, account!);
       await _channel.setStatus(
         [n.id],
         CaptureStatus.added,
-        transactionId: transactionId,
+        transactionId: transaction.id,
       );
       added++;
     }
     return added;
+  }
+
+  /// Runs the failed notifications [ids] through the pipeline again.
+  Future<CaptureRunResult> retry(Iterable<String> ids) async {
+    final wanted = ids.toSet();
+    final log = await _channel.log();
+    await _channel.setStatus([
+      for (final n in log)
+        if (wanted.contains(n.id) && n.status == CaptureStatus.failed) n.id,
+    ], CaptureStatus.pending);
+    return processPending();
   }
 
   Future<CaptureRunResult> _process() async {
@@ -279,47 +332,104 @@ class NotificationCaptureService {
     }
     final sources = await _sourcesByPackage();
     final accounts = await _accountsById();
+    final nearby = await _nearbyTransactions(pending);
     var added = 0;
     var ignored = 0;
     var held = 0;
+    var failed = 0;
+    var duplicates = 0;
     for (final n in pending) {
-      final parse = _parse(n);
-      if (parse.kind == CaptureKind.ignored) {
-        await _channel.setStatus([n.id], CaptureStatus.skipped);
-        ignored++;
-        continue;
+      try {
+        switch (await _handle(n, sources, accounts, nearby)) {
+          case _Outcome.added:
+            added++;
+          case _Outcome.ignored:
+            ignored++;
+          case _Outcome.held:
+            held++;
+          case _Outcome.duplicate:
+            duplicates++;
+        }
+      } catch (e, stackTrace) {
+        // One bad entry must not stop the others, and the user must be
+        // able to see what happened (log screen) and why (diagnostics).
+        failed++;
+        Logger.error(
+          'Card notification ${n.id} from ${n.packageName} '
+          '(${_breadcrumb(_parse(n))}) could not be booked',
+          e,
+          stackTrace,
+        );
+        try {
+          await _channel.setStatus(
+            [n.id],
+            CaptureStatus.failed,
+            error: describeError(e),
+          );
+        } catch (e2, stackTrace2) {
+          Logger.error(
+            'Card notification ${n.id} could not be marked as failed',
+            e2,
+            stackTrace2,
+          );
+        }
       }
-      final source = sources[n.packageName];
-      if (source == null) {
-        // The app is no longer watched; its captures are not wanted.
-        await _channel.remove([n.id]);
-        ignored++;
-        continue;
-      }
-      if (_holdReason(parse, source, accounts) != null) {
-        held++;
-        continue;
-      }
-      final transactionId = await _book(n, parse, accounts[source.accountId]!);
-      // Marked right after the save, so a crash in between can at worst
-      // book this one notification twice.
-      await _channel.setStatus(
-        [n.id],
-        CaptureStatus.added,
-        transactionId: transactionId,
-      );
-      added++;
     }
-    if (added > 0 || ignored > 0) {
+    if (added > 0 || ignored > 0 || failed > 0 || duplicates > 0) {
       Logger.info(
-        'Card notifications: $added booked, $ignored skipped, $held held',
+        'Card notifications: $added booked, $ignored skipped, $held held, '
+        '$duplicates duplicates, $failed failed',
       );
     }
-    return CaptureRunResult(added: added, ignored: ignored, held: held);
+    return CaptureRunResult(
+      added: added,
+      ignored: ignored,
+      held: held,
+      failed: failed,
+      duplicates: duplicates,
+    );
   }
 
-  /// Saves [n] as an unapproved transaction; returns its id.
-  Future<String> _book(
+  Future<_Outcome> _handle(
+    CapturedNotification n,
+    Map<String, CaptureSource> sources,
+    Map<String, Account> accounts,
+    List<Transaction> nearby,
+  ) async {
+    final parse = _parse(n);
+    if (parse.kind == CaptureKind.ignored || _isNoise(n, parse)) {
+      await _channel.setStatus([n.id], CaptureStatus.skipped);
+      return _Outcome.ignored;
+    }
+    final source = sources[n.packageName];
+    if (source == null) {
+      // The app is no longer watched; its captures are not wanted.
+      await _channel.remove([n.id]);
+      return _Outcome.ignored;
+    }
+    if (_holdReason(parse, source, accounts) != null) {
+      return _Outcome.held;
+    }
+    final account = accounts[source.accountId]!;
+    if (_hasDuplicate(n, parse, account, nearby)) {
+      await _channel.setStatus([n.id], CaptureStatus.duplicate);
+      return _Outcome.duplicate;
+    }
+    final transaction = await _book(n, parse, account);
+    // Marked right after the save, so a crash in between can at worst
+    // book this one notification twice.
+    await _channel.setStatus(
+      [n.id],
+      CaptureStatus.added,
+      transactionId: transaction.id,
+    );
+    // The next entry of this run may be the same payment from another app.
+    nearby.add(transaction);
+    return _Outcome.added;
+  }
+
+  /// Saves [n] as an unapproved transaction.
+  Future<Transaction> _book(
     CapturedNotification n,
     CardNotificationParse parse,
     Account account,
@@ -357,11 +467,59 @@ class NotificationCaptureService {
       ),
       recordUndo: false,
     );
-    return saved.id;
+    return (await _transactionRepository.getTransactionById(saved.id)) ??
+        Transaction(
+          id: saved.id,
+          accountId: account.id,
+          date: date,
+          amount: amount,
+          approved: false,
+        );
+  }
+
+  /// The transactions around the days of [entries], for duplicate checks.
+  Future<List<Transaction>> _nearbyTransactions(
+    List<CapturedNotification> entries,
+  ) async {
+    final dates = entries.map((n) => CalendarDate.normalize(n.postedAt));
+    final earliest = dates.reduce((a, b) => a.isBefore(b) ? a : b);
+    final latest = dates.reduce((a, b) => a.isAfter(b) ? a : b);
+    return (await _transactionRepository.getTransactionsByDateRange(
+      earliest.subtract(const Duration(days: 1)),
+      latest.add(const Duration(days: 2)),
+      excludeSplitChildren: true,
+    )).where((t) => !t.isDeleted).toList();
+  }
+
+  /// Whether [account] holds a transaction with the amount of [parse]
+  /// within a day of [n]; an added entry's own transaction does not count.
+  static bool _hasDuplicate(
+    CapturedNotification n,
+    CardNotificationParse parse,
+    Account account,
+    List<Transaction> nearby,
+  ) {
+    final amount = parse.signedAmount;
+    if (amount == null) {
+      return false;
+    }
+    final date = CalendarDate.normalize(n.postedAt);
+    return nearby.any(
+      (t) =>
+          t.accountId == account.id &&
+          t.amount == amount &&
+          t.id != n.transactionId &&
+          t.date.difference(date).inDays.abs() <= 1,
+    );
   }
 
   CardNotificationParse _parse(CapturedNotification n) =>
       _parser.parse(title: n.title, text: n.text, appLabel: n.appLabel);
+
+  /// A notification without an amount from a [noisyPackages] app.
+  static bool _isNoise(CapturedNotification n, CardNotificationParse parse) =>
+      parse.kind == CaptureKind.unreadable &&
+      noisyPackages.contains(n.packageName);
 
   CaptureHoldReason? _holdReason(
     CardNotificationParse parse,
@@ -429,6 +587,22 @@ class NotificationCaptureService {
     };
   }
 
+  /// What the parser made of a notification, without its text.
+  static String _breadcrumb(CardNotificationParse parse) =>
+      '${parse.kind.name}, amount ${parse.amount ?? '-'} '
+      '${parse.currency ?? ''}, merchant ${parse.merchant == null ? 'no' : 'yes'}'
+      '${parse.ignoredPhrase == null ? '' : ', phrase "${parse.ignoredPhrase}"'}';
+
+  /// The error class and message, short enough for the log entry.
+  static String describeError(Object error) {
+    final text = error.toString();
+    final type = error.runtimeType.toString();
+    final described = text.startsWith(type) ? text : '$type: $text';
+    return described.length <= 200
+        ? described
+        : '${described.substring(0, 199)}…';
+  }
+
   static String _memoFrom(CapturedNotification n) {
     final text = [n.title, n.text]
         .whereType<String>()
@@ -447,3 +621,5 @@ class NotificationCaptureService {
     for (final a in await _accounts.getAllAccounts()) a.id: a,
   };
 }
+
+enum _Outcome { added, ignored, held, duplicate }

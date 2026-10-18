@@ -82,6 +82,7 @@
         <!-- Known bank, card and wallet apps offered in the card
              notification app picker (NotificationCaptureChannel.KNOWN_APPS). -->
         <package android:name="com.google.android.apps.walletnfcrel" />
+        <package android:name="com.google.android.gms" />
         <package android:name="com.paypal.android.p2pmobile" />
         <package android:name="com.revolut.revolut" />
         <package android:name="de.number26.android" />

@@ -31,20 +31,37 @@ iOS 17+) can call; not built yet.
      the undo stack.
    * declined payments, codes/confirmations, statements and balance
      notices are skipped.
+   * a payment whose amount already exists in the linked account within a
+     day (the bank and Google Wallet both notified, or an authorisation
+     "autorisiert"/"pending" was followed by the booking) is logged as
+     `duplicate`, not booked; the log offers "Add anyway".
    * anything else (no amount, no account linked, other currency) waits in
      the "Waiting for you" list, where the user can open it in the
-     transaction form or dismiss it.
+     transaction form or dismiss it. Notifications without an amount from
+     Google Play services (`NotificationCaptureService.noisyPackages`) are
+     skipped instead, because that package posts far more than payments.
+   * every entry is handled on its own: when booking one throws, it is
+     logged as `failed` with the error class and message (also written to
+     the diagnostic log, which keeps warnings and errors in release
+     builds), the run goes on with the next entry, and the log offers
+     "Retry". A failed entry is no longer pending, so it is not retried on
+     every start.
 4. The transaction list marks captured rows as not approved; swiping
    approves, tapping edits.
 5. Handled notifications are not deleted but kept in the log with their
-   status (`added` with the transaction id, `skipped`, `dismissed`).
-   Settings > Card notifications > Captured notifications lists the last
-   30 days by app and date range, with why each was skipped ("contains
-   “declined”") and whether a transaction with the same amount within a
-   day already exists in the linked account. Selected entries are booked
-   again (`NotificationCaptureService.addAgain`), skipped ones included;
-   "Select all" leaves out skipped ones and likely duplicates. Entries
-   without amount, account or matching currency open in the form.
+   status (`added` with the transaction id, `skipped`, `dismissed`,
+   `duplicate`, `failed` with the error). Settings > Card notifications >
+   Captured notifications lists the last 30 days by app and date range,
+   with why each was skipped ("contains “declined”") and whether a
+   transaction with the same amount within a day already exists in the
+   linked account. Selected entries are booked again
+   (`NotificationCaptureService.addAgain`), skipped ones included; an
+   `added` entry whose transaction still exists cannot be selected (it
+   would be doubled) and "Select all" leaves out skipped ones and likely
+   duplicates. Entries without amount, account or matching currency open
+   in the form. The bin icon deletes the listed handled entries (waiting
+   ones stay). Both screens run the pending entries first and, when that
+   fails, still show their content with the error in a banner.
 6. When an app is added, its notifications still showing are logged as
    `found` (`CardNotificationListener.captureShowing`) and offered in the
    log, not booked: the user may have entered them already.
@@ -59,18 +76,33 @@ from notifications (use the bank's CSV export).
 `CardNotificationParser` is heuristic, not per bank (English and German):
 
 * An amount needs a currency symbol or code next to it (`€12,50`,
-  `12.50 EUR`, `-12,50 €`); otherwise only a lone two-decimal number counts.
-  Card numbers, dates and codes are therefore not taken for amounts.
-  Ambiguous separators ("1.234") follow the app's number format.
+  `12.50 EUR`, `-12,50 €`); otherwise only a lone two-decimal number counts,
+  and not one after "am"/"on" or before "um"/"Uhr"/a time ("am 18.10 um
+  09:28"). Card numbers, dates and codes are therefore not taken for
+  amounts. Ambiguous separators ("1.234") follow the app's number format.
+* Words that say the payment did not happen ("declined", "failed",
+  "cancelled", "abgelehnt", "storniert", ...) count only in the title or
+  in the same clause as the amount, so "Your subscription was cancelled;
+  €9.99 refunded" is a refund. Codes and log-ins are matched in forms a
+  merchant name does not take ("TAN:", "pushTAN", "OTP code", "new
+  login"), so "Tan Thai Imbiss" is a merchant.
+* "autorisiert", "vorgemerkt", "pending", "authorised", ... mark the
+  notification as an authorisation (`isAuthorisation`); the service's
+  duplicate check keeps the later booking from being added twice.
 * Amounts shortly after "balance", "Kontostand", "verfügbar", "Saldo", ...
   in the same sentence are skipped; a notification with only such amounts
   is a balance notice.
 * Direction: an explicit sign wins; else inflow words ("refund",
   "Gutschrift", "erhalten", ...) mean money in; else it is a payment.
 * Merchant: the text after "at/bei/@" (then "to/an"; for inflows
-  "from/von"), up to a verb, preposition or punctuation; else the title
-  when it is not the app name or a generic word ("Kartenzahlung",
-  "Payment"); else the text right after the amount.
+  "from/von"), up to a verb, preposition or punctuation ("gesendet",
+  "überwiesen", "sent", "received", ...); else the title when it is not
+  the app name or a generic word ("Kartenzahlung", "Payment"); else the
+  text right after the amount.
+* Google Wallet: on Pixels the tap-to-pay notification is posted by Google
+  Play services (`com.google.android.gms`), not by the Wallet app, so the
+  picker offers both ("Google Wallet (tap to pay via Google Play
+  services)"); watch the one that notifies, or both.
 
 The tests in `test/services/notification_capture/` use texts written in the
 style of common apps, not verified copies. When a real app's wording is not
@@ -89,7 +121,21 @@ understood, add its text (anonymised) as a test case and adjust the rules.
   detection keeps SHA-256 fingerprints of (notification key, title, text)
   for 2 minutes, because apps re-post or update notifications; `found`
   entries are also checked against the fingerprints in the log.
-* Stopping to watch an app deletes its log entries.
+* If the KeyStore key cannot be used any more (a vendor KeyStore reset;
+  `UnrecoverableKeyException`/`KeyStoreException`) or the log does not
+  decrypt, `CaptureStore` deletes the key, starts over with a new one and
+  records the time (`storageResetAt`); the Card notifications screen shows
+  "capture storage was reset on <date>" until the user dismisses it. The
+  log is never dropped silently.
+* Stopping to watch an app drops its waiting entries; its handled entries
+  stay in the log until the user deletes them there.
+* Listener binding: `isAccessGranted` only says the package is enabled.
+  `CardNotificationListener` tracks whether the system has actually bound
+  it (`connected`, exposed as `isListenerConnected`); at start the channel
+  calls `NotificationListenerService.requestRebind` when access is granted
+  but the listener is not connected (after an app update Android may leave
+  it unbound until a reboot). The screen says "access granted, but the
+  listener is not connected" with what to do.
 * The app picker lists apps with a notification showing, apps that
   notified while the process was alive (package names in memory only, never
   content), and installed known bank/wallet apps (`KNOWN_APPS`, each also
