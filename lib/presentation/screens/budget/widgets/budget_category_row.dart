@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/domain/undo/budget_undo_actions.dart';
@@ -49,18 +50,15 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     }
 
     if (oldAmount != value) {
-      ref
-          .read(undoServiceProvider)
-          .addAction(
-            BudgetChangeAction(
-              budgetingService: budgetingService,
-              categoryId: widget.viewModel.category.id,
-              month: month,
-              oldAmount: oldAmount,
-              newAmount: value,
-            ),
-          );
-      _showUndoSnackbar();
+      final action = BudgetChangeAction(
+        budgetingService: budgetingService,
+        categoryId: widget.viewModel.category.id,
+        month: month,
+        oldAmount: oldAmount,
+        newAmount: value,
+      );
+      ref.read(undoServiceProvider).addAction(action);
+      _showUndoSnackbar(action);
     }
   }
 
@@ -103,36 +101,39 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     }
 
     if (oldAmount != newAmount) {
-      ref
-          .read(undoServiceProvider)
-          .addAction(
-            BudgetChangeAction(
-              budgetingService: budgetingService,
-              categoryId: widget.viewModel.category.id,
-              month: month,
-              oldAmount: oldAmount,
-              newAmount: newAmount,
-            ),
-          );
-      _showUndoSnackbar();
+      final action = BudgetChangeAction(
+        budgetingService: budgetingService,
+        categoryId: widget.viewModel.category.id,
+        month: month,
+        oldAmount: oldAmount,
+        newAmount: newAmount,
+      );
+      ref.read(undoServiceProvider).addAction(action);
+      _showUndoSnackbar(action);
     }
-
-    // Refresh providers
   }
 
-  void _showUndoSnackbar() {
-    // The snack bar can outlive this row; keep the service, not the ref.
+  /// "Budget updated" with Undo for [action]. The snack bar can outlive
+  /// this row, so it keeps the service and messenger, not the ref; an undo
+  /// that fails (e.g. the category was deleted meanwhile) shows the generic
+  /// error instead of throwing.
+  void _showUndoSnackbar(BudgetChangeAction action) {
+    final l10n = AppLocalizations.of(context)!;
     final undoService = ref.read(undoServiceProvider);
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        content: Text(AppLocalizations.of(context)!.budgetUpdated),
+        content: Text(l10n.budgetUpdated),
         action: SnackBarAction(
-          label: AppLocalizations.of(context)!.undo,
-          onPressed: () async {
-            await undoService.undo();
-          },
+          label: l10n.undo,
+          onPressed: () => undoService.undo(action).catchError((
+            Object e,
+            StackTrace st,
+          ) {
+            Logger.error('Undoing a budget change failed', e, st);
+            messenger.showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
+          }),
         ),
       ),
     );
@@ -184,9 +185,21 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
             Navigator.pop(context);
             // Accepts a plain amount or an unevaluated expression.
             final val = parseBudgetInput(currentValue, fmt);
-            if (val != null) {
-              _onSubmit(val);
+            if (val == null) {
+              return;
             }
+            if (val < 0) {
+              // Budgeting a negative amount would raise To Be Budgeted.
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(this.context)!.budgetAmountNegative,
+                  ),
+                ),
+              );
+              return;
+            }
+            _onSubmit(val);
           },
         ),
       ),

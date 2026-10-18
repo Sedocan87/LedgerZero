@@ -1172,5 +1172,15 @@
   "faqSavingA": "Lassen Sie das Spar- oder Depotkonto außerhalb des Budgets. Budgetieren Sie jeden Monat den Betrag in einer Kategorie von „Sparen & Geldanlage“ und legen Sie dann eine Umbuchung vom Girokonto auf das Sparkonto mit dieser Kategorie an. Die Kategorie ist ausgegeben, „Zu budgetieren“ bleibt gleich.",
   "faqPersonalQ": "Kann ich ein Konto für mich behalten?",
   "faqPersonalA": "Ja. Schalten Sie beim Anlegen des Kontos „Persönlich“ ein. Ihr Partner sieht dann nur Name und Saldo; die Buchungen bleiben auf Ihrem Telefon. Tun Sie das vor der ersten Synchronisierung: Ein bereits synchronisiertes Konto bleibt gemeinsam.",
-  "hiddenCategoriesGroup": "Ausgeblendete Kategorien"
+  "hiddenCategoriesGroup": "Ausgeblendete Kategorien",
+  "budgetOverwriteTitle": "Budgetierte Beträge ersetzen?",
+  "budgetOverwriteConfirm": "Ersetzen",
+  "budgetCopyConfirmation": "{month} hat bereits budgetierte Beträge. Beim Kopieren erhält jede im {previous} budgetierte Kategorie diesen Betrag; alle anderen Kategorien behalten ihre Beträge. Sie können das rückgängig machen.",
+  "budgetApplyTemplateConfirmation": "{month} hat bereits budgetierte Beträge. Beim Anwenden von „{template}“ erhalten die Kategorien der Vorlage deren Beträge; alle anderen Kategorien behalten ihre Beträge. Sie können das rückgängig machen.",
+  "applyTemplateDescription": "Nur die Kategorien der Vorlage werden geändert; alle anderen Kategorien behalten ihre Beträge.",
+  "budgetCopiedFrom": "Aus {previous} kopiert",
+  "budgetTemplateApplied": "„{template}“ angewendet",
+  "budgetResetDone": "Budget zurückgesetzt",
+  "budgetNothingChanged": "Nichts zu ändern",
+  "budgetAmountNegative": "Ein budgetierter Betrag kann nicht negativ sein."
 }

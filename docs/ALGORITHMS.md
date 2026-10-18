@@ -123,8 +123,15 @@ cannot be set yet.
 
 ## Month-level operations
 
-* `copyBudgetFromPreviousMonth(M)`: copies every positive budget of M - 1
-  into M (overwriting M's value for those categories).
-* `resetBudget(M)`: sets every non-zero budget of M to 0.
-* `saveBudgetTemplate(name, M)`: stores the positive budgets of M as a
-  template; `applyBudgetTemplate(id, M)` writes them into M.
+All go through one helper that reads the month's rows, keeps only the
+categories whose amount would change, writes those in one unit of work and
+returns a `BudgetMonthChange` (category -> amount before and after) for
+undo. Hidden and deleted categories are skipped (`_visibleCategoryIds`).
+
+* `copyBudgetFromPreviousMonth(M)`: every positive budget of M - 1 into M
+  (overwriting M's value for those categories, leaving the others).
+* `applyBudgetTemplate(id, M)`: the template's entries into M (a merge).
+* `resetBudget(M)`: every non-zero budget of M to 0.
+* `saveBudgetTemplate(name, M)`: stores the positive budgets of M.
+* `setCategoryBudgetedAmounts(amounts, M)`: writes a map of amounts (undo
+  and redo of the above); categories that no longer exist are skipped.

@@ -32,9 +32,12 @@ View modes (`BudgetViewMode`):
    (`BudgetCalculator`) opens with the current value; it accepts an amount
    or an arithmetic expression.
 2. On submit, `BudgetingService.setCategoryBudgetedAmount` writes the
-   month's budget row (created with its deterministic id if missing).
+   month's budget row (created with its deterministic id if missing). A
+   negative result is rejected with a message (it would raise To Be
+   Budgeted).
 3. A `BudgetChangeAction` is pushed on the undo stack and a snackbar offers
-   Undo.
+   Undo. If the undo fails (the category was deleted meanwhile), the
+   generic error snackbar is shown.
 
 ## Quick actions (long-press a category row)
 
@@ -85,11 +88,23 @@ appears.
 
 ## Month menu
 
-* **Save as template / Apply template**: stores or applies the positive
-  budgets of a month.
-* **Copy from previous month**: copies the positive budgets of the previous
-  month.
-* **Reset budget**: sets all of the month's budgets to 0.
+All three operations skip hidden categories (like the new-month fill),
+touch only the categories whose amount changes, record one
+`BudgetMonthChangeAction` on the undo stack and show a snack bar with Undo
+(undo restores the previous amounts of the changed categories in one unit
+of work; a category deleted in the meantime is skipped). Copy and apply
+ask before overwriting a month that already has budgets ("Replace budgeted
+amounts?"); reset always asks.
+
+* **Save as template**: stores the positive budgets of the month's visible
+  categories.
+* **Apply template**: a *merge*: only the categories in the template are
+  set to the template's amounts, every other category keeps its amount
+  (the dialog says so). Entries whose category was deleted or hidden are
+  skipped.
+* **Copy from previous month**: sets every category budgeted in the month
+  before to that amount; other categories keep theirs.
+* **Reset budget**: sets every visible category of the month to 0.
 * **Fill automatically…**: the setting described below.
 
 ## Filling a new month

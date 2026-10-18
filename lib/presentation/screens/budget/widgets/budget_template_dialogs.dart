@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_month_actions.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 
 Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
@@ -76,49 +79,50 @@ Future<void> showApplyTemplateDialog(
     return;
   }
 
-  return showDialog(
+  final chosen = await showDialog<BudgetTemplate>(
     context: context,
     builder: (context) {
       return AlertDialog(
         title: Text(AppLocalizations.of(context)!.applyTemplate),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: templates.length,
-            itemBuilder: (context, index) {
-              final template = templates[index];
-              return ListTile(
-                title: Text(template.name),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  tooltip: AppLocalizations.of(context)!.deleteTemplate,
-                  onPressed: () async {
-                    await ref
-                        .read(budgetingServiceProvider)
-                        .deleteTemplate(template.id);
-                    ref.invalidate(budgetTemplatesProvider);
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                    // Re-open to refresh? Or just close. Simple to just close.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // A template is a merge: only its categories change.
+              Text(
+                AppLocalizations.of(context)!.applyTemplateDescription,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: templates.length,
+                  itemBuilder: (context, index) {
+                    final template = templates[index];
+                    return ListTile(
+                      title: Text(template.name),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        tooltip: AppLocalizations.of(context)!.deleteTemplate,
+                        onPressed: () async {
+                          await ref
+                              .read(budgetingServiceProvider)
+                              .deleteTemplate(template.id);
+                          ref.invalidate(budgetTemplatesProvider);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                      onTap: () => Navigator.pop(context, template),
+                    );
                   },
                 ),
-                onTap: () async {
-                  final month = ref.read(selectedBudgetMonthProvider);
-                  await ref
-                      .read(budgetingServiceProvider)
-                      .applyBudgetTemplate(template.id, month);
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(l10n.budgetUpdated)));
-                    Navigator.pop(context);
-                  }
-                },
-              );
-            },
+              ),
+            ],
           ),
         ),
         actions: [
@@ -129,5 +133,31 @@ Future<void> showApplyTemplateDialog(
         ],
       );
     },
+  );
+  if (chosen == null || !context.mounted) {
+    return;
+  }
+
+  final month = ref.read(selectedBudgetMonthProvider);
+  final fmt = ref.read(appFormatterProvider);
+  final ok = await confirmMonthOverwrite(
+    context,
+    ref,
+    month: month,
+    message: l10n.budgetApplyTemplateConfirmation(
+      fmt.formatMonthYear(month),
+      chosen.name,
+    ),
+  );
+  if (!ok || !context.mounted) {
+    return;
+  }
+  await runMonthAction(
+    context,
+    ref,
+    run: () => ref
+        .read(budgetingServiceProvider)
+        .applyBudgetTemplate(chosen.id, month),
+    message: l10n.budgetTemplateApplied(chosen.name),
   );
 }
