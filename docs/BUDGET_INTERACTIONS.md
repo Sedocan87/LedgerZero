@@ -8,7 +8,13 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
 ## Layout
 
 * Month selector (previous/next month); the month is held in
-  `selectedBudgetMonthProvider`.
+  `selectedBudgetMonthProvider`. It defaults to the current month and
+  follows the calendar: `todayProvider` re-reads the clock at midnight and
+  when the budget or home screen sees the app resume, and a selection that
+  still showed the month that was current moves to the new one (a month
+  the user navigated to stays). The home screen's month
+  (`selectedHomeMonthProvider`) and the home banner's To Be Budgeted work
+  the same way.
 * To Be Budgeted banner (`ToBeBudgetedBanner`), from `tbbProvider(month)`.
 * Category groups and rows (`BudgetGroupRow`, `BudgetCategoryRow`) from
   `budgetViewModelProvider`. Hidden categories are not listed; a hidden
@@ -151,8 +157,24 @@ All numbers are recomputed when anything relevant is written: the budget
 providers watch `ledgerChangesProvider`, which fires after every committed
 write to transactions, accounts, budgets, categories, category groups or
 payees (local edits, scheduled-transaction catch-up, imports and changes
-applied by sync alike). Everything works offline; cloud sync is described in
+applied by sync alike). While they recompute, the list, the To Be Budgeted
+banner and the home cards keep showing their previous values
+(`skipLoadingOnReload`), so an edit never replaces the screen with a
+spinner or flashes a zero, and the list keeps its scroll position and
+focus. Everything works offline; cloud sync is described in
 [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md).
+
+## Income line
+
+Under To Be Budgeted: what reached To Be Budgeted this month and what the
+recurring income (salary) still expects, with the next date. "Expected"
+counts only occurrences from today on; one whose date has passed is either
+booked already (and counts as received) or overdue, never expected.
+
+## Tutorial
+
+The first-run tutorial (`BudgetTutorialManager`) starts after the category
+list has its first data, so its last step can point at the list.
 
 ## In-app help
 

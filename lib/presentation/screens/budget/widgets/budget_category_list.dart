@@ -25,7 +25,10 @@ class BudgetCategoryList extends ConsumerWidget {
     final budgetViewModelAsync = ref.watch(budgetViewModelProvider);
     final scheme = Theme.of(context).colorScheme;
 
+    // After a ledger write the provider recomputes; keep showing the rows
+    // (and their scroll position and focus) instead of a spinner.
     return budgetViewModelAsync.when(
+      skipLoadingOnReload: true,
       data: (groups) {
         if (groups.isEmpty && ref.watch(budgetSearchQueryProvider).isNotEmpty) {
           return SliverFillRemaining(

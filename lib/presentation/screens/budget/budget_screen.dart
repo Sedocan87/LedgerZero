@@ -26,7 +26,8 @@ class BudgetScreen extends ConsumerStatefulWidget {
   ConsumerState<BudgetScreen> createState() => _BudgetScreenState();
 }
 
-class _BudgetScreenState extends ConsumerState<BudgetScreen> {
+class _BudgetScreenState extends ConsumerState<BudgetScreen>
+    with WidgetsBindingObserver {
   bool _isSearching = false;
   late TextEditingController _searchController;
   final _tutorialKeys = BudgetTutorialKeys();
@@ -34,9 +35,19 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _searchController = TextEditingController();
+  }
 
-    // Trigger tutorial after build
+  bool _tutorialStarted = false;
+
+  /// Starts the tutorial once the category list has data: its last step
+  /// points at the list, which does not exist while the list is loading.
+  void _startTutorialWhenLoaded(AsyncValue<Object?> list) {
+    if (_tutorialStarted || !list.hasValue) {
+      return;
+    }
+    _tutorialStarted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         BudgetTutorialManager.showTutorial(context, ref, _tutorialKeys);
@@ -46,8 +57,17 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // A new day (or month) may have started while in the background.
+      ref.read(todayProvider.notifier).refresh();
+    }
   }
 
   void _toggleSearch() {
@@ -125,6 +145,10 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    ref.listen(budgetViewModelProvider, (_, next) {
+      _startTutorialWhenLoaded(next);
+    });
+    _startTutorialWhenLoaded(ref.read(budgetViewModelProvider));
 
     return Scaffold(
       appBar: AppBar(

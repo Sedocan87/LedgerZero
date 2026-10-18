@@ -4,6 +4,7 @@ import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -22,17 +23,44 @@ final monthlyStatsProvider = FutureProvider.autoDispose
       return {'income': income, 'spending': spending};
     });
 
-/// The month shown on the home screen (first day, UTC midnight).
-final selectedHomeMonthProvider = StateProvider<DateTime>((ref) {
-  return CalendarDate.startOfMonthUtc(CalendarDate.today());
-});
+/// The month shown on the home screen (first day, UTC midnight). Defaults
+/// to the current month and follows it ([followCurrentMonth]).
+final selectedHomeMonthProvider = StateProvider<DateTime>(followCurrentMonth);
 
-class DashboardStatsWidget extends ConsumerWidget {
+class DashboardStatsWidget extends ConsumerStatefulWidget {
   const DashboardStatsWidget({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardStatsWidget> createState() =>
+      _DashboardStatsWidgetState();
+}
+
+class _DashboardStatsWidgetState extends ConsumerState<DashboardStatsWidget>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // A new day (or month) may have started while in the background.
+      ref.read(todayProvider.notifier).refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedMonth = ref.watch(selectedHomeMonthProvider);
+    final currentMonth = ref.watch(currentMonthProvider);
     final statsAsync = ref.watch(monthlyStatsProvider(selectedMonth));
     final l10n = AppLocalizations.of(context)!;
     final fmt = ref.watch(appFormatterProvider);
@@ -97,9 +125,6 @@ class DashboardStatsWidget extends ConsumerWidget {
                 icon: const Icon(Icons.chevron_right),
                 tooltip: AppLocalizations.of(context)!.nextMonth,
                 onPressed: () {
-                  final currentMonth = CalendarDate.startOfMonthUtc(
-                    CalendarDate.today(),
-                  );
                   // Don't allow navigating past current month
                   if (selectedMonth.isBefore(currentMonth)) {
                     ref
@@ -117,6 +142,7 @@ class DashboardStatsWidget extends ConsumerWidget {
         const SizedBox(height: 12),
         // Stats cards
         statsAsync.when(
+          skipLoadingOnReload: true,
           data: (stats) {
             return Row(
               children: [

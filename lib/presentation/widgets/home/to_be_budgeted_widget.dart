@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
@@ -99,13 +98,15 @@ class _ToBeBudgetedWidgetState extends ConsumerState<ToBeBudgetedWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final currentMonth = CalendarDate.startOfMonthUtc(CalendarDate.today());
+    final currentMonth = ref.watch(currentMonthProvider);
     final tbbAsync = ref.watch(tbbProvider(currentMonth));
     final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return tbbAsync.when(
+      // Keep the banner while To Be Budgeted recomputes after a write.
+      skipLoadingOnReload: true,
       data: (tbb) {
         final pages = homeBalancePages(accounts);
         // A remembered page that is not available now (e.g. accounts in
