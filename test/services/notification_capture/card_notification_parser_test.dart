@@ -236,5 +236,127 @@ void main() {
         CaptureKind.unreadable,
       );
     });
+
+    test('a day and month or a time is not a bare amount', () {
+      expect(
+        parse('Kartenzahlung am 18.10 um 09:28', with_: germanParser).kind,
+        CaptureKind.unreadable,
+      );
+      expect(parse('Zahlung um 18.30 Uhr', with_: germanParser).amount, isNull);
+      // With a currency the amount still wins.
+      final r = parse(
+        'Kartenzahlung 3,55 € am 18.10 um 09:28 bei Kiosk',
+        with_: germanParser,
+      );
+      expect(r.amount, 355);
+      expect(r.merchant, 'Kiosk');
+    });
+
+    test('a status word only counts for the clause with the amount', () {
+      final cancelled = parse(
+        'Your subscription was cancelled; €9.99 refunded',
+      );
+      expect(cancelled.kind, CaptureKind.inflow);
+      expect(cancelled.amount, 999);
+
+      expect(
+        parse('Payment of €9.99 to Netflix failed').kind,
+        CaptureKind.ignored,
+      );
+      expect(
+        parse('€9.99 at Netflix', title: 'Payment declined').kind,
+        CaptureKind.ignored,
+      );
+      expect(parse('Payment failed').kind, CaptureKind.ignored);
+    });
+
+    test('words that can be part of a merchant name are not ignored', () {
+      final thai = parse(
+        'Du hast 12,50 € bei Tan Thai Imbiss bezahlt.',
+        with_: germanParser,
+      );
+      expect(thai.kind, CaptureKind.outflow);
+      expect(thai.merchant, 'Tan Thai Imbiss');
+      expect(parse(r'You spent $8.00 at Otp Grill').kind, CaptureKind.outflow);
+
+      expect(parse('Ihre TAN: 123456').kind, CaptureKind.ignored);
+      expect(parse('pushTAN-Freigabe erforderlich').kind, CaptureKind.ignored);
+      expect(parse('Your OTP is 123456').kind, CaptureKind.ignored);
+      expect(parse('New login from Chrome on Windows').kind, CaptureKind.ignored);
+    });
+
+    test('an authorisation is marked as such', () {
+      final r = parse(
+        'Zahlung über 25,00 € bei Aral autorisiert',
+        with_: germanParser,
+      );
+      expect(r.kind, CaptureKind.outflow);
+      expect(r.isAuthorisation, isTrue);
+      expect(r.merchant, 'Aral');
+      expect(
+        parse('Zahlung über 25,00 € bei Aral gebucht', with_: germanParser)
+            .isAuthorisation,
+        isFalse,
+      );
+    });
+  });
+
+  group('wording seen in the wild', () {
+    test('"Sie haben ... erhalten" is an inflow without a merchant', () {
+      final r = parse('Sie haben 50,00 € erhalten', with_: germanParser);
+      expect(r.kind, CaptureKind.inflow);
+      expect(r.amount, 5000);
+      expect(r.merchant, isNull);
+    });
+
+    test('a transfer to a person ends at "gesendet"', () {
+      final r = parse(
+        'Du hast 20,00 € an Max gesendet',
+        with_: germanParser,
+      );
+      expect(r.kind, CaptureKind.outflow);
+      expect(r.merchant, 'Max');
+      expect(parse(r'You sent $15.00 to Anna').merchant, 'Anna');
+    });
+
+    test('a signed amount alone', () {
+      final r = parse('-3,55 €', with_: germanParser);
+      expect(r.kind, CaptureKind.outflow);
+      expect(r.amount, 355);
+      expect(r.merchant, isNull);
+    });
+
+    test('ambiguous grouping follows the app format', () {
+      expect(parse('1.234 €', with_: germanParser).amount, 123400);
+      expect(parse('1,234 €').amount, 123400);
+    });
+
+    test('Google Wallet tap to pay (Wallet app and Play services)', () {
+      final english = parse(
+        '€3.55 at H Ratschiller Spezialbro',
+        title: 'Google Wallet',
+        app: 'Google Wallet',
+      );
+      expect(english.kind, CaptureKind.outflow);
+      expect(english.amount, 355);
+      expect(english.currency, 'EUR');
+      expect(english.merchant, 'H Ratschiller Spezialbro');
+
+      final german = parse(
+        '3,55 € bei H Ratschiller Spezialbro',
+        title: 'Google Pay',
+        app: 'Google Play services',
+        with_: germanParser,
+      );
+      expect(german.amount, 355);
+      expect(german.merchant, 'H Ratschiller Spezialbro');
+
+      final titled = parse(
+        '€3.55 with Visa •••• 1234',
+        title: 'H Ratschiller Spezialbro',
+        app: 'Google Play services',
+      );
+      expect(titled.merchant, 'H Ratschiller Spezialbro');
+    });
   });
 }

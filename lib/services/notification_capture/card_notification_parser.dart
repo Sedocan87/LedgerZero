@@ -24,6 +24,7 @@ class CardNotificationParse {
     this.currency,
     this.merchant,
     this.isInflow = false,
+    this.isAuthorisation = false,
     this.ignoredPhrase,
   });
 
@@ -43,6 +44,12 @@ class CardNotificationParse {
 
   /// Whether money came in (also for an ignored notification).
   final bool isInflow;
+
+  /// The notification announced an authorisation or a reserved amount
+  /// ("autorisiert", "pending"), not the final booking; the bank may
+  /// notify again when the payment is booked. The capture service treats
+  /// a second notification with the same amount as a duplicate either way.
+  final bool isAuthorisation;
 
   /// For [CaptureKind.ignored]: the phrase that marked the notification as
   /// not a booking ("declined"); `null` for a balance notice.
@@ -87,12 +94,12 @@ class CardNotificationParser {
       if (text.trim().isNotEmpty) text.trim(),
     ].join('\n');
 
-    final ignoredPhrase = _firstContained(full, _ignoredPhrases);
     final amounts = _amounts(full);
+    final booking = amounts.where((a) => !a.isBalance).firstOrNull;
+    final ignoredPhrase = _ignoredPhrase(full, title, booking);
     if (amounts.isEmpty && ignoredPhrase == null) {
       return const CardNotificationParse(CaptureKind.unreadable);
     }
-    final booking = amounts.where((a) => !a.isBalance).firstOrNull;
     if (booking == null) {
       return CardNotificationParse(
         CaptureKind.ignored,
@@ -120,6 +127,7 @@ class CardNotificationParser {
           _merchantFromTitle(title, appLabel) ??
           _merchantAfterAmount(full, booking),
       isInflow: inflow,
+      isAuthorisation: _containsAny(full, _authorisationPhrases),
       ignoredPhrase: ignoredPhrase,
     );
   }
@@ -144,9 +152,13 @@ class CardNotificationParser {
     '$_signPattern\\s?(?<![\\d.,])$_numberPattern\\s?$_currencyPattern',
   );
 
-  /// A number with exactly two decimals and no currency: "12,50".
+  /// A number with exactly two decimals and no currency: "12,50". Not a
+  /// day and month after "am"/"on" ("am 18.10 um 09:28") and not a time
+  /// ("18.30 Uhr", "18.10 um 9:28").
   static final _bare = RegExp(
-    r'([+\-−–])?(?<![\d.,])(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:,\d{3})*\.\d{2})(?![\d.,]*\d)',
+    r'([+\-−–])?(?<![\d.,])(?<!\b(?:am|on)\s)(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:,\d{3})*\.\d{2})(?![\d.,]*\d)(?!\s*uhr|\s+um\s|\s*:\d)',
+    caseSensitive: false,
+    unicode: true,
   );
 
   static const _balanceWords = [
@@ -256,10 +268,65 @@ class CardNotificationParser {
   // Direction and ignored notifications
   // -------------------------------------------------------------------
 
+  /// Phrases that mark a notification as not a booking wherever they
+  /// occur (codes, confirmations, log-ins, statements). Words that could
+  /// be part of a merchant name ("Tan Thai Imbiss") are only matched in a
+  /// form a merchant name does not take ("TAN:", "pushTAN").
   static const _ignoredPhrases = [
-    // Not a completed booking.
+    // Codes, confirmations and log-ins.
+    'verification code',
+    'security code',
+    'one-time',
+    'otp:',
+    'otp code',
+    'otp is',
+    'your otp',
+    'passcode',
+    'confirm the payment',
+    'confirm this payment',
+    'confirm your',
+    'please confirm',
+    'approve this',
+    'approve the payment',
+    'log in',
+    'login code',
+    'login attempt',
+    'login request',
+    'new login',
+    'sign-in',
+    'bestätigungscode',
+    'sicherheitscode',
+    'tan:',
+    'tan-code',
+    'tan code',
+    'tan lautet',
+    'ihre tan',
+    'deine tan',
+    'pushtan',
+    'chiptan',
+    'smstan',
+    'sms-tan',
+    'phototan',
+    'bitte bestätigen',
+    'bitte freigeben',
+    'freigabe',
+    'anmeldung',
+    // Statements and reminders.
+    'statement',
+    'minimum payment',
+    'payment due',
+    'is due',
+    'kontoauszug',
+    'abrechnung',
+    'fällig',
+  ];
+
+  /// Phrases that say the payment did not happen. They count only when
+  /// they refer to the amount: in the title, or in the same clause as the
+  /// booking amount (not "Your subscription was cancelled; €9.99
+  /// refunded"), or anywhere when there is no amount at all.
+  static const _statusPhrases = [
     'declined',
-    'was declined',
     'rejected',
     'failed',
     'unsuccessful',
@@ -273,37 +340,22 @@ class CardNotificationParser {
     'storniert',
     'cancelled',
     'canceled',
-    // Codes, confirmations and log-ins.
-    'verification code',
-    'security code',
-    'one-time',
-    'otp',
-    'passcode',
-    'confirm the payment',
-    'confirm this payment',
-    'confirm your',
-    'please confirm',
-    'approve this',
-    'approve the payment',
-    'log in',
-    'login',
-    'sign-in',
-    'bestätigungscode',
-    'sicherheitscode',
-    'tan',
-    'pushtan',
-    'bitte bestätigen',
-    'bitte freigeben',
-    'freigabe',
-    'anmeldung',
-    // Statements and reminders.
-    'statement',
-    'minimum payment',
-    'payment due',
-    'is due',
-    'kontoauszug',
-    'abrechnung',
-    'fällig',
+  ];
+
+  /// The payment is authorised or reserved, not booked yet.
+  static const _authorisationPhrases = [
+    'autorisiert',
+    'autorisierung',
+    'vorautorisiert',
+    'vorgemerkt',
+    'reserviert',
+    'pending',
+    'authorised',
+    'authorized',
+    'authorisation',
+    'authorization',
+    'pre-authorised',
+    'pre-authorized',
   ];
 
   static const _inflowPhrases = [
@@ -332,8 +384,61 @@ class CardNotificationParser {
   // Merchant
   // -------------------------------------------------------------------
 
-  static const _merchantEnd =
-      r'(?=\s+(?:on|am|with|mit|using|via|for|für|über|um|was|were|has|have|is|wurde|wurden|ist|card|karte|ending|endet|bezahlt|gezahlt|ausgegeben|belastet|abgebucht|autorisiert|genehmigt|eingelöst|erfolgt|durchgeführt|approved|authori[sz]ed|charged|completed|abgeschlossen|\d{1,2}[./])(?![\p{L}\p{N}])|\s*[,!;:()\n|]|\.(?=\s|$)|\s+[-–—]\s|$)';
+  /// Words after which a merchant name is over ("at REWE on your card",
+  /// "an Max gesendet").
+  static const _endWords = [
+    'on',
+    'am',
+    'with',
+    'mit',
+    'using',
+    'via',
+    'for',
+    'für',
+    'über',
+    'um',
+    'was',
+    'were',
+    'has',
+    'have',
+    'is',
+    'wurde',
+    'wurden',
+    'ist',
+    'card',
+    'karte',
+    'ending',
+    'endet',
+    'bezahlt',
+    'gezahlt',
+    'ausgegeben',
+    'belastet',
+    'abgebucht',
+    'gebucht',
+    'autorisiert',
+    'vorgemerkt',
+    'reserviert',
+    'genehmigt',
+    'eingelöst',
+    'erfolgt',
+    'durchgeführt',
+    'gesendet',
+    'überwiesen',
+    'erhalten',
+    'approved',
+    'authorised',
+    'authorized',
+    'charged',
+    'completed',
+    'abgeschlossen',
+    'sent',
+    'transferred',
+    'received',
+    'paid',
+  ];
+
+  static final _merchantEnd =
+      '(?=\\s+(?:${_endWords.join('|')}|\\d{1,2}[./])(?![\\p{L}\\p{N}])|\\s*[,!;:()\\n|]|\\.(?=\\s|\$)|\\s+[-–—]\\s|\$)';
 
   static final _outflowKeywords = [
     _keyword(r'at|bei|chez|@'),
@@ -488,10 +593,49 @@ class CardNotificationParser {
       return null;
     }
     final firstWord = name.split(' ').first.toLowerCase();
-    if (_notMerchantStart.contains(firstWord)) {
+    if (_notMerchantStart.contains(firstWord) ||
+        _endWords.contains(name.toLowerCase())) {
       return null;
     }
     return name;
+  }
+
+  /// The phrase that marks the notification as not a booking, if any (see
+  /// [_ignoredPhrases] and [_statusPhrases]).
+  static String? _ignoredPhrase(String full, String? title, _Amount? booking) {
+    final anywhere = _firstContained(full, _ignoredPhrases);
+    if (anywhere != null) {
+      return anywhere;
+    }
+    if (title != null) {
+      final inTitle = _firstContained(title, _statusPhrases);
+      if (inTitle != null) {
+        return inTitle;
+      }
+    }
+    return _firstContained(
+      booking == null ? full : _clauseAround(full, booking),
+      _statusPhrases,
+    );
+  }
+
+  /// The clause of [text] (between `.`, `!`, `?`, `;` or line breaks)
+  /// that contains [amount].
+  static String _clauseAround(String text, _Amount amount) {
+    const boundary = r'[.!?;\n]';
+    var start = 0;
+    for (final m in RegExp('$boundary(?=\\s|\$)').allMatches(text)) {
+      if (m.start < amount.start) {
+        start = m.end;
+      } else {
+        break;
+      }
+    }
+    final after = RegExp('$boundary(?=\\s|\$)').firstMatch(
+      text.substring(amount.end),
+    );
+    final end = after == null ? text.length : amount.end + after.start;
+    return text.substring(start, end);
   }
 
   static bool _containsAny(String text, List<String> phrases) =>
