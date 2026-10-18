@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
@@ -8,6 +9,14 @@ import 'package:ledger_zero/domain/services/account_service.dart';
 
 import '../../helpers/test_database.dart';
 import 'ledger_test_helpers.dart';
+
+/// Something on the undo stack.
+class _NoopAction implements ReversibleAction {
+  @override
+  Future<void> undo() async {}
+  @override
+  Future<void> redo() async {}
+}
 
 void main() {
   late TestDatabase t;
@@ -262,5 +271,20 @@ void main() {
     final rule = (await t.rules.getRule('only'))!;
     expect(rule.actions, isEmpty);
     expect(rule.isActive, isFalse);
+  });
+
+  test('(L13) deleting clears the undo stack', () async {
+    final undo = UndoService()..addAction(_NoopAction());
+    final withUndo = AccountService(
+      accountRepository: t.accounts,
+      maintenance: t.maintenance,
+      ruleRepository: t.rules,
+      unitOfWork: t.unitOfWork,
+      undoService: undo,
+    );
+    expect(undo.canUndo, isTrue);
+    await withUndo.deleteAccount('c');
+    expect(undo.canUndo, isFalse);
+    expect(undo.canRedo, isFalse);
   });
 }

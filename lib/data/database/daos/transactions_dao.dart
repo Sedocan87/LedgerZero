@@ -393,6 +393,36 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     return ids;
   }
 
+  /// The search condition of [TransactionFilter.searchText] /
+  /// [TransactionFilter.searchAmount] on [table] (the transactions table or
+  /// an alias of it): memo, payee name or category name contain [text], or
+  /// the absolute amount equals [amount].
+  Expression<bool> _searchCondition(
+    $TransactionsTable table,
+    String? text,
+    int? amount,
+  ) {
+    Expression<bool>? search;
+    if (text != null && text.isNotEmpty) {
+      final pattern = _likePattern(text);
+      final payeeIds = selectOnly(payees)
+        ..addColumns([payees.id])
+        ..where(payees.name.like(pattern, escapeChar: r'\'));
+      final categoryIds = selectOnly(categories)
+        ..addColumns([categories.id])
+        ..where(categories.name.like(pattern, escapeChar: r'\'));
+      search =
+          table.memo.like(pattern, escapeChar: r'\') |
+          table.payeeId.isInQuery(payeeIds) |
+          table.categoryId.isInQuery(categoryIds);
+    }
+    if (amount != null) {
+      final byAmount = table.amount.abs().equals(amount.abs());
+      search = search == null ? byAmount : (search | byAmount);
+    }
+    return search!;
+  }
+
   static String _likePattern(String text) {
     final escaped = text
         .replaceAll(r'\', r'\\')
@@ -466,31 +496,29 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
             );
       }
       final text = filter.searchText?.trim();
+      final hidesSplitChildren =
+          filter.excludeSplitChildren &&
+          (filter.categoryIds == null || filter.categoryIds!.isEmpty);
       if ((text != null && text.isNotEmpty) || filter.searchAmount != null) {
-        Expression<bool>? search;
-        if (text != null && text.isNotEmpty) {
-          final pattern = _likePattern(text);
-          final payeeIds = selectOnly(payees)
-            ..addColumns([payees.id])
-            ..where(payees.name.like(pattern, escapeChar: r'\'));
-          final categoryIds = selectOnly(categories)
-            ..addColumns([categories.id])
-            ..where(categories.name.like(pattern, escapeChar: r'\'));
+        var search = _searchCondition(transactions, text, filter.searchAmount);
+        if (hidesSplitChildren) {
+          // A split is listed by its parent: it matches when one of its
+          // (non-deleted) lines matches by memo, category or amount.
+          final line = alias(transactions, 'split_line');
           search =
-              transactions.memo.like(pattern, escapeChar: r'\') |
-              transactions.payeeId.isInQuery(payeeIds) |
-              transactions.categoryId.isInQuery(categoryIds);
+              search |
+              existsQuery(
+                select(line)..where(
+                  (l) =>
+                      l.parentTransactionId.equalsExp(transactions.id) &
+                      l.isDeleted.equals(false) &
+                      _searchCondition(line, text, filter.searchAmount),
+                ),
+              );
         }
-        if (filter.searchAmount != null) {
-          final byAmount = transactions.amount.abs().equals(
-            filter.searchAmount!.abs(),
-          );
-          search = search == null ? byAmount : (search | byAmount);
-        }
-        whereClause = whereClause & search!;
+        whereClause = whereClause & search;
       }
-      if (filter.excludeSplitChildren &&
-          (filter.categoryIds == null || filter.categoryIds!.isEmpty)) {
+      if (hidesSplitChildren) {
         whereClause = whereClause & transactions.parentTransactionId.isNull();
       }
       if (filter.clearedStatuses != null &&

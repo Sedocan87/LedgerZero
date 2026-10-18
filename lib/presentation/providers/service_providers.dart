@@ -63,6 +63,7 @@ final categoryServiceProvider = Provider<CategoryService>((ref) {
     maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
     ruleRepository: ref.watch(ruleRepositoryProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    undoService: ref.watch(undoServiceProvider),
   );
 });
 
@@ -72,6 +73,7 @@ final accountServiceProvider = Provider<AccountService>((ref) {
     maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
     ruleRepository: ref.watch(ruleRepositoryProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    undoService: ref.watch(undoServiceProvider),
   );
 });
 
@@ -81,6 +83,7 @@ final payeeServiceProvider = Provider<PayeeService>((ref) {
     maintenance: ref.watch(referenceMaintenanceRepositoryProvider),
     ruleRepository: ref.watch(ruleRepositoryProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    undoService: ref.watch(undoServiceProvider),
   );
 });
 
