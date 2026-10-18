@@ -5,6 +5,15 @@ import 'package:ledger_zero/core/utils/log_level.dart';
 import 'package:ledger_zero/data/models/log_entry.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 
+/// Application log.
+///
+/// Warnings and errors are always written to the local diagnostic log
+/// ([LocalErrorReportingService]: scrubbed, on this device only, never
+/// uploaded), so a release build can explain afterwards why something did
+/// not happen. Debug and info lines are written only with
+/// [AppConfig.enableLogging]. Nothing is persisted before [AppConfig] is
+/// initialised (tests). The developer console (`dart:developer`) gets
+/// everything in debug builds and only with logging enabled otherwise.
 class Logger {
   static void log(
     String message, {
@@ -13,15 +22,16 @@ class Logger {
     StackTrace? stackTrace,
     LogLevel level = LogLevel.info,
   }) {
-    try {
-      if (AppConfig.instance.enableLogging) {
-        developer.log(
-          message,
-          name: name,
-          error: error,
-          stackTrace: stackTrace,
-        );
-
+    final enabled = _loggingEnabled;
+    if (enabled == true || kDebugMode) {
+      developer.log(message, name: name, error: error, stackTrace: stackTrace);
+    }
+    // Only a configured app (main.dart) persists: tests and early start-up
+    // have no place to write to.
+    if (enabled == true ||
+        (enabled == false &&
+            (level == LogLevel.warning || level == LogLevel.error))) {
+      try {
         LocalErrorReportingService().log(
           LogEntry(
             timestamp: DateTime.now(),
@@ -31,19 +41,18 @@ class Logger {
             stackTrace: stackTrace?.toString(),
           ),
         );
+      } catch (_) {
+        // Logging must never break the caller.
       }
+    }
+  }
+
+  /// `null` while [AppConfig] is not initialised (tests, early start-up).
+  static bool? get _loggingEnabled {
+    try {
+      return AppConfig.instance.enableLogging;
     } catch (_) {
-      // AppConfig not initialised (tests, early start-up): debug builds
-      // still get the message in the developer log; release builds stay
-      // silent.
-      if (kDebugMode) {
-        developer.log(
-          message,
-          name: name,
-          error: error,
-          stackTrace: stackTrace,
-        );
-      }
+      return null;
     }
   }
 
@@ -55,8 +64,14 @@ class Logger {
     log(message, name: 'INFO', level: LogLevel.info);
   }
 
-  static void warning(String message) {
-    log(message, name: 'WARNING', level: LogLevel.warning);
+  static void warning(String message, [Object? error, StackTrace? stackTrace]) {
+    log(
+      message,
+      name: 'WARNING',
+      error: error,
+      stackTrace: stackTrace,
+      level: LogLevel.warning,
+    );
   }
 
   static void error(String message, [Object? error, StackTrace? stackTrace]) {
