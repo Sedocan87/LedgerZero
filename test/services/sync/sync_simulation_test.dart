@@ -631,7 +631,7 @@ void main() {
         expect(ids, ['a0', 'c0']);
         final q = await b.db.syncDao.getQuarantine();
         expect(q.single.filename, target.name);
-        expect(q.single.reason, 'failed');
+        expect(q.single.reason, SyncEngine.reasonUnreadable);
 
         // Retries wait for the backoff ...
         await b.sync();
@@ -668,6 +668,136 @@ void main() {
         expect(await b.count('SELECT COUNT(*) FROM accounts'), 1);
       },
     );
+
+    test('an unreadable file is skipped after the last retry and repaired '
+        'by a requested snapshot', () async {
+      const config = SyncEngineConfig(
+        kdfParams: fastKdf,
+        maxQuarantineAttempts: 1,
+      );
+      final a = await device(config: config);
+      final b = await device(config: config);
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await addAccount(a, 'lost', 'In the damaged file');
+      await a.sync();
+      await addAccount(a, 'later', 'In the next file');
+      await a.sync();
+      final aFiles = folder.syncFiles(device: a.deviceId);
+      final damaged = folder.single(aFiles[aFiles.length - 2].name);
+      damaged.bytes = Uint8List.fromList(damaged.bytes)
+        ..[damaged.bytes.length - 3] ^= 0x01;
+
+      await b.sync(); // quarantined (attempt 1 of 1)
+      expect(await b.count('SELECT COUNT(*) FROM accounts'), 0);
+      await b.sync(); // given up: skipped, snapshot requested
+      expect(await b.db.syncDao.getQuarantine(), isEmpty);
+      expect(
+        await b.count("SELECT COUNT(*) FROM accounts WHERE id='later'"),
+        1,
+      );
+      expect(await b.count("SELECT COUNT(*) FROM accounts WHERE id='lost'"), 0);
+      final request = SyncFileName.request(a.deviceId, b.deviceId);
+      expect(folder.names, contains(request));
+
+      await a.sync(); // honours the request
+      expect(folder.names, isNot(contains(request)));
+      expect(folder.syncFiles(kind: SyncFileKind.snapshot), isNotEmpty);
+      await b.sync(); // repaired from the snapshot
+      expect(await b.count("SELECT COUNT(*) FROM accounts WHERE id='lost'"), 1);
+      expect(await SyncLocalState(b.db.syncDao).needsSnapshot(), isEmpty);
+      await syncAll([a, b]);
+      await expectConverged([a, b]);
+    });
+
+    test('"skip file" asks the sender for a snapshot', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await addAccount(a, 'x', 'X');
+      await a.sync();
+      final target = folder.single(
+        folder.syncFiles(device: a.deviceId).last.name,
+      );
+      target.bytes = Uint8List.fromList(target.bytes)
+        ..[target.bytes.length - 3] ^= 0x01;
+      await b.sync();
+      final q = (await b.db.syncDao.getQuarantine()).single;
+      await b.engine.skipQuarantined(q.filename);
+      await b.sync();
+      expect(
+        folder.names,
+        contains(SyncFileName.request(a.deviceId, b.deviceId)),
+      );
+      await a.sync();
+      await b.sync();
+      expect(await b.count("SELECT COUNT(*) FROM accounts WHERE id='x'"), 1);
+    });
+
+    test(
+      'files of an earlier sync folder are ignored, not quarantined',
+      () async {
+        var now = DateTime.utc(2030, 1, 1);
+        final a = await device(clock: () => now);
+        final b = await device(clock: () => now);
+        await connect([a, b]);
+        await addAccount(a, 'old-a', 'Old A');
+        await addAccount(b, 'old-b', 'Old B');
+        await syncAll([a, b]);
+        final oldFiles = folder.syncFiles().map((f) => f.name).toSet();
+        expect(oldFiles, isNotEmpty);
+
+        // The user deletes only the manifest and sets the folder up again
+        // with a new passphrase; the old change files stay behind.
+        folder.files.removeWhere((_, f) => f.name == SyncFileName.manifest);
+        now = now.add(const Duration(hours: 1));
+        await a.engine.createSyncFolder('a brand new passphrase');
+        await b.engine.joinSyncFolder('a brand new passphrase');
+        await addAccount(a, 'new-a', 'New A');
+        await syncAll([a, b], rounds: 3);
+
+        await expectConverged([a, b]);
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='new-a'"),
+          1,
+        );
+        final foreign = await b.db.syncDao.getQuarantine();
+        expect(foreign, isNotEmpty);
+        expect(
+          foreign.every((q) => q.reason == SyncEngine.reasonForeign),
+          isTrue,
+        );
+        expect(foreign.every((q) => oldFiles.contains(q.filename)), isTrue);
+        expect(foreign.every((q) => q.deviceId == a.deviceId), isTrue);
+        // Nothing waits: A's new files were applied past the old ones.
+        expect((await b.sync()).waitingDevices, 0);
+
+        // Each device lists the other's old files; both remove them.
+        await b.engine.removeForeignFiles();
+        await a.engine.removeForeignFiles();
+        expect(await b.db.syncDao.getQuarantine(), isEmpty);
+        expect(await a.db.syncDao.getQuarantine(), isEmpty);
+        expect(folder.names.toSet().intersection(oldFiles), isEmpty);
+        await syncAll([a, b]);
+        await expectConverged([a, b]);
+      },
+    );
+
+    test('a file with timestamps far in the future is reported', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await syncAll([a, b]);
+      await a.exec(
+        'INSERT INTO accounts (id, name, type, currency, starting_balance, '
+        "is_closed, created_at, updated_at) VALUES ('f', 'F', 'checking', "
+        "'USD', 0, 0, '2025-01-01T00:00:00.000Z', '2099-01-01T00:00:00.000Z')",
+      );
+      await a.sync();
+      expect((await b.sync()).clockSkewSuspected, isTrue);
+      expect((await b.sync()).clockSkewSuspected, isFalse);
+    });
 
     test('lost preferences do not mint a new device id', () async {
       final a = await device();

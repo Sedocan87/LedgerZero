@@ -167,7 +167,8 @@ class FakeSyncTransport implements SyncTransport {
     uploads++;
     final existing = folder.named(name);
     if (existing.isNotEmpty) {
-      if (existing.first.bytes.length == bytes.length) {
+      if (existing.first.bytes.length == bytes.length ||
+          name == SyncFileName.manifest) {
         return;
       }
       existing.first.bytes = Uint8List.fromList(bytes);

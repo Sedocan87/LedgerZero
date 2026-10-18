@@ -319,6 +319,14 @@ void main() {
     expect(await service.download(remote), [9]);
   });
 
+  test('an existing manifest is never replaced (creation race)', () async {
+    const manifest = 'ledgerzero-sync-manifest.json';
+    await service.upload(manifest, Uint8List.fromList([1, 2, 3]));
+    await service.upload(manifest, Uint8List.fromList([9, 9, 9, 9, 9]));
+    final remote = (await service.listFiles()).single;
+    expect(await service.download(remote), [1, 2, 3]);
+  });
+
   test('one cached client; 401 recreates it once', () async {
     await service.upload('a', Uint8List.fromList([1]));
     await service.listFiles();

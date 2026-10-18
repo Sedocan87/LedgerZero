@@ -18,6 +18,7 @@ class SyncLocalState {
   static const String _snapshots = 'own_snapshots';
   static const String _snapshotClock = 'snapshot_clock_started';
   static const String deviceIdKey = 'device_id';
+  static const String _needsSnapshot = 'needs_snapshot';
 
   Future<Uint8List?> syncKey() async {
     final value = await _dao.getValue(_syncKey);
@@ -78,6 +79,25 @@ class SyncLocalState {
       }),
     );
   }
+
+  /// Devices whose file was skipped here: device -> sequence of the skipped
+  /// file. A snapshot of that device covering the sequence repairs the gap.
+  Future<Map<String, int>> needsSnapshot() async {
+    final raw = await _dao.getValue(_needsSnapshot);
+    if (raw == null) {
+      return {};
+    }
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      return {for (final e in json.entries) e.key: e.value as int};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setNeedsSnapshot(Map<String, int> value) => value.isEmpty
+      ? _dao.deleteValue(_needsSnapshot)
+      : _dao.setValue(_needsSnapshot, jsonEncode(value));
 
   /// When this device started counting towards its first snapshot.
   Future<DateTime?> snapshotClock() async {

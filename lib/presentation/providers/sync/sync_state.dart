@@ -82,9 +82,15 @@ class SyncState extends Equatable {
     this.paused = false,
   });
 
-  /// Quarantined files that failed (as opposed to newer-schema deferrals).
-  List<SyncQuarantineItem> get failedFiles =>
-      quarantine.where((q) => q.reason == 'failed').toList();
+  /// Quarantined files that failed to apply or do not authenticate (as
+  /// opposed to newer-schema deferrals and leftovers of an old folder).
+  List<SyncQuarantineItem> get failedFiles => quarantine
+      .where((q) => q.reason == 'failed' || q.reason == 'unreadable')
+      .toList();
+
+  /// Files of an earlier sync folder (not readable with the current key).
+  List<SyncQuarantineItem> get foreignFiles =>
+      quarantine.where((q) => q.reason == 'foreign').toList();
 
   SyncState copyWith({
     SyncStatus? status,

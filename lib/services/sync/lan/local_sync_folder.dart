@@ -20,7 +20,9 @@ class LocalSyncFolder {
   static const int _maxDeleted = 5000;
 
   static bool isSyncFileName(String name) =>
-      name == SyncFileName.manifest || SyncFileName.tryParse(name) != null;
+      name == SyncFileName.manifest ||
+      SyncFileName.tryParse(name) != null ||
+      SyncFileName.tryParseRequest(name) != null;
 
   Future<Directory> _dir() async {
     final dir = await _directory();
@@ -52,10 +54,15 @@ class LocalSyncFolder {
     return await file.exists() ? file.readAsBytes() : null;
   }
 
-  /// Writes [bytes] atomically (temporary file, then rename).
+  /// Writes [bytes] atomically (temporary file, then rename). An existing
+  /// manifest is never replaced (see `SyncTransport.upload`).
   Future<void> write(String name, Uint8List bytes) async {
     _check(name);
     final dir = await _dir();
+    if (name == SyncFileName.manifest &&
+        await File('${dir.path}/$name').exists()) {
+      return;
+    }
     final temp = File('${dir.path}/.$name.part');
     await temp.writeAsBytes(bytes, flush: true);
     await temp.rename('${dir.path}/$name');
