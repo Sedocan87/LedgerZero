@@ -132,7 +132,7 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
       if (keptExisting) {
         context.go('/');
       } else {
-        context.goNamed('budget-setup');
+        context.goNamed('first-account');
       }
     });
   }

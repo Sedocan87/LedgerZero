@@ -55,9 +55,9 @@ void main() {
       routes: [
         GoRoute(path: '/', builder: (_, _) => screen),
         GoRoute(
-          path: '/budget-setup',
-          name: 'budget-setup',
-          builder: (_, _) => const Text('budget setup'),
+          path: '/first-account',
+          name: 'first-account',
+          builder: (_, _) => const Text('first account'),
         ),
         GoRoute(
           path: '/onboarding',
@@ -137,7 +137,7 @@ void main() {
       );
 
       await tester.tap(find.text('Continue'));
-      await waitUntil(tester, () => shows('budget setup'));
+      await waitUntil(tester, () => shows('first account'));
 
       expect(storedDeviceKey(), isNotNull);
       expect(store.values.containsKey(KeyVault.storageKey), isFalse);
@@ -173,7 +173,7 @@ void main() {
       expect(container.read(sessionProvider).key!.bytes, dek);
       expect(base64Decode(storedDeviceKey()!), dek);
       expect(await tester.runAsync(dbFile.exists), isTrue);
-      expect(shows('budget setup'), isFalse);
+      expect(shows('first account'), isFalse);
       expect(
         find.text('Your existing data on this phone was found and kept.'),
         findsOneWidget,
@@ -193,7 +193,7 @@ void main() {
       expect(toggle.onChanged, isNull);
 
       await tester.tap(find.text('Continue'));
-      await waitUntil(tester, () => shows('budget setup'));
+      await waitUntil(tester, () => shows('first account'));
       expect(container.read(appLockEnabledProvider), isFalse);
     });
   });

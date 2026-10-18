@@ -6,6 +6,7 @@ import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Where "Fill new months automatically" takes the amounts from.
@@ -209,9 +210,10 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
 }
 
 final newMonthFillProvider =
-    StateNotifierProvider<NewMonthFillController, NewMonthFillState>(
-      (ref) => NewMonthFillController(
+    StateNotifierProvider<NewMonthFillController, NewMonthFillState>((ref) {
+      ref.watch(settingsGenerationProvider); // reload after a factory reset
+      return NewMonthFillController(
         ref.watch(sharedPreferencesProvider),
         () => ref.read(budgetingServiceProvider),
-      ),
-    );
+      );
+    });

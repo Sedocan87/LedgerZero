@@ -18,6 +18,7 @@ import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_filter_sheet.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
+import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
 
 /// Ids of all split parents (labelled "Split" in lists).
 final splitParentIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {
@@ -481,6 +482,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           ];
         },
       ),
+      const SettingsAction(),
     ];
   }
 

@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_month_actions.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_template_dialogs.dart';
+import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_tutorial_banner.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/leftover_card.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/new_month_card.dart';
@@ -238,6 +239,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                 PopupMenuItem(value: 'reset', child: Text(l10n.resetBudget)),
               ],
             ),
+            const SettingsAction(),
           ] else
             IconButton(icon: const Icon(Icons.close), onPressed: _toggleSearch),
         ],

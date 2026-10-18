@@ -93,8 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         // The step after the security step needs the open database; if it
         // is not open (the app was restarted mid-onboarding), start over.
         final needsSession =
-            state.matchedLocation.startsWith('/onboarding/first-account') ||
-            state.matchedLocation.startsWith('/onboarding/budget-setup');
+            state.matchedLocation.startsWith('/onboarding/first-account');
         if (needsSession && !isAuthenticated) {
           return '/onboarding';
         }
@@ -144,12 +143,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               firstAccount: true,
               finishesOnboarding: true,
             ),
-          ),
-          // The security step still navigates to 'budget-setup'.
-          GoRoute(
-            path: 'budget-setup',
-            name: 'budget-setup',
-            redirect: (context, state) => '/onboarding/first-account',
           ),
         ],
       ),

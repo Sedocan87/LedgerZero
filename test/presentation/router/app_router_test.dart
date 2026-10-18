@@ -111,7 +111,7 @@ void main() {
       expect(location(c), '/onboarding', reason: target);
     }
     // The steps after the security step need the open database.
-    c.read(routerProvider).go('/onboarding/budget-setup');
+    c.read(routerProvider).go('/onboarding/first-account');
     await tester.pumpAndSettle();
     expect(location(c), '/onboarding');
     expect(c.read(pendingLocationProvider).value, isNull);
@@ -203,9 +203,9 @@ void main() {
   testWidgets('onboarding ends with the first account: saving it marks the app '
       'onboarded and opens the budget', (tester) async {
     final c = await pumpRouter(tester, onboarded: false);
-    // The security step opened the session, then goes to 'budget-setup'.
+    // The security step opened the session, then goes to 'first-account'.
     unlock(c);
-    c.read(routerProvider).goNamed('budget-setup');
+    c.read(routerProvider).goNamed('first-account');
     await tester.pumpAndSettle();
     expect(location(c), '/onboarding/first-account');
     final form = tester.widget<AddEditAccountScreen>(
