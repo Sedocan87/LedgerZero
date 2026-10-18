@@ -230,10 +230,13 @@ class SimDevice {
     int pageSize = 100,
     Random? shuffle,
     DateTime Function()? clock,
+    String Function(String englishName)? seedName,
   }) async {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     final dir = await Directory.systemTemp.createTemp('lz_sync_');
-    final TestDatabase? t = executor == null ? TestDatabase() : null;
+    final TestDatabase? t = executor == null
+        ? TestDatabase(seedName: seedName)
+        : null;
     final db = t?.db ?? AppDatabase(executor!);
     return SimDevice._(
       const Uuid().v4(),

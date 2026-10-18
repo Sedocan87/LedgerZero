@@ -252,6 +252,7 @@ class SyncEngine {
         throw const SyncFolderExistsException();
       }
       await _adoptKey(manifest.syncId, key);
+      await _claimSeededRows();
     });
   }
 
@@ -288,11 +289,33 @@ class SyncEngine {
         );
       }
       await _state.setSyncKey(syncId, key);
-      // Share everything this device has (merged by the conflict rule).
-      await _state.setFullUploadRequired(true);
+      // Share everything this device has (merged by the conflict rule); a
+      // folder that knows this device already gets only what it lacks.
+      await _state.setFullUpload(
+        previous == syncId ? FullUpload.reshare : FullUpload.everything,
+      );
     });
     if (previous != syncId) {
       await _outbox.clear();
+    }
+  }
+
+  /// The horizon of [FullUpload.reshare]: rows older than this are
+  /// re-shared only when newer than the folder's known version.
+  DateTime get _reshareHorizon => _now.subtract(config.tombstoneRetention);
+
+  /// The phone that sets up the folder keeps the names of its untouched
+  /// default categories: they get a fresh timestamp, so the other phones'
+  /// untouched seeds (same ids, same fixed timestamp, names in their own
+  /// language) lose deterministically instead of by device-id tiebreak.
+  Future<void> _claimSeededRows() async {
+    final seed = AppDatabase.seedTimestamp.toIso8601String();
+    final now = _now.toIso8601String();
+    for (final table in const ['category_groups', 'categories']) {
+      await _db.customStatement(
+        'UPDATE "$table" SET updated_at = ? WHERE updated_at = ?',
+        [now, seed],
+      );
     }
   }
 
@@ -375,15 +398,18 @@ class SyncEngine {
     _manifestCreatedAt = manifest.createdAt;
     if (!rebootstrap) {
       cancel.check();
-      final fullUpload = await _state.fullUploadRequired();
+      final fullUpload = await _state.fullUpload();
       await _generator.generate(
         key: key,
         outbox: _outbox,
-        fullUpload: fullUpload,
+        fullUpload: fullUpload != FullUpload.none,
+        reshareHorizon: fullUpload == FullUpload.reshare
+            ? _reshareHorizon
+            : null,
         now: _now,
       );
-      if (fullUpload) {
-        await _state.setFullUploadRequired(false);
+      if (fullUpload != FullUpload.none) {
+        await _state.setFullUpload(FullUpload.none);
       }
       uploaded += await _uploadOutbox(cancel);
     }
@@ -393,14 +419,17 @@ class SyncEngine {
 
     if (rebootstrap) {
       // Rows only the restored database has are shared again; rows that
-      // are newer elsewhere already replaced the restored ones.
+      // are newer elsewhere already replaced the restored ones. Old rows
+      // the folder does not know stay here (their tombstones may be gone).
       cancel.check();
       await _generator.generate(
         key: key,
         outbox: _outbox,
         fullUpload: true,
+        reshareHorizon: _reshareHorizon,
         now: _now,
       );
+      await _state.setFullUpload(FullUpload.none);
       uploaded += await _uploadOutbox(cancel);
       await _prefs.remove(SyncRebootstrap.prefsKey);
     }

@@ -52,6 +52,7 @@ void main() {
     QueryExecutor? executor,
     Random? shuffle,
     DateTime Function()? clock,
+    String Function(String englishName)? seedName,
   }) async {
     final d = await SimDevice.create(
       folder,
@@ -59,6 +60,7 @@ void main() {
       executor: executor,
       shuffle: shuffle,
       clock: clock,
+      seedName: seedName,
     );
     devices.add(d);
     return d;
@@ -338,6 +340,38 @@ void main() {
       expect(await b.count('SELECT COUNT(*) FROM categories'), seeded);
       expect(await a.db.syncDao.getConflicts(), isEmpty);
       expect(await b.db.syncDao.getConflicts(), isEmpty);
+    });
+
+    test('bilingual household: the phone that set up the folder keeps '
+        'its category names, renames still win', () async {
+      final en = await device();
+      final de = await device(seedName: (name) => 'DE $name');
+      // The German phone sets up the folder; the English one joins.
+      await de.engine.createSyncFolder(passphrase);
+      await en.engine.joinSyncFolder(passphrase);
+      await syncAll([en, de], rounds: 3);
+
+      await expectConverged([en, de]);
+      final names = (await en.rows(
+        'SELECT name FROM categories',
+      )).map((r) => r['name'] as String);
+      expect(names.every((n) => n.startsWith('DE ')), isTrue);
+      expect(await en.db.syncDao.getConflicts(), isEmpty);
+      expect(await de.db.syncDao.getConflicts(), isEmpty);
+
+      // A later rename on the English phone is newer and wins everywhere.
+      final groceries = await en.t!.categoryId('DE Groceries');
+      await en.exec("UPDATE categories SET name = 'Food' WHERE id = ?", [
+        groceries,
+      ]);
+      await syncAll([en, de]);
+      await expectConverged([en, de]);
+      expect(
+        (await de.rows(
+          "SELECT name FROM categories WHERE id = '$groceries'",
+        )).single['name'],
+        'Food',
+      );
     });
 
     test(
@@ -1016,6 +1050,74 @@ void main() {
       final aFiles = folder.syncFiles(device: a.deviceId);
       expect(aFiles.map((f) => f.name).toSet().length, aFiles.length);
     });
+  });
+
+  group('tombstone retention', () {
+    test(
+      'restoring an old backup does not resurrect rows deleted long ago',
+      () async {
+        var now = DateTime.now().toUtc();
+        final tmp = await Directory.systemTemp.createTemp('lz_retention_');
+        addTearDown(() => tmp.delete(recursive: true));
+        final dbFile = File('${tmp.path}/a.sqlite');
+        final backup = File('${tmp.path}/backup.sqlite');
+        var a = await device(
+          executor: NativeDatabase(dbFile),
+          clock: () => now,
+        );
+        final b = await device(clock: () => now);
+        await connect([a, b]);
+        await addAccount(a, 'gone', 'Deleted long ago');
+        await addAccount(a, 'kept', 'Still here');
+        await syncAll([a, b]);
+        await a.exec('VACUUM INTO ?', [backup.path]);
+
+        await b.exec("DELETE FROM accounts WHERE id = 'gone'");
+        await syncAll([a, b]);
+        expect(
+          await a.count("SELECT COUNT(*) FROM accounts WHERE id='gone'"),
+          0,
+        );
+
+        // Long after the retention: both devices pruned the tombstone.
+        now = now.add(const Duration(days: 200));
+        await syncAll([a, b]);
+        expect(await b.db.syncDao.getTombstones(), isEmpty);
+
+        // A restores the backup from before the delete.
+        await a.db.close();
+        devices.remove(a);
+        await backup.copy(dbFile.path);
+        final restored = AppDatabase(NativeDatabase(dbFile));
+        await restored.customStatement('DELETE FROM pending_sync_changes');
+        a = a.withDatabase(restored);
+        devices.add(a);
+        final rebootstrap = SyncRebootstrap(a.prefs, a.outbox);
+        await rebootstrap.markRequired();
+        await rebootstrap.discardOutbox();
+        expect(
+          await a.count("SELECT COUNT(*) FROM accounts WHERE id='gone'"),
+          1,
+        );
+
+        await syncAll([a, b], rounds: 3);
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='gone'"),
+          0,
+        );
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='kept'"),
+          1,
+        );
+        // A new row that only the backup has is still shared.
+        await addAccount(a, 'fresh', 'Fresh');
+        await syncAll([a, b]);
+        expect(
+          await b.count("SELECT COUNT(*) FROM accounts WHERE id='fresh'"),
+          1,
+        );
+      },
+    );
   });
 
   group('three devices', () {

@@ -331,6 +331,9 @@ class ChangeApplier {
     if (table == 'budgets' && _isAutomaticFill(local)) {
       return; // nothing the user decided was lost
     }
+    if (local.version == AppDatabase.seedTimestamp.microsecondsSinceEpoch) {
+      return; // an untouched default category (seeded, never edited)
+    }
     await _db.syncDao.addConflict(
       SyncConflictsCompanion.insert(
         syncTable: table,
