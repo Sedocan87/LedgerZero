@@ -3982,11 +3982,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get accountPersonalHelper =>
-      'Nur Sie sehen die Buchungen. Ein Partner, mit dem Sie synchronisieren, sieht nur Name und Saldo.';
+      'Nur Sie sehen die Buchungen. Ein Partner, mit dem Sie synchronisieren, sieht nur Name und Saldo. Buchungen eines persönlichen Kontos bleiben auf diesem Telefon und sind nur in den Sicherungen dieses Telefons enthalten; sie werden nie an Ihren Partner übertragen. Sichern Sie regelmäßig.';
 
   @override
   String get accountPersonalSynced =>
-      'Bereits mit Ihrem Partner geteilt, daher kann es nicht persönlich werden. Legen Sie stattdessen ein neues persönliches Konto an.';
+      'Dieses Konto ist bereits mit Ihrem Partner geteilt und die Synchronisierung ist eingerichtet, daher kann es nicht persönlich werden. Trennen Sie zuerst die Synchronisierung (Einstellungen > Sync), wenn Sie das wirklich möchten; Ihr Partner behält die bisher übertragenen Buchungen.';
 
   @override
   String get accountOnBudgetPersonal =>

@@ -3951,11 +3951,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountPersonalHelper =>
-      'Only you see its transactions. A partner you sync with sees just its name and balance.';
+      'Only you see its transactions. A partner you sync with sees just its name and balance. Transactions of a personal account stay on this phone and are only in this phone’s backups; they never sync to your partner. Back up regularly.';
 
   @override
   String get accountPersonalSynced =>
-      'Already shared with your partner, so it can\'t become personal. Create a new personal account instead.';
+      'This account is already shared with your partner and sync is set up, so it cannot become personal. Disconnect sync first (Settings > Sync) if you really want this; your partner keeps the transactions synced so far.';
 
   @override
   String get accountOnBudgetPersonal =>

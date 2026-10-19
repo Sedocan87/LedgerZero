@@ -15,6 +15,7 @@ import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.d
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
@@ -527,6 +528,15 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                   : l10n.accountCreated,
             ),
             backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on AccountSharedException catch (e, st) {
+      Logger.warning('Account cannot become personal', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.accountPersonalSynced),
           ),
         );
       }

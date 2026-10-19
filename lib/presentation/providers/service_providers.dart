@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/domain/services/account_service.dart';
 import 'package:ledger_zero/domain/services/category_service.dart';
@@ -28,6 +29,9 @@ final dataPortabilityServiceProvider = Provider<DataPortabilityService>((ref) {
 });
 
 final undoServiceProvider = Provider<UndoService>((ref) {
+  // A restore reopens the database; the old undo snapshots no longer
+  // match its rows, so the stack starts over.
+  ref.watch(databaseGenerationProvider);
   return UndoService();
 });
 

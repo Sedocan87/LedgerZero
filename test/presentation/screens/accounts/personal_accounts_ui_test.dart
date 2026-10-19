@@ -175,7 +175,7 @@ void main() {
 
       expect(switchTile(tester, 'account.personal').onChanged, isNull);
       expect(
-        find.textContaining('Already shared with your partner'),
+        find.textContaining('already shared with your partner'),
         findsOneWidget,
       );
       await unmount(tester);

@@ -6640,13 +6640,13 @@ abstract class AppLocalizations {
   /// Explanation under the Personal switch on the account form
   ///
   /// In en, this message translates to:
-  /// **'Only you see its transactions. A partner you sync with sees just its name and balance.'**
+  /// **'Only you see its transactions. A partner you sync with sees just its name and balance. Transactions of a personal account stay on this phone and are only in this phone’s backups; they never sync to your partner. Back up regularly.'**
   String get accountPersonalHelper;
 
   /// Explanation under the disabled Personal switch for an account that has already synced
   ///
   /// In en, this message translates to:
-  /// **'Already shared with your partner, so it can\'t become personal. Create a new personal account instead.'**
+  /// **'This account is already shared with your partner and sync is set up, so it cannot become personal. Disconnect sync first (Settings > Sync) if you really want this; your partner keeps the transactions synced so far.'**
   String get accountPersonalSynced;
 
   /// Explanation under the disabled Include in budget switch of a personal account
