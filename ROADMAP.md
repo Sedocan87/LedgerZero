@@ -56,6 +56,19 @@ A code audit in October 2026 was worked off in eight packages:
 7. **Tests:** green suite, no hangs, noise removed, integration tests on simulator/emulator.
 8. **Dependencies, builds, docs:** dependency refresh, Android tooling on AGP 9, chart colours from the theme (`ChartPalette`), README and docs rewritten, `DATABASE_SCHEMA.md` generated from the v17 schema.
 
+## Second audit and fix pass (2026-10-18/19)
+
+A second full audit (budgeting, ledger, import/export, backup and sync, security and card capture, UI flows) found about 60 issues; all were fixed on six branches (`fix/budget`, `fix/ledger`, `fix/import`, `fix/sync`, `fix/security`, `fix/ui`) and merged into `main`. The main changes:
+
+- **Budget rules (BUDGETING_RULES.md, ALGORITHMS.md):** money assigned in later months reduces the current month's To Be Budgeted; a category's overspending resets at the month end and is charged to the next month's TBB; starting balances count from the month the account was created; hidden categories leave the budget screen and all month operations; copy/apply/reset confirm and can be undone.
+- **Ledger:** quick-add reads dates and amounts correctly ("yesterday" near midnight, German dates, quantities); edits keep the approval state; schedules stop at closed accounts and their end date; transfers must share a currency, net worth is shown per currency; saves only touch rows that changed (so sync keeps the partner's concurrent edits); rules import drops unknown targets; search finds split lines.
+- **Import (CSV_FORMAT.md):** strict, scored date-format detection with two-digit years; whole-word header mapping; bank presets with fixtures for Sparkasse, DKB, ING, comdirect, N26, Volksbank, Deutsche Bank and Revolut (preamble, footer, Soll/Haben, encoding); blank and unreadable rows are skipped with a warning; duplicate detection survives rule renames; YNAB import keeps Budget.csv-only categories, tracking accounts and YNAB 4's nested file layout, and warns on a second import of the same export.
+- **Backup and sync (SYNC_ARCHITECTURE.md, ERROR_RECOVERY.md):** an interrupted restore is finished at the next start instead of leaving an empty database; restore warns when the backup belongs to the other household member or is older than the tombstone retention; files of an old sync folder are ignored instead of blocking sync; "Skip file" asks the sender for a snapshot; clock skew between phones is reported; factory reset removes the Wi-Fi pairing and sync folders; the device id survives lost preferences.
+- **Security and capture (SECURITY.md, CARD_NOTIFICATIONS.md):** every captured notification is booked on its own and failures are logged (warnings and errors are kept in release builds); duplicates across Wallet and the bank app are held; the app lock stays on after a transient prompt error; KeyStore and database-open failures offer Retry before Reset; onboarding keeps an existing database.
+- **UI:** literal routes before `:id` (reorder groups), budget currency chosen with the first account and derived from the device locale, Settings defaults applied in the transaction form, one locale for text and numbers, no spinner flash on writes, shorter onboarding (first account is the last step), settings reachable from every tab.
+
+Still open from that audit: a hybrid logical clock for sync (clock skew is only reported), a rename-merge when two phones with existing data join, "mark as transfer" on the CSV review screen, and Settings > Currency can still be changed while on-budget accounts exist in another currency. The real-device checks below remain.
+
 ## Phase 2: Design and UX (about 2–3 weeks)
 
 The app still looks like default Material 3 with a teal seed colour. The design is what makes people pay, so this phase matters as much as Phase 1.
