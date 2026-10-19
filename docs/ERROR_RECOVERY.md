@@ -97,10 +97,13 @@ face, PIN, pattern or password).
    Wi-Fi pairing) and returns to onboarding, where you can set up the app
    and restore a backup.
 2. **Backup**: restore it in Settings > Backup & Export with its backup
-   password (chosen when the backup was made). Without a backup the data on
-   this phone is gone; with sync, the shared data comes back from the sync
-   folder after joining it again (personal transactions do not — they exist
-   only in this phone's backups).
+   password (chosen when the backup was made). If automatic backups were
+   on, the reset keeps them: **Restore an automatic backup** lists them,
+   newest first, and they open with the password chosen when the feature
+   was turned on. Without a backup the data on this phone is gone; with
+   sync, the shared data comes back from the sync folder after joining it
+   again (personal transactions do not — they exist only in this phone's
+   backups).
    See [ENCRYPTION_TROUBLESHOOTING.md](ENCRYPTION_TROUBLESHOOTING.md).
 
 ## 4. Application Crashes

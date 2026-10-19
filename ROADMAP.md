@@ -67,6 +67,8 @@ A second full audit (budgeting, ledger, import/export, backup and sync, security
 - **Security and capture (SECURITY.md, CARD_NOTIFICATIONS.md):** every captured notification is booked on its own and failures are logged (warnings and errors are kept in release builds); duplicates across Wallet and the bank app are held; the app lock stays on after a transient prompt error; KeyStore and database-open failures offer Retry before Reset; onboarding keeps an existing database.
 - **UI:** literal routes before `:id` (reorder groups), budget currency chosen with the first account and derived from the device locale, Settings defaults applied in the transaction form, one locale for text and numbers, no spinner flash on writes, shorter onboarding (first account is the last step), settings reachable from every tab.
 
+Follow-up (2026-10-19): **automatic backups** (BACKUP_AND_EXPORT.md 1b). Once a day, at start or resume, the app writes an encrypted backup under the backup password chosen when the feature was turned on, into the app's external files folder (last 7 kept), and lists them for restore. They answer a KeyStore that loses the database key (the reset keeps them); they do not replace an off-phone copy.
+
 Still open from that audit: a hybrid logical clock for sync (clock skew is only reported), a rename-merge when two phones with existing data join, "mark as transfer" on the CSV review screen, and Settings > Currency can still be changed while on-budget accounts exist in another currency. The real-device checks below remain.
 
 ## Phase 2: Design and UX (about 2–3 weeks)

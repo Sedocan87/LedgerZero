@@ -140,9 +140,12 @@ it while the phone has not been unlocked since a restart.
 * Strings and native copies of the key (SQLCipher holds its own copy while
   the database is open) cannot be wiped from Dart.
 * Plaintext exports once the user has shared them with another app.
-* Losing the phone (or a KeyStore failure, or a factory reset of the phone)
-  loses the data unless there is a backup or a second synced phone; the key
-  never leaves the device.
+* Losing the phone (or a factory reset of the phone) loses the data unless
+  there is a backup or a second synced phone; the key never leaves the
+  device. A KeyStore failure alone is covered by the automatic backups
+  (Settings > Backup & Export): they are encrypted with a user-chosen
+  password, live in the app's external files folder and are kept by the
+  reset that such a failure forces ([BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md)).
 
 ## 8. Privacy
 

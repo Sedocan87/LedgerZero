@@ -70,6 +70,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
   int _selectedColor = 0xFF4CAF50; // Default Green
   String _selectedIcon = 'Wallet';
   bool _onBudget = true;
+
+  /// Set once the user moved the "Include in budget" switch: the type's
+  /// default (savings and investments start outside the budget) then no
+  /// longer overrides that choice.
+  bool _onBudgetTouched = false;
   bool _personal = false;
 
   /// An existing shared account that already synced cannot become personal
@@ -206,6 +211,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           }
           if (data['onBudget'] is bool) {
             _onBudget = data['onBudget'];
+            _onBudgetTouched = true;
           }
           if (data['personal'] == true) {
             _personal = true;
@@ -734,7 +740,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                                       // is meant to be budgeted.
                                       if (widget.accountId == null &&
                                           !widget.firstAccount &&
-                                          !_personal) {
+                                          !_personal &&
+                                          !_onBudgetTouched) {
                                         _onBudget = !value.startsOffBudget;
                                       }
                                     });
@@ -761,7 +768,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                           subtitle: Text(
                             _personal
                                 ? l10n.accountOnBudgetPersonal
-                                : l10n.accountOnBudgetHelper,
+                                : _onBudget
+                                ? l10n.accountOnBudgetHelper
+                                : l10n.accountOffBudgetHelper,
                           ),
                           value: _onBudget,
                           onChanged: _personal
@@ -769,6 +778,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                               : (value) {
                                   setState(() {
                                     _onBudget = value;
+                                    _onBudgetTouched = true;
                                     if (value && _otherOnBudgetExists) {
                                       _selectedCurrency = budgetCurrency;
                                     }

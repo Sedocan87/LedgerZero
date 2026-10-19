@@ -38,11 +38,16 @@ class BackupService {
   }) : _files = files ?? ExportFileService(),
        _kdf = kdf ?? KdfParams.recommended;
 
-  /// Writes an encrypted backup into the export directory. The plaintext
-  /// snapshot exists only in the app's temporary directory while the backup
-  /// is built and is deleted afterwards. The backup time is recorded by
+  /// Writes an encrypted backup into the export directory, or into
+  /// [directory] as [filename] (automatic backups). The plaintext snapshot
+  /// exists only in the app's temporary directory while the backup is
+  /// built and is deleted afterwards. The backup time is recorded by
   /// [recordBackupCompleted] once the file actually left the phone.
-  Future<File> createBackup({required String password}) async {
+  Future<File> createBackup({
+    required String password,
+    Directory? directory,
+    String? filename,
+  }) async {
     if (password.isEmpty) {
       throw const BackupException('A backup password is required');
     }
@@ -50,7 +55,10 @@ class BackupService {
     final stamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     final snapshot = File(p.join(exportDir.path, '.snapshot_$stamp.sqlite'));
     final output = File(
-      p.join(exportDir.path, 'ledgerzero_backup_$stamp.lzbk'),
+      p.join(
+        (directory ?? exportDir).path,
+        p.basename(filename ?? 'ledgerzero_backup_$stamp.lzbk'),
+      ),
     );
     try {
       await writePlaintextSnapshot(snapshot);

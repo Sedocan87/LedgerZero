@@ -343,6 +343,35 @@ void main() {
     expect(includedInBudget(tester), isTrue);
   });
 
+  testWidgets('a switch the user set is kept when the type changes, and '
+      'the subtitle says what the state means', (tester) async {
+    final repo = MockAccountRepository();
+    await pumpForm(tester, repo);
+    expect(find.textContaining('On: its balance'), findsOneWidget);
+
+    // Chosen explicitly: Savings no longer flips it off.
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    expect(includedInBudget(tester), isFalse);
+    expect(find.textContaining('Off: not budgeted'), findsOneWidget);
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    expect(includedInBudget(tester), isTrue);
+    await chooseType(tester, 'Savings');
+    expect(includedInBudget(tester), isTrue);
+    expect(find.textContaining('On: its balance'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Emergency fund');
+    // Pressed directly: after the dropdown closed, the button cannot be
+    // scrolled into the 600 px test viewport.
+    tester
+        .widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Create Account'),
+        )
+        .onPressed!();
+    await tester.pumpAndSettle();
+    expect(repo.created!.type, AccountType.savings);
+    expect(repo.created!.onBudget, isTrue);
+  });
+
   testWidgets('the first account stays in the budget whatever its type', (
     tester,
   ) async {

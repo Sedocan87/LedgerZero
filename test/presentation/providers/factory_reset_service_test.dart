@@ -29,6 +29,7 @@ void main() {
       deleteDatabase: step('database'),
       deleteDeviceKey: step('key'),
       deleteLegacyKeys: step('legacy'),
+      forgetAutoBackupPassword: step('auto backup password'),
       deleteExports: step('exports'),
       clearCapturedNotifications: step('capture'),
       deleteErrorReports: step('reports'),

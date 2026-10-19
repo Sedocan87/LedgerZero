@@ -83,6 +83,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       if (ref.read(sessionProvider).isUnlocked) {
         unawaited(_processDueSchedules());
         unawaited(ref.read(newMonthFillProvider.notifier).runIfDue());
+        unawaited(ref.read(autoBackupServiceProvider).runIfDue());
       }
     }
     if (state == AppLifecycleState.paused) {
@@ -138,6 +139,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     } on DatabaseLockedException {
       // Closed while starting up; runs again when it reopens.
     }
+    // The daily automatic backup, after the books are up to date.
+    unawaited(ref.read(autoBackupServiceProvider).runIfDue());
   }
 
   /// Runs when the UI is unlocked: things the user sees wait for the app

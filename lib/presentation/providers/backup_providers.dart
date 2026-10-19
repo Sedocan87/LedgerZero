@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/database.dart';
@@ -9,11 +11,13 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
+import 'package:ledger_zero/services/backup/auto_backup_service.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/backup/backup_service.dart';
 import 'package:ledger_zero/services/backup/restore_service.dart';
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 final exportFileServiceProvider = Provider<ExportFileService>(
   (ref) => ExportFileService(),
@@ -65,6 +69,47 @@ final backupServiceProvider = Provider<BackupService>((ref) {
     files: ref.watch(exportFileServiceProvider),
   );
 });
+
+/// Where the automatic backups live: the app's external files directory
+/// (`Android/data/<app>/files`, reachable over USB and in file managers so
+/// the user can copy them away), else the app documents directory. Both
+/// survive a lost database key; neither survives an uninstall.
+Future<Directory> autoBackupBaseDirectory() async {
+  try {
+    final external = await getExternalStorageDirectory();
+    if (external != null) {
+      return external;
+    }
+  } catch (_) {
+    // Not available on this platform or storage not mounted.
+  }
+  return getApplicationDocumentsDirectory();
+}
+
+final autoBackupServiceProvider = Provider<AutoBackupService>((ref) {
+  return AutoBackupService(
+    ref.watch(sharedPreferencesProvider),
+    ref.watch(secureStoreProvider),
+    backupService: () => ref.read(backupServiceProvider),
+    baseDirectory: autoBackupBaseDirectory,
+  );
+});
+
+/// Bumped after an automatic backup setting or run changed, so the Backup
+/// screen re-reads the status and the file list.
+final autoBackupGenerationProvider = StateProvider<int>((ref) => 0);
+
+/// The automatic backups on this phone, newest first.
+final autoBackupFilesProvider =
+    FutureProvider.autoDispose<List<AutoBackupFile>>((ref) {
+      ref.watch(autoBackupGenerationProvider);
+      return ref.watch(autoBackupServiceProvider).listBackups();
+    });
+
+/// The folder of the automatic backups (shown on the Backup screen).
+final autoBackupFolderProvider = FutureProvider<Directory>(
+  (ref) => ref.watch(autoBackupServiceProvider).directory(),
+);
 
 final syncRebootstrapProvider = Provider<SyncRebootstrap>((ref) {
   return SyncRebootstrap(

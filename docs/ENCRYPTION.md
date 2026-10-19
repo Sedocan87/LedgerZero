@@ -157,7 +157,7 @@ strength meter (length, character classes, repeats, sequences).
 | Onboarding | Close any session, delete leftover database files and key material of older versions, generate and store a new DEK, open the session, save the app lock choice. |
 | Start-up | Read the DEK, check it opens the database, open the session, then the app lock (if on). |
 | Lock / auto-lock | UI only (`isAuthenticated = false`); the database stays open. |
-| Factory reset | Close the session, delete DB files, the DEK and any old vault / legacy / biometric entries, exports and diagnostics, clear preferences. |
+| Factory reset | Close the session, delete DB files, the DEK and any old vault / legacy / biometric entries, the stored automatic-backup password, exports and diagnostics, clear preferences. The automatic backup files are kept: after a reset forced by a lost DEK they are what the user restores from. |
 
 ## Where secrets are stored
 

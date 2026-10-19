@@ -980,7 +980,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get factoryResetConfirmation =>
-      'Möchten Sie die App wirklich auf Werkseinstellungen zurücksetzen? Dabei werden ALLE Daten gelöscht, auch Transaktionen, Budgets und Einstellungen. Dies kann nicht rückgängig gemacht werden.';
+      'Möchten Sie die App wirklich auf Werkseinstellungen zurücksetzen? Dabei werden ALLE Daten gelöscht, auch Transaktionen, Budgets und Einstellungen. Dies kann nicht rückgängig gemacht werden. Automatische Sicherungen auf diesem Telefon bleiben erhalten.';
 
   @override
   String get factoryResetTitle => 'Auf Werkseinstellungen zurücksetzen?';
@@ -3412,7 +3412,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get accountOnBudgetHelper =>
-      'Für Ersparnisse oder Geldanlagen ausschalten, die Sie nicht budgetieren möchten. Sie zählen weiterhin zu Ihrem Nettovermögen.';
+      'Ein: Saldo und Buchungen zählen zu „Zu budgetieren“. Für Ersparnisse oder Geldanlagen ausschalten, die Sie nicht budgetieren möchten.';
+
+  @override
+  String get accountOffBudgetHelper =>
+      'Aus: nicht budgetiert. Der Saldo zählt nur zu Ihrem Nettovermögen, wie bei Ersparnissen und Geldanlagen üblich.';
 
   @override
   String get accountOnBudgetChangeTitle => 'Budget ändern?';
@@ -3717,7 +3721,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lockScreenKeyError =>
-      'LedgerZero kann Ihre Daten nicht öffnen: Der auf diesem Telefon gespeicherte Schlüssel fehlt oder passt nicht zu den Daten. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon.';
+      'LedgerZero kann Ihre Daten nicht öffnen: Der auf diesem Telefon gespeicherte Schlüssel fehlt oder passt nicht zu den Daten. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
 
   @override
   String get legacyUnlockTitle => 'Ein letztes Mal entsperren';
@@ -4401,7 +4405,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lockScreenReadErrorPersistent =>
-      'LedgerZero kann seinen Schlüssel nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen: Der Schlüsselspeicher hat ihn nicht mehr (das kann auf manchen Telefonen nach einem Systemupdate oder einer Änderung der Displaysperre passieren). Ihre Daten auf diesem Telefon lassen sich ohne diesen Schlüssel nicht öffnen. Versuchen Sie es erneut oder starten Sie das Telefon neu; hilft das nicht, setzen Sie die App zurück und stellen Sie eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon.';
+      'LedgerZero kann seinen Schlüssel nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen: Der Schlüsselspeicher hat ihn nicht mehr (das kann auf manchen Telefonen nach einem Systemupdate oder einer Änderung der Displaysperre passieren). Ihre Daten auf diesem Telefon lassen sich ohne diesen Schlüssel nicht öffnen. Versuchen Sie es erneut oder starten Sie das Telefon neu; hilft das nicht, setzen Sie die App zurück und stellen Sie eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
 
   @override
   String get lockScreenOpenError =>
@@ -4682,4 +4686,90 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get backupNudgeMessage =>
       'Sie haben persönliche Konten, und die letzte Sicherung ist älter als 7 Tage (oder es gibt keine). Deren Buchungen gibt es nur auf diesem Telefon.';
+
+  @override
+  String get autoBackupTitle => 'Automatische Sicherungen';
+
+  @override
+  String autoBackupExplanation(int count) {
+    return 'Einmal am Tag speichert die App eine verschlüsselte Sicherung auf diesem Telefon und behält die letzten $count. Sie verwendet das hier gewählte Sicherungspasswort und lässt sich auch dann wiederherstellen, wenn der Schlüssel der App verloren geht. Kopieren Sie den Ordner ab und zu auf einen Computer: Bei einem verlorenen oder zurückgesetzten Telefon sind auch diese Sicherungen weg.';
+  }
+
+  @override
+  String get autoBackupSwitch => 'Automatisch sichern';
+
+  @override
+  String get autoBackupStatusOff => 'Aus';
+
+  @override
+  String get autoBackupStatusPending => 'Ein. Noch keine Sicherung.';
+
+  @override
+  String autoBackupStatusLast(String date) {
+    return 'Letzte Sicherung: $date';
+  }
+
+  @override
+  String autoBackupStatusFailed(String date, String error) {
+    return 'Letzter Versuch fehlgeschlagen ($date): $error';
+  }
+
+  @override
+  String autoBackupFolder(String path) {
+    return 'Ordner: $path';
+  }
+
+  @override
+  String get autoBackupNow => 'Jetzt sichern';
+
+  @override
+  String get autoBackupSaved => 'Sicherung gespeichert';
+
+  @override
+  String autoBackupFailed(String error) {
+    return 'Die automatische Sicherung ist fehlgeschlagen: $error';
+  }
+
+  @override
+  String get autoBackupChangePassword => 'Sicherungspasswort ändern';
+
+  @override
+  String get autoBackupPasswordTitle => 'Passwort für automatische Sicherungen';
+
+  @override
+  String get autoBackupPasswordExplanation =>
+      'Automatische Sicherungen werden mit diesem Passwort verschlüsselt. Bewahren Sie es auf: Ohne das Passwort lassen sie sich nicht wiederherstellen.';
+
+  @override
+  String get autoBackupTurnOn => 'Einschalten';
+
+  @override
+  String get autoBackupPasswordChanged =>
+      'Passwort geändert. Die nächste Sicherung verwendet es.';
+
+  @override
+  String get autoBackupRestore => 'Automatische Sicherung wiederherstellen';
+
+  @override
+  String get autoBackupRestoreTitle => 'Welche Sicherung?';
+
+  @override
+  String get autoBackupNone =>
+      'Auf diesem Telefon gibt es keine automatischen Sicherungen.';
+
+  @override
+  String autoBackupFileSize(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String get autoBackupDeleteAll => 'Automatische Sicherungen löschen';
+
+  @override
+  String autoBackupDeleteAllConfirm(int count) {
+    return 'Alle $count automatischen Sicherungen auf diesem Telefon löschen?';
+  }
+
+  @override
+  String get autoBackupDeleted => 'Automatische Sicherungen gelöscht';
 }

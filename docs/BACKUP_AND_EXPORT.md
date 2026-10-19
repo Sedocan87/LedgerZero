@@ -42,6 +42,36 @@ export below. Details: [BACKUP_FORMAT.md](BACKUP_FORMAT.md).
 ### Compression
 Backups are compressed with gzip before encryption.
 
+## 1b. Automatic backups
+
+**Settings > Backup & Export > Automatic backups** keeps an encrypted
+backup on the phone without you doing anything:
+
+* Turn it on with a backup password (the same rules as a manual backup
+  password). The first backup is made right away; afterwards one is made
+  once a day, when the app starts or comes back to the foreground. After a
+  failure the app tries again an hour later and the switch shows the error.
+* The files are ordinary `.lzbk` backups named
+  `ledgerzero_auto_<date>_<time>.lzbk` in the app's external files folder
+  (`Android/data/com.ledgerzero.app/files/backups`, reachable over USB and
+  in file managers; the Backup screen shows the exact path). The last 7
+  are kept.
+* They are what you restore from when the phone's key store loses the
+  database key: the data on the phone cannot be opened any more, but the
+  automatic backups still open with their password (see
+  [ERROR_RECOVERY.md](ERROR_RECOVERY.md), section 3). A factory reset of
+  the app keeps them for that reason; **Delete the automatic backups**
+  removes them.
+* They do **not** survive a lost phone, a factory reset of the phone or an
+  uninstall. Copy the folder to a computer now and then, or export a
+  backup through the share sheet.
+* The password is stored in the phone's secure storage so the backups can
+  run unattended. Turning the feature off forgets it; the files stay.
+* A successful automatic backup counts as a backup for the reminder.
+
+**Restore an automatic backup** in the Restore section lists them newest
+first and then runs the normal restore (confirmation, password, warnings).
+
 ## 2. Restore
 
 ### How to Restore

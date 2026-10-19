@@ -977,7 +977,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get factoryResetConfirmation =>
-      'Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone.';
+      'Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone. Automatic backups kept on this phone are not deleted.';
 
   @override
   String get factoryResetTitle => 'Factory Reset?';
@@ -3386,7 +3386,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountOnBudgetHelper =>
-      'Turn off for savings or investments you don\'t want to budget. They still count towards your net worth.';
+      'On: its balance and transactions count towards To Be Budgeted. Turn off for savings or investments you don\'t want to budget.';
+
+  @override
+  String get accountOffBudgetHelper =>
+      'Off: not budgeted. Its balance only counts towards your net worth, which is usual for savings and investments.';
 
   @override
   String get accountOnBudgetChangeTitle => 'Change what you budget?';
@@ -3687,7 +3691,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lockScreenKeyError =>
-      'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone.';
+      'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.';
 
   @override
   String get legacyUnlockTitle => 'Unlock one last time';
@@ -4368,7 +4372,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lockScreenReadErrorPersistent =>
-      'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone.';
+      'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.';
 
   @override
   String get lockScreenOpenError =>
@@ -4647,4 +4651,89 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupNudgeMessage =>
       'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.';
+
+  @override
+  String get autoBackupTitle => 'Automatic backups';
+
+  @override
+  String autoBackupExplanation(int count) {
+    return 'Once a day the app saves an encrypted backup on this phone and keeps the last $count. It uses the backup password you choose here and can be restored even when the app’s key is lost. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.';
+  }
+
+  @override
+  String get autoBackupSwitch => 'Back up automatically';
+
+  @override
+  String get autoBackupStatusOff => 'Off';
+
+  @override
+  String get autoBackupStatusPending => 'On. No backup yet.';
+
+  @override
+  String autoBackupStatusLast(String date) {
+    return 'Last backup: $date';
+  }
+
+  @override
+  String autoBackupStatusFailed(String date, String error) {
+    return 'Last try failed ($date): $error';
+  }
+
+  @override
+  String autoBackupFolder(String path) {
+    return 'Folder: $path';
+  }
+
+  @override
+  String get autoBackupNow => 'Back up now';
+
+  @override
+  String get autoBackupSaved => 'Backup saved';
+
+  @override
+  String autoBackupFailed(String error) {
+    return 'The automatic backup failed: $error';
+  }
+
+  @override
+  String get autoBackupChangePassword => 'Change the backup password';
+
+  @override
+  String get autoBackupPasswordTitle => 'Password for automatic backups';
+
+  @override
+  String get autoBackupPasswordExplanation =>
+      'Automatic backups are encrypted with this password. Keep it: without it they cannot be restored.';
+
+  @override
+  String get autoBackupTurnOn => 'Turn on';
+
+  @override
+  String get autoBackupPasswordChanged =>
+      'Password changed. The next backup uses it.';
+
+  @override
+  String get autoBackupRestore => 'Restore an automatic backup';
+
+  @override
+  String get autoBackupRestoreTitle => 'Which backup?';
+
+  @override
+  String get autoBackupNone => 'There are no automatic backups on this phone.';
+
+  @override
+  String autoBackupFileSize(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String get autoBackupDeleteAll => 'Delete the automatic backups';
+
+  @override
+  String autoBackupDeleteAllConfirm(int count) {
+    return 'Delete all $count automatic backups on this phone?';
+  }
+
+  @override
+  String get autoBackupDeleted => 'Automatic backups deleted';
 }

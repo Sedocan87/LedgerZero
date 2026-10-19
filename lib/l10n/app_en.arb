@@ -455,7 +455,7 @@
   "clearCache": "Clear Cache",
   "cacheCleared": "Cache cleared successfully",
   "factoryReset": "Factory Reset",
-  "factoryResetConfirmation": "Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone.",
+  "factoryResetConfirmation": "Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone. Automatic backups kept on this phone are not deleted.",
   "factoryResetTitle": "Factory Reset?",
   "factoryResetSuccess": "Factory reset complete. Please restart the app.",
   "helpAndSupport": "Help & Support",
@@ -2754,9 +2754,13 @@
   "@accountOnBudgetLabel": {
     "description": "Switch on the account form: whether the account counts towards To Be Budgeted"
   },
-  "accountOnBudgetHelper": "Turn off for savings or investments you don't want to budget. They still count towards your net worth.",
+  "accountOnBudgetHelper": "On: its balance and transactions count towards To Be Budgeted. Turn off for savings or investments you don't want to budget.",
   "@accountOnBudgetHelper": {
-    "description": "Helper text under the Include in budget switch"
+    "description": "Helper text under the Include in budget switch while it is on"
+  },
+  "accountOffBudgetHelper": "Off: not budgeted. Its balance only counts towards your net worth, which is usual for savings and investments.",
+  "@accountOffBudgetHelper": {
+    "description": "Helper text under the Include in budget switch while it is off"
   },
   "accountOnBudgetChangeTitle": "Change what you budget?",
   "@accountOnBudgetChangeTitle": {
@@ -2954,7 +2958,7 @@
   "appLockPromptSubtitle": "Use your fingerprint, face or screen lock",
   "appLockTurnedOffNoScreenLock": "This phone has no screen lock any more, so the app lock was turned off.",
   "lockScreenTitle": "LedgerZero is locked",
-  "lockScreenKeyError": "LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone.",
+  "lockScreenKeyError": "LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.",
   "legacyUnlockTitle": "Unlock one last time",
   "legacyUnlockExplanation": "LedgerZero no longer uses a master password. Unlock one last time with your password or recovery key. After that, the app keeps its key in this phone's secure key store, and the app lock uses your fingerprint, face or screen lock.",
   "setupDeviceHeading": "Your data stays on this phone",
@@ -3721,7 +3725,7 @@
   "@cardNotificationsListenerDisconnected": {
     "description": "Warning on the card notifications screen"
   },
-  "lockScreenReadErrorPersistent": "LedgerZero cannot read its key from this phone's secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone.",
+  "lockScreenReadErrorPersistent": "LedgerZero cannot read its key from this phone's secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.",
   "@lockScreenReadErrorPersistent": {
     "description": "Lock screen: the key store keeps failing"
   },
@@ -3835,5 +3839,51 @@
   "backupNudgeTitle": "Back up now",
   "@backupNudgeTitle": {"description": "Backup screen nudge title and button"},
   "backupNudgeMessage": "You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.",
-  "@backupNudgeMessage": {"description": "Backup screen nudge text"}
+  "@backupNudgeMessage": {"description": "Backup screen nudge text"},
+  "autoBackupTitle": "Automatic backups",
+  "@autoBackupTitle": {"description": "Backup screen section title"},
+  "autoBackupExplanation": "Once a day the app saves an encrypted backup on this phone and keeps the last {count}. It uses the backup password you choose here and can be restored even when the app’s key is lost. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.",
+  "@autoBackupExplanation": {"description": "Backup screen, automatic backups explanation", "placeholders": {"count": {"type": "int"}}},
+  "autoBackupSwitch": "Back up automatically",
+  "@autoBackupSwitch": {"description": "Switch title"},
+  "autoBackupStatusOff": "Off",
+  "@autoBackupStatusOff": {"description": "Switch subtitle when off"},
+  "autoBackupStatusPending": "On. No backup yet.",
+  "@autoBackupStatusPending": {"description": "Switch subtitle when on without a backup"},
+  "autoBackupStatusLast": "Last backup: {date}",
+  "@autoBackupStatusLast": {"description": "Switch subtitle", "placeholders": {"date": {"type": "String"}}},
+  "autoBackupStatusFailed": "Last try failed ({date}): {error}",
+  "@autoBackupStatusFailed": {"description": "Switch subtitle after a failed run", "placeholders": {"date": {"type": "String"}, "error": {"type": "String"}}},
+  "autoBackupFolder": "Folder: {path}",
+  "@autoBackupFolder": {"description": "Where the automatic backups are kept", "placeholders": {"path": {"type": "String"}}},
+  "autoBackupNow": "Back up now",
+  "@autoBackupNow": {"description": "Action: make an automatic backup now"},
+  "autoBackupSaved": "Backup saved",
+  "@autoBackupSaved": {"description": "Snackbar after a successful automatic backup"},
+  "autoBackupFailed": "The automatic backup failed: {error}",
+  "@autoBackupFailed": {"description": "Snackbar after a failed automatic backup", "placeholders": {"error": {"type": "String"}}},
+  "autoBackupChangePassword": "Change the backup password",
+  "@autoBackupChangePassword": {"description": "Action"},
+  "autoBackupPasswordTitle": "Password for automatic backups",
+  "@autoBackupPasswordTitle": {"description": "Password dialog title"},
+  "autoBackupPasswordExplanation": "Automatic backups are encrypted with this password. Keep it: without it they cannot be restored.",
+  "@autoBackupPasswordExplanation": {"description": "Password dialog text"},
+  "autoBackupTurnOn": "Turn on",
+  "@autoBackupTurnOn": {"description": "Password dialog action when turning automatic backups on"},
+  "autoBackupPasswordChanged": "Password changed. The next backup uses it.",
+  "@autoBackupPasswordChanged": {"description": "Snackbar"},
+  "autoBackupRestore": "Restore an automatic backup",
+  "@autoBackupRestore": {"description": "Restore section button"},
+  "autoBackupRestoreTitle": "Which backup?",
+  "@autoBackupRestoreTitle": {"description": "Dialog title listing the automatic backups"},
+  "autoBackupNone": "There are no automatic backups on this phone.",
+  "@autoBackupNone": {"description": "Snackbar"},
+  "autoBackupFileSize": "{size} KB",
+  "@autoBackupFileSize": {"description": "File size in the list", "placeholders": {"size": {"type": "String"}}},
+  "autoBackupDeleteAll": "Delete the automatic backups",
+  "@autoBackupDeleteAll": {"description": "Action"},
+  "autoBackupDeleteAllConfirm": "Delete all {count} automatic backups on this phone?",
+  "@autoBackupDeleteAllConfirm": {"description": "Confirmation", "placeholders": {"count": {"type": "int"}}},
+  "autoBackupDeleted": "Automatic backups deleted",
+  "@autoBackupDeleted": {"description": "Snackbar"}
 }

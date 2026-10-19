@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/utils/picked_file.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
+import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/security/password_strength_meter.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -14,6 +15,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/widgets/filtered_export_dialog.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/services/backup/auto_backup_service.dart';
 import 'package:ledger_zero/services/backup/restore_service.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart'
     show SyncEngineConfig;
@@ -150,11 +152,17 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   Future<void> _restoreBackup() async {
-    final l10n = AppLocalizations.of(context)!;
     final file = await _pickBackupFile();
     if (file == null || !mounted) {
       return;
     }
+    await _restoreFile(file);
+  }
+
+  /// Replaces the data with [file] after the confirmation, the password
+  /// and the warnings a backup may need.
+  Future<void> _restoreFile(File file) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -219,6 +227,253 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  // ---- Automatic backups -------------------------------------------------
+
+  void _autoBackupChanged() {
+    ref.read(autoBackupGenerationProvider.notifier).state++;
+  }
+
+  String _errorText(Object error) {
+    final text = error.toString();
+    return text.length > 120 ? '${text.substring(0, 120)}…' : text;
+  }
+
+  /// Asks for a new backup password (typed twice, checked like every new
+  /// password) and returns it, or null when cancelled.
+  Future<String?> _askNewBackupPassword(
+    AppLocalizations l10n, {
+    required String title,
+    required String action,
+  }) {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => _NewBackupPasswordDialog(
+        title: title,
+        action: action,
+        explanation: l10n.autoBackupPasswordExplanation,
+        label: l10n.backupPasswordLabel,
+        cancel: l10n.cancel,
+      ),
+    );
+  }
+
+  Future<void> _toggleAutoBackup(bool on) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final service = ref.read(autoBackupServiceProvider);
+    if (!on) {
+      await service.disable();
+      _autoBackupChanged();
+      return;
+    }
+    final password = await _askNewBackupPassword(
+      l10n,
+      title: l10n.autoBackupPasswordTitle,
+      action: l10n.autoBackupTurnOn,
+    );
+    if (password == null || !mounted) {
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await service.enable(password);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.autoBackupSaved)));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.autoBackupFailed(_errorText(e)))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      _autoBackupChanged();
+    }
+  }
+
+  Future<void> _autoBackupNow() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(autoBackupServiceProvider).runNow();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.autoBackupSaved)));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.autoBackupFailed(_errorText(e)))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      _autoBackupChanged();
+    }
+  }
+
+  Future<void> _changeAutoBackupPassword() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final password = await _askNewBackupPassword(
+      l10n,
+      title: l10n.autoBackupPasswordTitle,
+      action: l10n.save,
+    );
+    if (password == null || !mounted) {
+      return;
+    }
+    await ref.read(autoBackupServiceProvider).changePassword(password);
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.autoBackupPasswordChanged)),
+    );
+  }
+
+  Future<void> _restoreAutoBackup() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final formatter = ref.read(appFormatterProvider);
+    final backups = await ref.read(autoBackupServiceProvider).listBackups();
+    if (!mounted) {
+      return;
+    }
+    if (backups.isEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.autoBackupNone)));
+      return;
+    }
+    final chosen = await showDialog<AutoBackupFile>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(l10n.autoBackupRestoreTitle),
+        children: [
+          for (final backup in backups)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, backup),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.history),
+                title: Text(formatter.formatDateTime(backup.createdAt)),
+                subtitle: Text(
+                  l10n.autoBackupFileSize(
+                    ((backup.sizeBytes + 1023) ~/ 1024).toString(),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || !mounted) {
+      return;
+    }
+    await _restoreFile(chosen.file);
+  }
+
+  Future<void> _deleteAutoBackups(int count) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.autoBackupDeleteAll),
+        content: Text(l10n.autoBackupDeleteAllConfirm(count)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) {
+      return;
+    }
+    await ref.read(autoBackupServiceProvider).deleteAll();
+    messenger.showSnackBar(SnackBar(content: Text(l10n.autoBackupDeleted)));
+    _autoBackupChanged();
+  }
+
+  Widget _buildAutoBackupSection(AppLocalizations l10n) {
+    ref.watch(autoBackupGenerationProvider);
+    final service = ref.watch(autoBackupServiceProvider);
+    final formatter = ref.watch(appFormatterProvider);
+    final files = ref.watch(autoBackupFilesProvider).value ?? const [];
+    final folder = ref.watch(autoBackupFolderProvider).value;
+    final enabled = service.isEnabled;
+    final error = service.lastError;
+    final last = service.lastSuccess;
+    final String status;
+    if (!enabled) {
+      status = l10n.autoBackupStatusOff;
+    } else if (error != null) {
+      status = l10n.autoBackupStatusFailed(
+        formatter.formatDateTime(service.lastAttempt ?? DateTime.now()),
+        error,
+      );
+    } else if (last == null) {
+      status = l10n.autoBackupStatusPending;
+    } else {
+      status = l10n.autoBackupStatusLast(formatter.formatDateTime(last));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.autoBackupTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        Text(l10n.autoBackupExplanation(service.keep)),
+        const SizedBox(height: 16),
+        Card(
+          child: Column(
+            children: [
+              SwitchListTile(
+                key: const Key('autoBackup.enabled'),
+                title: Text(l10n.autoBackupSwitch),
+                subtitle: Text(status, key: const Key('autoBackup.status')),
+                value: enabled,
+                onChanged: _isLoading ? null : _toggleAutoBackup,
+              ),
+              if (enabled) ...[
+                ListTile(
+                  key: const Key('autoBackup.now'),
+                  leading: const Icon(Icons.backup),
+                  title: Text(l10n.autoBackupNow),
+                  onTap: _isLoading ? null : _autoBackupNow,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.password),
+                  title: Text(l10n.autoBackupChangePassword),
+                  onTap: _isLoading ? null : _changeAutoBackupPassword,
+                ),
+              ],
+              if (files.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline),
+                  title: Text(l10n.autoBackupDeleteAll),
+                  onTap: _isLoading
+                      ? null
+                      : () => _deleteAutoBackups(files.length),
+                ),
+            ],
+          ),
+        ),
+        if (folder != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            l10n.autoBackupFolder(folder.path),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ],
+    );
   }
 
   /// Warnings a backup needs before it replaces the data: another
@@ -480,6 +735,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            _buildAutoBackupSection(l10n),
+            const SizedBox(height: 32),
             Text(
               l10n.backupCreateTitle,
               style: Theme.of(context).textTheme.titleLarge,
@@ -556,6 +813,12 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     ),
                     const SizedBox(height: 16),
                     AppButton.secondary(
+                      key: const Key('autoBackup.restore'),
+                      label: l10n.autoBackupRestore,
+                      onPressed: _isLoading ? null : _restoreAutoBackup,
+                    ),
+                    const SizedBox(height: 16),
+                    AppButton.secondary(
                       label: l10n.restoreSelective,
                       onPressed: _isLoading ? null : _selectiveRestore,
                     ),
@@ -568,6 +831,84 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The password dialog of the automatic backups; owns its controllers so
+/// they outlive the closing animation.
+class _NewBackupPasswordDialog extends StatefulWidget {
+  const _NewBackupPasswordDialog({
+    required this.title,
+    required this.action,
+    required this.explanation,
+    required this.label,
+    required this.cancel,
+  });
+
+  final String title;
+  final String action;
+  final String explanation;
+  final String label;
+  final String cancel;
+
+  @override
+  State<_NewBackupPasswordDialog> createState() =>
+      _NewBackupPasswordDialogState();
+}
+
+class _NewBackupPasswordDialogState extends State<_NewBackupPasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _controller = TextEditingController();
+  final _confirm = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_formKey.currentState!.validate()) {
+      Navigator.pop(context, _controller.text);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(widget.explanation),
+              const SizedBox(height: 16),
+              NewPasswordFields(
+                controller: _controller,
+                confirmController: _confirm,
+                label: widget.label,
+                onSubmitted: _submit,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(widget.cancel),
+        ),
+        TextButton(
+          key: const Key('autoBackup.confirmPassword'),
+          onPressed: _submit,
+          child: Text(widget.action),
+        ),
+      ],
     );
   }
 }

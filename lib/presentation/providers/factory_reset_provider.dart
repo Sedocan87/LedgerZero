@@ -23,6 +23,7 @@ class FactoryResetService {
     required this.deleteDatabase,
     required this.deleteDeviceKey,
     required this.deleteLegacyKeys,
+    required this.forgetAutoBackupPassword,
     required this.deleteExports,
     required this.clearCapturedNotifications,
     required this.deleteErrorReports,
@@ -41,6 +42,11 @@ class FactoryResetService {
 
   /// Key vault / legacy / biometric key entries of older versions.
   final Future<void> Function() deleteLegacyKeys;
+
+  /// The stored password of the automatic backups. The backup files
+  /// themselves are kept: after a reset forced by a lost database key they
+  /// are what the user restores from.
+  final Future<void> Function() forgetAutoBackupPassword;
   final Future<void> Function() deleteExports;
 
   /// Captured card notifications with their settings.
@@ -66,6 +72,7 @@ class FactoryResetService {
       ('delete database', deleteDatabase),
       ('delete device key', deleteDeviceKey),
       ('delete legacy keys', deleteLegacyKeys),
+      ('forget auto backup password', forgetAutoBackupPassword),
       ('delete exports', deleteExports),
       ('clear captured notifications', clearCapturedNotifications),
       ('delete error reports', deleteErrorReports),
@@ -95,6 +102,8 @@ final factoryResetServiceProvider = Provider<FactoryResetService>((ref) {
     deleteDeviceKey: () => ref.read(deviceKeyStoreProvider).delete(),
     deleteLegacyKeys: () =>
         ref.read(legacyKeyMigrationProvider).deleteLeftovers(),
+    forgetAutoBackupPassword: () =>
+        ref.read(autoBackupServiceProvider).forgetPassword(),
     deleteExports: () => ref.read(exportFileServiceProvider).deleteAll(),
     clearCapturedNotifications: () =>
         ref.read(notificationCaptureChannelProvider).clear(),

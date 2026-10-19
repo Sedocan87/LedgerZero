@@ -1871,7 +1871,7 @@ abstract class AppLocalizations {
   /// No description provided for @factoryResetConfirmation.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone.'**
+  /// **'Are you sure you want to perform a factory reset? This will delete ALL data including transactions, budgets, and settings. This action cannot be undone. Automatic backups kept on this phone are not deleted.'**
   String get factoryResetConfirmation;
 
   /// No description provided for @factoryResetTitle.
@@ -5737,11 +5737,17 @@ abstract class AppLocalizations {
   /// **'Include in budget'**
   String get accountOnBudgetLabel;
 
-  /// Helper text under the Include in budget switch
+  /// Helper text under the Include in budget switch while it is on
   ///
   /// In en, this message translates to:
-  /// **'Turn off for savings or investments you don\'t want to budget. They still count towards your net worth.'**
+  /// **'On: its balance and transactions count towards To Be Budgeted. Turn off for savings or investments you don\'t want to budget.'**
   String get accountOnBudgetHelper;
+
+  /// Helper text under the Include in budget switch while it is off
+  ///
+  /// In en, this message translates to:
+  /// **'Off: not budgeted. Its balance only counts towards your net worth, which is usual for savings and investments.'**
+  String get accountOffBudgetHelper;
 
   /// Title of the dialog confirming a change of an account's Include in budget setting
   ///
@@ -6226,7 +6232,7 @@ abstract class AppLocalizations {
   /// No description provided for @lockScreenKeyError.
   ///
   /// In en, this message translates to:
-  /// **'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone.'**
+  /// **'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
   String get lockScreenKeyError;
 
   /// No description provided for @legacyUnlockTitle.
@@ -7276,7 +7282,7 @@ abstract class AppLocalizations {
   /// Lock screen: the key store keeps failing
   ///
   /// In en, this message translates to:
-  /// **'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone.'**
+  /// **'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
   String get lockScreenReadErrorPersistent;
 
   /// Lock screen: transient database open error
@@ -7578,6 +7584,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.'**
   String get backupNudgeMessage;
+
+  /// Backup screen section title
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backups'**
+  String get autoBackupTitle;
+
+  /// Backup screen, automatic backups explanation
+  ///
+  /// In en, this message translates to:
+  /// **'Once a day the app saves an encrypted backup on this phone and keeps the last {count}. It uses the backup password you choose here and can be restored even when the app’s key is lost. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.'**
+  String autoBackupExplanation(int count);
+
+  /// Switch title
+  ///
+  /// In en, this message translates to:
+  /// **'Back up automatically'**
+  String get autoBackupSwitch;
+
+  /// Switch subtitle when off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get autoBackupStatusOff;
+
+  /// Switch subtitle when on without a backup
+  ///
+  /// In en, this message translates to:
+  /// **'On. No backup yet.'**
+  String get autoBackupStatusPending;
+
+  /// Switch subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Last backup: {date}'**
+  String autoBackupStatusLast(String date);
+
+  /// Switch subtitle after a failed run
+  ///
+  /// In en, this message translates to:
+  /// **'Last try failed ({date}): {error}'**
+  String autoBackupStatusFailed(String date, String error);
+
+  /// Where the automatic backups are kept
+  ///
+  /// In en, this message translates to:
+  /// **'Folder: {path}'**
+  String autoBackupFolder(String path);
+
+  /// Action: make an automatic backup now
+  ///
+  /// In en, this message translates to:
+  /// **'Back up now'**
+  String get autoBackupNow;
+
+  /// Snackbar after a successful automatic backup
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved'**
+  String get autoBackupSaved;
+
+  /// Snackbar after a failed automatic backup
+  ///
+  /// In en, this message translates to:
+  /// **'The automatic backup failed: {error}'**
+  String autoBackupFailed(String error);
+
+  /// Action
+  ///
+  /// In en, this message translates to:
+  /// **'Change the backup password'**
+  String get autoBackupChangePassword;
+
+  /// Password dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Password for automatic backups'**
+  String get autoBackupPasswordTitle;
+
+  /// Password dialog text
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backups are encrypted with this password. Keep it: without it they cannot be restored.'**
+  String get autoBackupPasswordExplanation;
+
+  /// Password dialog action when turning automatic backups on
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on'**
+  String get autoBackupTurnOn;
+
+  /// Snackbar
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed. The next backup uses it.'**
+  String get autoBackupPasswordChanged;
+
+  /// Restore section button
+  ///
+  /// In en, this message translates to:
+  /// **'Restore an automatic backup'**
+  String get autoBackupRestore;
+
+  /// Dialog title listing the automatic backups
+  ///
+  /// In en, this message translates to:
+  /// **'Which backup?'**
+  String get autoBackupRestoreTitle;
+
+  /// Snackbar
+  ///
+  /// In en, this message translates to:
+  /// **'There are no automatic backups on this phone.'**
+  String get autoBackupNone;
+
+  /// File size in the list
+  ///
+  /// In en, this message translates to:
+  /// **'{size} KB'**
+  String autoBackupFileSize(String size);
+
+  /// Action
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the automatic backups'**
+  String get autoBackupDeleteAll;
+
+  /// Confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all {count} automatic backups on this phone?'**
+  String autoBackupDeleteAllConfirm(int count);
+
+  /// Snackbar
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backups deleted'**
+  String get autoBackupDeleted;
 }
 
 class _AppLocalizationsDelegate
