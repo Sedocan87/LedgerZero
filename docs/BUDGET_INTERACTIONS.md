@@ -140,6 +140,18 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   was turned on. A card ("November was filled automatically") offers Undo.
   If the template was deleted, the month before is used and the setting
   switches to it.
+* **It waits for the money.** Before writing, the controller compares the
+  planned total with To Be Budgeted of the month
+  (`BudgetingService.calculateTBB`). While TBB is short (payday still to
+  come), nothing is written and the month is not marked handled: the
+  new-month card turns into "Waiting for income to fill November" with the
+  shortfall, the expected income, *Not now* (skips the month, which the
+  plain card then offers by hand) and *Fill anyway*. The next start or
+  resume tries again, and the card itself triggers the fill when TBB grows
+  to cover the total while the budget screen is open (a salary booked by
+  hand or imported). Scheduled income is booked before the fill runs
+  (`_initializeServices`), so a salary due on the 1st never causes a wait.
+  A wait is in memory only and is recomputed each time.
 * Both only fill categories that are still at zero (never hidden ones) and
   never overwrite an amount. Undo resets only the categories still at the
   filled amount.

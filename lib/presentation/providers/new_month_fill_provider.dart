@@ -59,6 +59,26 @@ class AutoFillNote {
   }
 }
 
+/// A month the automatic fill is holding back because To Be Budgeted does
+/// not cover the amounts yet (payday still to come). Not persisted: it is
+/// recomputed at every start and resume.
+class AutoFillWaiting {
+  /// First day of the month (UTC).
+  final DateTime month;
+
+  /// What would be filled (minor units).
+  final int total;
+
+  /// How much To Be Budgeted is short of [total].
+  final int missing;
+
+  const AutoFillWaiting({
+    required this.month,
+    required this.total,
+    required this.missing,
+  });
+}
+
 class NewMonthFillState {
   final AutoFillSource source;
 
@@ -67,10 +87,15 @@ class NewMonthFillState {
 
   final AutoFillNote? note;
 
+  /// Set while the current month waits for its income (see
+  /// [NewMonthFillController.runIfDue]).
+  final AutoFillWaiting? waiting;
+
   const NewMonthFillState({
     this.source = AutoFillSource.off,
     this.templateId,
     this.note,
+    this.waiting,
   });
 
   NewMonthFillState copyWith({
@@ -78,10 +103,13 @@ class NewMonthFillState {
     String? templateId,
     AutoFillNote? note,
     bool clearNote = false,
+    AutoFillWaiting? waiting,
+    bool clearWaiting = false,
   }) => NewMonthFillState(
     source: source ?? this.source,
     templateId: templateId ?? this.templateId,
     note: clearNote ? null : (note ?? this.note),
+    waiting: clearWaiting ? null : (waiting ?? this.waiting),
   );
 }
 
@@ -92,6 +120,13 @@ class NewMonthFillState {
 /// [BudgetingService.automaticFillStamp] so a hand edit on any phone wins).
 /// Runs at most once per month and phone; a month that already has
 /// budgets (e.g. filled on the paired phone) is left as it is.
+///
+/// The fill waits for the money: while To Be Budgeted of the month does
+/// not cover the amounts (payday still to come), nothing is written and
+/// [NewMonthFillState.waiting] says what is missing. The next run (start,
+/// resume, or the budget screen once To Be Budgeted has grown) fills the
+/// month as soon as it is covered, so a month never starts in the red.
+/// [fillAnyway] and [skipMonth] end the wait by hand.
 class NewMonthFillController extends StateNotifier<NewMonthFillState> {
   NewMonthFillController(
     this._prefs,
@@ -142,14 +177,30 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
     );
   }
 
-  /// Fills the current month if the setting is on and this phone has not
-  /// handled it yet. Never throws.
-  Future<void> runIfDue() async {
+  /// Fills the current month if the setting is on, this phone has not
+  /// handled it yet and To Be Budgeted covers the amounts; otherwise
+  /// records what is missing in [NewMonthFillState.waiting] and tries
+  /// again at the next call. Never throws.
+  Future<void> runIfDue() => _run(waitForMoney: true);
+
+  /// Fills the waiting month now, whatever To Be Budgeted says.
+  Future<void> fillAnyway() => _run(waitForMoney: false);
+
+  /// Leaves the waiting month empty (the card offers it by hand as usual).
+  Future<void> skipMonth() async {
+    await _prefs.setString(lastMonthKey, CalendarDate.monthKey(_currentMonth));
+    state = state.copyWith(clearWaiting: true);
+  }
+
+  Future<void> _run({required bool waitForMoney}) async {
     if (state.source == AutoFillSource.off) {
       return;
     }
     final month = _currentMonth;
     final key = CalendarDate.monthKey(month);
+    if (state.waiting != null && state.waiting!.month != month) {
+      state = state.copyWith(clearWaiting: true);
+    }
     if (_prefs.getString(lastMonthKey) == key) {
       return;
     }
@@ -171,10 +222,32 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
             await setSource(AutoFillSource.previousMonth);
           }
         }
+        final stamp = BudgetingService.automaticFillStamp(month);
+        if (waitForMoney) {
+          final planned = await budgeting.planFill(
+            month,
+            amounts,
+            stampedAt: stamp,
+          );
+          final total = planned.values.fold(0, (sum, v) => sum + v);
+          if (total > 0) {
+            final tbb = await budgeting.calculateTBB(month);
+            if (tbb < total) {
+              state = state.copyWith(
+                waiting: AutoFillWaiting(
+                  month: month,
+                  total: total,
+                  missing: total - tbb,
+                ),
+              );
+              return;
+            }
+          }
+        }
         final filled = await budgeting.fillEmptyCategories(
           month,
           amounts,
-          stampedAt: BudgetingService.automaticFillStamp(month),
+          stampedAt: stamp,
         );
         if (filled.isNotEmpty) {
           final note = AutoFillNote(
@@ -183,10 +256,11 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
             templateName: templateName,
           );
           await _prefs.setString(noteKey, jsonEncode(note.toJson()));
-          state = state.copyWith(note: note);
+          state = state.copyWith(note: note, clearWaiting: true);
         }
       }
       await _prefs.setString(lastMonthKey, key);
+      state = state.copyWith(clearWaiting: true);
     } catch (e, stack) {
       // Tried again on the next start or resume.
       Logger.error('Filling the new month failed', e, stack);

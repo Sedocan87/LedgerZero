@@ -6544,7 +6544,7 @@ abstract class AppLocalizations {
   /// Explanation in the automatic fill setting
   ///
   /// In en, this message translates to:
-  /// **'On the first open of a new month, categories that are still empty get these amounts. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.'**
+  /// **'On the first open of a new month, categories that are still empty get these amounts, as soon as To Be Budgeted covers them: the month never starts in the red, and the budget screen shows what is still missing until payday. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.'**
   String get autoFillExplanation;
 
   /// Automatic fill option: do not fill new months
@@ -6814,7 +6814,7 @@ abstract class AppLocalizations {
   /// Numbered steps of a help topic, one per line
   ///
   /// In en, this message translates to:
-  /// **'Only empty categories are filled: amounts you already set stay.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.'**
+  /// **'Only empty categories are filled: amounts you already set stay.\nThe automatic fill waits until To Be Budgeted covers the amounts, so a month never starts in the red; the card shows what is still missing, with Fill anyway.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.'**
   String get helpNewMonthSteps;
 
   /// Help topic title
@@ -7722,6 +7722,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automatic backups deleted'**
   String get autoBackupDeleted;
+
+  /// New-month card while the automatic fill waits for To Be Budgeted to cover the amounts
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for income to fill {month}'**
+  String autoFillWaitingTitle(String month);
+
+  /// Body of the waiting card
+  ///
+  /// In en, this message translates to:
+  /// **'{total} is ready to be filled in; To Be Budgeted is {missing} short. It fills by itself as soon as the money is in.'**
+  String autoFillWaitingBody(String total, String missing);
+
+  /// Button on the waiting card: fill even though To Be Budgeted does not cover it
+  ///
+  /// In en, this message translates to:
+  /// **'Fill anyway'**
+  String get autoFillAnyway;
 }
 
 class _AppLocalizationsDelegate

@@ -158,4 +158,36 @@ void main() {
     expect(find.byKey(const Key('budget.autoFillNote')), findsNothing);
     expect(await t.budgeting.isMonthEmpty(march), isTrue);
   });
+
+  dbTestWidgets('while the automatic fill waits for income, the card says '
+      'what is missing and offers Fill anyway', (tester) async {
+    // $1,000 - $400 (February) - $700 rent = -$100: $500 short of $400.
+    final rent = await t.categoryId('Rent/Mortgage');
+    await t.addTransaction(accountId: 'a', amount: -70000, categoryId: rent);
+    await pump(tester);
+    final container = ProviderScope.containerOf(tester.element(card));
+    final controller = container.read(newMonthFillProvider.notifier);
+    // The controller works on the current month in real time; the card
+    // is pinned to March 2099, so the wait is set up like runIfDue does.
+    await controller.setSource(AutoFillSource.previousMonth);
+    controller.state = controller.state.copyWith(
+      waiting: AutoFillWaiting(
+        month: DateTime.utc(2099, 3, 1),
+        total: 40000,
+        missing: 50000,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('budget.autoFillWaiting')), findsOneWidget);
+    expect(find.text('Waiting for income to fill March'), findsOneWidget);
+    expect(
+      find.textContaining(
+        '\$400.00 is ready to be filled in; To Be Budgeted is \$500.00 short.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Fill anyway'), findsOneWidget);
+    expect(await t.budgeting.isMonthEmpty(march), isTrue);
+  });
 }

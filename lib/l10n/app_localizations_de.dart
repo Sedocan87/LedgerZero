@@ -3914,7 +3914,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoFillExplanation =>
-      'Beim ersten Öffnen eines neuen Monats erhalten Kategorien, die noch leer sind, diese Beträge. Selbst eingetragene Beträge werden nie überschrieben, auch nicht vom gekoppelten Telefon. Gilt ab dem nächsten Monat.';
+      'Beim ersten Öffnen eines neuen Monats erhalten die noch leeren Kategorien diese Beträge, sobald „Zu budgetieren“ sie deckt: Der Monat beginnt nie im Minus, und der Budget-Bildschirm zeigt bis zum Gehaltseingang, was noch fehlt. Selbst gesetzte Beträge werden nie überschrieben, auch nicht vom gekoppelten Telefon. Gilt ab dem nächsten Monat.';
 
   @override
   String get autoFillOff => 'Aus';
@@ -4083,7 +4083,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpNewMonthSteps =>
-      'Nur leere Kategorien werden gefüllt; Beträge, die Sie schon gesetzt haben, bleiben.\nWas Sie von Hand ändern, hat immer Vorrang, auch wenn das Telefon Ihres Partners denselben Monat füllt.\nRückgängig direkt nach dem Füllen setzt nur Kategorien zurück, die Sie seitdem nicht geändert haben.';
+      'Nur leere Kategorien werden gefüllt; Beträge, die Sie schon gesetzt haben, bleiben.\nDas automatische Füllen wartet, bis „Zu budgetieren“ die Beträge deckt, damit ein Monat nie im Minus beginnt; die Karte zeigt, was noch fehlt, mit „Trotzdem füllen“.\nWas Sie von Hand ändern, hat immer Vorrang, auch wenn das Telefon Ihres Partners denselben Monat füllt.\nRückgängig direkt nach dem Füllen setzt nur Kategorien zurück, die Sie seitdem nicht geändert haben.';
 
   @override
   String get helpOnBudgetTitle => 'Im Budget oder außerhalb';
@@ -4772,4 +4772,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoBackupDeleted => 'Automatische Sicherungen gelöscht';
+
+  @override
+  String autoFillWaitingTitle(String month) {
+    return '$month wird gefüllt, sobald das Geld da ist';
+  }
+
+  @override
+  String autoFillWaitingBody(String total, String missing) {
+    return '$total stehen bereit; bei „Zu budgetieren“ fehlen noch $missing. Gefüllt wird von selbst, sobald das Geld eingegangen ist.';
+  }
+
+  @override
+  String get autoFillAnyway => 'Trotzdem füllen';
 }

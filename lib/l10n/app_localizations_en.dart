@@ -3883,7 +3883,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoFillExplanation =>
-      'On the first open of a new month, categories that are still empty get these amounts. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.';
+      'On the first open of a new month, categories that are still empty get these amounts, as soon as To Be Budgeted covers them: the month never starts in the red, and the budget screen shows what is still missing until payday. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.';
 
   @override
   String get autoFillOff => 'Off';
@@ -4052,7 +4052,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpNewMonthSteps =>
-      'Only empty categories are filled: amounts you already set stay.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.';
+      'Only empty categories are filled: amounts you already set stay.\nThe automatic fill waits until To Be Budgeted covers the amounts, so a month never starts in the red; the card shows what is still missing, with Fill anyway.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.';
 
   @override
   String get helpOnBudgetTitle => 'In or out of the budget';
@@ -4736,4 +4736,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoBackupDeleted => 'Automatic backups deleted';
+
+  @override
+  String autoFillWaitingTitle(String month) {
+    return 'Waiting for income to fill $month';
+  }
+
+  @override
+  String autoFillWaitingBody(String total, String missing) {
+    return '$total is ready to be filled in; To Be Budgeted is $missing short. It fills by itself as soon as the money is in.';
+  }
+
+  @override
+  String get autoFillAnyway => 'Fill anyway';
 }

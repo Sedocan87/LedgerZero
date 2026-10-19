@@ -3110,7 +3110,7 @@
   "@autoFillMenu": {
     "description": "Budget screen menu entry that opens the automatic fill setting"
   },
-  "autoFillExplanation": "On the first open of a new month, categories that are still empty get these amounts. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.",
+  "autoFillExplanation": "On the first open of a new month, categories that are still empty get these amounts, as soon as To Be Budgeted covers them: the month never starts in the red, and the budget screen shows what is still missing until payday. Amounts you set yourself are never overwritten, also not from the paired phone. Starts with next month.",
   "@autoFillExplanation": {
     "description": "Explanation in the automatic fill setting"
   },
@@ -3354,7 +3354,7 @@
   "@helpNewMonthBody": {
     "description": "Help topic text"
   },
-  "helpNewMonthSteps": "Only empty categories are filled: amounts you already set stay.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.",
+  "helpNewMonthSteps": "Only empty categories are filled: amounts you already set stay.\nThe automatic fill waits until To Be Budgeted covers the amounts, so a month never starts in the red; the card shows what is still missing, with Fill anyway.\nWhat you change by hand always wins, also against your partner’s phone filling the same month.\nUndo right after filling resets only the categories you have not changed since.",
   "@helpNewMonthSteps": {
     "description": "Numbered steps of a help topic, one per line"
   },
@@ -3885,5 +3885,11 @@
   "autoBackupDeleteAllConfirm": "Delete all {count} automatic backups on this phone?",
   "@autoBackupDeleteAllConfirm": {"description": "Confirmation", "placeholders": {"count": {"type": "int"}}},
   "autoBackupDeleted": "Automatic backups deleted",
-  "@autoBackupDeleted": {"description": "Snackbar"}
+  "@autoBackupDeleted": {"description": "Snackbar"},
+  "autoFillWaitingTitle": "Waiting for income to fill {month}",
+  "@autoFillWaitingTitle": {"description": "New-month card while the automatic fill waits for To Be Budgeted to cover the amounts", "placeholders": {"month": {"type": "String"}}},
+  "autoFillWaitingBody": "{total} is ready to be filled in; To Be Budgeted is {missing} short. It fills by itself as soon as the money is in.",
+  "@autoFillWaitingBody": {"description": "Body of the waiting card", "placeholders": {"total": {"type": "String"}, "missing": {"type": "String"}}},
+  "autoFillAnyway": "Fill anyway",
+  "@autoFillAnyway": {"description": "Button on the waiting card: fill even though To Be Budgeted does not cover it"}
 }

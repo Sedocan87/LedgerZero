@@ -25,6 +25,8 @@ void main() {
     now = DateTime(2099, 10, 15);
     groceries = await t.categoryId('Groceries');
     rent = await t.categoryId('Rent/Mortgage');
+    // Enough money for October's 1,300 and the same again in November.
+    await t.addAccount(id: 'a', startingBalance: 300000);
     await t.budgeting.setCategoryBudgetedAmount(groceries, 30000, october);
     await t.budgeting.setCategoryBudgetedAmount(rent, 100000, october);
   });
@@ -102,6 +104,8 @@ void main() {
 
     await t.budgeting.deleteTemplate(template.id);
     final december = DateTime.utc(2099, 12, 1);
+    // November's salary, so December is covered.
+    await t.addTransaction(accountId: 'a', amount: 300000);
     now = DateTime(2099, 12, 1);
     await c.dismissNote();
     await c.runIfDue();
@@ -121,5 +125,74 @@ void main() {
     expect(await t.budgeting.isMonthEmpty(november), isTrue);
     expect(c.state.note, isNull);
     expect(controller().state.note, isNull);
+  });
+
+  test(
+    'waits for the money: fills as soon as To Be Budgeted covers it',
+    () async {
+      // 3,000 - 1,300 (October) - 1,000 rent = 700 left: 600 short of 1,300.
+      await t.addTransaction(accountId: 'a', amount: -100000, categoryId: rent);
+      final c = controller();
+      await c.setSource(AutoFillSource.previousMonth);
+      now = DateTime(2099, 11, 2);
+
+      await c.runIfDue();
+      expect(await t.budgeting.isMonthEmpty(november), isTrue);
+      expect(c.state.note, isNull);
+      expect(c.state.waiting?.month, november);
+      expect(c.state.waiting?.total, 130000);
+      expect(c.state.waiting?.missing, 60000);
+      // Not handled yet: tried again at the next run.
+      expect(prefs.getString(NewMonthFillController.lastMonthKey), '2099-10');
+
+      // Payday.
+      await t.addTransaction(accountId: 'a', amount: 250000);
+      await c.runIfDue();
+      expect(await budgeted(groceries, november), 30000);
+      expect(await budgeted(rent, november), 100000);
+      expect(c.state.waiting, isNull);
+      expect(c.state.note?.total, 130000);
+      expect(prefs.getString(NewMonthFillController.lastMonthKey), '2099-11');
+    },
+  );
+
+  test('"Fill anyway" fills the waiting month; "Not now" leaves it empty '
+      'for the month', () async {
+    await t.addTransaction(accountId: 'a', amount: -100000, categoryId: rent);
+    final c = controller();
+    await c.setSource(AutoFillSource.previousMonth);
+    now = DateTime(2099, 11, 2);
+    await c.runIfDue();
+    expect(c.state.waiting, isNotNull);
+
+    await c.fillAnyway();
+    expect(await budgeted(groceries, november), 30000);
+    expect(c.state.waiting, isNull);
+    expect(c.state.note?.month, november);
+
+    // December, short again: skipped by hand.
+    final december = DateTime.utc(2099, 12, 1);
+    now = DateTime(2099, 12, 1);
+    await c.runIfDue();
+    expect(c.state.waiting?.month, december);
+    await c.skipMonth();
+    expect(c.state.waiting, isNull);
+    await t.addTransaction(accountId: 'a', amount: 500000);
+    await c.runIfDue();
+    expect(await t.budgeting.isMonthEmpty(december), isTrue);
+  });
+
+  test('a stale wait is dropped when the month changes', () async {
+    await t.addTransaction(accountId: 'a', amount: -100000, categoryId: rent);
+    final c = controller();
+    await c.setSource(AutoFillSource.previousMonth);
+    now = DateTime(2099, 11, 2);
+    await c.runIfDue();
+    expect(c.state.waiting?.month, november);
+
+    now = DateTime(2099, 12, 1);
+    await c.runIfDue();
+    // November stays empty, so December has nothing to copy: no wait.
+    expect(c.state.waiting, isNull);
   });
 }

@@ -31,6 +31,9 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
   late Set<String> _dismissed;
   bool _busy = false;
 
+  /// A fill triggered by the money arriving while the screen is open.
+  bool _retrying = false;
+
   @override
   void initState() {
     super.initState();
@@ -101,6 +104,39 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
     }
   }
 
+  /// The automatic fill is waiting for this month's income: once To Be
+  /// Budgeted covers the amounts, fill right away instead of at the next
+  /// start (the salary was just booked or imported).
+  void _retryWhenCovered(AutoFillWaiting waiting, int tbb) {
+    if (_retrying || tbb < waiting.total) {
+      return;
+    }
+    _retrying = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await ref.read(newMonthFillProvider.notifier).runIfDue();
+      } finally {
+        _retrying = false;
+      }
+    });
+  }
+
+  Future<void> _fillAnyway() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(newMonthFillProvider.notifier).fillAnyway();
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _skipWaiting(DateTime month) async {
+    await ref.read(newMonthFillProvider.notifier).skipMonth();
+    await _dismiss(month);
+  }
+
   @override
   Widget build(BuildContext context) {
     final month = ref.watch(selectedBudgetMonthProvider);
@@ -117,6 +153,11 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
     final scheme = theme.colorScheme;
     final tbb = ref.watch(tbbProvider(month)).valueOrNull ?? 0;
     final income = ref.watch(monthIncomeProvider(month)).valueOrNull;
+    final waiting = ref.watch(newMonthFillProvider.select((s) => s.waiting));
+    if (waiting != null && waiting.month == month) {
+      _retryWhenCovered(waiting, tbb);
+      return _waitingCard(context, waiting, income);
+    }
     final templates =
         ref.watch(budgetTemplatesProvider).valueOrNull ??
         const <BudgetTemplate>[];
@@ -206,6 +247,109 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
                     key: const Key('budget.newMonthFill'),
                     label: l10n.newMonthFill(fmt.formatMonthName(previous)),
                     onPressed: _busy ? null : () => _fill(month, offer),
+                  ),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: () => showAutoFillSettingsDialog(context, ref),
+                icon: const Icon(Icons.autorenew, size: 18),
+                label: Text(l10n.autoFillTitle),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+extension on _NewMonthCardState {
+  /// The automatic fill is holding the month back until payday: what is
+  /// missing, the income expected, "Not now" and "Fill anyway".
+  Widget _waitingCard(
+    BuildContext context,
+    AutoFillWaiting waiting,
+    MonthIncome? income,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final fmt = ref.watch(appFormatterProvider);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final bodyStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+      child: Card(
+        key: const Key('budget.autoFillWaiting'),
+        color: Color.alphaBlend(
+          scheme.primary.withValues(alpha: 0.08),
+          scheme.surfaceContainerLow,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: scheme.primary.withValues(alpha: 0.25)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.hourglass_top, size: 20, color: scheme.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.autoFillWaitingTitle(
+                            fmt.formatMonthName(waiting.month),
+                          ),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.autoFillWaitingBody(
+                            fmt.formatMoney(waiting.total),
+                            fmt.formatMoney(waiting.missing),
+                          ),
+                          style: bodyStyle,
+                        ),
+                        if (income != null && income.expected > 0)
+                          Text(
+                            l10n.labelValue(
+                              l10n.budgetIncomeLabel,
+                              l10n.budgetIncomeExpected(
+                                fmt.formatMoney(income.expected),
+                                fmt.formatMonthDay(income.nextExpectedDate!),
+                              ),
+                            ),
+                            style: bodyStyle,
+                          ),
+                      ],
+                    ),
+                  ),
+                  const InfoButton(HelpTopic.newMonth),
+                ],
+              ),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                children: [
+                  AppButton.text(
+                    label: l10n.newMonthDismiss,
+                    onPressed: _busy ? null : () => _skipWaiting(waiting.month),
+                  ),
+                  AppButton.text(
+                    key: const Key('budget.autoFillAnyway'),
+                    label: l10n.autoFillAnyway,
+                    onPressed: _busy ? null : _fillAnyway,
                   ),
                 ],
               ),

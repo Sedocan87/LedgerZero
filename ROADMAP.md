@@ -69,6 +69,8 @@ A second full audit (budgeting, ledger, import/export, backup and sync, security
 
 Follow-up (2026-10-19): **automatic backups** (BACKUP_AND_EXPORT.md 1b). Once a day, at start or resume, the app writes an encrypted backup under the backup password chosen when the feature was turned on, into the app's external files folder (last 7 kept), and lists them for restore. They answer a KeyStore that loses the database key (the reset keeps them); they do not replace an off-phone copy.
 
+Follow-up (2026-10-19): **the automatic month fill waits for the money** (BUDGET_INTERACTIONS.md "Filling a new month"): a new month is only filled once To Be Budgeted covers the amounts, so it never starts in the red; until then the budget screen shows what is missing, with Fill anyway and Not now, and fills by itself when the salary arrives.
+
 Still open from that audit: a hybrid logical clock for sync (clock skew is only reported), a rename-merge when two phones with existing data join, "mark as transfer" on the CSV review screen, and Settings > Currency can still be changed while on-budget accounts exist in another currency. The real-device checks below remain.
 
 ## Phase 2: Design and UX (about 2–3 weeks)

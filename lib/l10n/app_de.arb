@@ -1081,7 +1081,7 @@
   "newMonthFilled": "{count, plural, =1{1 Kategorie gefüllt} other{{count} Kategorien gefüllt}}",
   "autoFillTitle": "Neue Monate automatisch füllen",
   "autoFillMenu": "Automatisch füllen…",
-  "autoFillExplanation": "Beim ersten Öffnen eines neuen Monats erhalten Kategorien, die noch leer sind, diese Beträge. Selbst eingetragene Beträge werden nie überschrieben, auch nicht vom gekoppelten Telefon. Gilt ab dem nächsten Monat.",
+  "autoFillExplanation": "Beim ersten Öffnen eines neuen Monats erhalten die noch leeren Kategorien diese Beträge, sobald „Zu budgetieren“ sie deckt: Der Monat beginnt nie im Minus, und der Budget-Bildschirm zeigt bis zum Gehaltseingang, was noch fehlt. Selbst gesetzte Beträge werden nie überschrieben, auch nicht vom gekoppelten Telefon. Gilt ab dem nächsten Monat.",
   "autoFillOff": "Aus",
   "autoFillPrevious": "Wie im Vormonat",
   "autoFillTemplate": "Vorlage: {name}",
@@ -1126,7 +1126,7 @@
   "helpTbbSteps": "Negativ heißt: Sie haben mehr budgetiert, als Sie haben. Verringern Sie eine Kategorie, bis wieder null erreicht ist.\nWas am Monatsende übrig ist, geht in den nächsten Monat über und kann dort budgetiert werden.\nKonten außerhalb des Budgets, etwa Sparkonto oder Depot, zählen hier nicht.",
   "helpNewMonthTitle": "Einen neuen Monat füllen",
   "helpNewMonthBody": "Ein neuer Monat beginnt leer. Füllen Sie ihn wie den Vormonat oder aus einer Vorlage, von Hand oder jeden Monat automatisch (Budget-Menü ⋮, „Automatisch füllen…“).",
-  "helpNewMonthSteps": "Nur leere Kategorien werden gefüllt; Beträge, die Sie schon gesetzt haben, bleiben.\nWas Sie von Hand ändern, hat immer Vorrang, auch wenn das Telefon Ihres Partners denselben Monat füllt.\nRückgängig direkt nach dem Füllen setzt nur Kategorien zurück, die Sie seitdem nicht geändert haben.",
+  "helpNewMonthSteps": "Nur leere Kategorien werden gefüllt; Beträge, die Sie schon gesetzt haben, bleiben.\nDas automatische Füllen wartet, bis „Zu budgetieren“ die Beträge deckt, damit ein Monat nie im Minus beginnt; die Karte zeigt, was noch fehlt, mit „Trotzdem füllen“.\nWas Sie von Hand ändern, hat immer Vorrang, auch wenn das Telefon Ihres Partners denselben Monat füllt.\nRückgängig direkt nach dem Füllen setzt nur Kategorien zurück, die Sie seitdem nicht geändert haben.",
   "helpOnBudgetTitle": "Im Budget oder außerhalb",
   "helpOnBudgetBody": "Konten im Budget enthalten das Geld, mit dem Sie planen und bezahlen: Ihr Saldo ist das, was Sie budgetieren. Konten außerhalb des Budgets zählen nur zum Nettovermögen.",
   "helpOnBudgetSteps": "Im Budget: Girokonto, Bargeld, Kreditkarten und das Konto, auf dem Ihr Gehalt eingeht.\nAußerhalb: Spar-, Depot-, Krypto- und Rentenkonten, Kredite.\nEine Rücklage auf dem Girokonto kann nicht außerhalb sein: Budgetieren Sie sie stattdessen in einer Kategorie wie „Sparen“.\nNehmen Sie ein Konto heraus, bietet die App an, dafür budgetiertes Geld freizugeben, damit „Zu budgetieren“ nicht negativ wird.",
@@ -1277,5 +1277,8 @@
   "autoBackupFileSize": "{size} KB",
   "autoBackupDeleteAll": "Automatische Sicherungen löschen",
   "autoBackupDeleteAllConfirm": "Alle {count} automatischen Sicherungen auf diesem Telefon löschen?",
-  "autoBackupDeleted": "Automatische Sicherungen gelöscht"
+  "autoBackupDeleted": "Automatische Sicherungen gelöscht",
+  "autoFillWaitingTitle": "{month} wird gefüllt, sobald das Geld da ist",
+  "autoFillWaitingBody": "{total} stehen bereit; bei „Zu budgetieren“ fehlen noch {missing}. Gefüllt wird von selbst, sobald das Geld eingegangen ist.",
+  "autoFillAnyway": "Trotzdem füllen"
 }
