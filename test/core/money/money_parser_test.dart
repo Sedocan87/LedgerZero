@@ -77,6 +77,35 @@ void main() {
     });
   });
 
+  group('parseExact keeps every fraction digit', () {
+    ({BigInt unscaled, int scale}) exact(int unscaled, int scale) =>
+        (unscaled: BigInt.from(unscaled), scale: scale);
+
+    test('the same separators as parse, without rounding', () {
+      expect(en.parseExact('1.125'), exact(1125, 3));
+      expect(en.parseExact('0.004'), exact(4, 3));
+      expect(de.parseExact('0,004'), exact(4, 3));
+      expect(de.parseExact('1,125'), exact(1125, 3));
+      // Grouping is resolved like parse: "1,125" in en is 1125.
+      expect(en.parseExact('1,125'), exact(1125, 0));
+      expect(de.parseExact('1.234,5678'), exact(12345678, 4));
+      expect(en.parseExact('12'), exact(12, 0));
+      expect(en.parseExact('.5'), exact(5, 1));
+    });
+
+    test('signs and currency symbols', () {
+      expect(en.parseExact('-0.005'), exact(-5, 3));
+      expect(de.parseExact('12,505-'), exact(-12505, 3));
+      expect(en.parseExact('(€1.5)'), exact(-15, 1));
+    });
+
+    test('rejects what parse rejects', () {
+      for (final input in ['', '.', 'abc', '1.2.3,4,5', '--1']) {
+        expect(() => en.parseExact(input), throwsFormatException);
+      }
+    });
+  });
+
   test('forLocale picks the locale decimal separator', () {
     expect(MoneyParser.forLocale('de').decimalSeparator, ',');
     expect(MoneyParser.forLocale('en').decimalSeparator, '.');

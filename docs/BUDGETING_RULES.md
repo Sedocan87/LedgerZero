@@ -94,14 +94,39 @@ accounts".
 `TBB(M) = sum of the starting balances of the on-budget accounts that exist by M`
 `       + sum of the transactions that flow into TBB, up to the end of M`
 `       - sum of everything budgeted up to and including M`
-`       - sum of everything budgeted in the months after M`
 `       - sum of the cash overspending of the months before M`
+`       - Held(M), the money held for later months (below)`
 
-*   **Money assigned ahead is gone now.** Budgeting 1,000 for November while
-    October is showing takes the 1,000 out of October's TBB (it cannot be
+`Held(M) = max(0, max over the months F after M, up to the last month with a budget, of`
+`          sum budgeted in the months after M up to F`
+`          - sum arriving in the months after M up to F)`
+
+"Arriving" in a month means the positive transactions that flow into TBB
+dated in it (income, uncategorised refunds, money moved in from an
+off-budget account) plus the positive starting balances of the on-budget
+accounts that start in it.
+
+*   **Money assigned ahead is gone now, unless later money pays for it.** A
+    later month's budgets are paid first from the money that arrives in the
+    later months; only the part that money does not cover is taken out of
+    M. Budgeting 1,000 for November while October is showing, with no
+    November income, takes the 1,000 out of October's TBB (it cannot be
     assigned twice), and November's TBB does not go negative for it: the
-    money was there. Every month's TBB therefore counts all budgets,
-    earlier, current and later.
+    money was there. With 400 of November income, October gives up 600.
+    And a month that budgets exactly its own income leaves every earlier
+    month alone: January income 3,000 budgeted in January and February
+    income 3,000 budgeted in February shows 0 in both months, however many
+    months follow.
+*   **Money arriving later cannot pay an earlier later month.** The maximum
+    runs over the months in order: if November budgets 500 without income
+    and December brings 2,000, October still holds back 500 for November
+    (December's money comes too late for it).
+*   **A later month's outflows and overspending stay in that month.** Only
+    budgets count against M: an uncategorised outflow, a transfer to an
+    off-budget account or a negative starting balance in a later month,
+    and a later month's overspending, lower that month's TBB (and the ones
+    after it), never an earlier month's. With no budget after M, Held(M)
+    is 0.
 *   **Overspending is charged to the next month.** A category that ends
     month M at -50 starts M + 1 at zero, and TBB(M + 1) is 50 lower. Each
     month's overspending is charged once; covering it in the same month
@@ -143,7 +168,7 @@ other account is off budget**. Both signs count:
 
 For every month M:
 
-`sum over categories of Available(M) + TBB(M) + sum budgeted after M
+`sum over categories of Available(M) + TBB(M) + Held(M)
  = sum of the on-budget account balances (starting balances of the
    accounts that exist by M, plus transactions up to the end of M)`
 
@@ -152,7 +177,7 @@ Why it holds: summing the available rule over the months gives
 before M` per category (each reset adds back what was negative). Adding
 TBB(M) cancels the budgets through M and the overspending, leaving
 starting balances + rows flowing into TBB + category activity, which is
-the account balances, minus the budgets after M.
+the account balances, minus Held(M).
 
 This is checked by `test/domain/services/budget_invariant_test.dart` on a
 real database with several accounts (including a credit card with a

@@ -46,8 +46,19 @@ abstract class BudgetRepository {
     String? categoryId,
   });
 
-  /// Total budgeted (minor units) in all months after [endMonth].
-  Future<int> getTotalBudgetedAfterMonth(String endMonth);
+  /// Budgeted per month (`yyyy-MM` -> sum, minor units) of the months
+  /// after [endMonth] (one grouped query; months without rows are absent).
+  Future<Map<String, int>> getBudgetedByMonthAfter(String endMonth);
+
+  /// Money arriving in To Be Budgeted per month: `yyyy-MM` -> sum (minor
+  /// units) of the positive rows that flow into To Be Budgeted
+  /// (`TransactionRepository.getReadyToAssignSum`, outflows left out) with
+  /// `start <= date < endExclusive` (one grouped query; months without
+  /// such rows are absent).
+  Future<Map<String, int>> getMonthlyReadyToAssignInflows(
+    DateTime start,
+    DateTime endExclusive,
+  );
 
   /// Category activity per month: `yyyy-MM` -> (categoryId -> signed sum,
   /// minor units) of the categorised activity rows (on-budget accounts,

@@ -93,20 +93,27 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
         .get();
   }
 
-  /// Sum of everything budgeted in months after [endMonth] (minor units).
-  Future<int> getTotalBudgetedAfterMonth(String endMonth) {
+  /// Budgeted per month (`yyyy-MM` -> sum in minor units) of the months
+  /// after [endMonth]. Months without budget rows are absent.
+  Future<Map<String, int>> getBudgetedSumsByMonthAfter(String endMonth) async {
     final budgeted = budgets.budgeted.sum();
     final query = selectOnly(budgets)
       ..where(budgets.month.isBiggerThanValue(endMonth))
-      ..addColumns([budgeted]);
-    return query.map((row) => row.read(budgeted) ?? 0).getSingle();
+      ..addColumns([budgets.month, budgeted])
+      ..groupBy([budgets.month]);
+    return {
+      for (final row in await query.get())
+        if (row.read(budgets.month) != null)
+          row.read(budgets.month)!: row.read(budgeted) ?? 0,
+    };
   }
 
-  // The two queries below read the transactions table: they are the budget
-  // side's view of category activity and account history, grouped the way
-  // the rollover needs it. Their row filters mirror
-  // [TransactionsDao.getCategoryActivitySums] (activity rows) and the
-  // account balance rows; keep them in step.
+  // The queries below read the transactions table: they are the budget
+  // side's view of category activity, money arriving in To Be Budgeted and
+  // account history, grouped the way the rollover and To Be Budgeted need
+  // it. Their row filters mirror [TransactionsDao.getCategoryActivitySums]
+  // (activity rows), [TransactionsDao.getReadyToAssignSum] (ready-to-assign
+  // rows) and the account balance rows; keep them in step.
 
   /// Category activity per calendar month: `yyyy-MM` -> (categoryId ->
   /// signed sum in minor units) of the categorised activity rows dated
@@ -144,6 +151,38 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
     return result;
   }
 
+  /// Money arriving in To Be Budgeted per calendar month: `yyyy-MM` ->
+  /// sum (minor units) of the positive ready-to-assign rows (non-deleted,
+  /// uncategorised, on-budget account, not a split parent, transfer legs
+  /// only when the other account is off-budget) with
+  /// `start <= date < endExclusive`. Outflows are left out. Months without
+  /// such rows are absent.
+  Future<Map<String, int>> getMonthlyReadyToAssignInflows(
+    DateTime start,
+    DateTime endExclusive,
+  ) async {
+    final transactions = attachedDatabase.transactions;
+    final month = transactions.date.strftime('%Y-%m');
+    final amount = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..where(
+        transactions.date.isBiggerOrEqualValue(start.toUtc()) &
+            transactions.date.isSmallerThanValue(endExclusive.toUtc()) &
+            transactions.isDeleted.equals(false) &
+            transactions.categoryId.isNull() &
+            transactions.amount.isBiggerThanValue(0) &
+            _inBudgetAccount &
+            (transactions.transferAccountId.isNull() | _transferAcrossBudget) &
+            _isNotSplitParent,
+      )
+      ..addColumns([month, amount])
+      ..groupBy([month]);
+    return {
+      for (final row in await query.get())
+        if (row.read(month) != null) row.read(month)!: row.read(amount) ?? 0,
+    };
+  }
+
   /// accountId -> date of the account's earliest non-deleted transaction
   /// (accounts without transactions are absent).
   Future<Map<String, DateTime>> getFirstTransactionDates() async {
@@ -165,6 +204,12 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
   static const CustomExpression<bool> _inBudgetAccount = CustomExpression(
     'transactions.account_id IN '
     '(SELECT id FROM accounts WHERE on_budget = 1)',
+  );
+
+  /// The row of table `transactions` is not a split parent (same condition
+  /// as in [TransactionsDao]).
+  static const CustomExpression<bool> _isNotSplitParent = CustomExpression(
+    'NOT ${TransactionsDao.splitParentCondition}',
   );
 
   /// The row is a transfer leg whose other account is off-budget.

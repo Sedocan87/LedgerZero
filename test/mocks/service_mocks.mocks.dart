@@ -50,6 +50,15 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
           as _i3.Future<int>);
 
   @override
+  _i3.Future<int> calculateHeldForLaterMonths(DateTime? month) =>
+      (super.noSuchMethod(
+            Invocation.method(#calculateHeldForLaterMonths, [month]),
+            returnValue: _i3.Future<int>.value(0),
+            returnValueForMissingStub: _i3.Future<int>.value(0),
+          )
+          as _i3.Future<int>);
+
+  @override
   _i3.Future<int> calculateTotalIncomeForMonth(DateTime? month) =>
       (super.noSuchMethod(
             Invocation.method(#calculateTotalIncomeForMonth, [month]),

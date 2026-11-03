@@ -15,7 +15,8 @@ import '../../helpers/test_database.dart';
 /// Budget invariant for [month]:
 ///
 /// SUM(available of every category) + To Be Budgeted
-///   + SUM(budgeted in the months after it)
+///   + held for later months (the budgets after it that the money arriving
+///     after it does not cover)
 ///   == SUM over on-budget accounts of (starting balance, once the account
 ///      exists, + non-deleted, non-split-child rows dated before the next
 ///      month).
@@ -28,15 +29,14 @@ Future<void> expectLedgerInvariant(TestDatabase t, DateTime month) async {
     available += await t.budgeting.calculateCategoryAvailable(c.id, month);
   }
   final tbb = await t.budgeting.calculateTBB(month);
-  final budgetedAfter = await t.budgets.getTotalBudgetedAfterMonth(
-    CalendarDate.monthKey(month),
-  );
+  final held = await t.budgeting.calculateHeldForLaterMonths(month);
   expect(
-    available + tbb + budgetedAfter,
+    available + tbb + held,
     await onBudgetBalancesThrough(t, month),
     reason:
-        'SUM(available) + TBB + budgeted after must equal SUM(balances) '
-        'for $month (available $available, TBB $tbb, after $budgetedAfter)',
+        'SUM(available) + TBB + held for later months must equal '
+        'SUM(balances) for $month (available $available, TBB $tbb, '
+        'held $held)',
   );
 }
 

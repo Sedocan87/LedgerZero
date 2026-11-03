@@ -1,6 +1,6 @@
 // The budget identity (decision D3) on a real database:
 //
-//   SUM over categories of available(M) + TBB(M) + budgeted after M
+//   SUM over categories of available(M) + TBB(M) + held for later months(M)
 //     == SUM of on-budget account balances counting transactions up to
 //        end of M (a starting balance counts once the account exists)
 //
@@ -58,15 +58,13 @@ void main() {
   Future<void> expectInvariant(DateTime month) async {
     final available = await sumAvailable(month);
     final tbb = await t.budgeting.calculateTBB(month);
-    final after = await t.budgets.getTotalBudgetedAfterMonth(
-      CalendarDate.monthKey(month),
-    );
+    final held = await t.budgeting.calculateHeldForLaterMonths(month);
     expect(
-      available + tbb + after,
+      available + tbb + held,
       await onBudgetBalancesThrough(t, month),
       reason:
           'invariant at ${CalendarDate.monthKey(month)} '
-          '(available $available, TBB $tbb, budgeted after $after)',
+          '(available $available, TBB $tbb, held for later months $held)',
     );
   }
 
@@ -209,10 +207,7 @@ void main() {
     // starting balances 1000 - 300 = 700; ready-to-assign rows: income
     // 2000 + uncategorised split line 700 = 2700; budgeted 300 in January
     // and 200 in February (assigned ahead, so not available in January).
-    expect(
-      await t.budgeting.calculateTBB(jan),
-      70000 + 270000 - 30000 - 20000,
-    );
+    expect(await t.budgeting.calculateTBB(jan), 70000 + 270000 - 30000 - 20000);
     // Income for January excludes the split parent and the transfer.
     expect(await t.budgeting.calculateTotalIncomeForMonth(jan), 270000);
     // Spending for January: 150 + 80 + 70 + 50 (split lines, not parent).
@@ -335,11 +330,14 @@ void main() {
       await expectInvariant(feb);
     });
 
-    test('income of the next month is only available there', () async {
+    test('income of the next month pays its budgets first; January gives '
+        'only the rest', () async {
       final checking = (await t.accounts.getAllAccounts()).single.id;
       await t.addTransaction(accountId: checking, amount: 50000, date: feb);
       await t.budgeting.setCategoryBudgetedAmount(rent, 120000, feb);
-      expect(await t.budgeting.calculateTBB(jan), -20000);
+      // February's 1,200: 500 from its own income, 700 from January.
+      expect(await t.budgeting.calculateHeldForLaterMonths(jan), 70000);
+      expect(await t.budgeting.calculateTBB(jan), 30000);
       expect(await t.budgeting.calculateTBB(feb), 30000);
       await expectInvariant(jan);
       await expectInvariant(feb);

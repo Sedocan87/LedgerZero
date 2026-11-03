@@ -3,10 +3,11 @@ import 'package:ledger_zero/core/money/money.dart';
 /// Evaluates simple arithmetic typed into amount fields ("50 + 20",
 /// "12,50*3", "100/3") exactly and returns minor units.
 ///
-/// Operands are parsed with [MoneyParser] (either decimal style); `*` and
-/// `/` treat the right operand as a plain factor. Intermediate results are
-/// exact fractions; only the final result is rounded half away from zero to
-/// minor units, so `0.1 + 0.2` is exactly `30`.
+/// Operands are parsed exactly with [MoneyParser.parseExact] (either
+/// decimal style, any number of fraction digits); `*` and `/` treat the
+/// right operand as a plain factor. Intermediate results are exact
+/// fractions; only the final result is rounded half away from zero to minor
+/// units, so `0.1 + 0.2` is exactly `30` and `100*1.125` is `11250`.
 class MathEvaluator {
   /// Evaluates [expression] and returns the result in minor units.
   /// An empty expression is `0`. Throws [FormatException] when invalid.
@@ -33,8 +34,12 @@ class MathEvaluator {
       if ('+-*/'.contains(token)) {
         throw const FormatException('Unexpected operator');
       }
-      // Minor units, i.e. hundredths of the typed number.
-      return _Fraction(BigInt.from(parser.parse(token)), BigInt.from(100));
+      // The typed number exactly (no rounding to minor units, which would
+      // turn "1000*0.004" into 0).
+      final (:unscaled, :scale) = parser.parseExact(token);
+      final value = _Fraction(unscaled, BigInt.from(10).pow(scale));
+      value.roundToMinor(); // Throws when the operand itself is too large.
+      return value;
     }
 
     // Multiplication and division first.
