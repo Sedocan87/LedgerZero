@@ -54,6 +54,11 @@ class CategoryCsvService {
     return const ListToCsvConverter().convert(CsvSanitizer.rows(rows));
   }
 
+  /// A group or category name cell, without the `'` [buildCsv] puts before
+  /// names starting with `=`, `+`, `-` or `@`.
+  static String _name(Object? cell) =>
+      CsvSanitizer.unquote('$cell'.trim()).trim();
+
   /// Decodes a picked file (UTF-8, else Windows-1252 as spreadsheets on
   /// German Windows save it) and imports it; see [importCsv].
   Future<CategoryCsvImportResult> importCsvBytes(List<int> bytes) =>
@@ -95,8 +100,8 @@ class CategoryCsvService {
         if (row.length <= groupIdx || row.length <= catIdx) {
           continue;
         }
-        final groupName = '${row[groupIdx]}'.trim();
-        final categoryName = '${row[catIdx]}'.trim();
+        final groupName = _name(row[groupIdx]);
+        final categoryName = _name(row[catIdx]);
         if (groupName.isEmpty || categoryName.isEmpty) {
           continue;
         }

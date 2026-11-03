@@ -177,4 +177,75 @@ void main() {
 
     await unmount(tester);
   });
+
+  testWidgets('auto category and default account can be set back to None', (
+    tester,
+  ) async {
+    final category = (await t.categories.getAllCategories()).first;
+    await t.payees.updatePayee(
+      Payee(
+        id: 'p',
+        name: 'Shop',
+        autoCategoryId: category.id,
+        defaultAccountId: 'eur',
+      ),
+    );
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(ValueKey('cat_${category.id}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('None').last);
+    await tester.pumpAndSettle();
+    final afterCategory = await tester.runAsync(
+      () => t.payees.getPayeeById('p'),
+    );
+    expect(afterCategory!.autoCategoryId, isNull);
+    expect(afterCategory.defaultAccountId, 'eur');
+
+    await tester.tap(find.byKey(const ValueKey('acc_eur')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('None').last);
+    await tester.pumpAndSettle();
+    final afterAccount = await tester.runAsync(
+      () => t.payees.getPayeeById('p'),
+    );
+    expect(afterAccount!.defaultAccountId, isNull);
+
+    await unmount(tester);
+  });
+
+  testWidgets('a small screen with the keyboard open scrolls instead of '
+      'overflowing', (tester) async {
+    for (var i = 0; i < 12; i++) {
+      await t.addTransaction(
+        id: 't$i',
+        accountId: 'eur',
+        amount: -100 * (i + 1),
+        date: day,
+        payeeId: 'p',
+      );
+    }
+    await pumpScreen(tester);
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // The notes field and the transactions below it are reachable.
+    final notes = find.widgetWithText(TextFormField, 'Notes');
+    await tester.ensureVisible(notes);
+    await tester.pumpAndSettle();
+    await tester.tap(notes);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+      find.text(fmt.formatMoney(-1200, currencyCode: 'EUR')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.takeException(), isNull);
+
+    await unmount(tester);
+  });
 }

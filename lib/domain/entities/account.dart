@@ -123,6 +123,8 @@ class Account {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool clearColor = false,
+    bool clearIcon = false,
   }) {
     return Account(
       id: id ?? this.id,
@@ -134,8 +136,8 @@ class Account {
       isClosed: isClosed ?? this.isClosed,
       onBudget: onBudget ?? this.onBudget,
       owner: owner ?? this.owner,
-      color: color ?? this.color,
-      icon: icon ?? this.icon,
+      color: clearColor ? null : (color ?? this.color),
+      icon: clearIcon ? null : (icon ?? this.icon),
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

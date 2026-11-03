@@ -401,6 +401,8 @@ void main() {
     expect(offeredCurrencies(tester), supportedCurrencyCodes);
 
     await tester.enterText(find.byType(TextFormField).at(0), 'Giro');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     await chooseCurrency(tester, 'CHF');
     await tapAndSettle(
       tester,
@@ -471,5 +473,88 @@ void main() {
     );
     await pumpForm(tester, repo);
     expect(find.text('Budget currency'), findsOneWidget);
+  });
+
+  Finder colourSwatch(int index) => find.byWidgetPredicate(
+    (w) => w is Semantics && w.properties.label == 'Color $index',
+  );
+  Finder iconChip(String label) => find.ancestor(
+    of: find.byWidgetPredicate((w) => w is Icon && w.semanticLabel == label),
+    matching: find.byType(ChoiceChip),
+  );
+
+  testWidgets('an account saves no colour or icon until one is picked', (
+    tester,
+  ) async {
+    final repo = MockAccountRepository();
+    await pumpForm(tester, repo);
+    await tester.enterText(find.byType(TextFormField).at(0), 'Giro');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tapAndSettle(
+      tester,
+      find.widgetWithText(ElevatedButton, 'Create Account'),
+    );
+    expect(repo.created!.color, isNull);
+    expect(repo.created!.icon, isNull);
+  });
+
+  testWidgets('a picked colour and icon are saved', (tester) async {
+    final repo = MockAccountRepository();
+    await pumpForm(tester, repo);
+    await tester.enterText(find.byType(TextFormField).at(0), 'Giro');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tapAndSettle(tester, colourSwatch(1));
+    await tapAndSettle(tester, iconChip('Bank'));
+    await tapAndSettle(
+      tester,
+      find.widgetWithText(ElevatedButton, 'Create Account'),
+    );
+    expect(repo.created!.color, Colors.red.toARGB32());
+    expect(repo.created!.icon, 'Bank');
+  });
+
+  testWidgets('tapping the picked colour and icon again returns to the type '
+      'default', (tester) async {
+    final repo = MockAccountRepository(
+      existing: Account(
+        id: 'a1',
+        name: 'Giro',
+        type: AccountType.checking,
+        color: Colors.red.toARGB32(),
+        icon: 'Bank',
+      ),
+    );
+    await pumpForm(tester, repo, accountId: 'a1');
+    await tapAndSettle(tester, colourSwatch(1));
+    await tapAndSettle(tester, iconChip('Bank'));
+    await tapAndSettle(
+      tester,
+      find.widgetWithText(ElevatedButton, 'Save Changes'),
+    );
+    expect(repo.updated!.color, isNull);
+    expect(repo.updated!.icon, isNull);
+  });
+
+  testWidgets('the old green-wallet default loads as not picked', (
+    tester,
+  ) async {
+    final repo = MockAccountRepository(
+      existing: const Account(
+        id: 'a1',
+        name: 'Giro',
+        type: AccountType.checking,
+        color: 0xFF4CAF50,
+        icon: 'Wallet',
+      ),
+    );
+    await pumpForm(tester, repo, accountId: 'a1');
+    await tapAndSettle(
+      tester,
+      find.widgetWithText(ElevatedButton, 'Save Changes'),
+    );
+    expect(repo.updated!.color, isNull);
+    expect(repo.updated!.icon, isNull);
   });
 }

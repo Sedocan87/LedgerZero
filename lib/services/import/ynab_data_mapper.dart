@@ -257,8 +257,7 @@ class YnabDataMapper {
             name: yCat.name,
             categoryGroupId: targetGroupId,
             isHidden: yCat.isHidden || sourceGroup.isHidden,
-            color: 0xFF000000,
-            icon: null, // Icon is String? in Category
+            // No colour or icon: the screens fall back to the theme's.
             createdAt: DateTime.now().toUtc(),
             goalType: null,
             targetAmount: null,

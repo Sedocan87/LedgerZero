@@ -54,6 +54,47 @@ void main() {
     expect(csv, isNot(contains(',=SUM')));
   });
 
+  test('names starting with = + - @ round-trip without the export\'s '
+      'apostrophe', () async {
+    await service.importCsv(
+      'Group,Category\n'
+      '"=Formulas",+Plus\n'
+      '"=Formulas",-Minus\n'
+      '@Home,@Rent\n',
+    );
+    final groups = await t.categories.getAllCategoryGroups();
+    final categories = await t.categories.getAllCategories();
+    final csv = service.buildCsv(groups, categories);
+    expect(csv, contains("'=Formulas"));
+    expect(csv, contains("'+Plus"));
+
+    // Re-importing the export into the same budget finds every name.
+    final again = await service.importCsv(csv);
+    expect(again.groupsCreated, 0);
+    expect(again.categoriesCreated, 0);
+
+    // A fresh budget gets the names as they were, not "'=Formulas".
+    final other = TestDatabase();
+    addTearDown(other.close);
+    await CategoryCsvService(
+      categoryRepository: other.categories,
+      unitOfWork: other.unitOfWork,
+    ).importCsv(csv);
+    final otherGroups = {
+      for (final g in await other.categories.getAllCategoryGroups())
+        g.id: g.name,
+    };
+    final imported = {
+      for (final c in await other.categories.getAllCategories())
+        c.name: otherGroups[c.categoryGroupId],
+    };
+    expect(imported, containsPair('+Plus', '=Formulas'));
+    expect(imported, containsPair('-Minus', '=Formulas'));
+    expect(imported, containsPair('@Rent', '@Home'));
+    expect(imported.keys.where((n) => n.startsWith("'")), isEmpty);
+    expect(otherGroups.values.where((n) => n.startsWith("'")), isEmpty);
+  });
+
   test('rejects a file that is not a category list', () async {
     expect(
       () => service.importCsv(''),

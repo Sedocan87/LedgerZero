@@ -4,6 +4,7 @@ import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
+import 'package:ledger_zero/presentation/widgets/common/account_avatar.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class AccountSelector extends ConsumerWidget {
@@ -33,7 +34,7 @@ class AccountSelector extends ConsumerWidget {
             return ListTile(
               title: Text(account.name),
               subtitle: Text(account.type.label(l10n)),
-              leading: const Icon(Icons.account_balance),
+              leading: AccountAvatar(account: account, size: 40),
               onTap: () {
                 onSelected(account);
                 Navigator.pop(context);

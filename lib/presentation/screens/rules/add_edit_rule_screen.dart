@@ -472,7 +472,9 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
 
   void _showAddActionDialog() {
     RuleActionType type = RuleActionType.setCategory;
-    final valueController = TextEditingController();
+    final valueController = TextEditingController(
+      text: _defaultActionValue(type),
+    );
     // Store readable name for display in dialog before save, but ID in valueController
     String displayValue = '';
     final l10n = AppLocalizations.of(context)!;
@@ -504,7 +506,9 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                   onChanged: (v) {
                     setDialogState(() {
                       type = v!;
-                      valueController.clear();
+                      // A yes/no action starts on "yes", as its dropdown
+                      // shows, so Add works without touching it.
+                      valueController.text = _defaultActionValue(type);
                       displayValue = '';
                     });
                   },
@@ -547,6 +551,13 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
       ),
     );
   }
+
+  /// The value a new action of [type] starts with: "true" for the yes/no
+  /// actions, else nothing (the user picks or types one).
+  static String _defaultActionValue(RuleActionType type) =>
+      type == RuleActionType.markCleared || type == RuleActionType.markApproved
+      ? 'true'
+      : '';
 
   Widget _buildActionValueInput(
     BuildContext context,
@@ -613,6 +624,9 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     } else if (type == RuleActionType.markCleared ||
         type == RuleActionType.markApproved) {
       return DropdownButtonFormField<String>(
+        // A key per type, so switching between the two yes/no actions
+        // shows the reset value.
+        key: ValueKey(type),
         initialValue: controller.text.isEmpty ? 'true' : controller.text,
         items: [
           DropdownMenuItem(value: 'true', child: Text(l10n.yes)),
