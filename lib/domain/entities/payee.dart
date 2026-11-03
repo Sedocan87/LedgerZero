@@ -53,12 +53,18 @@ class Payee {
     int? color,
     String? notes,
     bool? isFavorite,
+    bool clearAutoCategoryId = false,
+    bool clearDefaultAccountId = false,
   }) {
     return Payee(
       id: id ?? this.id,
       name: name ?? this.name,
-      autoCategoryId: autoCategoryId ?? this.autoCategoryId,
-      defaultAccountId: defaultAccountId ?? this.defaultAccountId,
+      autoCategoryId: clearAutoCategoryId
+          ? null
+          : (autoCategoryId ?? this.autoCategoryId),
+      defaultAccountId: clearDefaultAccountId
+          ? null
+          : (defaultAccountId ?? this.defaultAccountId),
       createdAt: createdAt ?? this.createdAt,
       icon: icon ?? this.icon,
       color: color ?? this.color,

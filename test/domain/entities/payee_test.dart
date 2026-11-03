@@ -3,6 +3,27 @@ import 'package:ledger_zero/domain/entities/payee.dart';
 
 void main() {
   group('Payee', () {
+    test('copyWith keeps or clears the auto category and default account', () {
+      const payee = Payee(
+        id: '1',
+        name: 'Shop',
+        autoCategoryId: 'cat1',
+        defaultAccountId: 'acc1',
+      );
+
+      final renamed = payee.copyWith(name: 'Corner Shop');
+      expect(renamed.autoCategoryId, 'cat1');
+      expect(renamed.defaultAccountId, 'acc1');
+
+      final cleared = payee.copyWith(
+        clearAutoCategoryId: true,
+        clearDefaultAccountId: true,
+      );
+      expect(cleared.autoCategoryId, isNull);
+      expect(cleared.defaultAccountId, isNull);
+      expect(cleared.name, 'Shop');
+    });
+
     test('should instantiate correctly', () {
       final now = DateTime.now();
       final payee = Payee(

@@ -339,311 +339,333 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
-              child: Column(
-                children: [
+              // One scroll view, so the settings card (with the notes field)
+              // scrolls out of the keyboard's way instead of overflowing.
+              child: CustomScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
                   // Stats & Settings
-                  transactionsAsync.when(
-                    data: (transactions) {
-                      // A split counts once, through its parent; its
-                      // children would otherwise be counted twice.
-                      final counted = transactions
-                          .where((t) => t.parentTransactionId == null)
-                          .toList();
-                      final count = counted.length;
-                      final fmt = ref.watch(appFormatterProvider);
-                      final totalSpent = counted.fold<int>(
-                        0,
-                        (sum, t) => sum + (t.amount < 0 ? -t.amount : 0),
-                      );
-                      // Show the account currency when every transaction
-                      // uses the same one.
-                      final currencies = counted
-                          .map((t) => accountCurrencies[t.accountId])
-                          .toSet();
-                      final totalCurrency = currencies.length == 1
-                          ? currencies.single
-                          : null;
-                      final lastUsed = transactions.isNotEmpty
-                          ? transactions.first.date
-                          : null;
-
-                      return Card(
-                        margin: const EdgeInsets.all(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.usageStats,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _StatItem(
-                                    label: l10n.timesUsed,
-                                    value: count.toString(),
-                                  ),
-                                  _StatItem(
-                                    label: l10n.totalSpent,
-                                    value: fmt.formatMoney(
-                                      totalSpent,
-                                      currencyCode: totalCurrency,
-                                    ),
-                                  ),
-                                  _StatItem(
-                                    label: l10n.lastUsed,
-                                    value: lastUsed != null
-                                        ? fmt.formatDate(lastUsed)
-                                        : '-',
-                                  ),
-                                ],
-                              ),
-                              const Divider(height: 24),
-
-                              // Configuration
-                              Text(
-                                l10n.configuration,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Icon & Color
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () =>
-                                          _showIconPicker(context, payee),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8.0,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              payee.icon != null
-                                                  ? categoryIcons[payee.icon] ??
-                                                        Icons.category
-                                                  : Icons.category,
-                                              color: payee.color != null
-                                                  ? Color(payee.color!)
-                                                  : Colors.grey,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  l10n.icon,
-                                                  style: Theme.of(
-                                                    context,
-                                                  ).textTheme.bodySmall,
-                                                ),
-                                                Text(
-                                                  payee.icon ??
-                                                      l10n.defaultLabel,
-                                                  style: Theme.of(
-                                                    context,
-                                                  ).textTheme.bodyMedium,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () =>
-                                          _showColorPicker(context, payee),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8.0,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            CircleAvatar(
-                                              backgroundColor:
-                                                  payee.color != null
-                                                  ? Color(payee.color!)
-                                                  : Colors.grey,
-                                              radius: 12,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  l10n.color,
-                                                  style: Theme.of(
-                                                    context,
-                                                  ).textTheme.bodySmall,
-                                                ),
-                                                Text(
-                                                  payee.color != null
-                                                      ? l10n.custom
-                                                      : l10n.defaultLabel,
-                                                  style: Theme.of(
-                                                    context,
-                                                  ).textTheme.bodyMedium,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Auto Category
-                              categoriesAsync.when(
-                                data: (categories) =>
-                                    DropdownButtonFormField<String>(
-                                      key: ValueKey(
-                                        'cat_${payee.autoCategoryId}',
-                                      ),
-                                      decoration: InputDecoration(
-                                        labelText: l10n.autoCategory,
-                                      ),
-                                      initialValue: payee.autoCategoryId,
-                                      isExpanded: true,
-                                      items: [
-                                        DropdownMenuItem(
-                                          value: null,
-                                          child: Text(l10n.none),
-                                        ),
-                                        ...categories.map(
-                                          (c) => DropdownMenuItem(
-                                            value: c.id,
-                                            child: Text(
-                                              c.name,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                      onChanged: (value) {
-                                        if (value != payee.autoCategoryId) {
-                                          _updatePayee(
-                                            payee.copyWith(
-                                              autoCategoryId: value,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                loading: () => const LinearProgressIndicator(),
-                                error: (_, _) => const SizedBox(),
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Default Account
-                              accountsAsync.when(
-                                data: (accounts) =>
-                                    DropdownButtonFormField<String>(
-                                      key: ValueKey(
-                                        'acc_${payee.defaultAccountId}',
-                                      ),
-                                      decoration: InputDecoration(
-                                        labelText: l10n.defaultAccount,
-                                      ),
-                                      initialValue: payee.defaultAccountId,
-                                      isExpanded: true,
-                                      items: [
-                                        DropdownMenuItem(
-                                          value: null,
-                                          child: Text(l10n.none),
-                                        ),
-                                        ...accounts
-                                            .where(
-                                              (a) =>
-                                                  !a.isPartners ||
-                                                  a.id ==
-                                                      payee.defaultAccountId,
-                                            )
-                                            .map(
-                                              (a) => DropdownMenuItem(
-                                                value: a.id,
-                                                child: Text(
-                                                  a.name,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ),
-                                      ],
-                                      onChanged: (value) {
-                                        if (value != payee.defaultAccountId) {
-                                          _updatePayee(
-                                            payee.copyWith(
-                                              defaultAccountId: value,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                loading: () => const LinearProgressIndicator(),
-                                error: (_, _) => const SizedBox(),
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Notes
-                              TextFormField(
-                                controller: _notesController,
-                                focusNode: _notesFocusNode,
-                                decoration: InputDecoration(
-                                  labelText: l10n.notes,
-                                ),
-                                maxLines: 2,
-                                onChanged: (_) {
-                                  _notesDirty = true;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    loading: () => const LinearProgressIndicator(),
-                    error: (_, _) => const SizedBox(),
-                  ),
-
-                  Expanded(
+                  SliverToBoxAdapter(
                     child: transactionsAsync.when(
                       data: (transactions) {
-                        if (transactions.isEmpty) {
-                          return Center(child: Text(l10n.noTransactions));
-                        }
-                        return ListView.builder(
-                          itemCount: transactions.length,
-                          itemBuilder: (context, index) {
-                            final tx = transactions[index];
-                            return TransactionListItem(
-                              transaction: tx,
-                              payeeName: payee.name,
-                              categoryName: categoriesMap[tx.categoryId],
-                              accountName: accountsMap[tx.accountId],
-                              currencyCode: accountCurrencies[tx.accountId],
-                              onTap: () {
-                                context.push('/edit-transaction/${tx.id}');
-                              },
-                            );
-                          },
+                        // A split counts once, through its parent; its
+                        // children would otherwise be counted twice.
+                        final counted = transactions
+                            .where((t) => t.parentTransactionId == null)
+                            .toList();
+                        final count = counted.length;
+                        final fmt = ref.watch(appFormatterProvider);
+                        final totalSpent = counted.fold<int>(
+                          0,
+                          (sum, t) => sum + (t.amount < 0 ? -t.amount : 0),
+                        );
+                        // Show the account currency when every transaction
+                        // uses the same one.
+                        final currencies = counted
+                            .map((t) => accountCurrencies[t.accountId])
+                            .toSet();
+                        final totalCurrency = currencies.length == 1
+                            ? currencies.single
+                            : null;
+                        final lastUsed = transactions.isNotEmpty
+                            ? transactions.first.date
+                            : null;
+
+                        return Card(
+                          margin: const EdgeInsets.all(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.usageStats,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _StatItem(
+                                      label: l10n.timesUsed,
+                                      value: count.toString(),
+                                    ),
+                                    _StatItem(
+                                      label: l10n.totalSpent,
+                                      value: fmt.formatMoney(
+                                        totalSpent,
+                                        currencyCode: totalCurrency,
+                                      ),
+                                    ),
+                                    _StatItem(
+                                      label: l10n.lastUsed,
+                                      value: lastUsed != null
+                                          ? fmt.formatDate(lastUsed)
+                                          : '-',
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+
+                                // Configuration
+                                Text(
+                                  l10n.configuration,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Icon & Color
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () =>
+                                            _showIconPicker(context, payee),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8.0,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                payee.icon != null
+                                                    ? categoryIcons[payee
+                                                              .icon] ??
+                                                          Icons.category
+                                                    : Icons.category,
+                                                color: payee.color != null
+                                                    ? Color(payee.color!)
+                                                    : Colors.grey,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    l10n.icon,
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.bodySmall,
+                                                  ),
+                                                  Text(
+                                                    payee.icon ??
+                                                        l10n.defaultLabel,
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.bodyMedium,
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () =>
+                                            _showColorPicker(context, payee),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8.0,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              CircleAvatar(
+                                                backgroundColor:
+                                                    payee.color != null
+                                                    ? Color(payee.color!)
+                                                    : Colors.grey,
+                                                radius: 12,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    l10n.color,
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.bodySmall,
+                                                  ),
+                                                  Text(
+                                                    payee.color != null
+                                                        ? l10n.custom
+                                                        : l10n.defaultLabel,
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.bodyMedium,
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Auto Category
+                                categoriesAsync.when(
+                                  data: (categories) =>
+                                      DropdownButtonFormField<String>(
+                                        key: ValueKey(
+                                          'cat_${payee.autoCategoryId}',
+                                        ),
+                                        decoration: InputDecoration(
+                                          labelText: l10n.autoCategory,
+                                        ),
+                                        initialValue: payee.autoCategoryId,
+                                        isExpanded: true,
+                                        items: [
+                                          DropdownMenuItem(
+                                            value: null,
+                                            child: Text(l10n.none),
+                                          ),
+                                          ...categories.map(
+                                            (c) => DropdownMenuItem(
+                                              value: c.id,
+                                              child: Text(
+                                                c.name,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                        onChanged: (value) {
+                                          if (value != payee.autoCategoryId) {
+                                            _updatePayee(
+                                              payee.copyWith(
+                                                autoCategoryId: value,
+                                                clearAutoCategoryId:
+                                                    value == null,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                  loading: () =>
+                                      const LinearProgressIndicator(),
+                                  error: (_, _) => const SizedBox(),
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Default Account
+                                accountsAsync.when(
+                                  data: (accounts) =>
+                                      DropdownButtonFormField<String>(
+                                        key: ValueKey(
+                                          'acc_${payee.defaultAccountId}',
+                                        ),
+                                        decoration: InputDecoration(
+                                          labelText: l10n.defaultAccount,
+                                        ),
+                                        initialValue: payee.defaultAccountId,
+                                        isExpanded: true,
+                                        items: [
+                                          DropdownMenuItem(
+                                            value: null,
+                                            child: Text(l10n.none),
+                                          ),
+                                          ...accounts
+                                              .where(
+                                                (a) =>
+                                                    !a.isPartners ||
+                                                    a.id ==
+                                                        payee.defaultAccountId,
+                                              )
+                                              .map(
+                                                (a) => DropdownMenuItem(
+                                                  value: a.id,
+                                                  child: Text(
+                                                    a.name,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ),
+                                        ],
+                                        onChanged: (value) {
+                                          if (value != payee.defaultAccountId) {
+                                            _updatePayee(
+                                              payee.copyWith(
+                                                defaultAccountId: value,
+                                                clearDefaultAccountId:
+                                                    value == null,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                  loading: () =>
+                                      const LinearProgressIndicator(),
+                                  error: (_, _) => const SizedBox(),
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Notes
+                                TextFormField(
+                                  controller: _notesController,
+                                  focusNode: _notesFocusNode,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.notes,
+                                  ),
+                                  maxLines: 2,
+                                  onChanged: (_) {
+                                    _notesDirty = true;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
                         );
                       },
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (e, s) => LoadErrorView(error: e, stackTrace: s),
+                      loading: () => const LinearProgressIndicator(),
+                      error: (_, _) => const SizedBox(),
+                    ),
+                  ),
+
+                  transactionsAsync.when(
+                    data: (transactions) {
+                      if (transactions.isEmpty) {
+                        return SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(child: Text(l10n.noTransactions)),
+                        );
+                      }
+                      return SliverList.builder(
+                        itemCount: transactions.length,
+                        itemBuilder: (context, index) {
+                          final tx = transactions[index];
+                          return TransactionListItem(
+                            transaction: tx,
+                            payeeName: payee.name,
+                            categoryName: categoriesMap[tx.categoryId],
+                            accountName: accountsMap[tx.accountId],
+                            currencyCode: accountCurrencies[tx.accountId],
+                            onTap: () {
+                              context.push('/edit-transaction/${tx.id}');
+                            },
+                          );
+                        },
+                      );
+                    },
+                    loading: () => const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (e, s) => SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: LoadErrorView(error: e, stackTrace: s),
                     ),
                   ),
                 ],
@@ -667,19 +689,31 @@ class _StatItem extends StatelessWidget {
 
   const _StatItem({required this.label, required this.value});
 
+  /// One third of the row: a long amount or date shrinks to fit and the
+  /// label wraps, so narrow phones and German labels do not overflow.
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
+    return Expanded(
+      child: Column(
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
     );
   }
 }
