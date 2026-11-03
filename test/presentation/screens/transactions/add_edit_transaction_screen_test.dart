@@ -12,6 +12,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/transactions/add_edit_transaction_screen.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/split_editor.dart';
 import 'package:ledger_zero/presentation/screens/transactions/natural_language_input_screen.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/services/nlp/transaction_parser.dart';
@@ -216,6 +217,39 @@ void main() {
     expect(saved.accountId, 'checking');
     expect(saved.date.isUtc, isTrue);
     expect(saved.date.hour, 0);
+  });
+
+  dbTestWidgets('the split editor shows what is left of the amount', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const AddEditTransactionScreen(initialAccountId: 'checking'),
+    );
+    await tester.enterText(
+      find.widgetWithText(AppTextField, 'Amount').first,
+      '50',
+    );
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Split'));
+    await tester.pumpAndSettle();
+    final remainder = find.byKey(splitRemainderKey);
+    expect(tester.widget<Text>(remainder).data, r'Remaining: $50.00');
+
+    // Amount fields: the transaction's first, then one per split line.
+    await tester.enterText(
+      find.widgetWithText(AppTextField, 'Amount').at(1),
+      '60',
+    );
+    await tester.pump();
+    expect(tester.widget<Text>(remainder).data, r'Over by $10.00');
+
+    // Changing the total updates the line as well.
+    await tester.enterText(
+      find.widgetWithText(AppTextField, 'Amount').first,
+      '60',
+    );
+    await tester.pump();
+    expect(tester.widget<Text>(remainder).data, r'Remaining: $0.00');
   });
 
   dbTestWidgets('quick-add draft keeps payee, category and account', (

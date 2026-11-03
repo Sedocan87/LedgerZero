@@ -260,6 +260,8 @@ class TransactionFormBody extends ConsumerWidget {
                   items: c.splits,
                   categories: categories,
                   onChanged: c.changed,
+                  total: c.signedAmount(fmt)?.abs(),
+                  currencyCode: accounts[c.accountId]?.currency,
                 ),
             ],
             const SizedBox(height: 16),

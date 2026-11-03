@@ -4749,4 +4749,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoFillAnyway => 'Fill anyway';
+
+  @override
+  String splitRemaining(String amount) {
+    return 'Remaining: $amount';
+  }
+
+  @override
+  String splitOverBy(String amount) {
+    return 'Over by $amount';
+  }
 }
