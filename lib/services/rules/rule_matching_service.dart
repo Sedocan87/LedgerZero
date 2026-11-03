@@ -1,4 +1,5 @@
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
@@ -15,11 +16,32 @@ class RulePerformanceStats {
   final int modifiedCount;
   final int durationMs;
 
+  /// Rows a rule would have moved to another account that stayed where
+  /// they are because they are reconciled (moving one would change a
+  /// reconciled balance).
+  final int skippedReconciledCount;
+
+  /// Rows a rule would have moved into an account with another currency
+  /// (the app has no exchange rates; the amount would change its meaning).
+  final int skippedCurrencyCount;
+
+  /// Rows of off-budget accounts a rule would have given a category
+  /// (categories only exist in the budget).
+  final int skippedOffBudgetCount;
+
   RulePerformanceStats({
     required this.processedCount,
     required this.modifiedCount,
     required this.durationMs,
+    this.skippedReconciledCount = 0,
+    this.skippedCurrencyCount = 0,
+    this.skippedOffBudgetCount = 0,
   });
+
+  /// Rows where at least one action was withheld to keep the ledger
+  /// consistent (they may still have been changed by other actions).
+  int get skippedCount =>
+      skippedReconciledCount + skippedCurrencyCount + skippedOffBudgetCount;
 }
 
 /// How much a rule may change a transaction.
@@ -263,30 +285,54 @@ class RuleMatchingService {
   /// unit of work. Rows in the partner's personal accounts are left alone
   /// (they live on the partner's phone), and actions with unknown or
   /// unbookable targets are ignored ([withValidReferences]).
+  ///
+  /// The ledger rules of `TransactionService` hold here too (see
+  /// [_keepLedgerInvariants]): a reconciled row never moves to another
+  /// account, no row moves into an account of another currency, and a row
+  /// of an off-budget account never gets a category (a row moved into one
+  /// loses its category). Withheld actions are counted in the result.
+  ///
+  /// Payee names, accounts and split parents are read once up front, not
+  /// per row.
   Future<RulePerformanceStats> applyRulesToAllTransactions(
     List<Rule> rules,
   ) async {
     final stopwatch = Stopwatch()..start();
     try {
       final usable = await withValidReferences(rules);
-      final partnerAccountIds = <String>{
+      final accounts = <String, Account>{
         for (final a in await _accountRepository?.getAllAccounts() ?? const [])
-          if (a.isPartners) a.id,
+          a.id: a,
       };
-      Future<({int processed, int modified})> run() async {
+      final payeeNames = <String, String>{
+        for (final p in await _payeeRepository.getAllPayees()) p.id: p.name,
+      };
+      Future<_ApplyAllCounts> run() async {
         final allTransactions = await _transactionRepository
             .getAllTransactions();
+        // getAllTransactions returns the non-deleted rows: a row is a split
+        // parent iff one of them names it as its parent.
+        final splitParentIds = <String>{
+          for (final t in allTransactions)
+            if (t.parentTransactionId != null) t.parentTransactionId!,
+        };
+        final counts = _ApplyAllCounts(allTransactions.length);
         final modified = <Transaction>[];
         for (final original in allTransactions) {
-          if (partnerAccountIds.contains(original.accountId)) {
+          if (accounts[original.accountId]?.isPartners ?? false) {
             continue;
           }
-          final updated = await apply(
+          final applied = await apply(
             original,
             usable,
-            isSplitParent: await _transactionRepository.isSplitParent(
-              original.id,
-            ),
+            payeeName: payeeNames[original.payeeId],
+            isSplitParent: splitParentIds.contains(original.id),
+          );
+          final updated = _keepLedgerInvariants(
+            original,
+            applied,
+            accounts,
+            counts,
           );
           if (original != updated) {
             modified.add(updated.copyWith(updatedAt: DateTime.now().toUtc()));
@@ -295,7 +341,8 @@ class RuleMatchingService {
         if (modified.isNotEmpty) {
           await _transactionRepository.batchUpdateTransactions(modified);
         }
-        return (processed: allTransactions.length, modified: modified.length);
+        counts.modified = modified.length;
+        return counts;
       }
 
       final unitOfWork = _unitOfWork;
@@ -306,18 +353,84 @@ class RuleMatchingService {
       final duration = stopwatch.elapsedMilliseconds;
       Logger.info(
         'Applied rules to ${counts.processed} transactions. '
-        'Modified ${counts.modified}. Duration: ${duration}ms',
+        'Modified ${counts.modified}, kept reconciled ${counts.reconciled}, '
+        'other currency ${counts.currency}, off budget ${counts.offBudget}. '
+        'Duration: ${duration}ms',
       );
       return RulePerformanceStats(
         processedCount: counts.processed,
         modifiedCount: counts.modified,
         durationMs: duration,
+        skippedReconciledCount: counts.reconciled,
+        skippedCurrencyCount: counts.currency,
+        skippedOffBudgetCount: counts.offBudget,
       );
     } catch (e) {
       Logger.error('Error applying rules to all transactions', e);
       rethrow;
     }
   }
+
+  /// [updated] (the rules applied to [original]) with the changes
+  /// `TransactionService` would refuse undone, counted in [counts]:
+  ///
+  /// * a reconciled row keeps its account;
+  /// * a row does not move into an account with another currency;
+  /// * in an off-budget account a row carries no category: a row moved
+  ///   into one loses its category (as `TransactionService.save` stores
+  ///   it), a category action on a row already there is not applied.
+  ///
+  /// Transfer legs, split lines and split parents never reach the account
+  /// or category checks with a change ([apply] leaves those fields alone).
+  /// Without an account repository only the reconciled rule applies.
+  static Transaction _keepLedgerInvariants(
+    Transaction original,
+    Transaction updated,
+    Map<String, Account> accounts,
+    _ApplyAllCounts counts,
+  ) {
+    var result = updated;
+    if (result.accountId != original.accountId) {
+      final from = accounts[original.accountId];
+      final to = accounts[result.accountId];
+      if (original.cleared == TransactionClearStatus.reconciled) {
+        result = result.copyWith(accountId: original.accountId);
+        counts.reconciled++;
+      } else if (from != null && to != null && from.currency != to.currency) {
+        result = result.copyWith(accountId: original.accountId);
+        counts.currency++;
+      }
+    }
+    final account = accounts[result.accountId];
+    if (account != null && !account.onBudget && result.categoryId != null) {
+      if (result.accountId != original.accountId) {
+        result = _withCategory(result, null);
+      } else if (result.categoryId != original.categoryId) {
+        result = _withCategory(result, original.categoryId);
+        counts.offBudget++;
+      }
+    }
+    return result;
+  }
+
+  static Transaction _withCategory(Transaction t, String? categoryId) =>
+      Transaction(
+        id: t.id,
+        accountId: t.accountId,
+        date: t.date,
+        amount: t.amount,
+        payeeId: t.payeeId,
+        categoryId: categoryId,
+        memo: t.memo,
+        cleared: t.cleared,
+        approved: t.approved,
+        isDeleted: t.isDeleted,
+        transferAccountId: t.transferAccountId,
+        transferTransactionId: t.transferTransactionId,
+        parentTransactionId: t.parentTransactionId,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      );
 
   /// Preview of [RuleApplyMode.overwrite] on one transaction.
   Future<Transaction> previewRules(Transaction transaction, List<Rule> rules) =>
@@ -441,4 +554,15 @@ class RuleMatchingService {
         };
     }
   }
+}
+
+/// Running counts of [RuleMatchingService.applyRulesToAllTransactions].
+class _ApplyAllCounts {
+  _ApplyAllCounts(this.processed);
+
+  final int processed;
+  int modified = 0;
+  int reconciled = 0;
+  int currency = 0;
+  int offBudget = 0;
 }

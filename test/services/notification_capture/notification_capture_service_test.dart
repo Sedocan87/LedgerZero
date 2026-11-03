@@ -329,6 +329,139 @@ void main() {
       expect(statusOf(dup), CaptureStatus.duplicate);
       expect(statusOf(other), CaptureStatus.added);
     });
+
+    test('two purchases of the same amount at different merchants on the '
+        'same day are both booked', () async {
+      final espresso = capture(
+        'You spent €2.80 at Bakery A',
+        at: postedAt.subtract(const Duration(hours: 3)),
+      );
+      final ticket = capture('You spent €2.80 at Transit B');
+
+      final result = await service.processPending();
+
+      expect(result.added, 2);
+      expect(result.duplicates, 0);
+      expect(statusOf(espresso), CaptureStatus.added);
+      expect(statusOf(ticket), CaptureStatus.added);
+      expect(await t.transactions.getAllTransactions(), hasLength(2));
+      final entries = await service.history();
+      expect(entries.any((e) => e.likelyDuplicate), isFalse);
+    });
+
+    test('Google Wallet and the bank app reporting one payment under '
+        'different merchant names book it once', () async {
+      channel.sources.add(
+        CaptureSource(
+          packageName: 'com.google.android.gms',
+          label: 'Google Wallet',
+          accountId: accountId,
+        ),
+      );
+      final wallet = capture(
+        '€4.50 at Bakery A',
+        package: 'com.google.android.gms',
+        at: postedAt.subtract(const Duration(minutes: 2)),
+      );
+      final bank = capture('Kartenzahlung 4,50 EUR bei SUMUP *BKRY A 0815');
+
+      final result = await service.processPending();
+
+      expect(result.added, 1);
+      expect(result.duplicates, 1);
+      expect(statusOf(wallet), CaptureStatus.added);
+      expect(statusOf(bank), CaptureStatus.duplicate);
+    });
+
+    test('the same app reporting another merchant later is another '
+        'purchase; another app hours later is too', () async {
+      channel.sources.add(
+        CaptureSource(
+          packageName: 'wallet.app',
+          label: 'Wallet',
+          accountId: accountId,
+        ),
+      );
+      capture('You spent €9.00 at Cinema', at: postedAt);
+      final sameApp = capture(
+        'You spent €9.00 at Pizzeria',
+        at: postedAt.add(const Duration(minutes: 20)),
+      );
+      final otherAppLater = capture(
+        '€9.00 at Bar Centrale',
+        package: 'wallet.app',
+        at: postedAt.add(const Duration(hours: 4)),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 3);
+      expect(statusOf(sameApp), CaptureStatus.added);
+      expect(statusOf(otherAppLater), CaptureStatus.added);
+    });
+
+    test('a payee renamed by a rule still matches the merchant of a second '
+        'notification', () async {
+      channel.sources.add(
+        CaptureSource(
+          packageName: 'wallet.app',
+          label: 'Wallet',
+          accountId: accountId,
+        ),
+      );
+      await t.payees.createPayee(const Payee(id: 'p-rewe', name: 'Groceries'));
+      final first = capture('You spent €12.50 at REWE');
+      await service.processPending();
+      final tx = (await t.transactions.getAllTransactions()).single;
+      // The user renamed the payee after booking.
+      await t.db.customStatement(
+        'UPDATE transactions SET payee_id = ? WHERE id = ?',
+        ['p-rewe', tx.id],
+      );
+
+      final second = capture(
+        '€12.50 at REWE Markt GmbH',
+        package: 'wallet.app',
+        at: postedAt.add(const Duration(hours: 5)),
+      );
+      await service.processPending();
+
+      expect(statusOf(first), CaptureStatus.added);
+      expect(statusOf(second), CaptureStatus.duplicate);
+    });
+
+    test('a hand-entered transaction at another payee is not a '
+        'duplicate', () async {
+      await t.payees.createPayee(const Payee(id: 'p-bus', name: 'Transit B'));
+      await t.addTransaction(
+        accountId: accountId,
+        amount: -280,
+        date: CalendarDate.normalize(postedAt),
+        payeeId: 'p-bus',
+      );
+      final espresso = capture('You spent €2.80 at Bakery A');
+      final bus = capture(
+        'You spent €2.80 at TRANSIT B TICKETS',
+        at: postedAt.add(const Duration(minutes: 1)),
+      );
+
+      await service.processPending();
+
+      expect(statusOf(espresso), CaptureStatus.added);
+      expect(statusOf(bus), CaptureStatus.duplicate);
+    });
+
+    test('merchant names are compared loosely', () {
+      bool match(String a, String b) =>
+          NotificationCaptureService.merchantsMatch(a, b);
+      expect(match('REWE', 'REWE SAGT DANKE 4711'), isTrue);
+      expect(match('Bäckerei Schmidt', 'BAECKEREI SCHMIDT'), isTrue);
+      expect(match('Starbucks', 'SumUp *Starbucks'), isTrue);
+      expect(match('dm-drogerie markt', 'DM Drogerie'), isTrue);
+      expect(match('Bakery A', 'Transit B'), isFalse);
+      expect(match('REWE Markt', 'Edeka Markt'), isFalse);
+      expect(match('Aral', 'Shell'), isFalse);
+    });
   });
 
   test('notifications without an amount from Google Play services are '

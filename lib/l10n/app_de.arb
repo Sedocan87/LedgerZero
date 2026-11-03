@@ -1284,5 +1284,8 @@
   "splitRemaining": "Verbleibend: {amount}",
   "splitOverBy": "{amount} zu viel",
   "reportNetWorthOtherCurrencies": "Nur Konten in {budgetCurrency}. Nicht enthalten: Konten in {currencies}.",
-  "reportBudgetVsActualMonths": "Ganze Monate: {months}"
+  "reportBudgetVsActualMonths": "Ganze Monate: {months}",
+  "rulesAppliedSkipped": "{count, plural, =1{1 Änderung nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.} other{{count} Änderungen nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.}}",
+  "cardNotificationsDuplicatesHeld": "{count, plural, =1{1 Zahlung nicht hinzugefügt: Sie sieht aus wie eine vorhandene Transaktion} other{{count} Zahlungen nicht hinzugefügt: Sie sehen aus wie vorhandene Transaktionen}}",
+  "cardNotificationsDuplicatesBanner": "{count, plural, =1{1 Zahlung wurde nicht hinzugefügt, weil sie wie eine vorhandene Transaktion aussieht. War es ein eigener Kauf, tippen Sie auf „Trotzdem hinzufügen“.} other{{count} Zahlungen wurden nicht hinzugefügt, weil sie wie vorhandene Transaktionen aussehen. War eine davon ein eigener Kauf, tippen Sie dort auf „Trotzdem hinzufügen“.}}"
 }

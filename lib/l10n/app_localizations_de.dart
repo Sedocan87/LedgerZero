@@ -4808,4 +4808,43 @@ class AppLocalizationsDe extends AppLocalizations {
   String reportBudgetVsActualMonths(String months) {
     return 'Ganze Monate: $months';
   }
+
+  @override
+  String rulesAppliedSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Änderungen nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.',
+      one:
+          '1 Änderung nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsDuplicatesHeld(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zahlungen nicht hinzugefügt: Sie sehen aus wie vorhandene Transaktionen',
+      one:
+          '1 Zahlung nicht hinzugefügt: Sie sieht aus wie eine vorhandene Transaktion',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsDuplicatesBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zahlungen wurden nicht hinzugefügt, weil sie wie vorhandene Transaktionen aussehen. War eine davon ein eigener Kauf, tippen Sie dort auf „Trotzdem hinzufügen“.',
+      one:
+          '1 Zahlung wurde nicht hinzugefügt, weil sie wie eine vorhandene Transaktion aussieht. War es ein eigener Kauf, tippen Sie auf „Trotzdem hinzufügen“.',
+    );
+    return '$_temp0';
+  }
 }

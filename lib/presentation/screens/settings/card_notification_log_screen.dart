@@ -238,6 +238,11 @@ class _CardNotificationLogScreenState
     }
   }
 
+  /// Listed entries held as possible duplicates that can still be added.
+  int get _heldDuplicates => _entries
+      .where((e) => e.status == CaptureStatus.duplicate && e.canAdd)
+      .length;
+
   String _status(AppLocalizations l10n, LoggedCapture entry) =>
       switch (entry.status) {
         CaptureStatus.pending => l10n.cardNotificationsHeldTitle,
@@ -313,6 +318,12 @@ class _CardNotificationLogScreenState
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Text(l10n.cardNotificationsLogIntro),
                 ),
+                if (_heldDuplicates > 0)
+                  _DuplicatesBanner(
+                    text: l10n.cardNotificationsDuplicatesBanner(
+                      _heldDuplicates,
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Wrap(
@@ -424,6 +435,45 @@ class _CardNotificationLogScreenState
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// Says how many listed payments were held as possible duplicates and that
+/// "Add anyway" books them.
+class _DuplicatesBanner extends StatelessWidget {
+  const _DuplicatesBanner({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Material(
+        key: const Key('cardNotificationLog.duplicatesBanner'),
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.content_copy_outlined,
+                color: scheme.onSecondaryContainer,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(color: scheme.onSecondaryContainer),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

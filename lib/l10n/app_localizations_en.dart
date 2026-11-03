@@ -4772,4 +4772,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportBudgetVsActualMonths(String months) {
     return 'Whole months: $months';
   }
+
+  @override
+  String rulesAppliedSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count changes were not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.',
+      one:
+          '1 change was not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsDuplicatesHeld(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count payments not added: they look like transactions you already have',
+      one: '1 payment not added: it looks like a transaction you already have',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsDuplicatesBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count payments were not added because they look like transactions you already have. If one was a separate purchase, tap Add anyway on it.',
+      one:
+          '1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.',
+    );
+    return '$_temp0';
+  }
 }

@@ -130,7 +130,12 @@ class RulesScreen extends ConsumerWidget {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(l10n.rulesApplied(stats.modifiedCount)),
+                          content: Text(
+                            stats.skippedCount == 0
+                                ? l10n.rulesApplied(stats.modifiedCount)
+                                : '${l10n.rulesApplied(stats.modifiedCount)}\n'
+                                      '${l10n.rulesAppliedSkipped(stats.skippedCount)}',
+                          ),
                         ),
                       );
                     }

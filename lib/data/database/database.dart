@@ -226,7 +226,33 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('PRAGMA foreign_keys = ON');
         await customStatement('PRAGMA journal_mode = WAL');
         await customStatement('PRAGMA synchronous = NORMAL');
+        await createUnversionedIndexes();
       },
+    );
+  }
+
+  /// Name of the index on `transactions (parent_transaction_id,
+  /// is_deleted)`, see [createUnversionedIndexes].
+  static const String splitParentIndex = 'idx_transactions_parent';
+
+  /// Performance indexes that are not part of the versioned drift schema.
+  ///
+  /// They are created idempotently on every open (`IF NOT EXISTS`), for new
+  /// and existing databases alike, so adding one needs no schema version
+  /// bump: the schema version is written into every sync change file and a
+  /// phone quarantines files of a newer schema until it is updated, which
+  /// would force both phones of a household to update in lock-step for a
+  /// change that does not touch the data. An index never changes what is
+  /// stored or synced.
+  ///
+  /// * [splitParentIndex]: split children by parent. Used by the split
+  ///   parent checks (`TransactionsDao.splitParentCondition`, correlated in
+  ///   balance, activity and report queries) and by SQLite's foreign-key
+  ///   check when a transaction is deleted.
+  Future<void> createUnversionedIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS $splitParentIndex '
+      'ON transactions (parent_transaction_id, is_deleted)',
     );
   }
 

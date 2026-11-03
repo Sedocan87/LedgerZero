@@ -3899,5 +3899,11 @@
   "reportNetWorthOtherCurrencies": "Accounts in {budgetCurrency} only. Not included: accounts in {currencies}.",
   "@reportNetWorthOtherCurrencies": {"description": "Note below the net worth chart when accounts in other currencies exist (amounts in different currencies are never added up)", "placeholders": {"budgetCurrency": {"type": "String"}, "currencies": {"type": "String"}}},
   "reportBudgetVsActualMonths": "Whole months: {months}",
-  "@reportBudgetVsActualMonths": {"description": "Subtitle of Budget vs Actual: the calendar months it compares (budgets are monthly, so the selected range is widened to whole months), e.g. 'Jan 2024 – Mar 2024'", "placeholders": {"months": {"type": "String"}}}
+  "@reportBudgetVsActualMonths": {"description": "Subtitle of Budget vs Actual: the calendar months it compares (budgets are monthly, so the selected range is widened to whole months), e.g. 'Jan 2024 – Mar 2024'", "placeholders": {"months": {"type": "String"}}},
+  "rulesAppliedSkipped": "{count, plural, =1{1 change was not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.} other{{count} changes were not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.}}",
+  "@rulesAppliedSkipped": {"description": "Second line of the snackbar after applying rules to all transactions, when actions were withheld", "placeholders": {"count": {"type": "int"}}},
+  "cardNotificationsDuplicatesHeld": "{count, plural, =1{1 payment not added: it looks like a transaction you already have} other{{count} payments not added: they look like transactions you already have}}",
+  "@cardNotificationsDuplicatesHeld": {"description": "Snackbar after booking captured notifications when some were held as possible duplicates; its action opens the capture log", "placeholders": {"count": {"type": "int"}}},
+  "cardNotificationsDuplicatesBanner": "{count, plural, =1{1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.} other{{count} payments were not added because they look like transactions you already have. If one was a separate purchase, tap Add anyway on it.}}",
+  "@cardNotificationsDuplicatesBanner": {"description": "Banner at the top of the capture log when entries were held as possible duplicates", "placeholders": {"count": {"type": "int"}}}
 }

@@ -143,7 +143,16 @@ sent yet competes the same way — it does not win automatically.
   applied the file carrying it) and the content differs, the overwritten
   local row is recorded in `sync_conflicts`. Sync settings lists them:
   *Keep mine* re-applies the local snapshot as a new local edit (newer than
-  every known version), *Dismiss* removes the entry. Not recorded: a budget
+  every known version), *Dismiss* removes the entry. When the local version
+  was a delete, *Keep mine* deletes the row again the way the app deletes
+  it (`SyncConflictResolver`): a transaction with its split lines, split
+  parent and transfer counterpart (soft delete, stamped newer than every
+  known version); an account, category or payee through its domain
+  service (transfer legs elsewhere detached, the account's transactions
+  deleted; a category's budgets deleted and its transactions
+  uncategorised; payee references cleared); a category group moves its
+  current categories to the first other group. So rows that reference it
+  no longer make the delete fail on a foreign key. Not recorded: a budget
   amount written by the automatic new-month fill (its `updated_at` is the
   first day of its month, 00:00 UTC; see BUDGET_INTERACTIONS.md).
 * Seeded default categories use deterministic ids and a fixed timestamp.
