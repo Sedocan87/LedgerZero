@@ -1282,5 +1282,7 @@
   "autoFillWaitingBody": "{total} stehen bereit; bei „Zu budgetieren“ fehlen noch {missing}. Gefüllt wird von selbst, sobald das Geld eingegangen ist.",
   "autoFillAnyway": "Trotzdem füllen",
   "splitRemaining": "Verbleibend: {amount}",
-  "splitOverBy": "{amount} zu viel"
+  "splitOverBy": "{amount} zu viel",
+  "reportNetWorthOtherCurrencies": "Nur Konten in {budgetCurrency}. Nicht enthalten: Konten in {currencies}.",
+  "reportBudgetVsActualMonths": "Ganze Monate: {months}"
 }

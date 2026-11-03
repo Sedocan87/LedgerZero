@@ -353,8 +353,11 @@ household member; see BUDGETING_RULES.md for what users see.
   balance change gives the row a new `updated_at` and reaches the partner.
   `AccountsDao.balanceExpression` uses `shared_balance` for the partner's
   accounts and the computed balance for all others. The net worth report
-  counts the partner's accounts at that balance over the whole range (they
-  have no history here).
+  has no history of the partner's accounts, only the shared legs of
+  transfers to and from them: it leaves those legs out and counts each
+  partner account at its shared balance minus what the legs moved into it
+  (`TransactionsDao.getTransferLegTotals`), so a household-internal
+  transfer never moves net worth.
 * **Read-only.** The repository refuses to update the partner's accounts;
   `TransactionService` refuses to save or delete a transaction whose
   account or transfer account is one (`partnerAccount`); pickers leave

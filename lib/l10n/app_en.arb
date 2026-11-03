@@ -3895,5 +3895,9 @@
   "splitRemaining": "Remaining: {amount}",
   "@splitRemaining": {"description": "Below the split lines: part of the total not yet assigned to a line (0 when the lines add up)", "placeholders": {"amount": {"type": "String"}}},
   "splitOverBy": "Over by {amount}",
-  "@splitOverBy": {"description": "Below the split lines: the lines add up to more than the total", "placeholders": {"amount": {"type": "String"}}}
+  "@splitOverBy": {"description": "Below the split lines: the lines add up to more than the total", "placeholders": {"amount": {"type": "String"}}},
+  "reportNetWorthOtherCurrencies": "Accounts in {budgetCurrency} only. Not included: accounts in {currencies}.",
+  "@reportNetWorthOtherCurrencies": {"description": "Note below the net worth chart when accounts in other currencies exist (amounts in different currencies are never added up)", "placeholders": {"budgetCurrency": {"type": "String"}, "currencies": {"type": "String"}}},
+  "reportBudgetVsActualMonths": "Whole months: {months}",
+  "@reportBudgetVsActualMonths": {"description": "Subtitle of Budget vs Actual: the calendar months it compares (budgets are monthly, so the selected range is widened to whole months), e.g. 'Jan 2024 – Mar 2024'", "placeholders": {"months": {"type": "String"}}}
 }

@@ -121,16 +121,26 @@ class MoneyFormatter {
   }
 
   /// Rewrites the locale's separators to the configured ones.
+  ///
+  /// Only the number itself is rewritten (from its first to its last
+  /// digit): the text around it, such as the German compact suffix
+  /// `Mio.`, keeps its own punctuation.
   String _applySeparators(String formatted) {
     final symbols = _symbols;
     final localeDecimal = symbols.DECIMAL_SEP;
     final localeGroup = symbols.GROUP_SEP;
-    if (localeDecimal == decimalSeparator &&
-        (localeGroup == groupSeparator || !formatted.contains(localeGroup))) {
+    final first = formatted.indexOf(_digit);
+    if (first < 0) {
       return formatted;
     }
-    final buffer = StringBuffer();
-    for (final rune in formatted.runes) {
+    final last = formatted.lastIndexOf(_digit) + 1;
+    final number = formatted.substring(first, last);
+    if (localeDecimal == decimalSeparator &&
+        (localeGroup == groupSeparator || !number.contains(localeGroup))) {
+      return formatted;
+    }
+    final buffer = StringBuffer(formatted.substring(0, first));
+    for (final rune in number.runes) {
       final char = String.fromCharCode(rune);
       if (char == localeDecimal) {
         buffer.write(decimalSeparator);
@@ -140,8 +150,11 @@ class MoneyFormatter {
         buffer.write(char);
       }
     }
+    buffer.write(formatted.substring(last));
     return buffer.toString();
   }
+
+  static final RegExp _digit = RegExp('[0-9]');
 
   late final _symbols = NumberFormat.decimalPattern(_safeLocale).symbols;
 

@@ -4759,4 +4759,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String splitOverBy(String amount) {
     return 'Over by $amount';
   }
+
+  @override
+  String reportNetWorthOtherCurrencies(
+    String budgetCurrency,
+    String currencies,
+  ) {
+    return 'Accounts in $budgetCurrency only. Not included: accounts in $currencies.';
+  }
+
+  @override
+  String reportBudgetVsActualMonths(String months) {
+    return 'Whole months: $months';
+  }
 }

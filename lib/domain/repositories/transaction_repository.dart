@@ -1,3 +1,4 @@
+import 'package:ledger_zero/domain/entities/spending.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 
@@ -93,19 +94,42 @@ abstract class TransactionRepository {
   Future<int> getIncomeSum(DateTime start, DateTime endExclusive);
 
   /// Sum (minor units) of all account-balance rows (non-deleted, not split
-  /// children) dated before [endExclusive].
-  Future<int> getBalanceChangeSum(DateTime endExclusive);
+  /// children) dated before [endExclusive]. With [currency] only the rows
+  /// of accounts in that currency count; transfer legs whose other account
+  /// is in [excludeTransfersTo] never do.
+  Future<int> getBalanceChangeSum(
+    DateTime endExclusive, {
+    String? currency,
+    Set<String> excludeTransfersTo = const {},
+  });
 
   /// Net change of all account balances per month (`yyyy-MM` -> signed
-  /// minor units) for `start <= date < endExclusive` (one grouped query).
+  /// minor units) for `start <= date < endExclusive` (one grouped query),
+  /// narrowed like [getBalanceChangeSum].
   Future<Map<String, int>> getMonthlyBalanceChanges(
+    DateTime start,
+    DateTime endExclusive, {
+    String? currency,
+    Set<String> excludeTransfersTo = const {},
+  });
+
+  /// For each of [accountIds] with some: the signed sum and the earliest
+  /// date of the transfer legs on this phone whose other account it is.
+  Future<Map<String, ({int sum, DateTime first})>> getTransferLegTotals(
+    Set<String> accountIds,
+  );
+
+  /// The spending rows with `start <= date < endExclusive`, summed per
+  /// month, category and payee; [Spending] computes every spending figure
+  /// from them (one definition of "spent", see
+  /// `domain/entities/spending.dart`).
+  Future<List<SpendingRow>> getSpendingRows(
     DateTime start,
     DateTime endExclusive,
   );
 
-  /// Spending in minor units (negative): non-deleted outflows of on-budget
-  /// accounts that are not transfer legs or split parents, with
-  /// `start <= date < endExclusive`.
+  /// Spending in minor units (negative) with `start <= date < endExclusive`:
+  /// minus [Spending.total] of [getSpendingRows].
   Future<int> getOutflowSum(DateTime start, DateTime endExclusive);
 
   /// Activity of a category (signed sum, minor units, split children

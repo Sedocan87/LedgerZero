@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
-import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/spending.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
 import 'package:mockito/mockito.dart';
@@ -52,50 +52,27 @@ void main() {
           end: end,
         );
 
-        final t1 = Transaction(
-          id: '1',
-          accountId: 'a1',
-          date: DateTime.utc(2023, 1, 15),
-          amount: -10000,
-          categoryId: 'c1',
-          createdAt: DateTime.now(),
-        );
-        final t2 = Transaction(
-          id: '2',
-          accountId: 'a1',
-          date: DateTime.utc(2023, 1, 20),
-          amount: -5000,
-          categoryId: 'c2',
-          createdAt: DateTime.now(),
-        );
-        final t3 = Transaction(
-          id: '3',
-          accountId: 'a1',
-          date: DateTime.utc(2024, 5, 10),
-          amount: -20000,
-          categoryId: 'c1',
-          createdAt: DateTime.now(),
-        );
-
-        // Income should be ignored
-        final t4 = Transaction(
-          id: '4',
-          accountId: 'a1',
-          date: DateTime.utc(2023, 6, 1),
-          amount: 100000,
-          categoryId: null,
-          createdAt: DateTime.now(),
-        );
+        SpendingRow row(String month, String category, int amount) =>
+            SpendingRow(
+              month: month,
+              categoryId: category,
+              payeeId: null,
+              amount: amount,
+            );
 
         when(
           // Inclusive end day -> half-open query bound.
-          mockTransactionRepo.getTransactionsByDateRange(
-            start,
-            DateTime.utc(2025, 1, 1),
-            excludeSplitParents: true,
-            onBudgetOnly: true,
-          ),
-        ).thenAnswer((_) async => [t1, t2, t3, t4]);
+          mockTransactionRepo.getSpendingRows(start, DateTime.utc(2025, 1, 1)),
+        ).thenAnswer(
+          (_) async => [
+            row('2023-01', 'c1', -10000),
+            row('2023-01', 'c2', -5000),
+            row('2024-05', 'c1', -20000),
+            // A refund larger than the month's spending in c2 is no
+            // spending, and does not offset c1.
+            row('2024-05', 'c2', 3000),
+          ],
+        );
 
         // Act
         final trends = await container.read(spendingTrendsProvider.future);

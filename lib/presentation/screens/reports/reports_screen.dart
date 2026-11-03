@@ -767,12 +767,35 @@ class _NetWorthChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(netWorthHistoryProvider);
+    // Accounts in other currencies are left out (never added up).
+    final otherCurrencies =
+        ref.watch(netWorthOtherCurrenciesProvider).valueOrNull ?? const [];
+    final theme = Theme.of(context);
 
     return historyAsync.when(
-      data: (series) => MultiLineChart(
-        seriesList: series,
-        gridColor: Theme.of(context).dividerColor,
-        labelColor: Theme.of(context).colorScheme.onSurface,
+      data: (series) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MultiLineChart(
+            seriesList: series,
+            gridColor: theme.dividerColor,
+            labelColor: theme.colorScheme.onSurface,
+          ),
+          if (otherCurrencies.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+              child: Text(
+                AppLocalizations.of(context)!.reportNetWorthOtherCurrencies(
+                  ref.watch(reportCurrencyProvider),
+                  otherCurrencies.join(', '),
+                ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
       ),
       loading: () => const SizedBox(
         height: 200,

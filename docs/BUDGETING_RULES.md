@@ -159,10 +159,38 @@ other account is off budget**. Both signs count:
 
 *   **Income** of a period = the positive transactions that flow into TBB,
     without transfer legs.
-*   **Spending** of a period = all outflows of on-budget accounts that are
-    not transfer legs, with a split counted through its lines (never parent
-    and lines together).
-*   **Net worth** counts every account, on and off budget.
+*   **Spending** ("spent") is one figure everywhere: the home dashboard,
+    Spending by Category, Category Breakdown, Spending Trends, Income vs
+    Expense and Top Payees (`domain/entities/spending.dart`). It counts the
+    non-deleted transactions of on-budget accounts that are not transfer
+    legs, with a split counted through its lines (never parent and lines
+    together):
+    *   Categorised transactions net within their category and calendar
+        month, both signs: a refund of 20 against 50 of groceries is 30
+        spent. The result is clamped at zero, so a refund bigger than the
+        month's spending in its category is no spending and never offsets
+        another category or another month.
+    *   Uncategorised outflows are spending (nobody budgeted them; they
+        reduce TBB). Uncategorised inflows are income, not refunds.
+    *   Transfers are never spending, also not a categorised transfer to an
+        off-budget account (it is neither income nor spending, see above).
+    *   A period's spending is the sum of its months. Top Payees nets each
+        payee's transactions per month the same way, clamped at zero.
+    *   **Budget vs Actual is the exception:** "actual" is category activity
+        (refunds net, clamped at zero), so a categorised transfer to an
+        off-budget account counts there, because it uses up the category's
+        budget. It always covers whole calendar months (the months the
+        selected range touches, shown under the chart), since budgets are
+        monthly.
+*   **Net worth** counts every account, on and off budget, in the budget
+    currency (accounts in other currencies are left out, and the report
+    says which currencies; amounts in different currencies are never
+    added up). A starting balance counts from the day the account exists
+    (as for TBB: the earlier of its creation and its first transaction).
+    The partner's personal accounts count with the balance their phone
+    shared; a transfer between one of them and a shared account is inside
+    the household, so it never moves net worth (the report reconstructs
+    the partner's balance from the shared legs on this phone).
 
 ### The invariant
 
