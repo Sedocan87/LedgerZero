@@ -197,6 +197,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         : AppTheme.darkTheme;
 
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: AppConfig.instance.appTitle,
       theme: lightTheme,
       darkTheme: darkTheme,

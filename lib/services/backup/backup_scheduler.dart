@@ -8,6 +8,7 @@ class BackupScheduler {
   static const String _lastBackupKey = 'last_backup_timestamp';
   static const String _backupFrequencyKey = 'backup_frequency';
   static const String _lastReminderKey = 'last_backup_reminder_timestamp';
+  static const String _firstCheckKey = 'backup_reminder_first_check_timestamp';
 
   BackupScheduler(this._prefs, this._notificationService);
 
@@ -18,10 +19,19 @@ class BackupScheduler {
       return;
     }
 
-    final lastBackupMs = _prefs.getInt(_lastBackupKey) ?? 0;
-    // If no backup ever, treat as epoch 0 (1970), so it's definitely due.
-    final lastBackup = DateTime.fromMillisecondsSinceEpoch(lastBackupMs);
     final now = DateTime.now();
+    // With no backup yet, count from the first check (right after
+    // onboarding) so a new user gets one full interval before the first
+    // reminder, rather than a reminder on the first Home screen.
+    var lastBackupMs = _prefs.getInt(_lastBackupKey);
+    if (lastBackupMs == null) {
+      lastBackupMs = _prefs.getInt(_firstCheckKey);
+      if (lastBackupMs == null) {
+        await _prefs.setInt(_firstCheckKey, now.millisecondsSinceEpoch);
+        return;
+      }
+    }
+    final lastBackup = DateTime.fromMillisecondsSinceEpoch(lastBackupMs);
 
     bool isDue = false;
     switch (frequency) {
