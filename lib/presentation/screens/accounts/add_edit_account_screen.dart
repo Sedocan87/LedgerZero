@@ -485,13 +485,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           }
           // The starting balance is now To Be Budgeted: assign it.
           if (widget.finishesOnboarding) {
-            // Finishing onboarding rebuilds the router (it follows the
-            // auth state); navigate once the new one is in place.
-            ref.read(authProvider.notifier).setOnboarded(true);
+            // Finishing onboarding re-runs the router's redirect (it would
+            // leave onboarding for Home); the budget is where to go.
             final router = ref.read(routerProvider);
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) => router.go('/budget'),
-            );
+            ref.read(authProvider.notifier).setOnboarded(true);
+            router.go('/budget');
           } else {
             context.go('/budget');
           }

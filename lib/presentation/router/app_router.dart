@@ -67,23 +67,38 @@ final pendingLocationProvider = Provider<PendingLocation>(
   (ref) => PendingLocation(),
 );
 
-/// The app's router. Rebuilt when onboarding starts or ends and on the first
-/// unlock after start-up; that router starts at the pending deep link, if
-/// any, else at Home. A later app lock does not rebuild it: `LockOverlay`
-/// covers the app, so the navigation stack (tab, open screen, unsaved
-/// form) survives the lock.
+/// Tells the router that an auth gate changed (onboarding, first unlock),
+/// so it runs its redirect again on the current location.
+class _AuthGateRefresh extends ChangeNotifier {
+  void changed() => notifyListeners();
+}
+
+/// The app's router: one instance for the app's lifetime. Auth changes do
+/// not rebuild it; they re-run the redirect (`refreshListenable`), which
+/// reads the current auth state. (A router rebuilt mid-onboarding started
+/// again at `/` and dropped the onboarding step the user was on.)
+///
+/// The first unlock after start-up leaves the lock screen for the pending
+/// deep link, if any, else Home. A later app lock does not touch the
+/// router: `LockOverlay` covers the app, so the navigation stack (tab,
+/// open screen, unsaved form) survives the lock.
 final routerProvider = Provider<GoRouter>((ref) {
-  final (isOnboarded, isAuthenticated) = ref.watch(
-    authProvider.select((s) => (s.isOnboarded, s.hasUnlocked)),
-  );
   final pending = ref.watch(pendingLocationProvider);
-  final initialLocation =
-      (isOnboarded && isAuthenticated ? pending.take() : null) ?? '/';
+  final refresh = _AuthGateRefresh();
+  ref.listen(
+    authProvider.select((s) => (s.isOnboarded, s.hasUnlocked)),
+    (_, _) => refresh.changed(),
+  );
 
   final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: initialLocation,
+    initialLocation: '/',
+    refreshListenable: refresh,
     redirect: (context, state) {
+      final auth = ref.read(authProvider);
+      final isOnboarded = auth.isOnboarded;
+      // The UI was unlocked once: a later lock is the overlay's job.
+      final isAuthenticated = auth.hasUnlocked;
       final isGoingToOnboarding = state.matchedLocation.startsWith(
         '/onboarding',
       );
@@ -92,8 +107,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!isOnboarded) {
         // The step after the security step needs the open database; if it
         // is not open (the app was restarted mid-onboarding), start over.
-        final needsSession =
-            state.matchedLocation.startsWith('/onboarding/first-account');
+        final needsSession = state.matchedLocation.startsWith(
+          '/onboarding/first-account',
+        );
         if (needsSession && !isAuthenticated) {
           return '/onboarding';
         }
@@ -115,7 +131,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
-      if (isGoingToOnboarding || isGoingToLogin) {
+      if (isGoingToLogin) {
+        // The first unlock: the remembered deep link, else Home.
+        return pending.take() ?? '/';
+      }
+      if (isGoingToOnboarding) {
         return '/';
       }
 
@@ -540,7 +560,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
-  // A rebuilt router replaces this one: release its listeners and delegates.
-  ref.onDispose(router.dispose);
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
   return router;
 });
