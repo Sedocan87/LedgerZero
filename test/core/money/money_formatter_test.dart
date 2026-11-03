@@ -69,5 +69,37 @@ void main() {
       expect(f.formatNumber(123450), '1,234.50');
       expect(f.formatCompact(123456700), r'$1.23M');
     });
+
+    test('compact suffixes keep their punctuation with either setting', () {
+      final de = MoneyFormatter(locale: 'de', defaultCurrency: 'EUR');
+      expect(_clean(de.formatCompact(123456700)), '1,23 Mio. €');
+      final dePoint = MoneyFormatter(
+        locale: 'de',
+        defaultCurrency: 'EUR',
+        decimalSeparator: '.',
+      );
+      expect(_clean(dePoint.formatCompact(123456700)), '1.23 Mio. €');
+      expect(_clean(dePoint.formatCompact(-123456700)), '-1.23 Mio. €');
+      expect(_clean(dePoint.format(123450)), '1,234.50 €');
+      final enComma = MoneyFormatter(
+        locale: 'en',
+        defaultCurrency: 'USD',
+        decimalSeparator: ',',
+      );
+      expect(enComma.formatCompact(123456700), r'$1,23M');
+    });
+
+    test('fr: the no-break space grouping becomes the configured one', () {
+      final fr = MoneyFormatter(locale: 'fr', defaultCurrency: 'EUR');
+      expect(_clean(fr.format(123450)), '1.234,50 €');
+      expect(_clean(fr.formatCompact(123456700)), '1,23 M €');
+      final frPoint = MoneyFormatter(
+        locale: 'fr',
+        defaultCurrency: 'EUR',
+        decimalSeparator: '.',
+      );
+      expect(_clean(frPoint.format(123450)), '1,234.50 €');
+      expect(_clean(frPoint.formatCompact(123456700)), '1.23 M €');
+    });
   });
 }
