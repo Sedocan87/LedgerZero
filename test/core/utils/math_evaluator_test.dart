@@ -22,6 +22,36 @@ void main() {
       expect(MathEvaluator.evaluate('-0.05/2'), -3);
     });
 
+    test('keeps every fraction digit of an operand; only the result is '
+        'rounded', () {
+      expect(MathEvaluator.evaluate('100*1.125'), 11250);
+      expect(MathEvaluator.evaluate('1000*0.004'), 400);
+      expect(MathEvaluator.evaluate('10/0.004'), 250000);
+      expect(MathEvaluator.evaluate('0.005+0.005'), 1);
+      expect(MathEvaluator.evaluate('2.675*1'), 268);
+      expect(MathEvaluator.evaluate('100*1,125', decimalSeparator: ','), 11250);
+      expect(
+        MathEvaluator.evaluate('1.000,5*2', decimalSeparator: ','),
+        200100,
+      );
+      expect(() => MathEvaluator.evaluate('10/0.000'), throwsFormatException);
+    });
+
+    test('rejects results and operands out of range', () {
+      expect(
+        () => MathEvaluator.evaluate('99999999999999999999'),
+        throwsFormatException,
+      );
+      expect(
+        () => MathEvaluator.evaluate('99999999999999999*1000'),
+        throwsFormatException,
+      );
+      expect(
+        () => MathEvaluator.evaluate('1/0.0000000000000000001'),
+        throwsFormatException,
+      );
+    });
+
     test('is exact for decimal fractions (0.1 + 0.2)', () {
       expect(MathEvaluator.evaluate('0.1+0.2'), 30);
       expect(MathEvaluator.evaluate('0.30-0.10-0.20'), 0);

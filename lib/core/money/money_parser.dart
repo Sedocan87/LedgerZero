@@ -41,6 +41,35 @@ class MoneyParser {
 
   /// Parses [input] or throws a [FormatException].
   int parse(String input) {
+    final (negative, normalized) = _normalize(input);
+    final minor = Money.fromDecimalString(normalized);
+    if (minor == null) {
+      throw FormatException('Not an amount', input);
+    }
+    return negative ? -minor : minor;
+  }
+
+  /// Parses [input] like [parse] (same separators, signs and currency
+  /// symbols) but without rounding: the exact value in major units is
+  /// `unscaled * 10^-scale` ("1.125" -> (1125, 3), "-0,004" with `,` as
+  /// the decimal separator -> (-4, 3)). For arithmetic on typed operands,
+  /// where only the final result may be rounded. Throws a
+  /// [FormatException] when [input] is not an amount.
+  ({BigInt unscaled, int scale}) parseExact(String input) {
+    final (negative, normalized) = _normalize(input);
+    final match = _plainNumber.firstMatch(normalized);
+    final intPart = match?.group(1) ?? '';
+    final fracPart = match?.group(2) ?? '';
+    if (match == null || (intPart.isEmpty && fracPart.isEmpty)) {
+      throw FormatException('Not an amount', input);
+    }
+    final value = BigInt.parse(intPart + fracPart);
+    return (unscaled: negative ? -value : value, scale: fracPart.length);
+  }
+
+  /// The sign of [input] and its number as a `.`-decimal string without
+  /// grouping (digits and at most one `.`).
+  (bool, String) _normalize(String input) {
     var text = input.trim();
     if (text.isEmpty) {
       throw const FormatException('Empty amount');
@@ -83,12 +112,7 @@ class MoneyParser {
       throw FormatException('No digits', input);
     }
 
-    final normalized = _normalizeSeparators(text, input);
-    final minor = Money.fromDecimalString(normalized);
-    if (minor == null) {
-      throw FormatException('Not an amount', input);
-    }
-    return negative ? -minor : minor;
+    return (negative, _normalizeSeparators(text, input));
   }
 
   /// Turns [text] (digits, `.` and `,` only) into a `.`-decimal string.
@@ -241,6 +265,7 @@ class MoneyParser {
 
   static final RegExp _groupingChars = RegExp('[\\s   \'’]');
   static final RegExp _numberChars = RegExp(r'^[0-9.,]+$');
+  static final RegExp _plainNumber = RegExp(r'^(\d*)(?:\.(\d*))?$');
 }
 
 /// The decimal separator conventionally used by [locale] ("," for de, fr,
