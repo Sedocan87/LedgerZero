@@ -45,8 +45,8 @@ final notificationTapRouterProvider = Provider<NotificationTapRouter>((ref) {
             .getScheduledTransactionById(id) !=
         null,
     navigate: (location) {
-      // After an unlock the router is rebuilt and the login screen
-      // navigates home; go once that frame is done.
+      // An unlock re-runs the router's redirect (the lock screen leaves
+      // for Home); go once that frame is done.
       final binding = WidgetsBinding.instance;
       binding.addPostFrameCallback(
         (_) => ref.read(routerProvider).go(location),

@@ -80,6 +80,27 @@ class GoogleAuthService {
     }
   }
 
+  /// Forgets the Google account (factory reset): revokes the app's access
+  /// when that works (needs the network), else signs out on this phone so
+  /// no silent sign-in picks the account up again. Never throws; each step
+  /// gives up after [timeout].
+  Future<void> forgetAccount({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    try {
+      await _googleSignIn.disconnect().timeout(timeout);
+      Logger.info('Google account disconnected');
+      return;
+    } catch (e) {
+      Logger.warning('Google disconnect failed (offline?), signing out: $e');
+    }
+    try {
+      await _googleSignIn.signOut().timeout(timeout);
+    } catch (e) {
+      Logger.warning('Google sign-out failed: $e');
+    }
+  }
+
   Future<AuthClient?> getAuthenticatedClient() async {
     if (!await isConfigured()) {
       return null;

@@ -143,8 +143,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     unawaited(ref.read(autoBackupServiceProvider).runIfDue());
   }
 
-  /// Runs when the UI is unlocked: things the user sees wait for the app
-  /// lock (the permission prompt would otherwise cover it).
+  /// Runs when the UI is ready ([uiReadyProvider]): things the user sees
+  /// wait for the app lock and the end of onboarding (the permission prompt
+  /// would otherwise cover them).
   Future<void> _onUiUnlocked() async {
     unawaited(ref.read(notificationTapRouterProvider).onUnlocked());
     final settings = ref.read(settingsProvider);
@@ -176,9 +177,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         _initializeServices();
       }
     });
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      if (next.isAuthenticated &&
-          (previous == null || !previous.isAuthenticated)) {
+    // Each unlock of an onboarded app, and the end of onboarding (the
+    // permission prompt mid-onboarding interrupted the setup steps).
+    ref.listen<bool>(uiReadyProvider, (previous, next) {
+      if (next && previous != true) {
         _onUiUnlocked();
       }
     });

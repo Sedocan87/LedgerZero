@@ -69,3 +69,12 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   return AuthNotifier(prefs);
 });
+
+/// The app is in use: onboarding is finished and the app lock was passed.
+/// What covers the screen (the notification permission prompt) or leaves
+/// it (a tapped notification) waits for this; mid-onboarding the session
+/// is already open but the user is still in the setup steps.
+final uiReadyProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(authProvider.select((s) => s.isOnboarded && s.isAuthenticated)),
+);

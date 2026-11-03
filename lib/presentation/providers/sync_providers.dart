@@ -7,6 +7,7 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/connectivity_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/google_auth_service.dart';
@@ -26,8 +27,10 @@ final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
 });
 
 /// One Drive transport per app session; its cached client is dropped when
-/// the Google account changes (sign-out) and closed on dispose.
+/// the Google account changes (sign-out) and closed on dispose. A factory
+/// reset replaces it (cached folder ids).
 final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
+  ref.watch(settingsGenerationProvider);
   final authService = ref.watch(googleAuthServiceProvider);
   final service = GoogleDriveService(
     authService,
@@ -44,8 +47,11 @@ final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
   return service;
 });
 
-/// Wi-Fi sync between paired phones (app lifetime).
+/// Wi-Fi sync between paired phones (app lifetime). A factory reset
+/// replaces it: the old one is stopped, and the new one has the new device
+/// id and no pairing.
 final lanSyncServiceProvider = Provider<LanSyncService>((ref) {
+  ref.watch(settingsGenerationProvider);
   final service = LanSyncService(
     folder: LocalSyncFolder(
       () async => Directory(
@@ -79,8 +85,9 @@ final lanPeersProvider = StreamProvider<List<LanPeer>>((ref) async* {
 /// Outgoing change files (not yet uploaded).
 final syncOutboxProvider = Provider<SyncOutbox>((ref) => SyncOutbox());
 
-/// This installation's sync device id.
+/// This installation's sync device id (a new one after a factory reset).
 final syncDeviceIdProvider = Provider<String>((ref) {
+  ref.watch(settingsGenerationProvider);
   return SyncDeviceId.of(ref.watch(sharedPreferencesProvider));
 });
 
@@ -107,9 +114,12 @@ final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
 
 /// The app-wide sync controller. Created at app start (MyApp); follows
 /// [appLockStateProvider] (the database session, not the app lock): paused
-/// while the database is closed, running while it is open.
+/// while the database is closed, running while it is open. A factory reset
+/// replaces it, so the provider, account and last sync time it showed
+/// (read from the cleared preferences) are gone.
 final syncControllerProvider = StateNotifierProvider<SyncController, SyncState>(
   (ref) {
+    ref.watch(settingsGenerationProvider);
     final drive = ref.watch(googleDriveServiceProvider);
     final lan = ref.watch(lanSyncServiceProvider);
     final controller = SyncController(

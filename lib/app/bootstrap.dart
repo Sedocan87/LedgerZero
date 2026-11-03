@@ -1,0 +1,75 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/app/app.dart';
+import 'package:ledger_zero/app/startup_error_app.dart';
+import 'package:ledger_zero/core/config/app_config.dart';
+import 'package:ledger_zero/core/performance/performance_monitor.dart';
+import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/core/utils/error_tracker.dart';
+import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// The start-up shared by every entry point (`main.dart` and the
+/// `main_<flavor>.dart` files): on failure it shows [StartupErrorApp],
+/// whose Retry runs it again (every step is safe to repeat).
+///
+/// [loadPreferences] and [run] are seams for tests.
+Future<void> bootstrap(
+  AppEnvironment environment, {
+  @visibleForTesting
+  Future<SharedPreferences> Function() loadPreferences =
+      SharedPreferences.getInstance,
+  @visibleForTesting void Function(Widget app) run = runApp,
+}) async {
+  Future<void> retry() =>
+      bootstrap(environment, loadPreferences: loadPreferences, run: run);
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    final sharedPreferences = await loadPreferences();
+
+    AppConfig(
+      environment: environment,
+      appTitle: switch (environment) {
+        AppEnvironment.development => 'LedgerZero Dev',
+        AppEnvironment.staging => 'LedgerZero Staging',
+        AppEnvironment.production => 'LedgerZero',
+      },
+      enableLogging: environment != AppEnvironment.production,
+    );
+
+    // Crash reports are opt-in (Settings > Security > Privacy).
+    LocalErrorReportingService.crashReportsEnabled =
+        sharedPreferences.getBool(kCrashReportsEnabledKey) ?? false;
+    ErrorTracker.init();
+
+    if (kDebugMode || kProfileMode) {
+      PerformanceMonitor.instance.startMonitoring();
+    }
+
+    run(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  } catch (e, stack) {
+    // Logging may not be set up yet: debug builds report to the developer
+    // log; release builds stay silent.
+    if (kDebugMode) {
+      developer.log(
+        'App initialization failed',
+        name: 'LedgerZero',
+        error: e,
+        stackTrace: stack,
+      );
+    }
+    // Not a black screen: say what happened and offer to try again.
+    run(StartupErrorApp(onRetry: () => retry()));
+  }
+}

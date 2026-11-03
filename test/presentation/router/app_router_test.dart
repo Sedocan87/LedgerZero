@@ -1,7 +1,10 @@
 // The app router's gates (onboarding, lock) and deep links while locked,
 // with the real routes and screens on an in-memory database.
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
@@ -19,7 +22,9 @@ import 'package:ledger_zero/presentation/screens/categories/reorder_categories_s
 import 'package:ledger_zero/presentation/screens/categories/reorder_groups_screen.dart';
 import 'package:ledger_zero/presentation/screens/home_screen.dart';
 import 'package:ledger_zero/presentation/screens/lock_screen.dart';
+import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/security/key_vault.dart';
@@ -62,6 +67,9 @@ void main() {
           FakeBiometricKeyStore(available: false),
         ),
         backupSchedulerProvider.overrideWithValue(_NoBackupReminder()),
+        appLockAuthenticatorProvider.overrideWithValue(
+          FakeAppLockAuthenticator(),
+        ),
       ],
     );
     await tester.pumpWidget(
@@ -242,22 +250,80 @@ void main() {
     await unmount(tester, c);
   });
 
-  testWidgets('a rebuilt router disposes the previous one', (tester) async {
-    final c = await pumpRouter(tester, onboarded: true);
-    final before = c.read(routerProvider);
-    // The first unlock rebuilds the router (it starts at the pending link).
+  testWidgets('one router for the app\'s life: unlocking, locking and '
+      'finishing onboarding re-run the redirect, not a new router', (
+    tester,
+  ) async {
+    final c = await pumpRouter(tester, onboarded: false);
+    final router = c.read(routerProvider);
     unlock(c);
     await tester.pumpAndSettle();
-    final after = c.read(routerProvider);
-    expect(after, isNot(same(before)));
+    expect(c.read(routerProvider), same(router));
+    c.read(authProvider.notifier).setOnboarded(true);
+    await tester.pumpAndSettle();
+    expect(c.read(routerProvider), same(router));
+    // Onboarding is done: the redirect left it for Home.
+    expect(location(c), '/');
+    c.read(authProvider.notifier).setAuthenticated(false);
+    await tester.pump();
+    unlock(c);
+    await tester.pumpAndSettle();
+    expect(c.read(routerProvider), same(router));
     expect(
-      () => ChangeNotifier.debugAssertNotDisposed(before.routerDelegate),
-      throwsFlutterError,
-    );
-    expect(
-      () => ChangeNotifier.debugAssertNotDisposed(after.routerDelegate),
+      () => ChangeNotifier.debugAssertNotDisposed(router.routerDelegate),
       returnsNormally,
     );
+    await unmount(tester, c);
+  });
+
+  testWidgets('the security step opens the first-account step and never '
+      'returns to the onboarding slides', (tester) async {
+    final dir = Directory.systemTemp.createTempSync('lz_router_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async => dir.path,
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            null,
+          ),
+    );
+    final c = await pumpRouter(tester, onboarded: false);
+    final router = c.read(routerProvider);
+    router.goNamed('security-setup');
+    await tester.pumpAndSettle();
+    expect(find.byType(SecuritySetupScreen), findsOneWidget);
+
+    final visited = <String>[];
+    void record() => visited.add(location(c));
+    router.routerDelegate.addListener(record);
+    addTearDown(() => router.routerDelegate.removeListener(record));
+
+    await tester.tap(find.text('Continue'));
+    for (
+      var i = 0;
+      i < 200 && find.byType(AddEditAccountScreen).evaluate().isEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    await tester.pumpAndSettle();
+
+    expect(c.read(authProvider).hasUnlocked, isTrue);
+    expect(c.read(routerProvider), same(router));
+    expect(location(c), '/onboarding/first-account');
+    expect(find.byType(AddEditAccountScreen), findsOneWidget);
+    expect(find.byType(OnboardingScreen), findsNothing);
+    expect(visited, isNot(contains('/onboarding')));
+    expect(visited, isNot(contains('/')));
+    await c.read(sessionProvider.notifier).close();
     await unmount(tester, c);
   });
 

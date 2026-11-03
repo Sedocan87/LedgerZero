@@ -76,6 +76,11 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
 
   Future<void> _continue() async {
     setState(() => _isLoading = true);
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final existingDataKept = AppLocalizations.of(
+      context,
+    )!.setupExistingDataKept;
     var keptExisting = false;
     try {
       final session = ref.read(sessionProvider.notifier);
@@ -116,25 +121,18 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
       }
       return;
     }
-    if (!mounted) {
-      return;
-    }
-    setState(() => _isLoading = false);
+    // The router outlives auth changes (it re-runs its redirect instead of
+    // being rebuilt), so the next step opens right away: the first account,
+    // or Home when the existing data was kept (onboarding is done).
     if (keptExisting) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.setupExistingDataKept)),
-      );
+      messenger?.showSnackBar(SnackBar(content: Text(existingDataKept)));
+      router.go('/');
+    } else {
+      router.goNamed('first-account');
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      if (keptExisting) {
-        context.go('/');
-      } else {
-        context.goNamed('first-account');
-      }
-    });
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   /// The stored device key when a database file exists and opens with it;
