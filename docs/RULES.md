@@ -78,7 +78,12 @@ priority 0, the highest priority.
     never get a category, and reconciled transactions keep their status.
     It runs in one unit of work, skips the transactions of the partner's
     personal accounts, and never moves a transaction into a closed account
-    or the partner's account. The progress dialog cannot be dismissed.
+    or the partner's account. The ledger rules of manual edits hold too: a
+    reconciled transaction stays in its account, no transaction moves into
+    an account with another currency, and transactions of off-budget
+    accounts get no category (one moved into an off-budget account loses
+    its category). The snackbar says how many changes were withheld for
+    these reasons. The progress dialog cannot be dismissed.
 -   **Unknown targets**: an action whose category, payee or account does
     not exist on this phone is ignored wherever rules run
     (`RuleMatchingService.withValidReferences`). Importing rules drops such
