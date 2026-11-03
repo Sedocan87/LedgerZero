@@ -308,13 +308,32 @@ class MockBudgetRepository extends _i1.Mock implements _i5.BudgetRepository {
           as _i3.Future<List<_i6.Budget>>);
 
   @override
-  _i3.Future<int> getTotalBudgetedAfterMonth(String? endMonth) =>
+  _i3.Future<Map<String, int>> getBudgetedByMonthAfter(String? endMonth) =>
       (super.noSuchMethod(
-            Invocation.method(#getTotalBudgetedAfterMonth, [endMonth]),
-            returnValue: _i3.Future<int>.value(0),
-            returnValueForMissingStub: _i3.Future<int>.value(0),
+            Invocation.method(#getBudgetedByMonthAfter, [endMonth]),
+            returnValue: _i3.Future<Map<String, int>>.value(<String, int>{}),
+            returnValueForMissingStub: _i3.Future<Map<String, int>>.value(
+              <String, int>{},
+            ),
           )
-          as _i3.Future<int>);
+          as _i3.Future<Map<String, int>>);
+
+  @override
+  _i3.Future<Map<String, int>> getMonthlyReadyToAssignInflows(
+    DateTime? start,
+    DateTime? endExclusive,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getMonthlyReadyToAssignInflows, [
+              start,
+              endExclusive,
+            ]),
+            returnValue: _i3.Future<Map<String, int>>.value(<String, int>{}),
+            returnValueForMissingStub: _i3.Future<Map<String, int>>.value(
+              <String, int>{},
+            ),
+          )
+          as _i3.Future<Map<String, int>>);
 
   @override
   _i3.Future<Map<String, Map<String, int>>> getMonthlyCategoryActivity(

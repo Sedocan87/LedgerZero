@@ -40,9 +40,12 @@ enum AutoAssignRule {
 /// * TBB(M) = SUM(starting balances of the on-budget accounts that exist
 ///   by M) + SUM(rows flowing into To Be Budgeted up to end of M:
 ///   uncategorised, not a transfer leg, not a split parent, both signs)
-///   - SUM(budgeted in any month, before, in or after M)
-///   - SUM(overspending of the months before M).
-/// * Invariant: SUM(available(M)) + TBB(M) + SUM(budgeted after M)
+///   - SUM(budgeted up to and including M)
+///   - SUM(overspending of the months before M)
+///   - held(M), the part of the budgets of later months that the money
+///   arriving in those months does not cover
+///   (see [calculateHeldForLaterMonths]).
+/// * Invariant: SUM(available(M)) + TBB(M) + held(M)
 ///   == SUM(account balances counting transactions up to end of M).
 class BudgetingService {
   final TransactionRepository _transactionRepository;
@@ -64,16 +67,17 @@ class BudgetingService {
   /// Calculates "To Be Budgeted" (TBB) at the end of [targetMonth]:
   ///
   /// TBB = SUM(starting balances of the on-budget accounts that exist by
-  ///       the month, see [_startingBalancesThrough])
+  ///       the month, see [_startingBalances])
   ///     + SUM(uncategorised, non-split-parent rows of on-budget accounts up
   ///       to the end of the month, both signs, transfer legs only when the
   ///       other account is off-budget)
   ///     - SUM(budgeted up to and including the month)
-  ///     - SUM(budgeted in the months after it: money assigned to a future
-  ///       month is no longer available now)
   ///     - SUM(cash overspending of the months before it: a negative
   ///       category balance is not carried into the next month's category
-  ///       but taken out of To Be Budgeted, see [_rollTo]).
+  ///       but taken out of To Be Budgeted, see [_rollTo])
+  ///     - the money held for later months ([calculateHeldForLaterMonths]):
+  ///       what is budgeted in the months after it beyond the money that
+  ///       arrives in those months.
   ///
   /// Uncategorised outflows (and reconciliation adjustments) therefore
   /// reduce TBB, starting balances are budgetable, transfers between
@@ -81,49 +85,104 @@ class BudgetingService {
   /// accounts only matter when money moves to or from them.
   Future<int> calculateTBB(DateTime targetMonth) async {
     final nextMonthStart = CalendarDate.endOfMonthUtc(targetMonth);
-    final monthKey = CalendarDate.monthKey(targetMonth);
 
-    final startingBalances = await _startingBalancesThrough(targetMonth);
+    final starting = await _startingBalances();
     final readyToAssign = await _transactionRepository.getReadyToAssignSum(
       CalendarDate.beginningOfTime,
       nextMonthStart,
     );
     final roll = await _rollTo(targetMonth);
-    final budgetedAfter = await _budgetRepository.getTotalBudgetedAfterMonth(
-      monthKey,
-    );
+    final held = await _heldForLaterMonths(targetMonth, starting);
 
-    return startingBalances +
+    return starting.through(targetMonth) +
         readyToAssign -
         roll.budgetedThrough -
-        budgetedAfter -
-        roll.overspentBefore;
+        roll.overspentBefore -
+        held;
   }
 
-  /// Sum of the starting balances of the on-budget accounts that exist by
-  /// the end of [month]. An account exists from the earlier of the month
-  /// it was created in and the month of its first transaction (imported or
-  /// backdated history), so a month before the account shows nothing of
-  /// it; an account without a creation time always counts.
-  Future<int> _startingBalancesThrough(DateTime month) async {
+  /// Money of [month]'s To Be Budgeted that the months after it need
+  /// (minor units, never negative): budgets of a later month are paid
+  /// first from the money arriving after [month] (positive rows flowing
+  /// into To Be Budgeted, and the positive starting balances of accounts
+  /// that start then), and only the rest is taken from [month]:
+  ///
+  /// `held(M) = max(0, max over F in (M, L] of
+  ///     SUM(budgeted in (M, F]) - SUM(arriving in (M, F]))`
+  ///
+  /// where L is the last month with a budget. Outflows and overspending of
+  /// a later month are charged to that month, never to [month]. With no
+  /// budget after [month] this is 0.
+  Future<int> calculateHeldForLaterMonths(DateTime month) async =>
+      _heldForLaterMonths(month, await _startingBalances());
+
+  Future<int> _heldForLaterMonths(
+    DateTime month,
+    _StartingBalances starting,
+  ) async {
+    final budgeted = await _budgetRepository.getBudgetedByMonthAfter(
+      CalendarDate.monthKey(month),
+    );
+    final months = [
+      for (final MapEntry(:key, :value) in budgeted.entries)
+        if (value != 0) key,
+    ]..sort();
+    if (months.isEmpty) {
+      return 0;
+    }
+    final last = CalendarDate.parseMonthKey(months.last);
+    final arriving = await _budgetRepository.getMonthlyReadyToAssignInflows(
+      CalendarDate.endOfMonthUtc(month),
+      CalendarDate.endOfMonthUtc(last),
+    );
+    var short = 0;
+    var held = 0;
+    final count = _monthsDifference(month, last);
+    for (var i = 1; i <= count; i++) {
+      final key = CalendarDate.monthKey(
+        DateTime.utc(month.year, month.month + i, 1),
+      );
+      short +=
+          (budgeted[key] ?? 0) -
+          (arriving[key] ?? 0) -
+          (starting.positiveByMonth[key] ?? 0);
+      held = math.max(held, short);
+    }
+    return held;
+  }
+
+  /// The starting balances of the on-budget accounts by start month. An
+  /// account exists from the earlier of the month it was created in and
+  /// the month of its first transaction (imported or backdated history),
+  /// so a month before the account shows nothing of it; an account without
+  /// a creation time always counts.
+  Future<_StartingBalances> _startingBalances() async {
     final accounts = await _accountRepository.getAllAccounts();
     final firstDates = await _budgetRepository.getFirstTransactionDates();
-    final end = CalendarDate.endOfMonthUtc(month);
-    var total = 0;
+    var always = 0;
+    final byMonth = <String, int>{};
+    final positiveByMonth = <String, int>{};
     for (final account in accounts) {
       if (!account.onBudget) {
         continue;
       }
       final created = account.createdAt?.toUtc();
-      final first = firstDates[account.id];
+      final first = firstDates[account.id]?.toUtc();
       final start = created == null
           ? null
           : (first != null && first.isBefore(created) ? first : created);
-      if (start == null || start.isBefore(end)) {
-        total += account.startingBalance;
+      if (start == null) {
+        always += account.startingBalance;
+      } else {
+        final key = CalendarDate.monthKey(start);
+        byMonth[key] = (byMonth[key] ?? 0) + account.startingBalance;
+        if (account.startingBalance > 0) {
+          positiveByMonth[key] =
+              (positiveByMonth[key] ?? 0) + account.startingBalance;
+        }
       }
     }
-    return total;
+    return _StartingBalances(always, byMonth, positiveByMonth);
   }
 
   /// Rolls every category (or only [categoryId]) forward month by month
@@ -1008,4 +1067,31 @@ class _Rollover {
     required this.overspentBefore,
     required this.budgetedThrough,
   });
+}
+
+/// The starting balances of the on-budget accounts: [always] (accounts
+/// without a creation time) and per start month (`yyyy-MM`).
+class _StartingBalances {
+  final int always;
+  final Map<String, int> byMonth;
+
+  /// Per start month, the positive starting balances only: money that
+  /// arrives in To Be Budgeted that month (a negative one, existing debt,
+  /// is charged to its own month like an outflow).
+  final Map<String, int> positiveByMonth;
+
+  _StartingBalances(this.always, this.byMonth, this.positiveByMonth);
+
+  /// Sum of the starting balances of the accounts that exist by the end of
+  /// [month].
+  int through(DateTime month) {
+    final key = CalendarDate.monthKey(month);
+    var total = always;
+    for (final MapEntry(key: start, :value) in byMonth.entries) {
+      if (start.compareTo(key) <= 0) {
+        total += value;
+      }
+    }
+    return total;
+  }
 }

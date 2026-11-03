@@ -189,12 +189,28 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
-  Future<int> getTotalBudgetedAfterMonth(String endMonth) async {
+  Future<Map<String, int>> getBudgetedByMonthAfter(String endMonth) async {
     try {
-      return await _budgetsDao.getTotalBudgetedAfterMonth(endMonth);
+      return await _budgetsDao.getBudgetedSumsByMonthAfter(endMonth);
     } catch (e, stackTrace) {
       Logger.error('Failed to calculate budgeted after month', e, stackTrace);
       throw DatabaseException('Failed to calculate budgeted after month', e);
+    }
+  }
+
+  @override
+  Future<Map<String, int>> getMonthlyReadyToAssignInflows(
+    DateTime start,
+    DateTime endExclusive,
+  ) async {
+    try {
+      return await _budgetsDao.getMonthlyReadyToAssignInflows(
+        start,
+        endExclusive,
+      );
+    } catch (e, stackTrace) {
+      Logger.error('Failed to calculate monthly inflows', e, stackTrace);
+      throw DatabaseException('Failed to calculate monthly inflows', e);
     }
   }
 

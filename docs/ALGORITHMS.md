@@ -17,8 +17,8 @@ and the aggregate queries in `lib/data/database/daos/transactions_dao.dart`.
 TBB(M) = startingBalancesThrough(M)
        + TransactionRepository.getReadyToAssignSum(beginningOfTime, endOfMonth(M))
        - budgeted through M            // rollover: every budget row with month <= M
-       - BudgetRepository.getTotalBudgetedAfterMonth(M)   // rows with month > M
        - overspending before M         // rollover, see below
+       - held(M)                       // calculateHeldForLaterMonths, see below
 ```
 
 * `startingBalancesThrough(M)`: the starting balances of the on-budget
@@ -30,9 +30,31 @@ TBB(M) = startingBalancesThrough(M)
   belong to an on-budget account, are not a split parent (no non-deleted
   child row) and are not a transfer leg unless the other account is
   off-budget. Both signs count.
-* Budgets of every month count: money assigned to a later month is not
-  available in M (`getTotalBudgetedAfterMonth`).
 * Overspending before M is what the rollover charges to TBB.
+* `held(M)` (`calculateHeldForLaterMonths`): the part of the budgets of
+  the months after M that the money arriving in those months does not
+  cover. With `budgeted(m)` and `arriving(m)` per month m:
+
+  ```
+  L       = last month after M with a non-zero budget sum (none: held = 0)
+  short   = 0, held = 0
+  for m in M+1 .. L:
+    short += budgeted(m) - arriving(m)
+    held   = max(held, short)
+  ```
+
+  `budgeted(m)` is `BudgetRepository.getBudgetedByMonthAfter(M)` (one
+  grouped query). `arriving(m)` is
+  `BudgetRepository.getMonthlyReadyToAssignInflows(end(M), end(L))` (one
+  grouped query: the positive rows of the `getReadyToAssignSum` filter,
+  by month) plus the positive starting balances of the on-budget accounts
+  whose start month is m (from the same account/first-date data as
+  `startingBalancesThrough`). Outflows and overspending of later months
+  never enter it, so they are charged to their own month. Equivalently,
+  `TBB(M) = min(raw(M), min over F in (M, L] of raw(F) + what F's TBB
+  lost to outflows and overspending in (M, F])`, where raw is the formula
+  without `held`: the most M could still assign without leaving a later
+  month short of the money its budgets need.
 
 ## Rollover (`_rollTo`), activity and available
 
@@ -57,8 +79,8 @@ the activity filter mirrors `TransactionsDao.getCategoryActivitySums`.
 * `calculateBatchCategoryPerformance(M)` (budget screen): activity in M
   (one grouped query) plus the rollover for all categories.
 * `calculateTBB(M)` uses the same rollover for "budgeted through M" and
-  "overspending before M", so the invariant in BUDGETING_RULES.md holds by
-  construction.
+  "overspending before M", so the invariant in BUDGETING_RULES.md
+  (`SUM(available) + TBB + held = balances`) holds by construction.
 
 ## Writing budgets
 

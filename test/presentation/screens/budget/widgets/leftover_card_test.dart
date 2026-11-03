@@ -66,6 +66,27 @@ void main() {
       expect(await leftover(month), 20000);
       expect(await leftover(DateTime.utc(month.year, month.month + 1, 1)), 0);
     });
+
+    test('budgeting this month\'s own income keeps the offer', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 30000, previous);
+      await t.addTransaction(accountId: 'a', amount: 200000, date: month);
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 200000, month);
+      expect(await leftover(month), 70000);
+      // Budgeting beyond this month's income uses the leftover.
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 250000, month);
+      expect(await leftover(month), 20000);
+    });
+
+    test('last month\'s overspending is taken from the leftover', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 30000, previous);
+      await t.addTransaction(
+        accountId: 'a',
+        amount: -40000,
+        categoryId: groceries,
+        date: previous,
+      );
+      expect(await leftover(month), 60000);
+    });
   });
 
   group('card', () {

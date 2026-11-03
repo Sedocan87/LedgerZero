@@ -206,6 +206,12 @@ final newMonthOfferProvider = FutureProvider.autoDispose
 /// current month, and only when the month before was budgeted at all: a
 /// new account's starting balance counts in every month and is not a
 /// leftover.
+///
+/// TBB of the month before already holds back what [month] (and later
+/// months) budget beyond their own income, so budgeting this month's
+/// income does not use up the offer. The smaller of the two TBBs is what
+/// is left of it: last month's overspending (charged to this month) and
+/// unassigned spending this month have taken their share too.
 final leftoverProvider = FutureProvider.autoDispose.family<int, DateTime>((
   ref,
   month,
