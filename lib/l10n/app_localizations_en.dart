@@ -4762,4 +4762,29 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String cardNotificationsDuplicatesHeld(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count payments not added: they look like transactions you already have',
+      one: '1 payment not added: it looks like a transaction you already have',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsDuplicatesBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count payments were not added because they look like transactions you already have. If one was a separate purchase, tap Add anyway on it.',
+      one:
+          '1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.',
+    );
+    return '$_temp0';
+  }
 }

@@ -50,8 +50,8 @@ class LoggedCapture {
   /// form); `null` when it can.
   final CaptureHoldReason? blocker;
 
-  /// A transaction in the linked account with the same amount within a day
-  /// of the notification exists.
+  /// A transaction in the linked account looks like the same payment (see
+  /// [NotificationCaptureService.isSamePayment]).
   final bool likelyDuplicate;
 
   /// It was added, but that transaction no longer exists.
@@ -90,8 +90,9 @@ class CaptureRunResult {
   /// [CaptureStatus.failed] with the error and can be retried from the log.
   final int failed;
 
-  /// Entries not booked because a transaction with the same amount already
-  /// existed ([CaptureStatus.duplicate]).
+  /// Entries not booked because a transaction that looks like the same
+  /// payment already existed ([CaptureStatus.duplicate]); the user can
+  /// still add them from the log ("Add anyway").
   final int duplicates;
 }
 
@@ -107,10 +108,11 @@ class CaptureRunResult {
 /// it. Declined payments, codes and balance notices are skipped; anything
 /// else is held for the user (see [held]) in the native queue.
 ///
-/// A payment whose amount already exists in the linked account within a
-/// day (the wallet app and the bank both notified, or an authorisation was
-/// followed by the booking) is logged as [CaptureStatus.duplicate] instead
-/// of booked; the user can add it anyway from the log.
+/// A payment that looks like one already in the linked account (the wallet
+/// app and the bank both notified, or an authorisation was followed by the
+/// booking; see [isSamePayment]) is logged as [CaptureStatus.duplicate]
+/// instead of booked; the user can add it anyway from the log. A second
+/// purchase of the same amount at another merchant is booked.
 ///
 /// Every entry is handled on its own: when booking one throws, it is
 /// marked [CaptureStatus.failed] with the error (and the error is written
@@ -239,8 +241,9 @@ class NotificationCaptureService {
     if (!_channel.isSupported) {
       return const [];
     }
+    final log = await _channel.log();
     final entries = [
-      for (final n in await _channel.log())
+      for (final n in log)
         if ((packageName == null || n.packageName == packageName) &&
             (from == null || !n.postedAt.isBefore(from)) &&
             (toExclusive == null || n.postedAt.isBefore(toExclusive)))
@@ -251,7 +254,7 @@ class NotificationCaptureService {
     }
     final sources = await _sourcesByPackage();
     final accounts = await _accountsById();
-    final nearby = await _nearbyTransactions(entries);
+    final nearby = await _duplicateIndex(entries, log);
     final result = <LoggedCapture>[];
     for (final n in entries.reversed) {
       final parse = _parse(n);
@@ -332,7 +335,7 @@ class NotificationCaptureService {
     }
     final sources = await _sourcesByPackage();
     final accounts = await _accountsById();
-    final nearby = await _nearbyTransactions(pending);
+    final nearby = await _duplicateIndex(pending, await _channel.log());
     var added = 0;
     var ignored = 0;
     var held = 0;
@@ -394,7 +397,7 @@ class NotificationCaptureService {
     CapturedNotification n,
     Map<String, CaptureSource> sources,
     Map<String, Account> accounts,
-    List<Transaction> nearby,
+    _DuplicateIndex nearby,
   ) async {
     final parse = _parse(n);
     if (parse.kind == CaptureKind.ignored || _isNoise(n, parse)) {
@@ -424,7 +427,16 @@ class NotificationCaptureService {
       transactionId: transaction.id,
     );
     // The next entry of this run may be the same payment from another app.
-    nearby.add(transaction);
+    final payeeId = transaction.payeeId;
+    final payeeName = payeeId == null
+        ? null
+        : nearby.payeeNames[payeeId] ??
+              (await _payees.getPayeeById(payeeId))?.name;
+    nearby.add(
+      transaction,
+      _CaptureOrigin(n.packageName, n.postedAt, parse.merchant),
+      payeeName: payeeName,
+    );
     return _Outcome.added;
   }
 
@@ -477,40 +489,171 @@ class NotificationCaptureService {
         );
   }
 
-  /// The transactions around the days of [entries], for duplicate checks.
-  Future<List<Transaction>> _nearbyTransactions(
+  /// What the duplicate checks of [entries] need: the transactions around
+  /// their days, the notification each of those was booked from (from
+  /// [log]) and the payee names.
+  Future<_DuplicateIndex> _duplicateIndex(
     List<CapturedNotification> entries,
+    List<CapturedNotification> log,
   ) async {
     final dates = entries.map((n) => CalendarDate.normalize(n.postedAt));
     final earliest = dates.reduce((a, b) => a.isBefore(b) ? a : b);
     final latest = dates.reduce((a, b) => a.isAfter(b) ? a : b);
-    return (await _transactionRepository.getTransactionsByDateRange(
-      earliest.subtract(const Duration(days: 1)),
-      latest.add(const Duration(days: 2)),
-      excludeSplitChildren: true,
-    )).where((t) => !t.isDeleted).toList();
+    final transactions =
+        (await _transactionRepository.getTransactionsByDateRange(
+          earliest.subtract(const Duration(days: 1)),
+          latest.add(const Duration(days: 2)),
+          excludeSplitChildren: true,
+        )).where((t) => !t.isDeleted).toList();
+    final origins = <String, _CaptureOrigin>{
+      for (final n in log)
+        if (n.status == CaptureStatus.added && n.transactionId != null)
+          n.transactionId!: _CaptureOrigin(
+            n.packageName,
+            n.postedAt,
+            _parse(n).merchant,
+          ),
+    };
+    return _DuplicateIndex(transactions, origins, {
+      for (final p in await _payees.getAllPayees()) p.id: p.name,
+    });
   }
 
-  /// Whether [account] holds a transaction with the amount of [parse]
-  /// within a day of [n]; an added entry's own transaction does not count.
-  static bool _hasDuplicate(
+  /// How far apart two notifications of the same payment can be: the
+  /// wallet app and the bank notify within minutes, an authorisation and
+  /// its booking within a day.
+  static const samePaymentWindow = Duration(hours: 24);
+
+  /// How far apart the wallet app and the bank app notify one payment when
+  /// they name its merchant differently.
+  static const otherAppWindow = Duration(hours: 2);
+
+  /// Whether [account] holds a transaction that looks like the payment of
+  /// [n] ([isSamePayment]); an added entry's own transaction does not
+  /// count.
+  bool _hasDuplicate(
     CapturedNotification n,
     CardNotificationParse parse,
     Account account,
-    List<Transaction> nearby,
+    _DuplicateIndex nearby,
   ) {
     final amount = parse.signedAmount;
     if (amount == null) {
       return false;
     }
-    final date = CalendarDate.normalize(n.postedAt);
-    return nearby.any(
-      (t) =>
-          t.accountId == account.id &&
-          t.amount == amount &&
-          t.id != n.transactionId &&
-          t.date.difference(date).inDays.abs() <= 1,
-    );
+    return nearby.transactions.any((t) {
+      if (t.accountId != account.id ||
+          t.amount != amount ||
+          t.id == n.transactionId) {
+        return false;
+      }
+      final origin = nearby.origins[t.id];
+      return isSamePayment(
+        notification: n,
+        merchant: parse.merchant,
+        existingDate: t.date,
+        existingMerchants: [?nearby.payeeNames[t.payeeId], ?origin?.merchant],
+        existingPackage: origin?.packageName,
+        existingPostedAt: origin?.postedAt,
+      );
+    });
+  }
+
+  /// Whether [notification] (merchant [merchant]) reports the payment of an
+  /// existing transaction with the same amount in the same account: dated
+  /// [existingDate], with the payee / captured merchant names
+  /// [existingMerchants], and, when it was booked from a notification, that
+  /// notification's app [existingPackage] and time [existingPostedAt].
+  ///
+  /// * Booked from a notification: the two must be at most
+  ///   [samePaymentWindow] apart. When both name a merchant and the names
+  ///   do not match ([merchantsMatch]), it is the same payment only if
+  ///   another app reported it within [otherAppWindow] (Google Wallet and
+  ///   the bank app name merchants differently); the same app reporting
+  ///   another merchant is another purchase.
+  /// * Entered otherwise (by hand, import): dated within a day of the
+  ///   notification, and when both name a merchant the names must match.
+  /// * Without a merchant on either side the amount and time decide.
+  static bool isSamePayment({
+    required CapturedNotification notification,
+    required String? merchant,
+    required DateTime existingDate,
+    required List<String> existingMerchants,
+    String? existingPackage,
+    DateTime? existingPostedAt,
+  }) {
+    final bothNamed = merchant != null && existingMerchants.isNotEmpty;
+    final sameMerchant =
+        bothNamed && existingMerchants.any((m) => merchantsMatch(m, merchant));
+    if (existingPostedAt == null) {
+      final day = CalendarDate.normalize(notification.postedAt);
+      if (existingDate.difference(day).inDays.abs() > 1) {
+        return false;
+      }
+      return !bothNamed || sameMerchant;
+    }
+    final gap = existingPostedAt.difference(notification.postedAt).abs();
+    if (!bothNamed || sameMerchant) {
+      return gap <= samePaymentWindow;
+    }
+    return existingPackage != notification.packageName && gap <= otherAppWindow;
+  }
+
+  /// Words that do not tell merchants apart.
+  static const _merchantNoise = {
+    'gmbh', 'ag', 'kg', 'ohg', 'ug', 'ev', 'co', 'ltd', 'inc', 'llc', //
+    'sa', 'se', 'bv', 'the', 'und', 'and', 'sagt', 'danke', 'www', 'com',
+    'de', 'net', 'org', 'pos', 'ec', 'pay', 'payment', 'zahlung', 'card',
+    'karte', 'filiale', 'store', 'shop', 'markt', 'market', 'center',
+  };
+
+  static final _accents = <RegExp, String>{
+    RegExp('[àáâ]'): 'a',
+    RegExp('[èéê]'): 'e',
+    RegExp('[ìíî]'): 'i',
+    RegExp('[òóô]'): 'o',
+    RegExp('[ùúû]'): 'u',
+  };
+
+  static List<String> _merchantWords(String name) {
+    var folded = name
+        .toLowerCase()
+        .replaceAll('ä', 'ae')
+        .replaceAll('ö', 'oe')
+        .replaceAll('ü', 'ue')
+        .replaceAll('ß', 'ss');
+    _accents.forEach((pattern, plain) {
+      folded = folded.replaceAll(pattern, plain);
+    });
+    return [
+      for (final w in folded.split(RegExp('[^a-z0-9]+')))
+        if (w.length >= 2 &&
+            !_merchantNoise.contains(w) &&
+            !RegExp(r'^\d+$').hasMatch(w))
+          w,
+    ];
+  }
+
+  /// Whether two merchant names (payee names or what notifications called
+  /// the merchant) plausibly name the same merchant: "REWE" and "REWE SAGT
+  /// DANKE 4711", "Bäckerei Schmidt" and "BAECKEREI SCHMIDT", "Starbucks"
+  /// and "SumUp *Starbucks". The first significant word of one must appear
+  /// in the other, or one name must contain the other.
+  static bool merchantsMatch(String a, String b) {
+    final wordsA = _merchantWords(a);
+    final wordsB = _merchantWords(b);
+    if (wordsA.isEmpty || wordsB.isEmpty) {
+      return a.trim().toLowerCase() == b.trim().toLowerCase();
+    }
+    if (wordsB.contains(wordsA.first) || wordsA.contains(wordsB.first)) {
+      return true;
+    }
+    final compactA = wordsA.join();
+    final compactB = wordsB.join();
+    final (shorter, longer) = compactA.length <= compactB.length
+        ? (compactA, compactB)
+        : (compactB, compactA);
+    return shorter.length >= 4 && longer.contains(shorter);
   }
 
   CardNotificationParse _parse(CapturedNotification n) =>
@@ -623,3 +766,37 @@ class NotificationCaptureService {
 }
 
 enum _Outcome { added, ignored, held, duplicate }
+
+/// The notification a transaction was booked from.
+class _CaptureOrigin {
+  const _CaptureOrigin(this.packageName, this.postedAt, this.merchant);
+
+  final String packageName;
+  final DateTime postedAt;
+  final String? merchant;
+}
+
+/// Input of the duplicate checks of one run (see
+/// [NotificationCaptureService.isSamePayment]).
+class _DuplicateIndex {
+  _DuplicateIndex(this.transactions, this.origins, this.payeeNames);
+
+  /// Non-deleted transactions around the notifications' days (split lines
+  /// excluded).
+  final List<Transaction> transactions;
+
+  /// Transaction id -> the notification it was booked from.
+  final Map<String, _CaptureOrigin> origins;
+
+  /// Payee id -> name.
+  final Map<String, String> payeeNames;
+
+  /// Records a transaction booked during the run.
+  void add(Transaction t, _CaptureOrigin origin, {String? payeeName}) {
+    transactions.add(t);
+    origins[t.id] = origin;
+    if (payeeName != null && t.payeeId != null) {
+      payeeNames[t.payeeId!] = payeeName;
+    }
+  }
+}

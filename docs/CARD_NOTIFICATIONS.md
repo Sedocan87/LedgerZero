@@ -31,10 +31,32 @@ iOS 17+) can call; not built yet.
      the undo stack.
    * declined payments, codes/confirmations, statements and balance
      notices are skipped.
-   * a payment whose amount already exists in the linked account within a
-     day (the bank and Google Wallet both notified, or an authorisation
+   * a payment that looks like one already in the linked account (the bank
+     and Google Wallet both notified, or an authorisation
      "autorisiert"/"pending" was followed by the booking) is logged as
-     `duplicate`, not booked; the log offers "Add anyway".
+     `duplicate`, not booked; the log offers "Add anyway"
+     (`NotificationCaptureService.isSamePayment`). Same account and amount
+     are required, and then:
+     * the existing row was booked from a notification (its log entry
+       gives app and time): at most 24 hours apart. If both name a
+       merchant and the names do not match (`merchantsMatch`: case,
+       umlauts, legal forms and "sagt danke" ignored; the first word of
+       one name must appear in the other, or one name contains the
+       other), it is a duplicate only when **another app** notified
+       within 2 hours (Wallet and the bank name merchants differently);
+       the same app naming another merchant is another purchase, so an
+       espresso at Bakery A and a bus ticket at Transit B for the same
+       amount are both booked.
+     * the existing row was entered otherwise (by hand, import): dated
+       within a day, and when both have a merchant / payee the names must
+       match.
+     * without a merchant on either side, amount and time decide.
+
+     The existing row's payee name and the merchant of the notification it
+     came from both count, so a payee renamed by a rule still matches.
+     When a run holds payments as possible duplicates, the Card
+     notifications screen says so in a snackbar with "Review", and the
+     log shows a banner with the count above the list.
    * anything else (no amount, no account linked, other currency) waits in
      the "Waiting for you" list, where the user can open it in the
      transaction form or dismiss it. Notifications without an amount from
@@ -53,8 +75,8 @@ iOS 17+) can call; not built yet.
    `duplicate`, `failed` with the error). Settings > Card notifications >
    Captured notifications lists the last 30 days by app and date range,
    with why each was skipped ("contains “declined”") and whether a
-   transaction with the same amount within a day already exists in the
-   linked account. Selected entries are booked again
+   transaction that looks like the same payment (same rules as above)
+   already exists in the linked account. Selected entries are booked again
    (`NotificationCaptureService.addAgain`), skipped ones included; an
    `added` entry whose transaction still exists cannot be selected (it
    would be doubled) and "Select all" leaves out skipped ones and likely

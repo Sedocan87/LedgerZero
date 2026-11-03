@@ -134,10 +134,10 @@ class _CardNotificationsScreenState
   /// can be booked first and reports it.
   Future<void> _reload({bool process = false}) async {
     String? error;
-    var added = 0;
+    var run = const CaptureRunResult();
     if (process) {
       try {
-        added = (await _service.processPending()).added;
+        run = await _service.processPending();
       } catch (e, stackTrace) {
         // The settings must still show; the error is shown with them.
         Logger.error('Booking captured notifications failed', e, stackTrace);
@@ -171,12 +171,24 @@ class _CardNotificationsScreenState
       _error = error;
       _loading = false;
     });
-    if (added > 0) {
+    final l10n = AppLocalizations.of(context)!;
+    final lines = [
+      if (run.added > 0) l10n.cardNotificationsAdded(run.added),
+      // Held as possible duplicates: the user decides in the log.
+      if (run.duplicates > 0)
+        l10n.cardNotificationsDuplicatesHeld(run.duplicates),
+    ];
+    if (lines.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.cardNotificationsAdded(added),
-          ),
+          content: Text(lines.join('\n')),
+          action: run.duplicates > 0
+              ? SnackBarAction(
+                  key: const Key('cardNotifications.reviewDuplicates'),
+                  label: l10n.cardNotificationsReview,
+                  onPressed: _openLog,
+                )
+              : null,
         ),
       );
     }

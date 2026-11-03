@@ -30,6 +30,9 @@ class _FakeService implements NotificationCaptureService {
   /// Thrown by [processPending] (a broken native store).
   Object? processError;
 
+  /// What [processPending] reports.
+  CaptureRunResult runResult = const CaptureRunResult();
+
   @override
   Future<int> captureShowing(String packageName) =>
       channel.captureShowing(packageName);
@@ -55,7 +58,7 @@ class _FakeService implements NotificationCaptureService {
     if (processError != null) {
       throw processError!;
     }
-    return const CaptureRunResult();
+    return runResult;
   }
 
   @override
@@ -268,13 +271,32 @@ void main() {
     service.processError = StateError('disk full');
     await pump(tester);
 
-    expect(find.byKey(const Key('cardNotifications.errorBanner')), findsOneWidget);
+    expect(
+      find.byKey(const Key('cardNotifications.errorBanner')),
+      findsOneWidget,
+    );
     expect(
       find.textContaining('StateError: Bad state: disk full'),
       findsOneWidget,
     );
     expect(find.text('My Bank'), findsOneWidget);
     expect(find.text('Granted'), findsOneWidget);
+  });
+
+  testWidgets('a booking run reports payments held as possible '
+      'duplicates and opens the log', (tester) async {
+    service.runResult = const CaptureRunResult(added: 1, duplicates: 2);
+    await pump(tester);
+
+    expect(find.textContaining('1 card payment added'), findsOneWidget);
+    expect(
+      find.textContaining('2 payments not added: they look like transactions'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('cardNotifications.reviewDuplicates')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a listener that is not connected is pointed out', (
@@ -289,7 +311,10 @@ void main() {
 
     channel.listenerConnected = true;
     await pump(tester, home: const CardNotificationsScreen(key: Key('again')));
-    expect(find.byKey(const Key('cardNotifications.disconnected')), findsNothing);
+    expect(
+      find.byKey(const Key('cardNotifications.disconnected')),
+      findsNothing,
+    );
   });
 
   testWidgets('a storage reset is shown once, with its date', (tester) async {
@@ -365,9 +390,21 @@ void main() {
     ];
     await pump(tester, home: const CardNotificationLogScreen());
 
-    expect(find.textContaining('Not added: StateError: disk full'), findsOneWidget);
+    expect(
+      find.textContaining('Not added: StateError: disk full'),
+      findsOneWidget,
+    );
     expect(
       find.textContaining('a transaction with this amount already exists'),
+      findsOneWidget,
+    );
+    // The log says why payments are missing and how to add them.
+    expect(
+      find.byKey(const Key('cardNotificationLog.duplicatesBanner')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('1 payment was not added because it looks like'),
       findsOneWidget,
     );
 
@@ -375,6 +412,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(service.retried, ['failed']);
 
+    await tester.ensureVisible(find.text('Add anyway'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Add anyway'));
     await tester.pumpAndSettle();
     expect(service.addedAgain, ['dup']);
@@ -382,7 +421,9 @@ void main() {
     await tester.tap(find.byKey(const Key('cardNotificationLog.delete')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Delete the 2 listed entries'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('cardNotificationLog.deleteConfirm')));
+    await tester.tap(
+      find.byKey(const Key('cardNotificationLog.deleteConfirm')),
+    );
     await tester.pumpAndSettle();
     expect(service.deleted, ['failed', 'dup']);
   });
