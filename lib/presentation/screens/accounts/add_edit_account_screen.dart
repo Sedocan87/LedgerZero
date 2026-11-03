@@ -26,6 +26,7 @@ import 'package:ledger_zero/presentation/screens/settings/income/income_settings
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:ledger_zero/presentation/widgets/common/account_avatar.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -67,8 +68,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
 
   AccountType _selectedType = AccountType.checking;
   String _selectedCurrency = defaultCurrencyCode;
-  int _selectedColor = 0xFF4CAF50; // Default Green
-  String _selectedIcon = 'Wallet';
+
+  /// The picked colour and icon key; `null` shows the type's default (see
+  /// [accountAppearance]). Tapping the selected one again clears it.
+  int? _selectedColor;
+  String? _selectedIcon;
   bool _onBudget = true;
 
   /// Set once the user moved the "Include in budget" switch: the type's
@@ -126,16 +130,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     Colors.blueGrey,
   ];
 
-  final Map<String, IconData> _icons = const {
-    'Wallet': Icons.account_balance_wallet,
-    'Bank': Icons.account_balance,
-    'Card': Icons.credit_card,
-    'Cash': Icons.attach_money,
-    'Savings': Icons.savings,
-    'Investment': Icons.trending_up,
-  };
-
-  /// Screen reader names of the icon keys in [_icons] (the keys are stored).
+  /// Screen reader names of the keys in [accountIconOptions] (the keys are stored).
   String _iconLabel(AppLocalizations l10n, String key) => switch (key) {
     'Wallet' => l10n.accountIconWallet,
     'Bank' => l10n.accountIconBank,
@@ -203,10 +198,10 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           if (data['currency'] != null) {
             _selectedCurrency = data['currency'];
           }
-          if (data['color'] != null) {
+          if (data['color'] is int) {
             _selectedColor = data['color'];
           }
-          if (data['icon'] != null) {
+          if (data['icon'] is String) {
             _selectedIcon = data['icon'];
           }
           if (data['onBudget'] is bool) {
@@ -258,8 +253,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         setState(() {
           _selectedType = account.type;
           _selectedCurrency = account.currency;
-          _selectedColor = account.color ?? 0xFF4CAF50;
-          _selectedIcon = account.icon ?? 'Wallet';
+          final custom = accountCustomAppearance(account);
+          _selectedColor = custom.color;
+          _selectedIcon = custom.icon;
           _onBudget = account.onBudget;
           _personal = account.isPersonal;
           _personalLocked = locked;
@@ -431,7 +427,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           onBudget: _onBudget,
           owner: _personal ? AccountOwner.me : AccountOwner.shared,
           color: _selectedColor,
+          clearColor: _selectedColor == null,
           icon: _selectedIcon,
+          clearIcon: _selectedIcon == null,
           updatedAt: DateTime.now().toUtc(),
         );
         await repository.updateAccount(updatedAccount);
@@ -901,7 +899,9 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                               child: GestureDetector(
                                 onTap: () {
                                   setState(
-                                    () => _selectedColor = color.toARGB32(),
+                                    () => _selectedColor = isSelected
+                                        ? null
+                                        : color.toARGB32(),
                                   );
                                   _onFieldChange();
                                 },
@@ -947,7 +947,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                         Wrap(
                           spacing: AppSpacing.sm,
                           runSpacing: AppSpacing.sm,
-                          children: _icons.entries.map((entry) {
+                          children: accountIconOptions.entries.map((entry) {
                             final isSelected = _selectedIcon == entry.key;
                             return ChoiceChip(
                               label: Icon(
@@ -956,10 +956,12 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                               ),
                               selected: isSelected,
                               onSelected: (selected) {
-                                if (selected) {
-                                  setState(() => _selectedIcon = entry.key);
-                                  _onFieldChange();
-                                }
+                                setState(
+                                  () => _selectedIcon = selected
+                                      ? entry.key
+                                      : null,
+                                );
+                                _onFieldChange();
                               },
                             );
                           }).toList(),

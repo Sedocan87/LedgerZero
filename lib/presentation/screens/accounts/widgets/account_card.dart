@@ -3,6 +3,8 @@ import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
+import 'package:ledger_zero/presentation/widgets/common/account_avatar.dart';
 import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
 
@@ -19,38 +21,7 @@ class AccountCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Icon, accent color, and localized name of the account type
-    final (
-      IconData icon,
-      Color accentColor,
-      String? typeName,
-    ) = switch (account.type) {
-      AccountType.checking => (
-        Icons.account_balance_rounded,
-        scheme.primary,
-        l10n?.accountTypeChecking,
-      ),
-      AccountType.savings => (
-        Icons.savings_rounded,
-        isDark ? Colors.teal.shade300 : const Color(0xFF00796B),
-        l10n?.accountTypeSavings,
-      ),
-      AccountType.credit => (
-        Icons.credit_card_rounded,
-        isDark ? Colors.amber.shade300 : const Color(0xFFE65100),
-        l10n?.accountTypeCredit,
-      ),
-      AccountType.cash => (
-        Icons.payments_rounded,
-        isDark ? Colors.green.shade300 : AppColors.income,
-        l10n?.accountTypeCash,
-      ),
-      AccountType.investment => (
-        Icons.trending_up_rounded,
-        isDark ? Colors.indigo.shade200 : const Color(0xFF3949AB),
-        l10n?.accountTypeInvestment,
-      ),
-    };
+    final String? typeName = l10n == null ? null : account.type.label(l10n);
 
     // A personal account is always off-budget: its owner badge says enough.
     final statusBadge = switch (account.owner) {
@@ -73,16 +44,7 @@ class AccountCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, color: accentColor, size: 24),
-          ),
+          AccountAvatar(account: account),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
