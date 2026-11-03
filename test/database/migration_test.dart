@@ -529,4 +529,36 @@ void main() {
       await db.close();
     });
   });
+  group('unversioned indexes', () {
+    // Pure performance indexes are created on open (no schema version
+    // bump): change files keep the schema version, so a phone that has not
+    // been updated yet still applies them.
+    test('a v20 database gets the split-parent index on open', () async {
+      final schema = await verifier.schemaAt(20);
+      final db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, latest);
+
+      final indexes = await db
+          .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
+          .get();
+      expect(
+        indexes.map((r) => r.read<String>('name')),
+        contains(AppDatabase.splitParentIndex),
+      );
+      // The split-parent lookups use it.
+      final plan = await db
+          .customSelect(
+            'EXPLAIN QUERY PLAN SELECT 1 FROM transactions c '
+            "WHERE c.parent_transaction_id = 'x' AND c.is_deleted = 0",
+          )
+          .get();
+      expect(
+        plan.map((r) => r.data['detail']).join(' '),
+        contains(AppDatabase.splitParentIndex),
+      );
+      // Opening again is a no-op.
+      await db.createUnversionedIndexes();
+      await db.close();
+    });
+  });
 }

@@ -373,3 +373,20 @@ CREATE INDEX idx_payees_is_favorite ON payees (is_favorite);
 CREATE INDEX idx_pending_sync_record ON pending_sync_changes (table_name, record_id);
 CREATE INDEX idx_sync_row_versions_deleted ON sync_row_versions (deleted, version);
 ```
+
+Created on every open with `CREATE INDEX IF NOT EXISTS`, outside the
+versioned drift schema (`AppDatabase.createUnversionedIndexes`):
+
+```sql
+CREATE INDEX idx_transactions_parent ON transactions (parent_transaction_id, is_deleted);
+```
+
+Split children by parent: the split-parent checks (`EXISTS (... WHERE
+split_child.parent_transaction_id = transactions.id AND is_deleted = 0)`,
+correlated in balance, activity and report queries) and SQLite's foreign-key
+check when a transaction row is deleted. A pure performance index does not
+bump the schema version on purpose: the version is written into every sync
+change file, and a phone quarantines files of a newer schema
+(`newer_schema`) until it is updated, so a version bump would force both
+phones of a household to update together for a change that does not touch
+what is stored or synced. Such indexes are not in the `drift_schemas/` dumps.

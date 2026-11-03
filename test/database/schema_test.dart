@@ -151,6 +151,7 @@ void main() {
       expect(indexNames, contains('idx_budgets_month'));
       expect(indexNames, contains('idx_pending_sync_record'));
       expect(indexNames, contains('idx_sync_row_versions_deleted'));
+      expect(indexNames, contains(AppDatabase.splitParentIndex));
     });
   });
 }
