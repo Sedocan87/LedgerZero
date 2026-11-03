@@ -532,7 +532,9 @@ class BudgetingService {
   /// exceeding spending) become zero rather than a positive budget.
   static int _netSpending(int activity) => activity < 0 ? -activity : 0;
 
-  /// Gets the budgeted amount in the previous month.
+  /// Gets the budgeted amount in the previous month, or 0 when it was not
+  /// positive (a negative budget, left by moving money out of a category,
+  /// is not copied; same rule as [budgetsOfPreviousMonth]).
   Future<int> getLastMonthBudgeted(
     String categoryId,
     DateTime currentMonth,
@@ -544,7 +546,7 @@ class BudgetingService {
       categoryId,
       prevMonthString,
     );
-    return budget?.budgeted ?? 0;
+    return math.max(0, budget?.budgeted ?? 0);
   }
 
   /// Automatically assigns budget to a category based on a rule.

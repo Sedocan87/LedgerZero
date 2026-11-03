@@ -113,6 +113,21 @@ void main() {
       expect(await assign(AutoAssignRule.lastMonthBudgeted), 7000);
       await expectLedgerInvariant(t, apr);
     });
+
+    test('last month budgeted does not copy a negative budget', () async {
+      // Moving more out of Dining Out than it had leaves -50 there.
+      await t.budgeting.moveMoney(dining, groceries, 5000, mar);
+      expect(await budgeted(dining, mar), -5000);
+      expect(await t.budgeting.getLastMonthBudgeted(dining, apr), 0);
+      await t.budgeting.setCategoryBudgetedAmount(dining, 2000, apr);
+      await t.budgeting.autoAssign(
+        dining,
+        apr,
+        AutoAssignRule.lastMonthBudgeted,
+      );
+      expect(await budgeted(dining, apr), 0);
+      await expectLedgerInvariant(t, apr);
+    });
   });
 
   test('templates, copy from last month and reset', () async {
