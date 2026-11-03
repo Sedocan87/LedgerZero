@@ -4749,4 +4749,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoFillAnyway => 'Fill anyway';
+
+  @override
+  String reportNetWorthOtherCurrencies(
+    String budgetCurrency,
+    String currencies,
+  ) {
+    return 'Accounts in $budgetCurrency only. Not included: accounts in $currencies.';
+  }
+
+  @override
+  String reportBudgetVsActualMonths(String months) {
+    return 'Whole months: $months';
+  }
 }

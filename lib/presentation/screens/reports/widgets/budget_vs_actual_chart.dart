@@ -19,6 +19,36 @@ class BudgetVsActualChart extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final palette = ChartPalette.of(context);
 
+    // Budgets are monthly: the report compares whole calendar months.
+    final months = ref.watch(budgetVsActualMonthsProvider);
+    final firstMonth = fmt.formatMonthYearShort(months.start);
+    final lastMonth = fmt.formatMonthYearShort(months.end);
+    final monthsLabel = Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      child: Text(
+        l10n.reportBudgetVsActualMonths(
+          firstMonth == lastMonth ? firstMonth : '$firstMonth – $lastMonth',
+        ),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [monthsLabel, _chart(context, dataAsync, fmt, l10n, palette)],
+    );
+  }
+
+  Widget _chart(
+    BuildContext context,
+    AsyncValue<List<BudgetVsActualItem>> dataAsync,
+    AppFormatter fmt,
+    AppLocalizations l10n,
+    ChartPalette palette,
+  ) {
     return dataAsync.when(
       data: (items) {
         if (items.isEmpty) {

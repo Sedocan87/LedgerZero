@@ -7740,6 +7740,21 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fill anyway'**
   String get autoFillAnyway;
+
+  /// Note below the net worth chart when accounts in other currencies exist (amounts in different currencies are never added up)
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts in {budgetCurrency} only. Not included: accounts in {currencies}.'**
+  String reportNetWorthOtherCurrencies(
+    String budgetCurrency,
+    String currencies,
+  );
+
+  /// Subtitle of Budget vs Actual: the calendar months it compares (budgets are monthly, so the selected range is widened to whole months), e.g. 'Jan 2024 – Mar 2024'
+  ///
+  /// In en, this message translates to:
+  /// **'Whole months: {months}'**
+  String reportBudgetVsActualMonths(String months);
 }
 
 class _AppLocalizationsDelegate

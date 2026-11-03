@@ -50,6 +50,16 @@ void main() {
             ),
           ]),
         ),
+        reportCurrencyProvider.overrideWithValue('USD'),
+        netWorthOtherCurrenciesProvider.overrideWith(
+          (ref) => Future.value(['CHF', 'EUR']),
+        ),
+        reportDateRangeProvider.overrideWith(
+          (ref) => DateTimeRange(
+            start: DateTime.utc(2025, 1, 15),
+            end: DateTime.utc(2025, 3, 10),
+          ),
+        ),
         // Override all data providers to prevent loading states during test
         budgetVsActualProvider.overrideWith((ref) => Future.value([])),
         reportNotesListProvider.overrideWith((ref) => Future.value([])),
@@ -94,6 +104,14 @@ void main() {
     expect(find.text('Income vs Expense'), findsOneWidget);
     expect(find.text('Net Worth'), findsNWidgets(2)); // Title + Legend
     expect(find.text('Top Payees'), findsOneWidget);
+
+    // Net worth adds up the budget currency only and says so.
+    expect(
+      find.text('Accounts in USD only. Not included: accounts in CHF, EUR.'),
+      findsOneWidget,
+    );
+    // Budget vs actual compares whole months.
+    expect(find.text('Whole months: Jan 2025 – Mar 2025'), findsOneWidget);
 
     // Data check
     expect(find.text('Mario'), findsOneWidget);

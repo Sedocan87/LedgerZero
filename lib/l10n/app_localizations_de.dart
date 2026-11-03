@@ -4785,4 +4785,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoFillAnyway => 'Trotzdem füllen';
+
+  @override
+  String reportNetWorthOtherCurrencies(
+    String budgetCurrency,
+    String currencies,
+  ) {
+    return 'Nur Konten in $budgetCurrency. Nicht enthalten: Konten in $currencies.';
+  }
+
+  @override
+  String reportBudgetVsActualMonths(String months) {
+    return 'Ganze Monate: $months';
+  }
 }
