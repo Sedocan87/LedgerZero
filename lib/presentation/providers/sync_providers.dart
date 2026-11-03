@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/connectivity_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
@@ -108,7 +109,12 @@ final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
       prefs: prefs,
     ),
     dao: db.syncDao,
-    resolver: SyncConflictResolver(db),
+    // Keep-mine deletes go through the domain deletes, which clear the
+    // undo stack like any other delete.
+    resolver: SyncConflictResolver(
+      db,
+      undoService: ref.watch(undoServiceProvider),
+    ),
   );
 });
 
