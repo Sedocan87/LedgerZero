@@ -4749,4 +4749,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoFillAnyway => 'Fill anyway';
+
+  @override
+  String rulesAppliedSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count changes were not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.',
+      one:
+          '1 change was not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.',
+    );
+    return '$_temp0';
+  }
 }

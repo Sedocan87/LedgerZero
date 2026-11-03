@@ -3891,5 +3891,7 @@
   "autoFillWaitingBody": "{total} is ready to be filled in; To Be Budgeted is {missing} short. It fills by itself as soon as the money is in.",
   "@autoFillWaitingBody": {"description": "Body of the waiting card", "placeholders": {"total": {"type": "String"}, "missing": {"type": "String"}}},
   "autoFillAnyway": "Fill anyway",
-  "@autoFillAnyway": {"description": "Button on the waiting card: fill even though To Be Budgeted does not cover it"}
+  "@autoFillAnyway": {"description": "Button on the waiting card: fill even though To Be Budgeted does not cover it"},
+  "rulesAppliedSkipped": "{count, plural, =1{1 change was not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.} other{{count} changes were not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.}}",
+  "@rulesAppliedSkipped": {"description": "Second line of the snackbar after applying rules to all transactions, when actions were withheld", "placeholders": {"count": {"type": "int"}}}
 }

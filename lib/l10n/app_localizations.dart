@@ -7740,6 +7740,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fill anyway'**
   String get autoFillAnyway;
+
+  /// Second line of the snackbar after applying rules to all transactions, when actions were withheld
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 change was not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.} other{{count} changes were not made: reconciled transactions stay in their account, and transactions do not move to an account in another currency or get a category in an off-budget account.}}'**
+  String rulesAppliedSkipped(int count);
 }
 
 class _AppLocalizationsDelegate

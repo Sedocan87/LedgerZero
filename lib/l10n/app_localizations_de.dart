@@ -4785,4 +4785,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoFillAnyway => 'Trotzdem füllen';
+
+  @override
+  String rulesAppliedSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Änderungen nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.',
+      one:
+          '1 Änderung nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.',
+    );
+    return '$_temp0';
+  }
 }

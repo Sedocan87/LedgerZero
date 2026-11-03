@@ -1280,5 +1280,6 @@
   "autoBackupDeleted": "Automatische Sicherungen gelöscht",
   "autoFillWaitingTitle": "{month} wird gefüllt, sobald das Geld da ist",
   "autoFillWaitingBody": "{total} stehen bereit; bei „Zu budgetieren“ fehlen noch {missing}. Gefüllt wird von selbst, sobald das Geld eingegangen ist.",
-  "autoFillAnyway": "Trotzdem füllen"
+  "autoFillAnyway": "Trotzdem füllen",
+  "rulesAppliedSkipped": "{count, plural, =1{1 Änderung nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.} other{{count} Änderungen nicht vorgenommen: Abgeglichene Transaktionen bleiben in ihrem Konto, Transaktionen wechseln nicht in ein Konto mit anderer Währung und erhalten in Konten außerhalb des Budgets keine Kategorie.}}"
 }
