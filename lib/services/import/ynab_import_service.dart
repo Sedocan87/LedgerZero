@@ -1100,31 +1100,63 @@ class YnabImportService {
     return name == null || name.isEmpty ? null : name;
   }
 
-  /// Helper to map YNAB account types to LedgerZero AccountType
+  /// Guesses the account type from a YNAB account type or, for a CSV
+  /// export (which has no type column), the account NAME, in English or
+  /// German. Unrecognised names are checking accounts.
+  ///
+  /// German names are often compounds ("Tagesgeldkonto", "Aktiendepot"), so
+  /// most keywords match anywhere in the name; short or ambiguous ones
+  /// ("Visa", "ETF", "Cash") only as whole words. Bank names that merely
+  /// contain a keyword (Sparkasse, Sparda-Bank) do not count.
   static AccountType mapAccountType(String ynabType) {
-    final normalized = ynabType.toLowerCase().trim();
-    if (normalized.contains('checking')) {
-      return AccountType.checking;
-    }
-    if (normalized.contains('saving')) {
-      return AccountType.savings;
-    }
-    if (normalized.contains('credit')) {
-      return AccountType.credit;
-    }
-    if (normalized.contains('card')) {
-      return AccountType.credit;
-    }
-    if (normalized.contains('cash')) {
-      return AccountType.cash;
-    }
-    if (normalized.contains('invest') ||
-        normalized.contains('brokerage') ||
-        normalized.contains('retirement')) {
-      return AccountType.investment;
+    final normalized = ynabType.toLowerCase().trim().replaceAll(
+      RegExp(r'\b(sparkasse|sparda)\w*'),
+      ' ',
+    );
+    for (final (type, pattern) in _accountTypeKeywords) {
+      if (pattern.hasMatch(normalized)) {
+        return type;
+      }
     }
     return AccountType.checking; // Default
   }
+
+  /// Checked in order: the first match wins (a "Home Depot Card" is a
+  /// credit card, an "ETF-Sparplan" an investment, a "Sparkonto" savings).
+  static final List<(AccountType, RegExp)> _accountTypeKeywords = [
+    (
+      AccountType.checking,
+      RegExp(r'checking|giro|\bcurrent account\b|\bdebit'),
+    ),
+    (
+      AccountType.credit,
+      RegExp(
+        r'credit|card|kreditkarte|\bvisa\b|mastercard|\bamex\b|'
+        r'american express',
+      ),
+    ),
+    (
+      AccountType.investment,
+      RegExp(
+        r'invest|brokerage|\bbroker|retirement|depot|\betfs?\b|aktie|'
+        r'wertpapier|\bfonds',
+      ),
+    ),
+    (
+      AccountType.savings,
+      RegExp(
+        r'saving|\bspar|bauspar|tagesgeld|festgeld|\bnest ?egg\b|'
+        r'\bemergency fund\b|notgroschen|r(ü|ue)cklage',
+      ),
+    ),
+    (
+      AccountType.cash,
+      RegExp(
+        r'\bcash\b|bargeld|geldb(ö|oe)rse|geldbeutel|portemonnaie|'
+        r'portmonee|\bwallet\b|barkasse|handkasse',
+      ),
+    ),
+  ];
 
   /// Parses a YNAB CSV amount cell ("$1,234.56", "1.234,56 €", "") into
   /// minor units with the export's [parser]. Unparsable or empty cells

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/services/import/ynab_data_mapper.dart';
 import 'package:ledger_zero/services/import/ynab_import_service.dart';
@@ -38,6 +39,90 @@ Future<void> _writeYnab4Bundle(
 
 void main() {
   final service = YnabImportService();
+
+  group('mapAccountType', () {
+    void expectTypes(Map<String, AccountType> cases) {
+      for (final MapEntry(key: name, value: type) in cases.entries) {
+        expect(YnabImportService.mapAccountType(name), type, reason: name);
+      }
+    }
+
+    test('English names and YNAB types keep their mapping', () {
+      expectTypes({
+        'Checking': AccountType.checking,
+        'checking': AccountType.checking,
+        'Savings': AccountType.savings,
+        'creditCard': AccountType.credit,
+        'lineOfCredit': AccountType.credit,
+        'Chase Visa': AccountType.credit,
+        'Cash': AccountType.cash,
+        'Brokerage': AccountType.investment,
+        'Retirement 401k': AccountType.investment,
+        'Debit Card': AccountType.checking,
+        'Home Depot Card': AccountType.credit,
+        'Joint Account': AccountType.checking,
+      });
+    });
+
+    test('German names map to their type', () {
+      expectTypes({
+        'Girokonto': AccountType.checking,
+        'DKB Giro': AccountType.checking,
+        'Sparkonto': AccountType.savings,
+        'Sparbuch Oma': AccountType.savings,
+        'Tagesgeldkonto': AccountType.savings,
+        'Festgeld 12M': AccountType.savings,
+        'Bausparvertrag': AccountType.savings,
+        'Rücklagen': AccountType.savings,
+        'Kreditkarte': AccountType.credit,
+        'Barclays Visa': AccountType.credit,
+        'Mastercard Gold': AccountType.credit,
+        'Amex Platinum': AccountType.credit,
+        'Bargeld': AccountType.cash,
+        'Geldbörse': AccountType.cash,
+        'Portemonnaie': AccountType.cash,
+        'Aktiendepot': AccountType.investment,
+        'Depot comdirect': AccountType.investment,
+        'ETF Sparplan': AccountType.investment,
+        'ETFs': AccountType.investment,
+        'Broker': AccountType.investment,
+        'Wertpapierkonto': AccountType.investment,
+      });
+    });
+
+    test('bank names and lookalike words do not trigger a type', () {
+      expectTypes({
+        'Sparkasse': AccountType.checking,
+        'Sparkasse Giro': AccountType.checking,
+        'Sparda-Bank': AccountType.checking,
+        'Sparkassen-Kreditkarte': AccountType.credit,
+        'Improvisation': AccountType.checking,
+        'Cashew Fund': AccountType.checking,
+        'Gemeinschaftskonto': AccountType.checking,
+      });
+    });
+
+    test('a CSV export guesses the type from German account names', () async {
+      final csv = [
+        _header,
+        _row('Tagesgeld', '01/02/2024', 'Zinsen', '', '', '', '', '1.00'),
+        _row('Kreditkarte', '01/02/2024', 'Shop', '', '', '', '2.00', ''),
+        _row('Girokonto', '01/02/2024', 'Shop', '', '', '', '3.00', ''),
+      ].join('\n');
+      final data = await service.parseCsvExport(
+        registerCsvContent: csv,
+        budgetCsvContent: '',
+      );
+      expect(
+        {for (final a in data.accounts) a.name: a.type},
+        {
+          'Tagesgeld': AccountType.savings,
+          'Kreditkarte': AccountType.credit,
+          'Girokonto': AccountType.checking,
+        },
+      );
+    });
+  });
 
   group('parseSplitMarker', () {
     test('reads index, count and the remaining memo', () {
