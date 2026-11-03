@@ -202,6 +202,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
       goalType: GoalType.fromName(c.goalType),
       targetAmount: c.targetAmount,
       targetDate: c.targetDate,
+      color: c.color,
+      icon: c.icon,
       createdAt: c.createdAt,
     );
   }
@@ -219,6 +221,8 @@ class CategoryRepositoryImpl implements CategoryRepository {
       targetDate: Value(
         c.targetDate == null ? null : CalendarDate.normalize(c.targetDate!),
       ),
+      color: Value(c.color),
+      icon: Value(c.icon),
       createdAt: Value(c.createdAt?.toUtc() ?? now),
       updatedAt: Value(now),
     );
