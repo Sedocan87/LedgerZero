@@ -10,6 +10,13 @@ The screen shows a preview (amount, payee, category, date) and an account
 picker. **Create** saves directly; **Edit details** opens the full
 transaction form pre-filled with the parsed values.
 
+The text is parsed 300 ms after the last keystroke, not on every key; a
+slower, older parse that finishes late never replaces the preview of newer
+text. **Create** and **Edit details** first parse text typed since the last
+preview, so they always use what the field says. **Create** is disabled
+while it saves (a double tap books one transaction). The screen scrolls, so
+preview and buttons stay reachable above the keyboard on small phones.
+
 ## What is extracted
 
 ### Amount (required)

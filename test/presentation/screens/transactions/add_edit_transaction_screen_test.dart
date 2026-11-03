@@ -393,6 +393,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'Shop 15');
+    // Parsing waits for a pause in typing.
+    await tester.pump(NaturalLanguageInputScreen.parseDelay);
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     await tester.tap(find.text(l10n.editDetails));
