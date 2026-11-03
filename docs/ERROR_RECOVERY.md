@@ -94,8 +94,9 @@ face, PIN, pattern or password).
    **Reset app**; after typing the confirmation word it performs the
    factory reset (database with its WAL/SHM files and any restore leftover,
    key entries, preferences, exported files, local sync files and the
-   Wi-Fi pairing) and returns to onboarding, where you can set up the app
-   and restore a backup.
+   Wi-Fi pairing; it also signs out of Google Drive, best effort) and
+   returns to onboarding, where you can set up the app and restore a
+   backup.
 2. **Backup**: restore it in Settings > Backup & Export with its backup
    password (chosen when the backup was made). If automatic backups were
    on, the reset keeps them: **Restore an automatic backup** lists them,
