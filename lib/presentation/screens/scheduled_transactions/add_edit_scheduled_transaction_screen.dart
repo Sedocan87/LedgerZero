@@ -24,6 +24,8 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 const scheduledAccountFieldKey = Key('scheduled_account_field');
 const scheduledPayeeFieldKey = Key('scheduled_payee_field');
 const scheduledCategoryFieldKey = Key('scheduled_category_field');
+const scheduledAmountFieldKey = Key('scheduled_amount_field');
+const scheduledDirectionKey = Key('scheduled_direction');
 
 class AddEditScheduledTransactionScreen extends ConsumerStatefulWidget {
   final String? transactionId;
@@ -44,8 +46,12 @@ class _AddEditScheduledTransactionScreenState
   String? _payeeId;
   String? _categoryId;
 
-  /// Amount in minor units (signed: negative = outflow).
+  /// Amount in minor units, without sign; [_isInflow] gives the direction
+  /// (stored schedules are signed: negative = outflow).
   int _amount = 0;
+
+  /// Inflow (positive) or outflow (negative, the default).
+  bool _isInflow = false;
   RecurrenceFrequency _frequency = RecurrenceFrequency.monthly;
   int _interval = 1;
 
@@ -86,7 +92,9 @@ class _AddEditScheduledTransactionScreenState
           _accountId = transaction.accountId;
           _payeeId = transaction.payeeId;
           _categoryId = transaction.categoryId;
-          _amount = transaction.amount ?? 0;
+          final amount = transaction.amount ?? 0;
+          _amount = amount.abs();
+          _isInflow = amount > 0;
           _frequency = transaction.frequency ?? RecurrenceFrequency.monthly;
           _interval = transaction.interval ?? 1;
           _nextDate = transaction.nextDate != null
@@ -131,7 +139,7 @@ class _AddEditScheduledTransactionScreenState
         accountId: _accountId,
         payeeId: _payeeId,
         categoryId: _categoryId,
-        amount: _amount,
+        amount: _isInflow ? _amount : -_amount,
         frequency: _frequency,
         interval: _interval,
         occurrenceCount: _occurrenceCount,
@@ -225,15 +233,37 @@ class _AddEditScheduledTransactionScreenState
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Direction (same choice as the transaction form); the amount
+            // is entered without a sign.
+            SegmentedButton<bool>(
+              key: scheduledDirectionKey,
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(l10n.outflow),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(l10n.inflow),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ],
+              selected: {_isInflow},
+              onSelectionChanged: (selection) =>
+                  setState(() => _isInflow = selection.first),
+            ),
+            const SizedBox(height: 16),
+
             // Amount
             TextFormField(
+              key: scheduledAmountFieldKey,
               initialValue: widget.transactionId == null && _amount == 0
                   ? ''
                   : fmt.formatAmountForInput(_amount),
               decoration: InputDecoration(labelText: l10n.amount),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
-                signed: true,
               ),
               validator: (value) {
                 final amount = fmt.parseAmount(value);
@@ -245,7 +275,9 @@ class _AddEditScheduledTransactionScreenState
                 }
                 return null;
               },
-              onSaved: (value) => _amount = fmt.parseAmount(value) ?? 0,
+              // A typed sign is ignored: the direction comes from the
+              // Outflow | Inflow choice.
+              onSaved: (value) => _amount = (fmt.parseAmount(value) ?? 0).abs(),
             ),
             const SizedBox(height: 16),
 

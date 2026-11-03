@@ -325,4 +325,121 @@ void main() {
       expect((await at(oneAmLocal).parse('dinner at 7pm 32')).amount, 3200);
     });
   });
+
+  group('payee typo matching and cache', () {
+    final payees = [
+      const Payee(id: 'sb', name: 'Starbucks'),
+      const Payee(id: 'rewe', name: 'REWE'),
+      const Payee(id: 'bahn', name: 'Bahn'),
+      const Payee(id: 'db', name: 'Deutsche Bahn'),
+      const Payee(id: 'wm', name: 'Walmart'),
+      const Payee(id: 'nf', name: 'Netflix'),
+      const Payee(id: 'costco', name: 'Costco'),
+      const Payee(id: 'shell', name: 'Shell'),
+      const Payee(id: 'lidl', name: 'Lidl'),
+      const Payee(id: 'uber', name: 'Uber'),
+      const Payee(id: 'mp', name: "Mario's Pizza"),
+    ];
+    final today = DateTime(2025, 10, 18, 9);
+
+    TransactionParser parserWith({String separator = '.'}) => TransactionParser(
+      mockPayeeRepo,
+      mockCategoryRepo,
+      mockHistoryRepo,
+      amountParser: MoneyParser(decimalSeparator: separator),
+      now: () => today,
+    );
+
+    setUp(() {
+      when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async => payees);
+      when(mockCategoryRepo.getAllCategories()).thenAnswer((_) async => []);
+    });
+
+    test('a misspelt payee in a sentence with amount and date', () async {
+      final result = await parserWith().parse('Starbuks 4.50 yesterday');
+      expect(result.payeeId, 'sb');
+      expect(result.amount, 450);
+      expect(result.date, DateTime(2025, 10, 17, 12));
+    });
+
+    test('other typos: a missing letter, a swap, a dropped space', () async {
+      final parser = parserWith();
+      expect((await parser.parse('Walmrt 50')).payeeId, 'wm');
+      expect((await parser.parse('Netlfix 15')).payeeId, 'nf');
+      expect((await parser.parse('star bucks 3')).payeeId, 'sb');
+      expect((await parser.parse('20 at Costcoo')).payeeId, 'costco');
+    });
+
+    test('exact names win, case-insensitive, with German decimals', () async {
+      final parser = parserWith(separator: ',');
+      final rewe = await parser.parse('rewe 12,30');
+      expect(rewe.payeeId, 'rewe');
+      expect(rewe.amount, 1230);
+      final typo = await parser.parse('Starbuks 1.234,56 gestern');
+      expect(typo.payeeId, 'sb');
+      expect(typo.amount, 123456);
+      expect(typo.date, DateTime(2025, 10, 17, 12));
+      expect((await parser.parse("Mario's Pizza 18,90")).payeeId, 'mp');
+    });
+
+    test('a multi-word payee is preferred over one of its words', () async {
+      final parser = parserWith(separator: ',');
+      expect((await parser.parse('Deutsche Bahn 49')).payeeId, 'db');
+      expect((await parser.parse('Deutche Bahn 49')).payeeId, 'db');
+      expect((await parser.parse('Bahn 4,90')).payeeId, 'bahn');
+    });
+
+    test('unrelated words do not match a payee', () async {
+      final parser = parserWith();
+      for (final input in [
+        'Coffee 4.50',
+        'Lunch 12 yesterday',
+        'Miete 800',
+        'über 20',
+        'Lid 3',
+        'Dinner Friday 50',
+        'Groceries 100',
+        'Rent 1000 due 2023-11-01',
+        'shelf 12',
+      ]) {
+        expect(
+          (await parser.parse(input)).payeeId,
+          isNull,
+          reason: '"$input" matched a payee',
+        );
+      }
+    });
+
+    test(
+      'payees are loaded once and reloaded after invalidatePayees',
+      () async {
+        final parser = parserWith();
+        await parser.parse('Starbucks 1');
+        await parser.parse('Starbuks 2');
+        await parser.parse('Starbu');
+        verify(mockPayeeRepo.getAllPayees()).called(1);
+
+        when(mockPayeeRepo.getAllPayees()).thenAnswer(
+          (_) async => [...payees, const Payee(id: 'new', name: 'Bäckerei')],
+        );
+        expect((await parser.parse('Bäckerei 3')).payeeId, isNull);
+        parser.invalidatePayees();
+        expect((await parser.parse('Bäckerei 3')).payeeId, 'new');
+        verify(mockPayeeRepo.getAllPayees()).called(1);
+      },
+    );
+
+    test('a failed payee load is not cached', () async {
+      final parser = parserWith();
+      var calls = 0;
+      when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async {
+        if (calls++ == 0) {
+          throw StateError('db busy');
+        }
+        return payees;
+      });
+      await expectLater(parser.parse('Starbucks 1'), throwsStateError);
+      expect((await parser.parse('Starbucks 1')).payeeId, 'sb');
+    });
+  });
 }

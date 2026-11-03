@@ -4785,4 +4785,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get autoFillAnyway => 'Trotzdem füllen';
+
+  @override
+  String splitRemaining(String amount) {
+    return 'Verbleibend: $amount';
+  }
+
+  @override
+  String splitOverBy(String amount) {
+    return '$amount zu viel';
+  }
 }

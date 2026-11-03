@@ -225,7 +225,7 @@ void main() {
       ); // Income check might fail if "Received" isn't a keyword
 
       // 6. Fuzzy Matching / Typos
-      // cases.add(TestCase('Walmrt 50', amount: 5000, payee: 'Walmart')); // Fuzzy Payee with extra text is hard. Skipping for now.
+      cases.add(TestCase('Walmrt 50', amount: 5000, payee: 'Walmart'));
       cases.add(
         TestCase('Groceris 50', amount: 5000, category: 'Groceries'),
       ); // Fuzzy Category works because 'Groceries' is single word and distinct

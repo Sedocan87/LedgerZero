@@ -7740,6 +7740,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fill anyway'**
   String get autoFillAnyway;
+
+  /// Below the split lines: part of the total not yet assigned to a line (0 when the lines add up)
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining: {amount}'**
+  String splitRemaining(String amount);
+
+  /// Below the split lines: the lines add up to more than the total
+  ///
+  /// In en, this message translates to:
+  /// **'Over by {amount}'**
+  String splitOverBy(String amount);
 }
 
 class _AppLocalizationsDelegate

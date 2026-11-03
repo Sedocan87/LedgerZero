@@ -10,6 +10,13 @@ The screen shows a preview (amount, payee, category, date) and an account
 picker. **Create** saves directly; **Edit details** opens the full
 transaction form pre-filled with the parsed values.
 
+The text is parsed 300 ms after the last keystroke, not on every key; a
+slower, older parse that finishes late never replaces the preview of newer
+text. **Create** and **Edit details** first parse text typed since the last
+preview, so they always use what the field says. **Create** is disabled
+while it saves (a double tap books one transaction). The screen scrolls, so
+preview and buttons stay reachable above the keyboard on small phones.
+
 ## What is extracted
 
 ### Amount (required)
@@ -85,8 +92,23 @@ In this order, the first hit wins:
 1. An existing payee whose name appears in the text as whole word(s)
    (case-insensitive, longest name first, so "Mario's Pizza" beats
    "Mario"; a payee "Bus" does not match "business").
-2. Fuzzy match of the whole text against payee names (`fuzzy` package,
-   threshold 0.3).
+2. A typo-tolerant match. The amount, date tokens and date words
+   (`yesterday`, `gestern`, `next friday`, ...) are removed, and the
+   remaining words are compared in runs of about as many words as the
+   payee name has, spaces ignored: `Starbuks 4.50 yesterday` finds
+   Starbucks, `star bucks 3` too, `Deutche Bahn 49` finds Deutsche Bahn.
+   Allowed edits (insert, delete, substitute, swap two neighbouring
+   letters) by name length without spaces: under six letters none (so
+   `shelf` is not "Shell", `Lid` is not "Lidl"), 6-9 letters one, 10-13
+   two, longer three; the first letter must agree. The closest match wins,
+   on a tie the name with more words, then the longer one.
+
+An exact match from step 1 only gives way to a multi-word payee whose typo
+match covers it: with payees "Bahn" and "Deutsche Bahn", `Deutche Bahn 49`
+is Deutsche Bahn and `Bahn 4,90` stays Bahn.
+
+Payees are loaded once and kept for the following parses (quick add parses
+while you type); the cache is dropped whenever the payees table changes.
 
 If no payee is found, the transaction is saved without one (or with a new
 payee if you enter a name in Edit details).
@@ -140,4 +162,5 @@ in the app ever created such rules). User rules ([RULES.md](RULES.md)) are
 the way to automate payees and categories.
 
 `PayeeMatcher` (`lib/services/nlp/payee_matcher.dart`) is a separate fuzzy
-matcher used by the payee picker, not by Quick Add.
+matcher used by the payee picker, not by Quick Add (its lenient
+suggestion threshold suits a picker list, not an automatic match).

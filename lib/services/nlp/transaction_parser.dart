@@ -87,20 +87,39 @@ class TransactionParser {
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
+  /// Payees, loaded once and reused for every parse (quick add parses
+  /// while the user types) until [invalidatePayees] drops them;
+  /// [transactionParserProvider] does that whenever the payees table
+  /// changes, the way `payeeMatcherProvider` keeps its cache fresh.
+  Future<List<Payee>>? _payees;
+
+  /// Drops the cached payees; the next parse reloads them.
+  void invalidatePayees() => _payees = null;
+
+  Future<List<Payee>> _allPayees() {
+    final cached = _payees;
+    if (cached != null) {
+      return cached;
+    }
+    final loading = _payeeRepository.getAllPayees();
+    _payees = loading;
+    // A failed load is not cached.
+    loading.then<void>(
+      (_) {},
+      onError: (Object _) {
+        if (identical(_payees, loading)) {
+          _payees = null;
+        }
+      },
+    );
+    return loading;
+  }
+
   /// Whether [text] contains [phrase] as whole word(s), ignoring case. A
   /// word boundary is any character that is not a Unicode letter, mark or
   /// digit (or the start/end of the text).
-  static bool containsWord(String text, String phrase) {
-    final needle = phrase.trim();
-    if (needle.isEmpty) {
-      return false;
-    }
-    return RegExp(
-      '(?<![\\p{L}\\p{M}\\p{N}])${RegExp.escape(needle)}(?![\\p{L}\\p{M}\\p{N}])',
-      caseSensitive: false,
-      unicode: true,
-    ).hasMatch(text);
-  }
+  static bool containsWord(String text, String phrase) =>
+      _wordMatch(text, phrase) != null;
 
   Future<ParsedTransaction> parse(String input) async {
     // 0. History: the most recent confirmation for exactly this input.
@@ -112,11 +131,14 @@ class TransactionParser {
 
       Payee? payee;
       if (payeeId != null) {
-        // Try fetching payee (might be deleted?) - assuming generic fetch
-        final payees = await _payeeRepository.getAllPayees();
-        try {
-          payee = payees.firstWhere((p) => p.id == payeeId);
-        } catch (_) {}
+        // The payee may have been deleted since.
+        final payees = await _allPayees();
+        for (final p in payees) {
+          if (p.id == payeeId) {
+            payee = p;
+            break;
+          }
+        }
       }
 
       Category? category;
@@ -223,36 +245,215 @@ class TransactionParser {
     return incomeKeywords.any((keyword) => containsWord(lowerInput, keyword));
   }
 
+  /// The payee named in [input], or `null`.
+  ///
+  /// 1. A payee whose name appears as whole word(s), longest name first.
+  /// 2. Otherwise a typo-tolerant match: the words of the text, without
+  ///    the amount, date tokens and date words, are compared in runs of
+  ///    about as many words as the payee name has ("Starbuks" ->
+  ///    Starbucks, "Deutche Bahn" -> Deutsche Bahn). Names shorter than
+  ///    six letters (spaces not counted) only match exactly, so "shelf"
+  ///    is not "Shell"; longer ones allow one edit (a swap of neighbouring
+  ///    letters is one), two from ten letters and three from fourteen,
+  ///    and the first letter must agree. The closest match wins; on a tie, the name with more
+  ///    words, then the longer one.
+  ///
+  /// An exact match only gives way to a multi-word payee whose typo match
+  /// covers it ("Deutche Bahn" with payees "Bahn" and "Deutsche Bahn").
   Future<Payee?> extractPayee(String input) async {
-    // 1. Get all payees from repository
-    // Note: In a real app with thousands of payees, we should optimize this
-    // by only fetching names or using a trie/search index.
-    // For now, we fetch all.
-    final payees = await _payeeRepository.getAllPayees();
+    final payees = await _allPayees();
+    if (payees.isEmpty) {
+      return null;
+    }
 
-    // 2. Simple case-insensitive contains check
-    // Sort by length descending to match longest payee first ("Mario's Pizza" vs "Mario")
-    // Use List.of to avoid mutating the original list
+    // Longest name first ("Mario's Pizza" before "Mario").
     final sortedPayees = List.of(payees)
       ..sort((a, b) => b.name.length.compareTo(a.name.length));
-
+    Payee? exact;
+    RegExpMatch? exactSpan;
     for (final payee in sortedPayees) {
-      if (containsWord(input, payee.name)) {
-        return payee;
+      final match = _wordMatch(input, payee.name);
+      if (match != null) {
+        exact = payee;
+        exactSpan = match;
+        break;
       }
     }
 
-    // 3. Fuzzy matching for Payees
-    final payeeNames = payees.map((p) => p.name).toList();
-    final fuse = Fuzzy(payeeNames, options: FuzzyOptions(threshold: 0.3));
+    final fuzzy = _fuzzyPayee(
+      input,
+      payees,
+      // With an exact match, only longer multi-word names covering it.
+      covering: exactSpan,
+      minWords: exact == null ? 1 : _words(exact.name).length + 1,
+    );
+    return fuzzy ?? exact;
+  }
 
-    final result = fuse.search(input);
-    if (result.isNotEmpty) {
-      final bestMatchName = result.first.item;
-      return payees.firstWhere((p) => p.name == bestMatchName);
+  /// Letters, marks and digits; anything else separates words.
+  static final _wordPattern = RegExp(r'[\p{L}\p{M}\p{N}]+', unicode: true);
+
+  static List<String> _words(String text) => [
+    for (final m in _wordPattern.allMatches(text.toLowerCase())) m.group(0)!,
+  ];
+
+  /// [phrase] in [text] as whole word(s), ignoring case (see
+  /// [containsWord]), or `null`.
+  static RegExpMatch? _wordMatch(String text, String phrase) {
+    final needle = phrase.trim();
+    if (needle.isEmpty) {
+      return null;
+    }
+    return RegExp(
+      '(?<![\\p{L}\\p{M}\\p{N}])${RegExp.escape(needle)}(?![\\p{L}\\p{M}\\p{N}])',
+      caseSensitive: false,
+      unicode: true,
+    ).firstMatch(text);
+  }
+
+  /// Day words that are never part of a payee name.
+  static const _dateWords = {
+    'today',
+    'yesterday',
+    'tomorrow',
+    'heute',
+    'gestern',
+    'vorgestern',
+    'morgen',
+    'übermorgen',
+  };
+
+  /// [input] with the amount, date tokens and date expressions blanked
+  /// out (indices stay valid).
+  String _withoutAmountAndDate(String input) {
+    var text = _withoutDateTokens(input);
+    final amount = _findAmount(text);
+    if (amount != null) {
+      text = _blank(text, amount.start, amount.end);
+    }
+    try {
+      for (final result in Chrono.parse(text, ref: _now())) {
+        final start = result.index.toInt();
+        final end = start + result.text.length;
+        if (start >= 0 && end <= text.length) {
+          text = _blank(text, start, end);
+        }
+      }
+    } catch (_) {
+      // Dates are optional here.
+    }
+    return text;
+  }
+
+  /// Edits a payee name of [length] letters (spaces removed) may differ by.
+  static int _allowedEdits(int length) => switch (length) {
+    < 6 => 0,
+    < 10 => 1,
+    < 14 => 2,
+    _ => 3,
+  };
+
+  /// The closest typo match among [payees] with at least [minWords] words
+  /// (and, with [covering], whose matched words include that span).
+  Payee? _fuzzyPayee(
+    String input,
+    List<Payee> payees, {
+    RegExpMatch? covering,
+    int minWords = 1,
+  }) {
+    final text = _withoutAmountAndDate(input).toLowerCase();
+    final tokens = [
+      for (final m in _wordPattern.allMatches(text))
+        if (!_dateWords.contains(m.group(0)) &&
+            !RegExp(r'^\d+$').hasMatch(m.group(0)!))
+          m,
+    ];
+    if (tokens.isEmpty) {
+      return null;
     }
 
-    return null;
+    Payee? best;
+    var bestRatio = double.infinity;
+    var bestWords = 0;
+    for (final payee in payees) {
+      final words = _words(payee.name);
+      if (words.length < minWords) {
+        continue;
+      }
+      final target = words.join();
+      final allowed = _allowedEdits(target.length);
+      if (allowed == 0) {
+        continue;
+      }
+      // Runs of one word fewer to one more than the name has (a name
+      // typed with or without its spaces).
+      for (var n = words.length - 1; n <= words.length + 1; n++) {
+        if (n < 1) {
+          continue;
+        }
+        for (var i = 0; i + n <= tokens.length; i++) {
+          final run = tokens.sublist(i, i + n);
+          if (covering != null &&
+              (run.first.start > covering.start ||
+                  run.last.end < covering.end)) {
+            continue;
+          }
+          final candidate = run.map((m) => m.group(0)!).join();
+          if (candidate[0] != target[0] ||
+              (candidate.length - target.length).abs() > allowed) {
+            continue;
+          }
+          final distance = _editDistance(candidate, target);
+          if (distance > allowed) {
+            continue;
+          }
+          final ratio = distance / target.length;
+          final better =
+              ratio < bestRatio ||
+              (ratio == bestRatio &&
+                  (words.length > bestWords ||
+                      (words.length == bestWords &&
+                          payee.name.length > best!.name.length)));
+          if (better) {
+            best = payee;
+            bestRatio = ratio;
+            bestWords = words.length;
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  /// Optimal string alignment distance: insertions, deletions,
+  /// substitutions and swaps of neighbouring letters count one each.
+  static int _editDistance(String a, String b) {
+    final s = a.runes.toList();
+    final t = b.runes.toList();
+    var prev2 = List<int>.filled(t.length + 1, 0);
+    var prev = List<int>.generate(t.length + 1, (j) => j);
+    for (var i = 1; i <= s.length; i++) {
+      final row = List<int>.filled(t.length + 1, 0)..[0] = i;
+      for (var j = 1; j <= t.length; j++) {
+        final cost = s[i - 1] == t[j - 1] ? 0 : 1;
+        var value = [
+          prev[j] + 1,
+          row[j - 1] + 1,
+          prev[j - 1] + cost,
+        ].reduce((x, y) => x < y ? x : y);
+        if (i > 1 &&
+            j > 1 &&
+            s[i - 1] == t[j - 2] &&
+            s[i - 2] == t[j - 1] &&
+            prev2[j - 2] + 1 < value) {
+          value = prev2[j - 2] + 1;
+        }
+        row[j] = value;
+      }
+      prev2 = prev;
+      prev = row;
+    }
+    return prev[t.length];
   }
 
   Future<Category?> extractCategory(String input, Payee? matchedPayee) async {
@@ -577,11 +778,20 @@ class TransactionParser {
   }
 }
 
+/// The app's [TransactionParser]. Its payee cache is dropped whenever the
+/// payees table changes (created, renamed, merged or deleted payees).
 final transactionParserProvider = Provider<TransactionParser>((ref) {
-  return TransactionParser(
-    ref.watch(payeeRepositoryProvider),
+  final payees = ref.watch(payeeRepositoryProvider);
+  final parser = TransactionParser(
+    payees,
     ref.watch(categoryRepositoryProvider),
     ref.watch(parsingHistoryRepositoryProvider),
     amountParser: ref.watch(appFormatterProvider).parser,
   );
+  final subscription = payees.watchAllPayees().listen(
+    (_) => parser.invalidatePayees(),
+    onError: (Object _) => parser.invalidatePayees(),
+  );
+  ref.onDispose(subscription.cancel);
+  return parser;
 });

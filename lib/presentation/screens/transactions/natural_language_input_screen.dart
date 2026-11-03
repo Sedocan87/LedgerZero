@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,14 +7,17 @@ import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
+import 'package:ledger_zero/domain/services/transaction_service_types.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/screens/transactions/form/transaction_dialogs.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_draft.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
@@ -20,8 +25,14 @@ import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/services/nlp/transaction_parser.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
+/// Key of the quick-add "Create" button (for tests).
+const quickAddCreateKey = Key('quick_add_create');
+
 class NaturalLanguageInputScreen extends ConsumerStatefulWidget {
   const NaturalLanguageInputScreen({super.key});
+
+  /// Pause after the last keystroke before the text is parsed.
+  static const parseDelay = Duration(milliseconds: 300);
 
   @override
   ConsumerState<NaturalLanguageInputScreen> createState() =>
@@ -32,37 +43,112 @@ class _NaturalLanguageInputScreenState
     extends ConsumerState<NaturalLanguageInputScreen> {
   final TextEditingController _controller = TextEditingController();
   ParsedTransaction? _parsedTransaction;
+
+  /// The text [_parsedTransaction] was parsed from.
+  String? _parsedText;
   bool _isParsing = false;
+  bool _isSaving = false;
   Account? _selectedAccount;
   bool _accountInitialized = false;
 
+  /// Waits for a pause in typing (each parse reads payees and categories).
+  Timer? _debounce;
+
+  /// Number of the latest parse request; a slower, older parse that
+  /// finishes later never overwrites a newer preview.
+  int _parseRequest = 0;
+
   void _onTextChanged(String text) {
-    if (text.isEmpty) {
+    _debounce?.cancel();
+    if (text.trim().isEmpty) {
+      _parseRequest++;
       setState(() {
         _parsedTransaction = null;
+        _parsedText = null;
+        _isParsing = false;
       });
       return;
     }
-    _parseInput(text);
+    _debounce = Timer(
+      NaturalLanguageInputScreen.parseDelay,
+      () => _parseInput(text),
+    );
   }
 
   Future<void> _parseInput(String text) async {
+    final request = ++_parseRequest;
     setState(() {
       _isParsing = true;
     });
 
-    final parser = ref.read(transactionParserProvider);
-    final result = await parser.parse(text);
-
-    if (mounted) {
-      setState(() {
-        _parsedTransaction = result;
-        _isParsing = false;
-      });
+    ParsedTransaction? result;
+    try {
+      result = await ref.read(transactionParserProvider).parse(text);
+    } catch (e, stack) {
+      Logger.error('Quick add: parsing failed', e, stack);
     }
+
+    if (!mounted || request != _parseRequest) {
+      return;
+    }
+    setState(() {
+      _parsedTransaction = result;
+      _parsedText = result == null ? null : text;
+      _isParsing = false;
+    });
+  }
+
+  /// Parses text typed since the last preview right away (skipping the
+  /// debounce), so what is saved or handed on is what the field says.
+  Future<void> _flushParse() async {
+    final text = _controller.text;
+    if (_parsedText == text) {
+      return;
+    }
+    if (text.trim().isEmpty) {
+      _onTextChanged(text);
+      return;
+    }
+    _debounce?.cancel();
+    await _parseInput(text);
   }
 
   Future<void> _createTransaction() async {
+    if (_isSaving) {
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      await _flushParse();
+      if (!mounted) {
+        return;
+      }
+      await _save();
+    } on ValidationException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              transactionValidationMessage(AppLocalizations.of(context)!, e),
+            ),
+          ),
+        );
+      }
+    } catch (e, stack) {
+      Logger.error('Quick add: saving failed', e, stack);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.txSaveFailed)),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _save() async {
     if (_parsedTransaction == null ||
         _selectedAccount == null ||
         _parsedTransaction!.amount == null) {
@@ -123,9 +209,10 @@ class _NaturalLanguageInputScreenState
 
   /// Hands the parsed values to the full editor and replaces this screen,
   /// so going back from the editor does not return to stale quick-add text.
-  void _editDetails() {
+  Future<void> _editDetails() async {
+    await _flushParse();
     final parsed = _parsedTransaction;
-    if (parsed == null) {
+    if (parsed == null || !mounted) {
       return;
     }
     final amount = parsed.amount;
@@ -166,6 +253,7 @@ class _NaturalLanguageInputScreenState
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -213,8 +301,11 @@ class _NaturalLanguageInputScreenState
           ),
         ],
       ),
-      body: Padding(
+      // Scrolls so the preview and buttons stay reachable above the
+      // keyboard on small phones.
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -247,8 +338,11 @@ class _NaturalLanguageInputScreenState
 
             // Account Selector
             accountsAsync.when(
-              data: (accounts) => DropdownButtonFormField<Account>(
-                initialValue: _selectedAccount,
+              // Keyed by id: the accounts stream emits new instances (e.g.
+              // with the new balance right after saving), which must still
+              // match the selection.
+              data: (accounts) => DropdownButtonFormField<String>(
+                initialValue: _selectedAccount?.id,
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: l10n.account,
@@ -263,7 +357,7 @@ class _NaturalLanguageInputScreenState
                 items: accounts
                     .map(
                       (account) => DropdownMenuItem(
-                        value: account,
+                        value: account.id,
                         child: Text(
                           account.name,
                           overflow: TextOverflow.ellipsis,
@@ -271,9 +365,11 @@ class _NaturalLanguageInputScreenState
                       ),
                     )
                     .toList(),
-                onChanged: (value) {
+                onChanged: (id) {
                   setState(() {
-                    _selectedAccount = value;
+                    _selectedAccount = accounts
+                        .where((a) => a.id == id)
+                        .firstOrNull;
                   });
                 },
               ),
@@ -299,10 +395,13 @@ class _NaturalLanguageInputScreenState
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: AppButton.primary(
+                      key: quickAddCreateKey,
                       label: l10n.create,
+                      isLoading: _isSaving,
                       onPressed:
                           (_parsedTransaction!.amount != null &&
-                              _selectedAccount != null)
+                              _selectedAccount != null &&
+                              !_isSaving)
                           ? _createTransaction
                           : null,
                       icon: Icons.check,
@@ -340,12 +439,15 @@ class _NaturalLanguageInputScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  l10n.preview,
-                  style: Theme.of(context).textTheme.titleMedium,
+                Expanded(
+                  child: Text(
+                    l10n.preview,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: AppSpacing.sm),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -367,26 +469,32 @@ class _NaturalLanguageInputScreenState
             const Divider(),
             const SizedBox(height: AppSpacing.sm),
 
-            // Amount and Date
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Amount and Date (the date wraps below on narrow screens)
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       hasAmount ? Icons.attach_money : Icons.money_off,
                       color: hasAmount ? amountColor : Colors.grey,
                     ),
                     const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      hasAmount
-                          ? '$amountPrefix${fmt.formatMoney(transaction.amount!, currencyCode: currencyCode)}'
-                          : l10n.noAmount,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: hasAmount ? amountColor : Colors.grey,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Flexible(
+                      child: Text(
+                        hasAmount
+                            ? '$amountPrefix${fmt.formatMoney(transaction.amount!, currencyCode: currencyCode)}'
+                            : l10n.noAmount,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: hasAmount ? amountColor : Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
                     ),
                   ],
                 ),

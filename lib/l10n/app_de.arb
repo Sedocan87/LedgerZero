@@ -1280,5 +1280,7 @@
   "autoBackupDeleted": "Automatische Sicherungen gelöscht",
   "autoFillWaitingTitle": "{month} wird gefüllt, sobald das Geld da ist",
   "autoFillWaitingBody": "{total} stehen bereit; bei „Zu budgetieren“ fehlen noch {missing}. Gefüllt wird von selbst, sobald das Geld eingegangen ist.",
-  "autoFillAnyway": "Trotzdem füllen"
+  "autoFillAnyway": "Trotzdem füllen",
+  "splitRemaining": "Verbleibend: {amount}",
+  "splitOverBy": "{amount} zu viel"
 }

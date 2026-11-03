@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/app/theme.dart';
+import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -42,14 +44,24 @@ class SplitItem {
   }
 }
 
+/// Key of the live "Remaining" / "Over by" line under the splits.
+const splitRemainderKey = Key('split_remainder');
+
 /// Edits the lines of a split transaction. Amounts are entered without a
 /// sign; the transaction type (outflow/inflow) gives the sign.
+///
+/// Below the lines it shows what is left to assign: [total] minus the sum
+/// of the lines, both in the form's unsigned frame (a line typed with a
+/// minus sign counts against the transaction's direction, exactly as it is
+/// saved). "Remaining: 0.00" in the success colour means the lines add up.
 class SplitEditor extends ConsumerWidget {
   const SplitEditor({
     super.key,
     required this.items,
     required this.categories,
     required this.onChanged,
+    this.total,
+    this.currencyCode,
   });
 
   final List<SplitItem> items;
@@ -59,6 +71,13 @@ class SplitEditor extends ConsumerWidget {
 
   /// Called after any change (the parent re-renders and autosaves).
   final VoidCallback onChanged;
+
+  /// The transaction's amount without sign (minor units), or `null` while
+  /// it is empty or invalid (no remainder is shown then).
+  final int? total;
+
+  /// Currency of the account, for the remainder.
+  final String? currencyCode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -132,6 +151,7 @@ class SplitEditor extends ConsumerWidget {
               ),
             ),
           ),
+        if (total != null) _remainder(context, l10n, fmt, total!),
         AppButton.text(
           label: l10n.addSplit,
           icon: Icons.add,
@@ -141,6 +161,54 @@ class SplitEditor extends ConsumerWidget {
           },
         ),
       ],
+    );
+  }
+
+  Widget _remainder(
+    BuildContext context,
+    AppLocalizations l10n,
+    AppFormatter fmt,
+    int total,
+  ) {
+    // Lines that are empty or invalid count as 0 (their own field says why).
+    final assigned = Money.sum(
+      items.map((item) => fmt.parseAmount(item.amountController.text) ?? 0),
+    );
+    final remaining = total - assigned;
+    final amount = fmt.formatMoney(remaining.abs(), currencyCode: currencyCode);
+    final theme = Theme.of(context);
+    final Color color;
+    final String text;
+    if (remaining == 0) {
+      color = AppColors.success;
+      text = l10n.splitRemaining(amount);
+    } else if (remaining > 0) {
+      color = theme.colorScheme.onSurfaceVariant;
+      text = l10n.splitRemaining(amount);
+    } else {
+      color = theme.colorScheme.error;
+      text = l10n.splitOverBy(amount);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Row(
+        children: [
+          if (remaining == 0) ...[
+            Icon(Icons.check_circle, size: 18, color: color),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Text(
+              text,
+              key: splitRemainderKey,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

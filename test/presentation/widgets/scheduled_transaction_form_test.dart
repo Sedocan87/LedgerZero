@@ -107,7 +107,7 @@ void main() {
 
     setUp(() => repo = _MemoryScheduledRepository());
 
-    Future<void> pumpScreen(WidgetTester tester, String id) async {
+    Future<void> pumpScreen(WidgetTester tester, String? id) async {
       final router = GoRouter(
         initialLocation: '/',
         routes: [
@@ -310,6 +310,103 @@ void main() {
       expect(saved.payeeId, 'p2');
       expect(saved.categoryId, 'c2');
       expect(saved.accountId, 'acc2');
+    });
+
+    group('Outflow | Inflow', () {
+      Future<void> createNew(WidgetTester tester, {bool inflow = false}) async {
+        await pumpScreen(tester, null);
+        expect(find.text('Outflow'), findsOneWidget);
+        expect(find.text('Inflow'), findsOneWidget);
+        if (inflow) {
+          await tester.tap(find.text('Inflow'));
+          await tester.pumpAndSettle();
+        }
+        await tester.enterText(find.byKey(scheduledAmountFieldKey), '800');
+        await tester.tap(find.byKey(scheduledAccountFieldKey));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find
+              .descendant(
+                of: find.byType(BottomSheet),
+                matching: find.text('Checking'),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
+        await save(tester);
+      }
+
+      testWidgets('a new schedule is an outflow by default', (tester) async {
+        await createNew(tester);
+        expect(repo.rows.values.single.amount, -80000);
+      });
+
+      testWidgets('an inflow schedule is saved positive', (tester) async {
+        await createNew(tester, inflow: true);
+        expect(repo.rows.values.single.amount, 80000);
+      });
+
+      testWidgets('a typed minus sign does not flip the direction', (
+        tester,
+      ) async {
+        repo.rows['s1'] = ScheduledTransaction(
+          id: 's1',
+          accountId: 'acc1',
+          amount: 5000,
+          nextDate: DateTime.utc(2024, 1, 15),
+        );
+        await pumpScreen(tester, 's1');
+        await tester.enterText(find.byKey(scheduledAmountFieldKey), '-20');
+        await save(tester);
+        expect(repo.rows['s1']!.amount, 2000);
+      });
+
+      testWidgets('editing a negative schedule shows Outflow and the '
+          'absolute amount', (tester) async {
+        repo.rows['s1'] = ScheduledTransaction(
+          id: 's1',
+          accountId: 'acc1',
+          amount: -80000,
+          nextDate: DateTime.utc(2024, 1, 15),
+        );
+        await pumpScreen(tester, 's1');
+
+        final segments = tester.widget<SegmentedButton<bool>>(
+          find.byKey(scheduledDirectionKey),
+        );
+        expect(segments.selected, {false});
+        final amount = tester.widget<TextField>(
+          find.descendant(
+            of: find.byKey(scheduledAmountFieldKey),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(amount.controller!.text, '800.00');
+
+        // Switching to Inflow keeps the amount and flips the sign.
+        await tester.tap(find.text('Inflow'));
+        await tester.pumpAndSettle();
+        await save(tester);
+        expect(repo.rows['s1']!.amount, 80000);
+      });
+
+      testWidgets('editing a positive schedule shows Inflow', (tester) async {
+        repo.rows['s1'] = ScheduledTransaction(
+          id: 's1',
+          accountId: 'acc1',
+          amount: 1250,
+          nextDate: DateTime.utc(2024, 1, 15),
+        );
+        await pumpScreen(tester, 's1');
+        expect(
+          tester
+              .widget<SegmentedButton<bool>>(find.byKey(scheduledDirectionKey))
+              .selected,
+          {true},
+        );
+        await save(tester);
+        expect(repo.rows['s1']!.amount, 1250);
+      });
     });
 
     testWidgets('a search without matches says so', (tester) async {
