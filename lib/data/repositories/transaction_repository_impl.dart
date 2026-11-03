@@ -5,6 +5,7 @@ import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/database.dart' as db;
 import 'package:ledger_zero/data/database/database_error_handler.dart';
+import 'package:ledger_zero/domain/entities/spending.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
@@ -239,26 +240,55 @@ class TransactionRepositoryImpl implements TransactionRepository {
       _sum('income sum', () => _transactionsDao.getIncomeSum(start, end));
 
   @override
-  Future<int> getBalanceChangeSum(DateTime endExclusive) => _sum(
+  Future<int> getBalanceChangeSum(
+    DateTime endExclusive, {
+    String? currency,
+    Set<String> excludeTransfersTo = const {},
+  }) => _sum(
     'balance change sum',
-    () => _transactionsDao.getBalanceChangeSum(endExclusive),
+    () => _transactionsDao.getBalanceChangeSum(
+      endExclusive,
+      currency: currency,
+      excludeTransfersTo: excludeTransfersTo,
+    ),
   );
 
   @override
   Future<Map<String, int>> getMonthlyBalanceChanges(
     DateTime start,
-    DateTime endExclusive,
-  ) async {
+    DateTime endExclusive, {
+    String? currency,
+    Set<String> excludeTransfersTo = const {},
+  }) async {
     try {
       return await _transactionsDao.getMonthlyBalanceChanges(
         start,
         endExclusive,
+        currency: currency,
+        excludeTransfersTo: excludeTransfersTo,
       );
     } catch (e, st) {
       Logger.error('Error loading monthly balance changes', e, st);
       throw DatabaseException('Error loading monthly balance changes', e);
     }
   }
+
+  @override
+  Future<Map<String, ({int sum, DateTime first})>> getTransferLegTotals(
+    Set<String> accountIds,
+  ) => _sum(
+    'transfer leg totals',
+    () => _transactionsDao.getTransferLegTotals(accountIds),
+  );
+
+  @override
+  Future<List<SpendingRow>> getSpendingRows(
+    DateTime start,
+    DateTime endExclusive,
+  ) => _sum(
+    'spending rows',
+    () => _transactionsDao.getSpendingRows(start, endExclusive),
+  );
 
   @override
   Future<int> getOutflowSum(DateTime start, DateTime end) =>

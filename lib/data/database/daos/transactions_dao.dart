@@ -4,6 +4,7 @@ import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/database/tables/categories.dart';
 import 'package:ledger_zero/data/database/tables/payees.dart';
 import 'package:ledger_zero/data/database/tables/transactions.dart';
+import 'package:ledger_zero/domain/entities/spending.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart'
     show TransactionClearStatus;
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
@@ -223,36 +224,99 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       transactions.isDeleted.equals(false) &
       transactions.parentTransactionId.isNull();
 
-  /// Sum (minor units) of the balance rows (all accounts) dated before
-  /// [endExclusive].
-  Future<int> getBalanceChangeSum(DateTime endExclusive) {
+  /// [_balanceRow]s narrowed for the net worth report: with [currency]
+  /// only the rows of accounts in that currency, and without the transfer
+  /// legs whose other account is in [excludeTransfersTo] (the partner's
+  /// personal accounts, whose side of the transfer is not on this phone).
+  Expression<bool> _netWorthRow(
+    String? currency,
+    Set<String> excludeTransfersTo,
+  ) {
+    var where = _balanceRow;
+    if (currency != null) {
+      final accounts = attachedDatabase.accounts;
+      final ids = selectOnly(accounts)
+        ..addColumns([accounts.id])
+        ..where(accounts.currency.equals(currency));
+      where = where & transactions.accountId.isInQuery(ids);
+    }
+    if (excludeTransfersTo.isNotEmpty) {
+      where =
+          where &
+          (transactions.transferAccountId.isNull() |
+              transactions.transferAccountId.isNotIn(excludeTransfersTo));
+    }
+    return where;
+  }
+
+  /// Sum (minor units) of the balance rows (all accounts, or those of
+  /// [currency]) dated before [endExclusive], without transfer legs to the
+  /// accounts in [excludeTransfersTo].
+  Future<int> getBalanceChangeSum(
+    DateTime endExclusive, {
+    String? currency,
+    Set<String> excludeTransfersTo = const {},
+  }) {
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
       ..where(
         transactions.date.isSmallerThanValue(endExclusive.toUtc()) &
-            _balanceRow,
+            _netWorthRow(currency, excludeTransfersTo),
       )
       ..addColumns([amount]);
     return query.map((row) => row.read(amount) ?? 0).getSingle();
   }
 
-  /// Net change of all account balances per calendar month (`yyyy-MM` ->
-  /// signed sum in minor units) for `start <= date < endExclusive`,
-  /// computed in one grouped query.
+  /// Net change of all account balances (or those of [currency]) per
+  /// calendar month (`yyyy-MM` -> signed sum in minor units) for
+  /// `start <= date < endExclusive`, without transfer legs to the accounts
+  /// in [excludeTransfersTo], computed in one grouped query.
   Future<Map<String, int>> getMonthlyBalanceChanges(
     DateTime start,
-    DateTime endExclusive,
-  ) async {
+    DateTime endExclusive, {
+    String? currency,
+    Set<String> excludeTransfersTo = const {},
+  }) async {
     final month = transactions.date.strftime('%Y-%m');
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
-      ..where(_inRange(start, endExclusive) & _balanceRow)
+      ..where(
+        _inRange(start, endExclusive) &
+            _netWorthRow(currency, excludeTransfersTo),
+      )
       ..addColumns([month, amount])
       ..groupBy([month]);
     final rows = await query.get();
     return {
       for (final row in rows)
         if (row.read(month) != null) row.read(month)!: row.read(amount) ?? 0,
+    };
+  }
+
+  /// For each of [accountIds] that has some: the transfer legs on this
+  /// phone whose other account it is (balance rows) -> their signed sum
+  /// (minor units) and the earliest date. Used for the partner's personal
+  /// accounts, whose own legs never reach this phone.
+  Future<Map<String, ({int sum, DateTime first})>> getTransferLegTotals(
+    Set<String> accountIds,
+  ) async {
+    if (accountIds.isEmpty) {
+      return const {};
+    }
+    final amount = transactions.amount.sum();
+    final first = transactions.date.min();
+    final query = selectOnly(transactions)
+      ..where(_balanceRow & transactions.transferAccountId.isIn(accountIds))
+      ..addColumns([transactions.transferAccountId, amount, first])
+      ..groupBy([transactions.transferAccountId]);
+    return {
+      for (final row in await query.get())
+        if (row.read(transactions.transferAccountId) != null &&
+            row.read(first) != null)
+          row.read(transactions.transferAccountId)!: (
+            sum: row.read(amount) ?? 0,
+            first: row.read(first)!,
+          ),
     };
   }
 
@@ -274,24 +338,55 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     return query.map((row) => row.read(amount) ?? 0).getSingle();
   }
 
-  /// Spending (minor units, negative): the sum of the non-deleted outflows
-  /// of on-budget accounts that are not transfer legs and not split parents
-  /// (split children are counted instead of their parent).
-  Future<int> getOutflowSum(DateTime start, DateTime endExclusive) {
+  /// Rows that count as spending (see `domain/entities/spending.dart`):
+  /// non-deleted, in an on-budget account, not a split parent, not a
+  /// transfer leg (also not one to or from an off-budget account), and
+  /// either categorised (any sign, so a refund nets against its category)
+  /// or an uncategorised outflow.
+  Expression<bool> get _spendingRow =>
+      transactions.isDeleted.equals(false) &
+      _inBudgetAccount &
+      transactions.transferAccountId.isNull() &
+      _isNotSplitParent &
+      (transactions.categoryId.isNotNull() |
+          transactions.amount.isSmallerThanValue(0));
+
+  /// The spending rows with `start <= date < endExclusive`, summed per
+  /// calendar month, category and payee in one grouped query. [Spending]
+  /// turns them into the figures every report shows.
+  Future<List<SpendingRow>> getSpendingRows(
+    DateTime start,
+    DateTime endExclusive,
+  ) async {
+    final month = transactions.date.strftime('%Y-%m');
     final amount = transactions.amount.sum();
     final query = selectOnly(transactions)
-      ..where(
-        _inRange(start, endExclusive) &
-            transactions.isDeleted.equals(false) &
-            _inBudgetAccount &
-            transactions.transferAccountId.isNull() &
-            transactions.amount.isSmallerThanValue(0) &
-            _isNotSplitParent,
-      )
-      ..addColumns([amount]);
-
-    return query.map((row) => row.read(amount) ?? 0).getSingle();
+      ..where(_inRange(start, endExclusive) & _spendingRow)
+      ..addColumns([
+        month,
+        transactions.categoryId,
+        transactions.payeeId,
+        amount,
+      ])
+      ..groupBy([month, transactions.categoryId, transactions.payeeId]);
+    final rows = await query.get();
+    return [
+      for (final row in rows)
+        if (row.read(month) != null)
+          SpendingRow(
+            month: row.read(month)!,
+            categoryId: row.read(transactions.categoryId),
+            payeeId: row.read(transactions.payeeId),
+            amount: row.read(amount) ?? 0,
+          ),
+    ];
   }
+
+  /// Spending (minor units, negative) with `start <= date < endExclusive`:
+  /// minus [Spending.total] of [getSpendingRows] (refunds net within their
+  /// category and month, transfers excluded).
+  Future<int> getOutflowSum(DateTime start, DateTime endExclusive) async =>
+      -Spending(await getSpendingRows(start, endExclusive)).total;
 
   /// Activity (signed sum, minor units) of a category with
   /// `start <= date < endExclusive`: its [_activityRow]s, split children

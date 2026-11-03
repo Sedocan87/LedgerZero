@@ -11,8 +11,9 @@ import 'package:ledger_zero/domain/entities/budget.dart' as _i6;
 import 'package:ledger_zero/domain/entities/category.dart' as _i8;
 import 'package:ledger_zero/domain/entities/category_group.dart' as _i9;
 import 'package:ledger_zero/domain/entities/payee.dart' as _i12;
+import 'package:ledger_zero/domain/entities/spending.dart' as _i15;
 import 'package:ledger_zero/domain/entities/transaction.dart' as _i14;
-import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i15;
+import 'package:ledger_zero/domain/entities/transaction_filter.dart' as _i16;
 import 'package:ledger_zero/domain/repositories/account_repository.dart' as _i2;
 import 'package:ledger_zero/domain/repositories/budget_repository.dart' as _i5;
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
@@ -823,9 +824,17 @@ class MockTransactionRepository extends _i1.Mock
           as _i3.Future<int>);
 
   @override
-  _i3.Future<int> getBalanceChangeSum(DateTime? endExclusive) =>
+  _i3.Future<int> getBalanceChangeSum(
+    DateTime? endExclusive, {
+    String? currency,
+    Set<String>? excludeTransfersTo = const {},
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#getBalanceChangeSum, [endExclusive]),
+            Invocation.method(
+              #getBalanceChangeSum,
+              [endExclusive],
+              {#currency: currency, #excludeTransfersTo: excludeTransfersTo},
+            ),
             returnValue: _i3.Future<int>.value(0),
             returnValueForMissingStub: _i3.Future<int>.value(0),
           )
@@ -834,16 +843,55 @@ class MockTransactionRepository extends _i1.Mock
   @override
   _i3.Future<Map<String, int>> getMonthlyBalanceChanges(
     DateTime? start,
-    DateTime? endExclusive,
-  ) =>
+    DateTime? endExclusive, {
+    String? currency,
+    Set<String>? excludeTransfersTo = const {},
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#getMonthlyBalanceChanges, [start, endExclusive]),
+            Invocation.method(
+              #getMonthlyBalanceChanges,
+              [start, endExclusive],
+              {#currency: currency, #excludeTransfersTo: excludeTransfersTo},
+            ),
             returnValue: _i3.Future<Map<String, int>>.value(<String, int>{}),
             returnValueForMissingStub: _i3.Future<Map<String, int>>.value(
               <String, int>{},
             ),
           )
           as _i3.Future<Map<String, int>>);
+
+  @override
+  _i3.Future<Map<String, ({DateTime first, int sum})>> getTransferLegTotals(
+    Set<String>? accountIds,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTransferLegTotals, [accountIds]),
+            returnValue:
+                _i3.Future<Map<String, ({DateTime first, int sum})>>.value(
+                  <String, ({DateTime first, int sum})>{},
+                ),
+            returnValueForMissingStub:
+                _i3.Future<Map<String, ({DateTime first, int sum})>>.value(
+                  <String, ({DateTime first, int sum})>{},
+                ),
+          )
+          as _i3.Future<Map<String, ({DateTime first, int sum})>>);
+
+  @override
+  _i3.Future<List<_i15.SpendingRow>> getSpendingRows(
+    DateTime? start,
+    DateTime? endExclusive,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getSpendingRows, [start, endExclusive]),
+            returnValue: _i3.Future<List<_i15.SpendingRow>>.value(
+              <_i15.SpendingRow>[],
+            ),
+            returnValueForMissingStub: _i3.Future<List<_i15.SpendingRow>>.value(
+              <_i15.SpendingRow>[],
+            ),
+          )
+          as _i3.Future<List<_i15.SpendingRow>>);
 
   @override
   _i3.Future<int> getOutflowSum(DateTime? start, DateTime? endExclusive) =>
@@ -963,8 +1011,8 @@ class MockTransactionRepository extends _i1.Mock
 
   @override
   _i3.Future<List<_i14.Transaction>> getTransactions({
-    _i15.TransactionFilter? filter,
-    _i15.TransactionSort? sort,
+    _i16.TransactionFilter? filter,
+    _i16.TransactionSort? sort,
     int? limit,
   }) =>
       (super.noSuchMethod(
@@ -984,8 +1032,8 @@ class MockTransactionRepository extends _i1.Mock
 
   @override
   _i3.Stream<List<_i14.Transaction>> watchTransactions({
-    _i15.TransactionFilter? filter,
-    _i15.TransactionSort? sort,
+    _i16.TransactionFilter? filter,
+    _i16.TransactionSort? sort,
     int? limit,
   }) =>
       (super.noSuchMethod(
