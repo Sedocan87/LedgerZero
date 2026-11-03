@@ -268,8 +268,11 @@ class BudgetingService {
     );
   }
 
-  /// Total spending (negative) for [month]: outflows that are not transfer
-  /// legs; a split counts through its children, never twice.
+  /// Total spending (negative) for [month], by the one definition of
+  /// spending the reports use (see `Spending` and BUDGETING_RULES.md):
+  /// on-budget, no transfer legs, categorised rows netted per category and
+  /// clamped at 0, uncategorised outflows included; a split counts through
+  /// its children, never twice.
   Future<int> calculateTotalSpendingForMonth(DateTime month) async {
     return _transactionRepository.getOutflowSum(
       CalendarDate.startOfMonthUtc(month),
