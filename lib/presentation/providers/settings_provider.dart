@@ -44,8 +44,8 @@ final deviceLocalesProvider = Provider<List<Locale>>((ref) {
   }
 });
 
-/// Date format preference. [system] follows the app language (see
-/// [datePatternForLanguage]); it is the default, so a user who never chose
+/// Date format preference. [system] follows the app language and region
+/// (see [datePatternFor]); it is the default, so a user who never chose
 /// one sees dates the way the rest of the app's language writes them. New
 /// values must be appended: the index is persisted.
 enum AppDateFormat {
@@ -59,13 +59,50 @@ enum AppDateFormat {
   const AppDateFormat(this.pattern);
 }
 
-/// The date pattern of [AppDateFormat.system] for an app language:
-/// `dd.MM.yyyy` for German, `MM/dd/yyyy` for English (the order of the
-/// English date pickers).
-String datePatternForLanguage(String languageCode) => switch (languageCode) {
-  'de' => AppDateFormat.european.pattern!,
-  _ => AppDateFormat.us.pattern!,
+/// Regions whose English writes month before day (`MM/dd/yyyy`).
+const Set<String> _monthFirstRegions = {
+  'US',
+  'PH',
+  'PR',
+  'GU',
+  'AS',
+  'VI',
+  'MP',
+  'UM',
+  'FM',
+  'MH',
+  'PW',
 };
+
+/// The date pattern of [AppDateFormat.system] for an app language and the
+/// phone's region: `dd.MM.yyyy` for German; for English the region decides,
+/// since English is written differently around the world: `MM/dd/yyyy` in
+/// the US (and without a region), `yyyy-MM-dd` in Canada, `dd/MM/yyyy`
+/// elsewhere (UK, Ireland, Australia, India, ...).
+String datePatternFor(String languageCode, [String? regionCode]) {
+  if (languageCode == 'de') {
+    return AppDateFormat.european.pattern!;
+  }
+  final region = regionCode?.toUpperCase();
+  if (region == null || region.isEmpty || _monthFirstRegions.contains(region)) {
+    return AppDateFormat.us.pattern!;
+  }
+  if (region == 'CA') {
+    return AppDateFormat.iso8601.pattern!;
+  }
+  return 'dd/MM/yyyy';
+}
+
+/// The phone's region for dates in [languageCode]: the region of the first
+/// device locale in that language, else of the first device locale.
+String? deviceRegionFor(String languageCode, List<Locale> deviceLocales) {
+  for (final l in deviceLocales) {
+    if (l.languageCode == languageCode && (l.countryCode ?? '').isNotEmpty) {
+      return l.countryCode;
+    }
+  }
+  return deviceLocales.firstOrNull?.countryCode;
+}
 
 /// Decimal separator preference. [system] follows the app language
 /// (`,` for German, `.` for English). New values must be appended: the
