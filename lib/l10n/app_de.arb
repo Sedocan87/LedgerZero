@@ -1410,5 +1410,10 @@
   "proSettingsSubtitle": "Synchronisierung, Kartenbenachrichtigungen und mehr. Einmal zahlen.",
   "proBadge": "PRO",
   "proBadgeSemantics": "Benötigt LedgerZero Pro",
-  "proDevelopmentUnlock": "Pro freigeschaltet (Entwicklungsversion)"
+  "proDevelopmentUnlock": "Pro freigeschaltet (Entwicklungsversion)",
+  "legalTermsOfUse": "Nutzungsbedingungen",
+  "legalLoadFailed": "Diese Seite konnte nicht geladen werden.",
+  "rateApp": "LedgerZero bewerten",
+  "rateAppSubtitle": "Sagen Sie anderen auf Google Play, was Sie denken",
+  "rateAppFailed": "Google Play konnte nicht geöffnet werden."
 }

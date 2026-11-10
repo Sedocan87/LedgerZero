@@ -5443,4 +5443,20 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get proDevelopmentUnlock => 'Pro freigeschaltet (Entwicklungsversion)';
+
+  @override
+  String get legalTermsOfUse => 'Nutzungsbedingungen';
+
+  @override
+  String get legalLoadFailed => 'Diese Seite konnte nicht geladen werden.';
+
+  @override
+  String get rateApp => 'LedgerZero bewerten';
+
+  @override
+  String get rateAppSubtitle =>
+      'Sagen Sie anderen auf Google Play, was Sie denken';
+
+  @override
+  String get rateAppFailed => 'Google Play konnte nicht geöffnet werden.';
 }

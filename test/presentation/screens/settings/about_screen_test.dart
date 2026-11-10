@@ -10,6 +10,12 @@ import 'package:ledger_zero/core/constants/app_links.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/app_info_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/about_screen.dart';
+import 'package:ledger_zero/presentation/screens/settings/legal_document_screen.dart';
+import 'package:ledger_zero/services/legal/legal_documents.dart';
+import 'package:ledger_zero/presentation/providers/review_provider.dart';
+import 'package:ledger_zero/services/review/review_service.dart';
+import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ledger_zero/presentation/screens/settings/help_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -34,6 +40,21 @@ void main() {
       return canOpen;
     }),
   ];
+
+  /// The bundled text is read from disk (real I/O, outside the fake
+  /// clock): wait for the page.
+  Future<void> waitForPage(WidgetTester tester, String document) async {
+    for (var i = 0; i < 50; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+      if (find.byKey(Key('legal.$document')).evaluate().isNotEmpty) {
+        break;
+      }
+    }
+    await tester.pumpAndSettle();
+  }
 
   setUp(() {
     opened.clear();
@@ -113,68 +134,89 @@ void main() {
     expect(find.text('Open-source licences'), findsOneWidget);
   });
 
-  testWidgets('privacy policy and imprint are hidden while they have no URL', (
-    tester,
-  ) async {
-    // Today's constants: the owner has no hosted texts yet.
-    expect(AppLinks.privacyPolicyUrl, isNull);
-    expect(AppLinks.imprintUrl, isNull);
-
+  testWidgets('privacy policy and terms of use open in the app, in its '
+      'language', (tester) async {
     await pumpTestWidget(
       tester,
       child: const AboutScreen(),
       overrides: overrides(),
     );
 
-    expect(find.byKey(const Key('about.privacyPolicy')), findsNothing);
+    await tester.tap(find.byKey(const Key('about.privacy')));
+    await waitForPage(tester, 'privacy');
+    expect(find.byType(LegalDocumentScreen), findsOneWidget);
+    expect(find.text('Who is responsible'), findsOneWidget);
+    expect(opened, isEmpty, reason: 'bundled, no browser');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('about.terms')));
+    await waitForPage(tester, 'terms');
+    expect(find.text('No financial advice'), findsOneWidget);
+  });
+
+  testWidgets('the imprint is hidden while the publisher is not filled in', (
+    tester,
+  ) async {
+    await pumpTestWidget(
+      tester,
+      child: const AboutScreen(),
+      overrides: [
+        ...overrides(),
+        publisherProvider.overrideWith((ref) async => const Publisher()),
+      ],
+    );
     expect(find.byKey(const Key('about.imprint')), findsNothing);
   });
 
-  testWidgets('privacy policy and imprint open their URL once it is set', (
+  testWidgets('the imprint is shown once the publisher is filled in', (
     tester,
   ) async {
     await pumpTestWidget(
       tester,
-      child: const AboutScreen(
-        privacyPolicyUrl: 'https://example.com/privacy',
-        imprintUrl: 'https://example.com/imprint',
-      ),
-      overrides: overrides(),
+      child: const AboutScreen(),
+      overrides: [
+        ...overrides(),
+        publisherProvider.overrideWith(
+          (ref) async => const Publisher(
+            name: 'Erika Mustermann',
+            address: ['Musterstraße 1', '12345 Musterstadt'],
+            email: 'support@ledgerzero.app',
+          ),
+        ),
+      ],
     );
-
-    await tester.tap(find.byKey(const Key('about.privacyPolicy')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('about.imprint')));
-    await tester.pumpAndSettle();
-
-    expect(opened, [
-      Uri.parse('https://example.com/privacy'),
-      Uri.parse('https://example.com/imprint'),
-    ]);
-    expect(clipboard, isNull);
+    expect(find.byKey(const Key('about.imprint')), findsOneWidget);
   });
 
-  testWidgets('a web page that cannot be opened is copied to the clipboard', (
+  testWidgets('Settings lists About with the version, rating, the legal '
+      'pages and the licences; rating opens the Play Store page', (
     tester,
   ) async {
-    canOpen = false;
+    final review = _ListingOnly();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     await pumpTestWidget(
       tester,
-      child: const AboutScreen(privacyPolicyUrl: 'https://example.com/privacy'),
-      overrides: overrides(),
+      child: ListView(children: const [AboutSettingsSection()]),
+      overrides: [
+        ...overrides(),
+        reviewClientProvider.overrideWithValue(review),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
     );
-
-    await tester.tap(find.byKey(const Key('about.privacyPolicy')));
+    expect(find.text('Version 0.1.0-dev (build 7)'), findsOneWidget);
+    for (final key in [
+      'settings.rate',
+      'settings.privacy',
+      'settings.terms',
+      'settings.licenses',
+    ]) {
+      expect(find.byKey(Key(key)), findsOneWidget, reason: key);
+    }
+    await tester.tap(find.byKey(const Key('settings.rate')));
     await tester.pumpAndSettle();
-
-    expect(clipboard, 'https://example.com/privacy');
-    expect(
-      find.text(
-        'The page could not be opened. Its address has been copied to the '
-        'clipboard.',
-      ),
-      findsOneWidget,
-    );
+    expect(review.listings, 1);
   });
 
   testWidgets('the licence page lists the bundled Inter and Roboto fonts '
@@ -207,42 +249,45 @@ void main() {
   });
 
   // A plain test (real async): the licence stream reads an asset.
-  test('the Inter and Roboto entries carry the bundled licence texts', () async {
-    // rootBundle caches the asset's future; one cached by a widget test
-    // belongs to that test's fake-async zone and would never complete here.
-    rootBundle.clear();
-    LicenseRegistry.reset();
-    resetBundledLicensesForTesting();
-    addTearDown(() {
+  test(
+    'the Inter and Roboto entries carry the bundled licence texts',
+    () async {
+      // rootBundle caches the asset's future; one cached by a widget test
+      // belongs to that test's fake-async zone and would never complete here.
+      rootBundle.clear();
       LicenseRegistry.reset();
       resetBundledLicensesForTesting();
-    });
-    registerBundledLicenses();
-    // A second call must not add the entries twice.
-    registerBundledLicenses();
+      addTearDown(() {
+        LicenseRegistry.reset();
+        resetBundledLicensesForTesting();
+      });
+      registerBundledLicenses();
+      // A second call must not add the entries twice.
+      registerBundledLicenses();
 
-    final entries = await LicenseRegistry.licenses.toList();
+      final entries = await LicenseRegistry.licenses.toList();
 
-    final roboto = entries.where((e) => e.packages.contains('Roboto'));
-    expect(roboto, hasLength(1));
-    expect(
-      roboto.single.paragraphs.map((p) => p.text).join('\n'),
-      contains('Apache License'),
-    );
-    final inter = entries.where((e) => e.packages.contains('Inter'));
-    expect(inter, hasLength(1));
-    expect(
-      inter.single.paragraphs.map((p) => p.text).join('\n'),
-      allOf(
-        contains('The Inter Project Authors'),
-        contains('SIL OPEN FONT LICENSE Version 1.1'),
-      ),
-    );
-    expect(
-      entries.where((e) => e.packages.contains('zxing-cpp')),
-      hasLength(1),
-    );
-  });
+      final roboto = entries.where((e) => e.packages.contains('Roboto'));
+      expect(roboto, hasLength(1));
+      expect(
+        roboto.single.paragraphs.map((p) => p.text).join('\n'),
+        contains('Apache License'),
+      );
+      final inter = entries.where((e) => e.packages.contains('Inter'));
+      expect(inter, hasLength(1));
+      expect(
+        inter.single.paragraphs.map((p) => p.text).join('\n'),
+        allOf(
+          contains('The Inter Project Authors'),
+          contains('SIL OPEN FONT LICENSE Version 1.1'),
+        ),
+      );
+      expect(
+        entries.where((e) => e.packages.contains('zxing-cpp')),
+        hasLength(1),
+      );
+    },
+  );
 
   group('Contact support', () {
     testWidgets('opens a mail to the support address', (tester) async {
@@ -299,4 +344,17 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
     });
   });
+}
+
+class _ListingOnly implements ReviewClient {
+  int listings = 0;
+
+  @override
+  Future<bool> isAvailable() async => false;
+
+  @override
+  Future<void> requestReview() async {}
+
+  @override
+  Future<void> openStoreListing() async => listings++;
 }

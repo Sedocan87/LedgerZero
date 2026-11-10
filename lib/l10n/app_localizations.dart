@@ -8527,6 +8527,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pro unlocked (development build)'**
   String get proDevelopmentUnlock;
+
+  /// Settings/About: the terms of use page
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of use'**
+  String get legalTermsOfUse;
+
+  /// Legal page: the bundled text could not be read
+  ///
+  /// In en, this message translates to:
+  /// **'This page could not be loaded.'**
+  String get legalLoadFailed;
+
+  /// Settings/About: opens the app's page on Google Play
+  ///
+  /// In en, this message translates to:
+  /// **'Rate LedgerZero'**
+  String get rateApp;
+
+  /// Settings: subtitle of Rate LedgerZero
+  ///
+  /// In en, this message translates to:
+  /// **'Tell others what you think on Google Play'**
+  String get rateAppSubtitle;
+
+  /// Snackbar: the Play Store could not be opened
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play could not be opened.'**
+  String get rateAppFailed;
 }
 
 class _AppLocalizationsDelegate

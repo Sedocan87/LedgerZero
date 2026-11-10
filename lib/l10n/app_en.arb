@@ -4177,5 +4177,15 @@
   "proBadgeSemantics": "Needs LedgerZero Pro",
   "@proBadgeSemantics": {"description": "Screen reader label of the PRO badge"},
   "proDevelopmentUnlock": "Pro unlocked (development build)",
-  "@proDevelopmentUnlock": {"description": "Pro screen: switch shown only in development builds"}
+  "@proDevelopmentUnlock": {"description": "Pro screen: switch shown only in development builds"},
+  "legalTermsOfUse": "Terms of use",
+  "@legalTermsOfUse": {"description": "Settings/About: the terms of use page"},
+  "legalLoadFailed": "This page could not be loaded.",
+  "@legalLoadFailed": {"description": "Legal page: the bundled text could not be read"},
+  "rateApp": "Rate LedgerZero",
+  "@rateApp": {"description": "Settings/About: opens the app's page on Google Play"},
+  "rateAppSubtitle": "Tell others what you think on Google Play",
+  "@rateAppSubtitle": {"description": "Settings: subtitle of Rate LedgerZero"},
+  "rateAppFailed": "Google Play could not be opened.",
+  "@rateAppFailed": {"description": "Snackbar: the Play Store could not be opened"}
 }

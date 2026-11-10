@@ -5409,4 +5409,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get proDevelopmentUnlock => 'Pro unlocked (development build)';
+
+  @override
+  String get legalTermsOfUse => 'Terms of use';
+
+  @override
+  String get legalLoadFailed => 'This page could not be loaded.';
+
+  @override
+  String get rateApp => 'Rate LedgerZero';
+
+  @override
+  String get rateAppSubtitle => 'Tell others what you think on Google Play';
+
+  @override
+  String get rateAppFailed => 'Google Play could not be opened.';
 }
