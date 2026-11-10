@@ -104,21 +104,22 @@ Not done in this pass: encryption of sync and backup files off the UI isolate (n
 
 The app still looks like default Material 3 with a teal seed colour. The design is what makes people pay, so this phase matters as much as Phase 1.
 
-- [ ] **Pick a visual identity:** typeface with tabular figures for amounts, a palette that isn't stock Material (charts already take their colours from the theme), icon style, app icon and splash.
-- [ ] **Budget screen first.** Clear TBB banner, fast assignment, readable over/under states, good month navigation.
+- [ ] **Pick a visual identity:** typeface with tabular figures for amounts (done: Inter, tabular amounts), tonal surfaces and coloured category/Settings icons (done); still to do: a palette that isn't stock Material, the app icon and the splash.
+- [x] **Budget screen first.** Clear TBB banner, fast assignment, readable over/under states, good month navigation (UI refresh 2026-11: month in the app bar, status chip, one-line 56 dp rows).
 - [ ] **Transaction entry in under 5 seconds.** Make quick-add the default entry path, payee and category autocomplete up front. (The 1,588-line form screen is already split into `form/` widgets and a controller.)
 - [ ] Rework Home/Dashboard, Accounts and Reports once the budget screen sets the visual language.
 - [ ] **Onboarding:** from install to the first budgeted euro in under 2 minutes.
 - [x] **Localisation:** all strings in ARB, German complete, `de_DE` formats (audit package 6).
 - [ ] Accessibility: contrast checks exist for the themes and chart palette, screen-reader labels on amounts and charts are done; still to do: a full TalkBack pass and 48dp touch targets everywhere.
-- [ ] Semantic colours (income/expense/success/warning in `AppColors`) are fixed values; derive them from the theme so they keep contrast in dark and high-contrast mode.
+- [x] Semantic colours come from the theme (`AppSemanticColors`, light and dark, contrast-tested).
 - [ ] Empty, loading and error states on every screen (a shared `LoadErrorView` exists; not every screen uses it yet).
 
 **Exit criteria:** every screen redesigned. Screenshots good enough for the Play Store. A new user can set up a budget without help.
 
 ## Phase 3: Ship (about 1–2 weeks)
 
-- [ ] **Monetisation:** a free tier (e.g. 1 budget, 3 accounts or 100 transactions) plus a one-time "LedgerZero Pro" unlock via in-app purchase (`in_app_purchase` or RevenueCat). Add Restore Purchases and Family Sharing.
+- [x] **Monetisation (code):** free download plus a one-time "LedgerZero Pro" unlock through Google Play Billing (`in_app_purchase`, no RevenueCat, no server). Pro: Wi-Fi sync, card notification capture, PDF reports, budget templates and the automatic fill, rules; everything else is free. Restore purchase, offline unlock, refunds lock it again, a development-build switch (docs/PRO.md).
+- [ ] **Monetisation (Play Console):** create the in-app product `ledgerzero_pro` once a build is on a testing track, set the price, optionally Family Library, licence testers, and test buy/cancel/pending/restore/refund on a phone (docs/PRO.md).
 - [ ] Store setup: application IDs, release keystore and `android/key.properties`, Play Console listing in EN and DE, screenshots, and a short video.
 - [ ] Privacy: Play data-safety form, a privacy-policy page, and a working support email/domain (`support@ledgerzero.app` is referenced; confirm you own it).
 - [ ] Opt-in crash reporting or a "send diagnostic log" button (the local, opt-in error reporter exists).
