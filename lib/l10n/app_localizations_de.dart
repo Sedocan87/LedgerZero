@@ -4942,4 +4942,22 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get csvExportFormatSpreadsheetHint =>
       'Öffnet sich in einem deutschen Excel mit richtigen Spalten und Umlauten. Lässt sich ebenfalls wieder importieren.';
+
+  @override
+  String get csvNoHeaderRow => 'Datei hat keine Kopfzeile';
+
+  @override
+  String get csvNoHeaderRowHint =>
+      'Die erste Zeile wird als Buchung importiert. Die Spalten heißen #1, #2, …; prüfen Sie die Zuordnung anhand der Vorschau.';
+
+  @override
+  String get csvCustomDateFormat => 'Anderes Datumsformat …';
+
+  @override
+  String get csvCustomDateFormatHelp =>
+      'd Tag, M Monat, y Jahr, H Stunde, m Minute, s Sekunde. Beispiele: d.M.yyyy oder MMM d, yyyy';
+
+  @override
+  String get csvCustomDateFormatInvalid =>
+      'Dieses Muster kann nicht verwendet werden. Es braucht Tag (d), Monat (M) und Jahr (y), getrennt durch Satzzeichen oder Leerzeichen.';
 }

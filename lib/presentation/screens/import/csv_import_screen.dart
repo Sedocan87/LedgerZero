@@ -15,6 +15,7 @@ import 'package:ledger_zero/services/csv/bank_csv_presets.dart';
 import 'package:ledger_zero/services/csv/csv_date_formats.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
 import 'package:ledger_zero/domain/entities/import_profile.dart';
+import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:uuid/uuid.dart';
 
@@ -23,7 +24,12 @@ final importProfilesProvider = StreamProvider<List<ImportProfile>>((ref) {
 });
 
 class CsvImportScreen extends ConsumerStatefulWidget {
-  const CsvImportScreen({super.key});
+  const CsvImportScreen({super.key, this.initialFile});
+
+  /// A file to open right away instead of waiting for the picker (widget
+  /// tests).
+  @visibleForTesting
+  final PlatformFile? initialFile;
 
   @override
   ConsumerState<CsvImportScreen> createState() => _CsvImportScreenState();
@@ -47,6 +53,13 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   /// What the date-format detection found for the mapped date column.
   CsvDateDetection? _dateDetection;
 
+  /// The signs of the amounts in the mapped amount column(s), for the
+  /// "everything would be income" warning; `null` until analysed.
+  CsvColumnAnalysis? _analysis;
+
+  /// Counts [_analyze] runs so a slow one never overwrites a newer one.
+  int _analysisRun = 0;
+
   Map<String, String?> _columnMapping = {
     for (final field in CsvField.all) field: null,
   };
@@ -58,6 +71,17 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
   ).decimalSeparator;
 
   bool get _preferDayFirst => ref.read(appLocaleProvider).languageCode != 'en';
+
+  @override
+  void initState() {
+    super.initState();
+    final file = widget.initialFile;
+    if (file != null) {
+      _selectedFile = file;
+      _isLoading = true;
+      _loadFile(file);
+    }
+  }
 
   Future<void> _pickFile() async {
     final l10n = AppLocalizations.of(context)!;
@@ -77,17 +101,13 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
           _selectedFile = picked;
         });
 
-        final service = ref.read(csvImportServiceProvider);
         try {
-          final data = await service.parseCsvFile(_selectedFile!);
-          setState(() {
-            _csvData = data;
-            _isLoading = false;
-            _applyPreset(data.preset, detected: data.preset != null);
-          });
+          await _loadFile(picked);
         } on ImportException catch (e) {
           Logger.warning('Reading the CSV failed: $e');
-          setState(() => _isLoading = false);
+          if (mounted) {
+            setState(() => _isLoading = false);
+          }
           _showError(switch (e.failure) {
             ImportFailure.empty => l10n.csvFileEmpty,
             ImportFailure.unreadable => l10n.filePickFailedGeneric,
@@ -110,6 +130,43 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     }
   }
 
+  /// Parses [file] and presets mapping and formats from it. [hasHeader]
+  /// overrides the detection (the "no header row" switch).
+  Future<void> _loadFile(PlatformFile file, {bool? hasHeader}) async {
+    final service = ref.read(csvImportServiceProvider);
+    final data = await service.parseCsvFile(file, hasHeader: hasHeader);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _csvData = data;
+      _applyPreset(data.preset, detected: data.preset != null);
+    });
+    // Still loading: the screen appears with the detected formats.
+    await _analyze();
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _setHasHeader(bool hasHeader) async {
+    final file = _selectedFile;
+    if (file == null) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isLoading = true);
+    try {
+      await _loadFile(file, hasHeader: hasHeader);
+    } catch (e, st) {
+      Logger.error('Parsing the CSV failed', e, st);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      _showError(l10n.csvParseFailedGeneric);
+    }
+  }
+
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -118,47 +175,66 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     }
   }
 
-  /// Applies [preset] (or the generic keyword mapping for `null`) to the
-  /// loaded file: column mapping, date format, decimal separator and
-  /// outflow sign. Called inside `setState`.
+  /// Applies [preset] (or the generic mapping for `null`) to the loaded
+  /// file: column mapping and outflow sign. Called inside `setState`;
+  /// follow it with [_analyze] for the date format and decimal separator.
   void _applyPreset(BankCsvPreset? preset, {required bool detected}) {
-    final data = _csvData;
+    final data = _csvData?.withPreset(preset);
     if (data == null) {
       return;
     }
+    _csvData = data;
     _preset = preset;
     _presetDetected = detected;
-    _columnMapping = CsvImportService.autoMapColumns(
-      data.headers,
-      preset: preset,
-    );
+    _columnMapping = CsvImportService.initialMapping(data, preset: preset);
     _outflowIsNegative = preset?.outflowIsNegative ?? true;
-    _detectFormats();
   }
 
   /// Chooses the date format and decimal separator for the current
   /// mapping: the preset's, else detected from the column values (the app
-  /// language breaks ties). Called inside `setState`.
-  void _detectFormats() {
+  /// language breaks ties), and counts the amount signs. The pass over
+  /// the file runs off the UI thread; a run that a newer one overtook is
+  /// dropped.
+  Future<void> _analyze() async {
     final data = _csvData;
     if (data == null) {
       return;
     }
-    final service = ref.read(csvImportServiceProvider);
-    final detection = service.detectDateFormat(
-      data,
-      _columnMapping,
-      preferDayFirst: _preferDayFirst,
-      preset: _preset,
+    final run = ++_analysisRun;
+    final preset = _preset;
+    try {
+      final analysis = await ref
+          .read(csvImportServiceProvider)
+          .analyzeColumns(
+            data,
+            Map.of(_columnMapping),
+            preferDayFirst: _preferDayFirst,
+            fallbackSeparator: _localeDecimalSeparator,
+            preset: preset,
+          );
+      if (!mounted || run != _analysisRun) {
+        return;
+      }
+      setState(() {
+        _analysis = analysis;
+        _dateDetection = preset == null ? analysis.dateDetection : null;
+        _dateFormat = analysis.dateDetection.format;
+        _decimalSeparator = analysis.decimalSeparator;
+      });
+    } catch (e, st) {
+      Logger.error('Analysing the CSV columns failed', e, st);
+    }
+  }
+
+  /// Lets the user type a date pattern the list does not offer.
+  Future<void> _enterDateFormat() async {
+    final pattern = await showDialog<String>(
+      context: context,
+      builder: (context) => _DateFormatDialog(initial: _dateFormat),
     );
-    _dateDetection = _preset == null ? detection : null;
-    _dateFormat = detection.format;
-    _decimalSeparator = service.detectDecimalSeparator(
-      data,
-      _columnMapping,
-      fallback: _localeDecimalSeparator,
-      preset: _preset,
-    );
+    if (pattern != null && mounted) {
+      setState(() => _dateFormat = pattern);
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -219,6 +295,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       _preset = null;
       _presetDetected = false;
       _dateDetection = null;
+      _analysis = null;
+      _analysisRun++; // A running analysis must not overwrite the profile.
+      _csvData = _csvData?.withPreset(null);
 
       // Apply mappings if headers exist in current CSV
       final headers = _csvData?.headers;
@@ -446,9 +525,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 for (final preset in bankCsvPresets)
                   DropdownMenuItem(value: preset.id, child: Text(preset.name)),
               ],
-              onChanged: (id) => setState(() {
-                _applyPreset(BankCsvPreset.byId(id), detected: false);
-              }),
+              onChanged: (id) {
+                setState(() {
+                  _applyPreset(BankCsvPreset.byId(id), detected: false);
+                });
+                _analyze();
+              },
             ),
             if (_presetDetected && _preset != null)
               Padding(
@@ -467,6 +549,14 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                   style: noteStyle,
                 ),
               ),
+            SwitchListTile(
+              key: const Key('csv_no_header_row'),
+              title: Text(l10n.csvNoHeaderRow),
+              subtitle: data.hasHeader ? null : Text(l10n.csvNoHeaderRowHint),
+              value: !data.hasHeader,
+              onChanged: (noHeader) => _setHasHeader(!noHeader),
+              contentPadding: EdgeInsets.zero,
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -514,13 +604,29 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                   style: noteStyle?.copyWith(color: theme.colorScheme.error),
                 ),
               ),
-            const SizedBox(height: 16),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton(
+                key: const Key('csv_other_date_format'),
+                onPressed: _enterDateFormat,
+                child: Text(l10n.csvCustomDateFormat),
+              ),
+            ),
             SwitchListTile(
               title: Text(l10n.negativeValuesAreOutflows),
               value: _outflowIsNegative,
               onChanged: (v) => setState(() => _outflowIsNegative = v),
               contentPadding: EdgeInsets.zero,
             ),
+            if (_analysis?.allInflows(outflowIsNegative: _outflowIsNegative) ??
+                false)
+              Text(
+                l10n.csvIssueAllInflows(
+                  _analysis!.inflowCount(outflowIsNegative: _outflowIsNegative),
+                ),
+                key: const Key('csv_all_inflows'),
+                style: noteStyle?.copyWith(color: theme.colorScheme.error),
+              ),
           ],
         ),
       ),
@@ -577,15 +683,16 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                   (h) => DropdownMenuItem(value: h, child: Text(h)),
                 ),
               ],
-              onChanged: (v) => setState(() {
-                _columnMapping[field] = v;
+              onChanged: (v) {
+                setState(() => _columnMapping[field] = v);
                 if (field == CsvField.date ||
                     field == CsvField.amount ||
                     field == CsvField.debit ||
-                    field == CsvField.credit) {
-                  _detectFormats();
+                    field == CsvField.credit ||
+                    field == CsvField.debitCreditFlag) {
+                  _analyze();
                 }
-              }),
+              },
             ),
           ),
         ],
@@ -698,21 +805,39 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     CsvIssueKind.voidRows => l10n.csvIssueVoidRows(issue.count),
   };
 
-  void _validateAndImport() {
+  /// Validates and converts the file off the UI thread, then shows what
+  /// validation found or goes on to the review.
+  Future<void> _validateAndImport() async {
     final l10n = AppLocalizations.of(context)!;
     final service = ref.read(csvImportServiceProvider);
 
-    final result = service.validateCsvData(
-      data: _csvData!,
-      columnMapping: _columnMapping,
-      dateFormat: _dateFormat,
-      decimalSeparator: _decimalSeparator,
-      outflowIsNegative: _outflowIsNegative,
-    );
+    setState(() => _isLoading = true);
+    final CsvPreparedImport prepared;
+    try {
+      prepared = await service.prepareImport(
+        data: _csvData!,
+        columnMapping: Map.of(_columnMapping),
+        dateFormat: _dateFormat,
+        decimalSeparator: _decimalSeparator,
+        outflowIsNegative: _outflowIsNegative,
+      );
+    } catch (e, st) {
+      Logger.error('Preparing the CSV import failed', e, st);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showError(l10n.csvParseFailedGeneric);
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() => _isLoading = false);
+    final result = prepared.validation;
 
     if (!result.isValid) {
       // Show errors (blocking)
-      showDialog(
+      await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(l10n.error),
@@ -734,7 +859,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       );
     } else if (result.warnings.isNotEmpty) {
       // Show warnings (cancellable)
-      showDialog(
+      await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(l10n.warning),
@@ -754,7 +879,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             FilledButton(
               onPressed: () {
                 Navigator.pop(context);
-                _proceedToImport();
+                _proceedToImport(prepared.transactions);
               },
               child: Text(l10n.continueToReview),
             ),
@@ -762,25 +887,17 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         ),
       );
     } else {
-      _proceedToImport();
+      await _proceedToImport(prepared.transactions);
     }
   }
 
-  Future<void> _proceedToImport() async {
+  Future<void> _proceedToImport(List<ImportTransaction> transactions) async {
     setState(() => _isLoading = true);
     final l10n = AppLocalizations.of(context)!;
     final service = ref.read(csvImportServiceProvider);
     final categoryRepo = ref.read(categoryRepositoryProvider);
 
     try {
-      final transactions = service.convertCsvToTransactions(
-        data: _csvData!,
-        columnMapping: _columnMapping,
-        dateFormat: _dateFormat,
-        decimalSeparator: _decimalSeparator,
-        outflowIsNegative: _outflowIsNegative,
-      );
-
       // The file's Category column is matched to existing categories.
       // Duplicates are checked on the review screen, against the account
       // the user picks there.
@@ -805,5 +922,66 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+}
+
+/// Asks for a date pattern; pops with it once [isUsableCsvDateFormat]
+/// accepts it.
+class _DateFormatDialog extends StatefulWidget {
+  const _DateFormatDialog({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_DateFormatDialog> createState() => _DateFormatDialogState();
+}
+
+class _DateFormatDialogState extends State<_DateFormatDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initial,
+  );
+  bool _invalid = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _controller.text.trim();
+    if (isUsableCsvDateFormat(text)) {
+      Navigator.pop(context, text);
+    } else {
+      setState(() => _invalid = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.dateFormat),
+      content: TextField(
+        key: const Key('csv_custom_date_format'),
+        controller: _controller,
+        autofocus: true,
+        autocorrect: false,
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(
+          helperText: l10n.csvCustomDateFormatHelp,
+          helperMaxLines: 3,
+          errorText: _invalid ? l10n.csvCustomDateFormatInvalid : null,
+          errorMaxLines: 3,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(onPressed: _submit, child: Text(l10n.ok)),
+      ],
+    );
   }
 }

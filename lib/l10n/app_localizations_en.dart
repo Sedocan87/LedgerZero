@@ -4904,4 +4904,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get csvExportFormatSpreadsheetHint =>
       'Opens with the right columns and umlauts in a German Excel. Can be imported again as well.';
+
+  @override
+  String get csvNoHeaderRow => 'File has no header row';
+
+  @override
+  String get csvNoHeaderRowHint =>
+      'The first line is imported as a transaction. The columns are numbered #1, #2, …; check the mapping against the preview.';
+
+  @override
+  String get csvCustomDateFormat => 'Other date format…';
+
+  @override
+  String get csvCustomDateFormatHelp =>
+      'd day, M month, y year, H hour, m minute, s second. Examples: d.M.yyyy or MMM d, yyyy';
+
+  @override
+  String get csvCustomDateFormatInvalid =>
+      'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.';
 }

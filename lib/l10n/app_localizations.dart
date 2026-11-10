@@ -7887,6 +7887,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Opens with the right columns and umlauts in a German Excel. Can be imported again as well.'**
   String get csvExportFormatSpreadsheetHint;
+
+  /// CSV import mapping screen: switch for files whose first line already is a transaction
+  ///
+  /// In en, this message translates to:
+  /// **'File has no header row'**
+  String get csvNoHeaderRow;
+
+  /// CSV import mapping screen: note under the no-header switch when it is on
+  ///
+  /// In en, this message translates to:
+  /// **'The first line is imported as a transaction. The columns are numbered #1, #2, …; check the mapping against the preview.'**
+  String get csvNoHeaderRowHint;
+
+  /// CSV import mapping screen: button that lets the user type a date pattern
+  ///
+  /// In en, this message translates to:
+  /// **'Other date format…'**
+  String get csvCustomDateFormat;
+
+  /// Helper text of the custom date format field (the pattern letters are not translated)
+  ///
+  /// In en, this message translates to:
+  /// **'d day, M month, y year, H hour, m minute, s second. Examples: d.M.yyyy or MMM d, yyyy'**
+  String get csvCustomDateFormatHelp;
+
+  /// Error under the custom date format field
+  ///
+  /// In en, this message translates to:
+  /// **'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.'**
+  String get csvCustomDateFormatInvalid;
 }
 
 class _AppLocalizationsDelegate

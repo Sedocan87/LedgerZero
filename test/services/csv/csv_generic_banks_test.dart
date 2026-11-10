@@ -225,6 +225,67 @@ void main() {
     });
   });
 
+  group('off the UI thread (Improvement 4)', () {
+    test(
+      'analyzeColumns detects formats and counts the amount signs',
+      () async {
+        final data = await _service.parseCsvFile(
+          MemoryPlatformFile(
+            name: 'amex_de.csv',
+            bytes: File(
+              'test/fixtures/bank_csv_generic/amex_de.csv',
+            ).readAsBytesSync(),
+          ),
+        );
+        final mapping = CsvImportService.initialMapping(data);
+        final analysis = await _service.analyzeColumns(
+          data,
+          mapping,
+          preferDayFirst: true,
+          fallbackSeparator: '.',
+        );
+        expect(analysis.dateDetection.format, 'dd/MM/yyyy');
+        expect(analysis.decimalSeparator, ',');
+        expect(analysis.positiveAmounts, 3);
+        expect(analysis.negativeAmounts, 0);
+        expect(analysis.allInflows(outflowIsNegative: true), isTrue);
+        expect(analysis.inflowCount(outflowIsNegative: true), 3);
+        expect(analysis.allInflows(outflowIsNegative: false), isFalse);
+      },
+    );
+
+    test(
+      'prepareImport validates and converts like the direct calls',
+      () async {
+        final direct = await _import('lloyds.csv');
+        final prepared = await _service.prepareImport(
+          data: direct.data,
+          columnMapping: direct.mapping,
+          dateFormat: 'dd/MM/yyyy',
+          decimalSeparator: '.',
+          outflowIsNegative: true,
+        );
+        expect(prepared.validation.isValid, isTrue);
+        expect(
+          prepared.transactions.map(
+            (r) => '${r.date}|${r.amount}|${r.payeeName}',
+          ),
+          direct.rows.map((r) => '${r.date}|${r.amount}|${r.payeeName}'),
+        );
+
+        final invalid = await _service.prepareImport(
+          data: direct.data,
+          columnMapping: {...direct.mapping, CsvField.date: null},
+          dateFormat: 'dd/MM/yyyy',
+          decimalSeparator: '.',
+          outflowIsNegative: true,
+        );
+        expect(invalid.validation.isValid, isFalse);
+        expect(invalid.transactions, isEmpty);
+      },
+    );
+  });
+
   group('debit/credit pairs', () {
     for (final (debit, credit) in [
       ('Soll', 'Haben'),

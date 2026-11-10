@@ -151,6 +151,47 @@ class CsvValidationResult {
   });
 }
 
+/// What [CsvImportService.analyzeColumns] found in the mapped columns.
+class CsvColumnAnalysis {
+  const CsvColumnAnalysis({
+    required this.dateDetection,
+    required this.decimalSeparator,
+    required this.positiveAmounts,
+    required this.negativeAmounts,
+  });
+
+  /// The date format of the mapped date column.
+  final CsvDateDetection dateDetection;
+
+  /// The decimal separator of the mapped amount column(s).
+  final String decimalSeparator;
+
+  /// Rows whose amount (as the file writes it) is above / below zero.
+  final int positiveAmounts;
+  final int negativeAmounts;
+
+  /// Whether every amount would be imported as an inflow with the given
+  /// sign setting (two or more rows, no outflow): a card statement read
+  /// with the wrong sign, or one of two amount columns mapped.
+  bool allInflows({required bool outflowIsNegative}) => outflowIsNegative
+      ? negativeAmounts == 0 && positiveAmounts >= 2
+      : positiveAmounts == 0 && negativeAmounts >= 2;
+
+  /// The number of rows [allInflows] speaks about.
+  int inflowCount({required bool outflowIsNegative}) =>
+      outflowIsNegative ? positiveAmounts : negativeAmounts;
+}
+
+/// The outcome of [CsvImportService.prepareImport].
+class CsvPreparedImport {
+  const CsvPreparedImport(this.validation, this.transactions);
+
+  final CsvValidationResult validation;
+
+  /// The converted rows; empty when [validation] found errors.
+  final List<ImportTransaction> transactions;
+}
+
 /// Why a CSV file could not be read; shown localised by the UI.
 enum ImportFailure { unreadable, empty, malformed }
 
@@ -821,6 +862,107 @@ class CsvImportService {
     ], fallback: fallback);
   }
 
+  /// Detects the date format and decimal separator of the mapped columns
+  /// and counts the signs of the amounts, off the UI thread (a pass over
+  /// every row for every date format; seconds on a phone for a long
+  /// file). See [detectDateFormat] and [detectDecimalSeparator].
+  Future<CsvColumnAnalysis> analyzeColumns(
+    CsvImportData data,
+    Map<String, String?> columnMapping, {
+    required bool preferDayFirst,
+    required String fallbackSeparator,
+    BankCsvPreset? preset,
+  }) => compute(
+    _analyzeColumns,
+    _AnalysisRequest(
+      data,
+      columnMapping,
+      preferDayFirst,
+      fallbackSeparator,
+      preset,
+    ),
+  );
+
+  static CsvColumnAnalysis _analyzeColumns(_AnalysisRequest request) {
+    final service = CsvImportService();
+    final separator = service.detectDecimalSeparator(
+      request.data,
+      request.columnMapping,
+      fallback: request.fallbackSeparator,
+      preset: request.preset,
+    );
+    final columns = _Columns(request.data.headers, request.columnMapping);
+    final parser = MoneyParser(decimalSeparator: separator);
+    var positive = 0;
+    var negative = 0;
+    if (columns.amount != -1 || (columns.debit != -1 && columns.credit != -1)) {
+      for (final row in request.data.rows) {
+        if (columns.isVoid(row)) {
+          continue;
+        }
+        final amount = columns.amountOf(row, parser);
+        if (amount != null && amount > 0) {
+          positive++;
+        } else if (amount != null && amount < 0) {
+          negative++;
+        }
+      }
+    }
+    return CsvColumnAnalysis(
+      dateDetection: service.detectDateFormat(
+        request.data,
+        request.columnMapping,
+        preferDayFirst: request.preferDayFirst,
+        preset: request.preset,
+      ),
+      decimalSeparator: separator,
+      positiveAmounts: positive,
+      negativeAmounts: negative,
+    );
+  }
+
+  /// Validates the file and, when it is valid, converts its rows, off the
+  /// UI thread; see [validateCsvData] and [convertCsvToTransactions].
+  Future<CsvPreparedImport> prepareImport({
+    required CsvImportData data,
+    required Map<String, String?> columnMapping,
+    required String dateFormat,
+    required String decimalSeparator,
+    required bool outflowIsNegative,
+  }) => compute(
+    _prepareImport,
+    _PrepareRequest(
+      data,
+      columnMapping,
+      dateFormat,
+      decimalSeparator,
+      outflowIsNegative,
+    ),
+  );
+
+  static CsvPreparedImport _prepareImport(_PrepareRequest request) {
+    final service = CsvImportService();
+    final validation = service.validateCsvData(
+      data: request.data,
+      columnMapping: request.columnMapping,
+      dateFormat: request.dateFormat,
+      decimalSeparator: request.decimalSeparator,
+      outflowIsNegative: request.outflowIsNegative,
+    );
+    return CsvPreparedImport(
+      validation,
+      validation.isValid
+          ? service.convertCsvToTransactions(
+              data: request.data,
+              columnMapping: request.columnMapping,
+              dateFormat: request.dateFormat,
+              decimalSeparator: request.decimalSeparator,
+              outflowIsNegative: request.outflowIsNegative,
+            )
+          : const [],
+    );
+  }
+
   CsvValidationResult validateCsvData({
     required CsvImportData data,
     required Map<String, String?> columnMapping,
@@ -1291,6 +1433,36 @@ class _ParseRequest {
   final String content;
   final int? headerLineIndex;
   final bool? hasHeader;
+}
+
+class _AnalysisRequest {
+  const _AnalysisRequest(
+    this.data,
+    this.columnMapping,
+    this.preferDayFirst,
+    this.fallbackSeparator,
+    this.preset,
+  );
+  final CsvImportData data;
+  final Map<String, String?> columnMapping;
+  final bool preferDayFirst;
+  final String fallbackSeparator;
+  final BankCsvPreset? preset;
+}
+
+class _PrepareRequest {
+  const _PrepareRequest(
+    this.data,
+    this.columnMapping,
+    this.dateFormat,
+    this.decimalSeparator,
+    this.outflowIsNegative,
+  );
+  final CsvImportData data;
+  final Map<String, String?> columnMapping;
+  final String dateFormat;
+  final String decimalSeparator;
+  final bool outflowIsNegative;
 }
 
 /// Column indices of a mapping, with the cell readers shared by validation
