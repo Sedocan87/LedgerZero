@@ -6,6 +6,7 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
@@ -65,6 +66,57 @@ void main() {
     container.listen(transactionsProvider, (_, _) {});
     return container.read(transactionsProvider.notifier);
   }
+
+  testWidgets('a reopened database (restore) gets a new subscription; the '
+      'old rows are not kept', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repos = [_RecordingRepository(), _RecordingRepository()];
+    final scoped = ProviderContainer(
+      overrides: [
+        // Like the real provider chain: the repository follows the
+        // database, which follows the generation.
+        transactionRepositoryProvider.overrideWith(
+          (ref) => repos[ref.watch(databaseGenerationProvider)],
+        ),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        appFormatterProvider.overrideWithValue(
+          AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
+        ),
+      ],
+    );
+    addTearDown(scoped.dispose);
+    scoped.listen(transactionsProvider, (_, _) {});
+    final args = FilteredTransactionsArgs(
+      filter: const TransactionFilter(accountIds: ['a']),
+      title: 'Activity',
+    );
+    scoped.listen(filteredTransactionsProvider(args), (_, _) {});
+    repos[0].controllers.first.add([
+      Transaction(
+        id: 'before-restore',
+        accountId: 'a',
+        date: DateTime.utc(2024, 1, 1),
+        amount: -100,
+      ),
+    ]);
+    await tester.pump();
+    expect(scoped.read(transactionsProvider).transactions.value, hasLength(1));
+    expect(repos[0].queries, hasLength(2));
+    expect(repos[1].queries, isEmpty);
+
+    scoped.read(databaseGenerationProvider.notifier).state++;
+    // Both lists now watch the new database and show nothing of the old.
+    expect(scoped.read(transactionsProvider).transactions.isLoading, isTrue);
+    expect(
+      scoped.read(filteredTransactionsProvider(args)).transactions.isLoading,
+      isTrue,
+    );
+    expect(repos[1].queries, hasLength(2));
+    expect(repos[0].controllers.every((c) => !c.hasListener), isTrue);
+    // Riverpod's pending rebuild/dispose timers.
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 
   testWidgets('subscribes exactly once on creation', (tester) async {
     notifier();
