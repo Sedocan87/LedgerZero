@@ -1299,5 +1299,10 @@
   "importRowAccountNotFound": "Konto „{name}“ nicht gefunden – wird nicht importiert",
   "importRowNoAccount": "Kein Konto in der Datei – wird nicht importiert",
   "importRowsWithoutAccount": "Zeilen ohne Kontonamen",
-  "csvFieldApproved": "Bestätigt"
+  "csvFieldApproved": "Bestätigt",
+  "csvExportFormatTitle": "CSV-Format",
+  "csvExportFormatStandard": "Standard (durch Kommas getrennt)",
+  "csvExportFormatStandardHint": "Für andere Apps und Skripte. Lässt sich wieder importieren.",
+  "csvExportFormatSpreadsheet": "Für Excel (Semikolon, Dezimalkomma)",
+  "csvExportFormatSpreadsheetHint": "Öffnet sich in einem deutschen Excel mit richtigen Spalten und Umlauten. Lässt sich ebenfalls wieder importieren."
 }

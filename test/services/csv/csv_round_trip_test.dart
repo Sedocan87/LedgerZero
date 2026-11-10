@@ -368,4 +368,95 @@ void main() {
     expect(targetPayees.map((p) => p.name), contains('-Fees'));
     expect(targetPayees.map((p) => p.name), isNot(contains("'-Fees")));
   });
+  test(
+    'the German spreadsheet variant (semicolon, decimal comma, byte '
+    'order mark) is read back like the standard file (Improvement 2)',
+    () async {
+      final payees = await source.payees.getAllPayees();
+      final accounts = await source.accounts.getAllAccounts();
+      final checking = accounts.firstWhere((a) => a.name == 'Checking');
+      await source.payees.createPayee(
+        const Payee(id: 'p-baecker', name: 'Bäckerei; Müller'),
+      );
+      await source.addTransaction(
+        accountId: checking.id,
+        amount: -123456,
+        date: DateTime.utc(2024, 3, 12),
+        payeeId: 'p-baecker',
+      );
+      final csvService = CsvImportService();
+
+      Future<List<String>> readBack(TransactionCsvFormat format) async {
+        final csv = TransactionExportService().buildCsv(
+          transactions: await source.transactions.getAllTransactions(),
+          payeeNames: {
+            for (final p in [...payees, ...await source.payees.getAllPayees()])
+              p.id: p.name,
+          },
+          categoryNames: TransactionExportService.qualifiedCategoryNames(
+            await source.categories.getAllCategories(),
+            await source.categories.getAllCategoryGroups(),
+          ),
+          accountNames: {for (final a in accounts) a.id: a.name},
+          format: format,
+        );
+        final bytes = utf8.encode(csv);
+        if (format == TransactionCsvFormat.germanSpreadsheet) {
+          expect(bytes.take(3), [0xEF, 0xBB, 0xBF], reason: 'UTF-8 BOM');
+          expect(csv, contains(';-1234,56;'));
+          expect(csv, contains('"Bäckerei; Müller"'));
+        }
+        final data = await csvService.parseCsvFile(
+          MemoryPlatformFile(name: 'all.csv', bytes: bytes),
+        );
+        expect(
+          data.delimiter,
+          format == TransactionCsvFormat.germanSpreadsheet ? ';' : ',',
+        );
+        expect(data.headers.first, 'Date');
+        final mapping = CsvImportService.autoMapColumns(data.headers);
+        // What the mapping screen presets: nothing is chosen by hand, also
+        // with the app set to English (dot as the fallback separator).
+        final dateFormat = csvService.detectDateFormat(data, mapping).format;
+        final separator = csvService.detectDecimalSeparator(
+          data,
+          mapping,
+          fallback: '.',
+        );
+        expect(
+          separator,
+          format == TransactionCsvFormat.germanSpreadsheet ? ',' : '.',
+        );
+        final validation = csvService.validateCsvData(
+          data: data,
+          columnMapping: mapping,
+          dateFormat: dateFormat,
+          decimalSeparator: separator,
+        );
+        expect(validation.isValid, isTrue);
+        expect(validation.warnings, isEmpty);
+        final rows = csvService.convertCsvToTransactions(
+          data: data,
+          columnMapping: mapping,
+          dateFormat: dateFormat,
+          decimalSeparator: separator,
+          outflowIsNegative: true,
+        );
+        return [
+          for (final r in rows)
+            '${r.date.toIso8601String()}|${r.amount}|${r.payeeName}|'
+                '${r.categoryName}|${r.memo}|${r.accountName}|'
+                '${r.transferAccountName}|${r.cleared}|${r.approved}',
+        ];
+      }
+
+      final standard = await readBack(TransactionCsvFormat.standard);
+      final spreadsheet = await readBack(
+        TransactionCsvFormat.germanSpreadsheet,
+      );
+      expect(spreadsheet, standard);
+      expect(standard, hasLength(greaterThan(5)));
+      expect(standard.join('\n'), contains('-123456|Bäckerei; Müller'));
+    },
+  );
 }

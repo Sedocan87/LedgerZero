@@ -19,6 +19,7 @@ import 'package:ledger_zero/services/backup/auto_backup_service.dart';
 import 'package:ledger_zero/services/backup/restore_service.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart'
     show SyncEngineConfig;
+import 'package:ledger_zero/presentation/widgets/csv_export_format_dialog.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 
@@ -587,6 +588,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
   Future<void> _exportAllCsv() => _runExport(() async {
     final shareText = AppLocalizations.of(context)!.transactionsShareText;
+    final format = await chooseTransactionCsvFormat(context);
+    if (format == null) {
+      return;
+    }
     final transactions = await ref
         .read(transactionRepositoryProvider)
         .getAllTransactions();
@@ -609,6 +614,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       ),
       accountNames: {for (final a in accounts) a.id: a.name},
       shareText: shareText,
+      format: format,
     );
   });
 

@@ -4924,4 +4924,22 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get csvFieldApproved => 'Bestätigt';
+
+  @override
+  String get csvExportFormatTitle => 'CSV-Format';
+
+  @override
+  String get csvExportFormatStandard => 'Standard (durch Kommas getrennt)';
+
+  @override
+  String get csvExportFormatStandardHint =>
+      'Für andere Apps und Skripte. Lässt sich wieder importieren.';
+
+  @override
+  String get csvExportFormatSpreadsheet =>
+      'Für Excel (Semikolon, Dezimalkomma)';
+
+  @override
+  String get csvExportFormatSpreadsheetHint =>
+      'Öffnet sich in einem deutschen Excel mit richtigen Spalten und Umlauten. Lässt sich ebenfalls wieder importieren.';
 }

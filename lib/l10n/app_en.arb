@@ -3929,5 +3929,15 @@
   "importRowsWithoutAccount": "rows without an account name",
   "@importRowsWithoutAccount": {"description": "Import review: entry in the list of unmatched account names for rows whose Account cell is empty"},
   "csvFieldApproved": "Approved",
-  "@csvFieldApproved": {"description": "CSV import column mapping: the column that says whether a row is approved (our own export writes Yes/No)"}
+  "@csvFieldApproved": {"description": "CSV import column mapping: the column that says whether a row is approved (our own export writes Yes/No)"},
+  "csvExportFormatTitle": "CSV format",
+  "@csvExportFormatTitle": {"description": "Title of the dialog that asks which CSV variant the transaction export writes (shown in German only)"},
+  "csvExportFormatStandard": "Standard (comma-separated)",
+  "@csvExportFormatStandard": {"description": "CSV export format choice: comma-delimited, dot decimals"},
+  "csvExportFormatStandardHint": "For other apps and scripts. Can be imported again.",
+  "@csvExportFormatStandardHint": {"description": "Subtitle of the standard CSV format choice"},
+  "csvExportFormatSpreadsheet": "For Excel (semicolon, decimal comma)",
+  "@csvExportFormatSpreadsheet": {"description": "CSV export format choice for spreadsheet apps set to German: semicolon-delimited, decimal comma, UTF-8 byte order mark"},
+  "csvExportFormatSpreadsheetHint": "Opens with the right columns and umlauts in a German Excel. Can be imported again as well.",
+  "@csvExportFormatSpreadsheetHint": {"description": "Subtitle of the Excel CSV format choice"}
 }

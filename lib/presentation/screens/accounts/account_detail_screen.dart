@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/presentation/widgets/charts/balance_trend_chart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/presentation/widgets/csv_export_format_dialog.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -190,6 +191,10 @@ class AccountDetailScreen extends ConsumerWidget {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final format = await chooseTransactionCsvFormat(context);
+    if (format == null) {
+      return;
+    }
     try {
       final transactions = await ref
           .read(transactionRepositoryProvider)
@@ -213,6 +218,7 @@ class AccountDetailScreen extends ConsumerWidget {
         accountNames: {account.id: account.name},
         filenamePrefix: 'export_${account.name.replaceAll(' ', '_')}',
         shareText: l10n.transactionsShareText,
+        format: format,
       );
     } catch (e, st) {
       Logger.error('Exporting account $accountId failed', e, st);

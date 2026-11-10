@@ -9,6 +9,7 @@ import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
+import 'package:ledger_zero/presentation/widgets/csv_export_format_dialog.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 
 /// Exports the transactions matching a date range, accounts and categories
@@ -169,6 +170,10 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final shareText = AppLocalizations.of(context)!.transactionsShareText;
+    final format = await chooseTransactionCsvFormat(context);
+    if (format == null || !mounted) {
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final filter = TransactionFilter(
@@ -207,6 +212,7 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
         accountNames: {for (final a in accounts) a.id: a.name},
         filenamePrefix: 'filtered_transactions',
         shareText: shareText,
+        format: format,
       );
       if (mounted) {
         navigator.pop();

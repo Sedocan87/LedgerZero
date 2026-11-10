@@ -7857,6 +7857,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Approved'**
   String get csvFieldApproved;
+
+  /// Title of the dialog that asks which CSV variant the transaction export writes (shown in German only)
+  ///
+  /// In en, this message translates to:
+  /// **'CSV format'**
+  String get csvExportFormatTitle;
+
+  /// CSV export format choice: comma-delimited, dot decimals
+  ///
+  /// In en, this message translates to:
+  /// **'Standard (comma-separated)'**
+  String get csvExportFormatStandard;
+
+  /// Subtitle of the standard CSV format choice
+  ///
+  /// In en, this message translates to:
+  /// **'For other apps and scripts. Can be imported again.'**
+  String get csvExportFormatStandardHint;
+
+  /// CSV export format choice for spreadsheet apps set to German: semicolon-delimited, decimal comma, UTF-8 byte order mark
+  ///
+  /// In en, this message translates to:
+  /// **'For Excel (semicolon, decimal comma)'**
+  String get csvExportFormatSpreadsheet;
+
+  /// Subtitle of the Excel CSV format choice
+  ///
+  /// In en, this message translates to:
+  /// **'Opens with the right columns and umlauts in a German Excel. Can be imported again as well.'**
+  String get csvExportFormatSpreadsheetHint;
 }
 
 class _AppLocalizationsDelegate
