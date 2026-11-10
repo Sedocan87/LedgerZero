@@ -104,7 +104,7 @@ Not done in this pass: encryption of sync and backup files off the UI isolate (n
 
 The app still looks like default Material 3 with a teal seed colour. The design is what makes people pay, so this phase matters as much as Phase 1.
 
-- [ ] **Pick a visual identity:** typeface with tabular figures for amounts (done: Inter, tabular amounts), tonal surfaces and coloured category/Settings icons (done); still to do: a palette that isn't stock Material, the app icon and the splash.
+- [ ] **Pick a visual identity:** typeface with tabular figures for amounts (done: Inter, tabular amounts), tonal surfaces and coloured category/Settings icons (done); app icon (adaptive, themed, round), notification icon and launch screen (done, `tool/icons/generate_icons.py`); still to do: a palette that isn't stock Material.
 - [x] **Budget screen first.** Clear TBB banner, fast assignment, readable over/under states, good month navigation (UI refresh 2026-11: month in the app bar, status chip, one-line 56 dp rows).
 - [ ] **Transaction entry in under 5 seconds.** Make quick-add the default entry path, payee and category autocomplete up front. (The 1,588-line form screen is already split into `form/` widgets and a controller.)
 - [ ] Rework Home/Dashboard, Accounts and Reports once the budget screen sets the visual language.
@@ -121,7 +121,8 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [x] **Monetisation (code):** free download plus a one-time "LedgerZero Pro" unlock through Google Play Billing (`in_app_purchase`, no RevenueCat, no server). Pro: Wi-Fi sync, card notification capture, PDF reports, budget templates and the automatic fill, rules; everything else is free. Restore purchase, offline unlock, refunds lock it again, a development-build switch (docs/PRO.md).
 - [ ] **Monetisation (Play Console):** create the in-app product `ledgerzero_pro` once a build is on a testing track, set the price, optionally Family Library, licence testers, and test buy/cancel/pending/restore/refund on a phone (docs/PRO.md).
 - [ ] Store setup: application IDs, release keystore and `android/key.properties`, Play Console listing in EN and DE, screenshots, and a short video.
-- [ ] Privacy: Play data-safety form, a privacy-policy page, and a working support email/domain (`support@ledgerzero.app` is referenced; confirm you own it).
+- [x] Privacy policy, terms of use and imprint in the app (EN, DE) and as web pages (`tool/legal/build_pages.py`); in-app rating prompt; automatic versioning (`tool/release.sh`); see docs/RELEASE.md.
+- [ ] Privacy (owner): fill in `assets/legal/publisher.json`, have the legal texts checked, host `build/legal/`, the Play data-safety form, and a working support email/domain (`support@ledgerzero.app` is referenced; confirm you own it).
 - [ ] Opt-in crash reporting or a "send diagnostic log" button (the local, opt-in error reporter exists).
 - [ ] Closed beta with 10–20 testers (Play internal testing), recruited from r/ynab, r/Finanzen and r/personalfinance. Iterate for 1–2 weeks.
 - [ ] Launch.

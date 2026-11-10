@@ -239,4 +239,7 @@ measured 19.5 MB (18.6 MB after `VACUUM`; `test/performance/database_size_test.d
   no third-party purchase service (such as RevenueCat) is used. The unlock
   is remembered on the phone, so Pro also works offline (see
   [PRO.md](PRO.md)).
+* "Rate LedgerZero" and the occasional rating prompt use Google Play's
+  In-App Review API; the rating goes to Google Play, the app learns nothing
+  about it.
 * The app works fully offline.
