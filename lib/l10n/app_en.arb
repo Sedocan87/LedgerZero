@@ -3953,5 +3953,17 @@
   "ynabImportErrorInvalidAmount": "The amount “{value}” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.",
   "@ynabImportErrorInvalidAmount": {"description": "YNAB import error: an amount cell of the register or budget file is not a number", "placeholders": {"value": {"type": "String"}}},
   "ynabImportErrorMissingBudgetColumns": "The budget file is missing required columns: {columns}. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.",
-  "@ynabImportErrorMissingBudgetColumns": {"description": "YNAB import error: the budget/plan CSV lacks columns (listed)", "placeholders": {"columns": {"type": "String"}}}
+  "@ynabImportErrorMissingBudgetColumns": {"description": "YNAB import error: the budget/plan CSV lacks columns (listed)", "placeholders": {"columns": {"type": "String"}}},
+  "ynabImportZipTile": "YNAB export (ZIP file)",
+  "@ynabImportZipTile": {"description": "YNAB import, file step: tile that picks the export ZIP YNAB downloads, instead of the two CSV files"},
+  "ynabImportZipHint": "Pick the ZIP that YNAB downloads; both files are taken from it.",
+  "@ynabImportZipHint": {"description": "Subtitle of the export ZIP tile while nothing is picked"},
+  "ynabImportErrorInvalidZip": "This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export.",
+  "@ynabImportErrorInvalidZip": {"description": "YNAB import error: the picked ZIP is not a YNAB export"},
+  "ynabImportYnab4Zip": "Zipped budget folder (.zip)",
+  "@ynabImportYnab4Zip": {"description": "YNAB 4 import: tile that picks a ZIP of the .ynab4 folder"},
+  "ynabImportYnab4ZipHint": "If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.",
+  "@ynabImportYnab4ZipHint": {"description": "YNAB 4 import: note under the two tiles (Android does not let apps read a picked folder by path)"},
+  "ynabImportErrorInvalidYnab4Zip": "This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.",
+  "@ynabImportErrorInvalidYnab4Zip": {"description": "YNAB 4 import error: the picked ZIP has no Budget.ymeta / Budget.yfull"}
 }

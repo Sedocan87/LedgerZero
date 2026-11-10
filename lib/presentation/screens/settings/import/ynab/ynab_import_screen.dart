@@ -90,6 +90,10 @@ class YnabImportScreen extends ConsumerWidget {
         return l10n.ynabImportErrorMissingColumns(state.errorDetail ?? '');
       case YnabImportError.invalidYnab4Folder:
         return l10n.ynabImportErrorInvalidYnab4;
+      case YnabImportError.invalidYnab4Zip:
+        return l10n.ynabImportErrorInvalidYnab4Zip;
+      case YnabImportError.invalidExportZip:
+        return l10n.ynabImportErrorInvalidZip;
       case YnabImportError.invalidDates:
         return l10n.ynabImportErrorInvalidDates(state.errorDetail ?? '');
       case YnabImportError.missingBudgetColumns:
@@ -199,10 +203,21 @@ class YnabImportScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           ListTile(
-            title: const Text('Register.csv'),
-            subtitle: Text(
-              state.registerFile?.name ?? l10n.ynabImportNotSelected,
+            key: const Key('ynab_export_zip'),
+            title: Text(l10n.ynabImportZipTile),
+            subtitle: Text(l10n.ynabImportZipHint),
+            leading: const Icon(Icons.folder_zip),
+            trailing: const Icon(Icons.upload_file),
+            onTap: viewModel.pickExportZip,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: Colors.grey),
             ),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            title: const Text('Register.csv'),
+            subtitle: Text(state.registerName ?? l10n.ynabImportNotSelected),
             leading: const Icon(Icons.receipt_long),
             trailing: const Icon(Icons.upload_file),
             onTap: viewModel.pickRegisterFile,
@@ -214,9 +229,7 @@ class YnabImportScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           ListTile(
             title: const Text('Budget.csv'),
-            subtitle: Text(
-              state.budgetFile?.name ?? l10n.ynabImportNotSelected,
-            ),
+            subtitle: Text(state.budgetName ?? l10n.ynabImportNotSelected),
             leading: const Icon(Icons.pie_chart),
             trailing: const Icon(Icons.upload_file),
             onTap: viewModel.pickBudgetFile,
@@ -231,7 +244,7 @@ class YnabImportScreen extends ConsumerWidget {
           else
             ElevatedButton(
               onPressed:
-                  (state.registerFile != null && state.budgetFile != null)
+                  (state.registerName != null && state.budgetName != null)
                   ? viewModel.validateAndParse
                   : null,
               child: Text(l10n.ynabImportNextPreview),
@@ -258,12 +271,32 @@ class YnabImportScreen extends ConsumerWidget {
               side: const BorderSide(color: Colors.grey),
             ),
           ),
+          const SizedBox(height: 16),
+          ListTile(
+            key: const Key('ynab4_zip'),
+            title: Text(l10n.ynabImportYnab4Zip),
+            subtitle: Text(state.ynab4Zip?.name ?? l10n.ynabImportNotSelected),
+            leading: const Icon(Icons.folder_zip),
+            trailing: const Icon(Icons.upload_file),
+            onTap: viewModel.pickYnab4Zip,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.ynabImportYnab4ZipHint,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           const Spacer(),
           if (state.isLoading)
             const Center(child: CircularProgressIndicator())
           else
             ElevatedButton(
-              onPressed: state.ynab4FolderPath != null
+              onPressed: state.hasYnab4Source
                   ? viewModel.validateAndParse
                   : null,
               child: Text(l10n.ynabImportNextPreview),

@@ -7929,6 +7929,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The budget file is missing required columns: {columns}. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.'**
   String ynabImportErrorMissingBudgetColumns(String columns);
+
+  /// YNAB import, file step: tile that picks the export ZIP YNAB downloads, instead of the two CSV files
+  ///
+  /// In en, this message translates to:
+  /// **'YNAB export (ZIP file)'**
+  String get ynabImportZipTile;
+
+  /// Subtitle of the export ZIP tile while nothing is picked
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the ZIP that YNAB downloads; both files are taken from it.'**
+  String get ynabImportZipHint;
+
+  /// YNAB import error: the picked ZIP is not a YNAB export
+  ///
+  /// In en, this message translates to:
+  /// **'This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export.'**
+  String get ynabImportErrorInvalidZip;
+
+  /// YNAB 4 import: tile that picks a ZIP of the .ynab4 folder
+  ///
+  /// In en, this message translates to:
+  /// **'Zipped budget folder (.zip)'**
+  String get ynabImportYnab4Zip;
+
+  /// YNAB 4 import: note under the two tiles (Android does not let apps read a picked folder by path)
+  ///
+  /// In en, this message translates to:
+  /// **'If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.'**
+  String get ynabImportYnab4ZipHint;
+
+  /// YNAB 4 import error: the picked ZIP has no Budget.ymeta / Budget.yfull
+  ///
+  /// In en, this message translates to:
+  /// **'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.'**
+  String get ynabImportErrorInvalidYnab4Zip;
 }
 
 class _AppLocalizationsDelegate

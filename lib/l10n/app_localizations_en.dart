@@ -4932,4 +4932,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String ynabImportErrorMissingBudgetColumns(String columns) {
     return 'The budget file is missing required columns: $columns. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.';
   }
+
+  @override
+  String get ynabImportZipTile => 'YNAB export (ZIP file)';
+
+  @override
+  String get ynabImportZipHint =>
+      'Pick the ZIP that YNAB downloads; both files are taken from it.';
+
+  @override
+  String get ynabImportErrorInvalidZip =>
+      'This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export.';
+
+  @override
+  String get ynabImportYnab4Zip => 'Zipped budget folder (.zip)';
+
+  @override
+  String get ynabImportYnab4ZipHint =>
+      'If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.';
+
+  @override
+  String get ynabImportErrorInvalidYnab4Zip =>
+      'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.';
 }

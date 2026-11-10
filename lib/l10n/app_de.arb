@@ -1311,5 +1311,11 @@
   "csvCustomDateFormatHelp": "d Tag, M Monat, y Jahr, H Stunde, m Minute, s Sekunde. Beispiele: d.M.yyyy oder MMM d, yyyy",
   "csvCustomDateFormatInvalid": "Dieses Muster kann nicht verwendet werden. Es braucht Tag (d), Monat (M) und Jahr (y), getrennt durch Satzzeichen oder Leerzeichen.",
   "ynabImportErrorInvalidAmount": "Der Betrag „{value}“ im Export konnte nicht gelesen werden. Es wurde nichts importiert. Bitte exportieren Sie erneut aus YNAB, ohne die Dateien zu bearbeiten.",
-  "ynabImportErrorMissingBudgetColumns": "In der Budget-Datei fehlen erforderliche Spalten: {columns}. Es wurde nichts importiert. Wählen Sie die Budget- (oder Plan-)Datei eines unveränderten YNAB-Exports."
+  "ynabImportErrorMissingBudgetColumns": "In der Budget-Datei fehlen erforderliche Spalten: {columns}. Es wurde nichts importiert. Wählen Sie die Budget- (oder Plan-)Datei eines unveränderten YNAB-Exports.",
+  "ynabImportZipTile": "YNAB-Export (ZIP-Datei)",
+  "ynabImportZipHint": "Wählen Sie das ZIP, das YNAB herunterlädt; beide Dateien werden daraus übernommen.",
+  "ynabImportErrorInvalidZip": "Diese ZIP-Datei enthält nicht die CSV-Dateien Register und Budget (oder Plan) eines YNAB-Exports.",
+  "ynabImportYnab4Zip": "Gezippter Budget-Ordner (.zip)",
+  "ynabImportYnab4ZipHint": "Lässt sich der Ordner auf diesem Telefon nicht lesen, packen Sie den .ynab4-Ordner am Computer als ZIP und wählen Sie die ZIP-Datei hier aus.",
+  "ynabImportErrorInvalidYnab4Zip": "Diese ZIP-Datei enthält kein YNAB-4-Budget. Packen Sie den ganzen Ordner mit der Endung .ynab4."
 }

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
+import 'package:ledger_zero/core/utils/text_decoding.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
@@ -20,6 +22,13 @@ enum YnabImportFailure {
 
   /// The selected folder is not a readable YNAB4 budget bundle.
   invalidYnab4Folder,
+
+  /// The selected ZIP file holds no YNAB4 budget bundle.
+  invalidYnab4Zip,
+
+  /// The selected ZIP file is not YNAB's export (no register and budget
+  /// CSV inside).
+  invalidExportZip,
 
   /// No supported date format fits every Register.csv date;
   /// [YnabImportException.detail] is the first value that does not parse.
@@ -47,6 +56,15 @@ class YnabImportException implements Exception {
 
   @override
   String toString() => 'YnabImportException(${failure.name}): $detail';
+}
+
+/// A CSV file taken out of YNAB's export ZIP: its name inside the archive
+/// and its decoded text.
+class YnabZipEntry {
+  const YnabZipEntry(this.name, this.content);
+
+  final String name;
+  final String content;
 }
 
 /// Service responsible for parsing YNAB export files (CSV and YNAB4)
@@ -459,6 +477,97 @@ class YnabImportService {
     );
   }
 
+  /// The register and the budget CSV inside YNAB's export ZIP, so the
+  /// user need not unzip it on the phone.
+  ///
+  /// The files are told apart by their header line (the register has
+  /// `Outflow` and `Inflow`, the budget file `Month` and `Budgeted` or
+  /// `Assigned`), whatever they are called; a file whose header says
+  /// nothing is taken by its name (`... - Register.csv`, `... - Budget.csv`,
+  /// `... - Plan.csv`). Throws [YnabImportFailure.invalidExportZip] when
+  /// the archive cannot be read or lacks one of the two.
+  static ({YnabZipEntry register, YnabZipEntry budget}) readExportZip(
+    List<int> zipBytes,
+  ) {
+    YnabZipEntry? register;
+    YnabZipEntry? budget;
+    YnabZipEntry? registerByName;
+    YnabZipEntry? budgetByName;
+    for (final (name, bytes) in _zipFiles(
+      zipBytes,
+      YnabImportFailure.invalidExportZip,
+    )) {
+      final baseName = path.posix.basename(name);
+      if (!baseName.toLowerCase().endsWith('.csv')) {
+        continue;
+      }
+      final String content;
+      try {
+        content = decodeText(bytes);
+      } on FormatException {
+        continue;
+      }
+      final entry = YnabZipEntry(baseName, content);
+      final rows = _csvRows(content);
+      final headers = rows.isEmpty
+          ? const <String>[]
+          : rows.first.map((e) => e.toString()).toList();
+      if (_column(headers, 'Outflow') != -1 &&
+          _column(headers, 'Inflow') != -1) {
+        register ??= entry;
+      } else if (_column(headers, 'Month') != -1 &&
+          budgetAmountColumns.any((c) => _column(headers, c) != -1)) {
+        budget ??= entry;
+      } else if (baseName.toLowerCase().contains('register')) {
+        registerByName ??= entry;
+      } else if (baseName.toLowerCase().contains('budget') ||
+          baseName.toLowerCase().contains('plan')) {
+        budgetByName ??= entry;
+      }
+    }
+    register ??= registerByName;
+    budget ??= budgetByName;
+    if (register == null || budget == null) {
+      throw const YnabImportException(
+        YnabImportFailure.invalidExportZip,
+        'No register and budget CSV in the ZIP file',
+      );
+    }
+    return (register: register, budget: budget);
+  }
+
+  /// The files of a ZIP archive (name with `/` separators, bytes), without
+  /// directories and macOS resource forks. Throws [failure] when the bytes
+  /// are not a readable ZIP archive.
+  static List<(String, List<int>)> _zipFiles(
+    List<int> zipBytes,
+    YnabImportFailure failure,
+  ) {
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(zipBytes);
+    } catch (e) {
+      throw YnabImportException(failure, 'Not a readable ZIP file: $e');
+    }
+    final files = <(String, List<int>)>[];
+    for (final file in archive.files) {
+      final name = file.name.replaceAll('\\', '/');
+      if (!file.isFile ||
+          name.startsWith('__MACOSX/') ||
+          path.posix.basename(name).startsWith('._')) {
+        continue;
+      }
+      final bytes = file.readBytes();
+      if (bytes != null) {
+        files.add((name, bytes));
+      }
+    }
+    if (files.isEmpty) {
+      throw YnabImportException(failure, 'The ZIP file is empty');
+    }
+    return files;
+  }
+
   /// SHA-256 of an export's text, the key of the "already imported" check.
   static String fingerprintOf(String content) =>
       sha256.convert(utf8.encode(content)).toString();
@@ -550,7 +659,9 @@ class YnabImportService {
 
   /// Parses a legacy YNAB4 budget folder.
   ///
-  /// [folderPath]: Path to the .ynab4 directory.
+  /// [folderPath]: Path to the .ynab4 directory. This needs read access to
+  /// the folder by path, which Android 11 and later do not give an app for
+  /// a folder the user picks; there [parseYnab4Zip] is the way in.
   Future<YnabImportData> parseYnab4(String folderPath) async {
     final dir = Directory(folderPath);
     if (!await dir.exists()) {
@@ -559,58 +670,167 @@ class YnabImportService {
         'YNAB4 directory not found: $folderPath',
       );
     }
-
-    // 1. Locate Budget.ymeta to find current version
-    final metaFile = File(path.join(folderPath, 'Budget.ymeta'));
-    if (!await metaFile.exists()) {
-      throw const YnabImportException(
-        YnabImportFailure.invalidYnab4Folder,
-        'Invalid YNAB4 bundle: Budget.ymeta missing',
-      );
-    }
-
-    // 2. Find the data folder (usually data1-{GUID})
-    String? dataFolderPath;
-    await for (final entity in dir.list()) {
-      if (entity is Directory &&
-          path.basename(entity.path).startsWith('data')) {
-        dataFolderPath = entity.path;
-        break;
+    final files = <String, Future<String> Function()>{};
+    await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      if (entity is File) {
+        final relative = path.split(
+          path.relative(entity.path, from: folderPath),
+        );
+        files[relative.join('/')] = entity.readAsString;
       }
     }
+    return _parseYnab4Bundle(files, YnabImportFailure.invalidYnab4Folder);
+  }
 
-    if (dataFolderPath == null) {
-      throw const YnabImportException(
-        YnabImportFailure.invalidYnab4Folder,
-        'Could not find data folder in YNAB4 bundle',
-      );
-    }
-
-    // 3. Find the full budget file (Budget.yfull) inside the device folder
-    File? yfullFile;
-    final dataDir = Directory(dataFolderPath);
-
-    await for (final entity in dataDir.list()) {
-      if (entity is Directory) {
-        final potentialFile = File(path.join(entity.path, 'Budget.yfull'));
-        if (await potentialFile.exists()) {
-          yfullFile = potentialFile;
-          break;
+  /// Parses a YNAB4 budget folder packed as a ZIP file (the `.ynab4`
+  /// folder itself or its content at the top of the archive). A single
+  /// picked file is readable on every Android version.
+  Future<YnabImportData> parseYnab4Zip(List<int> zipBytes) async {
+    final entries = _zipFiles(zipBytes, YnabImportFailure.invalidYnab4Zip);
+    // The bundle's root is where Budget.ymeta lies (the shallowest one).
+    String? root;
+    for (final (name, _) in entries) {
+      if (path.posix.basename(name) == 'Budget.ymeta') {
+        final dir = name.substring(0, name.length - 'Budget.ymeta'.length);
+        if (root == null || dir.length < root.length) {
+          root = dir;
         }
       }
     }
-
-    if (yfullFile == null) {
+    if (root == null) {
       throw const YnabImportException(
-        YnabImportFailure.invalidYnab4Folder,
-        'Budget.yfull not found',
+        YnabImportFailure.invalidYnab4Zip,
+        'Invalid YNAB4 bundle: Budget.ymeta missing',
       );
     }
+    final prefix = root;
+    return _parseYnab4Bundle({
+      for (final (name, bytes) in entries)
+        if (name.startsWith(prefix))
+          name.substring(prefix.length): () async => decodeText(bytes),
+    }, YnabImportFailure.invalidYnab4Zip);
+  }
 
-    final content = await yfullFile.readAsString();
+  /// Parses a YNAB4 bundle given as its files (path relative to the
+  /// `.ynab4` folder with `/` separators -> reader).
+  Future<YnabImportData> _parseYnab4Bundle(
+    Map<String, Future<String> Function()> files,
+    YnabImportFailure failure,
+  ) async {
+    if (!files.containsKey('Budget.ymeta')) {
+      throw YnabImportException(
+        failure,
+        'Invalid YNAB4 bundle: Budget.ymeta missing',
+      );
+    }
+    final yfullPath = await _currentFullBudget(files);
+    if (yfullPath == null) {
+      throw YnabImportException(failure, 'Budget.yfull not found');
+    }
+    final content = await files[yfullPath]!();
     final json = jsonDecode(content) as Map<String, dynamic>;
 
     return _parseYnab4Json(json, fingerprint: fingerprintOf(content));
+  }
+
+  /// The `Budget.yfull` to import: the path
+  /// `data folder/device folder/Budget.yfull` of the device that knows the
+  /// budget best.
+  ///
+  /// A bundle used on several computers has one folder per device, each
+  /// with its own full budget file, and those can be stale. `Budget.ymeta`
+  /// names the current data folder; `devices/*.ydevice` in it says for
+  /// every device whether it has full knowledge and how far its full
+  /// budget file goes (`knowledgeInFullBudgetFile`, e.g. `A-120,B-45`: a
+  /// version per device). The device with full knowledge and the highest
+  /// versions wins. A bundle without readable metadata falls back to the
+  /// first full budget file by path, so the choice is at least the same
+  /// every time (the directory order is not).
+  static Future<String?> _currentFullBudget(
+    Map<String, Future<String> Function()> files,
+  ) async {
+    Future<Map<String, dynamic>?> readJson(String file) async {
+      try {
+        final decoded = jsonDecode(await files[file]!());
+        return decoded is Map<String, dynamic> ? decoded : null;
+      } catch (e) {
+        Logger.warning('YNAB4: $file is unreadable: $e');
+        return null;
+      }
+    }
+
+    // Data folder / device folder / Budget.yfull.
+    var candidates = [
+      for (final file in files.keys)
+        if (file.split('/').length == 3 &&
+            file.endsWith('/Budget.yfull') &&
+            file.startsWith('data'))
+          file,
+    ]..sort();
+    final meta = await readJson('Budget.ymeta');
+    final dataFolder = meta?['relativeDataFolderName'];
+    if (dataFolder is String &&
+        candidates.any((c) => c.startsWith('$dataFolder/'))) {
+      candidates = [
+        for (final c in candidates)
+          if (c.startsWith('$dataFolder/')) c,
+      ];
+    }
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    // Rank of each device folder (by data folder and device GUID).
+    final ranks = <String, (int, int, int)>{};
+    for (final file in files.keys) {
+      final parts = file.split('/');
+      if (parts.length != 3 ||
+          parts[1] != 'devices' ||
+          !parts[2].endsWith('.ydevice')) {
+        continue;
+      }
+      final device = await readJson(file);
+      final guid = device?['deviceGUID'];
+      if (device == null || guid is! String) {
+        continue;
+      }
+      ranks['${parts[0]}/$guid/Budget.yfull'] = (
+        device['hasFullKnowledge'] == true ? 1 : 0,
+        _knowledgeTotal(device['knowledgeInFullBudgetFile']),
+        _knowledgeTotal(device['knowledge']),
+      );
+    }
+    (int, int, int) rankOf(String file) => ranks[file] ?? (-1, -1, -1);
+    var best = candidates.first;
+    for (final candidate in candidates.skip(1)) {
+      final a = rankOf(candidate);
+      final b = rankOf(best);
+      final better = a.$1 != b.$1
+          ? a.$1 > b.$1
+          : (a.$2 != b.$2 ? a.$2 > b.$2 : a.$3 > b.$3);
+      if (better) {
+        best = candidate;
+      }
+    }
+    return best;
+  }
+
+  /// The sum of the versions in a YNAB4 knowledge string (`A-120,B-45` ->
+  /// 165); -1 when it is missing or malformed. Knowledge only grows, so
+  /// of two states of one budget the later one has the larger sum.
+  static int _knowledgeTotal(Object? knowledge) {
+    if (knowledge is! String || knowledge.trim().isEmpty) {
+      return -1;
+    }
+    var total = 0;
+    for (final part in knowledge.split(',')) {
+      final version = int.tryParse(part.substring(part.lastIndexOf('-') + 1));
+      if (version == null) {
+        return -1;
+      }
+      total += version;
+    }
+    return total;
   }
 
   /// YNAB 4 keeps its income categories under the internal master

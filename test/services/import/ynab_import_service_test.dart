@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
@@ -463,6 +464,211 @@ void main() {
         );
       },
     );
+  });
+
+  group('YNAB 4 bundle with several devices, and as a ZIP (F4)', () {
+    Map<String, dynamic> budget(String accountName) => {
+      'accounts': [
+        {
+          'entityId': 'acc-1',
+          'accountName': accountName,
+          'accountType': 'Checking',
+          'onBudget': true,
+        },
+      ],
+    };
+    String device(
+      String guid, {
+      required bool full,
+      required String knowledgeInFull,
+    }) => jsonEncode({
+      'deviceGUID': guid,
+      'shortDeviceId': guid.substring(0, 1),
+      'hasFullKnowledge': full,
+      'knowledge': knowledgeInFull,
+      'knowledgeInFullBudgetFile': knowledgeInFull,
+    });
+
+    /// A bundle used on two computers: the folder of the stale device
+    /// comes first in every listing.
+    Map<String, String> twoDeviceBundle() => {
+      'Budget.ymeta': jsonEncode({
+        'formatVersion': '1.2',
+        'relativeDataFolderName': 'data1~CURRENT',
+        'TED': 1,
+      }),
+      'data1~CURRENT/devices/A.ydevice': device(
+        'AAAA-stale',
+        full: false,
+        knowledgeInFull: 'A-10',
+      ),
+      'data1~CURRENT/devices/B.ydevice': device(
+        'BBBB-current',
+        full: true,
+        knowledgeInFull: 'A-10,B-25',
+      ),
+      'data1~CURRENT/AAAA-stale/Budget.yfull': jsonEncode(budget('Stale')),
+      'data1~CURRENT/BBBB-current/Budget.yfull': jsonEncode(budget('Current')),
+      'data1~CURRENT/BBBB-current/A-10_B-26.ydiff': '{}',
+      // An abandoned data folder that sorts before the current one.
+      'data0~OLD/devices/A.ydevice': device(
+        'AAAA-old',
+        full: true,
+        knowledgeInFull: 'A-999',
+      ),
+      'data0~OLD/AAAA-old/Budget.yfull': jsonEncode(budget('Old folder')),
+    };
+
+    List<int> zipOf(Map<String, String> files, {String prefix = ''}) {
+      final archive = Archive();
+      for (final entry in files.entries) {
+        archive.addFile(ArchiveFile.string('$prefix${entry.key}', entry.value));
+      }
+      return ZipEncoder().encodeBytes(archive);
+    }
+
+    test('the folder: Budget.ymeta names the data folder and the .ydevice '
+        'files the device whose full budget is current', () async {
+      final dir = await Directory.systemTemp.createTemp('ynab4_devices');
+      addTearDown(() => dir.delete(recursive: true));
+      for (final entry in twoDeviceBundle().entries) {
+        final file = File('${dir.path}/${entry.key}');
+        await file.parent.create(recursive: true);
+        await file.writeAsString(entry.value);
+      }
+      final data = await service.parseYnab4(dir.path);
+      expect(data.accounts.single.name, 'Current');
+    });
+
+    test(
+      'of two devices with full knowledge the higher versions win',
+      () async {
+        final files = twoDeviceBundle()
+          ..['data1~CURRENT/devices/A.ydevice'] = device(
+            'AAAA-stale',
+            full: true,
+            knowledgeInFull: 'A-10,B-20',
+          );
+        final data = await service.parseYnab4Zip(zipOf(files));
+        expect(data.accounts.single.name, 'Current');
+      },
+    );
+
+    test('a ZIP of the .ynab4 folder is read, with or without the folder '
+        'itself inside and with macOS extras', () async {
+      for (final prefix in ['', 'My Budget~1A2B3C4D.ynab4/']) {
+        final zip = zipOf({
+          ...twoDeviceBundle().map((k, v) => MapEntry('$prefix$k', v)),
+          '__MACOSX/$prefix._Budget.ymeta': 'resource fork',
+          '$prefix.DS_Store': 'x',
+        });
+        final data = await service.parseYnab4Zip(zip);
+        expect(data.accounts.single.name, 'Current', reason: prefix);
+        expect(data.source, 'YNAB4');
+        expect(data.fingerprint, isNotNull);
+      }
+    });
+
+    test('a bundle without device metadata still imports, the same file '
+        'every time', () async {
+      final data = await service.parseYnab4Zip(
+        zipOf({
+          'Budget.ymeta': '{}',
+          'data1-ABCD/device-2/Budget.yfull': jsonEncode(budget('Second')),
+          'data1-ABCD/device-1/Budget.yfull': jsonEncode(budget('First')),
+        }),
+      );
+      expect(data.accounts.single.name, 'First');
+    });
+
+    test('a ZIP that is no YNAB 4 budget raises a typed exception', () async {
+      for (final bytes in [
+        zipOf({'notes.txt': 'hello'}),
+        zipOf({'Budget.ymeta': '{}'}),
+        utf8.encode('this is not a zip file'),
+      ]) {
+        await expectLater(
+          service.parseYnab4Zip(bytes),
+          throwsA(
+            isA<YnabImportException>().having(
+              (e) => e.failure,
+              'failure',
+              YnabImportFailure.invalidYnab4Zip,
+            ),
+          ),
+        );
+      }
+    });
+  });
+
+  group('readExportZip (Improvement 3)', () {
+    List<int> zipOf(Map<String, String> files) {
+      final archive = Archive();
+      for (final entry in files.entries) {
+        archive.addFile(ArchiveFile.string(entry.key, entry.value));
+      }
+      return ZipEncoder().encodeBytes(archive);
+    }
+
+    const registerCsv =
+        '$_header\n'
+        '"Checking","","01/05/2025","Shop","Everyday: Food","Everyday","Food",'
+        '"","\$10.00","\$0.00","Cleared"\n';
+    const planCsv =
+        '"Month","Category Group/Category","Category Group","Category",'
+        '"Assigned","Activity","Available"\n'
+        '"Jan 2025","Everyday: Food","Everyday","Food","\$50.00","-\$10.00",'
+        '"\$40.00"\n';
+
+    test('finds the register and a budget file called Plan.csv or '
+        'Budget.csv, whatever the order', () async {
+      for (final budgetName in ['Plan.csv', 'Budget.csv']) {
+        final export = YnabImportService.readExportZip(
+          zipOf({
+            'My Budget as of 2026-11-01 0900 - $budgetName': planCsv,
+            'My Budget as of 2026-11-01 0900 - Register.csv':
+                '\u{FEFF}$registerCsv',
+            '__MACOSX/._My Budget - Register.csv': 'x',
+            'readme.txt': 'x',
+          }),
+        );
+        expect(export.register.name, endsWith('- Register.csv'));
+        expect(export.budget.name, endsWith('- $budgetName'));
+        final data = await service.parseCsvExport(
+          registerCsvContent: export.register.content,
+          budgetCsvContent: export.budget.content,
+        );
+        expect(data.transactions.single.amount, -1000);
+        expect(data.budgetEntries.single.budgeted, 5000);
+      }
+    });
+
+    test('the header decides, not the name', () {
+      final export = YnabImportService.readExportZip(
+        zipOf({'a.csv': planCsv, 'folder/b.csv': registerCsv}),
+      );
+      expect(export.register.name, 'b.csv');
+      expect(export.budget.name, 'a.csv');
+    });
+
+    test('a ZIP without both files raises a typed exception', () {
+      for (final bytes in [
+        zipOf({'My Budget - Register.csv': registerCsv}),
+        zipOf({'notes.txt': 'x'}),
+        utf8.encode('not a zip'),
+      ]) {
+        expect(
+          () => YnabImportService.readExportZip(bytes),
+          throwsA(
+            isA<YnabImportException>().having(
+              (e) => e.failure,
+              'failure',
+              YnabImportFailure.invalidExportZip,
+            ),
+          ),
+        );
+      }
+    });
   });
 
   group('parseCsvExport dates', () {
