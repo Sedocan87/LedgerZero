@@ -23,7 +23,8 @@ creates it. CSV and YNAB imports create payees the same way.
 
 * Rename, favourite (star), icon, colour, notes.
 * **Auto category**: the category pre-filled when this payee is picked in
-  a new transaction. It is also learned: saving a transaction with this
+  a new outflow (an inflow stays in To Be Budgeted unless a category is
+  picked for it). It is also learned: saving a new transaction with this
   payee and a category sets the payee's auto category to that category.
 * **Default account**: pre-filled when the payee is picked in a new
   transaction and no account is chosen yet.

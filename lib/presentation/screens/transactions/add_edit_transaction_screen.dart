@@ -37,9 +37,12 @@ export 'package:ledger_zero/presentation/screens/transactions/form/transaction_d
 /// always edits the outflow leg (opening the inflow leg follows its link),
 /// so "From" and "To" keep their meaning and the direction is preserved;
 /// both legs' cleared flags are shown and saved. A new transaction starts
-/// with the Settings default account and category (unless the caller or a
-/// draft gives one); a payee's own default category replaces the Settings
-/// default.
+/// with the Settings default account and, for an outflow, the Settings
+/// default category (unless the caller or a draft gives one); a payee's own
+/// default category replaces the Settings default. An inflow starts
+/// without a category ("To Be Budgeted"): neither default is applied to
+/// it, and becoming an inflow drops the category the outflow had (see
+/// [TransactionFormController.setFormType]).
 class AddEditTransactionScreen extends ConsumerStatefulWidget {
   final String? transactionId;
   final String? initialAccountId;
@@ -81,6 +84,9 @@ class _AddEditTransactionScreenState
   bool get _categoryEmpty =>
       _form.categoryId == null || _form.categoryId == _defaultCategoryId;
 
+  /// The form type last seen by [_onFormTypeChanged].
+  late TransactionFormType _lastFormType = _form.formType;
+
   bool get _isEditing => widget.transactionId != null;
 
   @override
@@ -95,7 +101,9 @@ class _AddEditTransactionScreenState
       if (draft != null) {
         _form.applyDraft(draft);
       }
+      _lastFormType = _form.formType;
       _form.addListener(_scheduleAutosave);
+      _form.addListener(_onFormTypeChanged);
       unawaited(_applySettingsDefaults());
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -169,8 +177,8 @@ class _AddEditTransactionScreenState
   // --- Settings defaults (new transactions) ------------------------------
 
   /// Fills an empty account from the Settings default account (if it is
-  /// open and not the partner's) and an empty category from the Settings
-  /// default category.
+  /// open and not the partner's) and an outflow's empty category from the
+  /// Settings default category.
   Future<void> _applySettingsDefaults() async {
     final settings = ref.read(settingsProvider);
     final accountId = settings.defaultAccountId;
@@ -187,16 +195,40 @@ class _AddEditTransactionScreenState
         _form.changed();
       }
     }
-    final categoryId = settings.defaultCategoryId;
-    if (categoryId != null && _form.categoryId == null && !_form.isTransfer) {
-      final category = await ref
-          .read(categoryRepositoryProvider)
-          .getCategoryById(categoryId);
-      if (category != null && mounted && _form.categoryId == null) {
-        _defaultCategoryId = category.id;
-        _form.categoryId = category.id;
-        _form.changed();
-      }
+    await _applyDefaultCategory();
+  }
+
+  /// Fills an empty category of an outflow from the Settings default
+  /// category. Never for an inflow: income belongs in To Be Budgeted, and
+  /// only an inflow without a category gets there.
+  Future<void> _applyDefaultCategory() async {
+    final categoryId = ref.read(settingsProvider).defaultCategoryId;
+    bool wanted() =>
+        _form.categoryId == null &&
+        _form.formType == TransactionFormType.expense;
+    if (categoryId == null || !wanted()) {
+      return;
+    }
+    final category = await ref
+        .read(categoryRepositoryProvider)
+        .getCategoryById(categoryId);
+    if (category != null && mounted && wanted()) {
+      _defaultCategoryId = category.id;
+      _form.categoryId = category.id;
+      _form.changed();
+    }
+  }
+
+  /// The form became an outflow again (e.g. Inflow was tapped by mistake):
+  /// an empty category gets the Settings default like a fresh form.
+  void _onFormTypeChanged() {
+    final type = _form.formType;
+    if (type == _lastFormType) {
+      return;
+    }
+    _lastFormType = type;
+    if (type == TransactionFormType.expense) {
+      unawaited(_applyDefaultCategory());
     }
   }
 
@@ -242,7 +274,10 @@ class _AddEditTransactionScreenState
       _form.changed();
     }
     if (_categoryEmpty && !_form.isSplit) {
-      if (payee.autoCategoryId != null) {
+      // The payee's remembered category is for spending there: an inflow
+      // stays in To Be Budgeted unless the user (or one of their rules)
+      // says otherwise.
+      if (payee.autoCategoryId != null && !_form.isInflow) {
         _form.categoryId = payee.autoCategoryId;
         _form.changed();
       } else {

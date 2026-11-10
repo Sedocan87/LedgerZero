@@ -73,7 +73,13 @@ class TransactionFormController extends ChangeNotifier {
   /// Cleared status the counterpart leg had when it was loaded.
   TransactionClearStatus? loadedCounterpartCleared;
 
+  /// The category the form had before it became an inflow (see
+  /// [setFormType]); it comes back when the form leaves inflow without a
+  /// category.
+  String? _categoryBeforeInflow;
+
   bool get isTransfer => formType == TransactionFormType.transfer;
+  bool get isInflow => formType == TransactionFormType.income;
   bool get isEditing => editingId != null;
 
   /// Whether the transaction can have a category, given [accounts] (id ->
@@ -93,10 +99,26 @@ class TransactionFormController extends ChangeNotifier {
   /// Notifies listeners after a field changed.
   void changed() => notifyListeners();
 
+  /// Switches between outflow, inflow and transfer.
+  ///
+  /// Income belongs in To Be Budgeted: only an inflow without a category
+  /// reaches it. A category carried over from the outflow the form showed
+  /// before (the Settings default, a payee's, or one picked for the
+  /// outflow) would book the income into that category unnoticed, so
+  /// becoming an inflow drops it. A refund gets its category picked while
+  /// the form is an inflow.
   void setFormType(TransactionFormType type) {
+    final wasInflow = isInflow;
     formType = type;
     if (type == TransactionFormType.transfer) {
       isSplit = false;
+    }
+    if (isInflow && !wasInflow) {
+      _categoryBeforeInflow = categoryId;
+      categoryId = null;
+    } else if (wasInflow && !isInflow) {
+      categoryId ??= _categoryBeforeInflow;
+      _categoryBeforeInflow = null;
     }
     notifyListeners();
   }
@@ -254,6 +276,7 @@ class TransactionFormController extends ChangeNotifier {
     memoController.clear();
     setPayee(null, null);
     categoryId = null;
+    _categoryBeforeInflow = null;
     transferAccountId = null;
     cleared = TransactionClearStatus.uncleared;
     counterpartCleared = TransactionClearStatus.uncleared;

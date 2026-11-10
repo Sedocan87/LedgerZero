@@ -8169,6 +8169,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.'**
   String get helpCsvStepsV2;
+
+  /// Transaction form: hint under the category field of an inflow
+  ///
+  /// In en, this message translates to:
+  /// **'Income goes to To Be Budgeted. Choose a category only for a refund: the money then goes back into that category.'**
+  String get txInflowCategoryHint;
+
+  /// Category picker of an inflow: subtitle of the first entry 'To Be Budgeted' (no category)
+  ///
+  /// In en, this message translates to:
+  /// **'Income you assign to categories in the budget'**
+  String get txInflowToBeBudgetedSubtitle;
 }
 
 class _AppLocalizationsDelegate

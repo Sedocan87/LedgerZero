@@ -5136,4 +5136,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpCsvStepsV2 =>
       'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.';
+
+  @override
+  String get txInflowCategoryHint =>
+      'Income goes to To Be Budgeted. Choose a category only for a refund: the money then goes back into that category.';
+
+  @override
+  String get txInflowToBeBudgetedSubtitle =>
+      'Income you assign to categories in the budget';
 }

@@ -115,7 +115,9 @@ payee if you enter a name in Edit details).
 
 ### Category
 
-1. The matched payee's auto category.
+1. The matched payee's auto category, for an outflow. An inflow (see the
+   income words) skips this step: it goes to To Be Budgeted unless the
+   text names a category, and the preview says so.
 2. A built-in keyword list that maps to the default categories (English or
    German seed names; skipped if that category does not exist):
    * Groceries / Lebensmittel: grocer, grocery, groceries, supermarket,

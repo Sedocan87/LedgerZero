@@ -33,8 +33,27 @@ When a *new* transaction is saved with a payee and a category, the payee's
 default category (`autoCategoryId`) is updated to that category; editing a
 transaction never relearns (a one-off correction must not replace the
 default). The form starts a new transaction with the Settings default
-account (if it is open and not the partner's) and default category; a
-payee's own default category and rule suggestions replace the latter.
+account (if it is open and not the partner's) and, for an outflow, the
+Settings default category; a payee's own default category and rule
+suggestions replace the latter.
+
+Income and the category field:
+
+* Only an inflow without a category reaches To Be Budgeted, so the form
+  never gives an inflow a category on its own. The category field of an
+  inflow reads "To Be Budgeted" while it is empty, with a hint under it,
+  and its picker lists "To Be Budgeted" first.
+* The Settings default category and a payee's default category are not
+  applied to an inflow (the user's rules still are: they are explicit).
+  Switching the form to Inflow drops the category the outflow had;
+  switching back to Outflow brings it back.
+* An inflow with a category is a refund into that category: pick it while
+  the form is an inflow. `TransactionService` stores it as given.
+* Every category field (transaction, split line, transfer) has a clear
+  button, so an existing categorised inflow can be set back to To Be
+  Budgeted, by the button or by the picker's first entry.
+* Quick add follows the same rule: an inflow takes a category only when
+  the text names one, and its preview says "To Be Budgeted" otherwise.
 
 Further rules of `save`:
 

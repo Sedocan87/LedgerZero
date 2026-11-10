@@ -169,8 +169,14 @@ class TransactionParser {
     final date = extractDate(input);
 
     final payeeMatch = await extractPayee(input);
-    final categoryMatch = await extractCategory(input, payeeMatch);
     final isIncome = detectIncome(input);
+    // An inflow goes to To Be Budgeted unless the text names a category:
+    // the payee's remembered category is for spending there (the same rule
+    // as in the transaction form).
+    final categoryMatch = await extractCategory(
+      input,
+      isIncome ? null : payeeMatch,
+    );
 
     final confidence = calculateConfidence(
       amount,

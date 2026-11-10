@@ -522,9 +522,16 @@ class _NaturalLanguageInputScreenState
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(AppIcons.category),
-              title: Text(transaction.categoryName ?? l10n.uncategorized),
+              // An inflow without a category is income for To Be Budgeted,
+              // not something left to categorise.
+              title: Text(
+                transaction.categoryName ??
+                    (transaction.isIncome
+                        ? l10n.toBeBudgeted
+                        : l10n.uncategorized),
+              ),
               subtitle: Text(hasCategory ? l10n.category : l10n.uncategorized),
-              trailing: hasCategory
+              trailing: hasCategory || transaction.isIncome
                   ? const Icon(Icons.check_circle, color: AppColors.success)
                   : const Icon(Icons.help_outline, color: AppColors.warning),
             ),
