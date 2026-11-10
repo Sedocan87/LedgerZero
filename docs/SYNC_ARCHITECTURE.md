@@ -236,10 +236,16 @@ run and deletes the request; the requester deletes its own request once
 the gap is repaired, should it still be there. Skipped changes are
 therefore delayed, not lost — unless the sender never comes back.
 
-A file written by a newer app version (schema version above this app's) is
-not applied and not counted as a failure: Sync settings asks the user to
-update the app ("… Update the app to sync its changes.") and the file is
-retried on every run.
+A file written by a newer app version (its `schema` above this app's
+`SyncSchema.syncVersion`, the version of the synced tables; see
+DELTA_SCHEMA_MIGRATION.md) is not applied and not counted as a failure,
+and the file is retried on every run. The user is asked to update the app
+in three places, because everything else about sync looks healthy while
+the partner's changes do not arrive: a notice in Sync settings ("… Update
+the app to sync its changes."), a line on the Home sync card, and a
+notification (at most every three days, with sync notifications on). The
+state comes from the quarantine entries and from the run report
+(`newerSchemaPending`), which also covers a snapshot of a newer version.
 
 ## 8. Snapshots and compaction
 
@@ -299,13 +305,19 @@ and follows `appLockStateProvider`:
 * State for the UI: status, last sync, pending changes, conflicts,
   quarantine (failed, old-folder files), newer-schema and old-folder
   notices, clock notices, setup state. The Home sync card shows the
-  counts of conflicts, failed files and old-folder files. "Last sync" is
+  counts of conflicts, failed files and old-folder files and the "update
+  the app" notice. "Last sync" is
   the last successful run; with Wi-Fi sync, where a run against the folder
   on this phone succeeds with nobody reached, it is the last exchange
   with a paired phone (`LanSyncService.lastPeerExchange`).
 * A run that is still going when the controller is disposed does not
   touch its state.
 * Pause/resume around a restore (section 9).
+* *Disconnect* (Wi-Fi: *Turn off Wi-Fi sync*) and choosing the provider
+  "None" ask for confirmation first. With Google Drive, an empty folder
+  ("Set a sync passphrase") also says that a second phone must be signed
+  in to the same Google account: with another account it sees its own
+  empty folder, and two phones would each sync alone.
 
 ## 11. Transports
 

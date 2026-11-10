@@ -99,6 +99,13 @@ first and then runs the normal restore (confirmation, password, warnings).
    the app is killed in the middle, the next start finishes the restore.
 6. If you use sync, the device resynchronises after a restore: changes made
    on your other devices after the backup was created will sync back in.
+   So do this phone's own changes that were already synced: the sync
+   folder still has them, and they are applied again under the conflict
+   rule. A restore therefore brings back data that was lost; it does
+   **not** undo a mistake that has already synced (a deleted account, a
+   bad import), and there is no "replace the shared budget with this
+   backup". While a sync provider is set, the confirmation dialog says
+   so.
 
 **Merge transactions from a backup (date range)** copies the transactions of
 a date range — together with the other leg of a transfer and the parts of

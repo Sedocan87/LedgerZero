@@ -107,7 +107,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
             items: availableProviders,
             onChanged: (value) {
               if (value != null) {
-                controller.setProvider(value);
+                _changeProvider(value);
               }
             },
           ),
@@ -181,7 +181,7 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
               OutlinedButton.icon(
                 onPressed: state.status == SyncStatus.syncing
                     ? null
-                    : () => controller.disconnect(),
+                    : () => _disconnect(isLan: isLan),
                 icon: const Icon(Icons.logout),
                 label: Text(isLan ? l10n.lanTurnOff : l10n.disconnect),
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
@@ -213,6 +213,75 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
         ],
       ),
     );
+  }
+
+  /// Asks before an action that stops this phone from syncing. Returns
+  /// whether the user confirmed.
+  Future<bool> _confirmStop({
+    required String title,
+    required String message,
+    required String action,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const Key('sync_stop_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
+  /// Provider dropdown: choosing "None" while a provider is set stops sync
+  /// and is confirmed first.
+  Future<void> _changeProvider(SyncProviderType value) async {
+    final controller = ref.read(syncControllerProvider.notifier);
+    final current = ref.read(syncControllerProvider).selectedProvider;
+    if (value == SyncProviderType.none && current != SyncProviderType.none) {
+      final l10n = AppLocalizations.of(context)!;
+      final confirmed = await _confirmStop(
+        title: l10n.syncProviderNoneConfirmTitle,
+        message: l10n.syncProviderNoneConfirmMessage,
+        action: l10n.syncStopAction,
+      );
+      if (!confirmed) {
+        // The dropdown already shows "None": back to the provider in use.
+        final field = _tutorialKeys.provider.currentState;
+        if (field is FormFieldState<SyncProviderType>) {
+          field.didChange(current);
+        }
+        return;
+      }
+    }
+    await controller.setProvider(value);
+  }
+
+  Future<void> _disconnect({required bool isLan}) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await _confirmStop(
+      title: isLan
+          ? l10n.lanTurnOffConfirmTitle
+          : l10n.syncDisconnectConfirmTitle,
+      message: isLan
+          ? l10n.lanTurnOffConfirmMessage
+          : l10n.syncDisconnectConfirmMessage,
+      action: isLan ? l10n.lanTurnOff : l10n.disconnect,
+    );
+    if (confirmed) {
+      await ref.read(syncControllerProvider.notifier).disconnect();
+    }
   }
 
   /// Wi-Fi sync before pairing: start on this phone or join another.
@@ -432,6 +501,17 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                     ? l10n.syncPassphraseSetExplanation
                     : l10n.syncPassphraseEnterExplanation,
               ),
+              // A second phone signed in to another Google account sees
+              // its own, empty folder: setting a passphrase there gives
+              // two phones that both "sync" and never meet.
+              if (create) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.syncEmptyFolderSameAccountHint,
+                  key: const ValueKey('syncSameAccountHint'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 12),
               FilledButton(
                 key: const ValueKey('syncPassphraseButton'),

@@ -163,11 +163,29 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   /// and the warnings a backup may need.
   Future<void> _restoreFile(File file) async {
     final l10n = AppLocalizations.of(context)!;
+    // With sync set up, the phone's own synced changes come back from the
+    // folder: a restore cannot roll a synced mistake back.
+    final syncs = ref.read(syncConfiguredProvider);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.restoreConfirmTitle),
-        content: Text(l10n.restoreConfirmMessage),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.restoreConfirmMessage),
+              if (syncs) ...[
+                const SizedBox(height: 12),
+                Text(
+                  l10n.restoreSyncNoRollbackNote,
+                  key: const ValueKey('restoreSyncNoRollbackNote'),
+                ),
+              ],
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

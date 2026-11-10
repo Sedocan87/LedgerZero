@@ -52,6 +52,11 @@ class _TestController extends SyncController {
        );
 
   void emit(SyncState next) => state = next;
+
+  int disconnects = 0;
+
+  @override
+  Future<void> disconnect() async => disconnects++;
 }
 
 void main() {
@@ -237,6 +242,80 @@ void main() {
     );
   });
 
+  testWidgets('an empty Drive folder says that both phones need the same '
+      'Google account', (tester) async {
+    final controller = await pump(tester, provider: 'googleDrive');
+    controller.emit(
+      controller.state.copyWith(
+        status: SyncStatus.connected,
+        setup: SyncSetupState.needsNewPassphrase,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('syncSameAccountHint')), findsOneWidget);
+    expect(find.textContaining('same Google account'), findsOneWidget);
+
+    // Not when the folder exists (the passphrase is asked for).
+    controller.emit(
+      controller.state.copyWith(setup: SyncSetupState.needsPassphrase),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('syncSameAccountHint')), findsNothing);
+  });
+
+  testWidgets('Disconnect asks first', (tester) async {
+    final controller = await pump(tester, provider: 'googleDrive');
+    controller.emit(
+      controller.state.copyWith(
+        status: SyncStatus.connected,
+        setup: SyncSetupState.ready,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Disconnect'));
+    await tester.pumpAndSettle();
+    expect(find.text('Disconnect sync?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(controller.disconnects, 0);
+
+    await tester.tap(find.text('Disconnect'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sync_stop_confirm')));
+    await tester.pumpAndSettle();
+    expect(controller.disconnects, 1);
+  });
+
+  testWidgets('choosing the provider "None" asks first', (tester) async {
+    final controller = await pump(tester, provider: 'googleDrive');
+
+    Future<void> chooseNone() async {
+      await tester.tap(find.text('Google Drive').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('None').last);
+      await tester.pumpAndSettle();
+    }
+
+    await chooseNone();
+    expect(find.text('Stop syncing?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(controller.state.selectedProvider, SyncProviderType.googleDrive);
+    // The dropdown shows the provider in use again.
+    expect(find.text('Google Drive Sync'), findsOneWidget);
+    expect(find.text('None'), findsNothing);
+
+    await chooseNone();
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('sync_stop_confirm')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(controller.state.selectedProvider, SyncProviderType.none);
+    expect(prefs.getString('sync_provider'), 'none');
+  });
+
   testWidgets('shows conflicts, failed files and update notices', (
     tester,
   ) async {
@@ -276,6 +355,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('newer version of LedgerZero'), findsOneWidget);
+    // Also on the sync card (the one the Home screen shows).
+    expect(
+      find.textContaining('Update the app: another device uses a newer'),
+      findsOneWidget,
+    );
     expect(find.textContaining('.json.gz'), findsOneWidget);
     expect(find.text('1 change file could not be applied'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('syncConflictsTile')));

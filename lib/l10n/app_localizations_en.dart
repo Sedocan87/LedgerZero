@@ -4810,4 +4810,47 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get syncIndicatorUpdateApp =>
+      'Update the app: another device uses a newer version';
+
+  @override
+  String get notificationSyncUpdateTitle => 'Update LedgerZero to keep syncing';
+
+  @override
+  String get notificationSyncUpdateBody =>
+      'Another device uses a newer version of LedgerZero. Its changes arrive after you update the app.';
+
+  @override
+  String get syncEmptyFolderSameAccountHint =>
+      'Is another phone already syncing? Then do not set a new passphrase here. This sync folder is empty because this phone is signed in to a different Google account. Both phones must use the same Google account: disconnect and connect with the account of the other phone.';
+
+  @override
+  String get restoreSyncNoRollbackNote =>
+      'Sync is set up on this phone: a restore does not undo changes that were already synced, including this phone’s own. They come back from the sync folder. A restore brings back data that was lost; it does not put the shared budget back to an earlier state.';
+
+  @override
+  String get syncDisconnectConfirmTitle => 'Disconnect sync?';
+
+  @override
+  String get syncDisconnectConfirmMessage =>
+      'This phone stops syncing and forgets the sync passphrase. Your data stays on this phone and on your other devices. To sync again, connect and enter the passphrase; changes made in the meantime are sent then.';
+
+  @override
+  String get lanTurnOffConfirmTitle => 'Turn off Wi-Fi sync?';
+
+  @override
+  String get lanTurnOffConfirmMessage =>
+      'This phone stops syncing and forgets the pairing. Your data stays on both phones. To sync again, the phones have to be paired again with a new code.';
+
+  @override
+  String get syncProviderNoneConfirmTitle => 'Stop syncing?';
+
+  @override
+  String get syncProviderNoneConfirmMessage =>
+      'This phone stops exchanging changes with your other devices until you choose the sync provider again. Changes made in the meantime are sent then.';
+
+  @override
+  String get syncStopAction => 'Stop syncing';
 }

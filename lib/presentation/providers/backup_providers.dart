@@ -39,6 +39,15 @@ final backupCloudTargetProvider = Provider<BackupCloudTarget?>((ref) {
   return null;
 });
 
+/// Whether a sync provider is chosen in Sync settings (Google Drive or
+/// Wi-Fi sync). Read from the stored setting, like
+/// [backupCloudTargetProvider].
+final syncConfiguredProvider = Provider<bool>((ref) {
+  final name = ref.watch(sharedPreferencesProvider).getString('sync_provider');
+  return name == SyncProviderType.googleDrive.name ||
+      name == SyncProviderType.localWifi.name;
+});
+
 /// Whether this phone has personal accounts of its own member. Their
 /// transactions never sync, so only this phone's backups hold them.
 final ownPersonalAccountsProvider = FutureProvider.autoDispose<bool>((

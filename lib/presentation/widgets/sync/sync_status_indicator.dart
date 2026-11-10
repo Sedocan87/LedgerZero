@@ -53,6 +53,9 @@ class SyncStatusIndicator extends ConsumerWidget {
     final failed = state.failedFiles.length;
     final foreign = state.foreignFiles.length;
     final attention = [
+      // The partner's changes stop arriving until this phone is updated,
+      // while everything else about sync looks healthy.
+      if (state.newerSchemaPending) l10n.syncIndicatorUpdateApp,
       if (state.conflicts.isNotEmpty)
         l10n.syncIndicatorConflicts(state.conflicts.length),
       if (failed > 0) l10n.syncIndicatorFailedFiles(failed),
