@@ -4,6 +4,7 @@ import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/core/constants/default_categories.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 
 /// Id of the seeded Savings & Investments group (stable across renames).
@@ -57,6 +58,9 @@ class BudgetGroupRow extends StatelessWidget {
           ),
           // How money budgeted here reaches the savings accounts.
           if (group.id == savingsGroupId) const InfoButton(HelpTopic.saving),
+          // What the credit cards' payment categories do.
+          if (group.id == CardPayments.groupId)
+            const InfoButton(HelpTopic.cardPayments),
         ],
       ),
     );

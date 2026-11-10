@@ -1350,5 +1350,17 @@
   "androidBackupExplanation": "Ist die Android-Sicherung eingeschaltet (bei den meisten Telefonen unter Einstellungen > System > Sicherung), kopiert Android das Budget etwa einmal am Tag in Ihr Google-Konto, Ende-zu-Ende-verschlüsselt mit der Displaysperre dieses Telefons, und stellt es auf einem neuen Telefon wieder her. LedgerZero kann nicht prüfen, ob sie eingeschaltet ist, und ohne Displaysperre sichert Android nichts davon.",
   "androidBackupTooLarge": "Das Budget belegt {size} MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort.",
   "seedGroupCardPayments": "Kreditkartenzahlungen",
-  "txPaymentCategory": "Eine Kreditkartenzahlungs-Kategorie kann nicht für eine Buchung verwendet werden. Wählen Sie die Kategorie, für die das Geld ausgegeben wurde; die Zahlungskategorie füllt sich selbst."
+  "txPaymentCategory": "Eine Kreditkartenzahlungs-Kategorie kann nicht für eine Buchung verwendet werden. Wählen Sie die Kategorie, für die das Geld ausgegeben wurde; die Zahlungskategorie füllt sich selbst.",
+  "cardPaymentMissing": "Noch offen: {amount}",
+  "cardPaymentCovered": "Kartensaldo gedeckt",
+  "cardPaymentCoverBalance": "Kartensaldo decken",
+  "cardPaymentNothingMissing": "Für diese Karte fehlt nichts.",
+  "budgetCreditOverspent": "Kreditüberziehung: Kartenausgaben, die diese Kategorie nicht decken konnte. Sie werden zu Kartenschulden und nicht vom „Zu budgetieren“ des nächsten Monats abgezogen.",
+  "helpCardPaymentsTitle": "Kreditkartenzahlungen",
+  "helpCardPaymentsBody": "Jede Kreditkarte im Budget hat eine Zahlungskategorie mit ihrem Namen. Zahlen Sie mit der Karte, wandert das in der Ausgabenkategorie budgetierte Geld hierher und liegt bereit, wenn die Abrechnung kommt. Bezahlen Sie die Karte vom Girokonto, wird es wieder entnommen. Was die Kategorie nicht decken konnte, erscheint orange (Kreditüberziehung) und bleibt als Kartenschuld: Die Zahlungszeile zeigt es als noch offen.",
+  "helpCardPaymentsSteps": "Zahlen Sie wie gewohnt mit der Karte, mit der Kategorie der Ausgabe.\nBezahlen Sie die Karte mit einer Umbuchung vom Girokonto auf die Karte.\nBestehende Schulden oder orange Kategorien: Weisen Sie den offenen Betrag der Zahlungskategorie zu (lange drücken, Kartensaldo decken).",
+  "guideCreditCardsBody": "Kreditkarten: Eine Ausgabe mit der Karte verschiebt das Geld aus ihrer Kategorie in die Zahlungskategorie der Karte in der Gruppe Kreditkartenzahlungen. Reichte die Kategorie nicht, wird sie orange statt rot: Dieser Teil ist Kartenschuld und wird nicht vom „Zu budgetieren“ des nächsten Monats abgezogen. Weisen Sie der Zahlungskategorie Geld zu, um sie abzuzahlen.",
+  "accountCardPaymentTitle": "Zahlungskategorie",
+  "accountCardPaymentAvailable": "Zur Zahlung der Karte zurückgelegt: {amount}",
+  "categoryPaymentLocked": "Dies ist die Zahlungskategorie der Karte {card}. Sie trägt den Namen der Karte, bleibt in Kreditkartenzahlungen und kann nicht gelöscht werden, solange die Karte offen und im Budget ist."
 }

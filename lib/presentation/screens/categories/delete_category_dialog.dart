@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
@@ -44,8 +45,10 @@ class _DeleteCategoryDialogState extends ConsumerState<DeleteCategoryDialog> {
     final groupsAsync = ref.watch(categoryGroupsWithCategoriesProvider);
     final items = <DropdownMenuItem<String>>[
       for (final group in groupsAsync.valueOrNull ?? const [])
-        for (final cat in group.categories)
-          if (cat.id != widget.category.id)
+        // Money and transactions cannot move into a payment category.
+        if (group.group.id != CardPayments.groupId)
+          for (final cat in group.categories)
+            if (cat.id != widget.category.id)
             DropdownMenuItem(
               value: cat.id,
               child: Text(

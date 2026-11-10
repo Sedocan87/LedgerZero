@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
@@ -102,6 +105,38 @@ void main() {
     await tester.tap(find.text('Delete Account'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('a credit card shows its payment category: set aside and '
+      'still missing', (tester) async {
+    await tester.runAsync(() async {
+      await t.addAccount(
+        id: 'visa',
+        name: 'Visa',
+        type: AccountType.credit,
+        startingBalance: -20000,
+      );
+      await t.budgeting.setCategoryBudgetedAmount(
+        CardPayments.categoryId('visa'),
+        5000,
+        CalendarDate.startOfMonthUtc(CalendarDate.today()),
+      );
+    });
+    await pumpScreen(tester, 'visa');
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('account.cardPayment')), findsOneWidget);
+    expect(find.text('Set aside to pay the card: \$50.00'), findsOneWidget);
+    expect(find.text('Still missing: \$150.00'), findsOneWidget);
+
+    await unmount(tester);
+  });
+
+  testWidgets('a checking account has no payment category', (tester) async {
+    await pumpScreen(tester, 'a');
+    expect(find.byKey(const Key('account.cardPayment')), findsNothing);
+    await unmount(tester);
+  });
 
   testWidgets('transfers show the other account and direction', (tester) async {
     await pumpScreen(tester, 'a');

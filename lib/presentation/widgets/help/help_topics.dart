@@ -35,7 +35,8 @@ enum GuideChapter {
     transactions => l10n.guideTransactionsBody,
     transfers => l10n.guideTransfersBody,
     saving => l10n.guideSavingBody,
-    overspending => l10n.guideOverspendingBody,
+    overspending =>
+      '${l10n.guideOverspendingBody}\n\n${l10n.guideCreditCardsBody}',
     reconcile => l10n.guideReconcileBody,
     partner => l10n.guidePartnerBody,
     security => l10n.guideSecurityBody,
@@ -60,7 +61,8 @@ enum HelpTopic {
   transfer(GuideChapter.transfers),
   sync(GuideChapter.partner),
   csvImport(GuideChapter.importing),
-  appLock(GuideChapter.security);
+  appLock(GuideChapter.security),
+  cardPayments(GuideChapter.overspending);
 
   const HelpTopic(this.chapter);
 
@@ -78,6 +80,7 @@ enum HelpTopic {
     sync => l10n.helpSyncTitle,
     csvImport => l10n.helpCsvTitle,
     appLock => l10n.helpAppLockTitle,
+    cardPayments => l10n.helpCardPaymentsTitle,
   };
 
   String body(AppLocalizations l10n) => switch (this) {
@@ -92,6 +95,7 @@ enum HelpTopic {
     sync => l10n.helpSyncBody,
     csvImport => l10n.helpCsvBody,
     appLock => l10n.helpAppLockBody,
+    cardPayments => l10n.helpCardPaymentsBody,
   };
 
   /// The steps (one per line in the translation), empty if the topic has
@@ -107,6 +111,7 @@ enum HelpTopic {
       transfer => l10n.helpTransferSteps,
       sync => l10n.helpSyncSteps,
       csvImport => l10n.helpCsvStepsV2,
+      cardPayments => l10n.helpCardPaymentsSteps,
       accountTypes || appLock => '',
     };
     return [
