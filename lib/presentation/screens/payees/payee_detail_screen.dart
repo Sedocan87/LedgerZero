@@ -12,6 +12,7 @@ import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/payee_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 class PayeeDetailScreen extends ConsumerStatefulWidget {
@@ -311,7 +312,7 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
     final accountsAsync = ref.watch(accountsProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    final categoriesMap = ref.watch(categoryMapProvider).valueOrNull ?? {};
+    final lookups = ref.watch(transactionLookupsProvider);
     final accountsMap = ref.watch(accountMapProvider).valueOrNull ?? {};
     final accountCurrencies = {
       for (final a in accountsAsync.valueOrNull ?? const <Account>[])
@@ -705,10 +706,14 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                           final tx = transactions[index];
                           return TransactionListItem(
                             transaction: tx,
-                            payeeName: payee.name,
-                            categoryName: categoriesMap[tx.categoryId],
+                            payeeName:
+                                lookups.payeeLabel(tx, l10n) ?? payee.name,
+                            categoryName: lookups.categoryLabel(tx, l10n),
+                            category: lookups.categoryOf(tx),
+                            isSplit: lookups.isSplit(tx),
                             accountName: accountsMap[tx.accountId],
                             currencyCode: accountCurrencies[tx.accountId],
+                            showDivider: index > 0,
                             onTap: () {
                               context.push('/edit-transaction/${tx.id}');
                             },
