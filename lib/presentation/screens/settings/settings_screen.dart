@@ -12,6 +12,7 @@ import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart'
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
+import 'package:ledger_zero/presentation/providers/notification_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/app_cache.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
@@ -496,8 +497,8 @@ class SettingsScreen extends ConsumerWidget {
                 value: settings.scheduledTransactionNotifications,
                 onChanged: (value) => unawaited(
                   ref
-                      .read(settingsProvider.notifier)
-                      .setScheduledTransactionNotifications(value),
+                      .read(notificationTogglesProvider)
+                      .setScheduledReminders(value),
                 ),
               ),
               SwitchListTile(
@@ -505,9 +506,7 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text(l10n.budgetAlertNotifications),
                 value: settings.budgetAlertNotifications,
                 onChanged: (value) => unawaited(
-                  ref
-                      .read(settingsProvider.notifier)
-                      .setBudgetAlertNotifications(value),
+                  ref.read(notificationTogglesProvider).setBudgetAlerts(value),
                 ),
               ),
               SwitchListTile(
@@ -515,9 +514,7 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text(l10n.syncStatusNotifications),
                 value: settings.syncStatusNotifications,
                 onChanged: (value) => unawaited(
-                  ref
-                      .read(settingsProvider.notifier)
-                      .setSyncStatusNotifications(value),
+                  ref.read(notificationTogglesProvider).setSyncStatus(value),
                 ),
               ),
             ],
