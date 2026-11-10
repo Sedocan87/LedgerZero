@@ -433,6 +433,27 @@ void main() {
     await unmount(tester, c);
   });
 
+  testWidgets('a route that needs its arguments goes Home when opened '
+      'without them (a link or a restored location)', (tester) async {
+    final c = await pumpRouter(tester, onboarded: true);
+    unlock(c);
+    await tester.pumpAndSettle();
+
+    for (final path in [
+      '/filtered-transactions',
+      '/settings/import-csv/confirm',
+    ]) {
+      c.read(routerProvider).go('/accounts');
+      await tester.pumpAndSettle();
+      c.read(routerProvider).go(path);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: path);
+      expect(location(c), '/', reason: path);
+      expect(find.byType(HomeScreen), findsOneWidget, reason: path);
+    }
+    await unmount(tester, c);
+  });
+
   test('no :parameter route precedes a literal sibling anywhere', () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();

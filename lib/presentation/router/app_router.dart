@@ -218,6 +218,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/filtered-transactions',
         name: 'filtered-transactions',
         parentNavigatorKey: _rootNavigatorKey,
+        // Opened without its filter (a link, a restored location): Home.
+        redirect: (context, state) =>
+            state.extra is FilteredTransactionsArgs ? null : '/',
         builder: (context, state) {
           final args = state.extra as FilteredTransactionsArgs;
           return TransactionsScreen(fixedFilter: args);
@@ -326,6 +329,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'confirm',
                 name: 'import-confirm',
                 parentNavigatorKey: _rootNavigatorKey,
+                // Opened without the parsed rows (a link, a restored
+                // location): Home.
+                redirect: (context, state) =>
+                    state.extra is List<ImportTransaction> ? null : '/',
                 builder: (context, state) {
                   final transactions = state.extra as List<ImportTransaction>;
                   return ImportConfirmationScreen(transactions: transactions);
