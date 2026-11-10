@@ -35,7 +35,9 @@ class AutoBackupFile {
 /// Android KeyStore loses the database key, the data on the phone is gone,
 /// but these files are still there and open with the password. They do not
 /// survive a lost phone, a factory reset of the phone or an uninstall; the
-/// Backup screen tells the user to copy the folder away now and then.
+/// Backup screen tells the user to copy the folder away now and then, and
+/// the backup reminder (`BackupScheduler`) keeps counting from the last
+/// backup that left the phone.
 ///
 /// The last [keep] backups are kept, older ones are deleted. A run happens
 /// when the app starts or resumes and the last successful backup is older
@@ -188,7 +190,9 @@ class AutoBackupService {
       await _rotate(dir, keepFile: file);
       await _prefs.setInt(lastSuccessKey, now.millisecondsSinceEpoch);
       await _prefs.remove(lastErrorKey);
-      await service.recordBackupCompleted();
+      // Not recorded as "last backup" for the reminder: this file is on
+      // the phone and is lost with it. The reminder and the personal
+      // accounts nudge count backups that left the phone.
       Logger.info('Automatic backup written: ${p.basename(file.path)}');
       return file;
     } catch (e, stackTrace) {
