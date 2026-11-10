@@ -92,9 +92,14 @@ class NotificationPermissionGate {
 
 final notificationPermissionGateProvider = Provider<NotificationPermissionGate>(
   (ref) => NotificationPermissionGate(
+    // Unlocked and in the foreground (no lifecycle event yet counts as
+    // foreground: the engine reports one as soon as the app is shown).
     canAsk: () =>
         ref.read(uiReadyProvider) &&
-        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed,
+        switch (WidgetsBinding.instance.lifecycleState) {
+          null || AppLifecycleState.resumed => true,
+          _ => false,
+        },
     request: () async {
       final notifications = ref.read(notificationServiceProvider);
       await notifications.initialize();
