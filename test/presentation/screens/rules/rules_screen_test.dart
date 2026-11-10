@@ -142,4 +142,31 @@ void main() {
     expect(find.byType(RulesScreen), findsOneWidget);
     await unmount(tester);
   });
+
+  testWidgets('(F5) a rule with a condition that can never match says so '
+      'in the list', (tester) async {
+    await tester.runAsync(
+      () => t.rules.createRule(
+        suggestion('dead').copyWith(
+          name: 'Dead',
+          priority: 1,
+          conditions: const [
+            RuleCondition(
+              type: RuleConditionType.payee,
+              operator: RuleConditionOperator.greaterThan,
+              value: 'Market',
+            ),
+          ],
+        ),
+      ),
+    );
+    await pumpScreen(tester);
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('rules.unevaluable.dead')), findsOneWidget);
+    expect(find.text(l10n.ruleListUnevaluable), findsOneWidget);
+    // The valid rule keeps its summary.
+    expect(find.byKey(const Key('rules.unevaluable.existing')), findsNothing);
+    await unmount(tester);
+  });
 }

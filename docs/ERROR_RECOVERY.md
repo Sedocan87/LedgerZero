@@ -4,7 +4,7 @@ This document outlines procedures for recovering from common error scenarios in 
 
 ## 1. Database Corruption
 
-Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.g., unexpected power loss during write).
+LedgerZero uses SQLite in WAL mode, so corruption is rare but possible (e.g., unexpected power loss during write). At start-up a file that is not a readable database is reported as damaged, with **Retry** and **Reset app** (see [TROUBLESHOOTING.md](TROUBLESHOOTING.md#start-up-and-app-lock)).
 
 ### Symptoms
 - App crashes on launch.
@@ -13,15 +13,16 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
 
 ### Recovery Steps
 1. **Restore from Backup**:
-   - If you uploaded backups, the `LedgerZero/Backups` folder on Google Drive contains encrypted backups (`.lzbk`).
-   - Uninstall and reinstall the app, then complete onboarding.
+   - Backup files you saved elsewhere ("Save to…" or the share sheet) or the automatic backups in `Android/data/com.ledgerzero.app/files/backups` are encrypted backups (`.lzbk`).
+   - With Android backup on, a reinstall restores the budget as Android last backed it up (up to about a day old; see [BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md#7-moving-to-a-new-phone)). If that copy is damaged too, use the "Reset app" step below and then a backup file.
+   - Otherwise uninstall and reinstall the app, then complete onboarding.
    - Go to **Settings > Backup & Export**, tap **Restore from file**, pick the `.lzbk` file and enter its backup password.
    - A restore that was interrupted (the app was killed while it replaced
      the database) is finished automatically at the next start.
 
 2. **Manual Extraction (Advanced)**:
    - The database is `db.sqlite` in the app's documents directory (`/data/data/com.ledgerzero.app/app_flutter/`).
-   - It is encrypted with SQLCipher under a random data key that is never shown or exported, so a copied file cannot be opened with an SQLite browser. Restore a backup instead.
+   - It is a plain SQLite file, but it lives in the app's private storage: without root or a debug build it cannot be copied off the phone. Use a backup or the JSON/CSV export instead.
 
 ## 2. Synchronization Issues
 
@@ -31,14 +32,15 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
   "Update the app to sync".
 
 ### Recovery Steps
-1. **Check connectivity and the account**: Settings > Sync Settings shows the
-   provider, the signed-in account, the last sync time and how many local
-   changes wait for upload. Check that cloud storage is not full.
+1. **Check the Wi-Fi**: both phones must be on the same Wi-Fi with
+   LedgerZero open. Settings > Sync Settings shows the paired phones, the
+   last sync time and how many local changes wait to be sent.
 2. **Sync now**: tap *Sync Now* (or pull to refresh on the Home screen). With
    frequency *Manual* nothing syncs automatically.
 3. **Passphrase**: if Sync settings asks for the sync passphrase, enter the
-   one set on your first device. If the cloud folder was deleted or reset,
-   set up sync again on one device and join on the others.
+   one set on your first device. With Wi-Fi sync the passphrase comes with
+   the pairing code; if sync cannot recover, turn Wi-Fi sync off on both
+   phones and pair again.
 4. **Change files that could not be applied**: listed in Sync settings. The
    app retries them automatically with increasing delays; changes from that
    device wait while all other devices keep syncing.
@@ -67,7 +69,7 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
    edits win every conflict until its clock is fixed.
 9. **Rebuild this device's sync state**: restoring a backup (Settings >
    Backup & Export) rebuilds the sync state automatically from the latest
-   snapshot and the change files in the cloud. A fresh install that joins
+   snapshot and the change files of the other phone. A fresh install that joins
    the folder does the same.
 10. **Resetting the sync folder** (new passphrase, or starting over): do it
     on one device and delete the **whole** folder content first — not only
@@ -76,27 +78,25 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
     removed from Sync settings. Then set up sync on one device and join on
     the others. Wi-Fi sync: tap *Turn off* on both phones and pair again.
 
-## 3. App Lock and Database Key
+## 3. App Lock and Start-up
 
-There is no master password. The database key lives in the phone's
-KeyStore; the app lock uses the phone's own screen lock (fingerprint,
-face, PIN, pattern or password).
+There is no master password and no database key. The app lock uses the
+phone's own screen lock (fingerprint, face, PIN, pattern or password) and
+gates the screen only.
 
 ### Symptoms
 - The app lock does not accept you: use the phone's PIN, pattern or
   password, the same way the lock screen does.
-- "The key data of this app is missing".
+- "LedgerZero cannot read the data on this phone" (damaged database) or
+  "saved by an early test version".
 
 ### Recovery Steps
-1. **"The key data of this app is missing"** (the KeyStore entry holding the
-   database key was removed, e.g. after a security reset of the phone): the
-   data on this phone cannot be opened any more. The lock screen offers
-   **Reset app**; after typing the confirmation word it performs the
-   factory reset (database with its WAL/SHM files and any restore leftover,
-   key entries, preferences, exported files, local sync files and the
-   Wi-Fi pairing; it also signs out of Google Drive, best effort) and
-   returns to onboarding, where you can set up the app and restore a
-   backup.
+1. **Damaged database or early test version**: the lock screen offers
+   **Reset app** next to **Retry**; after typing the confirmation word it
+   performs the factory reset (database with its WAL/SHM files and any
+   restore leftover, the stored automatic-backup password, preferences,
+   exported files, local sync files and the Wi-Fi pairing) and returns to onboarding, where you can
+   set up the app and restore a backup.
 2. **Backup**: restore it in Settings > Backup & Export with its backup
    password (chosen when the backup was made). If automatic backups were
    on, the reset keeps them: **Restore an automatic backup** lists them,
@@ -105,7 +105,7 @@ face, PIN, pattern or password).
    sync, the shared data comes back from the sync folder after joining it
    again (personal transactions do not — they exist only in this phone's
    backups).
-   See [ENCRYPTION_TROUBLESHOOTING.md](ENCRYPTION_TROUBLESHOOTING.md).
+   See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#start-up-and-app-lock).
 
 ## 4. Application Crashes
 
@@ -118,4 +118,4 @@ face, PIN, pattern or password).
    - Review and share them in Settings > Security Settings > **Diagnostic log** (if the app opens).
 2. **Update App**: Ensure you are on the latest version.
 3. **Clear Cache/Data**:
-   - **Warning**: Clearing Data deletes the local database. Only do this if you have a backup or cloud sync.
+   - **Warning**: Clearing Data deletes the local database. Only do this if you have a backup file, Android backup or a second phone that syncs.

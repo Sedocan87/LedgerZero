@@ -7,11 +7,14 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/core/constants/category_constants.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/unsaved_changes_guard.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 
 class AddEditCategoryScreen extends ConsumerStatefulWidget {
   final String? categoryId;
@@ -40,11 +43,33 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   StackTrace? _loadStackTrace;
   bool _notFound = false;
 
+  /// [_fingerprint] of the form as it was opened or loaded.
+  late String _initial = _fingerprint();
+
+  /// What the user can change, as one string.
+  String _fingerprint() => [
+    _nameController.text,
+    _selectedGroupId,
+    _isHidden,
+    _selectedColor,
+    _selectedIcon,
+  ].join('\u0000');
+
+  bool get _isDirty => _fingerprint() != _initial;
+
   @override
   void initState() {
     super.initState();
+    // The unsaved-changes prompt follows the name as it is typed.
+    _nameController.addListener(_onNameChanged);
     if (widget.categoryId != null) {
       _loadCategory();
+    }
+  }
+
+  void _onNameChanged() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -73,7 +98,14 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
         _selectedGroupId = category.categoryGroupId;
         _isHidden = category.isHidden;
         _selectedColor = category.color;
-        _selectedIcon = category.icon;
+        // The icon it is shown with, so the picker marks it (a seeded or
+        // imported category has no stored icon of its own).
+        _selectedIcon = CategoryIconResolver.keyFor(
+          icon: category.icon,
+          id: category.id,
+          name: category.name,
+        );
+        _initial = _fingerprint();
 
         // Load stats
         final transactions = await ref
@@ -165,6 +197,18 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
     final isEditing = widget.categoryId != null;
     final l10n = AppLocalizations.of(context)!;
 
+    return UnsavedChangesGuard(
+      dirty: _isDirty && !_notFound && _loadError == null,
+      child: _buildScaffold(context, groupsAsync, isEditing, l10n),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    AsyncValue<List<CategoryGroup>> groupsAsync,
+    bool isEditing,
+    AppLocalizations l10n,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? l10n.editCategory : l10n.addCategory),

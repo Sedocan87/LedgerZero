@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
+import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/services/notification_capture/notification_capture_channel.dart';
@@ -65,6 +66,9 @@ void main() {
       transactionRepository: t.transactions,
       accounts: t.accounts,
       payees: t.payees,
+      authorisationMemo: 'Reserved amount',
+      listenerGrace: Duration.zero,
+      now: () => postedAt.add(const Duration(hours: 1)),
     );
     accountId = (await t.addAccount(name: 'Visa', currency: 'EUR')).id;
     channel.sources = [
@@ -309,25 +313,76 @@ void main() {
       expect(await t.transactions.getAllTransactions(), hasLength(1));
     });
 
-    test('a transaction entered by hand counts too; two days apart does '
-        'not', () async {
+    test('a transaction entered by hand on the same day counts too; the day '
+        'before does not', () async {
       await t.addTransaction(
         accountId: accountId,
         amount: -740,
-        date: CalendarDate.normalize(postedAt.add(const Duration(days: 1))),
+        date: CalendarDate.normalize(postedAt),
       );
       await t.addTransaction(
         accountId: accountId,
         amount: -990,
-        date: CalendarDate.normalize(postedAt.add(const Duration(days: 2))),
+        date: CalendarDate.normalize(
+          postedAt.subtract(const Duration(days: 1)),
+        ),
       );
       final dup = capture('You spent €7.40 at Bakery');
       final other = capture('You spent €9.90 at Bakery');
 
-      await service.processPending();
+      final result = await service.processPending();
 
       expect(statusOf(dup), CaptureStatus.duplicate);
       expect(statusOf(other), CaptureStatus.added);
+      // The user is told: Home shows what attention() lists.
+      expect(result.duplicates, 1);
+      expect((await service.attention()).duplicates, [dup]);
+    });
+
+    test('a repeat purchase at the same merchant is booked: hours later, '
+        'the next day, but not minutes later', () async {
+      final lunch = capture('Kartenzahlung 4,50 EUR bei Kantine Nord');
+      final coffee = capture(
+        'Kartenzahlung 4,50 EUR bei Kantine Nord',
+        at: postedAt.add(const Duration(hours: 3)),
+      );
+      final nextDay = capture(
+        'Kartenzahlung 4,50 EUR bei Kantine Nord',
+        at: postedAt.add(const Duration(hours: 23, minutes: 40)),
+      );
+      // The app posted the same payment again with other words.
+      final repost = capture(
+        'Du hast 4,50 EUR bei Kantine Nord bezahlt',
+        at: postedAt.add(const Duration(hours: 23, minutes: 42)),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 3);
+      expect(result.duplicates, 1);
+      expect(statusOf(lunch), CaptureStatus.added);
+      expect(statusOf(coffee), CaptureStatus.added);
+      expect(statusOf(nextDay), CaptureStatus.added);
+      expect(statusOf(repost), CaptureStatus.duplicate);
+      expect(await t.transactions.getAllTransactions(), hasLength(3));
+    });
+
+    test('a row entered by hand yesterday with the same payee does not hold '
+        'today\'s purchase', () async {
+      await t.payees.createPayee(const Payee(id: 'p-k', name: 'Kantine Nord'));
+      await t.addTransaction(
+        accountId: accountId,
+        amount: -450,
+        date: CalendarDate.normalize(
+          postedAt.subtract(const Duration(days: 1)),
+        ),
+        payeeId: 'p-k',
+      );
+      final today = capture('Kartenzahlung 4,50 EUR bei Kantine Nord');
+
+      await service.processPending();
+
+      expect(statusOf(today), CaptureStatus.added);
     });
 
     test('two purchases of the same amount at different merchants on the '
@@ -465,7 +520,7 @@ void main() {
   });
 
   test('notifications without an amount from Google Play services are '
-      'skipped, not held', () async {
+      'dropped, not held or kept in the log', () async {
     channel.sources.add(
       CaptureSource(
         packageName: 'com.google.android.gms',
@@ -477,18 +532,526 @@ void main() {
       'Nearby Share is ready',
       package: 'com.google.android.gms',
     );
+    final code = capture(
+      'G-123456 is your Google verification code',
+      package: 'com.google.android.gms',
+    );
     final payment = capture(
       '€3.55 at Kiosk',
+      package: 'com.google.android.gms',
+    );
+    // Kept by an older version of the app.
+    channel.queue.add(
+      CapturedNotification(
+        id: 'old-noise',
+        packageName: 'com.google.android.gms',
+        appLabel: 'Google Play services',
+        text: 'Backup complete',
+        postedAt: postedAt.subtract(const Duration(days: 3)),
+        status: CaptureStatus.skipped,
+      ),
+    );
+    // A declined payment of the same app names an amount and stays.
+    final declined = capture(
+      'Your payment of €9.00 at Kiosk was declined',
       package: 'com.google.android.gms',
     );
 
     final result = await service.processPending();
 
-    expect(result.ignored, 1);
+    expect(result.ignored, 3);
     expect(result.added, 1);
-    expect(statusOf(noise), CaptureStatus.skipped);
+    expect(channel.queue.map((n) => n.id), [payment, declined]);
+    expect(channel.queue.map((n) => n.id), isNot(contains(noise)));
+    expect(channel.queue.map((n) => n.id), isNot(contains(code)));
     expect(statusOf(payment), CaptureStatus.added);
+    expect(statusOf(declined), CaptureStatus.skipped);
     expect(await service.held(), isEmpty);
+  });
+
+  group('only what is positively a payment is booked', () {
+    test('incoming money is an inflow, never spending', () async {
+      capture('1.500,00 EUR von Arbeitgeber GmbH', title: 'Zahlungseingang');
+      capture(
+        'Du hast 250,00 € von Max Mustermann bekommen',
+        title: 'Geldeingang',
+        at: postedAt.add(const Duration(minutes: 10)),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 2);
+      final amounts = [
+        for (final tx in await t.transactions.getAllTransactions()) tx.amount,
+      ]..sort();
+      expect(amounts, [25000, 150000]);
+    });
+
+    test('a decline in another sentence than the amount is skipped', () async {
+      final declined = capture(
+        'Your card was declined. You tried to pay €25.00 at REWE.',
+      );
+      final failed = capture(
+        'Die Zahlung über 25,00 € bei REWE konnte nicht durchgeführt werden',
+      );
+
+      final result = await service.processPending();
+
+      expect(result.ignored, 2);
+      expect(statusOf(declined), CaptureStatus.skipped);
+      expect(statusOf(failed), CaptureStatus.skipped);
+      expect(await t.transactions.getAllTransactions(), isEmpty);
+      // The log says why.
+      final entries = await service.history();
+      expect(entries.map((e) => e.parse.ignoredPhrase), [
+        'konnte nicht',
+        'declined',
+      ]);
+    });
+
+    test('summaries, price alerts and promotions are skipped; an amount '
+        'that is not clearly a payment waits', () async {
+      final summary = capture('Du hast diese Woche 234,56 € ausgegeben');
+      final alert = capture('Bitcoin steht bei 60.000 €');
+      final promotion = capture('Lade Freunde ein und erhalte 50 € Prämie');
+      final unclear = capture('39,99 € Mobilfunk November', title: 'Vodafone');
+
+      final result = await service.processPending();
+
+      expect(result.added, 0);
+      expect(result.ignored, 3);
+      expect(result.held, 1);
+      expect(statusOf(summary), CaptureStatus.skipped);
+      expect(statusOf(alert), CaptureStatus.skipped);
+      expect(statusOf(promotion), CaptureStatus.skipped);
+      expect(await t.transactions.getAllTransactions(), isEmpty);
+      final held = (await service.held()).single;
+      expect(held.notification.id, unclear);
+      expect(held.reason, CaptureHoldReason.unclear);
+      expect(held.parse.amount, 3999);
+      expect((await service.attention()).waiting, [unclear]);
+    });
+
+    test('the amount in the account currency is booked when the foreign '
+        'one is named too', () async {
+      capture('Kartenzahlung 25,00 USD (23,10 €) bei Amazon.com');
+
+      await service.processPending();
+
+      expect((await t.transactions.getAllTransactions()).single.amount, -2310);
+    });
+  });
+
+  group('several payments in one notification', () {
+    test('one per line: each is booked, and an update that adds a line '
+        'books only that', () async {
+      final bundle = capture(
+        'REWE Markt -12,50 €\nBäckerei Schmidt -3,20 €\nAral -45,00 €',
+        title: '3 neue Umsätze',
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 1);
+      var rows = await t.transactions.getAllTransactions();
+      expect(rows.map((r) => r.amount).toList()..sort(), [-4500, -1250, -320]);
+      expect(statusOf(bundle), CaptureStatus.added);
+      expect(
+        channel.queue.single.transactionIds.toSet(),
+        rows.map((r) => r.id).toSet(),
+      );
+      final payees = [
+        for (final r in rows) (await t.payees.getPayeeById(r.payeeId!))!.name,
+      ]..sort();
+      expect(payees, ['Aral', 'Bäckerei Schmidt', 'REWE Markt']);
+      final entry = (await service.history()).single;
+      expect(entry.transactionDeleted, isFalse);
+      expect(entry.canAdd, isFalse);
+      expect(entry.likelyDuplicate, isFalse);
+
+      // The app adds a line to the notification that is still showing.
+      final updated = capture(
+        'REWE Markt -12,50 €\nBäckerei Schmidt -3,20 €\nAral -45,00 €\n'
+        'Kiosk -2,00 €',
+        title: '4 neue Umsätze',
+        at: postedAt.add(const Duration(hours: 2)),
+      );
+      await service.processPending();
+
+      rows = await t.transactions.getAllTransactions();
+      expect(rows, hasLength(4));
+      expect(statusOf(updated), CaptureStatus.added);
+      expect(
+        channel.queue.singleWhere((n) => n.id == updated).transactionIds,
+        hasLength(1),
+      );
+    });
+
+    test('on one line: nothing is booked, the user sorts it out', () async {
+      final bundle = capture(
+        '3 neue Umsätze: -12,50 € REWE, -3,20 € Bäcker, -45,00 € Aral',
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 0);
+      expect(result.held, 1);
+      expect(statusOf(bundle), CaptureStatus.pending);
+      expect(await t.transactions.getAllTransactions(), isEmpty);
+      expect(
+        (await service.held()).single.reason,
+        CaptureHoldReason.severalAmounts,
+      );
+    });
+  });
+
+  group('authorisations', () {
+    Future<Transaction> only() async =>
+        (await t.transactions.getAllTransactions()).single;
+
+    test('a reserved amount is booked and marked', () async {
+      capture('150,00 € bei Aral Tankstelle vorgemerkt');
+
+      await service.processPending();
+
+      final tx = await only();
+      expect(tx.amount, -15000);
+      expect(tx.memo, 'Reserved amount');
+      expect(tx.approved, isFalse);
+    });
+
+    test('a release notice removes the reserved amount', () async {
+      final hold = capture('150,00 € bei Aral Tankstelle vorgemerkt');
+      await service.processPending();
+      final release = capture(
+        'Vormerkung aufgehoben: 150,00 € bei Aral',
+        at: postedAt.add(const Duration(days: 1)),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 0);
+      expect(await t.transactions.getAllTransactions(), isEmpty);
+      expect(statusOf(release), CaptureStatus.skipped);
+      final entries = await service.history();
+      expect(
+        entries
+            .singleWhere((e) => e.notification.id == hold)
+            .transactionDeleted,
+        isTrue,
+      );
+      // Taken back by the app, not by the user: nothing to undo.
+      expect(undo.canUndo, isFalse);
+    });
+
+    test('a correction that names the old amount changes the '
+        'transaction', () async {
+      final hold = capture('150,00 € bei Aral Tankstelle vorgemerkt');
+      await service.processPending();
+      final held = await only();
+      final correction = capture(
+        'Korrektur: 62,31 € statt 150,00 € bei Aral',
+        at: postedAt.add(const Duration(days: 1)),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 1);
+      final tx = await only();
+      expect(tx.id, held.id);
+      expect(tx.amount, -6231);
+      // The amount is final now.
+      expect(tx.memo, isNull);
+      expect(statusOf(correction), CaptureStatus.added);
+      expect(
+        channel.queue.singleWhere((n) => n.id == correction).transactionId,
+        tx.id,
+      );
+      expect(statusOf(hold), CaptureStatus.added);
+    });
+
+    test('a later payment of another amount at the same merchant asks '
+        'whether it replaces the reserved amount', () async {
+      capture('150,00 € bei Aral Tankstelle vorgemerkt');
+      await service.processPending();
+      final held = await only();
+      final finalAmount = capture(
+        'Kartenzahlung 62,31 € bei Aral',
+        at: postedAt.add(const Duration(days: 2)),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 0);
+      expect(result.held, 1);
+      expect(statusOf(finalAmount), CaptureStatus.pending);
+      expect(await t.transactions.getAllTransactions(), hasLength(1));
+      final waiting = (await service.held()).single;
+      expect(waiting.reason, CaptureHoldReason.replacesAuthorisation);
+      expect(waiting.replaces!.id, held.id);
+      expect(waiting.replaces!.amount, -15000);
+
+      await service.resolveAuthorisation(finalAmount, replace: true);
+
+      final tx = await only();
+      expect(tx.id, held.id);
+      expect(tx.amount, -6231);
+      expect(statusOf(finalAmount), CaptureStatus.added);
+      expect(await service.held(), isEmpty);
+    });
+
+    test('"add separately" books it next to the reserved amount', () async {
+      capture('150,00 € bei Aral Tankstelle vorgemerkt');
+      await service.processPending();
+      final second = capture(
+        'Kartenzahlung 62,31 € bei Aral',
+        at: postedAt.add(const Duration(days: 2)),
+      );
+      await service.processPending();
+
+      await service.resolveAuthorisation(second, replace: false);
+
+      final rows = await t.transactions.getAllTransactions();
+      expect(rows.map((r) => r.amount).toList()..sort(), [-15000, -6231]);
+      expect(statusOf(second), CaptureStatus.added);
+      // The next run leaves both alone.
+      await service.processPending();
+      expect(await t.transactions.getAllTransactions(), hasLength(2));
+    });
+
+    test('a bank that words every payment as an authorisation is not '
+        'asked about: each is a purchase', () async {
+      final first = capture('Zahlung über 25,00 € bei REWE autorisiert');
+      final second = capture(
+        'Zahlung über 31,40 € bei REWE autorisiert',
+        at: postedAt.add(const Duration(days: 1)),
+      );
+      // The same amount again a day later is the next purchase, too.
+      final third = capture(
+        'Zahlung über 25,00 € bei REWE autorisiert',
+        at: postedAt.add(const Duration(days: 2)),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.added, 3);
+      expect(statusOf(first), CaptureStatus.added);
+      expect(statusOf(second), CaptureStatus.added);
+      expect(statusOf(third), CaptureStatus.added);
+    });
+
+    test('an authorisation its booking has confirmed is not replaced by '
+        'the next purchase', () async {
+      capture('Zahlung über 25,00 € bei REWE autorisiert');
+      final booked = capture(
+        'Zahlung über 25,00 € bei REWE gebucht',
+        at: postedAt.add(const Duration(days: 1)),
+      );
+      final next = capture(
+        'Kartenzahlung 31,40 € bei REWE',
+        at: postedAt.add(const Duration(days: 2)),
+      );
+
+      final result = await service.processPending();
+
+      expect(statusOf(booked), CaptureStatus.duplicate);
+      expect(statusOf(next), CaptureStatus.added);
+      expect(result.held, 0);
+      expect(await t.transactions.getAllTransactions(), hasLength(2));
+      // The log still shows the booking notice as a likely duplicate.
+      final entry = (await service.history()).singleWhere(
+        (e) => e.notification.id == booked,
+      );
+      expect(entry.likelyDuplicate, isTrue);
+    });
+  });
+
+  group('the same payment captured on both household phones', () {
+    // What the other phone booked arrives by sync: a row this phone's log
+    // does not know.
+    Future<void> fromOtherPhone(
+      String id, {
+      required int amount,
+      required String payee,
+      bool approved = false,
+      DateTime? date,
+    }) async {
+      final payeeId = 'p-$id';
+      await t.payees.createPayee(Payee(id: payeeId, name: payee));
+      await t.transactions.createTransaction(
+        Transaction(
+          id: id,
+          accountId: accountId,
+          date: CalendarDate.normalize(date ?? postedAt),
+          amount: amount,
+          payeeId: payeeId,
+          approved: approved,
+        ),
+      );
+    }
+
+    Future<List<String>> rowIds() async => [
+      for (final tx in await t.transactions.getAllTransactions()) tx.id,
+    ];
+
+    test('this phone takes its copy back when the other copy has the '
+        'smaller id, although the merchant was read differently', () async {
+      final mine = capture('Kartenzahlung 12,50 EUR bei REWE Markt GmbH');
+      await service.processPending();
+      expect(await rowIds(), hasLength(1));
+      await fromOtherPhone('00000000-other', amount: -1250, payee: 'REWE');
+
+      final result = await service.processPending();
+
+      expect(result.duplicates, 1);
+      expect(await rowIds(), ['00000000-other']);
+      expect(statusOf(mine), CaptureStatus.duplicate);
+      // Told, and "Add anyway" is there for a purchase that was separate.
+      expect((await service.attention()).duplicates, [mine]);
+      expect(undo.canUndo, isFalse);
+      final entry = (await service.history()).single;
+      expect(entry.canAdd, isTrue);
+
+      expect(await service.addAgain([mine]), 1);
+      await service.processPending();
+      expect(await rowIds(), hasLength(2));
+      expect(statusOf(mine), CaptureStatus.added);
+    });
+
+    test('this phone keeps its copy when it has the smaller id (the other '
+        'phone gives way)', () async {
+      final mine = capture('Kartenzahlung 12,50 EUR bei REWE');
+      await service.processPending();
+      await fromOtherPhone('zzzzzzzz-other', amount: -1250, payee: 'REWE');
+
+      final result = await service.processPending();
+
+      expect(result.duplicates, 0);
+      expect(await rowIds(), hasLength(2));
+      expect(statusOf(mine), CaptureStatus.added);
+    });
+
+    test('a reviewed copy wins over an unreviewed one', () async {
+      final mine = capture('Kartenzahlung 12,50 EUR bei REWE');
+      await service.processPending();
+      await fromOtherPhone(
+        'zzzzzzzz-other',
+        amount: -1250,
+        payee: 'REWE',
+        approved: true,
+      );
+
+      await service.processPending();
+
+      expect(await rowIds(), ['zzzzzzzz-other']);
+      expect(statusOf(mine), CaptureStatus.duplicate);
+    });
+
+    test('a copy the user has approved here is never taken back', () async {
+      final mine = capture('Kartenzahlung 12,50 EUR bei REWE');
+      await service.processPending();
+      final own = (await t.transactions.getAllTransactions()).single;
+      await t.db.customStatement(
+        'UPDATE transactions SET approved = 1 WHERE id = ?',
+        [own.id],
+      );
+      await fromOtherPhone('00000000-other', amount: -1250, payee: 'REWE');
+
+      await service.processPending();
+
+      expect(await rowIds(), hasLength(2));
+      expect(statusOf(mine), CaptureStatus.added);
+    });
+
+    test('another merchant, another day or two candidates are left '
+        'alone', () async {
+      final mine = capture('Kartenzahlung 12,50 EUR bei REWE');
+      await service.processPending();
+      await fromOtherPhone('00000000-a', amount: -1250, payee: 'Edeka');
+      await fromOtherPhone(
+        '00000000-b',
+        amount: -1250,
+        payee: 'REWE',
+        date: postedAt.subtract(const Duration(days: 1)),
+      );
+
+      await service.processPending();
+      expect(await rowIds(), hasLength(3));
+      expect(statusOf(mine), CaptureStatus.added);
+
+      // Two rows that could be the same payment: not this service's call.
+      await fromOtherPhone('00000000-c', amount: -1250, payee: 'REWE');
+      await fromOtherPhone('00000000-d', amount: -1250, payee: 'REWE Markt');
+      await service.processPending();
+      expect(await rowIds(), hasLength(5));
+      expect(statusOf(mine), CaptureStatus.added);
+    });
+
+    test('a payment the other phone booked first is held as a duplicate '
+        'when this phone gets to it', () async {
+      await fromOtherPhone('00000000-other', amount: -1250, payee: 'REWE');
+      final mine = capture('Kartenzahlung 12,50 EUR bei REWE Markt GmbH');
+
+      final result = await service.processPending();
+
+      expect(result.duplicates, 1);
+      expect(statusOf(mine), CaptureStatus.duplicate);
+      expect(await rowIds(), ['00000000-other']);
+    });
+  });
+
+  group('attention', () {
+    test('nothing while no app is watched', () async {
+      channel.sources = [];
+      channel.accessGranted = false;
+
+      final attention = await service.attention();
+
+      expect(attention.watching, isFalse);
+      expect(attention.hasProblem, isFalse);
+    });
+
+    test('revoked access, an unconnected listener and a storage reset are '
+        'reported', () async {
+      channel.accessGranted = false;
+      var attention = await service.attention();
+      expect(attention.watching, isTrue);
+      expect(attention.accessMissing, isTrue);
+      expect(attention.listenerDisconnected, isFalse);
+
+      channel.accessGranted = true;
+      channel.listenerConnected = false;
+      attention = await service.attention();
+      expect(attention.accessMissing, isFalse);
+      expect(attention.listenerDisconnected, isTrue);
+
+      channel.listenerConnected = true;
+      channel.storageReset = DateTime(2026, 10, 18);
+      attention = await service.attention();
+      expect(attention.listenerDisconnected, isFalse);
+      expect(attention.storageResetAt, DateTime(2026, 10, 18));
+      expect(attention.hasProblem, isTrue);
+    });
+
+    test('waiting, failed and duplicate entries are listed by id', () async {
+      await t.addTransaction(
+        accountId: accountId,
+        amount: -740,
+        date: CalendarDate.normalize(postedAt),
+      );
+      final waiting = capture('You have a new message');
+      final duplicate = capture('You spent €7.40 at Bakery');
+      final bad = capture('You spent €2.00 at B');
+      capture('You spent €3.00 at C');
+      channel.failSetStatusFor = {bad: StateError('disk full')};
+      await service.processPending();
+
+      final attention = await service.attention();
+
+      expect(attention.waiting, [waiting]);
+      expect(attention.duplicates, [duplicate]);
+      expect(attention.failed, [bad]);
+    });
   });
 
   test('concurrent runs book each capture once', () async {
@@ -553,7 +1116,7 @@ void main() {
       await t.addTransaction(
         accountId: accountId,
         amount: -740,
-        date: CalendarDate.normalize(postedAt.add(const Duration(days: 1))),
+        date: CalendarDate.normalize(postedAt),
       );
 
       expect((await service.history()).single.likelyDuplicate, isTrue);

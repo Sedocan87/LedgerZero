@@ -131,7 +131,24 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
                 currencyCode: account.currency,
               ),
             );
-      messenger.showSnackBar(SnackBar(content: Text(message)));
+      // Undo (outliving this screen) restores the cleared status and
+      // removes the adjustment.
+      final undo = ref.read(undoServiceProvider);
+      messenger.showSnackBar(
+        SnackBar(
+          persist: false,
+          content: Text(message),
+          action: SnackBarAction(
+            label: l10n.undo,
+            onPressed: () => undo.undo(result.action).catchError((
+              Object e,
+              StackTrace stackTrace,
+            ) {
+              Logger.error('Undoing the reconciliation failed', e, stackTrace);
+            }),
+          ),
+        ),
+      );
       if (mounted) {
         Navigator.of(context).pop();
       }

@@ -87,10 +87,11 @@ enum CaptureStatus {
   /// from the log.
   failed,
 
-  /// Not booked: a transaction with the same amount within a day already
-  /// exists in the linked account (the bank and the wallet app both
-  /// notified, or an authorisation was followed by the booking). The user
-  /// can add it anyway from the log.
+  /// Not booked, or taken back: a transaction that looks like the same
+  /// payment exists in the linked account (the bank and the wallet app
+  /// both notified, an authorisation was followed by the booking, it was
+  /// entered by hand, or the other household phone captured it too). The
+  /// user can add it anyway from the log.
   duplicate,
 }
 
@@ -108,6 +109,7 @@ class CapturedNotification {
     this.status = CaptureStatus.pending,
     this.transactionId,
     this.error,
+    this.byUser = false,
   });
 
   final String id;
@@ -119,15 +121,29 @@ class CapturedNotification {
   final CaptureStatus status;
 
   /// The transaction it was booked as ([CaptureStatus.added]), when known.
+  /// A notification that listed several payments holds their ids joined
+  /// with commas (see [transactionIds]).
   final String? transactionId;
 
   /// For [CaptureStatus.failed]: the error class and message.
   final String? error;
 
+  /// For [CaptureStatus.added]: the user chose to add it (from the log, or
+  /// as a separate payment), so the capture service never takes the
+  /// transaction back as a duplicate.
+  final bool byUser;
+
+  /// The transactions it was booked as.
+  List<String> get transactionIds => switch (transactionId) {
+    null || '' => const [],
+    final ids => ids.split(','),
+  };
+
   CapturedNotification copyWith({
     CaptureStatus? status,
     String? transactionId,
     String? error,
+    bool byUser = false,
   }) => CapturedNotification(
     id: id,
     packageName: packageName,
@@ -138,6 +154,7 @@ class CapturedNotification {
     status: status ?? this.status,
     transactionId: transactionId,
     error: error,
+    byUser: byUser,
   );
 
   factory CapturedNotification.fromJson(Map<String, Object?> json) =>
@@ -156,6 +173,7 @@ class CapturedNotification {
         ),
         transactionId: json['transactionId'] as String?,
         error: json['error'] as String?,
+        byUser: json['byUser'] == true,
       );
 }
 
@@ -190,12 +208,14 @@ abstract class NotificationCaptureChannel {
   Future<List<CapturedNotification>> log();
 
   /// Records what became of the notifications [ids] (with the booked
-  /// transaction's id, or the error for [CaptureStatus.failed]).
+  /// transaction's id, or the error for [CaptureStatus.failed]; [byUser]
+  /// as in [CapturedNotification.byUser]).
   Future<void> setStatus(
     Iterable<String> ids,
     CaptureStatus status, {
     String? transactionId,
     String? error,
+    bool byUser = false,
   });
 
   /// Logs the notifications of [packageName] showing now as
@@ -328,6 +348,7 @@ class PlatformNotificationCaptureChannel implements NotificationCaptureChannel {
     CaptureStatus status, {
     String? transactionId,
     String? error,
+    bool byUser = false,
   }) async {
     if (!isSupported || ids.isEmpty) {
       return;
@@ -337,6 +358,7 @@ class PlatformNotificationCaptureChannel implements NotificationCaptureChannel {
       'status': status.name,
       'transactionId': transactionId,
       'error': error,
+      'byUser': byUser,
     });
   }
 

@@ -182,6 +182,101 @@ void main() {
     expect(await t.budgeting.isMonthEmpty(december), isTrue);
   });
 
+  group('the template was deleted and the month is short of money', () {
+    late NewMonthFillController c;
+
+    setUp(() async {
+      await t.budgeting.saveBudgetTemplate('Lean', october);
+      final template = (await t.budgeting.getAllTemplates()).single;
+      // 3,000 - 1,300 (October) - 1,000 rent = 700 left: 600 short.
+      await t.addTransaction(accountId: 'a', amount: -100000, categoryId: rent);
+      c = controller();
+      await c.setSource(AutoFillSource.template, templateId: template.id);
+      // Deleted behind the setting's back (the paired phone, or a restore).
+      await t.budgeting.deleteTemplate(template.id);
+      now = DateTime(2099, 11, 2);
+      await c.runIfDue();
+    });
+
+    test('the month waits, is not marked handled, and the setting falls '
+        'back to the month before', () async {
+      expect(c.state.source, AutoFillSource.previousMonth);
+      expect(c.state.templateId, isNull);
+      expect(c.state.waiting?.month, november);
+      expect(c.state.waiting?.missing, 60000);
+      expect(prefs.getString(NewMonthFillController.lastMonthKey), '2099-10');
+      // The fallback is stored.
+      expect(controller().state.source, AutoFillSource.previousMonth);
+    });
+
+    test('it is filled when the salary arrives', () async {
+      await t.addTransaction(accountId: 'a', amount: 250000);
+      await c.runIfDue();
+      expect(await budgeted(groceries, november), 30000);
+      expect(await budgeted(rent, november), 100000);
+      expect(c.state.waiting, isNull);
+      expect(prefs.getString(NewMonthFillController.lastMonthKey), '2099-11');
+    });
+
+    test('"Fill anyway" fills it', () async {
+      await c.fillAnyway();
+      expect(await budgeted(groceries, november), 30000);
+      expect(c.state.waiting, isNull);
+      expect(c.state.note?.month, november);
+    });
+  });
+
+  group('deleting the template the automatic fill uses', () {
+    test('switches to the month before without touching the month', () async {
+      await t.budgeting.saveBudgetTemplate('Lean', october);
+      final template = (await t.budgeting.getAllTemplates()).single;
+      final c = controller();
+      await c.setSource(AutoFillSource.template, templateId: template.id);
+      expect(c.usesTemplate(template.id), isTrue);
+      expect(c.usesTemplate('another'), isFalse);
+
+      now = DateTime(2099, 11, 2);
+      await t.budgeting.deleteTemplate(template.id);
+      await c.templateDeleted(template.id);
+      expect(c.state.source, AutoFillSource.previousMonth);
+      expect(c.state.templateId, isNull);
+      expect(prefs.getString(NewMonthFillController.templateKey), isNull);
+      // November is still due.
+      expect(prefs.getString(NewMonthFillController.lastMonthKey), '2099-10');
+      await c.runIfDue();
+      expect(await budgeted(groceries, november), 30000);
+    });
+
+    test('another template leaves the setting alone', () async {
+      await t.budgeting.saveBudgetTemplate('Lean', october);
+      final template = (await t.budgeting.getAllTemplates()).single;
+      final c = controller();
+      await c.setSource(AutoFillSource.template, templateId: template.id);
+      await c.templateDeleted('another');
+      expect(c.state.source, AutoFillSource.template);
+      expect(c.state.templateId, template.id);
+    });
+
+    test('a wait computed from the template is recomputed', () async {
+      await t.budgeting.saveBudgetTemplate('Lean', october);
+      final template = (await t.budgeting.getAllTemplates()).single;
+      await t.addTransaction(accountId: 'a', amount: -100000, categoryId: rent);
+      // October is emptied: the month before has nothing to copy.
+      await t.budgeting.resetBudget(october);
+      final c = controller();
+      await c.setSource(AutoFillSource.template, templateId: template.id);
+      now = DateTime(2099, 11, 2);
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 250000, october);
+      await c.runIfDue();
+      expect(c.state.waiting?.total, 130000);
+
+      await t.budgeting.deleteTemplate(template.id);
+      await c.templateDeleted(template.id);
+      // Now waiting for October's 2,500 instead of the template's 1,300.
+      expect(c.state.waiting?.total, 250000);
+    });
+  });
+
   test('a stale wait is dropped when the month changes', () async {
     await t.addTransaction(accountId: 'a', amount: -100000, categoryId: rent);
     final c = controller();

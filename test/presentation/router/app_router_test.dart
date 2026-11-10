@@ -27,10 +27,10 @@ import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
-import 'package:ledger_zero/services/security/key_vault.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/app_directories.dart';
 import '../../helpers/security_fakes.dart';
 import '../../helpers/test_database.dart';
 
@@ -42,7 +42,10 @@ class _NoBackupReminder extends Mock implements BackupScheduler {
 void main() {
   late TestDatabase t;
 
-  setUp(() => t = TestDatabase());
+  setUp(() {
+    mockAppDirectories();
+    t = TestDatabase();
+  });
   tearDown(() => t.close());
 
   /// Pumps the real router. [onboarded] is what the app persisted; the app
@@ -51,7 +54,12 @@ void main() {
     WidgetTester tester, {
     required bool onboarded,
   }) async {
-    SharedPreferences.setMockInitialValues({'user_onboarded': onboarded});
+    SharedPreferences.setMockInitialValues({
+      'user_onboarded': onboarded,
+      // The app lock is on and its prompt is dismissed: the app stays at
+      // the lock screen until a test unlocks it.
+      kAppLockEnabledKey: true,
+    });
     final prefs = await SharedPreferences.getInstance();
     final store = InMemorySecureStore();
     final container = ProviderContainer(
@@ -59,16 +67,9 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         databaseProvider.overrideWithValue(t.db),
         secureStoreProvider.overrideWithValue(store),
-        legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
-        keyVaultProvider.overrideWithValue(
-          KeyVault(store, newKdfParams: fastKdf),
-        ),
-        biometricKeyStoreProvider.overrideWithValue(
-          FakeBiometricKeyStore(available: false),
-        ),
         backupSchedulerProvider.overrideWithValue(_NoBackupReminder()),
         appLockAuthenticatorProvider.overrideWithValue(
-          FakeAppLockAuthenticator(),
+          FakeAppLockAuthenticator(result: AppLockResult.cancelled),
         ),
       ],
     );
@@ -327,6 +328,76 @@ void main() {
     await unmount(tester, c);
   });
 
+  testWidgets('back from the first-account step returns to the security '
+      'step, and Continue leads to the account step again without '
+      'finishing onboarding', (tester) async {
+    final dir = Directory.systemTemp.createTempSync('lz_router_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async => dir.path,
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            null,
+          ),
+    );
+    final c = await pumpRouter(tester, onboarded: false);
+    final router = c.read(routerProvider);
+
+    Future<void> continueToAccountStep() async {
+      await tester.tap(find.text('Continue'));
+      for (
+        var i = 0;
+        i < 200 && find.byType(AddEditAccountScreen).evaluate().isEmpty;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      await tester.pumpAndSettle();
+    }
+
+    router.goNamed('security-setup');
+    await tester.pumpAndSettle();
+    await continueToAccountStep();
+    expect(location(c), '/onboarding/first-account');
+    // The session (and so the database) this onboarding opened: going back
+    // must not replace it.
+    expect(c.read(sessionProvider).isOpen, isTrue);
+    final session = c.read(databaseProvider);
+
+    // System back, then the app bar's back arrow.
+    for (final viaAppBar in [false, true]) {
+      if (viaAppBar) {
+        await tester.tap(find.byType(BackButton));
+      } else {
+        await tester.binding.handlePopRoute();
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(SecuritySetupScreen), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(c.read(authProvider).isOnboarded, isFalse);
+
+      await continueToAccountStep();
+      expect(find.byType(AddEditAccountScreen), findsOneWidget);
+      expect(location(c), '/onboarding/first-account');
+      expect(c.read(authProvider).isOnboarded, isFalse);
+      expect(c.read(databaseProvider), same(session));
+      expect(
+        find.text('Your existing data on this phone was found and kept.'),
+        findsNothing,
+      );
+    }
+    await c.read(sessionProvider.notifier).close();
+    await unmount(tester, c);
+  });
+
   testWidgets('literal paths open their own screen, not a sibling :id route', (
     tester,
   ) async {
@@ -360,6 +431,27 @@ void main() {
           .accountId,
       isNull,
     );
+    await unmount(tester, c);
+  });
+
+  testWidgets('a route that needs its arguments goes Home when opened '
+      'without them (a link or a restored location)', (tester) async {
+    final c = await pumpRouter(tester, onboarded: true);
+    unlock(c);
+    await tester.pumpAndSettle();
+
+    for (final path in [
+      '/filtered-transactions',
+      '/settings/import-csv/confirm',
+    ]) {
+      c.read(routerProvider).go('/accounts');
+      await tester.pumpAndSettle();
+      c.read(routerProvider).go(path);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: path);
+      expect(location(c), '/', reason: path);
+      expect(find.byType(HomeScreen), findsOneWidget, reason: path);
+    }
     await unmount(tester, c);
   });
 

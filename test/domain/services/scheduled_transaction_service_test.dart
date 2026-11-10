@@ -8,6 +8,7 @@ import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
+import 'package:ledger_zero/domain/services/schedule_stamps.dart';
 import 'package:ledger_zero/domain/services/scheduled_transaction_service.dart';
 import 'package:ledger_zero/domain/services/transaction_service_types.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
@@ -52,6 +53,17 @@ class _FailingUpdateRepository implements ScheduledTransactionRepository {
       throw StateError('simulated failure while updating ${t.id}');
     }
     return _inner.updateScheduledTransaction(t);
+  }
+
+  @override
+  Future<void> storeCatchUp(
+    ScheduledTransaction t, {
+    required int occurrences,
+  }) {
+    if (failFor.contains(t.id)) {
+      throw StateError('simulated failure while updating ${t.id}');
+    }
+    return _inner.storeCatchUp(t, occurrences: occurrences);
   }
 
   @override
@@ -731,6 +743,152 @@ void main() {
       expect((await reload()).nextDate, isNull);
       expect(notifications.cancelled, contains(id));
     });
+  });
+
+  group('what the catch-up writes does not look newer than a person\'s '
+      'edit on another phone', () {
+    Future<DateTime> scheduleStamp() async {
+      final row = await t.db.scheduledTransactionsDao
+          .getScheduledTransactionById('sched-1');
+      return row!.updatedAt!;
+    }
+
+    test('an occurrence is stamped with the day before its date', () async {
+      await addSchedule(nextDate: DateTime.utc(2024, 3, 15));
+      await service.processDueTransactions(today: today);
+
+      for (final occurrence in await occurrences()) {
+        expect(
+          occurrence.updatedAt,
+          ScheduleStamps.occurrence(occurrence.date),
+        );
+      }
+      expect(
+        ScheduleStamps.occurrence(DateTime.utc(2024, 3, 1)),
+        DateTime.utc(2024, 2, 29),
+      );
+    });
+
+    test('the schedule moves one millisecond per occurrence, not to '
+        'now', () async {
+      await addSchedule(nextDate: DateTime.utc(2024, 3, 15));
+      final before = await scheduleStamp();
+
+      await service.processDueTransactions(today: today); // 3 occurrences
+
+      expect(
+        await scheduleStamp(),
+        before.add(const Duration(milliseconds: 3)),
+      );
+      expect((await reload()).nextDate, DateTime.utc(2024, 6, 15));
+    });
+
+    test('finishing a schedule past its end moves it one '
+        'millisecond', () async {
+      await addSchedule(
+        nextDate: DateTime.utc(2024, 3, 15),
+        endDate: DateTime.utc(2024, 3, 15),
+      );
+      await t.db.customStatement(
+        "UPDATE scheduled_transactions SET next_date = '2024-04-15T00:00:00.000Z', "
+        "updated_at = '2024-01-01T00:00:00.000Z'",
+      );
+
+      await service.processDueTransactions(today: today);
+
+      expect((await reload()).nextDate, isNull);
+      expect(await scheduleStamp(), DateTime.utc(2024, 1, 1, 0, 0, 0, 1));
+    });
+
+    test('an edit and a skip by hand carry the time they were made', () async {
+      await addSchedule(nextDate: DateTime.utc(2024, 3, 15));
+      await t.db.customStatement(
+        "UPDATE scheduled_transactions SET updated_at = '2024-01-01T00:00:00.000Z'",
+      );
+      final started = DateTime.now().toUtc().subtract(
+        const Duration(seconds: 1),
+      );
+
+      await service.skipOccurrence('sched-1');
+      expect((await scheduleStamp()).isAfter(started), isTrue);
+
+      await t.db.customStatement(
+        "UPDATE scheduled_transactions SET updated_at = '2024-01-01T00:00:00.000Z'",
+      );
+      await service.saveScheduledTransaction(
+        (await reload()).copyWith(amount: -123),
+        isNew: false,
+      );
+      expect((await scheduleStamp()).isAfter(started), isTrue);
+    });
+
+    test('a skip leaves the occurrence as a deleted transaction, so it is '
+        'never booked', () async {
+      await addSchedule(nextDate: DateTime.utc(2024, 5, 15));
+
+      await service.skipOccurrence('sched-1');
+
+      expect(await occurrences(), isEmpty);
+      final marker = await t.db.transactionsDao
+          .getTransactionByIdIncludingDeleted(
+            occurrenceId(DateTime.utc(2024, 5, 15)),
+          );
+      expect(marker, isNotNull);
+      expect(marker!.isDeleted, isTrue);
+      expect(marker.amount, -100000);
+      // The account balance does not see it.
+      expect((await t.accounts.getAccountById(accountId))!.balance, 0);
+      // Nor does a later catch-up bring it back.
+      await t.scheduledTransactions.updateScheduledTransaction(
+        (await reload()).copyWith(nextDate: DateTime.utc(2024, 5, 15)),
+      );
+      expect(await service.processDueTransactions(today: today), 0);
+      expect(await occurrences(), isEmpty);
+    });
+  });
+
+  test('(ledger improvement 5) an occurrence in an off-budget account gets '
+      'no category, neither the schedule\'s nor a rule\'s', () async {
+    final groceries = await t.categoryId('Groceries');
+    final depot = (await t.addAccount(name: 'Depot', onBudget: false)).id;
+    await t.rules.createRule(
+      Rule(
+        id: 'r',
+        name: 'r',
+        priority: 0,
+        isActive: true,
+        matchLogic: RuleMatchLogic.and,
+        conditions: const [
+          RuleCondition(
+            type: RuleConditionType.amount,
+            operator: RuleConditionOperator.lessThan,
+            value: '0',
+          ),
+        ],
+        actions: [
+          RuleAction(type: RuleActionType.setCategory, value: groceries),
+        ],
+      ),
+    );
+    await addSchedule(
+      id: 'depot',
+      nextDate: today,
+      categoryId: groceries,
+      account: depot,
+    );
+    await addSchedule(id: 'rule-only', nextDate: today, account: depot);
+    await addSchedule(id: 'on-budget', nextDate: today, categoryId: groceries);
+
+    expect(await service.processDueTransactions(today: today), 3);
+    final rows = {for (final r in await occurrences()) r.accountId + r.id: r};
+    expect(
+      rows.values.where((r) => r.accountId == depot).map((r) => r.categoryId),
+      [null, null],
+    );
+    expect(
+      rows.values.singleWhere((r) => r.accountId == accountId).categoryId,
+      groceries,
+    );
   });
 
   group('closed accounts, end date and catch-up cap (L3, L7)', () {

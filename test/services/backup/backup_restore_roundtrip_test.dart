@@ -3,11 +3,9 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
-import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/database.dart';
-import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/services/backup/backup_format.dart';
 import 'package:ledger_zero/services/backup/backup_service.dart';
 import 'package:ledger_zero/services/backup/restore_service.dart';
@@ -15,27 +13,22 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
-import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
-import '../../database/generated_migrations/schema.dart';
 import '../../domain/services/ledger_test_helpers.dart';
 import '../../helpers/security_fakes.dart';
 import '../../helpers/test_database.dart';
 
-/// Opens/closes the live database like the providers do: a connection keyed
-/// with the session key, on the real file.
+/// Opens/closes the live database like the providers do, on the real file.
 class _FileLifecycle implements DatabaseLifecycle {
   final File file;
-  final Uint8List key;
   AppDatabase? db;
   int failReopens = 0;
 
-  _FileLifecycle(this.file, this.key);
+  _FileLifecycle(this.file);
 
-  AppDatabase open() =>
-      db = AppDatabase(openEncryptedConnection(key, file: file));
+  AppDatabase open() => db = AppDatabase(openConnection(file: file));
 
   @override
   Future<void> close() async {
@@ -63,7 +56,6 @@ void main() {
   late Directory dir;
   late Directory tempDir;
   late File liveFile;
-  late Uint8List deviceKey;
   late _FileLifecycle lifecycle;
   late SharedPreferences prefs;
 
@@ -72,8 +64,7 @@ void main() {
     dir = Directory.systemTemp.createTempSync('lz_roundtrip_');
     tempDir = Directory('${dir.path}/tmp')..createSync();
     liveFile = File('${dir.path}/ledger_zero.db');
-    deviceKey = secureRandomBytes(32);
-    lifecycle = _FileLifecycle(liveFile, deviceKey);
+    lifecycle = _FileLifecycle(liveFile);
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
   });
@@ -91,11 +82,10 @@ void main() {
   BackupService backupService(AppDatabase db) =>
       BackupService(db, files: files(), kdf: fastKdf);
 
-  RestoreService restoreService({Uint8List? key}) => RestoreService(
+  RestoreService restoreService() => RestoreService(
     () => lifecycle.db!,
     lifecycle: lifecycle,
     databaseFile: () async => liveFile,
-    dataKey: () => key ?? deviceKey,
     rebootstrap: SyncRebootstrap(prefs),
     tempDirectory: () async => tempDir,
   );
@@ -108,7 +98,7 @@ void main() {
       latin1.decode(file.readAsBytesSync()).contains(text);
 
   test(
-    'backup of the keyed database is a plain snapshot under the backup password',
+    'backup of the database is a plain snapshot under the backup password',
     () async {
       final db = lifecycle.open();
       await addAccount(db, 'a1', 'Household Checking');
@@ -127,8 +117,7 @@ void main() {
       expect(leftovers, isEmpty);
       expect(prefs.getInt('last_backup_timestamp'), isNull); // no scheduler
 
-      // The decrypted content is a plain SQLite file (not one still keyed
-      // with the device key, which `VACUUM INTO` would have produced).
+      // The decrypted content is a plain SQLite file of the current schema.
       final out = File('${dir.path}/check.sqlite');
       await BackupFormat.decryptFile(
         input: backup,
@@ -152,58 +141,45 @@ void main() {
     },
   );
 
-  test(
-    'restore replaces the data, keeps the file encrypted with the device key and marks sync for re-bootstrap',
-    () async {
-      var db = lifecycle.open();
-      await addAccount(db, 'a1', 'Household Checking');
-      final backup = await backupService(
-        db,
-      ).createBackup(password: 'backup pw');
-      await addAccount(db, 'a2', 'Added After Backup');
-      expect(
-        (await db
-                .customSelect('SELECT count(*) AS c FROM pending_sync_changes')
-                .getSingle())
-            .data['c'],
-        greaterThan(0),
-      );
+  test('restore replaces the data and marks sync for re-bootstrap', () async {
+    var db = lifecycle.open();
+    await addAccount(db, 'a1', 'Household Checking');
+    final backup = await backupService(db).createBackup(password: 'backup pw');
+    await addAccount(db, 'a2', 'Added After Backup');
+    expect(
+      (await db
+              .customSelect('SELECT count(*) AS c FROM pending_sync_changes')
+              .getSingle())
+          .data['c'],
+      greaterThan(0),
+    );
 
-      await restoreService().restoreBackup(backup, password: 'backup pw');
+    await restoreService().restoreBackup(backup, password: 'backup pw');
 
-      db = lifecycle.db!;
-      final accounts = await db.select(db.accounts).get();
-      expect(accounts.map((a) => a.id), ['a1']);
-      final pending = await db
-          .customSelect('SELECT count(*) AS c FROM pending_sync_changes')
-          .getSingle();
-      expect(pending.data['c'], 0);
-      expect(prefs.getBool(SyncRebootstrap.prefsKey), isTrue);
-      // The device id of the backing phone is never cloned.
-      expect(await db.syncDao.getValue('device_id'), isNull);
+    db = lifecycle.db!;
+    final accounts = await db.select(db.accounts).get();
+    expect(accounts.map((a) => a.id), ['a1']);
+    final pending = await db
+        .customSelect('SELECT count(*) AS c FROM pending_sync_changes')
+        .getSingle();
+    expect(pending.data['c'], 0);
+    expect(prefs.getBool(SyncRebootstrap.prefsKey), isTrue);
+    // The device id of the backing phone is never cloned.
+    expect(await db.syncDao.getValue('device_id'), isNull);
 
-      await lifecycle.close();
-      expect(
-        ascii.decode(
-          liveFile.readAsBytesSync().sublist(0, 15),
-          allowInvalid: true,
-        ),
-        isNot('SQLite format 3'),
-      );
-      expect(SqlCipher.canOpen(liveFile, RawSqlCipherKey(deviceKey)), isTrue);
-      expect(containsPlaintext(liveFile, 'Household Checking'), isFalse);
-      // Exactly no previous copy and no staging file remain; temp is clean.
-      expect(File('${liveFile.path}.previous').existsSync(), isFalse);
-      expect(File('${liveFile.path}.restore-new').existsSync(), isFalse);
-      expect(
-        tempDir
-            .listSync(recursive: true)
-            .whereType<File>()
-            .where((f) => !f.path.endsWith('.lzbk')),
-        isEmpty,
-      );
-    },
-  );
+    await lifecycle.close();
+    expect(isReadableDatabase(liveFile), isTrue);
+    // Exactly no previous copy and no staging file remain; temp is clean.
+    expect(File('${liveFile.path}.previous').existsSync(), isFalse);
+    expect(File('${liveFile.path}.restore-new').existsSync(), isFalse);
+    expect(
+      tempDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => !f.path.endsWith('.lzbk')),
+      isEmpty,
+    );
+  });
 
   group('interrupted swap (process killed during the restore)', () {
     /// Lays out the files as they are right after the live database was
@@ -215,9 +191,7 @@ void main() {
       await addAccount(db, 'old', 'Before Restore');
       await lifecycle.close();
       if (stagedUsable) {
-        db = AppDatabase(
-          openEncryptedConnection(deviceKey, file: files.staged),
-        );
+        db = AppDatabase(openConnection(file: files.staged));
         await addAccount(db, 'new', 'From Backup');
         await db.close();
       } else {
@@ -302,9 +276,7 @@ void main() {
   group('restore warnings (prepareRestore)', () {
     Future<File> partnerBackup() async {
       final otherFile = File('${dir.path}/partner.db');
-      final other = AppDatabase(
-        openEncryptedConnection(secureRandomBytes(32), file: otherFile),
-      );
+      final other = AppDatabase(openConnection(file: otherFile));
       await other.syncDao.setValue(AppDatabase.memberIdKey, 'member-partner');
       await other
           .into(other.accounts)
@@ -401,12 +373,10 @@ void main() {
     );
   });
 
-  test('a backup from another device restores into this device key', () async {
-    // Made on device A with key A.
+  test('a backup from another device restores here', () async {
+    // Made on device A.
     final otherFile = File('${dir.path}/other.db');
-    final otherDb = AppDatabase(
-      openEncryptedConnection(secureRandomBytes(32), file: otherFile),
-    );
+    final otherDb = AppDatabase(openConnection(file: otherFile));
     await addAccount(otherDb, 'x1', 'From Device A');
     final backup = await backupService(
       otherDb,
@@ -424,7 +394,7 @@ void main() {
       ['From Device A'],
     );
     await lifecycle.close();
-    expect(SqlCipher.canOpen(liveFile, RawSqlCipherKey(deviceKey)), isTrue);
+    expect(isReadableDatabase(liveFile), isTrue);
   });
 
   test('wrong password leaves the live database untouched', () async {
@@ -463,35 +433,38 @@ void main() {
     },
   );
 
-  test('restores and migrates a backup with an older schema (v14)', () async {
-    final verifier = SchemaVerifier(GeneratedHelper());
-    final schema = await verifier.schemaAt(14);
-    final raw = schema.rawDatabase;
-    raw.execute(
-      'INSERT INTO accounts (id, name, type, currency, starting_balance, '
-      'current_balance, is_closed) VALUES '
-      "('old1', 'Old Account', 'checking', 'EUR', 12.5, 12.5, 0)",
-    );
-    final oldPlain = File('${dir.path}/old_v14.sqlite');
-    raw.execute('VACUUM INTO ?', [oldPlain.path]);
-    final backup = File('${dir.path}/old.lzbk');
+  test('a backup from a schema older than '
+      'v${AppDatabase.minimumSchemaVersion} is refused', () async {
+    final plain = File('${dir.path}/older.sqlite');
+    final tmp = AppDatabase(NativeDatabase(plain));
+    await tmp.select(tmp.accounts).get();
+    await tmp.close();
+    const old = AppDatabase.minimumSchemaVersion - 1;
+    final raw = sqlite.sqlite3.open(plain.path)
+      ..execute('PRAGMA user_version = $old');
+    raw.close();
+    final backup = File('${dir.path}/older.lzbk');
     await BackupFormat.encryptFile(
-      plaintext: oldPlain,
+      plaintext: plain,
       output: backup,
       password: 'backup pw',
-      schemaVersion: 14,
+      schemaVersion: old,
       kdf: fastKdf(),
     );
-
-    lifecycle.open();
-    await restoreService().restoreBackup(backup, password: 'backup pw');
-
-    final db = lifecycle.db!;
-    final account = await db.select(db.accounts).getSingle();
-    expect(account.id, 'old1');
-    expect(account.startingBalance, 1250); // REAL -> minor units (v15)
-    final version = await db.customSelect('PRAGMA user_version').getSingle();
-    expect(version.data.values.first, AppDatabase.currentSchemaVersion);
+    final db = lifecycle.open();
+    await addAccount(db, 'a1', 'Untouched');
+    await expectLater(
+      restoreService().restoreBackup(backup, password: 'backup pw'),
+      throwsA(
+        isA<BackupTooOldException>().having(
+          (e) => e.schemaVersion,
+          'schemaVersion',
+          old,
+        ),
+      ),
+    );
+    expect((await db.select(db.accounts).get()).single.id, 'a1');
+    expect(File('${liveFile.path}.restore-new').existsSync(), isFalse);
   });
 
   test('a backup from a newer schema is refused', () async {

@@ -89,25 +89,37 @@ void main() {
     expect(container.read(appFormatterProvider).locale, 'en');
   });
 
-  test('date format and first day of week settings are honoured', () {
+  test('the date format setting is honoured', () {
     final day = DateTime.utc(2024, 12, 31);
     String format(AppDateFormat f) =>
         AppFormatter.fromSettings(SettingsState(dateFormat: f)).formatDate(day);
     expect(format(AppDateFormat.iso8601), '2024-12-31');
     expect(format(AppDateFormat.european), '31.12.2024');
     expect(format(AppDateFormat.us), '12/31/2024');
+  });
 
-    final monday = AppFormatter.fromSettings(
-      const SettingsState(firstDayOfWeek: AppFirstDayOfWeek.monday),
+  test('by default dates follow the app language', () {
+    final day = DateTime.utc(2024, 12, 31, 0, 0);
+    String format(Locale language) => AppFormatter.fromSettings(
+      SettingsState(language: language),
+    ).formatDate(day);
+    expect(const SettingsState().dateFormat, AppDateFormat.system);
+    expect(format(const Locale('de')), '31.12.2024');
+    expect(format(const Locale('en')), '12/31/2024');
+    // From the phone's language when none is chosen in Settings.
+    expect(
+      AppFormatter.fromSettings(
+        const SettingsState(),
+        deviceLocales: const [Locale('de', 'DE')],
+      ).formatDate(day),
+      '31.12.2024',
     );
-    // 2024-12-31 is a Tuesday.
-    expect(monday.startOfWeek(day), DateTime.utc(2024, 12, 30));
-    final sunday = AppFormatter.fromSettings(const SettingsState());
-    expect(sunday.startOfWeek(day), DateTime.utc(2024, 12, 29));
   });
 
   test('calendar days are shown as stored, not shifted to local time', () {
-    final fmt = AppFormatter.fromSettings(const SettingsState());
+    final fmt = AppFormatter.fromSettings(
+      const SettingsState(dateFormat: AppDateFormat.iso8601),
+    );
     expect(fmt.formatDate(DateTime.utc(2024, 1, 1)), '2024-01-01');
   });
 }

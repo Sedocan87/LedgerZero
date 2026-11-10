@@ -1,15 +1,47 @@
 import 'package:csv/csv.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/services/export/csv_sanitizer.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 
+/// The variants of the transaction CSV export. Header names and ISO dates
+/// are the same in both; the CSV import reads both.
+enum TransactionCsvFormat {
+  /// Comma-delimited, dot decimals, plain UTF-8: the machine format that
+  /// scripts and most apps expect.
+  standard,
+
+  /// For spreadsheet apps set to German (Excel): semicolon-delimited,
+  /// decimal comma, and a UTF-8 byte order mark so umlauts are read.
+  germanSpreadsheet,
+}
+
 class TransactionExportService {
   final ExportFileService _files;
 
   TransactionExportService({ExportFileService? files})
     : _files = files ?? ExportFileService();
+
+  /// The export's category names: category id -> `Group: Category` (the
+  /// bare name for a category without group). A name can exist in several
+  /// groups ("Insurance" under Home and under Car); the qualified form is
+  /// what `CsvImportService.assignCategories` needs to tell them apart, so
+  /// an exported file re-imports with every category.
+  static Map<String, String> qualifiedCategoryNames(
+    List<Category> categories,
+    List<CategoryGroup> groups,
+  ) {
+    final groupNames = {for (final g in groups) g.id: g.name};
+    return {
+      for (final c in categories)
+        c.id: groupNames[c.categoryGroupId] == null
+            ? c.name
+            : '${groupNames[c.categoryGroupId]}: ${c.name}',
+    };
+  }
 
   /// Builds the CSV text. Text cells (payee, memo, names) are neutralised
   /// against formula injection; dates and amounts stay plain values.
@@ -18,11 +50,13 @@ class TransactionExportService {
     Map<String, String> payeeNames = const {},
     Map<String, String> categoryNames = const {},
     Map<String, String> accountNames = const {},
+    TransactionCsvFormat format = TransactionCsvFormat.standard,
   }) {
-    // Header names, ISO dates and plain numbers are a machine format and
-    // stay English in every app language, so the file re-imports and opens
-    // in any spreadsheet regardless of locale (CsvImportService recognises
-    // these headers).
+    final spreadsheet = format == TransactionCsvFormat.germanSpreadsheet;
+    // Header names and ISO dates are a machine format and stay English in
+    // every app language, so the file re-imports whatever the locale
+    // (CsvImportService recognises these headers). Only the delimiter and
+    // the decimal separator follow [format].
     final rows = <List<Object?>>[
       [
         'Date',
@@ -70,28 +104,38 @@ class TransactionExportService {
         payee,
         category,
         t.memo ?? '',
-        // Plain decimal in major units, e.g. -12.50 (amounts are minor units).
-        CsvLiteral(Money.toDecimalString(t.amount)),
+        // Plain decimal in major units, e.g. -12.50 (amounts are minor
+        // units); -12,50 for a German spreadsheet.
+        CsvLiteral(
+          spreadsheet
+              ? Money.toDecimalString(t.amount).replaceAll('.', ',')
+              : Money.toDecimalString(t.amount),
+        ),
         CsvLiteral(t.cleared.name),
         CsvLiteral(t.approved ? 'Yes' : 'No'),
         transferAccount,
       ]);
     }
-    return const ListToCsvConverter().convert(CsvSanitizer.rows(rows));
+    final csv = ListToCsvConverter(
+      fieldDelimiter: spreadsheet ? ';' : ',',
+    ).convert(CsvSanitizer.rows(rows));
+    return spreadsheet ? '\u{FEFF}$csv' : csv;
   }
 
   /// Exports a list of transactions to a CSV file and triggers the share sheet.
   ///
   /// [transactions]: The list of transactions to export.
   /// [payeeNames]: A map of payee IDs to names.
-  /// [categoryNames]: A map of category IDs to names.
+  /// [categoryNames]: A map of category IDs to names; pass
+  /// [qualifiedCategoryNames] so the file re-imports (see there).
   /// [accountNames]: A map of account IDs to names.
   /// [filenamePrefix]: The prefix for the filename (default: 'transactions_export').
   /// [shareText]: Localised text for the share sheet.
   ///
-  /// The file is a data export: English column names, ISO dates and plain
-  /// decimal amounts, whatever the app language, so spreadsheets, scripts
-  /// and the CSV import read it the same way everywhere.
+  /// The file is a data export: English column names and ISO dates,
+  /// whatever the app language, so scripts and the CSV import read it the
+  /// same way everywhere. [format] chooses the delimiter and decimal
+  /// separator (see [TransactionCsvFormat]).
   Future<String> exportTransactionsToCsv({
     required List<Transaction> transactions,
     Map<String, String> payeeNames = const {},
@@ -99,12 +143,14 @@ class TransactionExportService {
     Map<String, String> accountNames = const {},
     String filenamePrefix = 'transactions_export',
     String? shareText,
+    TransactionCsvFormat format = TransactionCsvFormat.standard,
   }) async {
     final csv = buildCsv(
       transactions: transactions,
       payeeNames: payeeNames,
       categoryNames: categoryNames,
       accountNames: accountNames,
+      format: format,
     );
 
     final dateStr = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());

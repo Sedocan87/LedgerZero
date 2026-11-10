@@ -47,6 +47,13 @@ typedef TransactionSavedHook =
 ///   one), except for the cross-budget transfer rule above.
 /// * A transfer between accounts of different currencies is rejected
 ///   ([TransactionValidationError.currencyMismatch]).
+/// * A closed account takes no new rows
+///   ([TransactionValidationError.closedAccount]): neither a new
+///   transaction, nor a new transfer leg, nor a row moved in from another
+///   account. Rows that are already there can still be edited and deleted.
+///   This holds for what is entered through [save] (the form, quick add,
+///   card capture); imports, sync, restore, undo and scheduled occurrences
+///   write through the repositories and follow their own rules.
 /// * Only rows whose content actually changed are written (and recorded
 ///   for undo): editing the memo of a split leaves its children's
 ///   `updatedAt` alone, so a concurrent edit on the partner's phone is not
@@ -201,6 +208,7 @@ class TransactionService {
     if (input.isTransfer) {
       await _ensureSameCurrency(account, input.transferAccountId!);
     }
+    await _ensureOpenForNewRows(input, account, existing, counterpart);
     final before = <String, Transaction?>{
       ?existing?.id: existing,
       ?counterpart?.id: counterpart,
@@ -228,12 +236,16 @@ class TransactionService {
           date: date,
           amount: -input.amount,
           memo: input.memo,
-          // The cleared state belongs to the counterpart's own account.
-          cleared:
-              input.counterpartCleared ??
-              (sameAccount
-                  ? counterpart!.cleared
-                  : TransactionClearStatus.uncleared),
+          // The cleared state belongs to the counterpart's own account:
+          // a leg that moves there (or is new) starts uncleared and is
+          // never reconciled there.
+          cleared: _statusIn(
+            input.counterpartCleared ??
+                (sameAccount
+                    ? counterpart!.cleared
+                    : TransactionClearStatus.uncleared),
+            stays: sameAccount || existing == null,
+          ),
           approved: input.approved,
           categoryId: transferCategory.counterpart,
           transferAccountId: input.accountId,
@@ -246,6 +258,11 @@ class TransactionService {
       written.add(_deleted(counterpart, now));
     }
 
+    // A reconciled row moved to another account starts uncleared there.
+    final cleared = _statusIn(
+      input.cleared,
+      stays: existing == null || existing.accountId == input.accountId,
+    );
     final primary = Transaction(
       id: primaryId,
       accountId: input.accountId,
@@ -256,7 +273,7 @@ class TransactionService {
           ? transferCategory.primary
           : (input.isSplit ? null : categoryId),
       memo: input.memo,
-      cleared: input.cleared,
+      cleared: cleared,
       approved: input.approved,
       transferAccountId: input.isTransfer ? input.transferAccountId : null,
       transferTransactionId: counterpartId,
@@ -281,7 +298,7 @@ class TransactionService {
           payeeId: payeeId,
           categoryId: onBudget ? line.categoryId : null,
           memo: line.memo,
-          cleared: input.cleared,
+          cleared: cleared,
           approved: input.approved,
           parentTransactionId: primaryId,
           createdAt: old?.createdAt ?? now,
@@ -355,6 +372,44 @@ class TransactionService {
         'Transfer between ${from.currency} and ${to.currency} accounts',
         TransactionValidationError.currencyMismatch,
       );
+    }
+  }
+
+  /// [status] for a row that [stays] in the account it had, else (it moves
+  /// to another account, or is the new leg of an existing transaction)
+  /// with `reconciled` dropped to `uncleared`: a row is only reconciled in
+  /// the account whose reconciliation included it.
+  static TransactionClearStatus _statusIn(
+    TransactionClearStatus status, {
+    required bool stays,
+  }) => !stays && status == TransactionClearStatus.reconciled
+      ? TransactionClearStatus.uncleared
+      : status;
+
+  /// A closed account takes no new rows: the row of [input] must already
+  /// be in its account, and so must the transfer's other leg in its own,
+  /// if that account is closed.
+  Future<void> _ensureOpenForNewRows(
+    TransactionInput input,
+    Account? account,
+    Transaction? existing,
+    Transaction? counterpart,
+  ) async {
+    Never reject(String accountId) => throw ValidationException(
+      'Account $accountId is closed',
+      TransactionValidationError.closedAccount,
+    );
+    if ((account?.isClosed ?? false) &&
+        existing?.accountId != input.accountId) {
+      reject(input.accountId);
+    }
+    final transferAccountId = input.transferAccountId;
+    if (transferAccountId != null &&
+        counterpart?.accountId != transferAccountId) {
+      final to = await _accountRepository.getAccountById(transferAccountId);
+      if (to?.isClosed ?? false) {
+        reject(transferAccountId);
+      }
     }
   }
 
@@ -535,9 +590,13 @@ class TransactionService {
 
   /// Soft-deletes several transactions and everything linked to them in
   /// one unit of work with one undo action.
+  ///
+  /// [recordUndo] is false for deletes the user did not make in the UI
+  /// (card capture taking back its own booking), like in [save].
   Future<TransactionChangeSetAction?> deleteMany(
     Iterable<String> ids, {
     bool allowReconciledChange = false,
+    bool recordUndo = true,
   }) async {
     final action = await _unitOfWork.run(() async {
       final rows = await _groupsOf(ids);
@@ -567,7 +626,9 @@ class TransactionService {
       );
     });
     if (action != null) {
-      _undoService.addAction(action);
+      if (recordUndo) {
+        _undoService.addAction(action);
+      }
       Logger.info('Transactions deleted: ${action.ids.length}');
     }
     return action;
@@ -685,23 +746,30 @@ class TransactionService {
   /// Sets the category of the given rows. Split parents are skipped (their
   /// lines carry the categories), and so are transfer legs unless the
   /// transfer crosses the budget boundary and the row is its on-budget leg
-  /// (the leg that may carry a category, see [_transferCategory]).
+  /// (the leg that may carry a category, see [_transferCategory]), and rows
+  /// of off-budget accounts (a category there counts nowhere, as in
+  /// [save]).
   Future<TransactionChangeSetAction?> bulkCategorize(
     List<String> ids,
     String categoryId,
   ) async {
+    final accounts = <String, Account?>{};
+    Future<Account?> account(String id) async => accounts.containsKey(id)
+        ? accounts[id]
+        : accounts[id] = await _accountRepository.getAccountById(id);
     final eligible = <String>[];
     for (final id in ids) {
       final t = await _transactionRepository.getTransactionById(id);
       if (t == null) {
         continue;
       }
+      final from = await account(t.accountId);
+      if (from == null || !from.onBudget) {
+        continue;
+      }
       if (t.transferAccountId != null) {
-        final from = await _accountRepository.getAccountById(t.accountId);
-        final to = await _accountRepository.getAccountById(
-          t.transferAccountId!,
-        );
-        if (from == null || to == null || !from.onBudget || to.onBudget) {
+        final to = await account(t.transferAccountId!);
+        if (to == null || to.onBudget) {
           continue;
         }
       }

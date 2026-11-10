@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
+import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
@@ -215,6 +216,8 @@ void main() {
       ProviderScope(
         overrides: [
           accountRepositoryProvider.overrideWithValue(repo),
+          // Edits run in a unit of work; the repository is a mock.
+          unitOfWorkProvider.overrideWithValue(const ImmediateUnitOfWork()),
           sharedPreferencesProvider.overrideWithValue(prefs),
           _germanFormatter,
         ],
@@ -256,6 +259,8 @@ void main() {
       ProviderScope(
         overrides: [
           accountRepositoryProvider.overrideWithValue(repo),
+          // Edits run in a unit of work; the repository is a mock.
+          unitOfWorkProvider.overrideWithValue(const ImmediateUnitOfWork()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: MaterialApp(
@@ -457,6 +462,57 @@ void main() {
     expect(repo.created!.currency, 'EUR');
   });
 
+  testWidgets('an off-budget account in another currency cannot join the '
+      'budget unless it is relabelled', (tester) async {
+    SharedPreferences.setMockInitialValues({'settings_currency': 'EUR'});
+    const travel = Account(
+      id: 'travel',
+      name: 'Travel',
+      type: AccountType.checking,
+      currency: 'USD',
+      onBudget: false,
+    );
+    final repo = MockAccountRepository(
+      existing: travel,
+      accounts: const [
+        Account(
+          id: 'a1',
+          name: 'Giro',
+          type: AccountType.checking,
+          currency: 'EUR',
+        ),
+        travel,
+      ],
+    );
+    await pumpForm(tester, repo, accountId: 'travel', keepPrefs: true);
+
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    // Not silently relabelled by the switch.
+    expect(offeredCurrencies(tester), ['EUR', 'USD']);
+    final save = find.widgetWithText(ElevatedButton, 'Save Changes');
+
+    // Refused: nothing saved.
+    await tapAndSettle(tester, save);
+    expect(find.text('Not in the budget currency'), findsOneWidget);
+    expect(
+      find.textContaining('This account is in USD, your budget in EUR'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(repo.updated, isNull);
+
+    // Relabelled on request, then the usual budget-change confirmation.
+    await tapAndSettle(tester, save);
+    await tester.tap(find.byKey(const Key('account.currencyJoin.relabel')));
+    await tester.pumpAndSettle();
+    expect(find.text('Change what you budget?'), findsOneWidget);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(repo.updated!.onBudget, isTrue);
+    expect(repo.updated!.currency, 'EUR');
+  });
+
   testWidgets('a closed on-budget account does not fix the currency', (
     tester,
   ) async {
@@ -556,5 +612,54 @@ void main() {
     );
     expect(repo.updated!.color, isNull);
     expect(repo.updated!.icon, isNull);
+  });
+
+  testWidgets('Discard drops the draft: the next "Add account" starts empty', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AddEditAccountScreen(),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Giro');
+    await tester.pumpAndSettle();
+    expect(prefs.getString('draft_account_add'), contains('Giro'));
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Discard'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AddEditAccountScreen), findsNothing);
+    expect(prefs.getString('draft_account_add'), isNull);
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Giro'), findsNothing);
+    expect(find.text('Draft restored'), findsNothing);
   });
 }

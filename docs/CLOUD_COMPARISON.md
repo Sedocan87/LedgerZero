@@ -1,46 +1,45 @@
-# Cloud Storage: Google Drive
+# Where the data goes: no account, no LedgerZero server
 
-LedgerZero has no server. Sync and cloud backups use a folder in your own
-cloud storage. Google Drive is the only provider for now; choose it in
-**Settings > Sync Settings**.
+LedgerZero has no server, no account and no sign-in to any cloud service.
+The budget lives on the phone. Three things can copy it elsewhere, each
+chosen by the user and each end-to-end encrypted:
 
-## Summary
+| | What | Where it goes | Encrypted with | Set up in |
+|---|---|---|---|---|
+| Wi-Fi sync | change files and snapshots | directly to the paired phone, over the local Wi-Fi | the sync key from the pairing (AES-256-GCM) | Settings > Sync Settings |
+| Backup file | the whole database (`.lzbk`) | wherever the user saves or shares it: a folder, a USB stick, a computer, or a cloud app (Drive, Dropbox, ...) chosen in the system file picker | the backup password (Argon2id + AES-256-GCM) | Settings > Backup & Export |
+| Android backup | `db.sqlite` (with its `-wal`) and the app's preferences | the user's Google account, through Android's own backup | the phone's screen lock (Android's client-side encryption); nothing is uploaded without it | Android's settings (System > Backup on most phones) |
 
-| | Google Drive |
-|---|---|
-| Available on | Android |
-| Sign-in | Google sign-in in the app (OAuth) |
-| Location | `LedgerZero/Sync` and `LedgerZero/Backups` in your Drive |
-| App access | `drive.file` scope: only files the app created |
+Earlier builds could also sign in to Google Drive and sync through a
+folder there. That is gone (2026-11): the app holds no Google account, no
+OAuth client and no Drive permission. A stored "Google Drive" provider of
+an older build reads as "None".
 
-All devices that sync with each other must use the **same Google
-account**.
+## Wi-Fi sync
 
-## How it works
+The two phones of a household sync when both are on the same Wi-Fi with
+LedgerZero open; each works on its own in between. There is no relay: two
+phones that are never on the same Wi-Fi do not sync. Details:
+[SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md#local-wi-fi).
 
-- **Encryption**: every change file and snapshot is AES-256-GCM encrypted
-  with a key derived from your **sync passphrase** (Argon2id + HKDF). The
-  manifest in the cloud folder holds the salt, KDF parameters and a
-  key-check value, not the key. Google can store the files but not read
-  them. Backups are always encrypted with a backup password. Details:
-  [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md),
-  [ENCRYPTION.md](ENCRYPTION.md), [BACKUP_FORMAT.md](BACKUP_FORMAT.md).
-- **Sync behaviour**: one encrypted change file per sync run; conflicts are
-  resolved per row by the newest `updated_at` (UTC), with the device id as
-  tiebreaker. Files that cannot be applied are quarantined and retried. A
-  new device starts from an encrypted snapshot.
-- **Timing**: the app syncs when it is unlocked, on resume, shortly after
-  local changes, on the interval chosen under **Sync Frequency**, and when
-  the network returns; with **Manual** only on **Sync Now**. Google Drive
-  does not push changes to the app; a device sees remote changes at its next
-  sync. **Sync only on Wi-Fi** applies to automatic syncs.
+## Backup files in a cloud folder
 
-## In practice
+"Save to…" on the Backup screen opens Android's own "create document"
+picker (Storage Access Framework). Installed cloud apps (Google Drive,
+Dropbox, OneDrive, Nextcloud, ...) appear there as places to save; the
+cloud app does the upload with its own account. LedgerZero only hands over
+the encrypted file and never sees the account. See
+[BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md).
 
-- **Setup**: Google Drive needs a sign-in and consent to the `drive.file`
-  permission. See [GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md).
-- **Transfers**: happen during the sync run and are retried on transient
-  errors.
-- **Storage quota**: the files count towards your Google storage.
+## Android backup
+
+Android's Auto Backup copies the files named in the backup rules about
+once a day (device idle, on Wi-Fi, 24 hours after the last backup) to the
+user's Google account, only when the backup is end-to-end encrypted with
+the screen lock, and puts them back when the app is reinstalled or a new
+phone is set up from that backup. The app cannot read whether it is
+switched on. Limits and the exact rules:
+[BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md#7-moving-to-a-new-phone),
+[SECURITY.md](SECURITY.md#android-backup-and-moving-to-a-new-phone).
 
 Troubleshooting: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

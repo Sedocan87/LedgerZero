@@ -162,6 +162,53 @@ void main() {
       expect(shown, 2);
     });
 
+    group('another device uses a newer app version', () {
+      late int updates;
+      late bool due;
+
+      SyncFailureNotifications notifier() => SyncFailureNotifications(
+        enabled: () => enabled,
+        show: () async => shown++,
+        showUpdateRequired: () async => updates++,
+        updateNoticeDue: () => due,
+      );
+
+      const waiting = SyncState(
+        status: SyncStatus.connected,
+        newerSchemaPending: true,
+      );
+
+      setUp(() {
+        updates = 0;
+        due = true;
+      });
+
+      test('notifies once when files of a newer version start to '
+          'wait', () {
+        final n = notifier();
+        n.onSyncState(syncing, waiting);
+        n.onSyncState(waiting, waiting.copyWith(status: SyncStatus.syncing));
+        n.onSyncState(waiting.copyWith(status: SyncStatus.syncing), waiting);
+        expect(updates, 1);
+        expect(shown, 0);
+      });
+
+      test('also when the state arrives outside a run (app start)', () {
+        notifier().onSyncState(null, waiting);
+        expect(updates, 1);
+      });
+
+      test('not when the setting is off or the notice was shown '
+          'recently', () {
+        enabled = false;
+        notifier().onSyncState(ok, waiting);
+        enabled = true;
+        due = false;
+        notifier().onSyncState(ok, waiting);
+        expect(updates, 0);
+      });
+    });
+
     test('errors that are not a sync run do not notify', () {
       notifier().onSyncState(ok, failed);
       notifier().onSyncState(null, failed);

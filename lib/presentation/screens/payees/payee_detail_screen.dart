@@ -5,6 +5,7 @@ import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
+import 'package:ledger_zero/domain/services/payee_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -66,6 +67,69 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
   /// The detail providers follow the database, so no refresh is needed.
   Future<void> _updatePayee(Payee payee) =>
       ref.read(payeeControllerProvider).updatePayee(payee);
+
+  /// Saves the typed name. A name another payee already has is refused
+  /// (two payees with one name cannot be told apart when a name is typed
+  /// or imported); the user can merge into that payee instead.
+  Future<void> _rename(Payee payee) async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      return;
+    }
+    try {
+      await ref.read(payeeControllerProvider).renamePayee(payee.id, name);
+    } on PayeeNameTakenException catch (e) {
+      if (mounted) {
+        await _offerMerge(payee, e.existing);
+      }
+      return;
+    }
+    if (mounted) {
+      setState(() => _isEditing = false);
+    }
+  }
+
+  Future<void> _offerMerge(Payee payee, Payee existing) async {
+    final l10n = AppLocalizations.of(context)!;
+    final merge = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('payee.nameTaken'),
+        title: Text(l10n.payeeNameTakenTitle),
+        content: Text(l10n.payeeNameTakenMessage(existing.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            key: const Key('payee.nameTaken.merge'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.merge),
+          ),
+        ],
+      ),
+    );
+    if (merge != true || !mounted) {
+      return;
+    }
+    try {
+      await ref
+          .read(payeeControllerProvider)
+          .mergePayees(payee.id, existing.id);
+    } catch (e, st) {
+      Logger.error('Merging payee ${payee.id} failed', e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.mergePayeeFailed)));
+      }
+      return;
+    }
+    if (mounted) {
+      Navigator.pop(context); // The merged payee no longer exists.
+    }
+  }
 
   void _deletePayee(BuildContext context, Payee payee) {
     final l10n = AppLocalizations.of(context)!;
@@ -298,15 +362,8 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
               if (_isEditing)
                 IconButton(
                   icon: const Icon(Icons.check),
-                  onPressed: () async {
-                    final name = _nameController.text.trim();
-                    if (name.isNotEmpty) {
-                      await _updatePayee(payee.copyWith(name: name));
-                      if (mounted) {
-                        setState(() => _isEditing = false);
-                      }
-                    }
-                  },
+                  tooltip: l10n.save,
+                  onPressed: () => _rename(payee),
                 )
               else
                 PopupMenuButton<String>(

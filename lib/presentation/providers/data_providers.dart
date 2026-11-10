@@ -21,15 +21,16 @@ final accountsProvider = StreamProvider<List<Account>>((ref) {
   return ref.watch(accountRepositoryProvider).watchAllAccounts();
 });
 
-/// The accounts this phone can book into: all but the partner's personal
-/// accounts (those are shown, never written). For pickers.
+/// The accounts this phone can book a new transaction into: open, and not
+/// the partner's personal accounts (those are shown, never written). For
+/// pickers and preselections.
 final writableAccountsProvider = Provider<AsyncValue<List<Account>>>((ref) {
   return ref
       .watch(accountsProvider)
       .whenData(
         (all) => [
           for (final a in all)
-            if (!a.isPartners) a,
+            if (!a.isClosed && !a.isPartners) a,
         ],
       );
 });

@@ -3,16 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/new_month_fill_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
@@ -54,13 +55,18 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 
   /// Notification taps (including the one that launched the app) go to the
-  /// tap router, which waits for the unlock before navigating.
+  /// tap router, which waits for the unlock before navigating. The
+  /// permission is asked for when a notification is first needed
+  /// ([NotificationPermissionGate]).
   void _initializeNotifications() {
     final notifications = ref.read(notificationServiceProvider);
     final tapRouter = ref.read(notificationTapRouterProvider);
     notifications.tapHandler = (payload) {
       unawaited(tapRouter.handleTap(payload));
     };
+    notifications.beforeUse = ref
+        .read(notificationPermissionGateProvider)
+        .onUse;
     unawaited(notifications.initialize());
   }
 
@@ -80,46 +86,86 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       _processCapturedNotifications();
       // A payday or a new month may have come while the app was in the
       // background.
-      if (ref.read(sessionProvider).isUnlocked) {
-        unawaited(_processDueSchedules());
-        unawaited(ref.read(newMonthFillProvider.notifier).runIfDue());
+      if (ref.read(sessionProvider).isOpen) {
+        unawaited(_bookDueThenFill());
         unawaited(ref.read(autoBackupServiceProvider).runIfDue());
       }
+      // A notification that came up in the background still needs the
+      // permission.
+      unawaited(ref.read(notificationPermissionGateProvider).onUiReady());
     }
     if (state == AppLifecycleState.paused) {
       ref.read(syncControllerProvider.notifier).onAppPaused();
+      unawaited(_checkpointDatabase());
+    }
+  }
+
+  /// Leaves the committed data in `db.sqlite` itself before Android may
+  /// stop the process or copy the files for its backup or a transfer to a
+  /// new phone ([AppDatabase.checkpointWal]). Never fails.
+  Future<void> _checkpointDatabase() async {
+    if (!ref.read(sessionProvider).isOpen) {
+      return;
+    }
+    try {
+      await ref.read(databaseProvider).checkpointWal();
+    } catch (e) {
+      Logger.warning('WAL checkpoint failed: $e');
     }
   }
 
   /// Books card notifications captured since the last run (needs the open
-  /// database, not the unlocked UI).
-  Future<void> _processCapturedNotifications() async {
-    if (!ref.read(sessionProvider).isUnlocked) {
-      return;
-    }
-    final capture = ref.read(notificationCaptureServiceProvider);
-    if (!capture.isSupported) {
-      return;
-    }
+  /// database, not the unlocked UI) and keeps the outcome, the listener
+  /// state and what is waiting for Home and Settings to show.
+  Future<void> _processCapturedNotifications() =>
+      ref.read(captureAttentionProvider.notifier).process();
+
+  /// How long booking due schedules waits for the sync that is under way
+  /// (see [_afterSyncPull]). Offline nothing runs and nothing is waited
+  /// for; on a slow connection the schedules book after this at the
+  /// latest.
+  static const Duration _syncWait = Duration(seconds: 10);
+
+  /// Lets the sync that started with this session or this resume finish
+  /// first, so that the catch-up sees what the partner's phone already
+  /// booked, edited, deleted or skipped instead of booking the same
+  /// occurrences again from an older state. Returns at once when no sync
+  /// runs (none set up, manual, offline). The catch-up is also safe
+  /// without it (`ScheduleStamps`); this keeps it from writing rows only
+  /// to lose them.
+  Future<void> _afterSyncPull() async {
     try {
-      await capture.processPending();
-    } on DatabaseLockedException {
-      // Closed meanwhile (factory reset); runs again when it reopens.
-    } catch (e, stackTrace) {
-      Logger.error('Booking captured card notifications failed', e, stackTrace);
+      await ref
+          .read(syncControllerProvider.notifier)
+          .syncSettled()
+          .timeout(_syncWait);
+    } catch (_) {
+      // Timed out: book with what this phone has.
     }
   }
 
-  /// Books the scheduled occurrences that are due by today.
-  Future<void> _processDueSchedules() async {
+  /// After a resume: books the scheduled occurrences that are due by today,
+  /// then fills the new month. In this order, like at start-up: scheduled
+  /// income is booked before the fill looks at To Be Budgeted
+  /// (docs/BUDGET_INTERACTIONS.md).
+  Future<void> _bookDueThenFill() async {
+    await _afterSyncPull();
+    if (!mounted) {
+      return;
+    }
     try {
       await ref
           .read(scheduledTransactionServiceProvider)
           .processDueTransactions(fallbackMemo: _scheduledFallbackMemo());
+      await ref.read(newMonthFillProvider.notifier).runIfDue();
     } on DatabaseLockedException {
       // Closed meanwhile; runs again when it reopens.
     } catch (e, stackTrace) {
-      Logger.error('Booking due scheduled transactions failed', e, stackTrace);
+      Logger.error(
+        'Booking due schedules or filling the new month failed',
+        e,
+        stackTrace,
+      );
     }
   }
 
@@ -128,6 +174,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     unawaited(_processCapturedNotifications());
     final notifications = ref.read(notificationServiceProvider);
     await notifications.initialize();
+    // With sync, after the first pull of the session (see there).
+    await _afterSyncPull();
+    if (!mounted) {
+      return;
+    }
     try {
       final scheduled = ref.read(scheduledTransactionServiceProvider);
       await scheduled.processDueTransactions(
@@ -145,17 +196,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   /// Runs when the UI is ready ([uiReadyProvider]): things the user sees
   /// wait for the app lock and the end of onboarding (the permission prompt
-  /// would otherwise cover them).
+  /// would otherwise cover them). The permission is asked for only if a
+  /// notification needed it meanwhile (e.g. the reminders scheduled at
+  /// start-up), not at the end of onboarding.
   Future<void> _onUiUnlocked() async {
     unawaited(ref.read(notificationTapRouterProvider).onUnlocked());
-    final settings = ref.read(settingsProvider);
-    if (settings.scheduledTransactionNotifications ||
-        settings.budgetAlertNotifications ||
-        settings.syncStatusNotifications) {
-      final notifications = ref.read(notificationServiceProvider);
-      await notifications.initialize();
-      await notifications.requestPermissions();
-    }
+    await ref.read(notificationPermissionGateProvider).onUiReady();
   }
 
   /// Localised memo for generated scheduled occurrences without memo and
@@ -169,6 +215,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final router = ref.watch(routerProvider);
     // Drops a default account/category that was deleted, closed or hidden.
     ref.watch(settingsDefaultsGuardProvider);
+    // Keeps Settings > Currency equal to the currency of the accounts in
+    // the budget (at start-up, after a sync run, after any account change).
+    ref.watch(budgetCurrencyGuardProvider);
 
     // Start-up work needs the database, not the unlocked UI: it runs as soon
     // as the lock screen has opened the session.

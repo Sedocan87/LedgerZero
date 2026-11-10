@@ -2,7 +2,7 @@
 
 **Goal:** a privacy-first, one-time-purchase envelope budgeting app for Android. It should be good enough that someone tired of YNAB's subscription would pay €29–49 for it.
 
-**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, encrypted local database, backup and restore, sync via Google Drive or phone to phone on the home Wi-Fi. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
+**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, local database on the phone (no account, no LedgerZero servers, no tracking), app lock, encrypted backup and restore ("Save to…" anywhere, Android backup end-to-end encrypted), sync phone to phone on the same Wi-Fi. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
 
 **Out of scope for v1:** PDF/OCR import, ML categorisation, Mint import, desktop and web, home-screen widgets. All of these were removed on the `slim-down` branch and remain in `main`'s history if needed later.
 
@@ -22,7 +22,7 @@
 - [x] **`BudgetingService` audit.** One budget identity (balances, activity, TBB) with an invariant test (`budget_invariant_test.dart`) and table-driven tests; dates are UTC calendar days.
 - [x] **Round-trip tests.** Backup → restore (`backup_restore_roundtrip_test.dart`, plus on-device), CSV export → import (`csv_round_trip_test.dart`), YNAB import tests, undo round trips.
 
-**Security**
+**Security** (the database encryption below was removed in 2026-11: the database is a plain SQLite file in the app's private storage, backups and sync stay encrypted; see docs/SECURITY.md)
 - [x] **Fail closed.** The connection refuses to open without a key and checks `PRAGMA cipher_version` (`lib/data/database/sqlcipher.dart`).
 - [x] **Raw hex key.** A random 256-bit data key is passed as `PRAGMA key = "x'…'"`.
 - [x] **Key handling reviewed.** Key vault with Argon2id (46 MiB, 2 passes) password wrapping, independent recovery key, optional hardware-bound biometric wrap; password change only re-wraps; legacy installs migrate on first login (`lib/services/security/key_vault.dart`, docs/ENCRYPTION.md).
@@ -41,7 +41,7 @@
 - [x] **Integration tests** (onboarding → budget, relaunch/unlock, CSV import, lock; backup/restore; v14 → v17 upgrade) pass on the iOS Simulator and an Android emulator.
 - [ ] **Manual smoke test on a real Android phone**, every flow from onboarding to sync (see the real-device list below).
 
-**Exit criteria:** all tests green ✅; money stored as integers ✅; encrypted DB verified on simulator/emulator ✅ and on real phones (open); two-device sync matrix on real devices (open); no crashes across a full manual run (open).
+**Exit criteria:** all tests green ✅; money stored as integers ✅; database, encrypted backups and app lock verified on simulator/emulator ✅ and on real phones (open); two-device sync matrix on real devices (open); no crashes across a full manual run (open).
 
 ## Audit fixes (2026-10)
 
@@ -86,6 +86,20 @@ An external audit was checked claim by claim against the code; about two thirds 
 
 Still open from that review: concurrent budget moves on two phones sync as absolute cell values (last writer wins per category), the v20 personal-balance triggers recompute per row on large imports, and the onboarding fix needs a run on the emulator before the item below can be ticked.
 
+## Fourth audit, fix pass and plain database (2026-11-10)
+
+A fourth audit (seven reviewers: budget, ledger, import/export/reports, sync/backup, security and card capture, UI flows, release engineering) found about 65 issues, 15 of them high. All were fixed on branches `fix4/capture`, `fix4/sync`, `fix4/import`, `fix4/ledger`, `fix4/shell` and `fix4/release`, merged into `fix/fourth-audit`. The owner then decided to drop the encrypted database (`fix4/noencrypt`). The main changes:
+
+- **Card capture (CARD_NOTIFICATIONS.md):** a notification is booked only with a positive payment signal. Incoming money is an inflow; declined payments, balances, summaries, price alerts and promotions are not booked; unclear wording waits for the user. Repeat purchases are booked; pre-authorisations are marked, replaced or released; lists of payments are split per line. Home and Settings show when capture stopped or held payments back; the native store survives transient KeyStore errors.
+- **Sync and backup (SYNC_ARCHITECTURE.md, DELTA_SCHEMA_MIGRATION.md):** captured changes and deletes survive provider None, Disconnect and reconnect; rows moved into a personal account leave the partner's phone; foreign-key repairs propagate; a second phone's schedule catch-up no longer undoes an edit, delete or skip; change files are gated on `SyncSchema.syncVersion`, not the database schema, so a schema change that touches no synced table does not stall sync; the "update the app" state shows on Home and as a notification; automatic on-phone backups no longer silence the off-phone backup reminder; Wi-Fi sync refuses bad requests before reading their body and binds requests to the recipient.
+- **Import and export (CSV_FORMAT.md, YNAB_MIGRATION.md):** debit/credit column pairs, same-amount-within-4-days possible duplicates, unknown accounts never fall back to the first account, Revolut reverted rows and fees, headerless files, more date shapes, analysis off the UI thread, "Undo last import" for CSV; YNAB "Assigned" column, tab-separated files, ZIP files (export and YNAB 4), unknown currency symbols, tracking-account detection; export writes `Group: Category` and offers a semicolon/BOM variant for German Excel.
+- **Ledger and forms (TRANSACTION_LIFECYCLE.md, RULES.md, PAYEE_MANAGEMENT.md):** income defaults to To Be Budgeted and can always be cleared; one draft and unsaved-changes model for the edit forms; closed accounts take no new bookings; payee Next keeps the typed name; rule conditions offer only the operators their field evaluates; payee rename/merge keeps rules matching; Undo is offered after the changes it records; stable same-day order; the account screen pages its list.
+- **Budget and app shell (BUDGETING_RULES.md, BUDGET_INTERACTIONS.md):** starting balances by the local calendar month; a deleted auto-fill template no longer blocks a waiting month; the budget row shows amounts in full at 360 dp; notification taps open on top of Home; factory reset offers a backup and needs a typed word; dates follow the app language by default; the notification permission is asked when first needed.
+- **Release engineering:** a production release without the upload key fails; the pairing scanner uses ZXing instead of Google ML Kit (no telemetry in the APK); About screen with version, licences and support; the diagnostic log has a device header; the unused `ledgerzero://` scheme is gone.
+- **Plain database (SECURITY.md, ENCRYPTION.md, BACKUP_AND_EXPORT.md §7):** SQLCipher, the device key, the master-password and legacy-unlock code and the v1–v19 upgrade steps are removed; the database is a plain SQLite file in app-private storage, open from start-up, behind the optional app lock. Backups and sync files stay encrypted. Google cloud backup is empty; a phone-to-phone transfer (Android 9+) moves the budget, and a transferred install gets a new sync device id. v20 is the schema baseline; older databases and backups are refused.
+
+Not done in this pass: encryption of sync and backup files off the UI isolate (needs a measurement on a phone), a per-revision cache for the budget recompute, and YNAB "Starting Balance" rows showing as first-month income in reports (balances and To Be Budgeted are correct).
+
 ## Phase 2: Design and UX (about 2–3 weeks)
 
 The app still looks like default Material 3 with a teal seed colour. The design is what makes people pay, so this phase matters as much as Phase 1.
@@ -107,7 +121,6 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] **Monetisation:** a free tier (e.g. 1 budget, 3 accounts or 100 transactions) plus a one-time "LedgerZero Pro" unlock via in-app purchase (`in_app_purchase` or RevenueCat). Add Restore Purchases and Family Sharing.
 - [ ] Store setup: application IDs, release keystore and `android/key.properties`, Play Console listing in EN and DE, screenshots, and a short video.
 - [ ] Privacy: Play data-safety form, a privacy-policy page, and a working support email/domain (`support@ledgerzero.app` is referenced; confirm you own it).
-- [ ] Google OAuth consent screen verification for the Drive `drive.file` scope; Android OAuth clients for every app ID/signing key.
 - [ ] Opt-in crash reporting or a "send diagnostic log" button (the local, opt-in error reporter exists).
 - [ ] Closed beta with 10–20 testers (Play internal testing), recruited from r/ynab, r/Finanzen and r/personalfinance. Iterate for 1–2 weeks.
 - [ ] Launch.
@@ -116,24 +129,30 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 
 - [x] v1 is Android only; iCloud sync and backup removed (ios/ kept for later).
 - [x] Wi-Fi sync between paired phones (a household sharing one budget): QR pairing, signed local HTTP exchange of the encrypted change files, UDP discovery (docs/SYNC_ARCHITECTURE.md, "Local Wi-Fi").
-- [x] No master password: the database key is kept by the Android KeyStore (flutter_secure_storage) and the database opens at every start, also behind the app lock. App lock = fingerprint/face/device PIN (BiometricPrompt), a UI gate; auto-lock locks only the UI. Older installs unlock once with the password, recovery key or biometrics and move the key (docs/ENCRYPTION.md). Sync and backups stay end-to-end encrypted.
+- [x] No master password: the database key is kept by the Android KeyStore (flutter_secure_storage) and the database opens at every start, also behind the app lock. App lock = fingerprint/face/device PIN (BiometricPrompt), a UI gate; auto-lock locks only the UI. Older installs unlock once with the password, recovery key or biometrics and move the key (docs/ENCRYPTION.md). Sync and backups stay end-to-end encrypted. (Superseded 2026-11: no database key and no encrypted database any more; see docs/SECURITY.md.)
+
+## Wi-Fi-only sync and Android backup (2026-11)
+
+- [x] Google sign-in and Drive sync removed: sync is Wi-Fi only (the two phones sync when both are on the same Wi-Fi with the app open); a stored Drive provider reads as "None". The engine, transport interface and change-file format are unchanged. `google_sign_in`, `extension_google_sign_in_as_googleapis_auth`, `googleapis`, `googleapis_auth` and the direct `http` dependency are gone; the merged manifest has no Google sign-in or Play services component left.
+- [x] Backup files leave the phone through "Save to…" (the system create-document picker: a folder, a USB stick, a cloud app) or the share sheet; either counts for the backup reminder.
+- [x] Android cloud backup on, end-to-end encrypted only (`disableIfNoEncryptionCapabilities` on 12+, `requireFlags="clientSideEncryption"` on 9–11, nothing on 7–8.1): the database with its WAL and the preferences. The WAL is checkpointed when the app goes to the background; a restore is handled like a transfer (new sync device id, sync rebuild). The Backup screen explains Android backup and notes a database above 20 MB (25 MB quota; a four-year household measured 19.5 MB).
 
 ## Follow-ups
 
 **Real-device verification** (cannot be done on simulators/emulators)
 - [ ] App lock on real phones: fingerprint, face and PIN/pattern prompts (Pixel 8, Xiaomi), auto-lock, and removing the screen lock turning the app lock off.
-- [ ] One-time migration of the existing master-password installs on the Pixel 8 and the Xiaomi (take a backup first): unlock once, data intact, app lock on.
 - [ ] FLAG_SECURE on Android.
-- [ ] `flutter_secure_storage` v9 → v10 migration on a real Android install that has v9 data (then move to v11, which drops the migration).
+- [ ] `flutter_secure_storage` 11 on a real phone: automatic-backup password and Wi-Fi pairing kept across restarts; after a KeyStore reset they are forgotten and asked for again, the app starts normally.
+- [ ] Moving to a new phone with Android's device-to-device transfer (two real phones, Android 12+ and one on 9–11 if available): budget and settings arrive, the new phone gets its own sync device id and both phones keep syncing; Wi-Fi pairing, card notifications and the automatic-backup password are set up again.
+- [ ] Android cloud backup on a real phone with a screen lock (Android 12+ and 9–11 if available): `adb shell bmgr backupnow com.ledgerzero.app` succeeds, uninstall and reinstall restores the budget and settings, the restored install gets a new sync device id and rebuilds its sync state with the partner's phone; without a screen lock nothing of the app is uploaded; a new phone set up from the cloud backup gets the budget; the 25 MB quota is not hit by a realistic database (logcat "Transport quota exceeded"); "Save to…" into Drive/Dropbox/USB works.
+- [ ] Restore of a backup on a real phone (plain database file swapped in, app reopens it without a restart).
 - [ ] Argon2id time (46 MiB, 2 passes) for the sync passphrase and backup password on a mid-range Android phone stays under ~1.5 s.
-- [ ] Two-device sync matrix with real accounts: Android↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
 - [ ] Wi-Fi sync on two real phones on a real home router: QR scan, discovery (routers that block broadcasts or client-to-client traffic), Xiaomi battery saver, merging the second phone's existing data.
 - [ ] Notification delivery: scheduled-transaction reminders and sync-failure notifications on Android (permissions, exact vs. inexact alarms, tap routing).
 - [ ] Card notification capture with real bank apps (Sparkasse, ING, DKB, N26, Revolut, Google Wallet, ...): collect anonymised notification texts, add them as parser test cases, and check that the listener survives reboots and vendor battery savers (Xiaomi/MIUI).
 
 **Engineering**
 - [ ] Riverpod 3 migration (app-wide; `flutter_riverpod` stays on 2.6).
-- [ ] `google_sign_in` 7 (new authentication/authorization API, Android Credential Manager with a server client ID); needs real-device verification of Drive sign-in.
 - [ ] `go_router` 18 together with the move to the unbundled `material_ui`/`cupertino_ui` packages.
 - [ ] `csv` 7+ (rewritten parser); re-run all import fixtures.
 - [ ] Third-party Android plugins still use deprecated Groovy DSL syntax (Gradle 10 will remove it) and `android.newDsl=false`; update when the plugins do.

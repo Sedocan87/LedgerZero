@@ -8,18 +8,17 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/leave_budget_dialog.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.dart';
 import 'package:ledger_zero/presentation/screens/settings/income/income_settings_screen.dart';
@@ -28,6 +27,7 @@ import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/presentation/widgets/common/account_avatar.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
+import 'package:ledger_zero/presentation/widgets/budget_currency_dialogs.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 
@@ -385,6 +385,24 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     if (!mounted) {
       return;
     }
+    // An account in another currency cannot join the budget (amounts are
+    // never converted): refused, or relabelled if the user says so.
+    final budgetCurrency = ref.read(budgetCurrencyProvider).currency;
+    final joinsBudget =
+        _onBudget && (_existingAccount == null || !_existingAccount!.onBudget);
+    if (joinsBudget &&
+        _otherOnBudgetExists &&
+        _selectedCurrency != budgetCurrency) {
+      final relabel = await confirmJoinInBudgetCurrency(
+        context,
+        accountCurrency: _selectedCurrency,
+        budgetCurrency: budgetCurrency,
+      );
+      if (!relabel || !mounted) {
+        return;
+      }
+      setState(() => _selectedCurrency = budgetCurrency);
+    }
     // Leaving the budget can release money budgeted for this account.
     var release = const <String, int>{};
     if (_existingAccount != null && _existingAccount!.onBudget != _onBudget) {
@@ -432,17 +450,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           clearIcon: _selectedIcon == null,
           updatedAt: DateTime.now().toUtc(),
         );
-        await repository.updateAccount(updatedAccount);
-        final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
-        final budgeting = ref.read(budgetingServiceProvider);
-        for (final MapEntry(key: categoryId, value: amount)
-            in release.entries) {
-          released += await budgeting.releaseFromCategory(
-            categoryId,
-            amount,
-            month,
-          );
-        }
+        // One unit of work with the release.
+        released = await saveAccountWithRelease(ref, updatedAccount, release);
       } else {
         final newAccount = Account(
           id: const Uuid().v4(),
@@ -503,6 +512,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           final helpContext = rootNavigator.context;
           messenger.showSnackBar(
             SnackBar(
+              persist: false,
               key: const Key('hint.offBudgetAccount'),
               content: Text(l10n.hintOffBudgetAccount),
               duration: const Duration(seconds: 10),
@@ -578,6 +588,14 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         false;
   }
 
+  /// Back from the onboarding first-account step: the security step it
+  /// came from. (A plain pop showed the welcome slides under it, and going
+  /// through them again took the "existing data kept" branch, which
+  /// finished onboarding without an account or the salary question.)
+  void _backToSecurityStep() {
+    GoRouter.of(context).goNamed('security-setup');
+  }
+
   /// A switch title followed by its ⓘ button.
   Widget _titleWithInfo(String title, HelpTopic topic) => Row(
     children: [
@@ -601,7 +619,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     final fmt = ref.watch(appFormatterProvider);
     final l10n = AppLocalizations.of(context)!;
     final budgetCurrency = ref.watch(
-      settingsProvider.select((s) => s.currency),
+      budgetCurrencyProvider.select((b) => b.currency),
     );
     _otherOnBudgetExists =
         ref
@@ -621,15 +639,34 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         : _currencies;
 
     return PopScope(
-      canPop: !_isFormDirty,
+      // The onboarding step goes back to the security step, not the
+      // slides below it in the stack (see [_backToSecurityStep]).
+      canPop: !_isFormDirty && !widget.finishesOnboarding,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
           return;
         }
+        if (!_isFormDirty) {
+          // Only the onboarding step gets here with a clean form.
+          _backToSecurityStep();
+          return;
+        }
         final shouldPop = await _showExitConfirmation();
         if (shouldPop && context.mounted) {
+          // Discarded: the next "Add account" (and the onboarding step,
+          // which shares the draft) starts empty.
+          if (widget.accountId == null) {
+            await _clearDraft();
+          }
+          if (!context.mounted) {
+            return;
+          }
           setState(() => _isFormDirty = false);
-          Navigator.of(context).pop();
+          if (widget.finishesOnboarding) {
+            _backToSecurityStep();
+          } else {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: CallbackShortcuts(
@@ -775,7 +812,12 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                                   setState(() {
                                     _onBudget = value;
                                     _onBudgetTouched = true;
-                                    if (value && _otherOnBudgetExists) {
+                                    // A new account takes the budget
+                                    // currency; an existing one in another
+                                    // currency is asked about on save.
+                                    if (value &&
+                                        _otherOnBudgetExists &&
+                                        _existingAccount == null) {
                                       _selectedCurrency = budgetCurrency;
                                     }
                                   });

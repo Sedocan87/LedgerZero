@@ -45,6 +45,38 @@ class RuleCondition {
     );
   }
 
+  /// The operators a condition on [type] is evaluated with, the default
+  /// one first. Text fields (payee, description) compare as text, the
+  /// amount compares as a number; any other combination never matches.
+  static List<RuleConditionOperator> operatorsFor(RuleConditionType type) =>
+      switch (type) {
+        RuleConditionType.amount => const [
+          RuleConditionOperator.equals,
+          RuleConditionOperator.greaterThan,
+          RuleConditionOperator.lessThan,
+        ],
+        RuleConditionType.payee => const [
+          RuleConditionOperator.equals,
+          RuleConditionOperator.contains,
+          RuleConditionOperator.startsWith,
+          RuleConditionOperator.endsWith,
+          RuleConditionOperator.regex,
+        ],
+        RuleConditionType.description => const [
+          RuleConditionOperator.contains,
+          RuleConditionOperator.equals,
+          RuleConditionOperator.startsWith,
+          RuleConditionOperator.endsWith,
+          RuleConditionOperator.regex,
+        ],
+      };
+
+  /// Whether this condition can ever match: its operator is one its field
+  /// is evaluated with (see [operatorsFor]). Rules saved by older versions
+  /// or imported from a file can hold a combination that never matches
+  /// ("Amount contains", "Payee greater than").
+  bool get isEvaluable => operatorsFor(type).contains(operator);
+
   /// The amount threshold in minor units, for amount conditions.
   int? get amountMinor =>
       type == RuleConditionType.amount ? int.tryParse(value.trim()) : null;

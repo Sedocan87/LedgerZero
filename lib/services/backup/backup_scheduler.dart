@@ -10,7 +10,36 @@ class BackupScheduler {
   static const String _lastReminderKey = 'last_backup_reminder_timestamp';
   static const String _firstCheckKey = 'backup_reminder_first_check_timestamp';
 
-  BackupScheduler(this._prefs, this._notificationService);
+  /// Set once the stamp of [_dropOnPhoneStamp] was checked.
+  static const String _offPhoneOnlyKey = 'last_backup_off_phone_only';
+
+  /// `AutoBackupService.lastSuccessKey`.
+  static const String _autoBackupSuccessKey = 'auto_backup_last_success';
+
+  BackupScheduler(this._prefs, this._notificationService) {
+    _dropOnPhoneStamp();
+  }
+
+  /// App versions before the fourth audit recorded every automatic backup
+  /// as "last backup", although those files stay on the phone. A stamp
+  /// written by one (within minutes after the automatic backup's own
+  /// stamp) says nothing about a backup that left the phone and is
+  /// dropped once; the reminder then counts from the first check like for
+  /// a user without a backup.
+  void _dropOnPhoneStamp() {
+    if (_prefs.getBool(_offPhoneOnlyKey) ?? false) {
+      return;
+    }
+    final last = _prefs.getInt(_lastBackupKey);
+    final automatic = _prefs.getInt(_autoBackupSuccessKey);
+    if (last != null &&
+        automatic != null &&
+        last >= automatic &&
+        last - automatic < const Duration(minutes: 10).inMilliseconds) {
+      _prefs.remove(_lastBackupKey);
+    }
+    _prefs.setBool(_offPhoneOnlyKey, true);
+  }
 
   Future<void> checkBackupDue() async {
     final frequency =
@@ -69,6 +98,8 @@ class BackupScheduler {
     return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
   }
 
+  /// Records a backup that left the phone (shared or uploaded). Automatic
+  /// backups on the phone do not count.
   Future<void> recordBackupSuccess() async {
     await _prefs.setInt(_lastBackupKey, DateTime.now().millisecondsSinceEpoch);
   }

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
+import 'package:ledger_zero/core/utils/text_decoding.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
@@ -21,15 +23,31 @@ enum YnabImportFailure {
   /// The selected folder is not a readable YNAB4 budget bundle.
   invalidYnab4Folder,
 
+  /// The selected ZIP file holds no YNAB4 budget bundle.
+  invalidYnab4Zip,
+
+  /// The selected ZIP file is not YNAB's export (no register and budget
+  /// CSV inside).
+  invalidExportZip,
+
   /// No supported date format fits every Register.csv date;
   /// [YnabImportException.detail] is the first value that does not parse.
   invalidDates,
+
+  /// The nYNAB budget file (Budget.csv, Plan.csv) lacks required columns
+  /// (listed in [YnabImportException.detail]).
+  missingBudgetColumns,
+
+  /// An amount cell of the register or budget file is not a number;
+  /// [YnabImportException.detail] is that cell.
+  invalidAmount,
 }
 
 /// A YNAB export that is not in the expected format. [detail] is technical
 /// text for the log (for [YnabImportFailure.missingRegisterColumns]: the
 /// comma-separated column names; for [YnabImportFailure.invalidDates]: the
-/// first date that does not parse).
+/// first date that does not parse; for [YnabImportFailure.invalidAmount]:
+/// the amount cell).
 class YnabImportException implements Exception {
   const YnabImportException(this.failure, this.detail);
 
@@ -38,6 +56,15 @@ class YnabImportException implements Exception {
 
   @override
   String toString() => 'YnabImportException(${failure.name}): $detail';
+}
+
+/// A CSV file taken out of YNAB's export ZIP: its name inside the archive
+/// and its decoded text.
+class YnabZipEntry {
+  const YnabZipEntry(this.name, this.content);
+
+  final String name;
+  final String content;
 }
 
 /// Service responsible for parsing YNAB export files (CSV and YNAB4)
@@ -53,13 +80,17 @@ class YnabImportException implements Exception {
 /// [YnabSplitItem.transferAccountId] for split lines that are transfers.
 class YnabImportService {
   /// Date formats of the Register.csv, in order of preference (YNAB's
-  /// default US format first). Day and month are ambiguous when no day is
-  /// above 12; the first format that fits every row wins.
+  /// default US format first, then the other formats of YNAB's date
+  /// setting). Day and month are ambiguous when no day is above 12; the
+  /// first format that fits every row wins.
   static const registerDateFormats = [
     'MM/dd/yyyy',
     'dd/MM/yyyy',
     'yyyy-MM-dd',
     'dd.MM.yyyy',
+    'yyyy/MM/dd',
+    'dd-MM-yyyy',
+    'yyyy.MM.dd',
   ];
 
   /// YNAB writes English month names ("Jan 2025") whatever the app
@@ -126,15 +157,31 @@ class YnabImportService {
   /// Parses nYNAB CSV export files.
   ///
   /// [registerCsvContent]: Content of the 'Register.csv' file.
-  /// [budgetCsvContent]: Content of the 'Budget.csv' file.
+  /// [budgetCsvContent]: Content of the budget file ('Budget.csv', in
+  /// newer exports 'Plan.csv'). Its amount column is `Budgeted` or
+  /// `Assigned`; a non-empty file without the required columns stops the
+  /// import ([YnabImportFailure.missingBudgetColumns]) instead of being
+  /// skipped, which would leave every category at 0 budgeted.
+  ///
+  /// Both files may be comma- or tab-separated (YNAB writes tabs for
+  /// budgets whose number format has a decimal comma); header names are
+  /// matched ignoring case and surrounding spaces.
   /// [dateFormat]: a format of [registerDateFormats] to read the register
   /// dates with instead of the detected one (the user's choice when the
   /// file is ambiguous); it must still fit every date.
   ///
   /// Tracking accounts: the CSV does not say which accounts are off
-  /// budget. An account whose rows are only its "Starting Balance" and
-  /// transfer legs is taken to be a tracking account (the user can change
-  /// it in the preview).
+  /// budget, but YNAB leaves a trace. A transfer between two budget
+  /// accounts has no category on either leg, while a transfer between a
+  /// budget account and a tracking account always carries one on the
+  /// budget-side leg (the spending category, "Uncategorized", or
+  /// "Inflow: Ready to Assign" for money coming back). So an account
+  /// whose own rows are only its "Starting Balance" and transfer legs is
+  /// a tracking account when one of the legs facing it in a budget
+  /// account has a category, and a budget account (a savings account that
+  /// is only ever topped up) when none has. Without any such leg there
+  /// is no trace and it is taken to be a tracking account (a house, a
+  /// loan). The user can change every account in the preview.
   Future<YnabImportData> parseCsvExport({
     required String registerCsvContent,
     required String budgetCsvContent,
@@ -155,41 +202,23 @@ class YnabImportService {
       ),
     );
 
-    String? detectEol(String content) {
-      if (content.contains('\r\n')) {
-        return '\r\n';
-      }
-      if (content.contains('\n')) {
-        return '\n';
-      }
-      if (content.contains('\r')) {
-        return '\r';
-      }
-      return null;
-    }
-
     // 1. Parse Register CSV
-    final regEol = detectEol(registerCsvContent);
-    final registerRows = const CsvToListConverter().convert(
-      registerCsvContent,
-      shouldParseNumbers: false,
-      eol: regEol,
-    );
+    final registerRows = _csvRows(registerCsvContent);
 
     if (registerRows.isNotEmpty) {
       final headers = registerRows.first.map((e) => e.toString()).toList();
       final rows = registerRows.skip(1).toList();
 
       // Index headers
-      final accIdx = headers.indexOf('Account');
-      final dateIdx = headers.indexOf('Date');
-      final payeeIdx = headers.indexOf('Payee');
-      final groupIdx = headers.indexOf('Category Group');
-      final catIdx = headers.indexOf('Category');
-      final memoIdx = headers.indexOf('Memo');
-      final outflowIdx = headers.indexOf('Outflow');
-      final inflowIdx = headers.indexOf('Inflow');
-      final clearedIdx = headers.indexOf('Cleared');
+      final accIdx = _column(headers, 'Account');
+      final dateIdx = _column(headers, 'Date');
+      final payeeIdx = _column(headers, 'Payee');
+      final groupIdx = _column(headers, 'Category Group');
+      final catIdx = _column(headers, 'Category');
+      final memoIdx = _column(headers, 'Memo');
+      final outflowIdx = _column(headers, 'Outflow');
+      final inflowIdx = _column(headers, 'Inflow');
+      final clearedIdx = _column(headers, 'Cleared');
 
       final missingColumns = <String>[];
       if (accIdx == -1) {
@@ -312,7 +341,8 @@ class YnabImportService {
       }
       transactions.addAll(_groupRegisterLines(lines));
 
-      // Tracking accounts: only starting balance and transfer legs.
+      // Tracking accounts (see the method comment). Accounts with rows
+      // of their own (purchases, income) are budget accounts.
       final hasOwnRows = <String>{};
       for (final line in lines) {
         final isStart = line.payee.trim().toLowerCase() == 'starting balance';
@@ -320,8 +350,29 @@ class YnabImportService {
           hasOwnRows.add(line.accountName);
         }
       }
+      // The legs in those budget accounts, by the account they face.
+      final facingLegs = <String, int>{};
+      final categorisedFacingLegs = <String, int>{};
+      for (final line in lines) {
+        final target = transferTargetName(line.payee);
+        if (target == null || !hasOwnRows.contains(line.accountName)) {
+          continue;
+        }
+        facingLegs[target] = (facingLegs[target] ?? 0) + 1;
+        if (line.category.trim().isNotEmpty || line.group.trim().isNotEmpty) {
+          categorisedFacingLegs[target] =
+              (categorisedFacingLegs[target] ?? 0) + 1;
+        }
+      }
       for (var i = 0; i < accounts.length; i++) {
-        if (!hasOwnRows.contains(accounts[i].id)) {
+        final id = accounts[i].id;
+        if (hasOwnRows.contains(id)) {
+          continue;
+        }
+        final tracking =
+            !facingLegs.containsKey(id) ||
+            categorisedFacingLegs.containsKey(id);
+        if (tracking) {
           accounts[i] = accounts[i].copyWith(onBudget: false);
         }
       }
@@ -329,67 +380,84 @@ class YnabImportService {
 
     // 2. Parse Budget CSV
     var categoriesOnlyInBudget = 0;
-    final budgetEol = detectEol(budgetCsvContent);
-    final budgetRows = const CsvToListConverter().convert(
-      budgetCsvContent,
-      shouldParseNumbers: false,
-      eol: budgetEol,
-    );
+    final budgetRows = _csvRows(budgetCsvContent);
 
     if (budgetRows.isNotEmpty) {
       final headers = budgetRows.first.map((e) => e.toString()).toList();
       final rows = budgetRows.skip(1).toList();
 
-      final monthIdx = headers.indexOf('Month');
-      final groupIdx = headers.indexOf('Category Group');
-      final catIdx = headers.indexOf('Category');
-      final budgetedIdx = headers.indexOf('Budgeted');
+      final monthIdx = _column(headers, 'Month');
+      final groupIdx = _column(headers, 'Category Group');
+      final catIdx = _column(headers, 'Category');
+      // "Group: Category" in one cell, for a file without the two columns.
+      final combinedIdx = _column(headers, 'Category Group/Category');
+      // YNAB renamed "Budgeted" to "Assigned" in the app; either name.
+      final budgetedIdx = [
+        for (final name in budgetAmountColumns) _column(headers, name),
+      ].firstWhere((i) => i != -1, orElse: () => -1);
+      final hasCategory = (groupIdx != -1 && catIdx != -1) || combinedIdx != -1;
 
-      if (monthIdx != -1 &&
-          groupIdx != -1 &&
-          catIdx != -1 &&
-          budgetedIdx != -1) {
-        for (final row in rows) {
-          if (row.length < headers.length) {
-            continue;
+      final missing = [
+        if (monthIdx == -1) 'Month',
+        if (!hasCategory && groupIdx == -1) 'Category Group',
+        if (!hasCategory && catIdx == -1) 'Category',
+        if (budgetedIdx == -1) budgetAmountColumns.join(' / '),
+      ];
+      if (missing.isNotEmpty) {
+        throw YnabImportException(
+          YnabImportFailure.missingBudgetColumns,
+          missing.join(', '),
+        );
+      }
+
+      for (final row in rows) {
+        if (row.length < headers.length) {
+          continue;
+        }
+
+        final month = parseBudgetMonth(row[monthIdx].toString());
+        if (month == null) {
+          Logger.warning('YNAB Budget.csv: unreadable month, row skipped');
+          continue;
+        }
+
+        var group = groupIdx == -1 ? '' : row[groupIdx].toString();
+        var category = catIdx == -1 ? '' : row[catIdx].toString();
+        if (groupIdx == -1 || catIdx == -1) {
+          final combined = row[combinedIdx].toString();
+          final colon = combined.indexOf(':');
+          if (colon != -1) {
+            group = combined.substring(0, colon).trim();
+            category = combined.substring(colon + 1).trim();
           }
+        }
 
-          final month = parseBudgetMonth(row[monthIdx].toString());
-          if (month == null) {
-            Logger.warning('YNAB Budget.csv: unreadable month, row skipped');
-            continue;
-          }
+        final budgeted = _parseCsvAmount(row[budgetedIdx], amountParser);
 
-          final group = row[groupIdx].toString();
-          final category = row[catIdx].toString();
-
-          final budgeted = _parseCsvAmount(row[budgetedIdx], amountParser);
-
-          // A category budgeted but never used in the register (a sinking
-          // fund, a credit card payment category) still exists.
-          if (group.isNotEmpty && category.isNotEmpty) {
-            final key = '$group|$category';
-            if (!categories.any((c) => c.id == key)) {
-              if (!categoryGroups.any((g) => g.name == group)) {
-                categoryGroups.add(YnabCategoryGroup(id: group, name: group));
-              }
-              categories.add(
-                YnabCategory(id: key, groupId: group, name: category),
-              );
-              categoriesOnlyInBudget++;
+        // A category budgeted but never used in the register (a sinking
+        // fund, a credit card payment category) still exists.
+        if (group.isNotEmpty && category.isNotEmpty) {
+          final key = '$group|$category';
+          if (!categories.any((c) => c.id == key)) {
+            if (!categoryGroups.any((g) => g.name == group)) {
+              categoryGroups.add(YnabCategoryGroup(id: group, name: group));
             }
-          }
-
-          if (budgeted != 0) {
-            budgetEntries.add(
-              YnabBudgetEntry(
-                categoryName: category,
-                categoryGroupName: group,
-                month: month,
-                budgeted: budgeted,
-              ),
+            categories.add(
+              YnabCategory(id: key, groupId: group, name: category),
             );
+            categoriesOnlyInBudget++;
           }
+        }
+
+        if (budgeted != 0) {
+          budgetEntries.add(
+            YnabBudgetEntry(
+              categoryName: category,
+              categoryGroupName: group,
+              month: month,
+              budgeted: budgeted,
+            ),
+          );
         }
       }
     }
@@ -409,32 +477,159 @@ class YnabImportService {
     );
   }
 
+  /// The register and the budget CSV inside YNAB's export ZIP, so the
+  /// user need not unzip it on the phone.
+  ///
+  /// The files are told apart by their header line (the register has
+  /// `Outflow` and `Inflow`, the budget file `Month` and `Budgeted` or
+  /// `Assigned`), whatever they are called; a file whose header says
+  /// nothing is taken by its name (`... - Register.csv`, `... - Budget.csv`,
+  /// `... - Plan.csv`). Throws [YnabImportFailure.invalidExportZip] when
+  /// the archive cannot be read or lacks one of the two.
+  static ({YnabZipEntry register, YnabZipEntry budget}) readExportZip(
+    List<int> zipBytes,
+  ) {
+    YnabZipEntry? register;
+    YnabZipEntry? budget;
+    YnabZipEntry? registerByName;
+    YnabZipEntry? budgetByName;
+    for (final (name, bytes) in _zipFiles(
+      zipBytes,
+      YnabImportFailure.invalidExportZip,
+    )) {
+      final baseName = path.posix.basename(name);
+      if (!baseName.toLowerCase().endsWith('.csv')) {
+        continue;
+      }
+      final String content;
+      try {
+        content = decodeText(bytes);
+      } on FormatException {
+        continue;
+      }
+      final entry = YnabZipEntry(baseName, content);
+      final rows = _csvRows(content);
+      final headers = rows.isEmpty
+          ? const <String>[]
+          : rows.first.map((e) => e.toString()).toList();
+      if (_column(headers, 'Outflow') != -1 &&
+          _column(headers, 'Inflow') != -1) {
+        register ??= entry;
+      } else if (_column(headers, 'Month') != -1 &&
+          budgetAmountColumns.any((c) => _column(headers, c) != -1)) {
+        budget ??= entry;
+      } else if (baseName.toLowerCase().contains('register')) {
+        registerByName ??= entry;
+      } else if (baseName.toLowerCase().contains('budget') ||
+          baseName.toLowerCase().contains('plan')) {
+        budgetByName ??= entry;
+      }
+    }
+    register ??= registerByName;
+    budget ??= budgetByName;
+    if (register == null || budget == null) {
+      throw const YnabImportException(
+        YnabImportFailure.invalidExportZip,
+        'No register and budget CSV in the ZIP file',
+      );
+    }
+    return (register: register, budget: budget);
+  }
+
+  /// The files of a ZIP archive (name with `/` separators, bytes), without
+  /// directories and macOS resource forks. Throws [failure] when the bytes
+  /// are not a readable ZIP archive.
+  static List<(String, List<int>)> _zipFiles(
+    List<int> zipBytes,
+    YnabImportFailure failure,
+  ) {
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(zipBytes);
+    } catch (e) {
+      throw YnabImportException(failure, 'Not a readable ZIP file: $e');
+    }
+    final files = <(String, List<int>)>[];
+    for (final file in archive.files) {
+      final name = file.name.replaceAll('\\', '/');
+      if (!file.isFile ||
+          name.startsWith('__MACOSX/') ||
+          path.posix.basename(name).startsWith('._')) {
+        continue;
+      }
+      final bytes = file.readBytes();
+      if (bytes != null) {
+        files.add((name, bytes));
+      }
+    }
+    if (files.isEmpty) {
+      throw YnabImportException(failure, 'The ZIP file is empty');
+    }
+    return files;
+  }
+
   /// SHA-256 of an export's text, the key of the "already imported" check.
   static String fingerprintOf(String content) =>
       sha256.convert(utf8.encode(content)).toString();
 
-  /// The amount cells of both files (Outflow, Inflow, Budgeted), for the
-  /// decimal separator inference.
+  /// The names the budget file's amount column goes by: `Budgeted` in
+  /// Budget.csv, `Assigned` since YNAB renamed it (Plan.csv).
+  static const budgetAmountColumns = ['Budgeted', 'Assigned'];
+
+  /// The rows of a YNAB CSV file (header first); empty for an empty file.
+  /// The delimiter is read from the header line: comma, or tab for the
+  /// exports of budgets with a decimal comma.
+  static List<List<dynamic>> _csvRows(String content) {
+    var text = content;
+    if (text.startsWith('\u{FEFF}')) {
+      text = text.substring(1);
+    }
+    if (text.trim().isEmpty) {
+      return const [];
+    }
+    final String? eol;
+    if (text.contains('\r\n')) {
+      eol = '\r\n';
+    } else if (text.contains('\n')) {
+      eol = '\n';
+    } else if (text.contains('\r')) {
+      eol = '\r';
+    } else {
+      eol = null;
+    }
+    final headerEnd = eol == null ? -1 : text.indexOf(eol);
+    final header = headerEnd == -1 ? text : text.substring(0, headerEnd);
+    final tabs = '\t'.allMatches(header).length;
+    return const CsvToListConverter().convert(
+      text,
+      fieldDelimiter: tabs > ','.allMatches(header).length ? '\t' : ',',
+      shouldParseNumbers: false,
+      eol: eol,
+    );
+  }
+
+  /// The index of the column called [name] (case and surrounding spaces
+  /// ignored), or -1.
+  static int _column(List<String> headers, String name) {
+    final wanted = name.toLowerCase();
+    return headers.indexWhere((h) => h.trim().toLowerCase() == wanted);
+  }
+
+  /// The amount cells of both files (Outflow, Inflow, Budgeted/Assigned),
+  /// for the decimal separator inference.
   static Iterable<String> _amountCells(String register, String budget) sync* {
     for (final (content, columns) in [
       (register, ['Outflow', 'Inflow']),
-      (budget, ['Budgeted']),
+      (budget, budgetAmountColumns),
     ]) {
-      if (content.trim().isEmpty) {
-        continue;
-      }
-      final rows = const CsvToListConverter().convert(
-        content,
-        shouldParseNumbers: false,
-        eol: content.contains('\r\n') ? '\r\n' : '\n',
-      );
+      final rows = _csvRows(content);
       if (rows.isEmpty) {
         continue;
       }
       final headers = rows.first.map((e) => e.toString()).toList();
       final indices = [
         for (final c in columns)
-          if (headers.contains(c)) headers.indexOf(c),
+          if (_column(headers, c) != -1) _column(headers, c),
       ];
       for (final row in rows.skip(1)) {
         for (final i in indices) {
@@ -464,7 +659,9 @@ class YnabImportService {
 
   /// Parses a legacy YNAB4 budget folder.
   ///
-  /// [folderPath]: Path to the .ynab4 directory.
+  /// [folderPath]: Path to the .ynab4 directory. This needs read access to
+  /// the folder by path, which Android 11 and later do not give an app for
+  /// a folder the user picks; there [parseYnab4Zip] is the way in.
   Future<YnabImportData> parseYnab4(String folderPath) async {
     final dir = Directory(folderPath);
     if (!await dir.exists()) {
@@ -473,58 +670,167 @@ class YnabImportService {
         'YNAB4 directory not found: $folderPath',
       );
     }
-
-    // 1. Locate Budget.ymeta to find current version
-    final metaFile = File(path.join(folderPath, 'Budget.ymeta'));
-    if (!await metaFile.exists()) {
-      throw const YnabImportException(
-        YnabImportFailure.invalidYnab4Folder,
-        'Invalid YNAB4 bundle: Budget.ymeta missing',
-      );
-    }
-
-    // 2. Find the data folder (usually data1-{GUID})
-    String? dataFolderPath;
-    await for (final entity in dir.list()) {
-      if (entity is Directory &&
-          path.basename(entity.path).startsWith('data')) {
-        dataFolderPath = entity.path;
-        break;
+    final files = <String, Future<String> Function()>{};
+    await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      if (entity is File) {
+        final relative = path.split(
+          path.relative(entity.path, from: folderPath),
+        );
+        files[relative.join('/')] = entity.readAsString;
       }
     }
+    return _parseYnab4Bundle(files, YnabImportFailure.invalidYnab4Folder);
+  }
 
-    if (dataFolderPath == null) {
-      throw const YnabImportException(
-        YnabImportFailure.invalidYnab4Folder,
-        'Could not find data folder in YNAB4 bundle',
-      );
-    }
-
-    // 3. Find the full budget file (Budget.yfull) inside the device folder
-    File? yfullFile;
-    final dataDir = Directory(dataFolderPath);
-
-    await for (final entity in dataDir.list()) {
-      if (entity is Directory) {
-        final potentialFile = File(path.join(entity.path, 'Budget.yfull'));
-        if (await potentialFile.exists()) {
-          yfullFile = potentialFile;
-          break;
+  /// Parses a YNAB4 budget folder packed as a ZIP file (the `.ynab4`
+  /// folder itself or its content at the top of the archive). A single
+  /// picked file is readable on every Android version.
+  Future<YnabImportData> parseYnab4Zip(List<int> zipBytes) async {
+    final entries = _zipFiles(zipBytes, YnabImportFailure.invalidYnab4Zip);
+    // The bundle's root is where Budget.ymeta lies (the shallowest one).
+    String? root;
+    for (final (name, _) in entries) {
+      if (path.posix.basename(name) == 'Budget.ymeta') {
+        final dir = name.substring(0, name.length - 'Budget.ymeta'.length);
+        if (root == null || dir.length < root.length) {
+          root = dir;
         }
       }
     }
-
-    if (yfullFile == null) {
+    if (root == null) {
       throw const YnabImportException(
-        YnabImportFailure.invalidYnab4Folder,
-        'Budget.yfull not found',
+        YnabImportFailure.invalidYnab4Zip,
+        'Invalid YNAB4 bundle: Budget.ymeta missing',
       );
     }
+    final prefix = root;
+    return _parseYnab4Bundle({
+      for (final (name, bytes) in entries)
+        if (name.startsWith(prefix))
+          name.substring(prefix.length): () async => decodeText(bytes),
+    }, YnabImportFailure.invalidYnab4Zip);
+  }
 
-    final content = await yfullFile.readAsString();
+  /// Parses a YNAB4 bundle given as its files (path relative to the
+  /// `.ynab4` folder with `/` separators -> reader).
+  Future<YnabImportData> _parseYnab4Bundle(
+    Map<String, Future<String> Function()> files,
+    YnabImportFailure failure,
+  ) async {
+    if (!files.containsKey('Budget.ymeta')) {
+      throw YnabImportException(
+        failure,
+        'Invalid YNAB4 bundle: Budget.ymeta missing',
+      );
+    }
+    final yfullPath = await _currentFullBudget(files);
+    if (yfullPath == null) {
+      throw YnabImportException(failure, 'Budget.yfull not found');
+    }
+    final content = await files[yfullPath]!();
     final json = jsonDecode(content) as Map<String, dynamic>;
 
     return _parseYnab4Json(json, fingerprint: fingerprintOf(content));
+  }
+
+  /// The `Budget.yfull` to import: the path
+  /// `data folder/device folder/Budget.yfull` of the device that knows the
+  /// budget best.
+  ///
+  /// A bundle used on several computers has one folder per device, each
+  /// with its own full budget file, and those can be stale. `Budget.ymeta`
+  /// names the current data folder; `devices/*.ydevice` in it says for
+  /// every device whether it has full knowledge and how far its full
+  /// budget file goes (`knowledgeInFullBudgetFile`, e.g. `A-120,B-45`: a
+  /// version per device). The device with full knowledge and the highest
+  /// versions wins. A bundle without readable metadata falls back to the
+  /// first full budget file by path, so the choice is at least the same
+  /// every time (the directory order is not).
+  static Future<String?> _currentFullBudget(
+    Map<String, Future<String> Function()> files,
+  ) async {
+    Future<Map<String, dynamic>?> readJson(String file) async {
+      try {
+        final decoded = jsonDecode(await files[file]!());
+        return decoded is Map<String, dynamic> ? decoded : null;
+      } catch (e) {
+        Logger.warning('YNAB4: $file is unreadable: $e');
+        return null;
+      }
+    }
+
+    // Data folder / device folder / Budget.yfull.
+    var candidates = [
+      for (final file in files.keys)
+        if (file.split('/').length == 3 &&
+            file.endsWith('/Budget.yfull') &&
+            file.startsWith('data'))
+          file,
+    ]..sort();
+    final meta = await readJson('Budget.ymeta');
+    final dataFolder = meta?['relativeDataFolderName'];
+    if (dataFolder is String &&
+        candidates.any((c) => c.startsWith('$dataFolder/'))) {
+      candidates = [
+        for (final c in candidates)
+          if (c.startsWith('$dataFolder/')) c,
+      ];
+    }
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    // Rank of each device folder (by data folder and device GUID).
+    final ranks = <String, (int, int, int)>{};
+    for (final file in files.keys) {
+      final parts = file.split('/');
+      if (parts.length != 3 ||
+          parts[1] != 'devices' ||
+          !parts[2].endsWith('.ydevice')) {
+        continue;
+      }
+      final device = await readJson(file);
+      final guid = device?['deviceGUID'];
+      if (device == null || guid is! String) {
+        continue;
+      }
+      ranks['${parts[0]}/$guid/Budget.yfull'] = (
+        device['hasFullKnowledge'] == true ? 1 : 0,
+        _knowledgeTotal(device['knowledgeInFullBudgetFile']),
+        _knowledgeTotal(device['knowledge']),
+      );
+    }
+    (int, int, int) rankOf(String file) => ranks[file] ?? (-1, -1, -1);
+    var best = candidates.first;
+    for (final candidate in candidates.skip(1)) {
+      final a = rankOf(candidate);
+      final b = rankOf(best);
+      final better = a.$1 != b.$1
+          ? a.$1 > b.$1
+          : (a.$2 != b.$2 ? a.$2 > b.$2 : a.$3 > b.$3);
+      if (better) {
+        best = candidate;
+      }
+    }
+    return best;
+  }
+
+  /// The sum of the versions in a YNAB4 knowledge string (`A-120,B-45` ->
+  /// 165); -1 when it is missing or malformed. Knowledge only grows, so
+  /// of two states of one budget the later one has the larger sum.
+  static int _knowledgeTotal(Object? knowledge) {
+    if (knowledge is! String || knowledge.trim().isEmpty) {
+      return -1;
+    }
+    var total = 0;
+    for (final part in knowledge.split(',')) {
+      final version = int.tryParse(part.substring(part.lastIndexOf('-') + 1));
+      if (version == null) {
+        return -1;
+      }
+      total += version;
+    }
+    return total;
   }
 
   /// YNAB 4 keeps its income categories under the internal master
@@ -1158,12 +1464,44 @@ class YnabImportService {
     ),
   ];
 
+  static final RegExp _digit = RegExp(r'\d');
+  static final RegExp _minus = RegExp('[-−–]');
+
   /// Parses a YNAB CSV amount cell ("$1,234.56", "1.234,56 €", "") into
-  /// minor units with the export's [parser]. Unparsable or empty cells
-  /// count as 0.
+  /// minor units with the export's [parser]. An empty cell is 0.
+  ///
+  /// YNAB writes the budget's currency symbol into every cell, and budgets
+  /// exist in currencies [MoneyParser] has no symbol for ("R1 234.56",
+  /// "1 234,56 Kč", "Rp 1.234"). Whatever stands before the first and
+  /// after the last digit is therefore dropped (a minus sign or an opening
+  /// parenthesis there still makes the amount negative). A cell that is
+  /// not a number even then stops the import
+  /// ([YnabImportFailure.invalidAmount]): reading it as 0 would import a
+  /// budget full of zero amounts without a word.
   static int _parseCsvAmount(dynamic value, MoneyParser parser) {
-    final text = value?.toString() ?? '';
-    return parser.tryParse(text) ?? 0;
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty) {
+      return 0;
+    }
+    final direct = parser.tryParse(text);
+    if (direct != null) {
+      return direct;
+    }
+    final first = text.indexOf(_digit);
+    final last = text.lastIndexOf(_digit);
+    if (first != -1) {
+      final prefix = text.substring(0, first);
+      final suffix = text.substring(last + 1);
+      final number = parser.tryParse(text.substring(first, last + 1));
+      if (number != null) {
+        final negative =
+            prefix.contains(_minus) ||
+            prefix.contains('(') ||
+            suffix.contains(_minus);
+        return negative ? -number : number;
+      }
+    }
+    throw YnabImportException(YnabImportFailure.invalidAmount, text);
   }
 
   /// YNAB4 JSON amounts are major-unit numbers.

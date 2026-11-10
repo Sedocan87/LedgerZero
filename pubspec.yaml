@@ -1,5 +1,5 @@
 name: ledger_zero
-description: "LedgerZero: local-first envelope budgeting for iOS and Android."
+description: "LedgerZero: local-first envelope budgeting for Android."
 publish_to: 'none'
 
 version: 0.1.0+1
@@ -20,14 +20,8 @@ dependencies:
 
   # Database & Persistence
   drift: ^2.35.2
-  # v10: EncryptedSharedPreferences replaced by KeyStore-wrapped AES-GCM;
-  # v9 data is migrated on first access (migrateOnAlgorithmChange). Stay on
-  # v10 until every install has run it once: v11 drops that migration.
-  flutter_secure_storage: ^10.3.4
-
-  # Cloud Sync
-  googleapis: ^17.0.0
-  googleapis_auth: ^2.3.4
+  # The automatic-backup password and the Wi-Fi pairing secret (KeyStore).
+  flutter_secure_storage: ^11.2.0
 
   # Natural Language Processing
   chrono_dart: ^2.0.1
@@ -62,11 +56,6 @@ dependencies:
   timezone: ^0.11.2
   pointycastle: ^4.0.0
   crypto: ^3.0.7
-  # google_sign_in 7 is a new API (authentication and authorization split,
-  # Credential Manager on Android with a mandatory server client ID). Stay on
-  # 6 until Drive sign-in can be migrated and verified on real devices.
-  google_sign_in: ^6.2.1
-  extension_google_sign_in_as_googleapis_auth: ^2.0.12
   synchronized: ^3.4.0
   connectivity_plus: ^7.0.0
   fuzzy: ^0.5.1
@@ -74,11 +63,15 @@ dependencies:
   archive: ^4.0.7
   url_launcher: ^6.3.2
 
-  # SQLCipher is bundled through the sqlite3 build hook (see `hooks` below).
+  # SQLite itself, bundled by the sqlite3 build hook (drift's native
+  # backend). The database is a plain SQLite file in the app's private
+  # storage; backups and sync files are encrypted by the app.
   sqlite3: ^3.7.1
-  http: ^1.6.0 # Drive media download client
   qr_flutter: ^4.1.0
-  mobile_scanner: ^7.4.2
+  # QR scanner for Wi-Fi sync pairing: ZXing C++ through FFI on top of the
+  # camera plugin. No Google ML Kit and no Play services, so nothing in the
+  # scanner reports usage or diagnostics to anyone.
+  flutter_zxing: ^3.1.1
 
 dev_dependencies:
   flutter_test:
@@ -102,9 +95,5 @@ flutter:
     # Unicode font for PDF reports (the PDF standard fonts lack €, „ “ and –).
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
-
-hooks:
-  user_defines:
-    sqlite3:
-      # Bundle SQLCipher instead of plain SQLite so the database is encrypted at rest.
-      source: sqlcipher
+    # Shown on the licence page (Settings > About); see lib/app/licenses.dart.
+    - assets/fonts/LICENSE-Roboto.txt

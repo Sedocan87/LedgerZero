@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/data/database/database.dart';
@@ -240,6 +241,50 @@ void main() {
         }
       }
     });
+
+    test('change files carry the sync version, not the database schema '
+        'version', () {
+      expect(SyncSchema.of(db).schemaVersion, SyncSchema.syncVersion);
+      expect(
+        SyncSchema.syncVersion,
+        lessThanOrEqualTo(AppDatabase.currentSchemaVersion),
+      );
+    });
+
+    test(
+      'the synced schema has not changed without a new sync version',
+      () async {
+        // Every column of every synced table as it travels in change files.
+        final lines = <String>[];
+        for (final table in [...AppDatabase.syncedTables]..sort()) {
+          final columns = await db
+              .customSelect('PRAGMA table_info("$table")')
+              .get();
+          for (final c in columns) {
+            lines.add(
+              '$table.${c.data['name']}:${c.data['type']}:'
+              '${c.data['notnull'] == 1 ? 'not null' : 'null'}:'
+              '${c.data['dflt_value']}',
+            );
+          }
+        }
+        lines.sort();
+        final fingerprint = sha256.convert(utf8.encode(lines.join('\n')));
+
+        // If this fails you changed a synced table. A phone on the previous
+        // app version cannot apply rows of the new shape, so it has to defer
+        // them until it is updated:
+        //  1. set SyncSchema.syncVersion to the new database schema version,
+        //  2. follow docs/DELTA_SCHEMA_MIGRATION.md (additive columns with
+        //     defaults only),
+        //  3. then update the two values below.
+        expect(
+          (SyncSchema.syncVersion, fingerprint.toString()),
+          (20, 'e0e45a010ba52b5103a5c90138d5aa84c96a81c7e2b6c3cde899fe43ae13806c'),
+          reason: lines.join('\n'),
+        );
+      },
+    );
 
     test('natural keys come from the table definitions', () {
       final schema = SyncSchema.of(db);

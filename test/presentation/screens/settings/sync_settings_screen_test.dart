@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_view_models.dart';
@@ -17,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/test_database.dart';
 import '../../providers/sync_controller_lifecycle_test.dart'
-    show DummyTransport, FakeAuth, FakeConnectivity;
+    show DummyTransport, FakeConnectivity;
 
 class _SetupEngine implements SyncEngine {
   String? created;
@@ -46,12 +45,16 @@ class _TestController extends SyncController {
     required super.dependencies,
     required super.connectivity,
   }) : super(
-         authService: FakeAuth(),
          transportFor: (p) =>
              p == SyncProviderType.none ? null : DummyTransport(),
        );
 
   void emit(SyncState next) => state = next;
+
+  int disconnects = 0;
+
+  @override
+  Future<void> disconnect() async => disconnects++;
 }
 
 void main() {
@@ -95,7 +98,14 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           syncControllerProvider.overrideWith((ref) => controller),
-          ...overrides,
+          // The paired phones (Wi-Fi sync set up) unless a test lists some.
+          ...(overrides.isEmpty
+              ? [
+                  lanPeersProvider.overrideWith(
+                    (ref) => Stream.value(const <LanPeer>[]),
+                  ),
+                ]
+              : overrides),
         ],
         child: const MaterialApp(
           localizationsDelegates: [
@@ -119,10 +129,22 @@ void main() {
     expect(find.text('None'), findsOneWidget);
   });
 
-  testWidgets('shows the Google Drive section when selected', (tester) async {
+  testWidgets('offers only "None" and Wi-Fi sync', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('None').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Home Wi-Fi (phone to phone)'), findsWidgets);
+    expect(find.textContaining('Google'), findsNothing);
+    expect(find.textContaining('Drive'), findsNothing);
+  });
+
+  testWidgets('a Google Drive provider from an older build shows "None"', (
+    tester,
+  ) async {
     await pump(tester, provider: 'googleDrive');
-    expect(find.text('Google Drive Sync'), findsOneWidget);
-    expect(find.text('Connect to Google Drive'), findsOneWidget);
+    expect(find.text('None'), findsOneWidget);
+    expect(find.text('Wi-Fi sync'), findsNothing);
+    expect(find.textContaining('Google'), findsNothing);
   });
 
   testWidgets('Wi-Fi sync before pairing offers start and join', (
@@ -139,9 +161,9 @@ void main() {
     expect(find.text('Wi-Fi sync'), findsOneWidget);
     expect(find.byKey(const Key('lan_start')), findsOneWidget);
     expect(find.byKey(const Key('lan_join')), findsOneWidget);
-    // No passphrase to type and no Google sign-in.
+    // No passphrase to type and no sign-in.
     expect(find.text('Set a sync passphrase'), findsNothing);
-    expect(find.text('Connect to Google Drive'), findsNothing);
+    expect(find.byIcon(Icons.login), findsNothing);
   });
 
   testWidgets('Wi-Fi sync after pairing lists the paired phones', (
@@ -184,63 +206,66 @@ void main() {
   ) async {
     await pump(tester, provider: 'iCloud');
     expect(find.text('None'), findsOneWidget);
-    expect(find.text('Google Drive Sync'), findsNothing);
+    expect(find.text('Wi-Fi sync'), findsNothing);
   });
 
-  testWidgets('first device sets a passphrase that meets the rules', (
-    tester,
-  ) async {
-    final controller = await pump(tester, provider: 'googleDrive');
-    await tester.runAsync(
-      () => controller.onLockStateChanged(AppLockState.unlocked),
-    );
+  testWidgets('Turn off Wi-Fi sync asks first', (tester) async {
+    final controller = await pump(tester, provider: 'localWifi');
     controller.emit(
       controller.state.copyWith(
         status: SyncStatus.connected,
-        setup: SyncSetupState.needsNewPassphrase,
+        setup: SyncSetupState.ready,
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Set a sync passphrase'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('syncPassphraseButton')));
+    await tester.tap(find.text('Turn off Wi-Fi sync'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const ValueKey('syncPassphraseField')),
-      'short',
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Set passphrase').last);
+    expect(find.text('Turn off Wi-Fi sync?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(find.text('Use at least 10 characters'), findsWidgets);
-    expect(engine.created, isNull);
+    expect(controller.disconnects, 0);
 
-    const good = 'purple elephant dances quietly';
-    await tester.enterText(
-      find.byKey(const ValueKey('syncPassphraseField')),
-      good,
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('syncPassphraseConfirmField')),
-      good,
-    );
+    await tester.tap(find.text('Turn off Wi-Fi sync'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sync_stop_confirm')));
+    await tester.pumpAndSettle();
+    expect(controller.disconnects, 1);
+  });
+
+  testWidgets('choosing the provider "None" asks first', (tester) async {
+    final controller = await pump(tester, provider: 'localWifi');
+
+    Future<void> chooseNone() async {
+      await tester.tap(find.text('Home Wi-Fi (phone to phone)').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('None').last);
+      await tester.pumpAndSettle();
+    }
+
+    await chooseNone();
+    expect(find.text('Stop syncing?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(controller.state.selectedProvider, SyncProviderType.localWifi);
+    // The dropdown shows the provider in use again.
+    expect(find.text('Wi-Fi sync'), findsOneWidget);
+    expect(find.text('None'), findsNothing);
+
+    await chooseNone();
     await tester.runAsync(() async {
-      await tester.tap(
-        find.widgetWithText(FilledButton, 'Set passphrase').last,
-      );
+      await tester.tap(find.byKey(const Key('sync_stop_confirm')));
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pumpAndSettle();
-    expect(engine.created, good);
-    expect(find.byType(AlertDialog), findsNothing);
-    await tester.runAsync(
-      () => controller.onLockStateChanged(AppLockState.locked),
-    );
+    expect(controller.state.selectedProvider, SyncProviderType.none);
+    expect(prefs.getString('sync_provider'), 'none');
   });
 
   testWidgets('shows conflicts, failed files and update notices', (
     tester,
   ) async {
-    final controller = await pump(tester, provider: 'googleDrive');
+    final controller = await pump(tester, provider: 'localWifi');
     final now = DateTime.utc(2030);
     controller.emit(
       controller.state.copyWith(
@@ -276,6 +301,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('newer version of LedgerZero'), findsOneWidget);
+    // Also on the sync card (the one the Home screen shows).
+    expect(
+      find.textContaining('Update the app: another device uses a newer'),
+      findsOneWidget,
+    );
     expect(find.textContaining('.json.gz'), findsOneWidget);
     expect(find.text('1 change file could not be applied'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('syncConflictsTile')));

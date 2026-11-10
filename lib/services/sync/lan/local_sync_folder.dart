@@ -5,12 +5,13 @@ import 'dart:typed_data';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 
 /// The sync folder of Wi-Fi sync, kept on this phone
-/// (`<documents>/sync/lan`). The sync engine reads and writes it like the
-/// Drive folder; the paired phones copy files between their folders.
+/// (`<documents>/sync/lan`). The sync engine reads and writes it like any
+/// sync folder; the paired phones copy files between their folders.
 ///
 /// Only sync file names ([isSyncFileName]) are listed, read or written.
-/// Deleting a file (the engine compacts its own old change files) records
-/// the name, so the paired phone can delete its copy too.
+/// Deleting a file (the engine compacts its own old change files, answers
+/// a snapshot request) records the name, so the paired phone can delete
+/// its copy too instead of copying the file back.
 class LocalSyncFolder {
   LocalSyncFolder(this._directory);
 
@@ -66,6 +67,12 @@ class LocalSyncFolder {
     final temp = File('${dir.path}/.$name.part');
     await temp.writeAsBytes(bytes, flush: true);
     await temp.rename('${dir.path}/$name');
+    // Unlike change files and snapshots, a snapshot request has the same
+    // name every time: one written now is a new request, not the answered
+    // one coming back.
+    if (SyncFileName.tryParseRequest(name) != null) {
+      await forgetDeleted({name});
+    }
   }
 
   /// Deletes [name]; with [record] the name is remembered (see class doc).
@@ -93,6 +100,17 @@ class LocalSyncFolder {
       return {for (final n in list) n as String};
     } catch (_) {
       return <String>{};
+    }
+  }
+
+  /// Drops [names] from the recorded deletions (the paired phone no
+  /// longer has them, or the file exists again).
+  Future<void> forgetDeleted(Iterable<String> names) async {
+    final deleted = await this.deleted();
+    final before = deleted.length;
+    deleted.removeAll(names);
+    if (deleted.length != before) {
+      await _writeDeleted(deleted);
     }
   }
 

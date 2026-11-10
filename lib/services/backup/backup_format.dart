@@ -33,6 +33,15 @@ class BackupTooNewException extends BackupException {
     : super('This backup was made by a newer version of LedgerZero');
 }
 
+/// The backup was made by a development build with a database schema that
+/// this version no longer reads (below `AppDatabase.minimumSchemaVersion`).
+class BackupTooOldException extends BackupException {
+  const BackupTooOldException(this.schemaVersion)
+    : super('This backup was made by an early test version of LedgerZero');
+
+  final int schemaVersion;
+}
+
 class BackupInfo {
   final int formatVersion;
 

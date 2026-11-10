@@ -6,9 +6,11 @@ import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/services/sync/format/sync_change.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
+import 'package:ledger_zero/services/sync/personal_rows.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
+import 'package:ledger_zero/domain/services/schedule_stamps.dart';
 
 /// A change file that cannot be applied (unknown table or column, a
 /// constraint that cannot be resolved, ...). The file is quarantined.
@@ -60,7 +62,13 @@ const int _unsent = 1 << 62;
 ///   different content is recorded in `sync_conflicts`;
 /// * before commit, rows whose parent no longer exists (deleted on another
 ///   device) are repaired: nullable references are cleared, required
-///   references and split children are deleted;
+///   references and split children are deleted. A repair is a local edit
+///   (`updated_at` one microsecond after the repaired version, captured
+///   in `pending_sync_changes`, a tombstone for a deleted row), so it
+///   reaches the other devices under
+///   the normal conflict rule. Without that, a device on which the parent
+///   was never missing (it applied a later version that brought the parent
+///   back) would keep the row as it was, for good;
 /// * [onCommit] runs last in the transaction (advances the high-water mark).
 ///
 /// Any error rolls the whole file back.
@@ -95,10 +103,11 @@ class ChangeApplier {
         'INSERT OR REPLACE INTO sync_applying (id) VALUES (1)',
       );
       final resolvedAt = (now ?? DateTime.now()).toUtc();
+      final personal = await PersonalRows.load(_db);
       for (final change in ordered) {
-        await _applyOne(change, header, result, resolvedAt);
+        await _applyOne(change, header, result, resolvedAt, personal);
       }
-      result.repaired = await _repairForeignKeys();
+      result.repaired = await _repairForeignKeys(resolvedAt);
       await _db.customStatement('DELETE FROM sync_applying');
       if (onCommit != null) {
         await onCommit();
@@ -124,6 +133,7 @@ class ChangeApplier {
     SyncFileHeader header,
     ApplyResult result,
     DateTime resolvedAt,
+    PersonalRows personal,
   ) async {
     final table = _schema[change.table];
     if (table == null) {
@@ -192,6 +202,17 @@ class ChangeApplier {
 
     final local = await _localVersion(table.name, change.id);
     if (local != null && !_wins(change, local)) {
+      result.skipped++;
+      return;
+    }
+    if (change.deleted &&
+        local?.row != null &&
+        personal.isOwn(table.name, local!.row!)) {
+      // The row is in one of this member's personal accounts: it lives on
+      // this phone only. A tombstone for it is the announcement that it
+      // left the shared budget (this phone's own, coming back after a
+      // restore or in a snapshot) or a delete the partner made on a copy
+      // that no longer exists. Neither may delete the row here.
       result.skipped++;
       return;
     }
@@ -331,6 +352,9 @@ class ChangeApplier {
     if (table == 'budgets' && _isAutomaticFill(local)) {
       return; // nothing the user decided was lost
     }
+    if (table == 'transactions' && _isGeneratedOccurrence(local)) {
+      return; // booked by the catch-up here, untouched since
+    }
     if (local.version == AppDatabase.seedTimestamp.microsecondsSinceEpoch) {
       return; // an untouched default category (seeded, never edited)
     }
@@ -364,6 +388,16 @@ class ChangeApplier {
     } catch (_) {
       return false; // malformed month key
     }
+  }
+
+  /// A scheduled occurrence the catch-up booked on this phone and nobody
+  /// touched since (stamped with [ScheduleStamps.occurrence] of its date).
+  static bool _isGeneratedOccurrence(_Local local) {
+    final date = local.row?['date'];
+    final parsed = date is String ? DateTime.tryParse(date) : null;
+    return parsed != null &&
+        local.version ==
+            ScheduleStamps.occurrence(parsed).microsecondsSinceEpoch;
   }
 
   Future<void> _upsert(SyncedTable table, Map<String, Object?> row) async {
@@ -409,9 +443,10 @@ class ChangeApplier {
     );
   }
 
-  /// Resolves rows that reference a missing parent (see class docs).
-  /// Returns the number of repaired rows.
-  Future<int> _repairForeignKeys() async {
+  /// Resolves rows that reference a missing parent (see class docs): each
+  /// repair is written as a local edit ([now] only stamps a row that has
+  /// no timestamp). Returns the number of repaired rows.
+  Future<int> _repairForeignKeys(DateTime now) async {
     var repaired = 0;
     for (var round = 0; round < 16; round++) {
       final violations = await _db
@@ -433,7 +468,7 @@ class ChangeApplier {
         }
         final idRow = await _db
             .customSelect(
-              'SELECT id FROM "$table" WHERE rowid = ?',
+              'SELECT id, updated_at FROM "$table" WHERE rowid = ?',
               variables: [Variable.withInt(rowid)],
             )
             .getSingleOrNull();
@@ -441,18 +476,41 @@ class ChangeApplier {
           continue; // already removed in this round
         }
         final id = idRow.read<String>('id');
+        final previous = idRow.data['updated_at'];
+        // One microsecond after the version it repairs, not the time of
+        // the apply: newer than what every device has (so the repair
+        // reaches them), but older than any later edit of the row,
+        // including one that is already waiting in the sender's next
+        // file, which must still win.
+        final version = SyncSchema.versionOf(previous);
+        final repairedAt = DateTime.fromMicrosecondsSinceEpoch(
+          version > 0 ? version + 1 : now.microsecondsSinceEpoch,
+          isUtc: true,
+        ).toIso8601String();
         if (_schema.deletesOnMissingParent(table, column)) {
           Logger.info('Sync: deleting $table row whose $column is gone');
           await _db.customStatement('DELETE FROM "$table" WHERE rowid = ?', [
             rowid,
           ]);
-          await _db.syncDao.deleteVersion(table, id);
           await _clearPending(table, id);
+          await _db.customStatement(
+            'INSERT INTO pending_sync_changes '
+            '(table_name, record_id, action, changed_at, old_updated_at) '
+            "VALUES (?, ?, 'DELETE', ?, ?)",
+            [table, id, repairedAt, previous],
+          );
         } else {
           Logger.info('Sync: clearing $table.$column (parent deleted)');
           await _db.customStatement(
-            'UPDATE "$table" SET "$column" = NULL WHERE rowid = ?',
-            [rowid],
+            'UPDATE "$table" SET "$column" = NULL, updated_at = ? '
+            'WHERE rowid = ?',
+            [repairedAt, rowid],
+          );
+          await _db.customStatement(
+            'INSERT INTO pending_sync_changes '
+            '(table_name, record_id, action, changed_at) '
+            "VALUES (?, ?, 'UPDATE', ?)",
+            [table, id, repairedAt],
           );
         }
         repaired++;

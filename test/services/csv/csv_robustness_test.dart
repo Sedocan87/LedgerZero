@@ -188,4 +188,28 @@ void main() {
     expect(warning.dateFormat, 'dd/MM/yyyy');
     expect(warning.otherFormat, 'MM/dd/yyyy');
   });
+  test('an LF file with a CRLF inside a quoted memo keeps its rows', () {
+    final data = service.parseCsvContent(
+      'Date,Amount,Memo\n'
+      '2026-10-01,-1.00,"first line\r\nsecond line"\n'
+      '2026-10-02,-2.00,plain\n'
+      '2026-10-03,-3.00,"a, b"\n',
+    );
+    expect(data.headers, ['Date', 'Amount', 'Memo']);
+    expect(data.rows, hasLength(3));
+    expect(data.rows.first[2], 'first line\r\nsecond line');
+    expect(validate(data).isValid, isTrue);
+    expect(validate(data).warnings, isEmpty);
+  });
+
+  test('a CRLF file with an LF inside a quoted memo keeps its rows', () {
+    final data = service.parseCsvContent(
+      'Date,Amount,Memo\r\n'
+      '2026-10-01,-1.00,"first line\nsecond line"\r\n'
+      '2026-10-02,-2.00,plain\r\n',
+    );
+    expect(data.rows, hasLength(2));
+    expect(data.rows.first[2], 'first line\nsecond line');
+    expect(data.rows.last[2], 'plain');
+  });
 }

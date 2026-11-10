@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later (android:dataExtractionRules). See
+     docs/PLATFORM_SPECIFICS.md ("Backup and moving to a new phone").
+
+     Both sections take the same files: the database
+     (app_flutter/db.sqlite with its WAL) and the app's preferences
+     (FlutterSharedPreferences.xml). With an include, only the included
+     files are copied. Everything else stays behind: the secure storage
+     (flutter_secure_storage: the automatic-backup password and the Wi-Fi
+     pairing secret are encrypted with an Android KeyStore key that cannot
+     move), the card capture store (ledgerzero_capture.xml, also
+     KeyStore-encrypted; it starts empty), the cache and exports, the sync
+     folder (app_flutter/sync) and the automatic backups (external
+     storage). The install marker in getNoBackupFilesDir() is never copied,
+     so a restored or moved install gets a new sync device id at its first
+     start (lib/services/backup/transferred_install.dart).
+
+     Cloud backup (Android backup to the user's Google account): only when
+     it is end-to-end encrypted with the phone's screen lock.
+     disableIfNoEncryptionCapabilities="true" makes the whole section
+     require client-side encryption (the transport flag
+     FLAG_CLIENT_SIDE_ENCRYPTION_ENABLED); without a screen lock nothing is
+     uploaded. It applies to this section only.
+
+     Device-to-device transfer (setting up a new phone from the old one, by
+     cable or Wi-Fi): the same files, whether or not the phone has a screen
+     lock (the data goes straight to the other phone). -->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="root" path="app_flutter/db.sqlite" />
+        <include domain="root" path="app_flutter/db.sqlite-wal" />
+        <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="root" path="app_flutter/db.sqlite" />
+        <include domain="root" path="app_flutter/db.sqlite-wal" />
+        <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+    </device-transfer>
+</data-extraction-rules>

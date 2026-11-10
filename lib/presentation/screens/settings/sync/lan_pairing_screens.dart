@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_zxing/flutter_zxing.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 /// Shows this phone's pairing code as a QR code (and as text for typing),
@@ -79,10 +79,23 @@ class _LanShowCodeScreenState extends ConsumerState<LanShowCodeScreen> {
   }
 }
 
+/// Builds the camera view of [LanScanCodeScreen]. It reports the text of
+/// every QR code it reads with [onCode], and calls [onCameraError] when the
+/// camera cannot be used (permission denied, no camera, camera fault).
+typedef LanQrScannerBuilder =
+    Widget Function(
+      BuildContext context, {
+      required ValueChanged<String> onCode,
+      required VoidCallback onCameraError,
+    });
+
 /// Scans the other phone's pairing code; "Enter code instead" for when the
 /// camera cannot be used. Pops with the code text.
 class LanScanCodeScreen extends StatefulWidget {
-  const LanScanCodeScreen({super.key});
+  const LanScanCodeScreen({super.key, this.scannerBuilder = _zxingScanner});
+
+  /// The camera view; replaced in widget tests, where no camera exists.
+  final LanQrScannerBuilder scannerBuilder;
 
   /// The scanned or typed code, or null when cancelled. The camera
   /// permission prompt must not trigger the auto-lock.
@@ -92,24 +105,57 @@ class LanScanCodeScreen extends StatefulWidget {
     ),
   );
 
+  /// ZXing (C++ through FFI) on the frames of the camera plugin: it decodes
+  /// on the phone and has no Google ML Kit or Play services behind it.
+  /// Opening the camera asks for the camera permission; a denial arrives in
+  /// `onControllerCreated` as an error.
+  static Widget _zxingScanner(
+    BuildContext context, {
+    required ValueChanged<String> onCode,
+    required VoidCallback onCameraError,
+  }) => ReaderWidget(
+    codeFormat: Format.qrCode,
+    // The pairing code is a dense QR code: scan most of the frame so that
+    // it does not have to sit exactly in the middle, and look again quickly
+    // after a frame without a code.
+    cropPercent: 0.8,
+    scanDelay: const Duration(milliseconds: 250),
+    showGallery: false,
+    showToggleCamera: false,
+    onScan: (code) {
+      final text = code.text;
+      if (code.isValid && text != null) {
+        onCode(text);
+      }
+    },
+    onControllerCreated: (_, error) {
+      if (error != null) {
+        onCameraError();
+      }
+    },
+  );
+
   @override
   State<LanScanCodeScreen> createState() => _LanScanCodeScreenState();
 }
 
 class _LanScanCodeScreenState extends State<LanScanCodeScreen> {
   bool _done = false;
+  bool _cameraFailed = false;
 
-  void _onDetect(BarcodeCapture capture) {
-    if (_done) {
+  void _onCode(String value) {
+    if (_done || !mounted) {
       return;
     }
-    for (final barcode in capture.barcodes) {
-      final value = barcode.rawValue;
-      if (value != null && value.startsWith(LanPairingCode.prefix)) {
-        _done = true;
-        Navigator.of(context).pop(value);
-        return;
-      }
+    if (value.startsWith(LanPairingCode.prefix)) {
+      _done = true;
+      Navigator.of(context).pop(value);
+    }
+  }
+
+  void _onCameraError() {
+    if (mounted && !_cameraFailed) {
+      setState(() => _cameraFailed = true);
     }
   }
 
@@ -132,18 +178,22 @@ class _LanScanCodeScreenState extends State<LanScanCodeScreen> {
       body: Column(
         children: [
           Expanded(
-            child: MobileScanner(
-              onDetect: _onDetect,
-              errorBuilder: (context, error) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    l10n.lanCameraUnavailable,
-                    textAlign: TextAlign.center,
+            child: _cameraFailed
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        l10n.lanCameraUnavailable,
+                        key: const Key('lan_camera_unavailable'),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                : widget.scannerBuilder(
+                    context,
+                    onCode: _onCode,
+                    onCameraError: _onCameraError,
                   ),
-                ),
-              ),
-            ),
           ),
           SafeArea(
             top: false,

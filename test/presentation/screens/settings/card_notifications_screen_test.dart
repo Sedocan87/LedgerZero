@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
@@ -32,6 +33,30 @@ class _FakeService implements NotificationCaptureService {
 
   /// What [processPending] reports.
   CaptureRunResult runResult = const CaptureRunResult();
+
+  /// What [held] returns instead of every queued notification.
+  List<HeldCapture>? heldCaptures;
+
+  /// Answers given with [resolveAuthorisation]: id -> replace.
+  final Map<String, bool> resolved = {};
+
+  @override
+  Future<CaptureAttention> attention() async => CaptureAttention(
+    watching: channel.sources.isNotEmpty,
+    duplicates: [
+      for (final n in channel.queue)
+        if (n.status == CaptureStatus.duplicate) n.id,
+    ],
+  );
+
+  @override
+  Future<void> resolveAuthorisation(String id, {required bool replace}) async {
+    resolved[id] = replace;
+    heldCaptures = [
+      for (final h in heldCaptures ?? const <HeldCapture>[])
+        if (h.notification.id != id) h,
+    ];
+  }
 
   @override
   Future<int> captureShowing(String packageName) =>
@@ -73,14 +98,16 @@ class _FakeService implements NotificationCaptureService {
   }
 
   @override
-  Future<List<HeldCapture>> held() async => [
-    for (final n in channel.queue)
-      HeldCapture(
-        n,
-        const CardNotificationParse(CaptureKind.unreadable),
-        CaptureHoldReason.unreadable,
-      ),
-  ];
+  Future<List<HeldCapture>> held() async =>
+      heldCaptures ??
+      [
+        for (final n in channel.queue)
+          HeldCapture(
+            n,
+            const CardNotificationParse(CaptureKind.unreadable),
+            CaptureHoldReason.unreadable,
+          ),
+      ];
 
   @override
   Future<void> dismiss(Iterable<String> ids) => channel.remove(ids);
@@ -217,6 +244,104 @@ void main() {
 
     expect(channel.queue, isEmpty);
     expect(find.text('Waiting for you'), findsNothing);
+  });
+
+  testWidgets('a payment that may be the final amount of a reserved one '
+      'asks whether it replaces it', (tester) async {
+    channel.sources = [
+      const CaptureSource(
+        packageName: 'de.bank.app',
+        label: 'My Bank',
+        accountId: 'acc-visa',
+      ),
+    ];
+    final notification = CapturedNotification(
+      id: 'n1',
+      packageName: 'de.bank.app',
+      appLabel: 'My Bank',
+      text: 'Kartenzahlung 62,31 € bei Aral',
+      postedAt: DateTime(2026, 10, 14),
+    );
+    service.heldCaptures = [
+      HeldCapture(
+        notification,
+        const CardNotificationParse(
+          CaptureKind.outflow,
+          amount: 6231,
+          currency: 'EUR',
+          merchant: 'Aral',
+        ),
+        CaptureHoldReason.replacesAuthorisation,
+        replaces: Transaction(
+          id: 'tx-hold',
+          accountId: 'acc-visa',
+          date: DateTime.utc(2026, 10, 12),
+          amount: -15000,
+          approved: false,
+        ),
+      ),
+    ];
+    await pump(tester);
+
+    expect(
+      find.textContaining('final amount of the €150.00 that was reserved'),
+      findsOneWidget,
+    );
+    // Neither answer is the plain "Add".
+    expect(find.text('Add'), findsNothing);
+    final replace = find.byKey(const Key('cardNotifications.replace.n1'));
+    expect(
+      find.byKey(const Key('cardNotifications.addSeparately.n1')),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(replace);
+    await tester.pumpAndSettle();
+    await tester.tap(replace);
+    await tester.pumpAndSettle();
+
+    expect(service.resolved, {'n1': true});
+    expect(find.text('Waiting for you'), findsNothing);
+  });
+
+  testWidgets('payments held as duplicates by an earlier run are pointed '
+      'out and no longer announced on Home', (tester) async {
+    channel.sources = [
+      const CaptureSource(
+        packageName: 'de.bank.app',
+        label: 'My Bank',
+        accountId: 'acc-visa',
+      ),
+    ];
+    channel.queue.add(
+      CapturedNotification(
+        id: 'dup',
+        packageName: 'de.bank.app',
+        appLabel: 'My Bank',
+        text: 'You spent €4.20 at Kiosk',
+        postedAt: DateTime(2026, 10, 14),
+        status: CaptureStatus.duplicate,
+      ),
+    );
+    service.heldCaptures = const [];
+    await pump(tester);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('cardNotifications.duplicates')),
+      200,
+    );
+    expect(
+      find.text(
+        '1 payment not added: it looks like a transaction you already have',
+      ),
+      findsOneWidget,
+    );
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CardNotificationsScreen)),
+    );
+    final attention = container.read(captureAttentionProvider);
+    expect(attention.attention.duplicates, ['dup']);
+    expect(attention.showBanner, isFalse);
   });
 
   testWidgets('notifications already showing are offered for review', (

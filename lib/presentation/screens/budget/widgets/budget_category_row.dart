@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +21,7 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/budget_calculato
 import 'package:ledger_zero/presentation/screens/budget/widgets/move_money_modal.dart';
 import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
-import 'package:ledger_zero/core/constants/category_constants.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/presentation/widgets/common/overflow_tooltip_text.dart';
@@ -34,35 +36,58 @@ class BudgetCategoryRow extends ConsumerStatefulWidget {
 }
 
 class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
-  Future<void> _onSubmit(int value) async {
-    await HapticFeedback.selectionClick();
-    final month = ref.read(selectedBudgetMonthProvider);
-    final budgetingService = ref.read(budgetingServiceProvider);
-    final oldAmount = widget.viewModel.budgeted;
+  /// What a write started from this row needs, taken when its sheet or
+  /// dialog opens. The row can be rebuilt for other data or removed while
+  /// the sheet is open (a sync hides or deletes the category), so nothing
+  /// is read from the widget or its `ref` when the user finally confirms.
+  _RowTarget _target() => _RowTarget(
+    container: ProviderScope.containerOf(context, listen: false),
+    messenger: ScaffoldMessenger.of(context),
+    l10n: AppLocalizations.of(context)!,
+    categoryId: widget.viewModel.category.id,
+    month: ref.read(selectedBudgetMonthProvider),
+    budgeted: widget.viewModel.budgeted,
+  );
 
-    await budgetingService.setCategoryBudgetedAmount(
-      widget.viewModel.category.id,
-      value,
-      month,
-    );
-    if (!mounted) {
+  /// The amount budgeted right now: the row's own while it is on screen
+  /// (it may have changed since the sheet opened), else what the sheet was
+  /// opened with.
+  int _currentBudgeted(_RowTarget target) =>
+      mounted ? widget.viewModel.budgeted : target.budgeted;
+
+  Future<void> _onSubmit(int value, _RowTarget target) async {
+    await HapticFeedback.selectionClick();
+    final budgetingService = target.container.read(budgetingServiceProvider);
+    final oldAmount = _currentBudgeted(target);
+
+    try {
+      await budgetingService.setCategoryBudgetedAmount(
+        target.categoryId,
+        value,
+        target.month,
+      );
+    } catch (e, stack) {
+      // E.g. the category was deleted by sync while the sheet was open.
+      Logger.error('Setting a budget failed', e, stack);
+      target.showError();
       return;
     }
 
     if (oldAmount != value) {
       final action = BudgetChangeAction(
         budgetingService: budgetingService,
-        categoryId: widget.viewModel.category.id,
-        month: month,
+        categoryId: target.categoryId,
+        month: target.month,
         oldAmount: oldAmount,
         newAmount: value,
       );
-      ref.read(undoServiceProvider).addAction(action);
-      _showUndoSnackbar(action);
+      target.container.read(undoServiceProvider).addAction(action);
+      _showUndoSnackbar(action, target);
     }
   }
 
   Future<void> _onDragAccept(int tbbAmount) async {
+    final target = _target();
     final val = await showDialog<int>(
       context: context,
       builder: (context) => _AssignAmountDialog(
@@ -70,46 +95,44 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
         initialAmount: tbbAmount,
       ),
     );
-    if (mounted && val != null && val > 0) {
+    if (val != null && val > 0) {
       // Add to existing budgeted amount
-      await _onSubmit(widget.viewModel.budgeted + val);
+      await _onSubmit(_currentBudgeted(target) + val, target);
     }
   }
 
-  Future<void> _autoAssign(AutoAssignRule rule) async {
+  Future<void> _autoAssign(AutoAssignRule rule, _RowTarget target) async {
     await HapticFeedback.selectionClick();
-    final month = ref.read(selectedBudgetMonthProvider);
-    final budgetingService = ref.read(budgetingServiceProvider);
-    final oldAmount = widget.viewModel.budgeted;
+    final budgetingService = target.container.read(budgetingServiceProvider);
+    final oldAmount = _currentBudgeted(target);
 
-    final budgetRepo = ref.read(budgetRepositoryProvider);
-    await budgetingService.autoAssign(
-      widget.viewModel.category.id,
-      month,
-      rule,
-    );
+    final int newAmount;
+    try {
+      final budgetRepo = target.container.read(budgetRepositoryProvider);
+      await budgetingService.autoAssign(target.categoryId, target.month, rule);
 
-    // Fetch new amount to record undo
-    final monthString = CalendarDate.monthKey(month);
-    final newBudget = await budgetRepo.getBudgetByCategoryAndMonth(
-      widget.viewModel.category.id,
-      monthString,
-    );
-    final newAmount = newBudget?.budgeted ?? 0;
-    if (!mounted) {
+      // Fetch new amount to record undo
+      final newBudget = await budgetRepo.getBudgetByCategoryAndMonth(
+        target.categoryId,
+        CalendarDate.monthKey(target.month),
+      );
+      newAmount = newBudget?.budgeted ?? 0;
+    } catch (e, stack) {
+      Logger.error('Quick-filling a budget failed', e, stack);
+      target.showError();
       return;
     }
 
     if (oldAmount != newAmount) {
       final action = BudgetChangeAction(
         budgetingService: budgetingService,
-        categoryId: widget.viewModel.category.id,
-        month: month,
+        categoryId: target.categoryId,
+        month: target.month,
         oldAmount: oldAmount,
         newAmount: newAmount,
       );
-      ref.read(undoServiceProvider).addAction(action);
-      _showUndoSnackbar(action);
+      target.container.read(undoServiceProvider).addAction(action);
+      _showUndoSnackbar(action, target);
     }
   }
 
@@ -117,13 +140,14 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
   /// this row, so it keeps the service and messenger, not the ref; an undo
   /// that fails (e.g. the category was deleted meanwhile) shows the generic
   /// error instead of throwing.
-  void _showUndoSnackbar(BudgetChangeAction action) {
-    final l10n = AppLocalizations.of(context)!;
-    final undoService = ref.read(undoServiceProvider);
-    final messenger = ScaffoldMessenger.of(context);
+  void _showUndoSnackbar(BudgetChangeAction action, _RowTarget target) {
+    final l10n = target.l10n;
+    final undoService = target.container.read(undoServiceProvider);
+    final messenger = target.messenger;
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
+        persist: false,
         content: Text(l10n.budgetUpdated),
         action: SnackBarAction(
           label: l10n.undo,
@@ -164,6 +188,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
   void _showCalculatorModal(int initialValue) {
     final fmt = ref.read(appFormatterProvider);
+    final target = _target();
     String currentValue = fmt.formatAmountForInput(initialValue);
 
     showModalBottomSheet(
@@ -182,32 +207,29 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
             currentValue = val;
           },
           onSubmitted: () {
-            Navigator.pop(context);
-            // Accepts a plain amount or an unevaluated expression.
+            // Accepts a plain amount or an unevaluated expression. Parsed
+            // before the sheet closes: an unfinished or impossible one
+            // ("50+", "5/0") keeps it open with a message, instead of
+            // closing as if the amount had been set.
             final val = parseBudgetInput(currentValue, fmt);
             if (val == null) {
-              return;
+              return target.l10n.invalidAmount;
             }
             if (val < 0) {
               // Budgeting a negative amount would raise To Be Budgeted.
-              ScaffoldMessenger.of(this.context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(this.context)!.budgetAmountNegative,
-                  ),
-                ),
-              );
-              return;
+              return target.l10n.budgetAmountNegative;
             }
-            _onSubmit(val);
+            Navigator.pop(context);
+            _onSubmit(val, target);
+            return null;
           },
         ),
       ),
     );
   }
 
-  // _moveFocus was unused, replacing it with the above
   void _showQuickActions() {
+    final target = _target();
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -227,7 +249,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 title: Text(AppLocalizations.of(context)!.budgetPreviousMonth),
                 onTap: () {
                   Navigator.pop(context);
-                  _autoAssign(AutoAssignRule.lastMonthBudgeted);
+                  _autoAssign(AutoAssignRule.lastMonthBudgeted, target);
                 },
               ),
               ListTile(
@@ -235,7 +257,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 title: Text(AppLocalizations.of(context)!.budgetLastMonthSpent),
                 onTap: () {
                   Navigator.pop(context);
-                  _autoAssign(AutoAssignRule.lastMonthSpent);
+                  _autoAssign(AutoAssignRule.lastMonthSpent, target);
                 },
               ),
               ListTile(
@@ -243,7 +265,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 title: Text(AppLocalizations.of(context)!.budgetAverageSpent),
                 onTap: () {
                   Navigator.pop(context);
-                  _autoAssign(AutoAssignRule.averageSpent);
+                  _autoAssign(AutoAssignRule.averageSpent, target);
                 },
               ),
               ListTile(
@@ -251,20 +273,22 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                 title: Text(AppLocalizations.of(context)!.budgetZeroOut),
                 onTap: () {
                   Navigator.pop(context);
-                  _onSubmit(0);
+                  _onSubmit(0, target);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.swap_horiz),
                 title: Text(AppLocalizations.of(context)!.moveMoney),
                 onTap: () {
-                  Navigator.pop(context);
-                  // The sheet's context is gone once popped; use the row's.
+                  // The sheet's context is gone once popped; the row's
+                  // navigator stays (the row itself may not).
+                  final navigator = Navigator.of(context);
+                  navigator.pop();
                   showModalBottomSheet(
-                    context: this.context,
+                    context: navigator.context,
                     isScrollControlled: true,
                     builder: (context) => MoveMoneyModal(
-                      initialFromCategoryId: widget.viewModel.category.id,
+                      initialFromCategoryId: target.categoryId,
                     ),
                   );
                 },
@@ -307,17 +331,208 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     }
 
     final viewMode = ref.watch(budgetViewModeProvider);
-    final catColor = category.color != null
-        ? Color(category.color!)
-        : theme.colorScheme.primary;
-    final catIcon = categoryIcons[category.icon] ?? Icons.label_outline_rounded;
+    final catColor = CategoryIconResolver.tintFor(
+      color: category.color,
+      icon: category.icon,
+      id: category.id,
+      name: category.name,
+      brightness: theme.brightness,
+    );
+    final catIcon = CategoryIconResolver.iconFor(
+      icon: category.icon,
+      id: category.id,
+      name: category.name,
+    );
 
     final budgeted = widget.viewModel.budgeted;
-    final spent = widget.viewModel.activity.abs();
+    // Net spending: a category whose refunds exceed its spending has spent
+    // nothing (not the refund's amount, which would show as overspending).
+    final spent = math.max(0, -widget.viewModel.activity);
     final miniProgress = budgeted > 0
         ? (spent / budgeted).clamp(0.0, 1.0)
         : (spent > 0 ? 1.0 : 0.0);
     final isOverspent = available < 0 || (budgeted > 0 && spent > budgeted);
+    final standard = viewMode == BudgetViewMode.standard;
+
+    // Category Icon Badge + Name + Subtle Progress Bar
+    final nameBlock = Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: catColor.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          alignment: Alignment.center,
+          child: Icon(catIcon, size: 15, color: catColor),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  if (widget.viewModel.goalTarget > 0 &&
+                      widget.viewModel.budgeted < widget.viewModel.goalTarget)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4.0),
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        size: 15,
+                        color: Colors.orange.shade700,
+                        semanticLabel: l10n?.budgetGoalUnderfunded,
+                      ),
+                    ),
+                  Expanded(
+                    // Two lines; tap shows a longer name.
+                    child: OverflowTooltipText(
+                      category.name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (standard && (budgeted > 0 || spent > 0)) ...[
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                  child: LinearProgressIndicator(
+                    value: miniProgress,
+                    minHeight: 3,
+                    color: isOverspent ? AppColors.expense : AppColors.success,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+
+    // Assigned (Budgeted) Column - Editable via Calculator
+    final budgetedCell = InkWell(
+      onTap: () => _showCalculatorModal(widget.viewModel.budgeted),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        alignment: Alignment.centerRight,
+        constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.28,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+        ),
+        child: _FittedAmount(
+          widget.viewModel.budgeted,
+          amountContext: AmountContext.budgeted,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+
+    // Activity Column (Read only)
+    final activityCell = InkWell(
+      onTap: _inspectCategory,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        alignment: Alignment.centerRight,
+        constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: _FittedAmount(
+          widget.viewModel.activity,
+          amountContext: AmountContext.activity,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+
+    // Available Column (Bubble)
+    final availableCell = Container(
+      alignment: Alignment.centerRight,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: bubbleColor,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+        ),
+        child: _FittedAmount(
+          available,
+          amountContext: AmountContext.available,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+
+    // Progress Bar Mode (Comparison/Simple)
+    Widget comparisonBar() {
+      // Ratio for the progress bar only.
+      final progress = budgeted > 0
+          ? (spent / budgeted).clamp(0.0, 1.0)
+          : (spent > 0 ? 1.0 : 0.0);
+      final barOverspent = spent > budgeted;
+      final barColor = barOverspent ? AppColors.expense : AppColors.success;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Semantics(
+                  label: l10n?.amountSemanticsSpentOfBudgeted(
+                    fmt.formatMoney(spent),
+                    fmt.formatMoney(budgeted),
+                  ),
+                  excludeSemantics: l10n != null,
+                  child: Text(
+                    '${fmt.formatMoney(spent)} / ${fmt.formatMoney(budgeted)}',
+                    style: theme.textTheme.labelSmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                NumberFormat.percentPattern(fmt.locale).format(progress),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: barColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            color: barColor,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(AppRadius.full),
+          ),
+        ],
+      );
+    }
 
     return DragTarget<int>(
       onWillAcceptWithDetails: (details) => details.data > 0,
@@ -325,258 +540,109 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       builder: (context, candidateData, rejectedData) {
         return InkWell(
           onLongPress: _showQuickActions,
-          child: Container(
-            color: candidateData.isNotEmpty
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                : Colors.transparent,
-            // The amount cells are at least kMinInteractiveDimension tall;
-            // the vertical padding is reduced so the row keeps its height.
-            padding: EdgeInsets.symmetric(
-              vertical: viewMode == BudgetViewMode.standard
-                  ? AppSpacing.md - 6
-                  : AppSpacing.md,
-              horizontal: AppSpacing.md,
-            ),
-            child: Row(
-              children: [
-                // Category Icon Badge + Name + Subtle Progress Bar
-                Expanded(
-                  flex: 3,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: catColor.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(catIcon, size: 15, color: catColor),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // On a phone the name and three amounts do not fit side by
+              // side (see budgetRowIsCompact): the name gets its own line.
+              final compact = budgetRowIsCompact(
+                constraints.maxWidth - 2 * AppSpacing.md,
+              );
+              final Widget content;
+              if (compact) {
+                content = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    nameBlock,
+                    if (standard) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Expanded(child: budgetedCell),
+                          const SizedBox(width: 4),
+                          Expanded(child: activityCell),
+                          Expanded(child: availableCell),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                if (widget.viewModel.goalTarget > 0 &&
-                                    widget.viewModel.budgeted <
-                                        widget.viewModel.goalTarget)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 4.0),
-                                    child: Icon(
-                                      Icons.warning_amber_rounded,
-                                      size: 15,
-                                      color: Colors.orange.shade700,
-                                      semanticLabel:
-                                          l10n?.budgetGoalUnderfunded,
-                                    ),
-                                  ),
-                                Expanded(
-                                  // Two lines; tap shows a longer name.
-                                  child: OverflowTooltipText(
-                                    category.name,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (viewMode == BudgetViewMode.standard &&
-                                (budgeted > 0 || spent > 0)) ...[
-                              const SizedBox(height: 4),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.full,
-                                ),
-                                child: LinearProgressIndicator(
-                                  value: miniProgress,
-                                  minHeight: 3,
-                                  color: isOverspent
-                                      ? AppColors.expense
-                                      : AppColors.success,
-                                  backgroundColor: theme
-                                      .colorScheme
-                                      .surfaceContainerHighest
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                    ] else ...[
+                      const SizedBox(height: 8),
+                      comparisonBar(),
                     ],
-                  ),
+                  ],
+                );
+              } else {
+                content = Row(
+                  children: [
+                    Expanded(flex: 3, child: nameBlock),
+                    if (standard) ...[
+                      const SizedBox(width: 4),
+                      Expanded(flex: 2, child: budgetedCell),
+                      Expanded(flex: 2, child: activityCell),
+                      Expanded(flex: 2, child: availableCell),
+                    ] else ...[
+                      const SizedBox(width: 8),
+                      Expanded(flex: 6, child: comparisonBar()),
+                    ],
+                  ],
+                );
+              }
+              return Container(
+                color: candidateData.isNotEmpty
+                    ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                    : Colors.transparent,
+                // The amount cells are at least kMinInteractiveDimension
+                // tall; the vertical padding is reduced so the row keeps
+                // its height.
+                padding: EdgeInsets.symmetric(
+                  vertical: standard
+                      ? (compact ? AppSpacing.sm : AppSpacing.md - 6)
+                      : (compact ? AppSpacing.md - 4 : AppSpacing.md),
+                  horizontal: AppSpacing.md,
                 ),
-
-                if (viewMode == BudgetViewMode.standard) ...[
-                  const SizedBox(width: 4),
-                  // Assigned (Budgeted) Column - Editable via Calculator
-                  Expanded(
-                    flex: 2,
-                    child: InkWell(
-                      onTap: () =>
-                          _showCalculatorModal(widget.viewModel.budgeted),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      child: Container(
-                        alignment: Alignment.centerRight,
-                        constraints: const BoxConstraints(
-                          minHeight: kMinInteractiveDimension,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.28),
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant.withValues(
-                              alpha: 0.35,
-                            ),
-                          ),
-                        ),
-                        child: AmountText(
-                          widget.viewModel.budgeted,
-                          amountContext: AmountContext.budgeted,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.primary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Activity Column (Read only)
-                  Expanded(
-                    flex: 2,
-                    child: InkWell(
-                      onTap: _inspectCategory,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      child: Container(
-                        alignment: Alignment.centerRight,
-                        constraints: const BoxConstraints(
-                          minHeight: kMinInteractiveDimension,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 4,
-                        ),
-                        child: AmountText(
-                          widget.viewModel.activity,
-                          amountContext: AmountContext.activity,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Available Column (Bubble)
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      alignment: Alignment.centerRight,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: bubbleColor,
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                        child: AmountText(
-                          available,
-                          amountContext: AmountContext.available,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: textColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  const SizedBox(width: 8),
-                  // Progress Bar Mode (Comparison/Simple)
-                  Expanded(
-                    flex: 6,
-                    child: Builder(
-                      builder: (context) {
-                        // Ratio for the progress bar only.
-                        final progress = budgeted > 0
-                            ? (spent / budgeted).clamp(0.0, 1.0)
-                            : (spent > 0 ? 1.0 : 0.0);
-                        final barOverspent = spent > budgeted;
-                        final barColor = barOverspent
-                            ? AppColors.expense
-                            : AppColors.success;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Semantics(
-                                    label: l10n?.amountSemanticsSpentOfBudgeted(
-                                      fmt.formatMoney(spent),
-                                      fmt.formatMoney(budgeted),
-                                    ),
-                                    excludeSemantics: l10n != null,
-                                    child: Text(
-                                      '${fmt.formatMoney(spent)} / ${fmt.formatMoney(budgeted)}',
-                                      style: theme.textTheme.labelSmall,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  NumberFormat.percentPattern(
-                                    fmt.locale,
-                                  ).format(progress),
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: barColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 6,
-                              color: barColor,
-                              backgroundColor:
-                                  theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.full,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ],
-            ),
+                child: content,
+              );
+            },
           ),
         );
       },
+    );
+  }
+}
+
+/// Whether a budget row (or the header and footer above and below it) whose
+/// content is [contentWidth] dp wide uses the two-line layout: the category
+/// name on its own line and the three amounts in equal columns under it.
+///
+/// Side by side, a 360 dp phone leaves about 51 dp for an amount and 61 dp
+/// for a name, which cuts off "250,00 €" and "Lebensmittel" alike
+/// (measured with Roboto in `budget_row_fit_test.dart`). Name plus icon
+/// need about 160 dp and each amount up to 100 dp, so the single line is
+/// kept from 460 dp on (tablets, landscape).
+bool budgetRowIsCompact(double contentWidth) => contentWidth < 460;
+
+/// An amount of the budget table: one line, tabular figures, never cut off.
+/// If it is wider than its cell (six-digit amounts, a large font scale) it
+/// is scaled down to fit instead of ending in an ellipsis.
+class _FittedAmount extends StatelessWidget {
+  final int amount;
+  final AmountContext amountContext;
+  final TextStyle? style;
+
+  const _FittedAmount(this.amount, {required this.amountContext, this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerRight,
+      child: AmountText(
+        amount,
+        amountContext: amountContext,
+        style: style?.copyWith(
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+        maxLines: 1,
+      ),
     );
   }
 }
@@ -635,4 +701,32 @@ class _AssignAmountDialogState extends ConsumerState<_AssignAmountDialog> {
       ],
     );
   }
+}
+
+/// See [_BudgetCategoryRowState._target].
+class _RowTarget {
+  /// Outlives the row, unlike its `ref`.
+  final ProviderContainer container;
+  final ScaffoldMessengerState messenger;
+  final AppLocalizations l10n;
+  final String categoryId;
+
+  /// The month on screen when the sheet opened (the selection can move on
+  /// by itself at midnight on the 1st).
+  final DateTime month;
+
+  /// Budgeted amount when the sheet opened.
+  final int budgeted;
+
+  const _RowTarget({
+    required this.container,
+    required this.messenger,
+    required this.l10n,
+    required this.categoryId,
+    required this.month,
+    required this.budgeted,
+  });
+
+  void showError() =>
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
 }

@@ -726,12 +726,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get occurrences => 'Wiederholungen';
 
   @override
-  String get recoveryKey => 'Wiederherstellungsschlüssel';
-
-  @override
-  String get revealRecoveryKey => 'Wiederherstellungsschlüssel anzeigen';
-
-  @override
   String get autoLock => 'Automatische Sperre';
 
   @override
@@ -752,16 +746,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoLockNever => 'Nie';
 
   @override
-  String get incorrectPassword => 'Falsches Passwort';
-
-  @override
   String get passwordsDoNotMatch => 'Die Passwörter stimmen nicht überein';
-
-  @override
-  String get biometrics => 'Biometrische Entsperrung';
-
-  @override
-  String get encryptionStatus => 'Verschlüsselungsstatus';
 
   @override
   String get encrypted => 'Verschlüsselt';
@@ -779,13 +764,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get syncSettings => 'Synchronisierung';
 
   @override
-  String get connectToGoogleDrive => 'Mit Google Drive verbinden';
-
-  @override
   String get syncNow => 'Jetzt synchronisieren';
-
-  @override
-  String get googleDriveSync => 'Google-Drive-Synchronisierung';
 
   @override
   String lastSynced(String time) {
@@ -799,16 +778,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get providerNone => 'Keiner';
 
   @override
-  String get providerGoogleDrive => 'Google Drive';
-
-  @override
   String get disconnect => 'Trennen';
 
   @override
   String get offlineMode => 'Offline-Modus';
-
-  @override
-  String get syncOnlyOnWifi => 'Nur über WLAN synchronisieren';
 
   @override
   String get syncFrequency => 'Sync-Intervall';
@@ -1347,9 +1320,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get confirmAction => 'Bestätigen';
 
   @override
-  String get masterPasswordLabel => 'Master-Passwort';
-
-  @override
   String get confirmPasswordLabel => 'Passwort bestätigen';
 
   @override
@@ -1402,66 +1372,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Einrichtung der Sicherheit ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
 
   @override
-  String get biometricPromptTitle => 'LedgerZero entsperren';
-
-  @override
-  String get biometricPromptSubtitle =>
-      'Bestätigen Sie Ihre Identität, um Ihre Daten zu entsperren';
-
-  @override
   String get loginUnlock => 'Entsperren';
-
-  @override
-  String get loginUseBiometrics => 'Biometrie verwenden';
-
-  @override
-  String get loginUseRecoveryKey => 'Wiederherstellungsschlüssel verwenden';
-
-  @override
-  String get loginVaultMissing =>
-      'Die Schlüsseldaten dieser App fehlen, daher können Ihre Daten nicht entsperrt werden. Sie können die App zurücksetzen und eine Sicherung wiederherstellen.';
-
-  @override
-  String get loginDatabaseKeyMismatch =>
-      'Ihr Schlüssel ist korrekt, aber die Datenbankdatei konnte damit nicht geöffnet werden.';
-
-  @override
-  String get loginFailed =>
-      'Das Entsperren ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
-
-  @override
-  String get biometricsInvalidated =>
-      'Die biometrische Entsperrung wurde deaktiviert, da sich die biometrischen Daten auf diesem Gerät geändert haben. Entsperren Sie mit Ihrem Passwort und aktivieren Sie sie in den Einstellungen erneut.';
-
-  @override
-  String get biometricsUnlockFailed =>
-      'Die biometrische Entsperrung ist fehlgeschlagen. Bitte verwenden Sie Ihr Passwort.';
-
-  @override
-  String get recoveryKeyEnterTitle => 'Wiederherstellungsschlüssel eingeben';
-
-  @override
-  String get recoveryKeyEnterHint =>
-      '32 Zeichen; Leerzeichen und Bindestriche sind optional';
-
-  @override
-  String get recoveryKeyInvalid =>
-      'Dieser Wiederherstellungsschlüssel ist nicht korrekt.';
-
-  @override
-  String get recoveryKeyNeedsPassword =>
-      'Ein Update wird noch abgeschlossen. Bitte entsperren Sie einmal mit Ihrem Passwort.';
-
-  @override
-  String get encryptionStatusEncrypted =>
-      'Verschlüsselt mit SQLCipher (AES-256)';
-
-  @override
-  String get encryptionStatusPlaintext =>
-      'Die Datenbankdatei ist NICHT verschlüsselt';
-
-  @override
-  String get encryptionStatusUnknown => 'Noch nicht geprüft';
 
   @override
   String get lockNow => 'Jetzt sperren';
@@ -1530,25 +1441,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get backupPasswordLabel => 'Sicherungspasswort';
 
   @override
-  String get backupUploadToCloud =>
-      'Zusätzlich in Ihren Sync-Speicher hochladen';
-
-  @override
-  String get backupUploadNotConfigured =>
-      'Richten Sie zuerst die Synchronisierung mit Google Drive ein';
-
-  @override
-  String get backupExport => 'Sicherung exportieren';
-
-  @override
   String get backupCreating => 'Sicherung wird erstellt …';
-
-  @override
-  String get backupUploaded => 'Sicherung hochgeladen';
-
-  @override
-  String get backupUploadFailed =>
-      'Das Hochladen ist fehlgeschlagen. Die Sicherung wurde trotzdem erstellt und kann geteilt werden.';
 
   @override
   String get backupFailed =>
@@ -1609,43 +1502,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get selectiveRestoreSuccess => 'Transaktionen übernommen.';
-
-  @override
-  String get syncPassphraseSetTitle => 'Sync-Passphrase festlegen';
-
-  @override
-  String get syncPassphraseSetExplanation =>
-      'Ihre Daten werden verschlüsselt, bevor sie dieses Gerät verlassen. Wählen Sie eine Sync-Passphrase: Sie müssen sie auf jedem Gerät eingeben, das synchronisiert werden soll. Sie kann nicht wiederhergestellt werden, auch nicht vom Entwickler. Bewahren Sie sie daher sicher auf.';
-
-  @override
-  String get syncPassphraseEnterTitle => 'Sync-Passphrase eingeben';
-
-  @override
-  String get syncPassphraseEnterExplanation =>
-      'Dieser Sync-Ordner wird bereits von einem anderen Gerät verwendet. Geben Sie die dort festgelegte Sync-Passphrase ein.';
-
-  @override
-  String get syncPassphraseLabel => 'Sync-Passphrase';
-
-  @override
-  String get syncPassphraseConfirmLabel => 'Sync-Passphrase bestätigen';
-
-  @override
-  String get syncPassphraseSetButton => 'Passphrase festlegen';
-
-  @override
-  String get syncPassphraseEnterButton => 'Passphrase eingeben';
-
-  @override
-  String get syncPassphraseWrong => 'Falsche Sync-Passphrase.';
-
-  @override
-  String get syncPassphraseFolderExists =>
-      'Ein anderes Gerät hat die Synchronisierung gerade eingerichtet. Geben Sie die dort festgelegte Passphrase ein.';
-
-  @override
-  String get syncPassphraseFailed =>
-      'Die Sync-Passphrase konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.';
 
   @override
   String syncPendingChanges(int count) {
@@ -1773,11 +1629,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get syncTableRules => 'Regel';
-
-  @override
-  String syncStatusConnectedAs(String email) {
-    return 'Verbunden als $email';
-  }
 
   @override
   String get syncStatusConnected => 'Verbunden';
@@ -2136,7 +1987,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationBackupBody =>
-      'Ihre letzte Sicherung liegt schon eine Weile zurück. Tippen Sie hier, um Ihre Daten zu sichern.';
+      'Seit einer Weile hat keine Sicherung dieses Telefon verlassen. Tippen Sie hier, um eine an einem anderen Ort zu speichern; die Android-Sicherung deckt, wenn sie eingeschaltet ist, auch ein verlorenes Telefon ab.';
 
   @override
   String get notificationSyncFailedTitle => 'Synchronisierung fehlgeschlagen';
@@ -2885,14 +2736,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get tutSyncProviderBody =>
-      'Synchronisieren Sie über Ihr eigenes Google Drive. Ihre Daten werden verschlüsselt, bevor sie dieses Gerät verlassen.';
-
-  @override
-  String get tutSyncConnectTitle => 'Verbinden';
-
-  @override
-  String get tutSyncConnectBody =>
-      'Melden Sie sich an und legen Sie eine Sync-Passphrase fest. Dieselbe Passphrase geben Sie auf jedem Ihrer Geräte ein.';
+      'Synchronisieren Sie mit einem zweiten Telefon über Ihr WLAN: Koppeln Sie die Telefone, indem Sie einen QR-Code scannen. Alles wird verschlüsselt, bevor es dieses Telefon verlässt.';
 
   @override
   String get accessibilityVisualSection => 'Darstellung';
@@ -2915,14 +2759,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get faqSafeA =>
-      'Ihre Daten liegen nur auf Ihrem Telefon, in einer verschlüsselten Datenbank, deren Schlüssel in der sicheren Hardware des Telefons liegt (Android KeyStore). Die App-Sperre schützt zusätzlich mit Fingerabdruck, Gesicht oder Geräte-PIN. Synchronisierte Daten werden verschlüsselt, bevor sie das Telefon verlassen. Es gibt keine LedgerZero-Server, kein Tracking und keine Analyse.';
+      'Ihr Budget liegt auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, den Android vor anderen Apps abschirmt und mit Ihrer Displaysperre schützt. Die App-Sperre schützt zusätzlich mit Fingerabdruck, Gesicht oder Geräte-PIN. Sicherungsdateien und synchronisierte Daten werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt, bevor sie das Telefon verlassen. Ist die Android-Sicherung eingeschaltet, bewahrt Android in Ihrem Google-Konto eine Ende-zu-Ende-verschlüsselte Kopie auf, die nur die Displaysperre Ihres Telefons öffnet. Es gibt keine LedgerZero-Server, kein Konto, kein Tracking und keine Analyse.';
 
   @override
   String get faqSyncQ => 'Wie teilen mein Partner und ich ein Budget?';
 
   @override
   String get faqSyncA =>
-      'Öffnen Sie Einstellungen > Synchronisierung. Zu Hause koppeln Sie die Telefone über WLAN, indem Sie einen QR-Code scannen. Um auch unterwegs zu synchronisieren, verwenden beide Telefone dasselbe Google-Drive-Konto und dieselbe Sync-Passphrase. Das Kapitel „LedgerZero zu zweit nutzen“ im Benutzerhandbuch erklärt die Einzelheiten.';
+      'Öffnen Sie Einstellungen > Synchronisierung und koppeln Sie die Telefone über WLAN, indem Sie einen QR-Code scannen. Die beiden Telefone synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist; dazwischen arbeitet jedes für sich. Das Kapitel „LedgerZero zu zweit nutzen“ im Benutzerhandbuch erklärt die Einzelheiten.';
 
   @override
   String get faqOfflineQ => 'Funktioniert die App offline?';
@@ -2936,7 +2780,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get faqBackupA =>
-      'Unter Einstellungen > Sicherung & Export erstellen Sie eine Sicherungsdatei, die immer mit einem Sicherungspasswort Ihrer Wahl verschlüsselt ist. Ohne dieses Passwort lässt sich die Sicherung nicht wiederherstellen. CSV- und JSON-Exporte sind lesbare Kopien und nicht verschlüsselt.';
+      'Unter Einstellungen > Sicherung & Export erstellen Sie eine Sicherungsdatei, die immer mit einem Sicherungspasswort Ihrer Wahl verschlüsselt ist; mit „Speichern unter…“ legen Sie sie an einem anderen Ort ab (Computer, USB-Stick, Cloud-Ordner). Ohne dieses Passwort lässt sich die Sicherung nicht wiederherstellen. Ist die Android-Sicherung eingeschaltet, kommt das Budget auch damit auf ein neues Telefon. CSV- und JSON-Exporte sind lesbare Kopien und nicht verschlüsselt.';
 
   @override
   String get faqImportQ =>
@@ -3015,7 +2859,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onbBenefitDataTitle => 'Ihre Daten bleiben bei Ihnen';
 
   @override
-  String get onbBenefitDataBody => 'Verschlüsselt auf Ihrem Gerät gespeichert.';
+  String get onbBenefitDataBody =>
+      'Auf Ihrem Telefon gespeichert. Kein Konto, keine LedgerZero-Server.';
 
   @override
   String get onbBenefitOfflineTitle => 'Funktioniert offline';
@@ -3036,11 +2881,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbPrivacyEncrypted =>
-      'Alle Daten werden auf Ihrem Gerät mit AES-256 verschlüsselt.';
+      'Sicherungen und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.';
 
   @override
   String get onbPrivacyOwnCloud =>
-      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt über Ihr eigenes Google Drive.';
+      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt direkt zwischen Ihren Telefonen über Ihr WLAN. Ist die Android-Sicherung eingeschaltet, bewahrt sie eine Ende-zu-Ende-verschlüsselte Kopie auf, die nur Ihre Displaysperre öffnet.';
 
   @override
   String get budgetBasicsTitle => 'Budget-Grundlagen';
@@ -3227,22 +3072,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get syncErrorNetwork =>
-      'Keine Verbindung zum Cloud-Speicher. Die Synchronisierung wird erneut versucht, sobald Sie online sind.';
-
-  @override
-  String get syncErrorNotSignedIn =>
-      'Sie sind nicht angemeldet. Bitte verbinden Sie sich erneut.';
-
-  @override
-  String get syncErrorAuthFailed =>
-      'Die Anmeldung ist abgelaufen. Bitte trennen Sie die Verbindung und verbinden Sie sich erneut.';
-
-  @override
-  String get syncErrorStorageFull =>
-      'Ihr Cloud-Speicher ist voll. Geben Sie Speicherplatz frei, um weiter zu synchronisieren.';
-
-  @override
   String get transactionsShareText => 'LedgerZero-Transaktionen (CSV)';
 
   @override
@@ -3389,7 +3218,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String loginResetAppBody(String word) {
-    return 'Ohne den Schlüsseltresor lassen sich Ihre Daten nicht entsperren. Das Zurücksetzen löscht die verschlüsselte Datenbank, alle Schlüssel, Einstellungen und exportierten Dateien auf diesem Gerät und startet die Einrichtung neu; anschließend können Sie eine Sicherung wiederherstellen. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
+    return 'LedgerZero kann die Daten auf diesem Telefon nicht öffnen. Das Zurücksetzen löscht sie zusammen mit den Einstellungen und exportierten Dateien auf diesem Gerät und startet die Einrichtung neu; anschließend können Sie eine Sicherung wiederherstellen. Automatische Sicherungen auf diesem Telefon bleiben erhalten. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
   }
 
   @override
@@ -3720,26 +3549,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get lockScreenTitle => 'LedgerZero ist gesperrt';
 
   @override
-  String get lockScreenKeyError =>
-      'LedgerZero kann Ihre Daten nicht öffnen: Der auf diesem Telefon gespeicherte Schlüssel fehlt oder passt nicht zu den Daten. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
-
-  @override
-  String get legacyUnlockTitle => 'Ein letztes Mal entsperren';
-
-  @override
-  String get legacyUnlockExplanation =>
-      'LedgerZero verwendet kein Master-Passwort mehr. Entsperren Sie ein letztes Mal mit Ihrem Passwort oder Wiederherstellungsschlüssel. Danach bewahrt die App ihren Schlüssel im sicheren Schlüsselspeicher dieses Telefons auf, und die App-Sperre nutzt Fingerabdruck, Gesicht oder Displaysperre.';
-
-  @override
   String get setupDeviceHeading => 'Ihre Daten bleiben auf diesem Telefon';
 
   @override
   String get setupDeviceExplanation =>
-      'Ihr Budget wird nur auf diesem Telefon gespeichert, verschlüsselt mit einem Schlüssel, den Android in seinem sicheren Schlüsselspeicher aufbewahrt. Es gibt kein Konto und kein Passwort, das Sie sich merken müssen. Damit Sie mit dem Telefon nichts verlieren, erstellen Sie Sicherungen oder synchronisieren Sie mit einem zweiten Telefon.';
-
-  @override
-  String get lockScreenReadError =>
-      'LedgerZero konnte seinen Schlüssel gerade nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen. Ihre Daten sind nicht betroffen. Versuchen Sie es erneut; wenn es weiterhin fehlschlägt, starten Sie das Telefon neu.';
+      'Ihr Budget wird auf diesem Telefon gespeichert, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Es gibt kein Konto, keinen LedgerZero-Server und kein Tracking. Ist die Android-Sicherung eingeschaltet, bewahrt Android eine Ende-zu-Ende-verschlüsselte Kopie auf, die nur die Displaysperre dieses Telefons öffnet. Die App-Sperre kann zusätzlich nach Fingerabdruck, Gesicht oder Geräte-PIN fragen.';
 
   @override
   String get providerLocalWifi => 'Heim-WLAN (Telefon zu Telefon)';
@@ -3749,7 +3563,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lanSetupExplanation =>
-      'Teilen Sie ein Budget mit einem zweiten Telefon, zum Beispiel dem Ihres Partners, ganz ohne Cloud. Die Telefone synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist.';
+      'Teilen Sie ein Budget mit einem zweiten Telefon, zum Beispiel dem Ihres Partners, direkt über Ihr WLAN: ohne Konto und ohne Server dazwischen. Die Telefone synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist.';
 
   @override
   String get lanStart => 'Auf diesem Telefon starten';
@@ -4141,7 +3955,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpSyncBody =>
-      'Zwei Telefone können ein Budget teilen: über Ihr WLAN zu Hause ganz ohne Cloud, oder über ein gemeinsames Google-Drive-Konto, wenn Sie unterwegs sind. Alles wird verschlüsselt, bevor es das Telefon verlässt.';
+      'Zwei Telefone können über Ihr WLAN ein Budget teilen: Sie synchronisieren direkt von Telefon zu Telefon, sobald beide im selben WLAN sind und LedgerZero geöffnet ist. Alles wird verschlüsselt, bevor es das Telefon verlässt.';
 
   @override
   String get helpSyncSteps =>
@@ -4196,14 +4010,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get guidePartnerBody =>
-      'Zwei Telefone können ein Budget teilen. Koppeln Sie sie unter Synchronisierung: über Ihr WLAN zu Hause (den QR-Code auf dem anderen Telefon scannen; auf beiden muss LedgerZero im selben WLAN geöffnet sein) oder über ein gemeinsames Google-Drive-Konto. Jede Änderung wird einzeln synchronisiert; ändern Sie beide dasselbe, gilt die spätere Änderung, und die Synchronisierung listet die andere auf. Konten, die Sie als persönlich markieren, bleiben Ihre: Ihr Partner sieht Name und Saldo im Nettovermögen, aber nicht die Buchungen. Markieren Sie ein Konto vor der ersten Synchronisierung als persönlich; teilen können Sie es auch später noch.';
+      'Zwei Telefone können ein Budget teilen. Koppeln Sie sie unter Synchronisierung über WLAN (den QR-Code auf dem anderen Telefon scannen); sie synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist. Jede Änderung wird einzeln synchronisiert; ändern Sie beide dasselbe, gilt die spätere Änderung, und die Synchronisierung listet die andere auf. Konten, die Sie als persönlich markieren, bleiben Ihre: Ihr Partner sieht Name und Saldo im Nettovermögen, aber nicht die Buchungen. Markieren Sie ein Konto vor der ersten Synchronisierung als persönlich; teilen können Sie es auch später noch.';
 
   @override
   String get guideSecurityTitle => 'Sicherheit und Sicherungen';
 
   @override
   String get guideSecurityBody =>
-      'Ihre Daten liegen verschlüsselt auf Ihrem Telefon, der Schlüssel in der sicheren Hardware des Telefons. Die App-Sperre fragt nach Fingerabdruck, Gesicht oder Geräte-PIN, wenn die App im Hintergrund war. Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export und bewahren Sie das Sicherungspasswort gut auf: Ohne es lässt sich eine Sicherung nicht wiederherstellen.';
+      'Ihre Daten liegen auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Die App-Sperre fragt nach Fingerabdruck, Gesicht oder Geräte-PIN, wenn die App im Hintergrund war. Geht das Telefon verloren oder wird es zurückgesetzt, sind die Daten mit ihm weg, außer die Android-Sicherung ist eingeschaltet (sie bewahrt eine Ende-zu-Ende-verschlüsselte Kopie auf, bis zu etwa einen Tag alt, die Ihre Displaysperre öffnet) oder ein zweites Telefon synchronisiert. Erstellen Sie deshalb auch regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export, speichern Sie sie an einem anderen Ort und bewahren Sie das Sicherungspasswort gut auf: Ohne es lässt sich eine Sicherung nicht wiederherstellen.';
 
   @override
   String get guideImportTitle => 'Importieren';
@@ -4402,10 +4216,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get cardNotificationsListenerDisconnected =>
       'Der Zugriff ist erteilt, aber Android hat den Benachrichtigungsdienst von LedgerZero nicht verbunden, daher wird nichts erfasst. Schalten Sie den Benachrichtigungszugriff in den Systemeinstellungen aus und wieder ein oder starten Sie das Telefon neu.';
-
-  @override
-  String get lockScreenReadErrorPersistent =>
-      'LedgerZero kann seinen Schlüssel nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen: Der Schlüsselspeicher hat ihn nicht mehr (das kann auf manchen Telefonen nach einem Systemupdate oder einer Änderung der Displaysperre passieren). Ihre Daten auf diesem Telefon lassen sich ohne diesen Schlüssel nicht öffnen. Versuchen Sie es erneut oder starten Sie das Telefon neu; hilft das nicht, setzen Sie die App zurück und stellen Sie eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
 
   @override
   String get lockScreenOpenError =>
@@ -4685,14 +4495,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupNudgeMessage =>
-      'Sie haben persönliche Konten, und die letzte Sicherung ist älter als 7 Tage (oder es gibt keine). Deren Buchungen gibt es nur auf diesem Telefon.';
+      'Sie haben persönliche Konten, und die letzte Sicherung ist älter als 7 Tage (oder es gibt keine). Deren Buchungen werden nie mit dem anderen Telefon synchronisiert: Nur die Sicherungen dieses Telefons enthalten sie.';
 
   @override
   String get autoBackupTitle => 'Automatische Sicherungen';
 
   @override
   String autoBackupExplanation(int count) {
-    return 'Einmal am Tag speichert die App eine verschlüsselte Sicherung auf diesem Telefon und behält die letzten $count. Sie verwendet das hier gewählte Sicherungspasswort und lässt sich auch dann wiederherstellen, wenn der Schlüssel der App verloren geht. Kopieren Sie den Ordner ab und zu auf einen Computer: Bei einem verlorenen oder zurückgesetzten Telefon sind auch diese Sicherungen weg.';
+    return 'Einmal am Tag speichert die App eine verschlüsselte Sicherung auf diesem Telefon und behält die letzten $count. Sie verwendet das hier gewählte Sicherungspasswort, und eine solche Sicherung lässt sich wie jede andere wiederherstellen. Kopieren Sie den Ordner ab und zu auf einen Computer: Bei einem verlorenen oder zurückgesetzten Telefon sind auch diese Sicherungen weg.';
   }
 
   @override
@@ -4846,5 +4656,617 @@ class AppLocalizationsDe extends AppLocalizations {
           '1 Zahlung wurde nicht hinzugefügt, weil sie wie eine vorhandene Transaktion aussieht. War es ein eigener Kauf, tippen Sie auf „Trotzdem hinzufügen“.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String get cardNotificationsHeldUnclear =>
+      'Nennt einen Betrag, sagt aber nicht eindeutig, dass Sie bezahlt haben';
+
+  @override
+  String get cardNotificationsHeldSeveralAmounts =>
+      'Nennt mehrere Beträge: Fügen Sie jede Zahlung selbst hinzu';
+
+  @override
+  String cardNotificationsHeldReplaces(String amount) {
+    return 'Ist das der endgültige Betrag der zuvor vorgemerkten $amount? „Ersetzen“ ändert diese Transaktion, „Einzeln hinzufügen“ behält beide.';
+  }
+
+  @override
+  String get cardNotificationsReplace => 'Ersetzen';
+
+  @override
+  String get cardNotificationsAddSeparately => 'Einzeln hinzufügen';
+
+  @override
+  String get cardNotificationsAuthorisationMemo =>
+      'Vorgemerkter Betrag, der endgültige Betrag kann abweichen';
+
+  @override
+  String get cardNotificationsAttentionTitle =>
+      'Kartenbenachrichtigungen brauchen einen Blick';
+
+  @override
+  String get cardNotificationsAttentionAccess =>
+      'Der Benachrichtigungszugriff ist aus, es werden keine Zahlungen erfasst.';
+
+  @override
+  String get cardNotificationsAttentionListener =>
+      'Android hat den Benachrichtigungsdienst nicht verbunden, es werden keine Zahlungen erfasst.';
+
+  @override
+  String cardNotificationsAttentionStorageReset(String date) {
+    return 'Der Erfassungsspeicher wurde am $date zurückgesetzt; davor erfasste Benachrichtigungen sind verloren.';
+  }
+
+  @override
+  String cardNotificationsAttentionWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count erfasste Benachrichtigungen warten auf Sie',
+      one: '1 erfasste Benachrichtigung wartet auf Sie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Zahlungen konnten nicht hinzugefügt werden',
+      one: '1 Zahlung konnte nicht hinzugefügt werden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Einträge brauchen Ihre Aufmerksamkeit',
+      one: '1 Eintrag braucht Ihre Aufmerksamkeit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncIndicatorUpdateApp =>
+      'App aktualisieren: Ein anderes Gerät verwendet eine neuere Version';
+
+  @override
+  String get notificationSyncUpdateTitle =>
+      'LedgerZero aktualisieren, um weiter zu synchronisieren';
+
+  @override
+  String get notificationSyncUpdateBody =>
+      'Ein anderes Gerät verwendet eine neuere Version von LedgerZero. Dessen Änderungen kommen an, sobald Sie die App aktualisieren.';
+
+  @override
+  String get restoreSyncNoRollbackNote =>
+      'Auf diesem Telefon ist die Synchronisierung eingerichtet: Eine Wiederherstellung macht bereits synchronisierte Änderungen nicht rückgängig, auch nicht die dieses Telefons. Sie kommen aus dem Sync-Ordner zurück. Eine Wiederherstellung bringt verlorene Daten zurück; sie setzt das gemeinsame Budget nicht auf einen früheren Stand zurück.';
+
+  @override
+  String get lanTurnOffConfirmTitle => 'WLAN-Synchronisierung ausschalten?';
+
+  @override
+  String get lanTurnOffConfirmMessage =>
+      'Dieses Telefon synchronisiert nicht mehr und vergisst die Kopplung. Ihre Daten bleiben auf beiden Telefonen. Um wieder zu synchronisieren, müssen die Telefone mit einem neuen Code erneut gekoppelt werden.';
+
+  @override
+  String get syncProviderNoneConfirmTitle => 'Synchronisierung beenden?';
+
+  @override
+  String get syncProviderNoneConfirmMessage =>
+      'Dieses Telefon tauscht keine Änderungen mehr mit Ihren anderen Geräten aus, bis Sie den Speicherdienst wieder auswählen. Änderungen aus der Zwischenzeit werden dann gesendet.';
+
+  @override
+  String get syncStopAction => 'Synchronisierung beenden';
+
+  @override
+  String csvIssueAllInflows(int count) {
+    return 'Alle $count Beträge würden als Einnahmen importiert. Wenn dies eine Kartenabrechnung ist, die Ausgaben als positive Zahlen aufführt, schalten Sie „Negative Werte sind Ausgaben“ aus. Hat die Datei getrennte Spalten für Ausgänge und Eingänge, ordnen Sie beide unter „Weitere Spalten“ zu.';
+  }
+
+  @override
+  String csvIssueVoidRows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen sind in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und werden ausgelassen.',
+      one:
+          '1 Zeile ist in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und wird ausgelassen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csvFieldFee => 'Gebühr';
+
+  @override
+  String importPossibleDuplicateOf(String payee, String date) {
+    return 'Mögliches Duplikat: $payee am $date hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.';
+  }
+
+  @override
+  String importPossibleDuplicateOfNoPayee(String date) {
+    return 'Mögliches Duplikat: Eine Buchung ohne Empfänger am $date (z. B. eine Umbuchung) hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.';
+  }
+
+  @override
+  String importPossibleDuplicatesNearby(int count, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen haben denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von $days Tagen und sind abgewählt. Setzen Sie den Haken bei denen, die eigene Buchungen sind.',
+      one:
+          '1 Zeile hat denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von $days Tagen und ist abgewählt. Setzen Sie den Haken, wenn es eine eigene Buchung ist.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsPartial(String names, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt $count Zeilen aus; ein einzelnes Konto nimmt alle Zeilen auf.',
+      one:
+          'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt 1 Zeile aus; ein einzelnes Konto nimmt alle Zeilen auf.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsNone(String names) {
+    return 'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Wählen Sie das Konto, in das alle Zeilen importiert werden.';
+  }
+
+  @override
+  String importRowAccountNotFound(String name) {
+    return 'Konto „$name“ nicht gefunden – wird nicht importiert';
+  }
+
+  @override
+  String get importRowNoAccount =>
+      'Kein Konto in der Datei – wird nicht importiert';
+
+  @override
+  String get importRowsWithoutAccount => 'Zeilen ohne Kontonamen';
+
+  @override
+  String get csvFieldApproved => 'Bestätigt';
+
+  @override
+  String get csvExportFormatTitle => 'CSV-Format';
+
+  @override
+  String get csvExportFormatStandard => 'Standard (durch Kommas getrennt)';
+
+  @override
+  String get csvExportFormatStandardHint =>
+      'Für andere Apps und Skripte. Lässt sich wieder importieren.';
+
+  @override
+  String get csvExportFormatSpreadsheet =>
+      'Für Excel (Semikolon, Dezimalkomma)';
+
+  @override
+  String get csvExportFormatSpreadsheetHint =>
+      'Öffnet sich in einem deutschen Excel mit richtigen Spalten und Umlauten. Lässt sich ebenfalls wieder importieren.';
+
+  @override
+  String get csvNoHeaderRow => 'Datei hat keine Kopfzeile';
+
+  @override
+  String get csvNoHeaderRowHint =>
+      'Die erste Zeile wird als Buchung importiert. Die Spalten heißen #1, #2, …; prüfen Sie die Zuordnung anhand der Vorschau.';
+
+  @override
+  String get csvCustomDateFormat => 'Anderes Datumsformat …';
+
+  @override
+  String get csvCustomDateFormatHelp =>
+      'd Tag, M Monat, y Jahr, H Stunde, m Minute, s Sekunde. Beispiele: d.M.yyyy oder MMM d, yyyy';
+
+  @override
+  String get csvCustomDateFormatInvalid =>
+      'Dieses Muster kann nicht verwendet werden. Es braucht Tag (d), Monat (M) und Jahr (y), getrennt durch Satzzeichen oder Leerzeichen.';
+
+  @override
+  String ynabImportErrorInvalidAmount(String value) {
+    return 'Der Betrag „$value“ im Export konnte nicht gelesen werden. Es wurde nichts importiert. Bitte exportieren Sie erneut aus YNAB, ohne die Dateien zu bearbeiten.';
+  }
+
+  @override
+  String ynabImportErrorMissingBudgetColumns(String columns) {
+    return 'In der Budget-Datei fehlen erforderliche Spalten: $columns. Es wurde nichts importiert. Wählen Sie die Budget- (oder Plan-)Datei eines unveränderten YNAB-Exports.';
+  }
+
+  @override
+  String get ynabImportZipTile => 'YNAB-Export (ZIP-Datei)';
+
+  @override
+  String get ynabImportZipHint =>
+      'Wählen Sie das ZIP, das YNAB herunterlädt; beide Dateien werden daraus übernommen.';
+
+  @override
+  String get ynabImportErrorInvalidZip =>
+      'Diese ZIP-Datei enthält nicht die CSV-Dateien Register und Budget (oder Plan) eines YNAB-Exports.';
+
+  @override
+  String get ynabImportYnab4Zip => 'Gezippter Budget-Ordner (.zip)';
+
+  @override
+  String get ynabImportYnab4ZipHint =>
+      'Lässt sich der Ordner auf diesem Telefon nicht lesen, packen Sie den .ynab4-Ordner am Computer als ZIP und wählen Sie die ZIP-Datei hier aus.';
+
+  @override
+  String get ynabImportErrorInvalidYnab4Zip =>
+      'Diese ZIP-Datei enthält kein YNAB-4-Budget. Packen Sie den ganzen Ordner mit der Endung .ynab4.';
+
+  @override
+  String get importUndoLast => 'Letzten Import rückgängig machen';
+
+  @override
+  String importUndoLastInfo(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Letzter CSV-Import: $count Transaktionen am $date.',
+      one: 'Letzter CSV-Import: 1 Transaktion am $date.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoConfirm(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count Transaktionen löschen, die der Import vom $date angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.',
+      one:
+          'Die 1 Transaktion löschen, die der Import vom $date angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoKept(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Transaktionen dieses Imports wurden seither bearbeitet, abgeglichen oder aufgeteilt und bleiben erhalten.',
+      one:
+          '1 Transaktion dieses Imports wurde seither bearbeitet, abgeglichen oder aufgeteilt und bleibt erhalten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoNothing =>
+      'Alle Transaktionen des letzten Imports wurden seither geändert oder gelöscht. Es gibt nichts rückgängig zu machen.';
+
+  @override
+  String importUndoDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Import rückgängig gemacht: $count Transaktionen gelöscht',
+      one: 'Import rückgängig gemacht: 1 Transaktion gelöscht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoAction => 'Import rückgängig machen';
+
+  @override
+  String get importUndoFailed =>
+      'Der Import konnte nicht rückgängig gemacht werden. Es wurde nichts geändert.';
+
+  @override
+  String get helpCsvStepsV2 =>
+      'Zeilen oberhalb der Spaltennamen (Kontodaten) werden übersprungen, und eine Datei ohne Spaltennamen wird erkannt: Prüfen Sie die Zuordnung anhand der Vorschau.\nBeträge können in einer Spalte mit Vorzeichen oder in getrennten Soll- und Haben-Spalten stehen. Erscheinen Ausgaben als Einnahmen, schalten Sie „Negative Werte sind Ausgaben“ aus.\nIm Prüfschritt sind Zeilen abgewählt, die wie vorhandene Buchungen aussehen: Setzen Sie den Haken bei eigenen Buchungen und entfernen Sie ihn bei Zeilen, die Sie nicht möchten.\nIns falsche Konto importiert? „Letzten Import rückgängig machen“ auf diesem Bildschirm nimmt den Import zurück.';
+
+  @override
+  String supportEmailCopied(String email) {
+    return 'Es wurde keine E-Mail-App gefunden. Die Adresse $email wurde in die Zwischenablage kopiert.';
+  }
+
+  @override
+  String get linkCopied =>
+      'Die Seite konnte nicht geöffnet werden. Die Adresse wurde in die Zwischenablage kopiert.';
+
+  @override
+  String get aboutTitle => 'Info';
+
+  @override
+  String aboutApp(String appName) {
+    return 'Über $appName';
+  }
+
+  @override
+  String get aboutSubtitle => 'Version, Lizenzen, Kontakt';
+
+  @override
+  String aboutVersion(String version, String build) {
+    return 'Version $version (Build $build)';
+  }
+
+  @override
+  String get aboutLicenses => 'Open-Source-Lizenzen';
+
+  @override
+  String get aboutLicensesSubtitle =>
+      'Software und Schriften, mit denen diese App gebaut ist';
+
+  @override
+  String get aboutPrivacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get aboutImprint => 'Impressum';
+
+  @override
+  String get budgetTemplateDeleteTitle => 'Vorlage löschen?';
+
+  @override
+  String budgetTemplateDeleteBody(String name) {
+    return 'Die Vorlage „$name“ wird endgültig gelöscht. Monate, die bereits damit budgetiert wurden, behalten ihre Beträge.';
+  }
+
+  @override
+  String get budgetTemplateDeleteAutoFill =>
+      'Neue Monate werden automatisch aus dieser Vorlage gefüllt. Nach dem Löschen werden sie wie der Vormonat gefüllt.';
+
+  @override
+  String budgetTemplateDeleted(String name) {
+    return 'Vorlage „$name“ gelöscht';
+  }
+
+  @override
+  String get moveMoneyFailed =>
+      'Das Geld konnte nicht verschoben werden. Es wurde nichts geändert.';
+
+  @override
+  String get factoryResetBackupOffer =>
+      'Erstellen Sie zuerst eine Sicherung, falls Sie diese Daten noch einmal brauchen könnten.';
+
+  @override
+  String get factoryResetBackUpFirst => 'Zuerst sichern';
+
+  @override
+  String factoryResetTypeToConfirm(String word) {
+    return 'Alle Daten auf diesem Telefon werden gelöscht, und die Einrichtung beginnt von vorn. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
+  }
+
+  @override
+  String get languagePhone => 'Sprache des Telefons';
+
+  @override
+  String languagePhoneCurrent(String language) {
+    return 'Sprache des Telefons ($language)';
+  }
+
+  @override
+  String dateFormatFollowLanguage(String pattern) {
+    return 'Wie Sprache ($pattern)';
+  }
+
+  @override
+  String get txInflowCategoryHint =>
+      'Einnahmen fließen in „Zu budgetieren“. Wählen Sie nur für eine Erstattung eine Kategorie: Der Betrag fließt dann in diese Kategorie zurück.';
+
+  @override
+  String get txInflowToBeBudgetedSubtitle =>
+      'Einnahmen, die Sie im Budget auf Kategorien verteilen';
+
+  @override
+  String get transactionNotFound =>
+      'Diese Transaktion gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht, oder sie ist in der wiederhergestellten Sicherung nicht enthalten.';
+
+  @override
+  String get txSwipeApprove => 'Bestätigen';
+
+  @override
+  String txSortedBy(String field, String direction) {
+    return 'Sortiert nach $field, $direction';
+  }
+
+  @override
+  String get sortAscending => 'aufsteigend';
+
+  @override
+  String get sortDescending => 'absteigend';
+
+  @override
+  String get txSelectAllLoaded => 'Alle geladenen auswählen';
+
+  @override
+  String txSelectedLoadedOnly(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count geladenen Transaktionen sind ausgewählt. Scrollen Sie nach unten, um weitere zu laden.',
+      one:
+          '1 geladene Transaktion ausgewählt. Scrollen Sie nach unten, um weitere zu laden.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get txAccountClosed =>
+      'Dieses Konto ist geschlossen und nimmt keine neuen Transaktionen an. Wählen Sie ein anderes Konto oder öffnen Sie es wieder.';
+
+  @override
+  String quickAddCurrencyNotConverted(String currency) {
+    return 'Dieses Konto wird in $currency geführt: Der Betrag wird in $currency gebucht, nicht umgerechnet.';
+  }
+
+  @override
+  String get ruleConditionUnevaluable =>
+      'Trifft nie zu: Dieses Feld lässt sich so nicht vergleichen. Löschen Sie die Bedingung und fügen Sie sie neu hinzu.';
+
+  @override
+  String get ruleSaveUnevaluableCondition =>
+      'Löschen Sie zuerst die mit „Trifft nie zu“ markierten Bedingungen.';
+
+  @override
+  String get ruleListUnevaluable =>
+      'Trifft nie zu: Eine Bedingung vergleicht ein Feld auf eine nicht unterstützte Weise. Tippen Sie zum Korrigieren.';
+
+  @override
+  String get payeeNameTakenTitle => 'Name bereits vergeben';
+
+  @override
+  String payeeNameTakenMessage(String name) {
+    return 'Es gibt bereits einen Empfänger „$name“. Möchten Sie diesen Empfänger mit ihm zusammenführen? Seine Transaktionen, Planungen und Regeln verwenden dann „$name“.';
+  }
+
+  @override
+  String get scheduledFinishedPickNextDate =>
+      'Beendet: Es wird nichts mehr gebucht. Wählen Sie ein nächstes Datum, um sie wieder zu starten.';
+
+  @override
+  String txApprovedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Transaktionen bestätigt',
+      one: 'Transaktion bestätigt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txCategorizedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Kategorie für $count Transaktionen gesetzt',
+      one: 'Kategorie gesetzt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get restoreOlderVersion =>
+      'Diese Sicherung stammt aus einer frühen Testversion von LedgerZero und kann mit dieser Version nicht wiederhergestellt werden.';
+
+  @override
+  String get lockScreenDatabaseDamaged =>
+      'LedgerZero kann die Daten auf diesem Telefon nicht lesen: Die Datenbankdatei ist beschädigt. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
+
+  @override
+  String get lockScreenDatabaseTooOld =>
+      'Die Daten auf diesem Telefon wurden von einer frühen Testversion von LedgerZero gespeichert, die diese Version nicht mehr öffnet. Setzen Sie die App zurück und richten Sie sie neu ein. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
+
+  @override
+  String get securityDataLocationTitle => 'Wo Ihre Daten liegen';
+
+  @override
+  String get securityDataLocationBody =>
+      'Auf diesem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Ist die Android-Sicherung eingeschaltet, zusätzlich als Ende-zu-Ende-verschlüsselte Kopie in Ihrem Google-Konto, die nur die Displaysperre dieses Telefons öffnet. Sicherungs- und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.';
+
+  @override
+  String get autoBackupPasswordMissing =>
+      'Das Sicherungspasswort ist auf diesem Telefon nicht mehr gespeichert (zum Beispiel nach dem Umzug auf ein neues Telefon). Schalten Sie die automatischen Sicherungen aus und wieder ein, um es einzugeben.';
+
+  @override
+  String get dataLossWarning =>
+      'Geht dieses Telefon verloren oder wird es zurückgesetzt, ist Ihr Budget weg, außer die Android-Sicherung ist eingeschaltet, eine Sicherungsdatei liegt an einem anderen Ort oder ein zweites Telefon synchronisiert mit diesem.';
+
+  @override
+  String get backupSaveTo => 'Speichern unter…';
+
+  @override
+  String get backupShare => 'Teilen…';
+
+  @override
+  String get backupSaved => 'Sicherung gespeichert';
+
+  @override
+  String get backupSaveToExplanation =>
+      'Mit „Speichern unter…“ wählen Sie, wohin die Datei kommt: in einen Ordner auf dem Telefon, auf einen USB-Stick oder in eine Cloud-App wie Google Drive oder Dropbox. LedgerZero meldet sich nirgends an; das Hochladen übernimmt die gewählte App.';
+
+  @override
+  String get androidBackupTitle => 'Android-Sicherung';
+
+  @override
+  String get androidBackupExplanation =>
+      'Ist die Android-Sicherung eingeschaltet (bei den meisten Telefonen unter Einstellungen > System > Sicherung), kopiert Android das Budget etwa einmal am Tag in Ihr Google-Konto, Ende-zu-Ende-verschlüsselt mit der Displaysperre dieses Telefons, und stellt es auf einem neuen Telefon wieder her. LedgerZero kann nicht prüfen, ob sie eingeschaltet ist, und ohne Displaysperre sichert Android nichts davon.';
+
+  @override
+  String androidBackupTooLarge(String size) {
+    return 'Das Budget belegt $size MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort.';
+  }
+
+  @override
+  String budgetCurrencyFixedSubtitle(String currency) {
+    return '$currency, die Währung der Konten in Ihrem Budget';
+  }
+
+  @override
+  String budgetCurrencyFixedBody(String currency) {
+    return 'Ihr Budget ist in $currency: Jedes Konto darin verwendet diese Währung, und „Zu budgetieren“ zählt sie zusammen. Konten außerhalb des Budgets können jede Währung haben.';
+  }
+
+  @override
+  String get budgetCurrencyChangeAction => 'Budgetwährung ändern';
+
+  @override
+  String budgetCurrencyChangeConfirmTitle(String currency) {
+    return 'Budgetwährung auf $currency ändern?';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmBody(String from, String to) {
+    return 'Die Konten in Ihrem Budget werden von $from auf $to umgestellt. Beträge werden NICHT umgerechnet: Aus 100 $from werden 100 $to.\n\nDas ist für eine Währung gedacht, die bei der Einrichtung versehentlich gewählt wurde. Um wirklich in eine andere Währung zu wechseln, schließen Sie diese Konten und eröffnen Sie neue in $to.\n\nKonten außerhalb des Budgets behalten ihre Währung. Die Änderung erreicht das andere Telefon mit der nächsten Synchronisierung.';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmAction(String currency) {
+    return 'Auf $currency ändern';
+  }
+
+  @override
+  String budgetCurrencyChanged(String currency) {
+    return 'Die Budgetwährung ist jetzt $currency';
+  }
+
+  @override
+  String budgetCurrencyMixedWarning(
+    String currencies,
+    String currency,
+    String accounts,
+  ) {
+    return 'Die Konten in Ihrem Budget verwenden verschiedene Währungen ($currencies). Beträge werden nie umgerechnet, daher zählt „Zu budgetieren“ verschiedene Währungen zusammen. Die Budgetwährung ist $currency; in einer anderen Währung: $accounts.';
+  }
+
+  @override
+  String get budgetCurrencyMixedLeave => 'Aus dem Budget nehmen';
+
+  @override
+  String get budgetCurrencyMixedPickAccount =>
+      'Welches Konto verlässt das Budget?';
+
+  @override
+  String get accountCurrencyJoinTitle => 'Nicht in der Budgetwährung';
+
+  @override
+  String accountCurrencyJoinBody(String account, String budget) {
+    return 'Dieses Konto ist in $account, Ihr Budget in $budget. Beträge werden nie umgerechnet, daher kann ein Konto in einer anderen Währung nicht im Budget sein.\n\nWurde $account versehentlich gewählt, stellen Sie das Konto auf $budget um (Beträge werden NICHT umgerechnet: Aus 100 $account werden 100 $budget). Andernfalls lassen Sie es außerhalb des Budgets.';
+  }
+
+  @override
+  String ynabImportCurrencyFixed(String currency) {
+    return 'Konten in Ihrem Budget verwenden die Budgetwährung ($currency), daher auch die importierten Konten.';
   }
 }

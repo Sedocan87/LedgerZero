@@ -16,6 +16,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/picker_field.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/pickers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_dialogs.dart';
+import 'package:ledger_zero/presentation/widgets/common/unsaved_changes_guard.dart';
 import 'package:ledger_zero/presentation/widgets/recurrence/recurrence_selector.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
@@ -57,6 +58,11 @@ class _AddEditScheduledTransactionScreenState
 
   /// Calendar days (UTC midnight).
   DateTime _nextDate = CalendarDate.today();
+
+  /// The loaded schedule is finished (no next date): it stays finished on
+  /// save until the user picks a new next date, so opening and saving it
+  /// does not book an occurrence today.
+  bool _finished = false;
   DateTime? _endDate;
   int? _occurrenceCount;
   bool _autoApprove = false;
@@ -71,6 +77,32 @@ class _AddEditScheduledTransactionScreenState
   /// True while an existing schedule is loaded.
   late bool _isLoading = widget.transactionId != null;
   bool _isSaving = false;
+
+  /// The amount and memo fields as typed (they are read into [_amount] and
+  /// [_memo] on save); `null` until the user types in them.
+  String? _amountText;
+  String? _memoText;
+
+  /// [_fingerprint] of the form as it was opened or loaded.
+  late String _initial = _fingerprint();
+
+  /// What the user can change, as one string.
+  String _fingerprint() => [
+    _accountId,
+    _payeeId,
+    _categoryId,
+    _isInflow,
+    _amountText,
+    _memoText,
+    _frequency.name,
+    _interval,
+    _finished ? null : _nextDate.toIso8601String(),
+    _endDate?.toIso8601String(),
+    _occurrenceCount,
+    _autoApprove,
+  ].join('\u0000');
+
+  bool get _isDirty => !_isLoading && _fingerprint() != _initial;
 
   @override
   void initState() {
@@ -97,6 +129,7 @@ class _AddEditScheduledTransactionScreenState
           _isInflow = amount > 0;
           _frequency = transaction.frequency ?? RecurrenceFrequency.monthly;
           _interval = transaction.interval ?? 1;
+          _finished = transaction.nextDate == null;
           _nextDate = transaction.nextDate != null
               ? CalendarDate.normalize(transaction.nextDate!)
               : CalendarDate.today();
@@ -108,6 +141,7 @@ class _AddEditScheduledTransactionScreenState
           _createdAt = transaction.createdAt;
           _memo = transaction.memo;
           _anchorDay = transaction.anchorDay;
+          _initial = _fingerprint();
         });
       }
     } catch (e, stack) {
@@ -143,7 +177,7 @@ class _AddEditScheduledTransactionScreenState
         frequency: _frequency,
         interval: _interval,
         occurrenceCount: _occurrenceCount,
-        nextDate: _nextDate,
+        nextDate: _finished ? null : _nextDate,
         endDate: _endDate,
         autoApprove: _autoApprove,
         memo: _memo,
@@ -213,6 +247,19 @@ class _AddEditScheduledTransactionScreenState
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    return UnsavedChangesGuard(
+      dirty: _isDirty,
+      child: _buildScaffold(l10n, fmt, accountNames, payeeNames, categoryNames),
+    );
+  }
+
+  Widget _buildScaffold(
+    AppLocalizations l10n,
+    AppFormatter fmt,
+    Map<String, String> accountNames,
+    Map<String, String> payeeNames,
+    Map<String, String> categoryNames,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -275,6 +322,7 @@ class _AddEditScheduledTransactionScreenState
                 }
                 return null;
               },
+              onChanged: (value) => setState(() => _amountText = value),
               // A typed sign is ignored: the direction comes from the
               // Outflow | Inflow choice.
               onSaved: (value) => _amount = (fmt.parseAmount(value) ?? 0).abs(),
@@ -331,6 +379,7 @@ class _AddEditScheduledTransactionScreenState
               initialValue: _memo ?? '',
               decoration: InputDecoration(labelText: l10n.memo),
               textCapitalization: TextCapitalization.sentences,
+              onChanged: (value) => setState(() => _memoText = value),
               onSaved: (value) {
                 final memo = value?.trim() ?? '';
                 _memo = memo.isEmpty ? null : memo;
@@ -355,8 +404,13 @@ class _AddEditScheduledTransactionScreenState
 
             // Next Date
             ListTile(
+              key: const Key('scheduled_next_date'),
               title: Text(l10n.nextDate),
-              subtitle: Text(fmt.formatDate(_nextDate)),
+              subtitle: Text(
+                _finished
+                    ? l10n.scheduledFinishedPickNextDate
+                    : fmt.formatDate(_nextDate),
+              ),
               trailing: const Icon(AppIcons.calendar),
               onTap: () async {
                 final initial = CalendarDate.toLocalDay(_nextDate);
@@ -379,6 +433,7 @@ class _AddEditScheduledTransactionScreenState
                   setState(() {
                     _nextDate = CalendarDate.fromLocalPick(date);
                     _anchorDay = _nextDate.day;
+                    _finished = false;
                   });
                 }
               },

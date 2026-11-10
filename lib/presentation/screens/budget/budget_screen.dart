@@ -8,6 +8,7 @@ import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_state_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_currency_warning.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_month_actions.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_template_dialogs.dart';
 import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
@@ -151,6 +152,24 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
     });
     _startTutorialWhenLoaded(ref.read(budgetViewModelProvider));
 
+    // Back leaves the search first (and clears the filter); only a second
+    // back leaves the screen.
+    return PopScope(
+      canPop: !_isSearching,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isSearching) {
+          _toggleSearch();
+        }
+      },
+      child: _buildScaffold(context, l10n, theme),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    AppLocalizations l10n,
+    ThemeData theme,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: _isSearching
@@ -241,7 +260,11 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
             ),
             const SettingsAction(),
           ] else
-            IconButton(icon: const Icon(Icons.close), onPressed: _toggleSearch),
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: l10n.close,
+              onPressed: _toggleSearch,
+            ),
         ],
       ),
       body: Center(
@@ -263,6 +286,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                 ),
               ),
               const SliverToBoxAdapter(child: _NoAccountsPrompt()),
+              const SliverToBoxAdapter(child: BudgetCurrencyWarning()),
               const SliverToBoxAdapter(child: BudgetTutorialBanner()),
               const SliverToBoxAdapter(child: SalaryPrompt()),
               const SliverToBoxAdapter(child: LeftoverCard()),

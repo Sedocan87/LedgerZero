@@ -25,7 +25,17 @@ transfer or split transaction. Validation (`ValidationException` with a
 
 * the amount is not zero;
 * a transfer has a different target account and is not split;
-* split lines are non-zero and add up exactly to the parent amount.
+* split lines are non-zero and add up exactly to the parent amount;
+* a closed account takes no new rows
+  (`TransactionValidationError.closedAccount`): a new transaction, a new
+  transfer leg and a row moved in from another account are rejected.
+  Rows already in a closed account can still be edited, deleted and
+  restored by undo. The pickers and preselections (form, quick add, a
+  payee's default account, the Settings default account) only offer open
+  accounts, so the rule is a backstop. It covers what is entered through
+  `save`; imports (a YNAB import creates closed accounts with their
+  history), sync, restore, reconciliation and scheduled occurrences (a
+  schedule waits while its account is closed) do not go through `save`.
 
 Defaults for a new row: `uncleared`, `approved: true`, not deleted. A new
 payee name is resolved case-insensitively to an existing payee or created.
@@ -33,8 +43,52 @@ When a *new* transaction is saved with a payee and a category, the payee's
 default category (`autoCategoryId`) is updated to that category; editing a
 transaction never relearns (a one-off correction must not replace the
 default). The form starts a new transaction with the Settings default
-account (if it is open and not the partner's) and default category; a
-payee's own default category and rule suggestions replace the latter.
+account (if it is open and not the partner's) and, for an outflow, the
+Settings default category; a payee's own default category and rule
+suggestions replace the latter.
+
+Income and the category field:
+
+* Only an inflow without a category reaches To Be Budgeted, so the form
+  never gives an inflow a category on its own. The category field of an
+  inflow reads "To Be Budgeted" while it is empty, with a hint under it,
+  and its picker lists "To Be Budgeted" first.
+* The Settings default category and a payee's default category are not
+  applied to an inflow (the user's rules still are: they are explicit).
+  Switching the form to Inflow drops the category the outflow had;
+  switching back to Outflow brings it back.
+* An inflow with a category is a refund into that category: pick it while
+  the form is an inflow. `TransactionService` stores it as given.
+* Every category field (transaction, split line, transfer) has a clear
+  button, so an existing categorised inflow can be set back to To Be
+  Budgeted, by the button or by the picker's first entry.
+* Quick add follows the same rule: an inflow takes a category only when
+  the text names one, and its preview says "To Be Budgeted" otherwise.
+
+Drafts and unsaved changes in the form
+(`AddEditTransactionScreen`):
+
+* Leaving the form with something unsaved asks "Discard changes?"
+  (`UnsavedChangesGuard`, `lib/presentation/widgets/common/unsaved_changes_guard.dart`):
+  system back, the back gesture and the close button all go through it.
+  For a new transaction "unsaved" means an amount, a payee, a memo or a
+  split line was typed; for an existing one, that a field differs from
+  the loaded row. The schedule, category and rule editors use the same
+  guard; the account form has its own with the same wording.
+* A new transaction is autosaved as a draft (`draft_transaction_new` in
+  the preferences) one second after a change, only while it has content.
+  The draft exists for one case: the app is closed while the form is
+  open. Saving, "Discard" in the prompt and emptying the form remove it,
+  so a cancelled entry never comes back.
+* When a draft is found, the form shows "Draft restored" with a Discard
+  action (which empties the form and removes the draft). The draft never
+  brings a date (the form keeps today), and the account the form was
+  opened with (e.g. from an account's screen) wins over the draft's. A
+  draft without amount, payee, memo and split content is ignored.
+* Editing an existing transaction writes no draft. While the row is being
+  read the form is not shown; a row that does not exist (deleted on the
+  other phone, or gone after restoring a backup) shows "This transaction
+  no longer exists" instead of an empty form, and Save is disabled.
 
 Further rules of `save`:
 
@@ -106,7 +160,13 @@ Two rows linked both ways:
 * each leg has its own cleared status: the form shows a switch per leg
   (`TransactionInput.counterpartCleared`); when it is omitted the
   counterpart keeps its own status unless it moves to another account
-  (then it starts `uncleared`).
+  (then it starts `uncleared`);
+* a row is only `reconciled` in the account whose reconciliation included
+  it: a reconciled row or transfer leg moved to another account (after
+  the reconciled-change confirmation) starts `uncleared` there, whatever
+  the input says. The form switches that leg's switch off when its
+  account is changed (and back on when the original account is picked
+  again); switching it on in the new account means `cleared`.
 
 ## Splits
 
@@ -124,8 +184,8 @@ A parent row plus child rows:
   category (e.g. "Activity" from the budget screen); a search still finds
   the split through its lines (memo, category, amount) and lists the
   parent;
-* bulk categorise skips split parents and transfer legs, except the
-  on-budget leg of a cross-budget transfer.
+* bulk categorise skips split parents, rows of off-budget accounts and
+  transfer legs, except the on-budget leg of a cross-budget transfer.
 
 ## Deletion
 
@@ -153,6 +213,16 @@ Hard deletes happen only when a whole account is deleted (see
 * Budget edits on the budget screen record a `BudgetChangeAction`.
 * Snackbars pass the action they announced to `undo`, so a later action is
   never undone by mistake.
+* There is no general Undo or Redo button, and redo is not offered
+  anywhere. Undo is offered in the snackbar after: saving in the
+  transaction form (new or edited) and in quick add, deleting (swipe or
+  selection), approving (swipe or selection), setting the category of a
+  selection, a reconciliation (restores the cleared status and removes
+  the adjustment), and on the budget screen after budget edits, moving
+  money and the month actions. The cleared toggle on a list row is
+  recorded but not announced (tapping it again reverts it). Writes the
+  user did not make in the UI (card capture, sync, scheduled occurrences,
+  imports, which have their own "Undo last import") are not recorded.
 * Deleting a category, payee or account clears both stacks
   (`UndoService.clear()`, called by `CategoryService`, `PayeeService` and
   `AccountService`): a recorded snapshot may reference the deleted entity

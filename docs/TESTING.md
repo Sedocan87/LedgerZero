@@ -1,26 +1,26 @@
 # Testing
 
 LedgerZero has three test layers. The first two run on the host in about a
-minute; the third needs an iOS Simulator or an Android emulator.
+minute; the third needs an Android emulator (v1 is Android only).
 
 | Layer | Where | Runs on | Command |
 |-------|-------|---------|---------|
 | Unit and real-database tests | `test/` (domain, data, database, services, core) | host | `flutter test` |
 | Widget tests | `test/` (presentation, app, accessibility, l10n, ui) | host | `flutter test` |
 | Performance guards (tag `perf`) | `test/performance/` | host | `flutter test --tags perf --run-skipped` |
-| On-device integration tests | `integration_test/` | simulator / emulator | see below |
+| On-device integration tests | `integration_test/` | Android emulator | see below |
 
 `bash tool/check.sh` is the local quality gate: it checks that the generated
 localisations are up to date with no untranslated messages, runs
 `flutter analyze`, runs `flutter test` (perf tests skipped) and prints a
 summary. `bash tool/check.sh --perf` also runs the perf guards. The host
-suite currently has about 939 unit and widget tests.
+suite currently has about 1,700 unit and widget tests.
 
 ## Device rule
 
 Integration tests install the app and **wipe its data** (preferences,
-Keychain/Keystore entries, the database file). Run them only on an iOS
-Simulator or an Android emulator, and always name the device with `-d`.
+KeyStore-protected entries, the database file). Run them only on an
+Android emulator, and always name the device with `-d`.
 Never run them on a physical phone that holds real data.
 
 ## Unit, real-database and widget tests
@@ -38,7 +38,7 @@ Principles:
   `TestDatabase`), which seeds the default categories and exposes the real
   repositories and services. Mocks (`test/mocks/`, generated with
   `@GenerateNiceMocks`) are kept for widget tests that only need a few canned
-  answers and for platform boundaries (connectivity, Google sign-in).
+  answers and for platform boundaries (connectivity).
 - **The budget invariant.** `expectLedgerInvariant` in
   `test/domain/services/ledger_test_helpers.dart` asserts
   `SUM(category available) + To Be Budgeted == SUM(account balances)` for a
@@ -50,7 +50,10 @@ Principles:
 - **Fast crypto.** Production key derivation (Argon2id) is too slow for unit
   tests. Code that derives keys takes injectable KDF parameters; tests pass
   `fastKdf()` from `test/helpers/security_fakes.dart`, together with
-  `InMemorySecureStore` and `FakeBiometricKeyStore`.
+  `InMemorySecureStore` (its `readError` simulates a KeyStore that lost
+  its key) and `FakeAppLockAuthenticator`. Widget tests that pass the lock
+  screen call `mockAppDirectories()` (`test/helpers/app_directories.dart`):
+  the lock screen looks for the database file at start-up.
 - **No wall-clock waits.** Widget tests use fake time (`tester.pump`). Drift
   stream queries start a zero-length timer when their last listener goes
   away, and `AppDatabase.close()` waits for it: unmount the widget tree and
@@ -66,14 +69,16 @@ What is covered where (main areas):
 | Transactions, transfers, splits, reconcile | `test/domain/services/transaction_service*_test.dart` |
 | Undo/redo of every recorded action | `test/domain/undo/undo_round_trip_test.dart` |
 | Deleting categories, groups, accounts, payees with dependants | `test/domain/services/{category,account,payee}_service_test.dart` |
-| Schema migrations v1, v14, v15, v16, v17, v18 -> v19 (structure and data) | `test/database/migration_test.dart` |
-| Encrypted database, key vault, unlock, password change | `test/data/database/`, `test/services/security/` |
-| Backup format, backup -> restore round trip | `test/services/backup/` |
+| Schema baseline v20 (no upgrades from older schemas) | `test/database/migration_test.dart` |
+| Database file: plain SQLite, start-up check (missing, damaged, too old), interrupted restore | `test/data/database/connection_test.dart` |
+| Start-up, app lock, onboarding, reset | `test/presentation/screens/security/security_flows_test.dart` |
+| Crypto (Argon2id, PBKDF2, AES-GCM), password policy | `test/services/security/` |
+| Backup format, backup -> restore round trip, automatic backups, moved installs | `test/services/backup/` |
 | CSV export -> import round trip, bank formats, YNAB import | `test/services/csv/`, `test/services/import/` |
 | Sync format v2, conflict resolution, multi-device simulation | `test/services/sync/` |
 | Router gates (onboarding, lock, deep links) and app boot | `test/presentation/router/`, `test/app/` |
 | Screens and widgets | `test/presentation/` |
-| Localisation completeness, German layout, hard-coded text | `test/l10n/` |
+| Localisation completeness, German layout, hard-coded text, no claims of an encrypted database or a master password | `test/l10n/` |
 
 ### Schema migration tests
 
@@ -88,7 +93,9 @@ dart run drift_dev schema generate drift_schemas/ test/database/generated_migrat
 
 then add the new version to the migration tests (see the header of
 `test/database/migration_test.dart` for one manual rename the generator
-needs).
+needs). v20 is the baseline: the dumps and helpers of older schemas were
+removed together with their upgrade steps, so the first new step is
+v20 -> v21.
 
 ### Mocks
 
@@ -103,7 +110,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 The `perf` tag (configured in `dart_test.yaml`) marks a few tests that check
 generous time budgets on large data sets (10,000 transactions: budget
-calculation, encrypted backup, transaction list rendering). They are skipped
+calculation, backup, transaction list rendering). They are skipped
 by default so the normal suite stays fast and deterministic. They catch an
 accidental N+1 query or full-table loop; they are not benchmarks.
 
@@ -111,34 +118,23 @@ accidental N+1 query or full-table loop; they are not benchmarks.
 flutter test --tags perf --run-skipped
 ```
 
-## Integration tests (on a simulator or emulator)
+## Integration tests (on an Android emulator)
 
 The on-device set is deliberately small; everything that can run on the host
-does. Each test exercises something the host cannot: the real Keychain /
-Keystore, the SQLCipher build that ships in the app, real file paths and
-the full app widget.
+does. Each test exercises something the host cannot: the real Keystore
+(secure storage), the SQLite build that ships in the app, real file paths
+and the full app widget.
 
 | File | What it covers |
 |------|----------------|
-| `integration_test/app_flow_test.dart` | First launch: onboarding with master password and recovery key, first account, a transaction, money assigned in the budget. Relaunch: the app starts locked, a wrong password is rejected, the right one unlocks the same data, a CSV file is imported through the import screens, "Lock now" returns to the login screen. |
-| `integration_test/backup_restore_test.dart` | Encrypted backup and restore into a keyed SQLCipher database on the device. |
-| `integration_test/schema_upgrade_test.dart` | An encrypted schema-v14 database file (before integer money) is opened, migrated and converted by the current app. |
+| `integration_test/app_flow_test.dart` | First launch: onboarding with the app lock on, first account, a transaction, money assigned in the budget. Relaunch: the database opens behind the lock screen, a cancelled prompt keeps the app locked, a successful one shows the same data, a CSV file is imported through the import screens, "Lock now" returns to the lock screen while the database stays open. |
+| `integration_test/backup_restore_test.dart` | Encrypted backup and restore of the database on the device. |
 
 `integration_test/helpers.dart` starts the real `MyApp` with real storage and
-wipes the app's data before and after the flow. Biometric unlock cannot be
-driven on a simulator or emulator; the tests replace it with "not
-available", so biometrics are covered only by unit tests
-(`FakeBiometricKeyStore`) and manual testing on a phone.
-
-### iOS Simulator
-
-```bash
-xcrun simctl list devices available        # pick an iPhone, e.g. iPhone 17 Pro
-xcrun simctl boot <simulator-id>
-flutter test integration_test/app_flow_test.dart \
-  integration_test/backup_restore_test.dart \
-  integration_test/schema_upgrade_test.dart -d <simulator-id>
-```
+wipes the app's data before and after the flow. The system prompt of the
+app lock (fingerprint, face or screen lock) cannot be driven on an
+emulator; the tests answer it with `ScriptedAppLock`, so the real prompt is
+covered only by manual testing on a phone.
 
 ### Android emulator
 
@@ -159,8 +155,7 @@ Each file is built and installed separately (about 20-60 s per file). The
 Android build needs Java 17 (the JetBrains Runtime bundled with Android
 Studio works).
 
-Last verified: all three files passed on an iOS Simulator and on an Android
-emulator (AVD `Medium_Phone_API_36.1`, `--flavor development`).
+Last verified: all three files passed on an Android emulator (AVD `Medium_Phone_API_36.1`, `--flavor development`).
 
 ## Coverage
 

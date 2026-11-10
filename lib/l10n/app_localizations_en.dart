@@ -724,12 +724,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get occurrences => 'Occurrences';
 
   @override
-  String get recoveryKey => 'Recovery Key';
-
-  @override
-  String get revealRecoveryKey => 'Reveal Recovery Key';
-
-  @override
   String get autoLock => 'Auto-lock Timer';
 
   @override
@@ -750,16 +744,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoLockNever => 'Never';
 
   @override
-  String get incorrectPassword => 'Incorrect Password';
-
-  @override
   String get passwordsDoNotMatch => 'Passwords do not match';
-
-  @override
-  String get biometrics => 'Biometric Authentication';
-
-  @override
-  String get encryptionStatus => 'Encryption Status';
 
   @override
   String get encrypted => 'Encrypted';
@@ -777,13 +762,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncSettings => 'Sync Settings';
 
   @override
-  String get connectToGoogleDrive => 'Connect to Google Drive';
-
-  @override
   String get syncNow => 'Sync Now';
-
-  @override
-  String get googleDriveSync => 'Google Drive Sync';
 
   @override
   String lastSynced(String time) {
@@ -797,16 +776,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerNone => 'None';
 
   @override
-  String get providerGoogleDrive => 'Google Drive';
-
-  @override
   String get disconnect => 'Disconnect';
 
   @override
   String get offlineMode => 'Offline Mode';
-
-  @override
-  String get syncOnlyOnWifi => 'Sync only on Wi-Fi';
 
   @override
   String get syncFrequency => 'Sync Frequency';
@@ -1338,9 +1311,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmAction => 'Confirm';
 
   @override
-  String get masterPasswordLabel => 'Master password';
-
-  @override
   String get confirmPasswordLabel => 'Confirm password';
 
   @override
@@ -1392,61 +1362,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFailed => 'Security setup failed. Please try again.';
 
   @override
-  String get biometricPromptTitle => 'Unlock LedgerZero';
-
-  @override
-  String get biometricPromptSubtitle => 'Confirm it is you to unlock your data';
-
-  @override
   String get loginUnlock => 'Unlock';
-
-  @override
-  String get loginUseBiometrics => 'Use biometrics';
-
-  @override
-  String get loginUseRecoveryKey => 'Use recovery key';
-
-  @override
-  String get loginVaultMissing =>
-      'The key data of this app is missing, so your data cannot be unlocked. You can reset the app and restore a backup.';
-
-  @override
-  String get loginDatabaseKeyMismatch =>
-      'Your key is correct, but the database file could not be opened with it.';
-
-  @override
-  String get loginFailed => 'Unlocking failed. Please try again.';
-
-  @override
-  String get biometricsInvalidated =>
-      'Biometric unlock was turned off because the biometrics on this device changed. Unlock with your password and turn it on again in Settings.';
-
-  @override
-  String get biometricsUnlockFailed =>
-      'Biometric unlock failed. Please use your password.';
-
-  @override
-  String get recoveryKeyEnterTitle => 'Enter your recovery key';
-
-  @override
-  String get recoveryKeyEnterHint =>
-      '32 characters; spaces and dashes are optional';
-
-  @override
-  String get recoveryKeyInvalid => 'This recovery key is not correct.';
-
-  @override
-  String get recoveryKeyNeedsPassword =>
-      'An update is still being completed. Please unlock once with your password.';
-
-  @override
-  String get encryptionStatusEncrypted => 'Encrypted with SQLCipher (AES-256)';
-
-  @override
-  String get encryptionStatusPlaintext => 'The database file is NOT encrypted';
-
-  @override
-  String get encryptionStatusUnknown => 'Not checked yet';
 
   @override
   String get lockNow => 'Lock now';
@@ -1513,23 +1429,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPasswordLabel => 'Backup password';
 
   @override
-  String get backupUploadToCloud => 'Also upload to your sync storage';
-
-  @override
-  String get backupUploadNotConfigured => 'Set up Google Drive sync first';
-
-  @override
-  String get backupExport => 'Export backup';
-
-  @override
   String get backupCreating => 'Creating backup…';
-
-  @override
-  String get backupUploaded => 'Backup uploaded';
-
-  @override
-  String get backupUploadFailed =>
-      'Upload failed. The backup was still created and can be shared.';
 
   @override
   String get backupFailed => 'The backup failed. Please try again.';
@@ -1588,43 +1488,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectiveRestoreSuccess => 'Transactions merged.';
-
-  @override
-  String get syncPassphraseSetTitle => 'Set a sync passphrase';
-
-  @override
-  String get syncPassphraseSetExplanation =>
-      'Your data is encrypted before it leaves this device. Choose a sync passphrase: you need to enter it on every device you want to sync. It cannot be recovered, not even by the developer, so keep it somewhere safe.';
-
-  @override
-  String get syncPassphraseEnterTitle => 'Enter your sync passphrase';
-
-  @override
-  String get syncPassphraseEnterExplanation =>
-      'This sync folder is already used by another device. Enter the sync passphrase you set there.';
-
-  @override
-  String get syncPassphraseLabel => 'Sync passphrase';
-
-  @override
-  String get syncPassphraseConfirmLabel => 'Confirm sync passphrase';
-
-  @override
-  String get syncPassphraseSetButton => 'Set passphrase';
-
-  @override
-  String get syncPassphraseEnterButton => 'Enter passphrase';
-
-  @override
-  String get syncPassphraseWrong => 'Wrong sync passphrase.';
-
-  @override
-  String get syncPassphraseFolderExists =>
-      'Another device has just set up sync. Enter the passphrase set there.';
-
-  @override
-  String get syncPassphraseFailed =>
-      'The sync passphrase could not be saved. Please try again.';
 
   @override
   String syncPendingChanges(int count) {
@@ -1752,11 +1615,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncTableRules => 'Rule';
-
-  @override
-  String syncStatusConnectedAs(String email) {
-    return 'Connected as $email';
-  }
 
   @override
   String get syncStatusConnected => 'Connected';
@@ -2114,7 +1972,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationBackupBody =>
-      'It has been a while since your last backup. Tap to back up your data.';
+      'No backup has left this phone for a while. Tap to save one somewhere else; Android backup, if it is on, also covers a lost phone.';
 
   @override
   String get notificationSyncFailedTitle => 'Sync failed';
@@ -2861,14 +2719,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutSyncProviderBody =>
-      'Sync through your own Google Drive. Your data is encrypted before it leaves this device.';
-
-  @override
-  String get tutSyncConnectTitle => 'Connect';
-
-  @override
-  String get tutSyncConnectBody =>
-      'Sign in, then set a sync passphrase. You enter the same passphrase on each of your devices.';
+      'Sync with a second phone over your Wi-Fi: pair the phones by scanning a QR code. Everything is encrypted before it leaves this phone.';
 
   @override
   String get accessibilityVisualSection => 'Visual';
@@ -2892,14 +2743,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqSafeA =>
-      'Your data is stored only on your phone, in an encrypted database whose key is kept in the phone’s secure hardware (Android KeyStore). The app lock adds your fingerprint, face or phone PIN. Synced data is encrypted before it leaves the phone. There are no LedgerZero servers, no tracking and no analytics.';
+      'Your budget is stored on your phone, in LedgerZero’s private app storage, which Android keeps away from other apps and protects with your screen lock. The app lock adds your fingerprint, face or phone PIN. Backup files and synced data are encrypted with your password or passphrase before they leave the phone. If Android backup is on, Android keeps an end-to-end encrypted copy in your Google account that only your phone’s screen lock opens. There are no LedgerZero servers, no account, no tracking and no analytics.';
 
   @override
   String get faqSyncQ => 'How do my partner and I share a budget?';
 
   @override
   String get faqSyncA =>
-      'Open Settings > Sync Settings. At home, pair the phones over Wi-Fi by scanning a QR code. To sync while you are apart, both phones use the same Google Drive account and sync passphrase. The user guide chapter “Using LedgerZero with a partner” explains the details.';
+      'Open Settings > Sync Settings and pair the phones over Wi-Fi by scanning a QR code. The two phones sync whenever both are on the same Wi-Fi with LedgerZero open; in between, each works on its own. The user guide chapter “Using LedgerZero with a partner” explains the details.';
 
   @override
   String get faqOfflineQ => 'Can I use the app offline?';
@@ -2913,7 +2764,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqBackupA =>
-      'Settings > Backup & Export creates a backup file that is always encrypted with a backup password you choose. Without that password the backup cannot be restored. CSV and JSON exports are readable copies and are not encrypted.';
+      'Settings > Backup & Export creates a backup file that is always encrypted with a backup password you choose; “Save to…” puts it in another place (a computer, a USB stick, a cloud folder). Without that password the backup cannot be restored. Android backup, if it is on, also brings the budget back on a new phone. CSV and JSON exports are readable copies and are not encrypted.';
 
   @override
   String get faqImportQ => 'Can I import from YNAB or my bank?';
@@ -2990,7 +2841,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onbBenefitDataTitle => 'Your data stays with you';
 
   @override
-  String get onbBenefitDataBody => 'Stored on your device and encrypted.';
+  String get onbBenefitDataBody =>
+      'Stored on your phone. No account, no LedgerZero servers.';
 
   @override
   String get onbBenefitOfflineTitle => 'Works offline';
@@ -3010,11 +2862,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onbPrivacyEncrypted =>
-      'All data is encrypted on your device with AES-256.';
+      'Backups and sync files are encrypted with your password or passphrase.';
 
   @override
   String get onbPrivacyOwnCloud =>
-      'We never see your financial data. Sync runs through your own Google Drive, end-to-end encrypted.';
+      'We never see your financial data. Sync runs directly between your phones over your Wi-Fi, end-to-end encrypted. Android backup, if it is on, keeps an end-to-end encrypted copy that only your screen lock opens.';
 
   @override
   String get budgetBasicsTitle => 'Budgeting Basics';
@@ -3201,22 +3053,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get syncErrorNetwork =>
-      'No connection to the cloud storage. Sync will try again when you are online.';
-
-  @override
-  String get syncErrorNotSignedIn =>
-      'You are not signed in. Please connect again.';
-
-  @override
-  String get syncErrorAuthFailed =>
-      'The sign-in has expired. Please disconnect and connect again.';
-
-  @override
-  String get syncErrorStorageFull =>
-      'Your cloud storage is full. Free up space to keep syncing.';
-
-  @override
   String get transactionsShareText => 'LedgerZero transactions (CSV)';
 
   @override
@@ -3363,7 +3199,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String loginResetAppBody(String word) {
-    return 'Without the key vault your data cannot be unlocked. Resetting deletes the encrypted database, all keys, settings and exported files on this device and starts the setup again; afterwards you can restore a backup. This cannot be undone. Type $word to confirm.';
+    return 'LedgerZero cannot open the data on this phone. Resetting deletes it together with the settings and exported files on this device and starts the setup again; afterwards you can restore a backup. Automatic backups kept on this phone are not deleted. This cannot be undone. Type $word to confirm.';
   }
 
   @override
@@ -3690,26 +3526,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockScreenTitle => 'LedgerZero is locked';
 
   @override
-  String get lockScreenKeyError =>
-      'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.';
-
-  @override
-  String get legacyUnlockTitle => 'Unlock one last time';
-
-  @override
-  String get legacyUnlockExplanation =>
-      'LedgerZero no longer uses a master password. Unlock one last time with your password or recovery key. After that, the app keeps its key in this phone\'s secure key store, and the app lock uses your fingerprint, face or screen lock.';
-
-  @override
   String get setupDeviceHeading => 'Your data stays on this phone';
 
   @override
   String get setupDeviceExplanation =>
-      'Your budget is stored only on this phone, encrypted with a key that Android keeps in its secure key store. There is no account and no password to remember. So you don\'t lose anything with your phone, create backups or sync with a second phone.';
-
-  @override
-  String get lockScreenReadError =>
-      'LedgerZero could not read its key from this phone\'s secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.';
+      'Your budget is stored on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. There is no account, no LedgerZero server and no tracking. If Android backup is on, Android keeps an end-to-end encrypted copy that only this phone’s screen lock opens. The app lock can also ask for your fingerprint, face or phone PIN.';
 
   @override
   String get providerLocalWifi => 'Home Wi-Fi (phone to phone)';
@@ -3719,7 +3540,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lanSetupExplanation =>
-      'Share one budget with a second phone, for example your partner\'s, without any cloud. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.';
+      'Share one budget with a second phone, for example your partner\'s, directly over your Wi-Fi: no account and no server in between. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.';
 
   @override
   String get lanStart => 'Start on this phone';
@@ -4110,7 +3931,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpSyncBody =>
-      'Two phones can share one budget: over your home Wi-Fi without any cloud, or through a Google Drive account you both use when you are apart. Everything is encrypted before it leaves the phone.';
+      'Two phones can share one budget over your Wi-Fi: they sync directly from phone to phone whenever both are on the same Wi-Fi with LedgerZero open. Everything is encrypted before it leaves the phone.';
 
   @override
   String get helpSyncSteps =>
@@ -4165,14 +3986,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guidePartnerBody =>
-      'Two phones can share one budget. Pair them in Sync Settings: over your home Wi-Fi (scan the QR code on the other phone; both need LedgerZero open on the same Wi-Fi) or through a Google Drive account you both use. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.';
+      'Two phones can share one budget. Pair them over Wi-Fi in Sync Settings (scan the QR code on the other phone); they sync whenever both are on the same Wi-Fi with LedgerZero open. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.';
 
   @override
   String get guideSecurityTitle => 'Security and backups';
 
   @override
   String get guideSecurityBody =>
-      'Your data is stored encrypted on your phone, and the key is kept in the phone’s secure hardware. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. Create encrypted backups regularly in Settings > Backup & Export and keep the backup password safe: without it a backup cannot be restored.';
+      'Your data is stored on your phone, in LedgerZero’s private app storage, protected by Android and your screen lock. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. If the phone is lost or reset, the data is gone with it, unless Android backup is on (it keeps an end-to-end encrypted copy, up to about a day old, that your screen lock opens) or a second phone syncs. So also create encrypted backups regularly in Settings > Backup & Export, save them somewhere else, and keep the backup password safe: without it a backup cannot be restored.';
 
   @override
   String get guideImportTitle => 'Importing';
@@ -4369,10 +4190,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cardNotificationsListenerDisconnected =>
       'Access is granted, but Android has not connected LedgerZero\'s notification listener, so nothing is captured. Turn notification access off and on again in the system settings, or restart the phone.';
-
-  @override
-  String get lockScreenReadErrorPersistent =>
-      'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.';
 
   @override
   String get lockScreenOpenError =>
@@ -4650,14 +4467,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupNudgeMessage =>
-      'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.';
+      'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions never sync to the other phone: only this phone’s backups have them.';
 
   @override
   String get autoBackupTitle => 'Automatic backups';
 
   @override
   String autoBackupExplanation(int count) {
-    return 'Once a day the app saves an encrypted backup on this phone and keeps the last $count. It uses the backup password you choose here and can be restored even when the app’s key is lost. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.';
+    return 'Once a day the app saves an encrypted backup on this phone and keeps the last $count. It uses the backup password you choose here, and a backup restores like any other. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.';
   }
 
   @override
@@ -4809,5 +4626,614 @@ class AppLocalizationsEn extends AppLocalizations {
           '1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.',
     );
     return '$_temp0';
+  }
+
+  @override
+  String get cardNotificationsHeldUnclear =>
+      'Has an amount, but does not clearly say that you paid';
+
+  @override
+  String get cardNotificationsHeldSeveralAmounts =>
+      'Names several amounts: add each payment yourself';
+
+  @override
+  String cardNotificationsHeldReplaces(String amount) {
+    return 'Is this the final amount of the $amount that was reserved earlier? Replace changes that transaction; Add separately keeps both.';
+  }
+
+  @override
+  String get cardNotificationsReplace => 'Replace';
+
+  @override
+  String get cardNotificationsAddSeparately => 'Add separately';
+
+  @override
+  String get cardNotificationsAuthorisationMemo =>
+      'Reserved amount, the final amount may differ';
+
+  @override
+  String get cardNotificationsAttentionTitle =>
+      'Card notifications need a look';
+
+  @override
+  String get cardNotificationsAttentionAccess =>
+      'Notification access is off, so no payments are captured.';
+
+  @override
+  String get cardNotificationsAttentionListener =>
+      'Android has not connected the notification listener, so no payments are captured.';
+
+  @override
+  String cardNotificationsAttentionStorageReset(String date) {
+    return 'The capture storage was reset on $date; notifications captured before then were lost.';
+  }
+
+  @override
+  String cardNotificationsAttentionWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count captured notifications are waiting for you',
+      one: '1 captured notification is waiting for you',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payments could not be added',
+      one: '1 payment could not be added',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items need your attention',
+      one: '1 item needs your attention',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncIndicatorUpdateApp =>
+      'Update the app: another device uses a newer version';
+
+  @override
+  String get notificationSyncUpdateTitle => 'Update LedgerZero to keep syncing';
+
+  @override
+  String get notificationSyncUpdateBody =>
+      'Another device uses a newer version of LedgerZero. Its changes arrive after you update the app.';
+
+  @override
+  String get restoreSyncNoRollbackNote =>
+      'Sync is set up on this phone: a restore does not undo changes that were already synced, including this phone’s own. They come back from the sync folder. A restore brings back data that was lost; it does not put the shared budget back to an earlier state.';
+
+  @override
+  String get lanTurnOffConfirmTitle => 'Turn off Wi-Fi sync?';
+
+  @override
+  String get lanTurnOffConfirmMessage =>
+      'This phone stops syncing and forgets the pairing. Your data stays on both phones. To sync again, the phones have to be paired again with a new code.';
+
+  @override
+  String get syncProviderNoneConfirmTitle => 'Stop syncing?';
+
+  @override
+  String get syncProviderNoneConfirmMessage =>
+      'This phone stops exchanging changes with your other devices until you choose the sync provider again. Changes made in the meantime are sent then.';
+
+  @override
+  String get syncStopAction => 'Stop syncing';
+
+  @override
+  String csvIssueAllInflows(int count) {
+    return 'All $count amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".';
+  }
+
+  @override
+  String csvIssueVoidRows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows are marked as reverted, failed or declined in the file and are left out.',
+      one:
+          '1 row is marked as reverted, failed or declined in the file and is left out.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csvFieldFee => 'Fee';
+
+  @override
+  String importPossibleDuplicateOf(String payee, String date) {
+    return 'Possible duplicate: $payee on $date has the same amount. Check the box if this is a separate transaction.';
+  }
+
+  @override
+  String importPossibleDuplicateOfNoPayee(String date) {
+    return 'Possible duplicate: a transaction without payee on $date (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.';
+  }
+
+  @override
+  String importPossibleDuplicatesNearby(int count, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows have the same amount as an existing transaction of the account within $days days and are unchecked. Check the ones that are separate transactions.',
+      one:
+          '1 row has the same amount as an existing transaction of the account within $days days and is unchecked. Check it if it is a separate transaction.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsPartial(String names, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This file names accounts that are not open accounts here: $names. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out $count rows; a single account takes every row.',
+      one:
+          'This file names accounts that are not open accounts here: $names. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out 1 row; a single account takes every row.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsNone(String names) {
+    return 'This file names accounts that are not open accounts here: $names. Choose the account that all rows go into.';
+  }
+
+  @override
+  String importRowAccountNotFound(String name) {
+    return 'Account “$name” not found – not imported';
+  }
+
+  @override
+  String get importRowNoAccount => 'No account in the file – not imported';
+
+  @override
+  String get importRowsWithoutAccount => 'rows without an account name';
+
+  @override
+  String get csvFieldApproved => 'Approved';
+
+  @override
+  String get csvExportFormatTitle => 'CSV format';
+
+  @override
+  String get csvExportFormatStandard => 'Standard (comma-separated)';
+
+  @override
+  String get csvExportFormatStandardHint =>
+      'For other apps and scripts. Can be imported again.';
+
+  @override
+  String get csvExportFormatSpreadsheet =>
+      'For Excel (semicolon, decimal comma)';
+
+  @override
+  String get csvExportFormatSpreadsheetHint =>
+      'Opens with the right columns and umlauts in a German Excel. Can be imported again as well.';
+
+  @override
+  String get csvNoHeaderRow => 'File has no header row';
+
+  @override
+  String get csvNoHeaderRowHint =>
+      'The first line is imported as a transaction. The columns are numbered #1, #2, …; check the mapping against the preview.';
+
+  @override
+  String get csvCustomDateFormat => 'Other date format…';
+
+  @override
+  String get csvCustomDateFormatHelp =>
+      'd day, M month, y year, H hour, m minute, s second. Examples: d.M.yyyy or MMM d, yyyy';
+
+  @override
+  String get csvCustomDateFormatInvalid =>
+      'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.';
+
+  @override
+  String ynabImportErrorInvalidAmount(String value) {
+    return 'The amount “$value” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.';
+  }
+
+  @override
+  String ynabImportErrorMissingBudgetColumns(String columns) {
+    return 'The budget file is missing required columns: $columns. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.';
+  }
+
+  @override
+  String get ynabImportZipTile => 'YNAB export (ZIP file)';
+
+  @override
+  String get ynabImportZipHint =>
+      'Pick the ZIP that YNAB downloads; both files are taken from it.';
+
+  @override
+  String get ynabImportErrorInvalidZip =>
+      'This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export.';
+
+  @override
+  String get ynabImportYnab4Zip => 'Zipped budget folder (.zip)';
+
+  @override
+  String get ynabImportYnab4ZipHint =>
+      'If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.';
+
+  @override
+  String get ynabImportErrorInvalidYnab4Zip =>
+      'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.';
+
+  @override
+  String get importUndoLast => 'Undo last import';
+
+  @override
+  String importUndoLastInfo(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Last CSV import: $count transactions on $date.',
+      one: 'Last CSV import: 1 transaction on $date.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoConfirm(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Delete the $count transactions that the import of $date created? Payees the import created stay.',
+      one:
+          'Delete the 1 transaction that the import of $date created? Payees the import created stay.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoKept(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count transactions of that import were edited, reconciled or split since and are kept.',
+      one:
+          '1 transaction of that import was edited, reconciled or split since and is kept.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoNothing =>
+      'Every transaction of the last import was changed or deleted since. There is nothing to undo.';
+
+  @override
+  String importUndoDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Import undone: $count transactions deleted',
+      one: 'Import undone: 1 transaction deleted',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoAction => 'Undo import';
+
+  @override
+  String get importUndoFailed =>
+      'The import could not be undone. Nothing was changed.';
+
+  @override
+  String get helpCsvStepsV2 =>
+      'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.';
+
+  @override
+  String supportEmailCopied(String email) {
+    return 'No e-mail app was found. The address $email has been copied to the clipboard.';
+  }
+
+  @override
+  String get linkCopied =>
+      'The page could not be opened. Its address has been copied to the clipboard.';
+
+  @override
+  String get aboutTitle => 'About';
+
+  @override
+  String aboutApp(String appName) {
+    return 'About $appName';
+  }
+
+  @override
+  String get aboutSubtitle => 'Version, licences, contact';
+
+  @override
+  String aboutVersion(String version, String build) {
+    return 'Version $version (build $build)';
+  }
+
+  @override
+  String get aboutLicenses => 'Open-source licences';
+
+  @override
+  String get aboutLicensesSubtitle =>
+      'Software and fonts this app is built with';
+
+  @override
+  String get aboutPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get aboutImprint => 'Imprint';
+
+  @override
+  String get budgetTemplateDeleteTitle => 'Delete template?';
+
+  @override
+  String budgetTemplateDeleteBody(String name) {
+    return 'The template \"$name\" is deleted for good. Months already budgeted with it keep their amounts.';
+  }
+
+  @override
+  String get budgetTemplateDeleteAutoFill =>
+      'New months are filled automatically from this template. After deleting it they are filled like the month before.';
+
+  @override
+  String budgetTemplateDeleted(String name) {
+    return 'Template \"$name\" deleted';
+  }
+
+  @override
+  String get moveMoneyFailed =>
+      'The money could not be moved. Nothing was changed.';
+
+  @override
+  String get factoryResetBackupOffer =>
+      'Make a backup first if you might want this data back.';
+
+  @override
+  String get factoryResetBackUpFirst => 'Back up first';
+
+  @override
+  String factoryResetTypeToConfirm(String word) {
+    return 'All data on this phone is deleted and the setup starts again. This cannot be undone. Type $word to confirm.';
+  }
+
+  @override
+  String get languagePhone => 'Phone language';
+
+  @override
+  String languagePhoneCurrent(String language) {
+    return 'Phone language ($language)';
+  }
+
+  @override
+  String dateFormatFollowLanguage(String pattern) {
+    return 'Follow language ($pattern)';
+  }
+
+  @override
+  String get txInflowCategoryHint =>
+      'Income goes to To Be Budgeted. Choose a category only for a refund: the money then goes back into that category.';
+
+  @override
+  String get txInflowToBeBudgetedSubtitle =>
+      'Income you assign to categories in the budget';
+
+  @override
+  String get transactionNotFound =>
+      'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.';
+
+  @override
+  String get txSwipeApprove => 'Approve';
+
+  @override
+  String txSortedBy(String field, String direction) {
+    return 'Sorted by $field, $direction';
+  }
+
+  @override
+  String get sortAscending => 'ascending';
+
+  @override
+  String get sortDescending => 'descending';
+
+  @override
+  String get txSelectAllLoaded => 'Select all loaded';
+
+  @override
+  String txSelectedLoadedOnly(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The $count loaded transactions are selected. Scroll down to load more.',
+      one: '1 loaded transaction selected. Scroll down to load more.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get txAccountClosed =>
+      'This account is closed and takes no new transactions. Choose another account or reopen it.';
+
+  @override
+  String quickAddCurrencyNotConverted(String currency) {
+    return 'This account is in $currency: the amount is booked in $currency, not converted.';
+  }
+
+  @override
+  String get ruleConditionUnevaluable =>
+      'Never matches: this field cannot be compared this way. Delete the condition and add it again.';
+
+  @override
+  String get ruleSaveUnevaluableCondition =>
+      'Delete the conditions marked \"Never matches\" first.';
+
+  @override
+  String get ruleListUnevaluable =>
+      'Never matches: a condition compares a field in a way it does not support. Tap to fix.';
+
+  @override
+  String get payeeNameTakenTitle => 'Name already in use';
+
+  @override
+  String payeeNameTakenMessage(String name) {
+    return 'A payee named \"$name\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"$name\".';
+  }
+
+  @override
+  String get scheduledFinishedPickNextDate =>
+      'Finished: nothing more is booked. Pick a next date to restart it.';
+
+  @override
+  String txApprovedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions approved',
+      one: 'Transaction approved',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txCategorizedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Category set for $count transactions',
+      one: 'Category set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get restoreOlderVersion =>
+      'This backup was made by an early test version of LedgerZero and cannot be restored with this version.';
+
+  @override
+  String get lockScreenDatabaseDamaged =>
+      'LedgerZero cannot read the data on this phone: the database file is damaged. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.';
+
+  @override
+  String get lockScreenDatabaseTooOld =>
+      'The data on this phone was saved by an early test version of LedgerZero that this version no longer opens. Reset the app and set it up again. Automatic backups kept on this phone are not deleted by the reset.';
+
+  @override
+  String get securityDataLocationTitle => 'Where your data is';
+
+  @override
+  String get securityDataLocationBody =>
+      'On this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. If Android backup is on, also as an end-to-end encrypted copy in your Google account that only this phone’s screen lock opens. Backup files and sync files are encrypted with your password or passphrase.';
+
+  @override
+  String get autoBackupPasswordMissing =>
+      'The backup password is no longer stored on this phone (for example after moving to a new phone). Turn automatic backups off and on again to enter it.';
+
+  @override
+  String get dataLossWarning =>
+      'If this phone is lost or reset, your budget is gone, unless Android backup is on, a backup file is kept somewhere else, or a second phone syncs with this one.';
+
+  @override
+  String get backupSaveTo => 'Save to…';
+
+  @override
+  String get backupShare => 'Share…';
+
+  @override
+  String get backupSaved => 'Backup saved';
+
+  @override
+  String get backupSaveToExplanation =>
+      '“Save to…” lets you pick where the file goes: a folder on the phone, a USB stick or a cloud app such as Google Drive or Dropbox. LedgerZero signs in to nothing; the app you pick does the upload.';
+
+  @override
+  String get androidBackupTitle => 'Android backup';
+
+  @override
+  String get androidBackupExplanation =>
+      'If Android backup is on (Settings > System > Backup on most phones), Android copies the budget to your Google account about once a day, end-to-end encrypted with this phone’s screen lock, and puts it back on a new phone. LedgerZero cannot check whether it is on, and without a screen lock Android backs up none of it.';
+
+  @override
+  String androidBackupTooLarge(String size) {
+    return 'The budget takes $size MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.';
+  }
+
+  @override
+  String budgetCurrencyFixedSubtitle(String currency) {
+    return '$currency, the currency of the accounts in your budget';
+  }
+
+  @override
+  String budgetCurrencyFixedBody(String currency) {
+    return 'Your budget is in $currency: every account in it uses this currency, and To Be Budgeted adds them up. Accounts outside the budget can use any currency.';
+  }
+
+  @override
+  String get budgetCurrencyChangeAction => 'Change the budget currency';
+
+  @override
+  String budgetCurrencyChangeConfirmTitle(String currency) {
+    return 'Change the budget currency to $currency?';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmBody(String from, String to) {
+    return 'The accounts in your budget are relabelled from $from to $to. Amounts are NOT converted: 100 $from becomes 100 $to.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in $to.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmAction(String currency) {
+    return 'Change to $currency';
+  }
+
+  @override
+  String budgetCurrencyChanged(String currency) {
+    return 'The budget currency is now $currency';
+  }
+
+  @override
+  String budgetCurrencyMixedWarning(
+    String currencies,
+    String currency,
+    String accounts,
+  ) {
+    return 'The accounts in your budget use different currencies ($currencies). Amounts are never converted, so To Be Budgeted adds up different currencies. The budget currency is $currency; in another currency: $accounts.';
+  }
+
+  @override
+  String get budgetCurrencyMixedLeave => 'Take off budget';
+
+  @override
+  String get budgetCurrencyMixedPickAccount =>
+      'Which account leaves the budget?';
+
+  @override
+  String get accountCurrencyJoinTitle => 'Not in the budget currency';
+
+  @override
+  String accountCurrencyJoinBody(String account, String budget) {
+    return 'This account is in $account, your budget in $budget. Amounts are never converted, so an account in another currency cannot be in the budget.\n\nIf $account was picked by mistake, change the account to $budget (amounts are NOT converted: 100 $account becomes 100 $budget). Otherwise keep it outside the budget.';
+  }
+
+  @override
+  String ynabImportCurrencyFixed(String currency) {
+    return 'Accounts in your budget use the budget currency ($currency), so the imported accounts do too.';
   }
 }

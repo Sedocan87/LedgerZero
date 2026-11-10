@@ -80,14 +80,53 @@ accounts".
 
 ## Budget currency
 
-*   The budget has one currency (Settings > Currency). On a fresh install
-    it is proposed from the device locale (`de_DE` -> EUR, `en_US` -> USD,
-    `de_CH` -> CHF; an unsupported currency falls back to USD).
-*   The first on-budget account sets it: its currency field is labelled
-    "Budget currency" and saving stores it in Settings.
-*   Every later on-budget account is fixed to the budget currency (the form
-    explains why); accounts outside the budget may use any currency, so TBB
-    never sums different currencies.
+Amounts are never converted between currencies, and To Be Budgeted adds
+up the accounts in the budget, so they all use one currency: the budget
+currency.
+
+*   **While no open account is in the budget** it is the setting
+    (Settings > Currency, stored per phone). On a fresh install it is
+    proposed from the device locale (`de_DE` -> EUR, `en_US` -> USD,
+    `de_CH` -> CHF; an unsupported currency falls back to USD). The first
+    on-budget account sets it: its currency field is labelled "Budget
+    currency" and saving stores it in Settings.
+*   **Once open accounts are in the budget, it is their currency**
+    (`BudgetCurrency`, `lib/domain/services/budget_currency.dart`). Closed
+    accounts do not count: closing the accounts and opening new ones in
+    another currency is how a budget really moves to that currency (the
+    closed accounts keep their history in the old one).
+*   **Settings > Currency** then shows that currency and offers one action,
+    "Change the budget currency". After a confirmation that says amounts
+    are NOT converted (100 EUR becomes 100 CHF; it is for a currency picked
+    by mistake at setup) it relabels every open account in the budget to
+    the new currency in one unit of work
+    (`AccountService.relabelBudgetCurrency`), as ordinary account edits
+    that sync to the partner's phone, and stores the setting. Accounts
+    outside the budget, personal accounts included, and closed accounts
+    keep their currency. The relabel is not on the undo stack (no account
+    edit is); the same action relabels back.
+*   **Both phones agree.** Whenever the accounts load or change (start-up,
+    a restore, a sync run that applied the partner's changes) the app sets
+    the stored setting to the budget currency if it differs
+    (`budgetCurrencyGuardProvider`). The formatter, the reports ("accounts
+    in X only") and the imports therefore use the budget currency.
+*   **No account in another currency joins the budget.** A new on-budget
+    account is fixed to the budget currency (the form explains why).
+    Moving an off-budget account in another currency into the budget, or
+    reopening a closed budget account whose currency is no longer the
+    budget's, is refused with an explanation and the offer to relabel the
+    account (amounts are not converted). The YNAB import uses the budget
+    currency for the accounts it creates once accounts are in the budget
+    (before that, the currency chosen on the import screen); the CSV import
+    creates no accounts. Accounts outside the budget may use any currency.
+*   **Accounts in the budget that disagree** (data from before this rule,
+    an import, a sync race) leave To Be Budgeted adding up different
+    currencies. The budget screen then shows a warning naming the
+    currencies and the accounts not in the budget currency, with two
+    fixes: relabel them to the budget currency (same confirmation), or take
+    one out of the budget through the usual leave-budget dialog. While they
+    disagree, the budget currency is the setting if it is one of theirs,
+    else the currency most of them use.
 
 ## To Be Budgeted (TBB)
 
@@ -136,14 +175,22 @@ accounts that start in it.
     first transaction if that is earlier (imported or backdated history),
     so a month before the account existed shows nothing of it. There is no
     separate "opening date": the creation time (`accounts.created_at`) and
-    the transactions are the record.
+    the transactions are the record. "The month the account was created
+    in" is the month on the user's calendar at that moment (the phone's
+    time zone), so an account created on the evening of the 31st counts in
+    that month wherever the user lives.
 
 A transaction flows into TBB when it is **not deleted, uncategorised, in an
 on-budget account, not a split parent, and not a transfer leg unless the
 other account is off budget**. Both signs count:
 
 *   An uncategorised inflow (salary, refund you did not categorise, the YNAB
-    "Starting Balance" row) increases TBB.
+    "Starting Balance" row) increases TBB. An inflow *with* a category is a
+    refund: it raises that category's available amount and never reaches
+    TBB. The transaction form and quick add therefore leave an inflow
+    without a category unless the user picks one (see
+    [TRANSACTION_LIFECYCLE.md](TRANSACTION_LIFECYCLE.md), "Income and the
+    category field").
 *   An uncategorised outflow decreases TBB (it is spending nobody budgeted).
 *   A reconciliation adjustment is an uncategorised transaction, so a
     difference found while reconciling changes TBB deliberately.
@@ -244,7 +291,8 @@ would be short by that much, so the confirmation lists the Savings &
 Investments categories with money available, pre-selected, and releases
 up to the account's balance from them (`BudgetingService.releaseFromCategory`:
 oldest budgets first, where the money was assigned, never leaving a month
-overspent and never below zero).
+overspent and never below zero). The account change and the release are
+saved together in one unit of work: either both happen or neither.
 
 Interest and dividends are not categories: they are uncategorised income
 and flow into TBB (or stay in an off-budget account).

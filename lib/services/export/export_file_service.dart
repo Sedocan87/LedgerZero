@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
@@ -35,8 +36,28 @@ class SharePlusFileSharer implements FileSharer {
   }
 }
 
+/// Saves a file where the user picks, through the system's "create
+/// document" picker (Android's Storage Access Framework): a local folder,
+/// a USB stick, or a cloud app's provider (Drive, Dropbox, ...). The app
+/// signs in to nothing; the provider app does the upload. Replaceable in
+/// tests.
+abstract class FileSaver {
+  /// Returns false when the user cancelled the picker.
+  Future<bool> save(String filename, Uint8List bytes);
+}
+
+class SystemFileSaver implements FileSaver {
+  const SystemFileSaver();
+
+  @override
+  Future<bool> save(String filename, Uint8List bytes) async {
+    final saved = await FilePicker.saveFile(fileName: filename, bytes: bytes);
+    return saved != null;
+  }
+}
+
 /// Writes exported files (CSV, JSON, PDF, images, backups, diagnostic logs)
-/// where they do not linger, and shares them.
+/// where they do not linger, and shares or saves them.
 ///
 /// * Files go to `<temporary dir>/exports`: iOS `tmp/` and Android
 ///   `cacheDir` are excluded from device backups and from the Files app,
@@ -52,14 +73,17 @@ class ExportFileService {
   static const Duration androidDeleteDelay = Duration(seconds: 60);
 
   final FileSharer _sharer;
+  final FileSaver _saver;
   final Future<Directory> Function() _baseDirectory;
   final bool _deferDeletion;
 
   ExportFileService({
     FileSharer? sharer,
+    FileSaver? saver,
     Future<Directory> Function()? baseDirectory,
     bool? deferDeletion,
   }) : _sharer = sharer ?? const SharePlusFileSharer(),
+       _saver = saver ?? const SystemFileSaver(),
        _baseDirectory = baseDirectory ?? getTemporaryDirectory,
        _deferDeletion =
            deferDeletion ?? defaultTargetPlatform == TargetPlatform.android;
@@ -110,6 +134,21 @@ class ExportFileService {
       } else {
         await _delete(file);
       }
+    }
+  }
+
+  /// Lets the user save [file] through the system file picker ("Save
+  /// to…") and deletes it afterwards (also if saving fails). The picker
+  /// writes a copy, so the file is deleted at once. Returns false when the
+  /// user cancelled.
+  Future<bool> saveAndDelete(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      return await ExternalUiGuard.run(
+        () => _saver.save(p.basename(file.path), bytes),
+      );
+    } finally {
+      await _delete(file);
     }
   }
 

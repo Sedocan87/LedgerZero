@@ -416,6 +416,13 @@ class SyncEngine {
 
     cancel.check();
     final applied = await _applyRemote(remote, key, cancel);
+    await _removeObsoleteRequests(remote);
+    if (applied.applied > 0) {
+      // Applied account rows keep the shared balance they were written
+      // with; this member's personal accounts follow the transactions on
+      // this phone (they differ after a restore).
+      await _db.refreshPersonalBalances();
+    }
 
     if (rebootstrap) {
       // Rows only the restored database has are shared again; rows that
@@ -534,7 +541,8 @@ class SyncEngine {
         }
         final file = files[next];
         if (file == null) {
-          if (files.keys.any((s) => s > next)) {
+          if (files.keys.any((s) => s > next) ||
+              remote.hasSnapshotFrom(device, next)) {
             stalled.add(device);
           }
           continue;
@@ -579,6 +587,19 @@ class SyncEngine {
         if (header.maxVersion >
             _now.add(clockTolerance).microsecondsSinceEpoch) {
           stats.futureTimestamps = true;
+        }
+      }
+
+      // A device that compacted every change file this device has not
+      // applied has only a snapshot left: it is not in `remote.changes`,
+      // but it is waiting all the same.
+      for (final (name, _) in remote.snapshots) {
+        final device = name.deviceId;
+        if (device != deviceId &&
+            !blocked.contains(device) &&
+            !remote.changes.containsKey(device) &&
+            name.sequence > (progress[device] ?? 0)) {
+          stalled.add(device);
         }
       }
 
@@ -875,6 +896,34 @@ class SyncEngine {
     }
   }
 
+  /// Deletes this device's own snapshot requests that are no longer needed
+  /// (the gap was repaired). The asked device deletes a request when it
+  /// answers; with Wi-Fi sync that deletion has to travel back to this
+  /// phone's folder, and a phone on an older app version does not send it,
+  /// so the request would be copied to it again and answered with a new
+  /// snapshot on every run.
+  Future<void> _removeObsoleteRequests(_RemoteIndex remote) async {
+    if (remote.requests.isEmpty) {
+      return;
+    }
+    final needs = await _state.needsSnapshot();
+    for (final entry in remote.requests.entries) {
+      if (needs.containsKey(entry.key)) {
+        continue;
+      }
+      for (final file in entry.value) {
+        if (SyncFileName.tryParseRequest(file.name)?.requester != deviceId) {
+          continue;
+        }
+        try {
+          await transport.delete(file);
+        } catch (e) {
+          Logger.warning('Sync: could not remove ${file.name}: $e');
+        }
+      }
+    }
+  }
+
   static final Uint8List _requestBytes = Uint8List.fromList(
     'ledgerzero-snapshot-request'.codeUnits,
   );
@@ -897,6 +946,14 @@ class SyncEngine {
     for (final snapshot in remote.snapshotsNewestFirst) {
       if (downloads >= 5) {
         break;
+      }
+      // An own snapshot at or below this device's own progress holds
+      // nothing new (everything in it came from here or was applied here
+      // before it was written): not worth a download. After a restore the
+      // progress is cleared and it is used.
+      if (snapshot.$1.deviceId == deviceId &&
+          snapshot.$1.sequence <= (progress[deviceId] ?? 0)) {
+        continue;
       }
       if (!tried.add(snapshot.$1.name)) {
         continue;
@@ -1254,6 +1311,11 @@ class _RemoteIndex {
 
   bool hasSnapshot(String device, int sequence) => snapshots.any(
     (s) => s.$1.deviceId == device && s.$1.sequence == sequence,
+  );
+
+  /// Whether [device] has a snapshot covering its change file [sequence].
+  bool hasSnapshotFrom(String device, int sequence) => snapshots.any(
+    (s) => s.$1.deviceId == device && s.$1.sequence >= sequence,
   );
 
   List<(SyncFileName, RemoteFile)> get snapshotsNewestFirst {

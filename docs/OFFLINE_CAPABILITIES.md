@@ -4,8 +4,8 @@ LedgerZero is designed as a "Local-First" application. This means it is fully fu
 
 ## Core Philosophy
 
-1.  **Local Database**: All data is stored in a local SQLite database (encrypted with SQLCipher). The UI reads from this local database, ensuring 0-latency access regardless of network status.
-2.  **Offline Queue**: Every change to a synced table is captured by database triggers in the encrypted database (`pending_sync_changes`). It survives restarts and crashes.
+1.  **Local Database**: All data is stored in a local SQLite database in the app's private storage. The UI reads from this local database, ensuring 0-latency access regardless of network status.
+2.  **Offline Queue**: Every change to a synced table is captured by database triggers in the database (`pending_sync_changes`). It survives restarts and crashes.
 3.  **Automatic Sync**: With a sync provider set up (and a frequency other than *Manual*), the app syncs after unlock, on resume, about 10 seconds after a change, periodically, and when connectivity returns.
 
 ## Offline Features
@@ -38,7 +38,7 @@ Each row carries its last edit time (`updated_at`, UTC).
 *   A delete wins over an older edit and loses to a newer one.
 
 ## Data Persistence & Crash Recovery
-*   **Persistence**: Captured changes live in the encrypted database; generated files in the outbox. Both persist across restarts and reboots.
+*   **Persistence**: Captured changes live in the database; generated files in the outbox. Both persist across restarts and reboots.
 *   **Crash Recovery**: Files are written atomically (temporary file, then rename) in the same database transaction that removes the captured changes, so a crash never loses a change or uploads a truncated file.
 
 ## Optimizations

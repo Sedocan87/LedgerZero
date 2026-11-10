@@ -66,6 +66,37 @@ void main() {
     expect(prefs.getInt('settings_number_format'), AppNumberFormat.comma.index);
   });
 
+  testWidgets('date format follows the language by default; language can '
+      'follow the phone again; no first day of week', (tester) async {
+    SharedPreferences.setMockInitialValues({'settings_language': 'en'});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(_app(prefs));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Follow language (MM/dd/yyyy)'), findsOneWidget);
+    expect(find.text('First Day of Week'), findsNothing);
+
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('Phone language'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(prefs.getString('settings_language'), isNull);
+    expect(find.text('Phone language (English)'), findsOneWidget);
+
+    // A dismissed dialog changes nothing.
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Phone language (English)'), findsOneWidget);
+  });
+
   testWidgets('Currency picker lists every supported currency', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -90,6 +121,88 @@ void main() {
       tester.element(find.byType(SettingsScreen)),
     );
     expect(container.read(settingsProvider).currency, 'CHF');
+  });
+
+  testWidgets('with accounts in the budget, Currency shows their currency '
+      'and relabels them after a confirmation that nothing is converted', (
+    tester,
+  ) async {
+    final t = TestDatabase();
+    addTearDown(t.close);
+    await t.addAccount(id: 'giro', currency: 'EUR', startingBalance: 1000);
+    await t.addAccount(id: 'usd', currency: 'USD', onBudget: false);
+    // This phone still has an older setting.
+    SharedPreferences.setMockInitialValues({'settings_currency': 'GBP'});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          databaseProvider.overrideWithValue(t.db),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('EUR, the currency of the accounts in your budget'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('settings.currency')));
+    await tester.pumpAndSettle();
+    // No free picker: one action.
+    expect(find.byKey(const Key('settings.currency.fixed')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings.currency.change')));
+    await tester.pumpAndSettle();
+    final picker = find.byKey(const Key('settings.currency.picker'));
+    expect(
+      find.descendant(of: picker, matching: find.text('EUR')),
+      findsNothing,
+    );
+    await tester.tap(find.descendant(of: picker, matching: find.text('CHF')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change the budget currency to CHF?'), findsOneWidget);
+    expect(
+      find.textContaining('Amounts are NOT converted: 100 EUR becomes 100 CHF'),
+      findsOneWidget,
+    );
+    // Cancel changes nothing.
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect((await t.accounts.getAccountById('giro'))!.currency, 'EUR');
+
+    await tester.tap(find.byKey(const Key('settings.currency')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings.currency.change')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('settings.currency.picker')),
+        matching: find.text('CHF'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('budgetCurrency.confirm.change')));
+    await tester.pumpAndSettle();
+
+    final giro = (await t.accounts.getAccountById('giro'))!;
+    expect(giro.currency, 'CHF');
+    expect(giro.startingBalance, 1000);
+    expect((await t.accounts.getAccountById('usd'))!.currency, 'USD');
+    expect(prefs.getString('settings_currency'), 'CHF');
+    expect(
+      find.text('CHF, the currency of the accounts in your budget'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('SettingsScreen shows Scheduled Transactions option', (
@@ -292,12 +405,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Factory Reset'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Factory Reset'),
-      ),
+    await tester.tap(find.byKey(const Key('settings.factoryResetContinue')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('login_reset_confirm_field')),
+      'RESET',
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('login_reset_confirm')));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -307,6 +422,121 @@ void main() {
     );
     expect(find.byType(SettingsScreen), findsOneWidget);
   });
+
+  group('factory reset', () {
+    late _RecordingFactoryReset service;
+
+    /// Settings under a router with a stand-in Backup screen.
+    Future<void> pumpSettings(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      service = _RecordingFactoryReset();
+      final router = GoRouter(
+        initialLocation: '/settings',
+        routes: [
+          GoRoute(
+            path: '/settings',
+            builder: (_, _) => const SettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'backup',
+                builder: (_, _) => const Text('backup screen'),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/onboarding',
+            builder: (_, _) => const Text('onboarding'),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            factoryResetServiceProvider.overrideWithValue(service),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Factory Reset'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Factory Reset'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('needs the typed confirmation word', (tester) async {
+      await pumpSettings(tester);
+      expect(
+        find.textContaining(
+          'Make a backup first if you might want this data back.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('settings.factoryResetContinue')));
+      await tester.pumpAndSettle();
+
+      final confirm = find.byKey(const Key('login_reset_confirm'));
+      bool enabled() => tester.widget<TextButton>(confirm).onPressed != null;
+      expect(enabled(), isFalse);
+      await tester.enterText(
+        find.byKey(const Key('login_reset_confirm_field')),
+        'RESE',
+      );
+      await tester.pumpAndSettle();
+      expect(enabled(), isFalse);
+      await tester.enterText(
+        find.byKey(const Key('login_reset_confirm_field')),
+        'reset',
+      );
+      await tester.pumpAndSettle();
+      expect(enabled(), isTrue);
+      expect(service.resets, 0);
+
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(service.resets, 1);
+      expect(find.text('onboarding'), findsOneWidget);
+    });
+
+    testWidgets('"Back up first" opens Backup and resets nothing', (
+      tester,
+    ) async {
+      await pumpSettings(tester);
+      await tester.tap(
+        find.byKey(const Key('settings.factoryResetBackUpFirst')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('backup screen'), findsOneWidget);
+      expect(service.resets, 0);
+    });
+
+    testWidgets('Cancel resets nothing', (tester) async {
+      await pumpSettings(tester);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(service.resets, 0);
+    });
+  });
+}
+
+class _RecordingFactoryReset extends Fake implements FactoryResetService {
+  int resets = 0;
+
+  @override
+  Future<void> reset() async => resets++;
 }
 
 class _FailingFactoryReset extends Fake implements FactoryResetService {

@@ -117,8 +117,7 @@ class TransactionFormBody extends ConsumerWidget {
               onTap: () async {
                 final picked = await showAccountPicker(context);
                 if (picked != null) {
-                  c.accountId = picked.id;
-                  c.changed();
+                  c.pickAccount(picked.id);
                 }
               },
             ),
@@ -135,8 +134,7 @@ class TransactionFormBody extends ConsumerWidget {
                     currency: accounts[c.accountId]?.currency,
                   );
                   if (picked != null) {
-                    c.transferAccountId = picked.id;
-                    c.changed();
+                    c.pickTransferAccount(picked.id);
                   }
                 },
               ),
@@ -234,21 +232,52 @@ class TransactionFormBody extends ConsumerWidget {
                     ],
                   ),
                 )
-              else if (!c.isSplit)
+              else if (!c.isSplit) ...[
                 KeyedSubtree(
                   key: tutorialKeys.category,
                   child: PickerField(
+                    fieldKey: const Key('transaction.category'),
                     label: l10n.category,
-                    text: categories[c.categoryId]?.name ?? '',
+                    // An inflow without a category is income: it goes to
+                    // To Be Budgeted, and the field says so.
+                    text: c.categoryId == null
+                        ? (c.isInflow ? l10n.toBeBudgeted : '')
+                        : categories[c.categoryId]?.name ?? '',
                     onTap: () async {
+                      if (c.isInflow) {
+                        final picked = await showInflowCategoryPicker(context);
+                        if (picked != null) {
+                          c.categoryId = picked.category?.id;
+                          c.changed();
+                        }
+                        return;
+                      }
                       final picked = await showCategoryPicker(context);
                       if (picked != null) {
                         c.categoryId = picked.id;
                         c.changed();
                       }
                     },
+                    onClear: c.categoryId == null
+                        ? null
+                        : () {
+                            c.categoryId = null;
+                            c.changed();
+                          },
                   ),
                 ),
+                if (c.isInflow)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 4),
+                    child: Text(
+                      l10n.txInflowCategoryHint,
+                      key: const Key('transaction.inflowCategoryHint'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
               if (!offBudget)
                 SwitchListTile(
                   title: Text(l10n.split),

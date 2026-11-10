@@ -21,6 +21,10 @@ class TransactionListItem extends ConsumerWidget {
   final bool isSelected;
   final bool isSelectionMode;
 
+  /// Whether the row shows its date. Off where the list already has a
+  /// heading for each day.
+  final bool showDate;
+
   const TransactionListItem({
     super.key,
     required this.transaction,
@@ -33,6 +37,7 @@ class TransactionListItem extends ConsumerWidget {
     this.onClearStatusChanged,
     this.isSelected = false,
     this.isSelectionMode = false,
+    this.showDate = true,
   });
 
   @override
@@ -142,14 +147,16 @@ class TransactionListItem extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      // Date
-                      fmt.formatDate(transaction.date),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                    if (showDate) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        // Date
+                        fmt.formatDate(transaction.date),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 if (accountName != null) ...[

@@ -1424,18 +1424,6 @@ abstract class AppLocalizations {
   /// **'Occurrences'**
   String get occurrences;
 
-  /// No description provided for @recoveryKey.
-  ///
-  /// In en, this message translates to:
-  /// **'Recovery Key'**
-  String get recoveryKey;
-
-  /// No description provided for @revealRecoveryKey.
-  ///
-  /// In en, this message translates to:
-  /// **'Reveal Recovery Key'**
-  String get revealRecoveryKey;
-
   /// No description provided for @autoLock.
   ///
   /// In en, this message translates to:
@@ -1460,29 +1448,11 @@ abstract class AppLocalizations {
   /// **'Never'**
   String get autoLockNever;
 
-  /// No description provided for @incorrectPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Incorrect Password'**
-  String get incorrectPassword;
-
   /// No description provided for @passwordsDoNotMatch.
   ///
   /// In en, this message translates to:
   /// **'Passwords do not match'**
   String get passwordsDoNotMatch;
-
-  /// No description provided for @biometrics.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric Authentication'**
-  String get biometrics;
-
-  /// No description provided for @encryptionStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Encryption Status'**
-  String get encryptionStatus;
 
   /// No description provided for @encrypted.
   ///
@@ -1514,23 +1484,11 @@ abstract class AppLocalizations {
   /// **'Sync Settings'**
   String get syncSettings;
 
-  /// No description provided for @connectToGoogleDrive.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect to Google Drive'**
-  String get connectToGoogleDrive;
-
   /// No description provided for @syncNow.
   ///
   /// In en, this message translates to:
   /// **'Sync Now'**
   String get syncNow;
-
-  /// No description provided for @googleDriveSync.
-  ///
-  /// In en, this message translates to:
-  /// **'Google Drive Sync'**
-  String get googleDriveSync;
 
   /// No description provided for @lastSynced.
   ///
@@ -1550,12 +1508,6 @@ abstract class AppLocalizations {
   /// **'None'**
   String get providerNone;
 
-  /// No description provided for @providerGoogleDrive.
-  ///
-  /// In en, this message translates to:
-  /// **'Google Drive'**
-  String get providerGoogleDrive;
-
   /// No description provided for @disconnect.
   ///
   /// In en, this message translates to:
@@ -1567,12 +1519,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Offline Mode'**
   String get offlineMode;
-
-  /// No description provided for @syncOnlyOnWifi.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync only on Wi-Fi'**
-  String get syncOnlyOnWifi;
 
   /// No description provided for @syncFrequency.
   ///
@@ -2408,12 +2354,6 @@ abstract class AppLocalizations {
   /// **'Confirm'**
   String get confirmAction;
 
-  /// No description provided for @masterPasswordLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Master password'**
-  String get masterPasswordLabel;
-
   /// No description provided for @confirmPasswordLabel.
   ///
   /// In en, this message translates to:
@@ -2504,107 +2444,11 @@ abstract class AppLocalizations {
   /// **'Security setup failed. Please try again.'**
   String get setupFailed;
 
-  /// No description provided for @biometricPromptTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock LedgerZero'**
-  String get biometricPromptTitle;
-
-  /// No description provided for @biometricPromptSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm it is you to unlock your data'**
-  String get biometricPromptSubtitle;
-
   /// No description provided for @loginUnlock.
   ///
   /// In en, this message translates to:
   /// **'Unlock'**
   String get loginUnlock;
-
-  /// No description provided for @loginUseBiometrics.
-  ///
-  /// In en, this message translates to:
-  /// **'Use biometrics'**
-  String get loginUseBiometrics;
-
-  /// No description provided for @loginUseRecoveryKey.
-  ///
-  /// In en, this message translates to:
-  /// **'Use recovery key'**
-  String get loginUseRecoveryKey;
-
-  /// No description provided for @loginVaultMissing.
-  ///
-  /// In en, this message translates to:
-  /// **'The key data of this app is missing, so your data cannot be unlocked. You can reset the app and restore a backup.'**
-  String get loginVaultMissing;
-
-  /// No description provided for @loginDatabaseKeyMismatch.
-  ///
-  /// In en, this message translates to:
-  /// **'Your key is correct, but the database file could not be opened with it.'**
-  String get loginDatabaseKeyMismatch;
-
-  /// No description provided for @loginFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlocking failed. Please try again.'**
-  String get loginFailed;
-
-  /// No description provided for @biometricsInvalidated.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric unlock was turned off because the biometrics on this device changed. Unlock with your password and turn it on again in Settings.'**
-  String get biometricsInvalidated;
-
-  /// No description provided for @biometricsUnlockFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric unlock failed. Please use your password.'**
-  String get biometricsUnlockFailed;
-
-  /// No description provided for @recoveryKeyEnterTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your recovery key'**
-  String get recoveryKeyEnterTitle;
-
-  /// No description provided for @recoveryKeyEnterHint.
-  ///
-  /// In en, this message translates to:
-  /// **'32 characters; spaces and dashes are optional'**
-  String get recoveryKeyEnterHint;
-
-  /// No description provided for @recoveryKeyInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'This recovery key is not correct.'**
-  String get recoveryKeyInvalid;
-
-  /// No description provided for @recoveryKeyNeedsPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'An update is still being completed. Please unlock once with your password.'**
-  String get recoveryKeyNeedsPassword;
-
-  /// No description provided for @encryptionStatusEncrypted.
-  ///
-  /// In en, this message translates to:
-  /// **'Encrypted with SQLCipher (AES-256)'**
-  String get encryptionStatusEncrypted;
-
-  /// No description provided for @encryptionStatusPlaintext.
-  ///
-  /// In en, this message translates to:
-  /// **'The database file is NOT encrypted'**
-  String get encryptionStatusPlaintext;
-
-  /// No description provided for @encryptionStatusUnknown.
-  ///
-  /// In en, this message translates to:
-  /// **'Not checked yet'**
-  String get encryptionStatusUnknown;
 
   /// No description provided for @lockNow.
   ///
@@ -2720,41 +2564,11 @@ abstract class AppLocalizations {
   /// **'Backup password'**
   String get backupPasswordLabel;
 
-  /// No description provided for @backupUploadToCloud.
-  ///
-  /// In en, this message translates to:
-  /// **'Also upload to your sync storage'**
-  String get backupUploadToCloud;
-
-  /// No description provided for @backupUploadNotConfigured.
-  ///
-  /// In en, this message translates to:
-  /// **'Set up Google Drive sync first'**
-  String get backupUploadNotConfigured;
-
-  /// No description provided for @backupExport.
-  ///
-  /// In en, this message translates to:
-  /// **'Export backup'**
-  String get backupExport;
-
   /// No description provided for @backupCreating.
   ///
   /// In en, this message translates to:
   /// **'Creating backup…'**
   String get backupCreating;
-
-  /// No description provided for @backupUploaded.
-  ///
-  /// In en, this message translates to:
-  /// **'Backup uploaded'**
-  String get backupUploaded;
-
-  /// No description provided for @backupUploadFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload failed. The backup was still created and can be shared.'**
-  String get backupUploadFailed;
 
   /// No description provided for @backupFailed.
   ///
@@ -2857,72 +2671,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transactions merged.'**
   String get selectiveRestoreSuccess;
-
-  /// No description provided for @syncPassphraseSetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a sync passphrase'**
-  String get syncPassphraseSetTitle;
-
-  /// No description provided for @syncPassphraseSetExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'Your data is encrypted before it leaves this device. Choose a sync passphrase: you need to enter it on every device you want to sync. It cannot be recovered, not even by the developer, so keep it somewhere safe.'**
-  String get syncPassphraseSetExplanation;
-
-  /// No description provided for @syncPassphraseEnterTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your sync passphrase'**
-  String get syncPassphraseEnterTitle;
-
-  /// No description provided for @syncPassphraseEnterExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'This sync folder is already used by another device. Enter the sync passphrase you set there.'**
-  String get syncPassphraseEnterExplanation;
-
-  /// No description provided for @syncPassphraseLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync passphrase'**
-  String get syncPassphraseLabel;
-
-  /// No description provided for @syncPassphraseConfirmLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm sync passphrase'**
-  String get syncPassphraseConfirmLabel;
-
-  /// No description provided for @syncPassphraseSetButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Set passphrase'**
-  String get syncPassphraseSetButton;
-
-  /// No description provided for @syncPassphraseEnterButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter passphrase'**
-  String get syncPassphraseEnterButton;
-
-  /// No description provided for @syncPassphraseWrong.
-  ///
-  /// In en, this message translates to:
-  /// **'Wrong sync passphrase.'**
-  String get syncPassphraseWrong;
-
-  /// No description provided for @syncPassphraseFolderExists.
-  ///
-  /// In en, this message translates to:
-  /// **'Another device has just set up sync. Enter the passphrase set there.'**
-  String get syncPassphraseFolderExists;
-
-  /// No description provided for @syncPassphraseFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'The sync passphrase could not be saved. Please try again.'**
-  String get syncPassphraseFailed;
 
   /// No description provided for @syncPendingChanges.
   ///
@@ -3109,12 +2857,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rule'**
   String get syncTableRules;
-
-  /// No description provided for @syncStatusConnectedAs.
-  ///
-  /// In en, this message translates to:
-  /// **'Connected as {email}'**
-  String syncStatusConnectedAs(String email);
 
   /// No description provided for @syncStatusConnected.
   ///
@@ -3701,7 +3443,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'It has been a while since your last backup. Tap to back up your data.'**
+  /// **'No backup has left this phone for a while. Tap to save one somewhere else; Android backup, if it is on, also covers a lost phone.'**
   String get notificationBackupBody;
 
   /// No description provided for @notificationSyncFailedTitle.
@@ -4930,20 +4672,8 @@ abstract class AppLocalizations {
   /// Sync tutorial step text
   ///
   /// In en, this message translates to:
-  /// **'Sync through your own Google Drive. Your data is encrypted before it leaves this device.'**
+  /// **'Sync with a second phone over your Wi-Fi: pair the phones by scanning a QR code. Everything is encrypted before it leaves this phone.'**
   String get tutSyncProviderBody;
-
-  /// Sync tutorial step title
-  ///
-  /// In en, this message translates to:
-  /// **'Connect'**
-  String get tutSyncConnectTitle;
-
-  /// Sync tutorial step text
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in, then set a sync passphrase. You enter the same passphrase on each of your devices.'**
-  String get tutSyncConnectBody;
 
   /// Section heading in accessibility settings
   ///
@@ -4984,7 +4714,7 @@ abstract class AppLocalizations {
   /// FAQ answer
   ///
   /// In en, this message translates to:
-  /// **'Your data is stored only on your phone, in an encrypted database whose key is kept in the phone’s secure hardware (Android KeyStore). The app lock adds your fingerprint, face or phone PIN. Synced data is encrypted before it leaves the phone. There are no LedgerZero servers, no tracking and no analytics.'**
+  /// **'Your budget is stored on your phone, in LedgerZero’s private app storage, which Android keeps away from other apps and protects with your screen lock. The app lock adds your fingerprint, face or phone PIN. Backup files and synced data are encrypted with your password or passphrase before they leave the phone. If Android backup is on, Android keeps an end-to-end encrypted copy in your Google account that only your phone’s screen lock opens. There are no LedgerZero servers, no account, no tracking and no analytics.'**
   String get faqSafeA;
 
   /// FAQ question
@@ -4996,7 +4726,7 @@ abstract class AppLocalizations {
   /// FAQ answer
   ///
   /// In en, this message translates to:
-  /// **'Open Settings > Sync Settings. At home, pair the phones over Wi-Fi by scanning a QR code. To sync while you are apart, both phones use the same Google Drive account and sync passphrase. The user guide chapter “Using LedgerZero with a partner” explains the details.'**
+  /// **'Open Settings > Sync Settings and pair the phones over Wi-Fi by scanning a QR code. The two phones sync whenever both are on the same Wi-Fi with LedgerZero open; in between, each works on its own. The user guide chapter “Using LedgerZero with a partner” explains the details.'**
   String get faqSyncA;
 
   /// FAQ question
@@ -5020,7 +4750,7 @@ abstract class AppLocalizations {
   /// FAQ answer; menu names must match the settings labels
   ///
   /// In en, this message translates to:
-  /// **'Settings > Backup & Export creates a backup file that is always encrypted with a backup password you choose. Without that password the backup cannot be restored. CSV and JSON exports are readable copies and are not encrypted.'**
+  /// **'Settings > Backup & Export creates a backup file that is always encrypted with a backup password you choose; “Save to…” puts it in another place (a computer, a USB stick, a cloud folder). Without that password the backup cannot be restored. Android backup, if it is on, also brings the budget back on a new phone. CSV and JSON exports are readable copies and are not encrypted.'**
   String get faqBackupA;
 
   /// FAQ question
@@ -5158,7 +4888,7 @@ abstract class AppLocalizations {
   /// Onboarding benefit
   ///
   /// In en, this message translates to:
-  /// **'Stored on your device and encrypted.'**
+  /// **'Stored on your phone. No account, no LedgerZero servers.'**
   String get onbBenefitDataBody;
 
   /// Onboarding benefit
@@ -5194,13 +4924,13 @@ abstract class AppLocalizations {
   /// Onboarding privacy point
   ///
   /// In en, this message translates to:
-  /// **'All data is encrypted on your device with AES-256.'**
+  /// **'Backups and sync files are encrypted with your password or passphrase.'**
   String get onbPrivacyEncrypted;
 
   /// Onboarding privacy point
   ///
   /// In en, this message translates to:
-  /// **'We never see your financial data. Sync runs through your own Google Drive, end-to-end encrypted.'**
+  /// **'We never see your financial data. Sync runs directly between your phones over your Wi-Fi, end-to-end encrypted. Android backup, if it is on, keeps an end-to-end encrypted copy that only your screen lock opens.'**
   String get onbPrivacyOwnCloud;
 
   /// App bar title of the onboarding budgeting explanation
@@ -5431,30 +5161,6 @@ abstract class AppLocalizations {
   /// **'{value}'**
   String integerValue(int value);
 
-  /// Sync error: network or timeout
-  ///
-  /// In en, this message translates to:
-  /// **'No connection to the cloud storage. Sync will try again when you are online.'**
-  String get syncErrorNetwork;
-
-  /// Sync error
-  ///
-  /// In en, this message translates to:
-  /// **'You are not signed in. Please connect again.'**
-  String get syncErrorNotSignedIn;
-
-  /// Sync error
-  ///
-  /// In en, this message translates to:
-  /// **'The sign-in has expired. Please disconnect and connect again.'**
-  String get syncErrorAuthFailed;
-
-  /// Sync error
-  ///
-  /// In en, this message translates to:
-  /// **'Your cloud storage is full. Free up space to keep syncing.'**
-  String get syncErrorStorageFull;
-
   /// Share sheet text of a transaction CSV export
   ///
   /// In en, this message translates to:
@@ -5683,7 +5389,7 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 tracking account was imported outside the budget. Transfers between it and your budget accounts are linked; a category on the budget side stays there.} other{{count} tracking accounts were imported outside the budget. Transfers between them and your budget accounts are linked; a category on the budget side stays there.}}'**
   String ynabImportTrackingSkipped(int count);
 
-  /// Login screen button shown when the key vault is missing; deletes all local data
+  /// Start-up screen button shown when the database cannot be opened; deletes all local data
   ///
   /// In en, this message translates to:
   /// **'Reset app'**
@@ -5698,7 +5404,7 @@ abstract class AppLocalizations {
   /// Explanation in the reset confirmation on the login screen
   ///
   /// In en, this message translates to:
-  /// **'Without the key vault your data cannot be unlocked. Resetting deletes the encrypted database, all keys, settings and exported files on this device and starts the setup again; afterwards you can restore a backup. This cannot be undone. Type {word} to confirm.'**
+  /// **'LedgerZero cannot open the data on this phone. Resetting deletes it together with the settings and exported files on this device and starts the setup again; afterwards you can restore a backup. Automatic backups kept on this phone are not deleted. This cannot be undone. Type {word} to confirm.'**
   String loginResetAppBody(String word);
 
   /// Word the user must type to confirm the reset from the login screen
@@ -6229,24 +5935,6 @@ abstract class AppLocalizations {
   /// **'LedgerZero is locked'**
   String get lockScreenTitle;
 
-  /// No description provided for @lockScreenKeyError.
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
-  String get lockScreenKeyError;
-
-  /// No description provided for @legacyUnlockTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock one last time'**
-  String get legacyUnlockTitle;
-
-  /// No description provided for @legacyUnlockExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero no longer uses a master password. Unlock one last time with your password or recovery key. After that, the app keeps its key in this phone\'s secure key store, and the app lock uses your fingerprint, face or screen lock.'**
-  String get legacyUnlockExplanation;
-
   /// No description provided for @setupDeviceHeading.
   ///
   /// In en, this message translates to:
@@ -6256,14 +5944,8 @@ abstract class AppLocalizations {
   /// No description provided for @setupDeviceExplanation.
   ///
   /// In en, this message translates to:
-  /// **'Your budget is stored only on this phone, encrypted with a key that Android keeps in its secure key store. There is no account and no password to remember. So you don\'t lose anything with your phone, create backups or sync with a second phone.'**
+  /// **'Your budget is stored on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. There is no account, no LedgerZero server and no tracking. If Android backup is on, Android keeps an end-to-end encrypted copy that only this phone’s screen lock opens. The app lock can also ask for your fingerprint, face or phone PIN.'**
   String get setupDeviceExplanation;
-
-  /// No description provided for @lockScreenReadError.
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero could not read its key from this phone\'s secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.'**
-  String get lockScreenReadError;
 
   /// No description provided for @providerLocalWifi.
   ///
@@ -6280,7 +5962,7 @@ abstract class AppLocalizations {
   /// No description provided for @lanSetupExplanation.
   ///
   /// In en, this message translates to:
-  /// **'Share one budget with a second phone, for example your partner\'s, without any cloud. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.'**
+  /// **'Share one budget with a second phone, for example your partner\'s, directly over your Wi-Fi: no account and no server in between. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.'**
   String get lanSetupExplanation;
 
   /// No description provided for @lanStart.
@@ -6910,7 +6592,7 @@ abstract class AppLocalizations {
   /// Help topic text
   ///
   /// In en, this message translates to:
-  /// **'Two phones can share one budget: over your home Wi-Fi without any cloud, or through a Google Drive account you both use when you are apart. Everything is encrypted before it leaves the phone.'**
+  /// **'Two phones can share one budget over your Wi-Fi: they sync directly from phone to phone whenever both are on the same Wi-Fi with LedgerZero open. Everything is encrypted before it leaves the phone.'**
   String get helpSyncBody;
 
   /// Numbered steps of a help topic, one per line
@@ -7000,7 +6682,7 @@ abstract class AppLocalizations {
   /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Two phones can share one budget. Pair them in Sync Settings: over your home Wi-Fi (scan the QR code on the other phone; both need LedgerZero open on the same Wi-Fi) or through a Google Drive account you both use. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.'**
+  /// **'Two phones can share one budget. Pair them over Wi-Fi in Sync Settings (scan the QR code on the other phone); they sync whenever both are on the same Wi-Fi with LedgerZero open. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.'**
   String get guidePartnerBody;
 
   /// User guide chapter title
@@ -7012,7 +6694,7 @@ abstract class AppLocalizations {
   /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Your data is stored encrypted on your phone, and the key is kept in the phone’s secure hardware. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. Create encrypted backups regularly in Settings > Backup & Export and keep the backup password safe: without it a backup cannot be restored.'**
+  /// **'Your data is stored on your phone, in LedgerZero’s private app storage, protected by Android and your screen lock. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. If the phone is lost or reset, the data is gone with it, unless Android backup is on (it keeps an end-to-end encrypted copy, up to about a day old, that your screen lock opens) or a second phone syncs. So also create encrypted backups regularly in Settings > Backup & Export, save them somewhere else, and keep the backup password safe: without it a backup cannot be restored.'**
   String get guideSecurityBody;
 
   /// User guide chapter title
@@ -7278,12 +6960,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Access is granted, but Android has not connected LedgerZero\'s notification listener, so nothing is captured. Turn notification access off and on again in the system settings, or restart the phone.'**
   String get cardNotificationsListenerDisconnected;
-
-  /// Lock screen: the key store keeps failing
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
-  String get lockScreenReadErrorPersistent;
 
   /// Lock screen: transient database open error
   ///
@@ -7582,7 +7258,7 @@ abstract class AppLocalizations {
   /// Backup screen nudge text
   ///
   /// In en, this message translates to:
-  /// **'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.'**
+  /// **'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions never sync to the other phone: only this phone’s backups have them.'**
   String get backupNudgeMessage;
 
   /// Backup screen section title
@@ -7594,7 +7270,7 @@ abstract class AppLocalizations {
   /// Backup screen, automatic backups explanation
   ///
   /// In en, this message translates to:
-  /// **'Once a day the app saves an encrypted backup on this phone and keeps the last {count}. It uses the backup password you choose here and can be restored even when the app’s key is lost. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.'**
+  /// **'Once a day the app saves an encrypted backup on this phone and keeps the last {count}. It uses the backup password you choose here, and a backup restores like any other. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.'**
   String autoBackupExplanation(int count);
 
   /// Switch title
@@ -7785,6 +7461,778 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.} other{{count} payments were not added because they look like transactions you already have. If one was a separate purchase, tap Add anyway on it.}}'**
   String cardNotificationsDuplicatesBanner(int count);
+
+  /// Reason a captured notification waits for the user: it names an amount but nothing says a payment was made (e.g. an unknown wording)
+  ///
+  /// In en, this message translates to:
+  /// **'Has an amount, but does not clearly say that you paid'**
+  String get cardNotificationsHeldUnclear;
+
+  /// Reason a captured notification waits for the user: it lists several payments that could not be told apart
+  ///
+  /// In en, this message translates to:
+  /// **'Names several amounts: add each payment yourself'**
+  String get cardNotificationsHeldSeveralAmounts;
+
+  /// Question on a captured payment that may be the final amount of an earlier pre-authorisation (e.g. a fuel pump hold); the buttons are Replace and Add separately
+  ///
+  /// In en, this message translates to:
+  /// **'Is this the final amount of the {amount} that was reserved earlier? Replace changes that transaction; Add separately keeps both.'**
+  String cardNotificationsHeldReplaces(String amount);
+
+  /// Button: the captured payment replaces the amount of the earlier pre-authorisation
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get cardNotificationsReplace;
+
+  /// Button: the captured payment is booked as a transaction of its own, next to the earlier pre-authorisation
+  ///
+  /// In en, this message translates to:
+  /// **'Add separately'**
+  String get cardNotificationsAddSeparately;
+
+  /// Memo of a transaction booked from a pre-authorisation notification (pending / reserved amount)
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved amount, the final amount may differ'**
+  String get cardNotificationsAuthorisationMemo;
+
+  /// Title of the Home banner shown when card notification capture is not working or captured payments need the user
+  ///
+  /// In en, this message translates to:
+  /// **'Card notifications need a look'**
+  String get cardNotificationsAttentionTitle;
+
+  /// Home banner line: the user revoked notification access
+  ///
+  /// In en, this message translates to:
+  /// **'Notification access is off, so no payments are captured.'**
+  String get cardNotificationsAttentionAccess;
+
+  /// Home banner line: access is granted but the system has not bound the listener service
+  ///
+  /// In en, this message translates to:
+  /// **'Android has not connected the notification listener, so no payments are captured.'**
+  String get cardNotificationsAttentionListener;
+
+  /// Home banner line: the encrypted capture log had to be started over
+  ///
+  /// In en, this message translates to:
+  /// **'The capture storage was reset on {date}; notifications captured before then were lost.'**
+  String cardNotificationsAttentionStorageReset(String date);
+
+  /// Home banner line: captured notifications that could not be booked on their own
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 captured notification is waiting for you} other{{count} captured notifications are waiting for you}}'**
+  String cardNotificationsAttentionWaiting(int count);
+
+  /// Home banner line: booking captured payments failed with an error
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 payment could not be added} other{{count} payments could not be added}}'**
+  String cardNotificationsAttentionFailed(int count);
+
+  /// Accessibility label of the badge on Settings > Card notifications
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item needs your attention} other{{count} items need your attention}}'**
+  String cardNotificationsAttentionBadge(int count);
+
+  /// Home sync card: attention line part shown while change files of a newer app version are waiting
+  ///
+  /// In en, this message translates to:
+  /// **'Update the app: another device uses a newer version'**
+  String get syncIndicatorUpdateApp;
+
+  /// Notification title: another device runs a newer app version
+  ///
+  /// In en, this message translates to:
+  /// **'Update LedgerZero to keep syncing'**
+  String get notificationSyncUpdateTitle;
+
+  /// Notification body (no financial data)
+  ///
+  /// In en, this message translates to:
+  /// **'Another device uses a newer version of LedgerZero. Its changes arrive after you update the app.'**
+  String get notificationSyncUpdateBody;
+
+  /// Second paragraph of the restore confirmation while sync is set up
+  ///
+  /// In en, this message translates to:
+  /// **'Sync is set up on this phone: a restore does not undo changes that were already synced, including this phone’s own. They come back from the sync folder. A restore brings back data that was lost; it does not put the shared budget back to an earlier state.'**
+  String get restoreSyncNoRollbackNote;
+
+  /// Confirmation dialog title before turning Wi-Fi sync off
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off Wi-Fi sync?'**
+  String get lanTurnOffConfirmTitle;
+
+  /// Confirmation dialog text before turning Wi-Fi sync off
+  ///
+  /// In en, this message translates to:
+  /// **'This phone stops syncing and forgets the pairing. Your data stays on both phones. To sync again, the phones have to be paired again with a new code.'**
+  String get lanTurnOffConfirmMessage;
+
+  /// Confirmation dialog title before the sync provider is set to None
+  ///
+  /// In en, this message translates to:
+  /// **'Stop syncing?'**
+  String get syncProviderNoneConfirmTitle;
+
+  /// Confirmation dialog text before the sync provider is set to None
+  ///
+  /// In en, this message translates to:
+  /// **'This phone stops exchanging changes with your other devices until you choose the sync provider again. Changes made in the meantime are sent then.'**
+  String get syncProviderNoneConfirmMessage;
+
+  /// Confirmation dialog button: set the sync provider to None
+  ///
+  /// In en, this message translates to:
+  /// **'Stop syncing'**
+  String get syncStopAction;
+
+  /// CSV import: warning on the mapping screen and before the review when every amount of the file would become an inflow
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".'**
+  String csvIssueAllInflows(int count);
+
+  /// CSV import: notice before the review that rows with a reverted/failed/declined status are not imported
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row is marked as reverted, failed or declined in the file and is left out.} other{{count} rows are marked as reverted, failed or declined in the file and are left out.}}'**
+  String csvIssueVoidRows(int count);
+
+  /// CSV import column mapping: a fee column whose value is charged on top of the amount
+  ///
+  /// In en, this message translates to:
+  /// **'Fee'**
+  String get csvFieldFee;
+
+  /// Import review: shown under an unchecked row when an existing transaction of the account has the same amount within a few days
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate: {payee} on {date} has the same amount. Check the box if this is a separate transaction.'**
+  String importPossibleDuplicateOf(String payee, String date);
+
+  /// Import review: like importPossibleDuplicateOf when the existing transaction has no payee
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate: a transaction without payee on {date} (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.'**
+  String importPossibleDuplicateOfNoPayee(String date);
+
+  /// Import review banner: number of possible duplicates (same amount within a few days, whatever the payee)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row has the same amount as an existing transaction of the account within {days} days and is unchecked. Check it if it is a separate transaction.} other{{count} rows have the same amount as an existing transaction of the account within {days} days and are unchecked. Check the ones that are separate transactions.}}'**
+  String importPossibleDuplicatesNearby(int count, int days);
+
+  /// Import review: blocking banner when the file's Account column names accounts that do not all match an open account, and some do
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out 1 row; a single account takes every row.} other{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out {count} rows; a single account takes every row.}}'**
+  String importUnknownAccountsPartial(String names, int count);
+
+  /// Import review: blocking banner when none of the account names in the file match an open account
+  ///
+  /// In en, this message translates to:
+  /// **'This file names accounts that are not open accounts here: {names}. Choose the account that all rows go into.'**
+  String importUnknownAccountsNone(String names);
+
+  /// Import review: under a row left out because its account name matches no open account (Account from file)
+  ///
+  /// In en, this message translates to:
+  /// **'Account “{name}” not found – not imported'**
+  String importRowAccountNotFound(String name);
+
+  /// Import review: under a row left out because its Account cell is empty (Account from file)
+  ///
+  /// In en, this message translates to:
+  /// **'No account in the file – not imported'**
+  String get importRowNoAccount;
+
+  /// Import review: entry in the list of unmatched account names for rows whose Account cell is empty
+  ///
+  /// In en, this message translates to:
+  /// **'rows without an account name'**
+  String get importRowsWithoutAccount;
+
+  /// CSV import column mapping: the column that says whether a row is approved (our own export writes Yes/No)
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get csvFieldApproved;
+
+  /// Title of the dialog that asks which CSV variant the transaction export writes (shown in German only)
+  ///
+  /// In en, this message translates to:
+  /// **'CSV format'**
+  String get csvExportFormatTitle;
+
+  /// CSV export format choice: comma-delimited, dot decimals
+  ///
+  /// In en, this message translates to:
+  /// **'Standard (comma-separated)'**
+  String get csvExportFormatStandard;
+
+  /// Subtitle of the standard CSV format choice
+  ///
+  /// In en, this message translates to:
+  /// **'For other apps and scripts. Can be imported again.'**
+  String get csvExportFormatStandardHint;
+
+  /// CSV export format choice for spreadsheet apps set to German: semicolon-delimited, decimal comma, UTF-8 byte order mark
+  ///
+  /// In en, this message translates to:
+  /// **'For Excel (semicolon, decimal comma)'**
+  String get csvExportFormatSpreadsheet;
+
+  /// Subtitle of the Excel CSV format choice
+  ///
+  /// In en, this message translates to:
+  /// **'Opens with the right columns and umlauts in a German Excel. Can be imported again as well.'**
+  String get csvExportFormatSpreadsheetHint;
+
+  /// CSV import mapping screen: switch for files whose first line already is a transaction
+  ///
+  /// In en, this message translates to:
+  /// **'File has no header row'**
+  String get csvNoHeaderRow;
+
+  /// CSV import mapping screen: note under the no-header switch when it is on
+  ///
+  /// In en, this message translates to:
+  /// **'The first line is imported as a transaction. The columns are numbered #1, #2, …; check the mapping against the preview.'**
+  String get csvNoHeaderRowHint;
+
+  /// CSV import mapping screen: button that lets the user type a date pattern
+  ///
+  /// In en, this message translates to:
+  /// **'Other date format…'**
+  String get csvCustomDateFormat;
+
+  /// Helper text of the custom date format field (the pattern letters are not translated)
+  ///
+  /// In en, this message translates to:
+  /// **'d day, M month, y year, H hour, m minute, s second. Examples: d.M.yyyy or MMM d, yyyy'**
+  String get csvCustomDateFormatHelp;
+
+  /// Error under the custom date format field
+  ///
+  /// In en, this message translates to:
+  /// **'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.'**
+  String get csvCustomDateFormatInvalid;
+
+  /// YNAB import error: an amount cell of the register or budget file is not a number
+  ///
+  /// In en, this message translates to:
+  /// **'The amount “{value}” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.'**
+  String ynabImportErrorInvalidAmount(String value);
+
+  /// YNAB import error: the budget/plan CSV lacks columns (listed)
+  ///
+  /// In en, this message translates to:
+  /// **'The budget file is missing required columns: {columns}. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.'**
+  String ynabImportErrorMissingBudgetColumns(String columns);
+
+  /// YNAB import, file step: tile that picks the export ZIP YNAB downloads, instead of the two CSV files
+  ///
+  /// In en, this message translates to:
+  /// **'YNAB export (ZIP file)'**
+  String get ynabImportZipTile;
+
+  /// Subtitle of the export ZIP tile while nothing is picked
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the ZIP that YNAB downloads; both files are taken from it.'**
+  String get ynabImportZipHint;
+
+  /// YNAB import error: the picked ZIP is not a YNAB export
+  ///
+  /// In en, this message translates to:
+  /// **'This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export.'**
+  String get ynabImportErrorInvalidZip;
+
+  /// YNAB 4 import: tile that picks a ZIP of the .ynab4 folder
+  ///
+  /// In en, this message translates to:
+  /// **'Zipped budget folder (.zip)'**
+  String get ynabImportYnab4Zip;
+
+  /// YNAB 4 import: note under the two tiles (Android does not let apps read a picked folder by path)
+  ///
+  /// In en, this message translates to:
+  /// **'If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.'**
+  String get ynabImportYnab4ZipHint;
+
+  /// YNAB 4 import error: the picked ZIP has no Budget.ymeta / Budget.yfull
+  ///
+  /// In en, this message translates to:
+  /// **'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.'**
+  String get ynabImportErrorInvalidYnab4Zip;
+
+  /// CSV import screen: button that deletes the transactions the last CSV import created
+  ///
+  /// In en, this message translates to:
+  /// **'Undo last import'**
+  String get importUndoLast;
+
+  /// CSV import screen: what the last import created
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Last CSV import: 1 transaction on {date}.} other{Last CSV import: {count} transactions on {date}.}}'**
+  String importUndoLastInfo(int count, String date);
+
+  /// Confirmation before undoing the last CSV import
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Delete the 1 transaction that the import of {date} created? Payees the import created stay.} other{Delete the {count} transactions that the import of {date} created? Payees the import created stay.}}'**
+  String importUndoConfirm(int count, String date);
+
+  /// Warning in the undo-import confirmation and result: rows changed since the import are not deleted
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 transaction of that import was edited, reconciled or split since and is kept.} other{{count} transactions of that import were edited, reconciled or split since and are kept.}}'**
+  String importUndoKept(int count);
+
+  /// Undo last import: nothing left that can be deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Every transaction of the last import was changed or deleted since. There is nothing to undo.'**
+  String get importUndoNothing;
+
+  /// Snackbar after undoing the last CSV import
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Import undone: 1 transaction deleted} other{Import undone: {count} transactions deleted}}'**
+  String importUndoDone(int count);
+
+  /// Button: undo the CSV import (confirmation dialog and the dialog shown right after an import)
+  ///
+  /// In en, this message translates to:
+  /// **'Undo import'**
+  String get importUndoAction;
+
+  /// Snackbar when undoing the last import failed
+  ///
+  /// In en, this message translates to:
+  /// **'The import could not be undone. Nothing was changed.'**
+  String get importUndoFailed;
+
+  /// Help topic 'Importing a CSV file': the steps, one per line (replaces helpCsvSteps, whose claims about header lines and debit/credit columns no longer hold)
+  ///
+  /// In en, this message translates to:
+  /// **'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.'**
+  String get helpCsvStepsV2;
+
+  /// Snackbar after tapping Contact support on a phone without a mail app
+  ///
+  /// In en, this message translates to:
+  /// **'No e-mail app was found. The address {email} has been copied to the clipboard.'**
+  String supportEmailCopied(String email);
+
+  /// Snackbar after tapping a web link (privacy policy, imprint) on a phone without a browser
+  ///
+  /// In en, this message translates to:
+  /// **'The page could not be opened. Its address has been copied to the clipboard.'**
+  String get linkCopied;
+
+  /// Settings: title of the last section, which holds the About entry
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutTitle;
+
+  /// Settings tile and title of the About screen
+  ///
+  /// In en, this message translates to:
+  /// **'About {appName}'**
+  String aboutApp(String appName);
+
+  /// Subtitle of the About tile in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'Version, licences, contact'**
+  String get aboutSubtitle;
+
+  /// About screen: app version and build number
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} (build {build})'**
+  String aboutVersion(String version, String build);
+
+  /// About screen: opens the list of licences of the bundled software and fonts
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source licences'**
+  String get aboutLicenses;
+
+  /// Subtitle of the open-source licences entry
+  ///
+  /// In en, this message translates to:
+  /// **'Software and fonts this app is built with'**
+  String get aboutLicensesSubtitle;
+
+  /// About screen: opens the privacy policy in the browser
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get aboutPrivacyPolicy;
+
+  /// About screen: opens the imprint (legal notice, German Impressum) in the browser
+  ///
+  /// In en, this message translates to:
+  /// **'Imprint'**
+  String get aboutImprint;
+
+  /// Title of the confirmation before a budget template is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Delete template?'**
+  String get budgetTemplateDeleteTitle;
+
+  /// Body of the confirmation before a budget template is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'The template \"{name}\" is deleted for good. Months already budgeted with it keep their amounts.'**
+  String budgetTemplateDeleteBody(String name);
+
+  /// Extra paragraph of the delete-template confirmation when 'Fill new months automatically' uses the template
+  ///
+  /// In en, this message translates to:
+  /// **'New months are filled automatically from this template. After deleting it they are filled like the month before.'**
+  String get budgetTemplateDeleteAutoFill;
+
+  /// Snackbar after a budget template was deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Template \"{name}\" deleted'**
+  String budgetTemplateDeleted(String name);
+
+  /// Move money sheet: error shown above the Save button when the write failed
+  ///
+  /// In en, this message translates to:
+  /// **'The money could not be moved. Nothing was changed.'**
+  String get moveMoneyFailed;
+
+  /// Factory reset, first dialog: paragraph after the warning that offers a backup first
+  ///
+  /// In en, this message translates to:
+  /// **'Make a backup first if you might want this data back.'**
+  String get factoryResetBackupOffer;
+
+  /// Factory reset, first dialog: button that opens Backup & Export instead of resetting
+  ///
+  /// In en, this message translates to:
+  /// **'Back up first'**
+  String get factoryResetBackUpFirst;
+
+  /// Factory reset from Settings, second dialog: the reset is enabled only after typing the confirmation word
+  ///
+  /// In en, this message translates to:
+  /// **'All data on this phone is deleted and the setup starts again. This cannot be undone. Type {word} to confirm.'**
+  String factoryResetTypeToConfirm(String word);
+
+  /// Settings > Language: the option that follows the phone's language instead of a fixed one
+  ///
+  /// In en, this message translates to:
+  /// **'Phone language'**
+  String get languagePhone;
+
+  /// Settings > Language subtitle when the app follows the phone's language; {language} is the language in use, e.g. English
+  ///
+  /// In en, this message translates to:
+  /// **'Phone language ({language})'**
+  String languagePhoneCurrent(String language);
+
+  /// Settings > Date format: the option and subtitle that follow the app language; {pattern} is the resulting pattern, e.g. dd.MM.yyyy
+  ///
+  /// In en, this message translates to:
+  /// **'Follow language ({pattern})'**
+  String dateFormatFollowLanguage(String pattern);
+
+  /// Transaction form: hint under the category field of an inflow
+  ///
+  /// In en, this message translates to:
+  /// **'Income goes to To Be Budgeted. Choose a category only for a refund: the money then goes back into that category.'**
+  String get txInflowCategoryHint;
+
+  /// Category picker of an inflow: subtitle of the first entry 'To Be Budgeted' (no category)
+  ///
+  /// In en, this message translates to:
+  /// **'Income you assign to categories in the budget'**
+  String get txInflowToBeBudgetedSubtitle;
+
+  /// Edit transaction screen: shown instead of the form when the transaction does not exist (any more)
+  ///
+  /// In en, this message translates to:
+  /// **'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.'**
+  String get transactionNotFound;
+
+  /// Transaction list: label of the swipe-left action that approves the transaction
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get txSwipeApprove;
+
+  /// Transaction list: line above a list that is not in the default order (newest first). field is Date, Amount or Payee; direction is sortAscending or sortDescending
+  ///
+  /// In en, this message translates to:
+  /// **'Sorted by {field}, {direction}'**
+  String txSortedBy(String field, String direction);
+
+  /// Sort direction, used inside txSortedBy and as the label of the up arrow in the sort menu
+  ///
+  /// In en, this message translates to:
+  /// **'ascending'**
+  String get sortAscending;
+
+  /// Sort direction, used inside txSortedBy and as the label of the down arrow in the sort menu
+  ///
+  /// In en, this message translates to:
+  /// **'descending'**
+  String get sortDescending;
+
+  /// Transaction list, selection mode: tooltip of 'select all' while the paged list has more rows than are loaded
+  ///
+  /// In en, this message translates to:
+  /// **'Select all loaded'**
+  String get txSelectAllLoaded;
+
+  /// Snackbar after 'select all' on a paged transaction list that has more rows than are loaded
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 loaded transaction selected. Scroll down to load more.} other{The {count} loaded transactions are selected. Scroll down to load more.}}'**
+  String txSelectedLoadedOnly(int count);
+
+  /// Snackbar when saving a new transaction (or a transfer leg) into a closed account is rejected
+  ///
+  /// In en, this message translates to:
+  /// **'This account is closed and takes no new transactions. Choose another account or reopen it.'**
+  String get txAccountClosed;
+
+  /// Quick add preview: note under the amount when the typed currency symbol is not the account's currency
+  ///
+  /// In en, this message translates to:
+  /// **'This account is in {currency}: the amount is booked in {currency}, not converted.'**
+  String quickAddCurrencyNotConverted(String currency);
+
+  /// Rule editor: note under a stored condition whose operator its field does not support (e.g. Amount contains)
+  ///
+  /// In en, this message translates to:
+  /// **'Never matches: this field cannot be compared this way. Delete the condition and add it again.'**
+  String get ruleConditionUnevaluable;
+
+  /// Rule editor: snackbar when saving a rule that still has a condition that can never match
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the conditions marked \"Never matches\" first.'**
+  String get ruleSaveUnevaluableCondition;
+
+  /// Rules list: subtitle of a rule with a condition that can never match
+  ///
+  /// In en, this message translates to:
+  /// **'Never matches: a condition compares a field in a way it does not support. Tap to fix.'**
+  String get ruleListUnevaluable;
+
+  /// Payee detail: title of the dialog when renaming a payee to the name of another payee
+  ///
+  /// In en, this message translates to:
+  /// **'Name already in use'**
+  String get payeeNameTakenTitle;
+
+  /// Payee detail: rename refused because another payee has the name; offers to merge
+  ///
+  /// In en, this message translates to:
+  /// **'A payee named \"{name}\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"{name}\".'**
+  String payeeNameTakenMessage(String name);
+
+  /// Scheduled transaction form: Next date of a finished schedule (it has no next date)
+  ///
+  /// In en, this message translates to:
+  /// **'Finished: nothing more is booked. Pick a next date to restart it.'**
+  String get scheduledFinishedPickNextDate;
+
+  /// Transaction list: snackbar (with Undo) after approving by swipe or for the selection
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Transaction approved} other{{count} transactions approved}}'**
+  String txApprovedCount(int count);
+
+  /// Transaction list: snackbar (with Undo) after setting the category of the selection
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Category set} other{Category set for {count} transactions}}'**
+  String txCategorizedCount(int count);
+
+  /// Restore error: the backup's database schema is older than this version reads (development builds only)
+  ///
+  /// In en, this message translates to:
+  /// **'This backup was made by an early test version of LedgerZero and cannot be restored with this version.'**
+  String get restoreOlderVersion;
+
+  /// Start-up screen: the database file is not a readable database; offers Retry and Reset
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero cannot read the data on this phone: the database file is damaged. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
+  String get lockScreenDatabaseDamaged;
+
+  /// Start-up screen: the database has a schema from a development build that is not upgraded any more; offers Retry and Reset
+  ///
+  /// In en, this message translates to:
+  /// **'The data on this phone was saved by an early test version of LedgerZero that this version no longer opens. Reset the app and set it up again. Automatic backups kept on this phone are not deleted by the reset.'**
+  String get lockScreenDatabaseTooOld;
+
+  /// Settings > Security: title of the row that explains how the data on the phone is protected
+  ///
+  /// In en, this message translates to:
+  /// **'Where your data is'**
+  String get securityDataLocationTitle;
+
+  /// Settings > Security: how the data on the phone is protected (the database itself is not encrypted by the app)
+  ///
+  /// In en, this message translates to:
+  /// **'On this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. If Android backup is on, also as an end-to-end encrypted copy in your Google account that only this phone’s screen lock opens. Backup files and sync files are encrypted with your password or passphrase.'**
+  String get securityDataLocationBody;
+
+  /// Backup screen: automatic backups are on but the stored password is gone (Android key store lost it, or the app moved to a new phone)
+  ///
+  /// In en, this message translates to:
+  /// **'The backup password is no longer stored on this phone (for example after moving to a new phone). Turn automatic backups off and on again to enter it.'**
+  String get autoBackupPasswordMissing;
+
+  /// Onboarding (security step) and Backup screen: what a lost phone loses, and what keeps the budget (Android backup, a backup file elsewhere, a second phone)
+  ///
+  /// In en, this message translates to:
+  /// **'If this phone is lost or reset, your budget is gone, unless Android backup is on, a backup file is kept somewhere else, or a second phone syncs with this one.'**
+  String get dataLossWarning;
+
+  /// Backup screen: button that creates the backup and opens the system file picker to save it (a folder, a USB stick, a cloud app)
+  ///
+  /// In en, this message translates to:
+  /// **'Save to…'**
+  String get backupSaveTo;
+
+  /// Backup screen: button that creates the backup and opens the share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Share…'**
+  String get backupShare;
+
+  /// Snackbar after the backup file was saved through the system file picker
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved'**
+  String get backupSaved;
+
+  /// Backup screen, Create backup: what Save to… does
+  ///
+  /// In en, this message translates to:
+  /// **'“Save to…” lets you pick where the file goes: a folder on the phone, a USB stick or a cloud app such as Google Drive or Dropbox. LedgerZero signs in to nothing; the app you pick does the upload.'**
+  String get backupSaveToExplanation;
+
+  /// Backup screen: section about Android's own (Google) backup
+  ///
+  /// In en, this message translates to:
+  /// **'Android backup'**
+  String get androidBackupTitle;
+
+  /// Backup screen: Android backup in one or two sentences (the app cannot read the setting)
+  ///
+  /// In en, this message translates to:
+  /// **'If Android backup is on (Settings > System > Backup on most phones), Android copies the budget to your Google account about once a day, end-to-end encrypted with this phone’s screen lock, and puts it back on a new phone. LedgerZero cannot check whether it is on, and without a screen lock Android backs up none of it.'**
+  String get androidBackupExplanation;
+
+  /// Backup screen: shown when the database is above 20 MB
+  ///
+  /// In en, this message translates to:
+  /// **'The budget takes {size} MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.'**
+  String androidBackupTooLarge(String size);
+
+  /// Settings > Currency: subtitle once accounts are in the budget (the budget currency is theirs)
+  ///
+  /// In en, this message translates to:
+  /// **'{currency}, the currency of the accounts in your budget'**
+  String budgetCurrencyFixedSubtitle(String currency);
+
+  /// Settings > Currency: dialog once accounts are in the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Your budget is in {currency}: every account in it uses this currency, and To Be Budgeted adds them up. Accounts outside the budget can use any currency.'**
+  String budgetCurrencyFixedBody(String currency);
+
+  /// Settings > Currency dialog: the one action once accounts are in the budget (relabels them, after a confirmation)
+  ///
+  /// In en, this message translates to:
+  /// **'Change the budget currency'**
+  String get budgetCurrencyChangeAction;
+
+  /// Confirmation before the accounts in the budget are relabelled to another currency
+  ///
+  /// In en, this message translates to:
+  /// **'Change the budget currency to {currency}?'**
+  String budgetCurrencyChangeConfirmTitle(String currency);
+
+  /// Confirmation before the accounts in the budget are relabelled: amounts are not converted
+  ///
+  /// In en, this message translates to:
+  /// **'The accounts in your budget are relabelled from {from} to {to}. Amounts are NOT converted: 100 {from} becomes 100 {to}.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in {to}.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.'**
+  String budgetCurrencyChangeConfirmBody(String from, String to);
+
+  /// Button that relabels accounts to another currency (amounts are not converted)
+  ///
+  /// In en, this message translates to:
+  /// **'Change to {currency}'**
+  String budgetCurrencyChangeConfirmAction(String currency);
+
+  /// Snackbar after the accounts in the budget were relabelled
+  ///
+  /// In en, this message translates to:
+  /// **'The budget currency is now {currency}'**
+  String budgetCurrencyChanged(String currency);
+
+  /// Budget screen: warning when accounts in the budget disagree on the currency
+  ///
+  /// In en, this message translates to:
+  /// **'The accounts in your budget use different currencies ({currencies}). Amounts are never converted, so To Be Budgeted adds up different currencies. The budget currency is {currency}; in another currency: {accounts}.'**
+  String budgetCurrencyMixedWarning(
+    String currencies,
+    String currency,
+    String accounts,
+  );
+
+  /// Budget screen, mixed-currency warning: takes an account in another currency out of the budget (the leave-budget dialog follows)
+  ///
+  /// In en, this message translates to:
+  /// **'Take off budget'**
+  String get budgetCurrencyMixedLeave;
+
+  /// Budget screen, mixed-currency warning: picks one of several accounts in another currency to take out of the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Which account leaves the budget?'**
+  String get budgetCurrencyMixedPickAccount;
+
+  /// Account form and reopening: an account in another currency cannot be in the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Not in the budget currency'**
+  String get accountCurrencyJoinTitle;
+
+  /// Account form and reopening: why an account in another currency cannot be in the budget, and the relabel offer
+  ///
+  /// In en, this message translates to:
+  /// **'This account is in {account}, your budget in {budget}. Amounts are never converted, so an account in another currency cannot be in the budget.\n\nIf {account} was picked by mistake, change the account to {budget} (amounts are NOT converted: 100 {account} becomes 100 {budget}). Otherwise keep it outside the budget.'**
+  String accountCurrencyJoinBody(String account, String budget);
+
+  /// YNAB import preview: helper under the currency once accounts are in the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts in your budget use the budget currency ({currency}), so the imported accounts do too.'**
+  String ynabImportCurrencyFixed(String currency);
 }
 
 class _AppLocalizationsDelegate

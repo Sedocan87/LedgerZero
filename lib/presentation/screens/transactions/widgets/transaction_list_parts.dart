@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
@@ -22,17 +23,31 @@ class TransactionLookups {
   final Set<String> splitParents;
 }
 
-/// Date headers (DateTime) followed by that day's transactions, newest
-/// day first.
-List<Object> flattenByDay(List<Transaction> transactions) {
-  final groups = <DateTime, List<Transaction>>{};
-  for (final tx in transactions) {
-    groups.putIfAbsent(CalendarDate.normalize(tx.date), () => []).add(tx);
+/// The rows of a transaction list in the order the query returned them,
+/// with a date header (a [DateTime]) before each day's rows when the list
+/// is sorted by date. Any other order has no headers (every row shows its
+/// date): grouping by day would undo the order the user asked for.
+List<Object> flattenByDay(
+  List<Transaction> transactions, {
+  TransactionSort sort = const TransactionSort(
+    field: TransactionSortField.date,
+    ascending: false,
+  ),
+}) {
+  if (sort.field != TransactionSortField.date) {
+    return transactions;
   }
-  final keys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
-  return [
-    for (final day in keys) ...[day, ...groups[day]!],
-  ];
+  final items = <Object>[];
+  DateTime? current;
+  for (final tx in transactions) {
+    final day = CalendarDate.normalize(tx.date);
+    if (day != current) {
+      items.add(day);
+      current = day;
+    }
+    items.add(tx);
+  }
+  return items;
 }
 
 class TransactionDateHeader extends ConsumerWidget {

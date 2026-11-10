@@ -6,8 +6,8 @@ import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
 
-/// Whether a sync provider that needs the network (Google Drive, Wi-Fi
-/// pairing) is set up. Without one, being offline changes nothing.
+/// Whether a sync provider that needs the network (Wi-Fi sync) is set up.
+/// Without one, being offline changes nothing.
 final networkSyncConfiguredProvider = Provider<bool>((ref) {
   final provider = ref.watch(
     syncControllerProvider.select((s) => s.selectedProvider),

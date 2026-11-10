@@ -1,13 +1,12 @@
-// The main user journey on a device, with real storage (Keychain/Keystore,
-// SQLCipher file, preferences):
+// The main user journey on a device, with real storage (the database
+// file, the Keystore-backed secure storage, preferences):
 //
-// 1. First launch: onboarding with the app lock on (the device key is
-//    created), first account, a transaction, money assigned in the budget.
-// 2. Relaunch: the database opens with the device key behind the lock
-//    screen; a cancelled prompt keeps the UI locked, a successful one
-//    shows the same data; a CSV file is imported through the import
-//    screens; "Lock now" returns to the lock screen while the database
-//    stays open.
+// 1. First launch: onboarding with the app lock on, first account, a
+//    transaction, money assigned in the budget.
+// 2. Relaunch: the database opens behind the lock screen; a cancelled
+//    prompt keeps the UI locked, a successful one shows the same data; a
+//    CSV file is imported through the import screens; "Lock now" returns
+//    to the lock screen while the database stays open.
 //
 // The tests run in order and share the device state. The system prompt
 // (fingerprint/face/PIN) cannot be driven on an emulator and is scripted
@@ -210,7 +209,7 @@ void main() {
     await waitFor(tester, find.byType(HomeScreen));
     await dismissTutorial(tester);
 
-    // The data of the first launch is there (same keyed database file).
+    // The data of the first launch is there (same database file).
     final accounts = await app.read(accountRepositoryProvider).getAllAccounts();
     expect(accounts.map((a) => (a.name, a.balance)), [
       ('Checking', 100000 - 1234),

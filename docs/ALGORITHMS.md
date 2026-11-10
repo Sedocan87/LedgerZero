@@ -23,13 +23,18 @@ TBB(M) = startingBalancesThrough(M)
 
 * `startingBalancesThrough(M)`: the starting balances of the on-budget
   accounts whose start month is `<= M`. The start month is the earlier of
-  `accounts.created_at` and the account's first non-deleted transaction
+  the calendar day the account was created on (`accounts.created_at` in
+  the phone's time zone, like every other month boundary, not the UTC
+  month of the instant) and the account's first non-deleted transaction
   (`BudgetRepository.getFirstTransactionDates`, one grouped query); an
   account without `created_at` always counts.
 * `getReadyToAssignSum` sums rows that are not deleted, have no category,
   belong to an on-budget account, are not a split parent (no non-deleted
   child row) and are not a transfer leg unless the other account is
-  off-budget. Both signs count.
+  off-budget. Both signs count. `beginningOfTime` is year 0, the earliest
+  date SQLite compares, so there is in effect no lower bound (a row
+  imported with a mis-parsed year counts here as it does in the account
+  balance).
 * Overspending before M is what the rollover charges to TBB.
 * `held(M)` (`calculateHeldForLaterMonths`): the part of the budgets of
   the months after M that the money arriving in those months does not

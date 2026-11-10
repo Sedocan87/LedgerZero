@@ -23,6 +23,7 @@ class _Expectation {
     this.memos,
     this.cleared,
     this.skippedRows = 0,
+    this.voidRows = 0,
   });
 
   final String presetId;
@@ -36,6 +37,9 @@ class _Expectation {
 
   /// Footer rows (balances) that validation reports as skipped.
   final int skippedRows;
+
+  /// Rows the file marks as reverted, failed or declined (left out).
+  final int voidRows;
 }
 
 final _expectations = <String, _Expectation>{
@@ -203,20 +207,31 @@ final _expectations = <String, _Expectation>{
     presetId: 'revolut',
     headerLineIndex: 0,
     delimiter: ',',
-    amounts: [-1550, -480, -10000, 20000],
+    // The ATM row carries a fee of 2.00 on top of its amount; the
+    // reverted, declined and failed rows never touched the balance.
+    amounts: [-1550, -480, -10000, 20000, -10200],
     dates: [
       DateTime.utc(2026, 10, 18),
       DateTime.utc(2026, 10, 17),
       DateTime.utc(2026, 10, 15),
       DateTime.utc(2026, 10, 14),
+      DateTime.utc(2026, 10, 13),
     ],
-    payees: ['Uber', 'Starbucks', 'To Erika Musterfrau', 'Top-Up by *1234'],
+    payees: [
+      'Uber',
+      'Starbucks',
+      'To Erika Musterfrau',
+      'Top-Up by *1234',
+      'Cash at ATM',
+    ],
     cleared: [
       TransactionClearStatus.uncleared,
       TransactionClearStatus.cleared,
       TransactionClearStatus.cleared,
       TransactionClearStatus.cleared,
+      TransactionClearStatus.cleared,
     ],
+    voidRows: 3,
   ),
 };
 
@@ -260,6 +275,11 @@ void main() {
       );
       expect(validation.isValid, isTrue, reason: '${validation.errors}');
       expect(validation.skippedRows, want.skippedRows);
+      expect(validation.voidRows, want.voidRows);
+      expect(
+        validation.warnings.where((w) => w.kind == CsvIssueKind.voidRows),
+        hasLength(want.voidRows == 0 ? 0 : 1),
+      );
 
       final rows = service.convertCsvToTransactions(
         data: data,

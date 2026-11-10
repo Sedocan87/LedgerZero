@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
@@ -7,7 +8,6 @@ import 'package:ledger_zero/services/csv/category_csv_service.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
@@ -406,13 +406,18 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                     ),
                     subtitle: category.isHidden ? Text(l10n.hidden) : null,
                     leading: CircleAvatar(
-                      backgroundColor: category.color != null
-                          ? Color(category.color!)
-                          : Theme.of(context).primaryColor,
+                      backgroundColor: CategoryIconResolver.avatarFor(
+                        color: category.color,
+                        icon: category.icon,
+                        id: category.id,
+                        name: category.name,
+                      ),
                       child: Icon(
-                        category.icon != null
-                            ? (categoryIcons[category.icon] ?? Icons.category)
-                            : Icons.category,
+                        CategoryIconResolver.iconFor(
+                          icon: category.icon,
+                          id: category.id,
+                          name: category.name,
+                        ),
                         color: Colors.white,
                       ),
                     ),

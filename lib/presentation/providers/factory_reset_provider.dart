@@ -12,8 +12,8 @@ import 'package:ledger_zero/services/sync/sync_outbox.dart';
 
 /// Deletes everything LedgerZero stores on this device and returns the app
 /// to the "not onboarded" state. Used by Settings > Factory reset and by the
-/// lock screen when the database key is missing (the data can no longer be
-/// opened, and Settings is unreachable).
+/// lock screen when the database cannot be opened (damaged, or from an
+/// early test version; Settings is unreachable then).
 ///
 /// Every step runs even when an earlier one fails; the first error is
 /// rethrown at the end so the caller can report it.
@@ -21,32 +21,25 @@ class FactoryResetService {
   FactoryResetService({
     required this.closeSession,
     required this.deleteDatabase,
-    required this.deleteDeviceKey,
-    required this.deleteLegacyKeys,
     required this.forgetAutoBackupPassword,
     required this.deleteExports,
     required this.clearCapturedNotifications,
     required this.deleteErrorReports,
     required this.unpairWifiSync,
-    required this.signOutGoogle,
     required this.deleteSyncFiles,
     required this.clearPreferences,
     required this.markNotOnboarded,
   });
 
-  /// Closes the session (closes the database, zeroes the key).
+  /// Closes the session (closes the database).
   final Future<void> Function() closeSession;
 
   /// Deletes the database with its WAL/SHM files and every restore leftover.
   final Future<void> Function() deleteDatabase;
-  final Future<void> Function() deleteDeviceKey;
-
-  /// Key vault / legacy / biometric key entries of older versions.
-  final Future<void> Function() deleteLegacyKeys;
 
   /// The stored password of the automatic backups. The backup files
-  /// themselves are kept: after a reset forced by a lost database key they
-  /// are what the user restores from.
+  /// themselves are kept: after a reset forced by a database that cannot be
+  /// opened they are what the user restores from.
   final Future<void> Function() forgetAutoBackupPassword;
   final Future<void> Function() deleteExports;
 
@@ -57,11 +50,6 @@ class FactoryResetService {
   /// Forgets the Wi-Fi pairing secret and the paired phones, so a
   /// re-onboarded phone cannot serve the old folder to the old peer.
   final Future<void> Function() unpairWifiSync;
-
-  /// Forgets the Google Drive account (revoked when online, else signed
-  /// out on this phone). Best effort: offline it must not fail the reset,
-  /// so its error is only logged.
-  final Future<void> Function() signOutGoogle;
 
   /// `<documents>/sync` (outbox and Wi-Fi sync folder).
   final Future<void> Function() deleteSyncFiles;
@@ -76,8 +64,6 @@ class FactoryResetService {
     for (final (name, step) in <(String, Future<void> Function())>[
       ('close session', closeSession),
       ('delete database', deleteDatabase),
-      ('delete device key', deleteDeviceKey),
-      ('delete legacy keys', deleteLegacyKeys),
       ('forget auto backup password', forgetAutoBackupPassword),
       ('delete exports', deleteExports),
       ('clear captured notifications', clearCapturedNotifications),
@@ -94,12 +80,6 @@ class FactoryResetService {
         firstStack ??= stack;
       }
     }
-    try {
-      await signOutGoogle();
-    } catch (e, stack) {
-      // Offline (or never signed in): the reset itself succeeded.
-      Logger.warning('Factory reset: sign out of Google failed', e, stack);
-    }
     // Also replaces the settings-backed providers, sync included
     // (settingsGenerationProvider).
     markNotOnboarded();
@@ -113,9 +93,6 @@ final factoryResetServiceProvider = Provider<FactoryResetService>((ref) {
   return FactoryResetService(
     closeSession: () => ref.read(sessionProvider.notifier).close(),
     deleteDatabase: deleteDatabaseFiles,
-    deleteDeviceKey: () => ref.read(deviceKeyStoreProvider).delete(),
-    deleteLegacyKeys: () =>
-        ref.read(legacyKeyMigrationProvider).deleteLeftovers(),
     forgetAutoBackupPassword: () =>
         ref.read(autoBackupServiceProvider).forgetPassword(),
     deleteExports: () => ref.read(exportFileServiceProvider).deleteAll(),
@@ -123,7 +100,6 @@ final factoryResetServiceProvider = Provider<FactoryResetService>((ref) {
         ref.read(notificationCaptureChannelProvider).clear(),
     deleteErrorReports: () => LocalErrorReportingService().deleteAll(),
     unpairWifiSync: () => ref.read(lanSyncServiceProvider).unpair(),
-    signOutGoogle: () => ref.read(googleAuthServiceProvider).forgetAccount(),
     deleteSyncFiles: SyncOutbox.deleteAllSyncFiles,
     clearPreferences: () => ref.read(sharedPreferencesProvider).clear(),
     markNotOnboarded: () {

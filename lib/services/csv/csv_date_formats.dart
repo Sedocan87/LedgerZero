@@ -4,6 +4,13 @@ import 'package:intl/intl.dart';
 ///
 /// Two-digit years (`yy`) get intl's century window (`26` -> 2026, `99` ->
 /// 1999); the Sparkasse CSV-CAMT and CSV-MT940 exports use `dd.MM.yy`.
+/// Timestamps are read for their calendar day only: the time and, for the
+/// ISO form, fractional seconds and a zone suffix (`Z`, `+01:00`) are
+/// ignored, so the day is the one the file writes. `MMM` is an English
+/// month abbreviation (`01 Feb 2024`).
+///
+/// The mapping screen also accepts a pattern typed by the user (see
+/// [isUsableCsvDateFormat]).
 const List<String> csvDateFormats = [
   'yyyy-MM-dd',
   'dd.MM.yyyy',
@@ -17,8 +24,39 @@ const List<String> csvDateFormats = [
   'dd-MM-yyyy',
   'MM-dd-yyyy',
   'yyyy-MM-dd HH:mm:ss',
+  "yyyy-MM-dd'T'HH:mm:ss",
   'dd.MM.yyyy HH:mm',
+  'dd.MM.yyyy HH:mm:ss',
+  'dd MMM yyyy',
 ];
+
+/// Fractional seconds and the zone designator of an ISO 8601 timestamp.
+final RegExp _isoTimestampSuffix = RegExp(
+  r'(\.\d+)?(Z|[+-]\d{2}(:?\d{2})?)?$',
+  caseSensitive: false,
+);
+
+/// Whether [pattern] can be used as a CSV date format: it names day, month
+/// and year, and a date written with it is read back by [parseCsvDate].
+bool isUsableCsvDateFormat(String pattern) {
+  final unquoted = pattern.replaceAll(RegExp("'[^']*'"), '');
+  if (!unquoted.contains('d') ||
+      !unquoted.contains('M') ||
+      !unquoted.contains('y')) {
+    return false;
+  }
+  try {
+    final sample = DateTime(2031, 11, 27, 13, 45, 56);
+    final text = DateFormat(pattern, 'en_US').format(sample);
+    final parsed = parseCsvDate(text, pattern);
+    return parsed != null &&
+        parsed.year == sample.year &&
+        parsed.month == sample.month &&
+        parsed.day == sample.day;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Earliest and latest year an imported date may have. intl's `yyyy`
 /// accepts any run of digits, so `18.10.26` parsed as `dd.MM.yyyy` would
@@ -32,7 +70,10 @@ const int csvMaxYear = 2100;
 /// Returns `null` otherwise. The result is a local `DateTime` (callers turn
 /// it into a calendar day).
 DateTime? parseCsvDate(String value, String format) {
-  final text = value.trim();
+  var text = value.trim();
+  if (format.contains("'T'")) {
+    text = text.replaceFirst(_isoTimestampSuffix, '');
+  }
   if (text.isEmpty || !_shapeOf(format).hasMatch(text)) {
     return null;
   }
@@ -42,6 +83,8 @@ DateTime? parseCsvDate(String value, String format) {
     parsed = DateFormat(format, 'en_US').parseStrict(text);
   } on FormatException {
     return null;
+  } on ArgumentError {
+    return null; // A typed pattern intl cannot use.
   }
   if (parsed.year < csvMinYear || parsed.year > csvMaxYear) {
     return null;
@@ -65,14 +108,28 @@ bool _isMonthFirstFormat(String format) {
 
 final Map<String, RegExp> _shapes = {};
 
-/// A regular expression for the digit layout of [format]: `d`/`M`/`H`/`m`/
+/// A regular expression for the layout of [format]: `d`/`M`/`H`/`h`/`m`/
 /// `s` runs become one or two digits, `yyyy` exactly four, `yy` exactly
-/// two; everything else is literal.
+/// two, `MMM` (and longer) a month name, `S` fraction digits, `a` AM/PM;
+/// text in single quotes and everything else is literal.
 RegExp _shapeOf(String format) => _shapes.putIfAbsent(format, () {
   final buffer = StringBuffer('^');
   var i = 0;
   while (i < format.length) {
     final c = format[i];
+    if (c == "'") {
+      // Quoted literal ('T'); '' is a literal quote.
+      final end = format.indexOf("'", i + 1);
+      if (end == -1) {
+        buffer.write(RegExp.escape(format.substring(i + 1)));
+        break;
+      }
+      buffer.write(
+        end == i + 1 ? "'" : RegExp.escape(format.substring(i + 1, end)),
+      );
+      i = end + 1;
+      continue;
+    }
     var run = 1;
     while (i + run < format.length && format[i + run] == c) {
       run++;
@@ -80,15 +137,21 @@ RegExp _shapeOf(String format) => _shapes.putIfAbsent(format, () {
     switch (c) {
       case 'y':
         buffer.write(run >= 4 ? r'\d{4}' : r'\d{2}');
-      case 'd' || 'M' || 'H' || 'm' || 's':
+      case 'M' when run >= 3:
+        buffer.write(r'\p{L}+\.?');
+      case 'd' || 'M' || 'H' || 'h' || 'm' || 's':
         buffer.write(r'\d{1,2}');
+      case 'S':
+        buffer.write(r'\d+');
+      case 'a':
+        buffer.write('[AaPp][Mm]');
       default:
         buffer.write(RegExp.escape(format.substring(i, i + run)));
     }
     i += run;
   }
   buffer.write(r'$');
-  return RegExp(buffer.toString());
+  return RegExp(buffer.toString(), unicode: true);
 });
 
 /// The outcome of [detectCsvDateFormat].

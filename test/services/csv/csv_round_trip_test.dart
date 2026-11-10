@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/memory_platform_file.dart';
 import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
@@ -153,12 +155,45 @@ void main() {
   });
 
   test('one file for every account, imported with "account from file": '
-      'transfers are linked again, cleared states, categories and a '
-      'sanitised payee survive', () async {
+      'transfers are linked again, cleared states, categories (also a '
+      'name used in two groups, F7) and a sanitised payee survive', () async {
     // Extras the sample ledger lacks: a payee the sanitiser must quote, an
-    // uncleared and a reconciled row.
+    // uncleared and a reconciled row, and one category name in two groups.
     final checking = (await source.accounts.getAllAccounts()).firstWhere(
       (a) => a.name == 'Checking',
+    );
+    for (final db in [source, target]) {
+      for (final (group, category) in [
+        ('g-flat', 'c-flat-insurance'),
+        ('g-vehicle', 'c-vehicle-insurance'),
+      ]) {
+        await db.categories.createCategoryGroup(
+          CategoryGroup(
+            id: group,
+            name: group == 'g-flat' ? 'Flat' : 'Vehicle',
+          ),
+        );
+        await db.categories.createCategory(
+          Category(id: category, name: 'Insurance', categoryGroupId: group),
+        );
+      }
+    }
+    await source.addTransaction(
+      accountId: checking.id,
+      amount: -7000,
+      date: DateTime.utc(2024, 3, 9),
+      categoryId: 'c-flat-insurance',
+    );
+    await source.addTransaction(
+      accountId: checking.id,
+      amount: -5000,
+      date: DateTime.utc(2024, 3, 10),
+      categoryId: 'c-vehicle-insurance',
+    );
+    await source.budgeting.setCategoryBudgetedAmount(
+      'c-flat-insurance',
+      8000,
+      month,
     );
     await source.payees.createPayee(const Payee(id: 'p-fees', name: '-Fees'));
     await source.addTransaction(
@@ -175,6 +210,16 @@ void main() {
       payeeId: 'p-fees',
       cleared: TransactionClearStatus.reconciled,
     );
+    // Not approved yet (a captured card payment, for instance).
+    final pending = await source.addTransaction(
+      accountId: checking.id,
+      amount: -700,
+      date: DateTime.utc(2024, 3, 11),
+      payeeId: 'p-fees',
+    );
+    await source.transactions.updateTransaction(
+      pending.copyWith(approved: false),
+    );
 
     final payees = await source.payees.getAllPayees();
     final categories = await source.categories.getAllCategories();
@@ -182,10 +227,15 @@ void main() {
     final csv = TransactionExportService().buildCsv(
       transactions: await source.transactions.getAllTransactions(),
       payeeNames: {for (final p in payees) p.id: p.name},
-      categoryNames: {for (final c in categories) c.id: c.name},
+      categoryNames: TransactionExportService.qualifiedCategoryNames(
+        categories,
+        await source.categories.getAllCategoryGroups(),
+      ),
       accountNames: {for (final a in accounts) a.id: a.name},
     );
     expect(csv, contains("'-Fees"), reason: 'the sanitiser quoted it');
+    expect(csv, contains('Flat: Insurance'));
+    expect(csv, contains('Vehicle: Insurance'));
 
     final csvService = CsvImportService();
     final data = await csvService.parseCsvFile(
@@ -195,6 +245,7 @@ void main() {
     expect(mapping[CsvField.transfer], 'Transfer');
     expect(mapping[CsvField.account], 'Account');
     expect(mapping[CsvField.cleared], 'Cleared');
+    expect(mapping[CsvField.approved], 'Approved');
     expect(
       csvService
           .validateCsvData(
@@ -219,7 +270,7 @@ void main() {
       groups: await target.categories.getAllCategoryGroups(),
     );
     expect(rows.where((r) => r.hasUnmatchedCategory), isEmpty);
-    expect(rows.where((r) => r.payeeName == '-Fees'), hasLength(2));
+    expect(rows.where((r) => r.payeeName == '-Fees'), hasLength(3));
 
     final targetIds = <String, String>{};
     for (final account in accounts) {
@@ -250,14 +301,34 @@ void main() {
       accountIdsByName: targetIds,
     );
     for (final budget in await source.budgets.getBudgetsForMonth('2024-03')) {
-      final name = categories.firstWhere((c) => c.id == budget.categoryId).name;
+      final category = categories.firstWhere((c) => c.id == budget.categoryId);
       final id = (await target.categories.getAllCategories())
-          .firstWhere((c) => c.name == name)
+          .firstWhere(
+            (c) =>
+                c.name == category.name &&
+                (category.name != 'Insurance' || c.id == category.id),
+          )
           .id;
       await target.budgeting.setCategoryBudgetedAmount(
         id,
         budget.budgeted,
         month,
+      );
+    }
+    // Both "Insurance" categories got their own transaction back.
+    for (final (id, available) in [
+      ('c-flat-insurance', 1000),
+      ('c-vehicle-insurance', -5000),
+    ]) {
+      expect(
+        await target.budgeting.calculateCategoryAvailable(id, month),
+        available,
+        reason: id,
+      );
+      expect(
+        await source.budgeting.calculateCategoryAvailable(id, month),
+        available,
+        reason: id,
       );
     }
 
@@ -284,8 +355,108 @@ void main() {
           if (!parents.contains(t.id)) '${t.amount}|${t.cleared.name}',
       ]),
     );
+    // Approved states come back as exported (Improvement 5).
+    expect(
+      imported.map((t) => '${t.amount}|${t.approved}'),
+      unorderedEquals([
+        for (final t in sourceRows)
+          if (!parents.contains(t.id)) '${t.amount}|${t.approved}',
+      ]),
+    );
+    expect(imported.where((t) => !t.approved).map((t) => t.amount), [-700]);
     final targetPayees = await target.payees.getAllPayees();
     expect(targetPayees.map((p) => p.name), contains('-Fees'));
     expect(targetPayees.map((p) => p.name), isNot(contains("'-Fees")));
   });
+  test(
+    'the German spreadsheet variant (semicolon, decimal comma, byte '
+    'order mark) is read back like the standard file (Improvement 2)',
+    () async {
+      final payees = await source.payees.getAllPayees();
+      final accounts = await source.accounts.getAllAccounts();
+      final checking = accounts.firstWhere((a) => a.name == 'Checking');
+      await source.payees.createPayee(
+        const Payee(id: 'p-baecker', name: 'Bäckerei; Müller'),
+      );
+      await source.addTransaction(
+        accountId: checking.id,
+        amount: -123456,
+        date: DateTime.utc(2024, 3, 12),
+        payeeId: 'p-baecker',
+      );
+      final csvService = CsvImportService();
+
+      Future<List<String>> readBack(TransactionCsvFormat format) async {
+        final csv = TransactionExportService().buildCsv(
+          transactions: await source.transactions.getAllTransactions(),
+          payeeNames: {
+            for (final p in [...payees, ...await source.payees.getAllPayees()])
+              p.id: p.name,
+          },
+          categoryNames: TransactionExportService.qualifiedCategoryNames(
+            await source.categories.getAllCategories(),
+            await source.categories.getAllCategoryGroups(),
+          ),
+          accountNames: {for (final a in accounts) a.id: a.name},
+          format: format,
+        );
+        final bytes = utf8.encode(csv);
+        if (format == TransactionCsvFormat.germanSpreadsheet) {
+          expect(bytes.take(3), [0xEF, 0xBB, 0xBF], reason: 'UTF-8 BOM');
+          expect(csv, contains(';-1234,56;'));
+          expect(csv, contains('"Bäckerei; Müller"'));
+        }
+        final data = await csvService.parseCsvFile(
+          MemoryPlatformFile(name: 'all.csv', bytes: bytes),
+        );
+        expect(
+          data.delimiter,
+          format == TransactionCsvFormat.germanSpreadsheet ? ';' : ',',
+        );
+        expect(data.headers.first, 'Date');
+        final mapping = CsvImportService.autoMapColumns(data.headers);
+        // What the mapping screen presets: nothing is chosen by hand, also
+        // with the app set to English (dot as the fallback separator).
+        final dateFormat = csvService.detectDateFormat(data, mapping).format;
+        final separator = csvService.detectDecimalSeparator(
+          data,
+          mapping,
+          fallback: '.',
+        );
+        expect(
+          separator,
+          format == TransactionCsvFormat.germanSpreadsheet ? ',' : '.',
+        );
+        final validation = csvService.validateCsvData(
+          data: data,
+          columnMapping: mapping,
+          dateFormat: dateFormat,
+          decimalSeparator: separator,
+        );
+        expect(validation.isValid, isTrue);
+        expect(validation.warnings, isEmpty);
+        final rows = csvService.convertCsvToTransactions(
+          data: data,
+          columnMapping: mapping,
+          dateFormat: dateFormat,
+          decimalSeparator: separator,
+          outflowIsNegative: true,
+        );
+        return [
+          for (final r in rows)
+            '${r.date.toIso8601String()}|${r.amount}|${r.payeeName}|'
+                '${r.categoryName}|${r.memo}|${r.accountName}|'
+                '${r.transferAccountName}|${r.cleared}|${r.approved}',
+        ];
+      }
+
+      final standard = await readBack(TransactionCsvFormat.standard);
+      final spreadsheet = await readBack(
+        TransactionCsvFormat.germanSpreadsheet,
+      );
+      expect(spreadsheet, standard);
+      expect(standard, hasLength(greaterThan(5)));
+      expect(standard.join('\n'), contains('-123456|Bäckerei; Müller'));
+    },
+  );
 }

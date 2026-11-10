@@ -25,23 +25,46 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
   section.
 * App bar: search (filters categories by name), view mode toggle, manage
   categories (`/budget/categories`), and a menu with save as template, apply
-  template, copy from previous month and reset budget.
+  template, copy from previous month and reset budget. While the search is
+  open, the system back button closes it and clears the filter; the next
+  back leaves the screen.
+* **Row layout.** On a phone the name and three amounts do not fit side by
+  side (at 360 dp even "250,00 €" was cut off), so below 460 dp of row
+  content (`budgetRowIsCompact`) the category name has its own line and
+  Budgeted, Activity and Available sit under it in three equal columns; the
+  column header and the totals footer use the same columns. From 460 dp on
+  (tablets, landscape) the row is one line, 3:2:2:2. In both layouts an
+  amount is never ellipsised: it uses tabular figures and, if it is still
+  wider than its cell (six digits, a large font scale), it is scaled down
+  to fit. `test/presentation/screens/budget/widgets/budget_row_fit_test.dart`
+  checks this with real Roboto metrics at 360 and 412 dp.
+* Rows are keyed by category id, and a sheet or dialog opened from a row
+  keeps the category, the month and the services it needs from the moment
+  it opened. A sync that adds, hides or deletes a category while the
+  calculator is open therefore cannot redirect the amount to another
+  category or lose it.
 
 View modes (`BudgetViewMode`):
 
 * **standard**: Budgeted, Activity and Available columns.
-* **comparison**: a "spent of budgeted" progress bar per category.
+* **comparison**: a "spent of budgeted" progress bar per category. "Spent"
+  is net spending, `max(0, -activity)`: a category whose refunds exceed its
+  spending shows 0, not the refund as overspending.
 
 ## Assigning money to a category
 
 1. In standard mode, tap the Budgeted cell. A calculator bottom sheet
    (`BudgetCalculator`) opens with the current value; it accepts an amount
    or an arithmetic expression.
-2. On submit, `BudgetingService.setCategoryBudgetedAmount` writes the
-   month's budget row (created with its deterministic id if missing). A
-   negative result is rejected with a message (it would raise To Be
-   Budgeted).
-3. A `BudgetChangeAction` is pushed on the undo stack and a snackbar offers
+2. OK parses the input before the sheet closes. An unfinished or
+   impossible expression (`50+`, `5/0`) and a negative result (it would
+   raise To Be Budgeted) keep the calculator open with a message under the
+   value; the next key clears the message.
+3. `BudgetingService.setCategoryBudgetedAmount` writes the month's budget
+   row (created with its deterministic id if missing). If the write fails
+   (the category was deleted by sync meanwhile), the generic error snackbar
+   is shown; the same goes for the quick actions.
+4. A `BudgetChangeAction` is pushed on the undo stack and a snackbar offers
    Undo. If the undo fails (the category was deleted meanwhile), the
    generic error snackbar is shown.
 
@@ -60,7 +83,9 @@ The first four record an undo action like a manual edit. The goal-based
 ## Moving money
 
 `MoveMoneyModal` asks for source category, target category and a positive
-amount; source and target must differ. Hidden categories are not offered,
+amount; source and target must differ. That message and a failed write are
+shown inside the sheet, above the Save button (a snack bar would appear on
+the screen underneath, hidden by the sheet). Hidden categories are not offered,
 except the one the modal was opened from (so money can be moved out of a
 hidden category from the Hidden categories section). `BudgetingService.moveMoney`
 decrements the source's and increments the target's budget for the selected
@@ -107,7 +132,10 @@ amounts?"); reset always asks.
 * **Apply template**: a *merge*: only the categories in the template are
   set to the template's amounts, every other category keeps its amount
   (the dialog says so). Entries whose category was deleted or hidden are
-  skipped.
+  skipped. The bin icon next to a template deletes it after a confirmation
+  ("Delete template?"); when "Fill new months automatically" uses that
+  template, the dialog says so and the setting switches to the month
+  before (see below).
 * **Copy from previous month**: sets every category budgeted in the month
   before to that amount; other categories keep theirs.
 * **Reset budget**: sets every visible category of the month to 0.
@@ -128,18 +156,24 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   SharedPreferences, `leftover_card_dismissed`), so a later edit does not
   bring the same offer back; Undo of the assignment shows it again. Not
   shown for a new budget: an account created this month has nothing in
-  the month before.
+  the month before. The assignment is a `BudgetAddAction` on the undo
+  stack, like every other budget change.
 * **New-month card**: for the current or a later month with nothing budgeted
   whose previous month has budgets. It shows the total, To Be Budgeted after
   filling and the income still expected, and offers *Fill like (previous
   month)*, *Use a template* (when templates exist) and *Not now* (hides it
-  for that month). Filling shows a snack bar with Undo.
+  for that month). Filling shows a snack bar with Undo (a
+  `BudgetFillAction` on the undo stack; an undo that fails shows the
+  generic error).
 * **Fill new months automatically** (off by default; the month before or a
   template): runs at start-up and on resume, once per month and phone, and
   only when the month is still empty. It starts with the month after it
   was turned on. A card ("November was filled automatically") offers Undo.
-  If the template was deleted, the month before is used and the setting
-  switches to it.
+  If the template was deleted (in the Apply template dialog, on the paired
+  phone or by a restore), the month before is used and the setting
+  switches to it. Only the source changes: the month stays due, so a month
+  that is waiting for its income is still filled when the money arrives
+  or with *Fill anyway*.
 * **It waits for the money.** Before writing, the controller compares the
   planned total with To Be Budgeted of the month
   (`BudgetingService.calculateTBB`). While TBB is short (payday still to
@@ -149,9 +183,14 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   plain card then offers by hand) and *Fill anyway*. The next start or
   resume tries again, and the card itself triggers the fill when TBB grows
   to cover the total while the budget screen is open (a salary booked by
-  hand or imported). Scheduled income is booked before the fill runs
-  (`_initializeServices`), so a salary due on the 1st never causes a wait.
-  A wait is in memory only and is recomputed each time.
+  hand or imported). Scheduled income is booked before the fill runs, at
+  start-up (`_initializeServices`) and on resume (`_bookDueThenFill` in
+  `lib/app/app.dart`: the fill is awaited after the catch-up, not started
+  next to it), so a salary due on the 1st never causes a wait.
+  A wait is in memory only and is recomputed each time. The waiting card
+  does not depend on the month before: with a template as the source and
+  an empty previous month it is shown all the same, and it goes away when
+  the month is budgeted by hand.
 * Both only fill categories that are still at zero (never hidden ones) and
   never overwrite an amount. Undo resets only the categories still at the
   filled amount.
@@ -173,7 +212,7 @@ applied by sync alike). While they recompute, the list, the To Be Budgeted
 banner and the home cards keep showing their previous values
 (`skipLoadingOnReload`), so an edit never replaces the screen with a
 spinner or flashes a zero, and the list keeps its scroll position and
-focus. Everything works offline; cloud sync is described in
+focus. Everything works offline; Wi-Fi sync is described in
 [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md).
 
 ## Income line

@@ -1,4 +1,5 @@
 import 'package:ledger_zero/core/constants/default_categories.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
@@ -138,6 +139,7 @@ class CategoryService {
               id: id,
               name: nameOf(name),
               categoryGroupId: groupId,
+              icon: CategoryIconResolver.keyForDefault(name),
               sortOrder: index,
               createdAt: now,
             ),

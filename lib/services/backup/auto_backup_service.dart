@@ -9,12 +9,13 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:synchronized/synchronized.dart';
 
-/// Automatic backups are on but no backup password is stored (the secure
-/// storage lost it): the user has to turn them on again.
+/// Automatic backups are on but no backup password is stored (the Android
+/// KeyStore lost it, or the app was moved to a new phone, which does not
+/// take the secure storage along): the user has to turn them on again.
 class AutoBackupNotConfiguredException implements Exception {
   const AutoBackupNotConfiguredException();
   @override
-  String toString() => 'AutoBackupNotConfiguredException';
+  String toString() => AutoBackupService.passwordMissingError;
 }
 
 /// An automatic backup file on this phone.
@@ -32,10 +33,12 @@ class AutoBackupFile {
 /// feature on (kept in [SecureStore]) and the normal backup format, so they
 /// restore like a manual backup. They live in [directory], outside the
 /// export directory and outside what a factory reset deletes: when the
-/// Android KeyStore loses the database key, the data on the phone is gone,
-/// but these files are still there and open with the password. They do not
+/// database on the phone cannot be opened any more, these files are still
+/// there and open with the password. They do not
 /// survive a lost phone, a factory reset of the phone or an uninstall; the
-/// Backup screen tells the user to copy the folder away now and then.
+/// Backup screen tells the user to copy the folder away now and then, and
+/// the backup reminder (`BackupScheduler`) keeps counting from the last
+/// backup that left the phone.
 ///
 /// The last [keep] backups are kept, older ones are deleted. A run happens
 /// when the app starts or resumes and the last successful backup is older
@@ -77,6 +80,10 @@ class AutoBackupService {
   static const String directoryName = 'backups';
   static const String filePrefix = 'ledgerzero_auto_';
   static const String fileExtension = '.lzbk';
+
+  /// [lastError] of a run that found no stored password (see
+  /// [AutoBackupNotConfiguredException]); the Backup screen explains it.
+  static const String passwordMissingError = 'AutoBackupNotConfiguredException';
 
   bool get isEnabled => _prefs.getBool(enabledKey) ?? false;
 
@@ -173,7 +180,7 @@ class AutoBackupService {
     final now = _now();
     await _prefs.setInt(lastAttemptKey, now.millisecondsSinceEpoch);
     try {
-      final password = await _store.read(passwordKey);
+      final password = await _readPassword();
       if (password == null || password.isEmpty) {
         throw const AutoBackupNotConfiguredException();
       }
@@ -188,7 +195,9 @@ class AutoBackupService {
       await _rotate(dir, keepFile: file);
       await _prefs.setInt(lastSuccessKey, now.millisecondsSinceEpoch);
       await _prefs.remove(lastErrorKey);
-      await service.recordBackupCompleted();
+      // Not recorded as "last backup" for the reminder: this file is on
+      // the phone and is lost with it. The reminder and the personal
+      // accounts nudge count backups that left the phone.
       Logger.info('Automatic backup written: ${p.basename(file.path)}');
       return file;
     } catch (e, stackTrace) {
@@ -197,6 +206,24 @@ class AutoBackupService {
       rethrow;
     }
   });
+
+  /// The stored password; null when it is missing or the secure storage
+  /// cannot read it any more (a lost KeyStore key only forgets it).
+  Future<String?> _readPassword() async {
+    try {
+      return await _store.read(passwordKey);
+    } catch (e, stackTrace) {
+      Logger.warning(
+        'The automatic backup password cannot be read; forgetting it',
+        e,
+        stackTrace,
+      );
+      try {
+        await _store.delete(passwordKey);
+      } catch (_) {}
+      return null;
+    }
+  }
 
   /// The automatic backups on this phone, newest first.
   Future<List<AutoBackupFile>> listBackups() async {

@@ -156,6 +156,11 @@ class BudgetingService {
   /// the month of its first transaction (imported or backdated history),
   /// so a month before the account shows nothing of it; an account without
   /// a creation time always counts.
+  ///
+  /// The creation month is the one on the user's calendar (the local day
+  /// of `created_at`, like every other month boundary, see
+  /// [CalendarDate.today]), not the UTC month of the instant: an account
+  /// created on the evening of the 31st west of UTC belongs to that month.
   Future<_StartingBalances> _startingBalances() async {
     final accounts = await _accountRepository.getAllAccounts();
     final firstDates = await _budgetRepository.getFirstTransactionDates();
@@ -166,7 +171,10 @@ class BudgetingService {
       if (!account.onBudget) {
         continue;
       }
-      final created = account.createdAt?.toUtc();
+      final createdAt = account.createdAt;
+      final created = createdAt == null
+          ? null
+          : CalendarDate.today(now: createdAt);
       final first = firstDates[account.id]?.toUtc();
       final start = created == null
           ? null

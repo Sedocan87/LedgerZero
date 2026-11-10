@@ -324,6 +324,33 @@ void main() {
       expect((await at(oneAmLocal).parse('oct 15th 4')).amount, 400);
       expect((await at(oneAmLocal).parse('dinner at 7pm 32')).amount, 3200);
     });
+
+    test('an inflow does not take the payee\'s remembered category', () async {
+      const category = Category(id: 'c1', name: 'Groceries');
+      const payee = Payee(id: 'p1', name: 'Rewe', autoCategoryId: 'c1');
+      when(mockPayeeRepo.getAllPayees()).thenAnswer((_) async => [payee]);
+      when(
+        mockCategoryRepo.getAllCategories(),
+      ).thenAnswer((_) async => [category]);
+      when(
+        mockCategoryRepo.getCategoryById('c1'),
+      ).thenAnswer((_) async => category);
+
+      // Spending there takes the remembered category ...
+      final outflow = await parser.parse('Rewe 20');
+      expect(outflow.isIncome, isFalse);
+      expect(outflow.categoryId, 'c1');
+
+      // ... an inflow goes to To Be Budgeted unless the text names one.
+      final inflow = await parser.parse('Gutschrift Rewe 20');
+      expect(inflow.isIncome, isTrue);
+      expect(inflow.payeeId, 'p1');
+      expect(inflow.categoryId, isNull);
+
+      final refund = await parser.parse('Gutschrift Rewe 20 Groceries');
+      expect(refund.isIncome, isTrue);
+      expect(refund.categoryId, 'c1');
+    });
   });
 
   group('payee typo matching and cache', () {

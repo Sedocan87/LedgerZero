@@ -7,6 +7,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/new_month_fill_provider.dart';
 import 'package:ledger_zero/presentation/screens/budget/budget_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -166,6 +167,47 @@ void main() {
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(await tester.runAsync(() => budgeted(groceries, month)), 1000);
+    await unmount(tester);
+  });
+
+  testWidgets('deleting a template asks first; deleting the one the '
+      'automatic fill uses says so and switches it to the month before', (
+    tester,
+  ) async {
+    await t.budgeting.saveBudgetTemplate('Usual', previous);
+    final template = (await t.budgeting.getAllTemplates()).single;
+    await prefs.setString(
+      NewMonthFillController.sourceKey,
+      AutoFillSource.template.name,
+    );
+    await prefs.setString(NewMonthFillController.templateKey, template.id);
+    await pump(tester);
+
+    await openMenuItem(tester, 'Apply Template');
+    await tester.tap(find.byTooltip('Delete Template'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete template?'), findsOneWidget);
+    expect(
+      find.textContaining('After deleting it they are filled like the month'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel').last);
+    await tester.pumpAndSettle();
+    expect(await tester.runAsync(t.budgeting.getAllTemplates), hasLength(1));
+    // Still in the template list.
+    expect(find.text('Usual'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Delete Template'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('budget.templateDeleteConfirm')));
+    await tester.pumpAndSettle();
+    expect(await tester.runAsync(t.budgeting.getAllTemplates), isEmpty);
+    expect(find.text('Template "Usual" deleted'), findsOneWidget);
+    expect(
+      prefs.getString(NewMonthFillController.sourceKey),
+      AutoFillSource.previousMonth.name,
+    );
+    expect(prefs.getString(NewMonthFillController.templateKey), isNull);
     await unmount(tester);
   });
 }

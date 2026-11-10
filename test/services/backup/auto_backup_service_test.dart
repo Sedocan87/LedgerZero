@@ -83,8 +83,8 @@ void main() {
     expect(await auto.listBackups(), isEmpty);
   });
 
-  test('enable stores the password, writes a backup that opens with it and '
-      'records the backup for the reminder', () async {
+  test('enable stores the password and writes a backup that opens with it; '
+      'the off-phone backup reminder keeps counting', () async {
     await t.addAccount(id: 'a1', name: 'Household Checking');
     final auto = service();
 
@@ -99,7 +99,9 @@ void main() {
     expect(p.dirname(file.path), p.join(dir.path, 'backups'));
     expect(auto.lastSuccess, now);
     expect(auto.lastError, isNull);
-    expect(prefs.getInt('last_backup_timestamp'), isNotNull);
+    // The file is on the phone: it is not "the last backup that left the
+    // phone", which the reminder and the personal-accounts nudge read.
+    expect(prefs.getInt('last_backup_timestamp'), isNull);
     // No plaintext snapshot is left behind.
     expect(
       Directory(
@@ -175,8 +177,20 @@ void main() {
       auto.runNow(),
       throwsA(isA<AutoBackupNotConfiguredException>()),
     );
-    expect(auto.lastError, isNotNull);
+    expect(auto.lastError, AutoBackupService.passwordMissingError);
     expect(auto.isEnabled, isTrue);
+  });
+
+  test('a password the KeyStore cannot read any more is forgotten, and the '
+      'run reports it as missing (the app goes on)', () async {
+    final auto = service();
+    await auto.enable('correct horse battery');
+    store.readError = Exception('javax.crypto.AEADBadTagException');
+    now = now.add(const Duration(days: 1));
+
+    expect(await auto.runIfDue(), isNull);
+    expect(auto.lastError, AutoBackupService.passwordMissingError);
+    expect(store.values.containsKey(AutoBackupService.passwordKey), isFalse);
   });
 
   test('only the newest backups are kept', () async {

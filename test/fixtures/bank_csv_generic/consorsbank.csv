@@ -1,0 +1,4 @@
+Buchung;Valuta;Sender / Empfänger;IBAN / Konto-Nr.;BIC / BLZ;Buchungstext;Verwendungszweck;Kategorie;Stichwörter;Umsatz geteilt;Betrag in EUR
+16.10.2026;16.10.2026;Stadtwerke München;DE02120300000000202051;BYLADEM1001;Lastschrift;Abschlag Strom;;;;-80,00
+15.10.2026;15.10.2026;Beispiel AG;DE02500105170137075030;INGDDEFFXXX;Gehalt/Rente;Gehalt 10/2026;;;;2.500,00
+12.10.2026;13.10.2026;Bäckerei Schmidt;DE02100500000054540402;BELADEBEXXX;Lastschrift;Kartenzahlung;;;;-4,50

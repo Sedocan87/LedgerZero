@@ -1,6 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/services/budget_currency.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/core/utils/picked_file.dart';
 import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
@@ -21,7 +23,14 @@ final ynabImportViewModelProvider =
         importService: ref.watch(ynabImportServiceProvider),
         dataMapper: ref.watch(ynabDataMapperProvider),
         history: ref.watch(ynabImportHistoryProvider),
-        defaultCurrency: ref.read(settingsProvider).currency,
+        defaultCurrency: ref.read(budgetCurrencyProvider).currency,
+        fixedCurrency: () async {
+          final budget = BudgetCurrency.of(
+            await ref.read(accountRepositoryProvider).getAllAccounts(),
+            setting: ref.read(settingsProvider).currency,
+          );
+          return budget.isFixed ? budget.currency : null;
+        },
       );
     });
 
@@ -51,11 +60,13 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     required YnabDataMapper dataMapper,
     YnabImportHistory? history,
     String defaultCurrency = defaultCurrencyCode,
+    Future<String?> Function()? fixedCurrency,
   }) : this._(
          importService,
          dataMapper,
          history ?? InMemoryYnabImportHistory(),
          defaultCurrency,
+         fixedCurrency,
        );
 
   YnabImportViewModel._(
@@ -63,7 +74,13 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     this._dataMapper,
     this._history,
     String defaultCurrency,
+    this._fixedCurrency,
   ) : super(YnabImportState(currency: defaultCurrency));
+
+  /// The budget currency once accounts are in the budget (null before):
+  /// the imported accounts then use it whatever was chosen, so no account
+  /// in another currency joins the budget (amounts are never converted).
+  final Future<String?> Function()? _fixedCurrency;
 
   /// Marks the account [accountId] of the parsed data as a tracking
   /// (off-budget) account or a budget account.
@@ -164,22 +181,67 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     );
   }
 
-  Future<PlatformFile?> _pickCsv() async {
+  /// Picks YNAB's export ZIP and takes both CSV files out of it.
+  Future<void> pickExportZip() async {
+    final file = await _pickFile('zip');
+    if (file != null) {
+      await selectExportZip(file);
+    }
+  }
+
+  /// Uses the register and budget CSV inside the export ZIP [file] (the
+  /// picker calls this; tests too).
+  Future<void> selectExportZip(PlatformFile file) async {
+    try {
+      final export = YnabImportService.readExportZip(await file.readAsBytes());
+      if (mounted) {
+        state = state.copyWith(
+          registerEntry: export.register,
+          budgetEntry: export.budget,
+          error: null,
+        );
+      }
+    } catch (e, stackTrace) {
+      Logger.error('YNAB import: reading the export ZIP failed', e, stackTrace);
+      if (mounted) {
+        state = state.copyWith(error: YnabImportError.invalidExportZip);
+      }
+    }
+  }
+
+  Future<PlatformFile?> _pickCsv() => _pickFile('csv');
+
+  Future<PlatformFile?> _pickFile(String extension) async {
     try {
       final result = await ExternalUiGuard.run(
         () => FilePicker.pickFile(
           type: FileType.custom,
-          allowedExtensions: ['csv'],
+          allowedExtensions: [extension],
         ),
       );
       return result;
     } catch (e, stackTrace) {
-      Logger.error('YNAB import: picking a CSV file failed', e, stackTrace);
+      Logger.error('YNAB import: picking a file failed', e, stackTrace);
       if (mounted) {
         state = state.copyWith(error: YnabImportError.filePickFailed);
       }
       return null;
     }
+  }
+
+  /// Picks a ZIP of the `.ynab4` folder: one file, readable on every
+  /// Android version (a picked folder is not, see [pickYnab4Folder]).
+  Future<void> pickYnab4Zip() async {
+    final file = await _pickFile('zip');
+    if (file != null) {
+      selectYnab4Zip(file);
+    }
+  }
+
+  /// Uses the zipped YNAB 4 budget [file] (the picker calls this; tests
+  /// too).
+  void selectYnab4Zip(PlatformFile file) {
+    state = state.copyWith(ynab4Zip: file, error: null);
   }
 
   Future<void> pickYnab4Folder() async {
@@ -205,7 +267,7 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     try {
       final YnabImportData data;
       if (state.method == YnabImportMethod.nynabCsv) {
-        if (state.registerFile == null || state.budgetFile == null) {
+        if (state.registerName == null || state.budgetName == null) {
           state = state.copyWith(
             isLoading: false,
             error: YnabImportError.filesMissing,
@@ -213,8 +275,12 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
           return;
         }
 
-        final registerContent = await _readFileContent(state.registerFile!);
-        final budgetContent = await _readFileContent(state.budgetFile!);
+        final registerContent =
+            state.registerEntry?.content ??
+            await _readFileContent(state.registerFile!);
+        final budgetContent =
+            state.budgetEntry?.content ??
+            await _readFileContent(state.budgetFile!);
 
         data = await _importService.parseCsvExport(
           registerCsvContent: registerContent,
@@ -222,7 +288,7 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
           dateFormat: dateFormat,
         );
       } else {
-        if (state.ynab4FolderPath == null) {
+        if (!state.hasYnab4Source) {
           state = state.copyWith(
             isLoading: false,
             error: YnabImportError.folderMissing,
@@ -230,7 +296,10 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
           return;
         }
 
-        data = await _importService.parseYnab4(state.ynab4FolderPath!);
+        final zip = state.ynab4Zip;
+        data = zip != null
+            ? await _importService.parseYnab4Zip(await zip.readAsBytes())
+            : await _importService.parseYnab4(state.ynab4FolderPath!);
       }
       final fingerprint = data.fingerprint;
       final previous = fingerprint == null
@@ -260,9 +329,27 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
           isLoading: false,
           error: YnabImportError.invalidYnab4Folder,
         ),
+        YnabImportFailure.invalidYnab4Zip => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.invalidYnab4Zip,
+        ),
+        YnabImportFailure.invalidExportZip => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.invalidExportZip,
+        ),
         YnabImportFailure.invalidDates => state.copyWith(
           isLoading: false,
           error: YnabImportError.invalidDates,
+          errorDetail: e.detail,
+        ),
+        YnabImportFailure.missingBudgetColumns => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.missingBudgetColumns,
+          errorDetail: e.detail,
+        ),
+        YnabImportFailure.invalidAmount => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.invalidAmount,
           errorDetail: e.detail,
         ),
       };
@@ -291,9 +378,10 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     );
 
     try {
+      final currency = await _fixedCurrency?.call() ?? state.currency;
       final summary = await _dataMapper.importData(
         state.parsedData!,
-        currency: state.currency,
+        currency: currency,
       );
       final fingerprint = state.parsedData!.fingerprint;
       if (fingerprint != null) {

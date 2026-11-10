@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
@@ -465,6 +466,211 @@ void main() {
     );
   });
 
+  group('YNAB 4 bundle with several devices, and as a ZIP (F4)', () {
+    Map<String, dynamic> budget(String accountName) => {
+      'accounts': [
+        {
+          'entityId': 'acc-1',
+          'accountName': accountName,
+          'accountType': 'Checking',
+          'onBudget': true,
+        },
+      ],
+    };
+    String device(
+      String guid, {
+      required bool full,
+      required String knowledgeInFull,
+    }) => jsonEncode({
+      'deviceGUID': guid,
+      'shortDeviceId': guid.substring(0, 1),
+      'hasFullKnowledge': full,
+      'knowledge': knowledgeInFull,
+      'knowledgeInFullBudgetFile': knowledgeInFull,
+    });
+
+    /// A bundle used on two computers: the folder of the stale device
+    /// comes first in every listing.
+    Map<String, String> twoDeviceBundle() => {
+      'Budget.ymeta': jsonEncode({
+        'formatVersion': '1.2',
+        'relativeDataFolderName': 'data1~CURRENT',
+        'TED': 1,
+      }),
+      'data1~CURRENT/devices/A.ydevice': device(
+        'AAAA-stale',
+        full: false,
+        knowledgeInFull: 'A-10',
+      ),
+      'data1~CURRENT/devices/B.ydevice': device(
+        'BBBB-current',
+        full: true,
+        knowledgeInFull: 'A-10,B-25',
+      ),
+      'data1~CURRENT/AAAA-stale/Budget.yfull': jsonEncode(budget('Stale')),
+      'data1~CURRENT/BBBB-current/Budget.yfull': jsonEncode(budget('Current')),
+      'data1~CURRENT/BBBB-current/A-10_B-26.ydiff': '{}',
+      // An abandoned data folder that sorts before the current one.
+      'data0~OLD/devices/A.ydevice': device(
+        'AAAA-old',
+        full: true,
+        knowledgeInFull: 'A-999',
+      ),
+      'data0~OLD/AAAA-old/Budget.yfull': jsonEncode(budget('Old folder')),
+    };
+
+    List<int> zipOf(Map<String, String> files, {String prefix = ''}) {
+      final archive = Archive();
+      for (final entry in files.entries) {
+        archive.addFile(ArchiveFile.string('$prefix${entry.key}', entry.value));
+      }
+      return ZipEncoder().encodeBytes(archive);
+    }
+
+    test('the folder: Budget.ymeta names the data folder and the .ydevice '
+        'files the device whose full budget is current', () async {
+      final dir = await Directory.systemTemp.createTemp('ynab4_devices');
+      addTearDown(() => dir.delete(recursive: true));
+      for (final entry in twoDeviceBundle().entries) {
+        final file = File('${dir.path}/${entry.key}');
+        await file.parent.create(recursive: true);
+        await file.writeAsString(entry.value);
+      }
+      final data = await service.parseYnab4(dir.path);
+      expect(data.accounts.single.name, 'Current');
+    });
+
+    test(
+      'of two devices with full knowledge the higher versions win',
+      () async {
+        final files = twoDeviceBundle()
+          ..['data1~CURRENT/devices/A.ydevice'] = device(
+            'AAAA-stale',
+            full: true,
+            knowledgeInFull: 'A-10,B-20',
+          );
+        final data = await service.parseYnab4Zip(zipOf(files));
+        expect(data.accounts.single.name, 'Current');
+      },
+    );
+
+    test('a ZIP of the .ynab4 folder is read, with or without the folder '
+        'itself inside and with macOS extras', () async {
+      for (final prefix in ['', 'My Budget~1A2B3C4D.ynab4/']) {
+        final zip = zipOf({
+          ...twoDeviceBundle().map((k, v) => MapEntry('$prefix$k', v)),
+          '__MACOSX/$prefix._Budget.ymeta': 'resource fork',
+          '$prefix.DS_Store': 'x',
+        });
+        final data = await service.parseYnab4Zip(zip);
+        expect(data.accounts.single.name, 'Current', reason: prefix);
+        expect(data.source, 'YNAB4');
+        expect(data.fingerprint, isNotNull);
+      }
+    });
+
+    test('a bundle without device metadata still imports, the same file '
+        'every time', () async {
+      final data = await service.parseYnab4Zip(
+        zipOf({
+          'Budget.ymeta': '{}',
+          'data1-ABCD/device-2/Budget.yfull': jsonEncode(budget('Second')),
+          'data1-ABCD/device-1/Budget.yfull': jsonEncode(budget('First')),
+        }),
+      );
+      expect(data.accounts.single.name, 'First');
+    });
+
+    test('a ZIP that is no YNAB 4 budget raises a typed exception', () async {
+      for (final bytes in [
+        zipOf({'notes.txt': 'hello'}),
+        zipOf({'Budget.ymeta': '{}'}),
+        utf8.encode('this is not a zip file'),
+      ]) {
+        await expectLater(
+          service.parseYnab4Zip(bytes),
+          throwsA(
+            isA<YnabImportException>().having(
+              (e) => e.failure,
+              'failure',
+              YnabImportFailure.invalidYnab4Zip,
+            ),
+          ),
+        );
+      }
+    });
+  });
+
+  group('readExportZip (Improvement 3)', () {
+    List<int> zipOf(Map<String, String> files) {
+      final archive = Archive();
+      for (final entry in files.entries) {
+        archive.addFile(ArchiveFile.string(entry.key, entry.value));
+      }
+      return ZipEncoder().encodeBytes(archive);
+    }
+
+    const registerCsv =
+        '$_header\n'
+        '"Checking","","01/05/2025","Shop","Everyday: Food","Everyday","Food",'
+        '"","\$10.00","\$0.00","Cleared"\n';
+    const planCsv =
+        '"Month","Category Group/Category","Category Group","Category",'
+        '"Assigned","Activity","Available"\n'
+        '"Jan 2025","Everyday: Food","Everyday","Food","\$50.00","-\$10.00",'
+        '"\$40.00"\n';
+
+    test('finds the register and a budget file called Plan.csv or '
+        'Budget.csv, whatever the order', () async {
+      for (final budgetName in ['Plan.csv', 'Budget.csv']) {
+        final export = YnabImportService.readExportZip(
+          zipOf({
+            'My Budget as of 2026-11-01 0900 - $budgetName': planCsv,
+            'My Budget as of 2026-11-01 0900 - Register.csv':
+                '\u{FEFF}$registerCsv',
+            '__MACOSX/._My Budget - Register.csv': 'x',
+            'readme.txt': 'x',
+          }),
+        );
+        expect(export.register.name, endsWith('- Register.csv'));
+        expect(export.budget.name, endsWith('- $budgetName'));
+        final data = await service.parseCsvExport(
+          registerCsvContent: export.register.content,
+          budgetCsvContent: export.budget.content,
+        );
+        expect(data.transactions.single.amount, -1000);
+        expect(data.budgetEntries.single.budgeted, 5000);
+      }
+    });
+
+    test('the header decides, not the name', () {
+      final export = YnabImportService.readExportZip(
+        zipOf({'a.csv': planCsv, 'folder/b.csv': registerCsv}),
+      );
+      expect(export.register.name, 'b.csv');
+      expect(export.budget.name, 'a.csv');
+    });
+
+    test('a ZIP without both files raises a typed exception', () {
+      for (final bytes in [
+        zipOf({'My Budget - Register.csv': registerCsv}),
+        zipOf({'notes.txt': 'x'}),
+        utf8.encode('not a zip'),
+      ]) {
+        expect(
+          () => YnabImportService.readExportZip(bytes),
+          throwsA(
+            isA<YnabImportException>().having(
+              (e) => e.failure,
+              'failure',
+              YnabImportFailure.invalidExportZip,
+            ),
+          ),
+        );
+      }
+    });
+  });
+
   group('parseCsvExport dates', () {
     Future<List<DateTime>> datesOf(List<String> dates) async {
       final data = await service.parseCsvExport(
@@ -545,6 +751,103 @@ void main() {
       (2025, 5),
       (2025, 10),
     ]);
+  });
+
+  group('budget file (F3)', () {
+    const register = _header;
+    const columns =
+        '"Month","Category Group/Category","Category Group","Category",';
+
+    test('the amount column may be called Assigned (Plan.csv)', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent:
+            '$columns"Assigned","Activity","Available"\n'
+            '"May 2025","Bills: Rent","Bills","Rent","\$400.00","\$0.00","\$0.00"\n',
+      );
+      expect(data.budgetEntries.single.budgeted, 40000);
+      expect(data.budgetEntries.single.categoryName, 'Rent');
+      expect(data.categoriesOnlyInBudget, 1);
+    });
+
+    test('a tab-separated export with decimal commas is read', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          '"Account"\t"Flag"\t"Date"\t"Payee"\t"Category Group/Category"\t'
+              '"Category Group"\t"Category"\t"Memo"\t"Outflow"\t"Inflow"\t'
+              '"Cleared"',
+          '"Giro"\t""\t"13.05.2025"\t"Vermieter, Hans"\t"Fix: Miete"\t"Fix"\t'
+              '"Miete"\t""\t"1.234,56€"\t"0,00€"\t"Cleared"',
+        ].join('\n'),
+        budgetCsvContent:
+            '"Month"\t"Category Group/Category"\t"Category Group"\t'
+            '"Category"\t"Assigned"\t"Activity"\t"Available"\n'
+            '"May 2025"\t"Fix: Miete"\t"Fix"\t"Miete"\t"1.300,00€"\t'
+            '"-1.234,56€"\t"65,44€"\n',
+      );
+      expect(data.transactions.single.amount, -123456);
+      expect(data.transactions.single.payeeName, 'Vermieter, Hans');
+      expect(data.transactions.single.date, DateTime.utc(2025, 5, 13));
+      expect(data.budgetEntries.single.budgeted, 130000);
+    });
+
+    test('header names are matched ignoring case and spaces; the combined '
+        'category column is enough', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent:
+            '"month"," Category Group/Category ","ASSIGNED"\n'
+            '"May 2025","Bills: Rent","\$400.00"\n',
+      );
+      expect(data.budgetEntries.single.categoryGroupName, 'Bills');
+      expect(data.budgetEntries.single.categoryName, 'Rent');
+      expect(data.budgetEntries.single.budgeted, 40000);
+    });
+
+    test('a budget file without the amount column stops the import instead '
+        'of being ignored', () async {
+      for (final (content, missing) in [
+        (
+          '$columns"Activity","Available"\n'
+              '"May 2025","Bills: Rent","Bills","Rent","\$0.00","\$0.00"\n',
+          'Budgeted / Assigned',
+        ),
+        // The register picked as the budget file.
+        (
+          [
+            _header,
+            _row('Checking', '01/05/2025', 'Shop', '', '', '', '1.00', ''),
+          ].join('\n'),
+          'Month, Budgeted / Assigned',
+        ),
+        ('"Month","Assigned"\n"May 2025","1.00"\n', 'Category Group, Category'),
+      ]) {
+        await expectLater(
+          service.parseCsvExport(
+            registerCsvContent: register,
+            budgetCsvContent: content,
+          ),
+          throwsA(
+            isA<YnabImportException>()
+                .having(
+                  (e) => e.failure,
+                  'failure',
+                  YnabImportFailure.missingBudgetColumns,
+                )
+                .having((e) => e.detail, 'detail', missing),
+          ),
+          reason: missing,
+        );
+      }
+    });
+
+    test('an empty budget file is still no error', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent: '\n',
+      );
+      expect(data.budgetEntries, isEmpty);
+    });
   });
 
   test(
@@ -745,6 +1048,80 @@ void main() {
       },
     );
 
+    test('currency symbols MoneyParser does not know are dropped: a rand '
+        'budget is not imported as zeros (F9)', () async {
+      for (final (outflow, inflow, amount) in [
+        ('R1 234.56', 'R0.00', -123456),
+        ('R0.00', 'R25 000.00', 2500000),
+        ('1 234,56 Kč', '0,00 Kč', -123456),
+        ('Rp 1.234.567', 'Rp 0', -123456700),
+        ('12.50 lei', '', -1250),
+        ('RM12.50', 'RM0.00', -1250),
+        ('฿1,234.00', '฿0.00', -123400),
+        ('-R12.50', '', 1250),
+      ]) {
+        final data = await service.parseCsvExport(
+          registerCsvContent: [
+            _header,
+            _row('Cheque', '01/05/2025', 'Shop', '', '', '', outflow, inflow),
+            // A second row with decimals settles the decimal separator.
+            _row('Cheque', '01/06/2025', 'Shop', '', '', '', '', inflow),
+          ].join('\n'),
+          budgetCsvContent: '',
+        );
+        expect(data.transactions.first.amount, amount, reason: outflow);
+      }
+    });
+
+    test('an amount that is not a number stops the import instead of '
+        'counting as 0 (F9)', () async {
+      for (final bad in ['n/a', 'R', '12.3.4.5']) {
+        await expectLater(
+          service.parseCsvExport(
+            registerCsvContent: [
+              _header,
+              _row('Checking', '01/05/2025', 'Shop', '', '', '', bad, ''),
+            ].join('\n'),
+            budgetCsvContent: '',
+          ),
+          throwsA(
+            isA<YnabImportException>()
+                .having(
+                  (e) => e.failure,
+                  'failure',
+                  YnabImportFailure.invalidAmount,
+                )
+                .having((e) => e.detail, 'detail', bad),
+          ),
+          reason: bad,
+        );
+      }
+    });
+
+    test("YNAB's other date settings are read: yyyy/MM/dd, dd-MM-yyyy, "
+        'yyyy.MM.dd (F9)', () async {
+      for (final (first, second, format) in [
+        ('2024/02/13', '2024/03/01', 'yyyy/MM/dd'),
+        ('13-02-2024', '01-03-2024', 'dd-MM-yyyy'),
+        ('2024.02.13', '2024.03.01', 'yyyy.MM.dd'),
+      ]) {
+        final data = await service.parseCsvExport(
+          registerCsvContent: [
+            _header,
+            _row('Checking', first, 'Shop', '', '', '', '1.00', ''),
+            _row('Checking', second, 'Shop', '', '', '', '2.00', ''),
+          ].join('\n'),
+          budgetCsvContent: '',
+        );
+        expect(data.registerDateFormat, format);
+        expect(data.dateFormatCandidates, [format]);
+        expect(data.transactions.map((t) => t.date), [
+          DateTime.utc(2024, 2, 13),
+          DateTime.utc(2024, 3, 1),
+        ]);
+      }
+    });
+
     test('an ambiguous register reports its candidates and can be read '
         'with the other order', () async {
       final register = [
@@ -830,6 +1207,151 @@ void main() {
       );
       final onBudget = {for (final a in data.accounts) a.name: a.onBudget};
       expect(onBudget, {'Checking': true, 'House': false});
+    });
+    test('an on-budget savings account that only receives transfers stays '
+        'on budget: no leg facing it has a category (F5)', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          _header,
+          _row(
+            'Giro',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '1000.00',
+          ),
+          _row(
+            'Giro',
+            '02/01/2025',
+            'Rewe',
+            'Alltag',
+            'Lebensmittel',
+            '',
+            '23.45',
+            '',
+          ),
+          // Giro -> Tagesgeld: both on budget, YNAB writes no category.
+          _row(
+            'Giro',
+            '03/01/2025',
+            'Transfer : Tagesgeld',
+            '',
+            '',
+            '',
+            '200.00',
+            '',
+          ),
+          _row(
+            'Tagesgeld',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '5000.00',
+          ),
+          _row(
+            'Tagesgeld',
+            '03/01/2025',
+            'Transfer : Giro',
+            '',
+            '',
+            '',
+            '',
+            '200.00',
+          ),
+          // Giro -> Depot: a tracking account, the Giro leg is categorised.
+          _row(
+            'Giro',
+            '04/01/2025',
+            'Transfer : Depot',
+            'Sparen',
+            'ETF',
+            '',
+            '100.00',
+            '',
+          ),
+          _row(
+            'Depot',
+            '04/01/2025',
+            'Transfer : Giro',
+            '',
+            '',
+            '',
+            '',
+            '100.00',
+          ),
+          // Money back from a tracking account is Ready to Assign.
+          _row(
+            'Giro',
+            '05/01/2025',
+            'Transfer : Darlehen',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '50.00',
+          ),
+          _row(
+            'Darlehen',
+            '05/01/2025',
+            'Transfer : Giro',
+            '',
+            '',
+            '',
+            '50.00',
+            '',
+          ),
+          // No transfer at all: no trace, a tracking account as before.
+          _row(
+            'Haus',
+            '01/01/2025',
+            'Starting Balance',
+            '',
+            '',
+            '',
+            '',
+            '300000.00',
+          ),
+          // Only connected to accounts that have no rows of their own.
+          _row(
+            'Depot',
+            '06/01/2025',
+            'Transfer : Depot 2',
+            '',
+            '',
+            '',
+            '10.00',
+            '',
+          ),
+          _row(
+            'Depot 2',
+            '06/01/2025',
+            'Transfer : Depot',
+            '',
+            '',
+            '',
+            '',
+            '10.00',
+          ),
+        ].join('\n'),
+        budgetCsvContent: '',
+      );
+      expect(
+        {for (final a in data.accounts) a.name: a.onBudget},
+        {
+          'Giro': true,
+          'Tagesgeld': true,
+          'Depot': false,
+          'Darlehen': false,
+          'Haus': false,
+          'Depot 2': false,
+        },
+      );
     });
   });
 }

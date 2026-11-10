@@ -445,6 +445,84 @@ void main() {
     expect(rows.first.isSelected, isFalse);
   });
 
+  group('possible duplicates: same amount within a few days (F2)', () {
+    setUp(() async {
+      // Entered by hand on the day of the purchase.
+      await t.payees.createPayee(const Payee(id: 'p-rewe', name: 'Rewe'));
+      await t.addTransaction(
+        accountId: accountId,
+        amount: -2345,
+        date: DateTime.utc(2025, 11, 5),
+        payeeId: 'p-rewe',
+      );
+    });
+
+    ImportTransaction bank(String payee, int day, {int amount = -2345}) =>
+        ImportTransaction(
+          date: DateTime.utc(2025, 11, day),
+          amount: amount,
+          payeeName: payee,
+        );
+
+    test('the bank spells the payee differently', () async {
+      final rows = [bank('REWE SAGT DANKE 4711', 5), bank('Kiosk', 5)];
+      await service.markDuplicates(rows, accountId);
+      expect(rows.map((r) => r.isDuplicate), [false, false]);
+      expect(rows.map((r) => r.isPossibleDuplicate), [true, false]);
+      expect(rows.map((r) => r.isSelected), [false, true]);
+      expect(rows.first.possibleDuplicateDate, DateTime.utc(2025, 11, 5));
+      expect(rows.first.possibleDuplicatePayee, 'Rewe');
+    });
+
+    test('the bank books it a few days later, also before the first row '
+        'of the file', () async {
+      for (final day in [6, 9, 1]) {
+        final rows = [bank('Rewe', day)];
+        await service.markDuplicates(rows, accountId);
+        expect(rows.single.isPossibleDuplicate, isTrue, reason: 'day $day');
+        expect(rows.single.isDuplicate, isFalse);
+        expect(rows.single.isSelected, isFalse);
+      }
+    });
+
+    test('outside the window, another amount or another account: not '
+        'flagged', () async {
+      final other = (await t.addAccount(name: 'Card')).id;
+      final rows = [bank('Rewe', 10), bank('Rewe', 5, amount: -2346)];
+      await service.markDuplicates(rows, accountId);
+      expect(rows.map((r) => r.isPossibleDuplicate), [false, false]);
+      expect(rows.map((r) => r.isSelected), [true, true]);
+
+      final sameDay = [bank('REWE SAGT DANKE 4711', 5)];
+      await service.markDuplicates(sameDay, other);
+      expect(sameDay.single.isPossibleDuplicate, isFalse);
+    });
+
+    test('one existing transaction flags one row, the nearest day; the '
+        'exact duplicate comes first', () async {
+      final rows = [bank('REWE 4711', 7), bank('REWE 4711', 6)];
+      await service.markDuplicates(rows, accountId);
+      expect(rows.map((r) => r.isPossibleDuplicate), [false, true]);
+
+      final withExact = [bank('REWE 4711', 5), bank('rewe', 5)];
+      await service.markDuplicates(withExact, accountId);
+      expect(withExact.map((r) => r.isDuplicate), [false, true]);
+      expect(withExact.map((r) => r.isPossibleDuplicate), [false, false]);
+      expect(withExact.map((r) => r.isSelected), [true, false]);
+    });
+
+    test('two identical coffees in one file both import when nothing '
+        'like them exists', () async {
+      final rows = [
+        bank('Coffee', 5, amount: -300),
+        bank('Coffee', 5, amount: -300),
+      ];
+      await service.markDuplicates(rows, accountId);
+      expect(rows.map((r) => r.isSelected), [true, true]);
+      expect(rows.any((r) => r.isDuplicate || r.isPossibleDuplicate), isFalse);
+    });
+  });
+
   test('rows with their own account are checked and imported per account; '
       'transfer legs naming each other are linked', () async {
     final savings = (await t.addAccount(name: 'Savings')).id;

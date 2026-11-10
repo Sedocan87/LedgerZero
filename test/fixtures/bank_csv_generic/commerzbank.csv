@@ -1,0 +1,4 @@
+Buchungstag;Wertstellung;Umsatzart;Buchungstext;Betrag;Währung;Auftraggeberkonto;Bankleitzahl Auftraggeberkonto;IBAN Auftraggeberkonto;Kategorie
+16.10.2026;16.10.2026;Lastschrift;Stadtwerke Köln Abschlag Strom;-80,00;EUR;123456700;37040044;DE89370400440123456700;
+15.10.2026;15.10.2026;Gutschrift;Beispiel AG Gehalt 10/2026;2.500,00;EUR;123456700;37040044;DE89370400440123456700;
+12.10.2026;12.10.2026;Kartenzahlung;REWE Markt GmbH Köln;-23,45;EUR;123456700;37040044;DE89370400440123456700;

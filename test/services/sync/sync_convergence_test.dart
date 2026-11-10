@@ -1,0 +1,503 @@
+// Scenarios in which two phones used to end up with different data for
+// good: deletes made while disconnected, rows moved into a personal
+// account, foreign-key repairs, compacted files. Real databases and
+// engines over a fake folder (test/helpers/sync_simulation.dart).
+import 'dart:io';
+
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/data/database/database.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
+import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
+import 'package:ledger_zero/services/sync/sync_engine.dart';
+
+import '../../helpers/sync_simulation.dart';
+import '../../helpers/test_database.dart';
+
+const passphrase = 'correct horse battery staple';
+
+void main() {
+  late FakeSyncFolder folder;
+  final devices = <SimDevice>[];
+
+  Future<SimDevice> device({
+    SyncEngineConfig? config,
+    DateTime Function()? clock,
+  }) async {
+    final d = await SimDevice.create(folder, config: config, clock: clock);
+    devices.add(d);
+    return d;
+  }
+
+  Future<void> connect(List<SimDevice> list) async {
+    await list.first.engine.createSyncFolder(passphrase);
+    for (final d in list.skip(1)) {
+      await d.engine.joinSyncFolder(passphrase);
+    }
+  }
+
+  Future<void> expectConverged(List<SimDevice> list) async {
+    final reference = await list.first.dump();
+    for (final d in list.skip(1)) {
+      expect(await d.dump(), reference, reason: 'device ${d.deviceId}');
+    }
+  }
+
+  setUp(() {
+    folder = FakeSyncFolder();
+    devices.clear();
+  });
+
+  tearDown(() async {
+    for (final d in devices) {
+      await d.close();
+    }
+  });
+
+  group('reconnecting to the same folder', () {
+    Future<(SimDevice, SimDevice)> pairWithPayeeAndCategory() async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.exec("INSERT INTO payees (id, name) VALUES ('p', 'Bakery')");
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('c', 'Gym', 0)",
+      );
+      await syncAll([a, b]);
+      expect(await b.count('SELECT COUNT(*) FROM payees'), 1);
+      return (a, b);
+    }
+
+    test('deletes made while disconnected reach the partner', () async {
+      final (a, b) = await pairWithPayeeAndCategory();
+
+      await a.engine.forgetKey(); // Disconnect
+      await a.exec("DELETE FROM payees WHERE id = 'p'");
+      await a.exec("DELETE FROM categories WHERE id = 'c'");
+      await a.engine.joinSyncFolder(passphrase);
+      await syncAll([a, b]);
+
+      expect(await b.count('SELECT COUNT(*) FROM payees'), 0);
+      expect(await b.count("SELECT COUNT(*) FROM categories WHERE id='c'"), 0);
+      await expectConverged([a, b]);
+    });
+
+    test('a delete whose capture was lost (older app version) is sent as a '
+        'tombstone by the re-share', () async {
+      final (a, b) = await pairWithPayeeAndCategory();
+
+      await a.engine.forgetKey();
+      await a.exec("DELETE FROM payees WHERE id = 'p'");
+      await a.exec("DELETE FROM categories WHERE id = 'c'");
+      // What the previous app version did on Disconnect and at every start
+      // without a provider.
+      await a.exec('DELETE FROM pending_sync_changes');
+      await a.engine.joinSyncFolder(passphrase);
+      await syncAll([a, b]);
+
+      expect(await b.count('SELECT COUNT(*) FROM payees'), 0);
+      expect(await b.count("SELECT COUNT(*) FROM categories WHERE id='c'"), 0);
+      await expectConverged([a, b]);
+    });
+
+    test('an uncaptured delete does not destroy an edit the partner made '
+        'since', () async {
+      final (a, b) = await pairWithPayeeAndCategory();
+
+      await a.engine.forgetKey();
+      await a.exec("DELETE FROM payees WHERE id = 'p'");
+      await a.exec('DELETE FROM pending_sync_changes');
+      await b.exec("UPDATE payees SET name = 'Bakery Schmidt' WHERE id = 'p'");
+      await b.sync();
+      await a.engine.joinSyncFolder(passphrase);
+      await syncAll([a, b]);
+
+      // The time of the delete is unknown, so the later edit wins.
+      expect(await a.rows('SELECT name FROM payees'), [
+        {'name': 'Bakery Schmidt'},
+      ]);
+      await expectConverged([a, b]);
+    });
+  });
+
+  group('a synced row moved into a personal account', () {
+    late SimDevice a;
+    late SimDevice b;
+
+    setUp(() async {
+      a = await device();
+      b = await device();
+      await connect([a, b]);
+      await a.t!.addAccount(
+        id: 'chk',
+        name: 'Checking',
+        startingBalance: 100000,
+      );
+      await a.t!.addAccount(
+        id: 'mine',
+        name: 'Pocket money',
+        owner: AccountOwner.me,
+      );
+      await a.t!.addTransaction(id: 't1', accountId: 'chk', amount: -30000);
+      await syncAll([a, b]);
+      expect(await b.count('SELECT COUNT(*) FROM transactions'), 1);
+    });
+
+    Future<int> balance(SimDevice d, String id) async =>
+        (await d.t!.accounts.getAccountById(id))!.balance;
+
+    test('disappears from the partner, and the balances agree', () async {
+      final t1 = (await a.t!.transactions.getTransactionById('t1'))!;
+      await a.t!.transactions.updateTransaction(t1.copyWith(accountId: 'mine'));
+      await syncAll([a, b]);
+
+      expect(await b.count('SELECT COUNT(*) FROM transactions'), 0);
+      expect(await balance(a, 'chk'), 100000);
+      expect(await balance(b, 'chk'), 100000);
+      expect(await balance(a, 'mine'), -30000);
+      expect(await balance(b, 'mine'), -30000);
+      // Still on the owner's phone, and not sent again.
+      expect(await a.count('SELECT COUNT(*) FROM transactions'), 1);
+      final files = folder.files.length;
+      await syncAll([a, b]);
+      expect(folder.files.length, files);
+    });
+
+    test('and back into the shared account returns to the partner', () async {
+      final t1 = (await a.t!.transactions.getTransactionById('t1'))!;
+      await a.t!.transactions.updateTransaction(t1.copyWith(accountId: 'mine'));
+      await syncAll([a, b]);
+      final moved = (await a.t!.transactions.getTransactionById('t1'))!;
+      await a.t!.transactions.updateTransaction(
+        moved.copyWith(accountId: 'chk'),
+      );
+      await syncAll([a, b]);
+
+      expect(
+        await b.rows('SELECT id, account_id, is_deleted FROM transactions'),
+        [
+          {'id': 't1', 'account_id': 'chk', 'is_deleted': 0},
+        ],
+      );
+      expect(await balance(b, 'chk'), 70000);
+      expect(await balance(b, 'mine'), 0);
+    });
+
+    test('a whole account made personal while disconnected: its rows leave '
+        'the partner and survive this phone re-applying its own '
+        'files', () async {
+      await a.t!.addAccount(id: 'old', name: 'Old savings');
+      await a.t!.addTransaction(id: 'u1', accountId: 'old', amount: 4200);
+      await syncAll([a, b]);
+
+      // Allowed only while disconnected; the rows themselves are not edited.
+      await a.engine.forgetKey();
+      final old = (await a.t!.accounts.getAccountById('old'))!;
+      await a.t!.accounts.updateAccount(old.copyWith(owner: AccountOwner.me));
+      await a.engine.joinSyncFolder(passphrase);
+      await syncAll([a, b]);
+
+      expect(
+        await b.count("SELECT COUNT(*) FROM transactions WHERE id = 'u1'"),
+        0,
+      );
+      expect(await balance(b, 'old'), 4200);
+
+      // After a restore the phone applies its own files again, the
+      // tombstone for u1 among them. u1 exists on this phone only.
+      await a.prefs.setBool(SyncRebootstrap.prefsKey, true);
+      await syncAll([a, b]);
+
+      expect(
+        await a.count("SELECT COUNT(*) FROM transactions WHERE id = 'u1'"),
+        1,
+      );
+      expect(await balance(a, 'old'), 4200);
+      expect(await balance(b, 'old'), 4200);
+    });
+
+    test('a stale copy of a row in the partner\'s personal account never '
+        'becomes a tombstone for the partner\'s own row', () async {
+      await b.t!.addAccount(id: 'theirs', name: 'Partner savings');
+      await b.t!.addTransaction(id: 'x1', accountId: 'theirs', amount: 900);
+      await syncAll([a, b]);
+      // What a partner on the previous app version leaves behind when the
+      // account becomes personal: A gets the account row, no tombstones.
+      await a.exec('INSERT OR REPLACE INTO sync_applying (id) VALUES (1)');
+      await a.exec(
+        "UPDATE accounts SET owner_id = 'another-member' WHERE id = 'theirs'",
+      );
+      await a.exec('DELETE FROM sync_applying');
+
+      // A re-shares everything it has (reconnect).
+      await a.engine.forgetKey();
+      await a.engine.joinSyncFolder(passphrase);
+      await syncAll([a, b]);
+
+      expect(
+        await b.count("SELECT COUNT(*) FROM transactions WHERE id = 'x1'"),
+        1,
+      );
+    });
+
+    test('a schedule moved into a personal account disappears from the '
+        'partner', () async {
+      await a.exec(
+        'INSERT INTO scheduled_transactions (id, account_id, amount, '
+        "auto_approve) VALUES ('s1', 'chk', -500, 0)",
+      );
+      await syncAll([a, b]);
+      expect(await b.count('SELECT COUNT(*) FROM scheduled_transactions'), 1);
+
+      await a.exec(
+        "UPDATE scheduled_transactions SET account_id = 'mine' "
+        "WHERE id = 's1'",
+      );
+      await syncAll([a, b]);
+
+      expect(await b.count('SELECT COUNT(*) FROM scheduled_transactions'), 0);
+      expect(await a.count('SELECT COUNT(*) FROM scheduled_transactions'), 1);
+    });
+  });
+
+  group('foreign-key repairs', () {
+    test('a repair made on one phone reaches the other when the parent '
+        'comes back (delete on A, later rename on B)', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('extra', 'Extra', 0)",
+      );
+      await a.t!.addAccount(id: 'y', name: 'Savings');
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      // B books into the category and the account and syncs (file 1).
+      await b.t!.addTransaction(
+        id: 'tx',
+        accountId: 'chk',
+        amount: -100,
+        categoryId: 'extra',
+      );
+      await b.exec(
+        'INSERT INTO budgets (id, category_id, month, budgeted) '
+        "VALUES ('bx', 'extra', '2025-01', 700)",
+      );
+      await b.t!.addTransaction(id: 'tx2', accountId: 'y', amount: -200);
+      await b.sync();
+
+      // A, which has not synced yet, deletes both parents.
+      await a.exec("DELETE FROM categories WHERE id = 'extra'");
+      await a.exec("DELETE FROM accounts WHERE id = 'y'");
+
+      // B renames them afterwards (newer than the deletes) and syncs
+      // (file 2).
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await b.exec("UPDATE categories SET name = 'Extras' WHERE id = 'extra'");
+      await b.exec("UPDATE accounts SET name = 'Rainy day' WHERE id = 'y'");
+      await b.sync();
+
+      await syncAll([a, b], rounds: 3);
+
+      // Both parents are back on both phones, and the rows A repaired while
+      // they were missing are the same on both.
+      expect(
+        await a.count("SELECT COUNT(*) FROM categories WHERE id='extra'"),
+        1,
+      );
+      expect(await a.count("SELECT COUNT(*) FROM accounts WHERE id='y'"), 1);
+      await expectConverged([a, b]);
+      expect(await a.count('SELECT COUNT(*) FROM pending_sync_changes'), 0);
+      expect(await b.count('SELECT COUNT(*) FROM pending_sync_changes'), 0);
+      expect(
+        await b.rows('SELECT id, category_id FROM transactions ORDER BY id'),
+        [
+          {'id': 'tx', 'category_id': null},
+        ],
+      );
+      expect(await b.count('SELECT COUNT(*) FROM budgets'), 0);
+    });
+
+    test('an edit that was already on its way when the repair was made '
+        'is not lost', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('extra', 'Extra', 0)",
+      );
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      // B books into the category (file 1). A deletes the category. B then
+      // corrects the amount and renames the category (file 2), all before
+      // A syncs.
+      await b.t!.addTransaction(
+        id: 'tx',
+        accountId: 'chk',
+        amount: -100,
+        categoryId: 'extra',
+      );
+      await b.sync();
+      await a.exec("DELETE FROM categories WHERE id = 'extra'");
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await b.exec("UPDATE transactions SET amount = -250 WHERE id = 'tx'");
+      await b.exec("UPDATE categories SET name = 'Extras' WHERE id = 'extra'");
+      await b.sync();
+
+      // A applies file 1 (the category is gone: repair) and then file 2
+      // (the correction, and the category is back) in the same run.
+      await syncAll([a, b], rounds: 3);
+
+      await expectConverged([a, b]);
+      expect(await a.rows('SELECT amount, category_id FROM transactions'), [
+        {'amount': -250, 'category_id': 'extra'},
+      ]);
+    });
+
+    test('a later edit on the other phone wins over the repair', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('extra', 'Extra', 0)",
+      );
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      await b.t!.addTransaction(
+        id: 'tx',
+        accountId: 'chk',
+        amount: -100,
+        categoryId: 'extra',
+      );
+      await b.sync();
+      await a.exec("DELETE FROM categories WHERE id = 'extra'");
+      await a.sync(); // repairs tx: no category
+      // B, which has not seen the delete, moves the transaction to another
+      // category afterwards.
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      final groceries = await b.t!.categoryId('Groceries');
+      await b.exec(
+        "UPDATE transactions SET category_id = '$groceries' WHERE id = 'tx'",
+      );
+
+      await syncAll([a, b], rounds: 3);
+
+      await expectConverged([a, b]);
+      expect(await a.rows('SELECT category_id FROM transactions'), [
+        {'category_id': groceries},
+      ]);
+    });
+  });
+
+  group('restore', () {
+    test('the shared balance of an own personal account follows the '
+        'restored transactions', () async {
+      final tmp = await Directory.systemTemp.createTemp('lz_restore_');
+      addTearDown(() => tmp.delete(recursive: true));
+      final dbFile = File('${tmp.path}/a.sqlite');
+      final backup = File('${tmp.path}/backup.sqlite');
+      var a = await SimDevice.create(folder, executor: NativeDatabase(dbFile));
+      devices.add(a);
+      final b = await device();
+      await connect([a, b]);
+      var ta = TestDatabase.wrap(a.db);
+      await ta.addAccount(
+        id: 'brk',
+        name: 'Brokerage',
+        startingBalance: 500000,
+        owner: AccountOwner.me,
+      );
+      await ta.addTransaction(id: 'dep', accountId: 'brk', amount: 20000);
+      await syncAll([a, b]);
+      Future<int> onB() async =>
+          (await b.t!.accounts.getAccountById('brk'))!.balance;
+      expect(await onB(), 520000);
+
+      await a.exec('VACUUM INTO ?', [backup.path]);
+      await ta.addTransaction(id: 'dep2', accountId: 'brk', amount: 1000);
+      await syncAll([a, b]);
+      expect(await onB(), 521000);
+
+      // Restore the backup on A (file swap, empty queue, flag).
+      await a.db.close();
+      devices.remove(a);
+      await backup.copy(dbFile.path);
+      final restored = AppDatabase(NativeDatabase(dbFile));
+      await restored.customStatement('DELETE FROM pending_sync_changes');
+      a = a.withDatabase(restored);
+      devices.add(a);
+      ta = TestDatabase.wrap(a.db);
+      final rebootstrap = SyncRebootstrap(a.prefs, a.outbox);
+      await rebootstrap.markRequired();
+      await rebootstrap.discardOutbox();
+
+      await syncAll([a, b]);
+
+      // dep2 exists in no backup and never synced: it is gone, and the
+      // partner must see the balance the owner sees.
+      expect((await ta.accounts.getAccountById('brk'))!.balance, 520000);
+      expect(await onB(), 520000);
+    });
+  });
+
+  group('snapshots', () {
+    const compacting = SyncEngineConfig(
+      kdfParams: fastKdf,
+      snapshotEveryFiles: 1,
+      compactAfter: Duration.zero,
+    );
+
+    test('a phone that missed files which were compacted away catches up '
+        'from the snapshot alone', () async {
+      final a = await device(config: compacting);
+      final b = await device();
+      await connect([a, b]);
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      // B is away; A books, writes a snapshot and compacts its files.
+      await a.t!.addTransaction(id: 't1', accountId: 'chk', amount: -500);
+      await a.sync();
+      await a.sync();
+      expect(
+        folder.syncFiles(device: a.deviceId, kind: SyncFileKind.changes),
+        isEmpty,
+      );
+      expect(
+        folder.syncFiles(device: a.deviceId, kind: SyncFileKind.snapshot),
+        hasLength(1),
+      );
+
+      final report = await b.sync();
+
+      expect(await b.count('SELECT COUNT(*) FROM transactions'), 1);
+      expect(report.waitingDevices, 0);
+      await syncAll([a, b]);
+      await expectConverged([a, b]);
+    });
+
+    test('a phone alone in the folder does not download its own '
+        'snapshots', () async {
+      final a = await device(config: compacting);
+      await connect([a]);
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await a.sync();
+      await a.sync();
+      expect(folder.syncFiles(kind: SyncFileKind.snapshot), isNotEmpty);
+
+      a.transport.downloads = 0;
+      await a.sync();
+
+      // The manifest, nothing else.
+      expect(a.transport.downloads, 1);
+    });
+  });
+}

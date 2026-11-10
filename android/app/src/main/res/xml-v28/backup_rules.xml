@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 9 to 11 (android:fullBackupContent). The same files as
+     data_extraction_rules.xml (Android 12+), with the same condition:
+
+     * a cloud backup takes them only when it is end-to-end encrypted with
+       the screen lock (requireFlags="clientSideEncryption");
+     * a device-to-device transfer takes them in any case
+       (requireFlags="deviceToDeviceTransfer").
+
+     Each file is included twice, once per flag: an include with several
+     flags ("a|b") would need ALL of them (the framework checks
+     (transportFlags & requiredFlags) == requiredFlags), so the two
+     conditions are separate includes, and either one suffices. A transport
+     that sets both flags copies the file twice with the same content; the
+     restore writes it twice.
+
+     Android 7.0 to 8.1 ignore requireFlags (it needs API 28), so they use
+     res/xml/backup_rules.xml, which includes nothing. -->
+<full-backup-content>
+    <include
+        domain="root"
+        path="app_flutter/db.sqlite"
+        requireFlags="clientSideEncryption" />
+    <include
+        domain="root"
+        path="app_flutter/db.sqlite-wal"
+        requireFlags="clientSideEncryption" />
+    <include
+        domain="sharedpref"
+        path="FlutterSharedPreferences.xml"
+        requireFlags="clientSideEncryption" />
+    <include
+        domain="root"
+        path="app_flutter/db.sqlite"
+        requireFlags="deviceToDeviceTransfer" />
+    <include
+        domain="root"
+        path="app_flutter/db.sqlite-wal"
+        requireFlags="deviceToDeviceTransfer" />
+    <include
+        domain="sharedpref"
+        path="FlutterSharedPreferences.xml"
+        requireFlags="deviceToDeviceTransfer" />
+</full-backup-content>

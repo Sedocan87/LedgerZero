@@ -1,3 +1,4 @@
+import 'package:archive/archive.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
@@ -16,7 +17,7 @@ const _register =
     '"Account","Flag","Date","Payee","Category Group/Category","Category Group","Category","Memo","Outflow","Inflow","Cleared"\n'
     '"Checking","","05/03/2025","Starting Balance","Inflow: Ready to Assign","Inflow","Ready to Assign","","\$0.00","\$1,000.00","Cleared"\n'
     '"Checking","","05/04/2025","Shop","Everyday: Food","Everyday","Food","","\$10.00","\$0.00","Cleared"\n'
-    '"Checking","","05/06/2025","Transfer : House","","","","","\$20.00","\$0.00","Cleared"\n'
+    '"Checking","","05/06/2025","Transfer : House","Everyday: Home","Everyday","Home","","\$20.00","\$0.00","Cleared"\n'
     '"House","","05/06/2025","Transfer : Checking","","","","","\$0.00","\$20.00","Cleared"\n';
 const _budget =
     '"Month","Category Group/Category","Category Group","Category","Budgeted","Activity","Available"\n';
@@ -68,6 +69,47 @@ void main() {
     expect(container.read(ynabImportViewModelProvider).currency, 'CHF');
   });
 
+  test('with accounts in the budget, the imported accounts use the budget '
+      'currency whatever was chosen', () async {
+    SharedPreferences.setMockInitialValues({'settings_currency': 'EUR'});
+    final prefs = await SharedPreferences.getInstance();
+    final t = TestDatabase();
+    addTearDown(t.close);
+    await t.addAccount(id: 'giro', name: 'Giro', currency: 'EUR');
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(t.db),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+    final sub = container.listen(ynabImportViewModelProvider, (_, _) {});
+    addTearDown(sub.close);
+    final vm = container.read(ynabImportViewModelProvider.notifier);
+    vm.setMethod(YnabImportMethod.nynabCsv);
+    vm.selectFiles(
+      register: MemoryPlatformFile(
+        name: 'Register.csv',
+        bytes: _register.codeUnits,
+      ),
+      budget: MemoryPlatformFile(name: 'Budget.csv', bytes: _budget.codeUnits),
+    );
+    await vm.validateAndParse();
+    vm.setCurrency('CHF');
+    await vm.startImport();
+    expect(
+      container.read(ynabImportViewModelProvider).currentStep,
+      YnabImportStep.success,
+    );
+
+    final created = [
+      for (final a in await t.accounts.getAllAccounts())
+        if (a.id != 'giro') a,
+    ];
+    expect(created, isNotEmpty);
+    expect(created.map((a) => a.currency).toSet(), {'EUR'});
+  });
+
   test('the preview warns when the same export was imported before', () async {
     final t = TestDatabase();
     addTearDown(t.close);
@@ -92,7 +134,8 @@ void main() {
     final vm = _viewModel(t, InMemoryYnabImportHistory());
     await vm.validateAndParse();
     final data = vm.state.parsedData!;
-    // Inferred: House has only a transfer leg.
+    // Inferred: House has only a transfer leg, and the Checking leg facing
+    // it carries a category, as YNAB writes it for a tracking account.
     expect(data.accounts.singleWhere((a) => a.id == 'House').onBudget, isFalse);
     expect(data.registerDateFormat, 'MM/dd/yyyy');
     expect(data.dateFormatCandidates, ['MM/dd/yyyy', 'dd/MM/yyyy']);
@@ -119,5 +162,140 @@ void main() {
     expect(vm.state.currentStep, YnabImportStep.success);
     final accounts = await t.accounts.getAllAccounts();
     expect(accounts.singleWhere((a) => a.name == 'House').onBudget, isTrue);
+  });
+  test('a budget file without its columns and an unreadable amount are '
+      'shown as errors; nothing is parsed (F3, F9)', () async {
+    final t = TestDatabase();
+    addTearDown(t.close);
+    final vm = _viewModel(t, InMemoryYnabImportHistory());
+
+    // The register picked twice.
+    vm.selectFiles(
+      budget: MemoryPlatformFile(
+        name: 'Register.csv',
+        bytes: _register.codeUnits,
+      ),
+    );
+    await vm.validateAndParse();
+    expect(vm.state.error, YnabImportError.missingBudgetColumns);
+    expect(vm.state.errorDetail, 'Month, Budgeted / Assigned');
+    expect(vm.state.currentStep, YnabImportStep.selectFiles);
+    expect(vm.state.parsedData, isNull);
+
+    vm.selectFiles(
+      budget: MemoryPlatformFile(
+        name: 'Plan.csv',
+        bytes:
+            '"Month","Category Group","Category","Assigned"\n'
+                    '"May 2025","Everyday","Food","abc"\n'
+                .codeUnits,
+      ),
+    );
+    await vm.validateAndParse();
+    expect(vm.state.error, YnabImportError.invalidAmount);
+    expect(vm.state.errorDetail, 'abc');
+    expect(vm.state.parsedData, isNull);
+
+    vm.selectFiles(
+      budget: MemoryPlatformFile(
+        name: 'Plan.csv',
+        bytes:
+            '"Month","Category Group","Category","Assigned"\n'
+                    '"May 2025","Everyday","Food","\$50.00"\n'
+                .codeUnits,
+      ),
+    );
+    await vm.validateAndParse();
+    expect(vm.state.error, isNull);
+    expect(vm.state.parsedData!.budgetEntries.single.budgeted, 5000);
+  });
+  test('the export ZIP supplies both files; a file picked afterwards '
+      'replaces its one (Improvement 3)', () async {
+    final t = TestDatabase();
+    addTearDown(t.close);
+    final vm = YnabImportViewModel(
+      importService: YnabImportService(),
+      dataMapper: YnabDataMapper(
+        accountRepo: t.accounts,
+        categoryRepo: t.categories,
+        payeeRepo: t.payees,
+        transactionRepo: t.transactions,
+        budgetRepo: t.budgets,
+        scheduledTransactionRepo: t.scheduledTransactions,
+        unitOfWork: t.unitOfWork,
+      ),
+    );
+    vm.setMethod(YnabImportMethod.nynabCsv);
+    final archive = Archive()
+      ..addFile(ArchiveFile.string('My Budget - Register.csv', _register))
+      ..addFile(
+        ArchiveFile.string(
+          'My Budget - Plan.csv',
+          '"Month","Category Group","Category","Assigned"\n'
+              '"May 2025","Everyday","Food","\$50.00"\n',
+        ),
+      );
+    await vm.selectExportZip(
+      MemoryPlatformFile(
+        name: 'export.zip',
+        bytes: ZipEncoder().encodeBytes(archive),
+      ),
+    );
+    expect(vm.state.error, isNull);
+    expect(vm.state.registerName, 'My Budget - Register.csv');
+    expect(vm.state.budgetName, 'My Budget - Plan.csv');
+
+    await vm.validateAndParse();
+    expect(vm.state.currentStep, YnabImportStep.preview);
+    expect(vm.state.parsedData!.transactions, hasLength(4));
+    expect(vm.state.parsedData!.budgetEntries.single.budgeted, 5000);
+
+    vm.goBack();
+    vm.selectFiles(
+      budget: MemoryPlatformFile(name: 'Budget.csv', bytes: _budget.codeUnits),
+    );
+    expect(vm.state.registerName, 'My Budget - Register.csv');
+    expect(vm.state.budgetName, 'Budget.csv');
+    await vm.validateAndParse();
+    expect(vm.state.parsedData!.budgetEntries, isEmpty);
+
+    await vm.selectExportZip(
+      MemoryPlatformFile(name: 'photos.zip', bytes: 'nope'.codeUnits),
+    );
+    expect(vm.state.error, YnabImportError.invalidExportZip);
+  });
+
+  test('a zipped YNAB 4 folder is parsed; picking it replaces a picked '
+      'folder (F4)', () async {
+    final t = TestDatabase();
+    addTearDown(t.close);
+    final vm = _viewModel(t, InMemoryYnabImportHistory());
+    vm.setMethod(YnabImportMethod.ynab4);
+    final archive = Archive()
+      ..addFile(ArchiveFile.string('Budget~1.ynab4/Budget.ymeta', '{}'))
+      ..addFile(
+        ArchiveFile.string(
+          'Budget~1.ynab4/data1~X/DEV/Budget.yfull',
+          '{"accounts":[{"entityId":"a","accountName":"Giro",'
+              '"accountType":"Checking","onBudget":true}]}',
+        ),
+      );
+    vm.selectYnab4Zip(
+      MemoryPlatformFile(
+        name: 'Budget.zip',
+        bytes: ZipEncoder().encodeBytes(archive),
+      ),
+    );
+    expect(vm.state.hasYnab4Source, isTrue);
+    await vm.validateAndParse();
+    expect(vm.state.error, isNull);
+    expect(vm.state.parsedData!.accounts.single.name, 'Giro');
+
+    vm.goBack();
+    vm.selectYnab4Zip(
+      MemoryPlatformFile(name: 'other.zip', bytes: 'nope'.codeUnits),
+    );
+    await vm.validateAndParse();
+    expect(vm.state.error, YnabImportError.invalidYnab4Zip);
   });
 }

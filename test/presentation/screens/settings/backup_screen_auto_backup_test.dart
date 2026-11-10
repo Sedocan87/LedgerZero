@@ -97,6 +97,9 @@ void main() {
       expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
       expect(find.text('Off'), findsOneWidget);
 
+      // Below the Android backup section.
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(find.text('Password for automatic backups'), findsOneWidget);
@@ -192,6 +195,55 @@ void main() {
             .text('There are no automatic backups on this phone.')
             .evaluate()
             .isNotEmpty,
+      );
+    });
+  });
+
+  /// Opens the restore confirmation for an automatic backup on the phone.
+  Future<void> openRestoreConfirmation(WidgetTester tester) async {
+    Directory(p.join(dir.path, 'backups')).createSync(recursive: true);
+    File(
+      p.join(dir.path, 'backups', 'ledgerzero_auto_20261019_090000.lzbk'),
+    ).writeAsBytesSync([1, 2, 3]);
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('autoBackup.restore')));
+    await tester.tap(find.byKey(const Key('autoBackup.restore')));
+    await waitUntil(
+      tester,
+      () => find.byType(SimpleDialogOption).evaluate().isNotEmpty,
+    );
+    await tester.tap(find.byType(SimpleDialogOption));
+    await waitUntil(
+      tester,
+      () => find.text('Replace all data?').evaluate().isNotEmpty,
+    );
+  }
+
+  testWidgets('with sync set up the restore confirmation says that synced '
+      'changes are not rolled back', (tester) async {
+    await tester.runAsync(() async {
+      await prefs.setString('sync_provider', 'localWifi');
+      await openRestoreConfirmation(tester);
+      expect(
+        find.byKey(const ValueKey('restoreSyncNoRollbackNote')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('does not undo changes that were already synced'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  testWidgets('without sync the restore confirmation has no sync note', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await openRestoreConfirmation(tester);
+      expect(
+        find.byKey(const ValueKey('restoreSyncNoRollbackNote')),
+        findsNothing,
       );
     });
   });

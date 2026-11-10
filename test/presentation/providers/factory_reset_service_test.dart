@@ -27,14 +27,11 @@ void main() {
     return FactoryResetService(
       closeSession: step('session'),
       deleteDatabase: step('database'),
-      deleteDeviceKey: step('key'),
-      deleteLegacyKeys: step('legacy'),
       forgetAutoBackupPassword: step('auto backup password'),
       deleteExports: step('exports'),
       clearCapturedNotifications: step('capture'),
       deleteErrorReports: step('reports'),
       unpairWifiSync: step('unpair'),
-      signOutGoogle: step('google'),
       deleteSyncFiles: deleteSyncFiles ?? step('sync files'),
       clearPreferences: step('prefs'),
       markNotOnboarded: () => log.add('onboarding'),
@@ -52,10 +49,7 @@ void main() {
       deleteSyncFiles: () => SyncOutbox.deleteAllSyncFiles(docs),
     ).reset();
     expect(Directory('${docs.path}/sync').existsSync(), isFalse);
-    expect(
-      log,
-      containsAllInOrder(['session', 'database', 'unpair', 'google']),
-    );
+    expect(log, containsAllInOrder(['session', 'database', 'unpair']));
     expect(log.last, 'onboarding');
   });
 
@@ -64,7 +58,7 @@ void main() {
     () async {
       final log = <String>[];
       await expectLater(
-        service(log: log, failing: 'key').reset(),
+        service(log: log, failing: 'database').reset(),
         throwsA(isA<StateError>()),
       );
       expect(log, contains('prefs'));

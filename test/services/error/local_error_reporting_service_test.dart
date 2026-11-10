@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/utils/log_level.dart';
+import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/models/log_entry.dart';
+import 'package:ledger_zero/services/error/diagnostic_environment.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/services.dart';
@@ -27,9 +29,86 @@ void main() {
   });
 
   tearDown(() async {
+    LocalErrorReportingService.crashReportsEnabled = false;
+    LocalErrorReportingService.loadEnvironment =
+        DiagnosticEnvironment.fromPlatform;
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
+  });
+
+  group('diagnostic report header', () {
+    const pixel = DiagnosticEnvironment(
+      appName: 'LedgerZero',
+      version: '0.1.0',
+      buildNumber: '7',
+      androidSdk: 36,
+      androidRelease: '16',
+      deviceModel: 'Google Pixel 8',
+      locale: 'de_DE',
+      schemaVersion: AppDatabase.currentSchemaVersion,
+    );
+    const header =
+        'App: LedgerZero 0.1.0 (build 7)\n'
+        'Android: 16 (SDK 36)\n'
+        'Device: Google Pixel 8\n'
+        'Locale: de_DE\n'
+        'Database schema: ${AppDatabase.currentSchemaVersion}';
+
+    setUp(() {
+      LocalErrorReportingService.loadEnvironment = () async => pixel;
+    });
+
+    test('names app version and build, Android, device, locale and schema '
+        'with crash reports off and nothing logged', () async {
+      LocalErrorReportingService.crashReportsEnabled = false;
+
+      final report = await LocalErrorReportingService().buildDiagnosticReport();
+
+      expect(report, startsWith('DIAGNOSTIC REPORT\n'));
+      expect(report, contains(header));
+      expect(report, endsWith(LocalErrorReportingService.nothingStoredLine));
+    });
+
+    test('comes before the log entries', () async {
+      final service = LocalErrorReportingService();
+      await service.log(
+        LogEntry(
+          timestamp: DateTime.utc(2026, 11, 10, 8),
+          level: LogLevel.warning,
+          message: 'Sync skipped',
+        ),
+      );
+
+      final report = await service.buildDiagnosticReport();
+
+      expect(report, startsWith('DIAGNOSTIC REPORT\n'));
+      final headerAt = report.indexOf(header);
+      final entryAt = report.indexOf(
+        '[2026-11-10T08:00:00.000Z] WARNING: Sync skipped',
+      );
+      expect(headerAt, greaterThan(0));
+      expect(entryAt, greaterThan(headerAt));
+      expect(
+        report,
+        isNot(contains(LocalErrorReportingService.nothingStoredLine)),
+      );
+    });
+
+    test('is still written when the platform does not answer', () async {
+      // The real loader: no package_info or device_info plugin in a test.
+      LocalErrorReportingService.loadEnvironment =
+          DiagnosticEnvironment.fromPlatform;
+
+      final report = await LocalErrorReportingService().buildDiagnosticReport();
+
+      expect(report, contains('App: unavailable'));
+      expect(report, contains('Locale: '));
+      expect(
+        report,
+        contains('Database schema: ${AppDatabase.currentSchemaVersion}'),
+      );
+    });
   });
 
   test('LocalErrorReportingService writes logs and reads them back', () async {

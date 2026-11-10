@@ -1,29 +1,29 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/connection.dart';
-import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
-import 'package:ledger_zero/services/security/crypto/secure_random.dart';
-import 'package:ledger_zero/services/security/device_key_store.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 /// Onboarding step 1: explains where the data lives and offers the app
 /// lock.
 ///
-/// "Continue" creates the database key in [DeviceKeyStore] (removing any
-/// half-created database and key material from an earlier attempt or an
-/// older version) and opens the session. When a database exists that the
-/// stored device key opens (the onboarding flag was lost, not the data),
-/// nothing is deleted: the session opens on it and onboarding is finished
-/// at once. Turning the app lock on asks for the fingerprint/face or
-/// device PIN once, so the user knows it works.
+/// "Continue" opens the database session. When a database with accounts
+/// exists (the onboarding flag was lost, not the data), nothing is deleted:
+/// the session opens on it and onboarding is finished at once. A database
+/// without accounts (an earlier onboarding stopped at the first-account
+/// step) is opened and onboarding goes on; a damaged one, or one from an
+/// early test version, is replaced. Back from the first-account step, the
+/// session this onboarding opened is kept and "Continue" returns to that
+/// step. Turning the app lock on asks for the fingerprint/face or device
+/// PIN once, so the user knows it works.
 class SecuritySetupScreen extends ConsumerStatefulWidget {
   const SecuritySetupScreen({super.key});
 
@@ -82,37 +82,53 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
       context,
     )!.setupExistingDataKept;
     var keptExisting = false;
+    final auth = ref.read(authProvider);
+    if (!auth.isOnboarded &&
+        auth.hasUnlocked &&
+        ref.read(sessionProvider).isOpen) {
+      // Back here from the first-account step: this onboarding already
+      // opened the session. Keep it (the database is not "existing data",
+      // and onboarding is not done yet).
+      try {
+        await ref.read(appLockEnabledProvider.notifier).set(_useAppLock);
+      } catch (e, stackTrace) {
+        Logger.error('Saving the app lock choice failed', e, stackTrace);
+      }
+      router.goNamed('first-account');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      return;
+    }
     try {
       final session = ref.read(sessionProvider.notifier);
       await session.close();
-      final keyStore = ref.read(deviceKeyStoreProvider);
-      final existing = await _existingDataKey(keyStore);
-      if (existing != null) {
-        // Real data from before: the onboarding flag was lost, not the
-        // database. One tap must not destroy it.
-        Logger.warning(
-          'Onboarding found an existing database that the device key '
-          'opens; keeping it',
-        );
-        session.open(existing);
-        zeroBytes(existing);
-        keptExisting = true;
-      } else {
-        // A database left by an abandoned earlier onboarding is keyed with
-        // a key that no longer exists.
-        await deleteDatabaseFiles();
-        await ref.read(legacyKeyMigrationProvider).deleteLeftovers();
-        final dek = await keyStore.create();
-        session.open(dek);
-        zeroBytes(dek);
+      final file = await databaseFile();
+      switch (await checkDatabaseFile(file)) {
+        case DatabaseFileState.usable:
+          // Real data from before: the onboarding flag was lost, not the
+          // database. One tap must not destroy it.
+          keptExisting = _hasAccounts(file);
+          if (keptExisting) {
+            Logger.warning(
+              'Onboarding found an existing database with accounts; '
+              'keeping it',
+            );
+          }
+        case DatabaseFileState.damaged:
+        case DatabaseFileState.tooOld:
+          await deleteDatabaseFiles();
+        case DatabaseFileState.missing:
+          break;
       }
+      session.open();
       await ref.read(appLockEnabledProvider.notifier).set(_useAppLock);
       if (keptExisting) {
         ref.read(authProvider.notifier).setOnboarded(true);
       }
       ref.read(authProvider.notifier).setAuthenticated(true);
     } catch (e, stackTrace) {
-      Logger.error('Onboarding key setup failed', e, stackTrace);
+      Logger.error('Onboarding setup failed', e, stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -135,32 +151,16 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
     }
   }
 
-  /// The stored device key when a database file exists and opens with it;
-  /// `null` when there is no data to keep (or no key).
-  static Future<Uint8List?> _existingDataKey(DeviceKeyStore keyStore) async {
-    final file = await databaseFile();
-    if (!file.existsSync()) {
-      return null;
-    }
-    final Uint8List? dek;
+  /// Whether the database [file] has an account (open accounts or not).
+  static bool _hasAccounts(File file) {
+    final db = sqlite.sqlite3.open(file.path);
     try {
-      dek = await keyStore.read();
-    } catch (e, stackTrace) {
-      Logger.warning('Onboarding could not read the device key', e, stackTrace);
-      return null;
+      return db.select('SELECT 1 FROM accounts LIMIT 1').isNotEmpty;
+    } on sqlite.SqliteException {
+      return false;
+    } finally {
+      db.close();
     }
-    if (dek == null) {
-      return null;
-    }
-    try {
-      if (SqlCipher.canOpen(file, RawSqlCipherKey(dek))) {
-        return dek;
-      }
-    } catch (e, stackTrace) {
-      Logger.warning('Onboarding could not check the database', e, stackTrace);
-    }
-    zeroBytes(dek);
-    return null;
   }
 
   @override
@@ -180,6 +180,11 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
               ),
               const SizedBox(height: 16),
               Text(l10n.setupDeviceExplanation),
+              const SizedBox(height: 16),
+              Text(
+                l10n.dataLossWarning,
+                key: const Key('setup_data_loss_warning'),
+              ),
               const SizedBox(height: 24),
               SwitchListTile(
                 key: const Key('setup_app_lock'),

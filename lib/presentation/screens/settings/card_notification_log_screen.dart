@@ -270,6 +270,11 @@ class _CardNotificationLogScreenState
         CaptureHoldReason.noAccount => l10n.cardNotificationsHeldNoAccount,
         CaptureHoldReason.foreignCurrency =>
           l10n.cardNotificationsHeldForeignCurrency,
+        CaptureHoldReason.unclear => l10n.cardNotificationsHeldUnclear,
+        CaptureHoldReason.severalAmounts =>
+          l10n.cardNotificationsHeldSeveralAmounts,
+        // Asked on the Card notifications screen, never a blocker.
+        CaptureHoldReason.replacesAuthorisation => null,
       };
     }
     // The status of a duplicate says it already.

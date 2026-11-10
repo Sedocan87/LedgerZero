@@ -6,17 +6,7 @@ import 'package:ledger_zero/services/backup/backup_format.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
-import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:path/path.dart' as p;
-
-/// Where an encrypted backup can be uploaded.
-enum BackupCloudTarget { googleDrive }
-
-/// No cloud storage is set up for uploads.
-class BackupUploadNotConfiguredException extends BackupException {
-  const BackupUploadNotConfiguredException()
-    : super('No cloud storage is configured');
-}
 
 /// Creates encrypted backups (format v2, see [BackupFormat]).
 ///
@@ -24,14 +14,12 @@ class BackupUploadNotConfiguredException extends BackupException {
 /// plaintext backup. For a readable copy use the JSON/CSV export.
 class BackupService {
   final AppDatabase _db;
-  final GoogleDriveService? _googleDriveService;
   final BackupScheduler? _backupScheduler;
   final ExportFileService _files;
   final KdfParams Function() _kdf;
 
   BackupService(
     this._db, {
-    this._googleDriveService,
     this._backupScheduler,
     ExportFileService? files,
     KdfParams Function()? kdf,
@@ -79,56 +67,19 @@ class BackupService {
   }
 
   /// Records now as the last backup time (for the backup reminder). Call
-  /// it after the share sheet handed the file on or the upload succeeded,
-  /// not when the file was merely written: a cancelled share sheet must not
-  /// silence the reminder.
+  /// it after the share sheet handed the file on or the file was saved
+  /// through the system file picker ("Save to…"), not when the file was
+  /// merely written: a cancelled share sheet or picker must not silence the
+  /// reminder. The automatic backups on the phone never call it.
   Future<void> recordBackupCompleted() async {
     await _backupScheduler?.recordBackupSuccess();
   }
 
-  /// Writes an unencrypted copy of the open database to [target].
-  ///
-  /// Under SQLCipher `VACUUM INTO` would copy the main database's key, so the
-  /// copy is made with `ATTACH ... KEY ''` + `sqlcipher_export`. Plain SQLite
-  /// (only possible in tests) falls back to `VACUUM INTO`.
+  /// Writes a consistent copy of the open database to [target] with
+  /// `VACUUM INTO` (the schema version, `user_version`, is copied too).
   Future<void> writePlaintextSnapshot(File target) async {
     await _deleteDatabaseFiles(target);
-    if (await _db.hasCipherSupport) {
-      final version = await _db.customSelect('PRAGMA user_version').getSingle();
-      final userVersion = version.data.values.first as int;
-      await _db.customStatement("ATTACH DATABASE ? AS lz_export KEY ''", [
-        target.path,
-      ]);
-      try {
-        await _db.customSelect("SELECT sqlcipher_export('lz_export')").get();
-        await _db.customStatement(
-          'PRAGMA lz_export.user_version = $userVersion',
-        );
-      } finally {
-        await _db.customStatement('DETACH DATABASE lz_export');
-      }
-    } else {
-      await _db.customStatement('VACUUM INTO ?', [target.path]);
-    }
-  }
-
-  /// Uploads [backupFile] to [target]. Errors are not swallowed: a failed
-  /// upload throws.
-  Future<void> uploadBackupToCloud(
-    File backupFile,
-    BackupCloudTarget? target,
-  ) async {
-    final filename = p.basename(backupFile.path);
-    switch (target) {
-      case BackupCloudTarget.googleDrive:
-        final drive = _googleDriveService;
-        if (drive == null) {
-          throw const BackupUploadNotConfiguredException();
-        }
-        await drive.uploadBackup(backupFile, filename);
-      case null:
-        throw const BackupUploadNotConfiguredException();
-    }
+    await _db.customStatement('VACUUM INTO ?', [target.path]);
   }
 
   static Future<void> _deleteIfExists(File file) async {

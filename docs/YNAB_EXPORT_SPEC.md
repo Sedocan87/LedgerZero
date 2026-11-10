@@ -10,21 +10,36 @@ UI in `lib/presentation/screens/settings/import/ynab/`.
 
 Two sources are supported:
 
-1. **nYNAB CSV export** (current YNAB web app): the `Register` and `Budget`
-   CSV files from YNAB's export ZIP, picked separately (any file name).
-2. **YNAB 4 budget folder** (`*.ynab4`, legacy desktop app).
+1. **nYNAB CSV export** (current YNAB web app): the `Register` and the
+   `Budget` (in newer exports `Plan`) CSV files of YNAB's export, taken
+   out of the export ZIP (`YnabImportService.readExportZip`) or picked
+   separately (any file name).
+2. **YNAB 4 budget folder** (`*.ynab4`, legacy desktop app), as a ZIP of
+   the folder (`parseYnab4Zip`) or as the folder itself (`parseYnab4`).
+
+In the export ZIP the two files are told apart by their header line (the
+register has `Outflow` and `Inflow`, the budget file `Month` and
+`Budgeted` or `Assigned`); a CSV whose header says nothing is taken by its
+name (`Register`, `Budget`, `Plan`). The exact header row of YNAB's
+current "Plan" export was not available when this was written: `Assigned`
+is accepted next to `Budgeted` on that assumption, and a budget file with
+neither stops the import with an error rather than being skipped.
 
 The YNAB API is not used.
 
 ## 1. nYNAB Register CSV
 
-Header names are matched exactly. Required: `Account`, `Date`, `Payee`,
-`Outflow`, `Inflow` (missing ones are listed in the error). Optional:
-`Category Group`, `Category`, `Memo`, `Cleared`. Other columns (e.g. `Flag`)
-are ignored. Rows shorter than the header are skipped.
+Header names are matched ignoring case and surrounding spaces. The file is
+comma-separated, or tab-separated (YNAB's export for budgets whose number
+format has a decimal comma); the delimiter is read from the header line.
+Required: `Account`, `Date`, `Payee`, `Outflow`, `Inflow` (missing ones are
+listed in the error). Optional: `Category Group`, `Category`, `Memo`,
+`Cleared`. Other columns (e.g. `Flag`) are ignored. Rows shorter than the
+header are skipped.
 
 - **Date**: one format for the whole file, detected once: the first of
-  `MM/dd/yyyy`, `dd/MM/yyyy`, `yyyy-MM-dd`, `dd.MM.yyyy` that parses
+  `MM/dd/yyyy`, `dd/MM/yyyy`, `yyyy-MM-dd`, `dd.MM.yyyy`, `yyyy/MM/dd`,
+  `dd-MM-yyyy`, `yyyy.MM.dd` (YNAB's date settings) that parses
   *every* row strictly (no roll-over: `13/05/2025` never becomes a date in
   2026). A file whose days never exceed 12 is read as `MM/dd/yyyy` (YNAB's
   US default); every format that fits is listed in
@@ -38,15 +53,31 @@ are ignored. Rows shorter than the header are skipped.
   (currency symbols and either decimal style accepted; empty = 0), stored in
   minor units. The decimal separator is inferred once from all amount
   cells of both files (`inferDecimalSeparator`), so an export without
-  decimals (`€1.234`) is read as thousands.
+  decimals (`€1.234`) is read as thousands. YNAB writes the budget's
+  currency symbol into every cell; when `MoneyParser` does not know it
+  (`R1 234.56`, `1 234,56 Kč`, `Rp 1.234`, `RM`, `lei`, `฿`), whatever
+  stands before the first and after the last digit is dropped (a minus
+  sign or an opening parenthesis there still negates). A non-empty cell
+  that is not a number even then stops the import
+  (`YnabImportFailure.invalidAmount`, the cell in the error); it is never
+  read as 0.
 - **Cleared**: values starting with `R` are reconciled, `C` cleared,
   anything else uncleared.
 - **Accounts**: one per distinct `Account` name. The type is guessed from the
   name (`checking`, `saving`, `credit`/`card`, `cash`; default checking).
   The CSV has no closed flag; all accounts are imported as open. It has no
-  tracking flag either: an account whose rows are only `Starting Balance`
-  and transfer legs gets `onBudget: false` (the preview switch overrides
-  it per account).
+  tracking flag either, so `onBudget` is inferred from the trace YNAB
+  leaves: a transfer between two budget accounts has no category on
+  either leg, a transfer between a budget account and a tracking account
+  always has one on the budget-side leg (the spending category,
+  `Uncategorized`, or `Inflow: Ready to Assign` for money coming back).
+  An account with rows of its own (anything but `Starting Balance` and
+  transfer legs) is a budget account. An account without such rows gets
+  `onBudget: false` when a leg facing it in a budget account carries a
+  category, stays on budget when it has such legs and none carries one
+  (a savings account that is only topped up), and gets `onBudget: false`
+  when there is no such leg at all (a house, a loan). The preview switch
+  overrides it per account.
 - **Categories**: every distinct `Category Group` / `Category` pair of the
   register, plus every pair of Budget.csv that the register lacks
   (`YnabImportData.categoriesOnlyInBudget` counts those).
@@ -63,10 +94,17 @@ are ignored. Rows shorter than the header are skipped.
 
 ## 2. nYNAB Budget CSV
 
-Optional for parsing but required by the UI. Uses `Month`, `Category Group`,
-`Category`, `Budgeted` (all four must exist, otherwise the file is ignored).
-`Activity` and `Available` are ignored; LedgerZero recalculates them from
-the transactions.
+Optional for parsing (an empty file is no error) but required by the UI.
+Called `Budget.csv`, in newer exports `Plan.csv`. Uses `Month`, `Category
+Group`, `Category` and the amount column, which is `Budgeted` or
+`Assigned`; a file with only the combined `Category Group/Category` column
+is split at the first colon. A non-empty file that lacks one of them stops
+the import with `YnabImportFailure.missingBudgetColumns` (the missing
+names in the error) instead of being skipped: a skipped budget file left
+every category at 0 budgeted and all past spending overspent. Comma- or
+tab-separated and header names matched like the register's. `Activity`
+and `Available` are ignored; LedgerZero recalculates them from the
+transactions.
 
 - **Month**: `MMM yyyy` / `MMMM yyyy` with English month names (e.g.
   `Jan 2024`; parsed with the `en_US` locale whatever the app language),
@@ -78,6 +116,25 @@ the transactions.
 
 The folder must contain `Budget.ymeta` and a `data*` subfolder with a device
 folder holding `Budget.yfull` (JSON). Tombstoned entities are skipped.
+
+**ZIP.** `parseYnab4` reads the folder by path. Android 11 and later do
+not let an app read another app's non-media files by path, so a folder
+picked with the system picker is usually unreadable there (not verified
+on a device). `parseYnab4Zip` reads a ZIP of the folder instead, picked as
+a single file, which works on every Android version. The ZIP may hold the
+`.ynab4` folder or its content at the top; the bundle's root is where the
+shallowest `Budget.ymeta` lies, and `__MACOSX` entries are ignored.
+
+**Which `Budget.yfull`.** A budget used on several computers has one
+folder per device, each with its own full budget file, and some are stale.
+`Budget.ymeta` names the current data folder (`relativeDataFolderName`).
+In it, every `devices/*.ydevice` describes a device: `deviceGUID` (its
+folder), `hasFullKnowledge` and `knowledgeInFullBudgetFile` (a version per
+device, e.g. `A-120,B-45`). The file of the device with full knowledge and
+the highest versions is imported (`knowledge` breaks ties). A bundle
+without readable metadata falls back to the first `Budget.yfull` by path,
+so the choice is the same every time. Changes that exist only as `.ydiff`
+files newer than the chosen full budget file are not applied.
 
 Read from `Budget.yfull`: `accounts` (name, type, `hidden` = closed,
 `onBudget`), `payees`, `masterCategories` (groups, `isHidden`) with their
