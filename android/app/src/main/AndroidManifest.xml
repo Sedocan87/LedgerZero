@@ -1,10 +1,22 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- The camera plugin (QR scanner for Wi-Fi sync pairing) declares CAMERA
+         itself, plus permissions for recording video that the app never
+         uses: the scanner opens the camera without audio and saves nothing.
+         (The manifest merger adds READ_EXTERNAL_STORAGE on its own wherever
+         a library asks for WRITE_EXTERNAL_STORAGE.) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
+    <!-- Pairing also works by typing the code, so a device without a camera
+         can still install the app. -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false"/>
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -76,6 +88,17 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <!-- flutter_zxing depends on image_picker for a "scan a picture from
+             the gallery" button that the app does not show. Its file provider
+             and its request to Google Play services for the photo picker
+             module are therefore left out of the app. -->
+        <provider
+            android:name="io.flutter.plugins.imagepicker.ImagePickerFileProvider"
+            android:authorities="${applicationId}.flutter.image_provider"
+            tools:node="remove" />
+        <service
+            android:name="com.google.android.gms.metadata.ModuleDependencies"
+            tools:node="remove" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

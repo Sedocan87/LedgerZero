@@ -36,8 +36,15 @@ This document outlines the platform-specific implementations, configurations, an
   - `VIBRATE`: For haptic feedback.
   - `POST_NOTIFICATIONS`: For local notifications (sync alerts, reminders).
   - `RECEIVE_BOOT_COMPLETED`: Lets scheduled local notifications survive a reboot.
-- **Camera** (`CAMERA`, added by `mobile_scanner`): only for scanning the
-  Wi-Fi sync pairing code; asked when the scanner opens.
+- **Camera** (`CAMERA`, added by the `camera` plugin): only for scanning the
+  Wi-Fi sync pairing code; asked when the scanner opens. The code is read on
+  the phone by `flutter_zxing` (ZXing C++ through FFI). There is no Google
+  ML Kit and no Play services in the scanner, so it reports nothing to
+  anyone. The app manifest removes what the plugins declare beyond that
+  (`RECORD_AUDIO`, the external-storage permissions, `image_picker`'s file
+  provider and photo-picker module request) and marks the camera as optional
+  (`android.hardware.camera.any`, `required="false"`): the pairing code can
+  also be typed.
 - **Local network**: Wi-Fi sync listens on TCP 47321 and sends/receives UDP
   broadcasts on 47322 while the app is open. See
   [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md#local-wi-fi).

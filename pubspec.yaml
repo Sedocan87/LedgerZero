@@ -78,7 +78,10 @@ dependencies:
   sqlite3: ^3.7.1
   http: ^1.6.0 # Drive media download client
   qr_flutter: ^4.1.0
-  mobile_scanner: ^7.4.2
+  # QR scanner for Wi-Fi sync pairing: ZXing C++ through FFI on top of the
+  # camera plugin. No Google ML Kit and no Play services, so nothing in the
+  # scanner reports usage or diagnostics to anyone.
+  flutter_zxing: ^3.1.1
 
 dev_dependencies:
   flutter_test:
