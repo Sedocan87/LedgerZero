@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/core/constants/default_categories.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
+import 'package:ledger_zero/core/constants/icon_tint.dart';
 
 /// Picks the icon a category is shown with.
 ///
@@ -380,46 +381,6 @@ abstract final class CategoryIconResolver {
     Colors.brown,
   ];
 
-  /// The shade of each family used on light surfaces, worked out once.
-  static final Map<MaterialColor, Color> _lightShades = {};
-
-  /// A light surface a little darker than the app's (white rows, light grey
-  /// cards), so the result has a margin on every real one.
-  static const Color _lightReference = Color(0xFFE8E8E8);
-
-  static double _contrast(Color a, Color b) {
-    final la = a.computeLuminance();
-    final lb = b.computeLuminance();
-    final hi = la > lb ? la : lb;
-    final lo = la > lb ? lb : la;
-    return (hi + 0.05) / (lo + 0.05);
-  }
-
-  /// The lightest of shades 700, 800 and 900 of [swatch] that stands out
-  /// (3.3:1) on a faint badge of itself over a light surface; families that
-  /// stay too pale (amber, orange) are darkened further.
-  static Color _lightShade(MaterialColor swatch) => _lightShades.putIfAbsent(
-    swatch,
-    () {
-      bool readable(Color c) =>
-          _contrast(
-            c,
-            Color.alphaBlend(c.withValues(alpha: 0.14), _lightReference),
-          ) >=
-          3.3;
-      for (final shade in [swatch.shade700, swatch.shade800, swatch.shade900]) {
-        if (readable(shade)) {
-          return shade;
-        }
-      }
-      var hsl = HSLColor.fromColor(swatch.shade900);
-      while (!readable(hsl.toColor()) && hsl.lightness > 0.1) {
-        hsl = hsl.withLightness(hsl.lightness - 0.03);
-      }
-      return hsl.toColor();
-    },
-  );
-
   /// The colour family a category is shown in.
   static MaterialColor swatchFor({
     String? icon,
@@ -452,10 +413,7 @@ abstract final class CategoryIconResolver {
       return Color(color);
     }
     final swatch = swatchFor(icon: icon, id: id, name: name);
-    if (brightness == Brightness.dark) {
-      return swatch.shade300;
-    }
-    return _lightShade(swatch);
+    return IconTint.of(swatch, brightness);
   }
 
   /// The background of a round avatar with a white icon (category list):
@@ -470,6 +428,9 @@ abstract final class CategoryIconResolver {
     if (color != null) {
       return Color(color);
     }
-    return _lightShade(swatchFor(icon: icon, id: id, name: name));
+    return IconTint.of(
+      swatchFor(icon: icon, id: id, name: name),
+      Brightness.light,
+    );
   }
 }

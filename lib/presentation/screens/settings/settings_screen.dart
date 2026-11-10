@@ -15,6 +15,7 @@ import 'package:ledger_zero/presentation/providers/notification_capture_provider
 import 'package:ledger_zero/presentation/providers/notification_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/app_cache.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
+import 'package:ledger_zero/presentation/screens/settings/widgets/settings_icon.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
 import 'package:ledger_zero/presentation/widgets/security/reset_app_dialog.dart';
 import 'dart:async';
@@ -163,7 +164,10 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               // Currency
               ListTile(
-                leading: const Icon(Icons.attach_money),
+                leading: const SettingsIcon(
+                  Icons.attach_money,
+                  color: Colors.green,
+                ),
                 title: Text(l10n.currency),
                 subtitle: Text(settings.currency),
                 onTap: () async {
@@ -185,7 +189,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
               // Date Format
               ListTile(
-                leading: const Icon(Icons.calendar_today),
+                leading: const SettingsIcon(
+                  Icons.calendar_today,
+                  color: Colors.blue,
+                ),
                 title: Text(l10n.dateFormat),
                 subtitle: Text(dateFormatLabel(settings.dateFormat)),
                 onTap: () async {
@@ -216,7 +223,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
               // Number Format
               ListTile(
-                leading: const Icon(Icons.numbers),
+                leading: const SettingsIcon(
+                  Icons.numbers,
+                  color: Colors.indigo,
+                ),
                 title: Text(l10n.numberFormat),
                 subtitle: Text(switch (settings.numberFormat) {
                   AppNumberFormat.system => l10n.numberFormatSystem,
@@ -253,7 +263,10 @@ class SettingsScreen extends ConsumerWidget {
               // else in the app is week-based.
               // Theme
               ListTile(
-                leading: const Icon(Icons.brightness_6),
+                leading: const SettingsIcon(
+                  Icons.brightness_6,
+                  color: Colors.deepPurple,
+                ),
                 title: Text(l10n.theme),
                 subtitle: Text(switch (themeState.mode) {
                   ThemeMode.system => l10n.systemTheme,
@@ -283,7 +296,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
               // Accessibility
               ListTile(
-                leading: const Icon(Icons.accessibility),
+                leading: const SettingsIcon(
+                  Icons.accessibility,
+                  color: Colors.teal,
+                ),
                 title: Text(l10n.accessibility),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -295,7 +311,10 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
               SwitchListTile(
-                secondary: const Icon(Icons.animation),
+                secondary: const SettingsIcon(
+                  Icons.animation,
+                  color: Colors.pink,
+                ),
                 title: Text(l10n.reducedMotion),
                 value: themeState.reducedMotion,
                 onChanged: (value) {
@@ -304,7 +323,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
               // Language
               ListTile(
-                leading: const Icon(Icons.language),
+                leading: const SettingsIcon(
+                  Icons.language,
+                  color: Colors.lightBlue,
+                ),
                 title: Text(l10n.language),
                 subtitle: Text(
                   settings.language == null
@@ -353,7 +375,10 @@ class SettingsScreen extends ConsumerWidget {
                       );
                   return accountsAsync.when(
                     data: (accounts) => ListTile(
-                      leading: const Icon(Icons.account_balance_wallet),
+                      leading: const SettingsIcon(
+                        Icons.account_balance_wallet,
+                        color: Colors.cyan,
+                      ),
                       title: Text(l10n.defaultAccount),
                       subtitle: Text(
                         accounts
@@ -424,7 +449,10 @@ class SettingsScreen extends ConsumerWidget {
                       );
                   return categoriesAsync.when(
                     data: (categories) => ListTile(
-                      leading: const Icon(Icons.category),
+                      leading: const SettingsIcon(
+                        Icons.category,
+                        color: Colors.orange,
+                      ),
                       title: Text(l10n.defaultCategory),
                       subtitle: Text(
                         categories
@@ -493,7 +521,10 @@ class SettingsScreen extends ConsumerWidget {
             title: l10n.notificationSettings,
             children: [
               SwitchListTile(
-                secondary: const Icon(Icons.event_note),
+                secondary: const SettingsIcon(
+                  Icons.event_note,
+                  color: Colors.deepOrange,
+                ),
                 title: Text(l10n.scheduledTransactionNotifications),
                 value: settings.scheduledTransactionNotifications,
                 onChanged: (value) => unawaited(
@@ -503,7 +534,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               SwitchListTile(
-                secondary: const Icon(Icons.warning_amber),
+                secondary: const SettingsIcon(
+                  Icons.warning_amber,
+                  color: Colors.amber,
+                ),
                 title: Text(l10n.budgetAlertNotifications),
                 value: settings.budgetAlertNotifications,
                 onChanged: (value) => unawaited(
@@ -511,7 +545,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               SwitchListTile(
-                secondary: const Icon(Icons.sync),
+                secondary: const SettingsIcon(
+                  Icons.sync,
+                  color: Colors.lightBlue,
+                ),
                 title: Text(l10n.syncStatusNotifications),
                 value: settings.syncStatusNotifications,
                 onChanged: (value) => unawaited(
@@ -526,25 +563,28 @@ class SettingsScreen extends ConsumerWidget {
             title: l10n.securityAndData,
             children: [
               ListTile(
-                leading: const Icon(Icons.help),
+                leading: const SettingsIcon(Icons.help, color: Colors.blue),
                 title: Text(l10n.helpAndSupport),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.pushNamed('help'),
               ),
               ListTile(
-                leading: const Icon(Icons.lock),
+                leading: const SettingsIcon(Icons.lock, color: Colors.red),
                 title: Text(l10n.securitySettings),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/security'),
               ),
               ListTile(
-                leading: const Icon(Icons.sync),
+                leading: const SettingsIcon(
+                  Icons.sync,
+                  color: Colors.lightBlue,
+                ),
                 title: Text(l10n.syncSettings),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/sync'),
               ),
               ListTile(
-                leading: const Icon(Icons.backup),
+                leading: const SettingsIcon(Icons.backup, color: Colors.green),
                 title: Text(l10n.backupAndExport),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/backup'),
@@ -557,14 +597,20 @@ class SettingsScreen extends ConsumerWidget {
             title: l10n.settingsManageSection,
             children: [
               ListTile(
-                leading: const Icon(Icons.upload_file),
+                leading: const SettingsIcon(
+                  Icons.upload_file,
+                  color: Colors.teal,
+                ),
                 title: Text(l10n.importCsv),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/import-csv'),
               ),
               ListTile(
                 key: const Key('settings.importYnab'),
-                leading: const Icon(Icons.move_down),
+                leading: const SettingsIcon(
+                  Icons.move_down,
+                  color: Colors.indigo,
+                ),
                 title: Text(l10n.ynabImportTitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/import-ynab'),
@@ -574,7 +620,10 @@ class SettingsScreen extends ConsumerWidget {
               if (ref.watch(notificationCaptureChannelProvider).isSupported)
                 ListTile(
                   key: const Key('settings.cardNotifications'),
-                  leading: const Icon(Icons.credit_card),
+                  leading: const SettingsIcon(
+                    Icons.credit_card,
+                    color: Colors.purple,
+                  ),
                   title: Text(l10n.cardNotifications),
                   subtitle: Text(l10n.cardNotificationsSubtitle),
                   // Capture that stopped, and payments that wait.
@@ -597,26 +646,35 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ListTile(
                 key: const Key('settings.rules'),
-                leading: const Icon(Icons.rule),
+                leading: const SettingsIcon(
+                  Icons.rule,
+                  color: Colors.deepPurple,
+                ),
                 title: Text(l10n.rules),
                 subtitle: Text(l10n.rulesSettingsSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/rules'),
               ),
               ListTile(
-                leading: const Icon(Icons.people),
+                leading: const SettingsIcon(Icons.people, color: Colors.orange),
                 title: Text(l10n.payees),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/payees'),
               ),
               ListTile(
-                leading: const Icon(Icons.attach_money),
+                leading: const SettingsIcon(
+                  Icons.attach_money,
+                  color: Colors.lightGreen,
+                ),
                 title: Text(l10n.incomeAndSalaries),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/income'),
               ),
               ListTile(
-                leading: const Icon(AppIcons.calendar),
+                leading: const SettingsIcon(
+                  AppIcons.calendar,
+                  color: Colors.blue,
+                ),
                 title: Text(l10n.scheduledTransactions),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/settings/scheduled-transactions'),
@@ -629,14 +687,17 @@ class SettingsScreen extends ConsumerWidget {
             title: l10n.advancedSettings,
             children: [
               ListTile(
-                leading: const Icon(Icons.cleaning_services),
+                leading: const SettingsIcon(
+                  Icons.cleaning_services,
+                  color: Colors.brown,
+                ),
                 title: Text(l10n.clearCache),
                 onTap: () => clearCache(context),
               ),
               ListTile(
-                leading: Icon(
+                leading: const SettingsIcon(
                   Icons.delete_forever,
-                  color: Theme.of(context).colorScheme.error,
+                  color: Colors.red,
                 ),
                 title: Text(
                   l10n.factoryReset,
