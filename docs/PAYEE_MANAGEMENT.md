@@ -11,6 +11,13 @@ Payees are created implicitly: when a transaction is saved with a payee name
 that does not exist yet (compared case-insensitively), `TransactionService`
 creates it. CSV and YNAB imports create payees the same way.
 
+In the transaction form the payee field suggests existing payees whose
+name contains the typed text. Tapping a suggestion picks that payee. The
+keyboard's "Next" keeps the typed text as it is, unless it is exactly an
+existing payee's name (ignoring case), which picks that payee; it never
+takes the first suggestion, so "Corner" can be entered next to an
+existing "Corner Shop".
+
 ## Payee list
 
 * Search by name (case-insensitive substring).

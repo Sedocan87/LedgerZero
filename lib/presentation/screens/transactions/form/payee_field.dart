@@ -12,6 +12,11 @@ import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 /// knows the typed text. Typing anything that is not the selected payee's
 /// name reports [onTextChanged] (the form then forgets the selected payee,
 /// so a payee can be cleared or replaced by a new name).
+///
+/// The keyboard's "Next" keeps the typed text: it selects an existing payee
+/// only when the text is that payee's name (ignoring case), never the first
+/// suggestion, so a new payee whose name is part of an existing one ("Corner"
+/// next to "Corner Shop") can be entered.
 class PayeeField extends ConsumerWidget {
   const PayeeField({
     super.key,
@@ -27,6 +32,15 @@ class PayeeField extends ConsumerWidget {
   final ValueChanged<Payee> onSelected;
   final ValueChanged<String> onTextChanged;
   final VoidCallback? onSubmitted;
+
+  /// The payee in [payees] named [text] (trimmed, ignoring case), if any.
+  static Payee? exactMatch(List<Payee> payees, String text) {
+    final query = text.trim().toLowerCase();
+    if (query.isEmpty) {
+      return null;
+    }
+    return payees.where((p) => p.name.toLowerCase() == query).firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,8 +66,14 @@ class PayeeField extends ConsumerWidget {
           label: l10n.payee,
           textInputAction: TextInputAction.next,
           onChanged: onTextChanged,
-          onFieldSubmitted: (_) {
-            onFieldSubmitted();
+          onFieldSubmitted: (text) {
+            final match = exactMatch(payees, text);
+            if (match != null && match.name != text) {
+              textController.text = match.name;
+            }
+            if (match != null) {
+              onSelected(match);
+            }
             onSubmitted?.call();
           },
         );
