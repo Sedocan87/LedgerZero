@@ -535,9 +535,13 @@ class TransactionService {
 
   /// Soft-deletes several transactions and everything linked to them in
   /// one unit of work with one undo action.
+  ///
+  /// [recordUndo] is false for deletes the user did not make in the UI
+  /// (card capture taking back its own booking), like in [save].
   Future<TransactionChangeSetAction?> deleteMany(
     Iterable<String> ids, {
     bool allowReconciledChange = false,
+    bool recordUndo = true,
   }) async {
     final action = await _unitOfWork.run(() async {
       final rows = await _groupsOf(ids);
@@ -567,7 +571,9 @@ class TransactionService {
       );
     });
     if (action != null) {
-      _undoService.addAction(action);
+      if (recordUndo) {
+        _undoService.addAction(action);
+      }
       Logger.info('Transactions deleted: ${action.ids.length}');
     }
     return action;

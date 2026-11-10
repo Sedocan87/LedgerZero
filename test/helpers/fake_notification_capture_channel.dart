@@ -56,6 +56,7 @@ class FakeNotificationCaptureChannel implements NotificationCaptureChannel {
     CaptureStatus status, {
     String? transactionId,
     String? error,
+    bool byUser = false,
   }) async {
     final set = ids.toSet();
     for (final id in set) {
@@ -70,6 +71,7 @@ class FakeNotificationCaptureChannel implements NotificationCaptureChannel {
           status: status,
           transactionId: transactionId,
           error: error,
+          byUser: byUser,
         );
       }
     }

@@ -7785,6 +7785,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.} other{{count} payments were not added because they look like transactions you already have. If one was a separate purchase, tap Add anyway on it.}}'**
   String cardNotificationsDuplicatesBanner(int count);
+
+  /// Reason a captured notification waits for the user: it names an amount but nothing says a payment was made (e.g. an unknown wording)
+  ///
+  /// In en, this message translates to:
+  /// **'Has an amount, but does not clearly say that you paid'**
+  String get cardNotificationsHeldUnclear;
+
+  /// Reason a captured notification waits for the user: it lists several payments that could not be told apart
+  ///
+  /// In en, this message translates to:
+  /// **'Names several amounts: add each payment yourself'**
+  String get cardNotificationsHeldSeveralAmounts;
+
+  /// Question on a captured payment that may be the final amount of an earlier pre-authorisation (e.g. a fuel pump hold); the buttons are Replace and Add separately
+  ///
+  /// In en, this message translates to:
+  /// **'Is this the final amount of the {amount} that was reserved earlier? Replace changes that transaction; Add separately keeps both.'**
+  String cardNotificationsHeldReplaces(String amount);
+
+  /// Button: the captured payment replaces the amount of the earlier pre-authorisation
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get cardNotificationsReplace;
+
+  /// Button: the captured payment is booked as a transaction of its own, next to the earlier pre-authorisation
+  ///
+  /// In en, this message translates to:
+  /// **'Add separately'**
+  String get cardNotificationsAddSeparately;
+
+  /// Memo of a transaction booked from a pre-authorisation notification (pending / reserved amount)
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved amount, the final amount may differ'**
+  String get cardNotificationsAuthorisationMemo;
+
+  /// Title of the Home banner shown when card notification capture is not working or captured payments need the user
+  ///
+  /// In en, this message translates to:
+  /// **'Card notifications need a look'**
+  String get cardNotificationsAttentionTitle;
+
+  /// Home banner line: the user revoked notification access
+  ///
+  /// In en, this message translates to:
+  /// **'Notification access is off, so no payments are captured.'**
+  String get cardNotificationsAttentionAccess;
+
+  /// Home banner line: access is granted but the system has not bound the listener service
+  ///
+  /// In en, this message translates to:
+  /// **'Android has not connected the notification listener, so no payments are captured.'**
+  String get cardNotificationsAttentionListener;
+
+  /// Home banner line: the encrypted capture log had to be started over
+  ///
+  /// In en, this message translates to:
+  /// **'The capture storage was reset on {date}; notifications captured before then were lost.'**
+  String cardNotificationsAttentionStorageReset(String date);
+
+  /// Home banner line: captured notifications that could not be booked on their own
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 captured notification is waiting for you} other{{count} captured notifications are waiting for you}}'**
+  String cardNotificationsAttentionWaiting(int count);
+
+  /// Home banner line: booking captured payments failed with an error
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 payment could not be added} other{{count} payments could not be added}}'**
+  String cardNotificationsAttentionFailed(int count);
+
+  /// Accessibility label of the badge on Settings > Card notifications
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item needs your attention} other{{count} items need your attention}}'**
+  String cardNotificationsAttentionBadge(int count);
 }
 
 class _AppLocalizationsDelegate
