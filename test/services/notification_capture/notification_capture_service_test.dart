@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
@@ -117,6 +119,47 @@ void main() {
     final tx = (await t.transactions.getAllTransactions()).single;
     expect(tx.payeeId, 'p-rewe');
     expect(tx.categoryId, groceries);
+  });
+
+  test('a capture into a credit card follows the card rules: the spending '
+      'category\'s money moves to the payment category', () async {
+    final card = await t.addAccount(
+      name: 'Amex',
+      currency: 'EUR',
+      type: AccountType.credit,
+    );
+    channel.sources = [
+      CaptureSource(
+        packageName: 'bank.app',
+        label: 'My Bank',
+        accountId: card.id,
+      ),
+    ];
+    final groceries = await t.categoryId('Groceries');
+    final month = CalendarDate.startOfMonthUtc(
+      CalendarDate.normalize(postedAt),
+    );
+    await t.budgeting.setCategoryBudgetedAmount(groceries, 2000, month);
+    await t.payees.createPayee(
+      Payee(id: 'p-rewe', name: 'REWE', autoCategoryId: groceries),
+    );
+    capture('Kartenzahlung 30,00 EUR bei rewe');
+
+    await service.processPending();
+
+    final tx = (await t.transactions.getAllTransactions()).single;
+    expect(tx.accountId, card.id);
+    expect(tx.categoryId, groceries);
+    // 20 of the 30 were budgeted: they move to the payment category, the
+    // other 10 are credit overspending (card debt).
+    final perf = await t.budgeting.calculateBatchCategoryPerformance(month);
+    expect(perf[groceries]!['available'], -1000);
+    expect(perf[groceries]!['creditOverspent'], 1000);
+    expect(perf[CardPayments.categoryId(card.id)]!['available'], 2000);
+    expect(
+      (await t.budgeting.calculateCardPaymentStatus(card.id, month))!.missing,
+      1000,
+    );
   });
 
   test('a refund is an inflow', () async {

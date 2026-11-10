@@ -6,6 +6,7 @@ import 'package:ledger_zero/core/constants/default_categories.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -137,12 +138,25 @@ Future<int> saveAccountWithRelease(
 ) {
   final repository = ref.read(accountRepositoryProvider);
   final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
-  final budgeting = release.isEmpty ? null : ref.read(budgetingServiceProvider);
   return ref.read(unitOfWorkProvider).run(() async {
+    final existing = await repository.getAccountById(account.id);
+    // A card that leaves the budget or stops being a credit card: its
+    // payment category is hidden and gives back what it holds.
+    final releasesPayment =
+        existing != null &&
+        CardPayments.isActive(existing) &&
+        !CardPayments.isActive(account);
+    // Only read when something is released (it needs the database).
+    final budgeting = release.isEmpty && !releasesPayment
+        ? null
+        : ref.read(budgetingServiceProvider);
     await repository.updateAccount(account);
     var total = 0;
     for (final MapEntry(key: categoryId, value: amount) in release.entries) {
       total += await budgeting!.releaseFromCategory(categoryId, amount, month);
+    }
+    if (releasesPayment) {
+      total += await budgeting!.releasePaymentCategory(account.id, month);
     }
     return total;
   });

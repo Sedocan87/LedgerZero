@@ -5269,4 +5269,57 @@ class AppLocalizationsDe extends AppLocalizations {
   String ynabImportCurrencyFixed(String currency) {
     return 'Konten in Ihrem Budget verwenden die Budgetwährung ($currency), daher auch die importierten Konten.';
   }
+
+  @override
+  String get seedGroupCardPayments => 'Kreditkartenzahlungen';
+
+  @override
+  String get txPaymentCategory =>
+      'Eine Kreditkartenzahlungs-Kategorie kann nicht für eine Buchung verwendet werden. Wählen Sie die Kategorie, für die das Geld ausgegeben wurde; die Zahlungskategorie füllt sich selbst.';
+
+  @override
+  String cardPaymentMissing(String amount) {
+    return 'Noch offen: $amount';
+  }
+
+  @override
+  String get cardPaymentCovered => 'Kartensaldo gedeckt';
+
+  @override
+  String get cardPaymentCoverBalance => 'Kartensaldo decken';
+
+  @override
+  String get cardPaymentNothingMissing => 'Für diese Karte fehlt nichts.';
+
+  @override
+  String get budgetCreditOverspent =>
+      'Kreditüberziehung: Kartenausgaben, die diese Kategorie nicht decken konnte. Sie werden zu Kartenschulden und nicht vom „Zu budgetieren“ des nächsten Monats abgezogen.';
+
+  @override
+  String get helpCardPaymentsTitle => 'Kreditkartenzahlungen';
+
+  @override
+  String get helpCardPaymentsBody =>
+      'Jede Kreditkarte im Budget hat eine Zahlungskategorie mit ihrem Namen. Zahlen Sie mit der Karte, wandert das in der Ausgabenkategorie budgetierte Geld hierher und liegt bereit, wenn die Abrechnung kommt. Bezahlen Sie die Karte vom Girokonto, wird es wieder entnommen. Was die Kategorie nicht decken konnte, erscheint orange (Kreditüberziehung) und bleibt als Kartenschuld: Die Zahlungszeile zeigt es als noch offen.';
+
+  @override
+  String get helpCardPaymentsSteps =>
+      'Zahlen Sie wie gewohnt mit der Karte, mit der Kategorie der Ausgabe.\nBezahlen Sie die Karte mit einer Umbuchung vom Girokonto auf die Karte.\nBestehende Schulden oder orange Kategorien: Weisen Sie den offenen Betrag der Zahlungskategorie zu (lange drücken, Kartensaldo decken).';
+
+  @override
+  String get guideCreditCardsBody =>
+      'Kreditkarten: Eine Ausgabe mit der Karte verschiebt das Geld aus ihrer Kategorie in die Zahlungskategorie der Karte in der Gruppe Kreditkartenzahlungen. Reichte die Kategorie nicht, wird sie orange statt rot: Dieser Teil ist Kartenschuld und wird nicht vom „Zu budgetieren“ des nächsten Monats abgezogen. Weisen Sie der Zahlungskategorie Geld zu, um sie abzuzahlen.';
+
+  @override
+  String get accountCardPaymentTitle => 'Zahlungskategorie';
+
+  @override
+  String accountCardPaymentAvailable(String amount) {
+    return 'Zur Zahlung der Karte zurückgelegt: $amount';
+  }
+
+  @override
+  String categoryPaymentLocked(String card) {
+    return 'Dies ist die Zahlungskategorie der Karte $card. Sie trägt den Namen der Karte, bleibt in Kreditkartenzahlungen und kann nicht gelöscht werden, solange die Karte offen und im Budget ist.';
+  }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -36,6 +38,11 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
   bool _isLoading = false;
   Category? _existingCategory;
   int _transactionCount = 0;
+
+  /// The card whose payment category is being edited (see `CardPayments`):
+  /// its name follows the card, its group is Credit Card Payments and its
+  /// visibility follows the card, so only colour and icon can change.
+  Account? _paymentCard;
 
   /// Why the category being edited could not be loaded (the editor then
   /// shows the error instead of an empty form that would create a new one).
@@ -94,6 +101,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
         _notFound = true;
       } else {
         _existingCategory = category;
+        _paymentCard = CardPayments.byCategoryId(
+          await ref.read(accountRepositoryProvider).getAllAccounts(),
+        )[category.id];
         _nameController.text = category.name;
         _selectedGroupId = category.categoryGroupId;
         _isHidden = category.isHidden;
@@ -153,10 +163,13 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
       final now = DateTime.now();
 
       if (widget.categoryId != null && _existingCategory != null) {
+        final payment = _paymentCard != null;
         final updatedCategory = _existingCategory!.copyWith(
-          name: _nameController.text.trim(),
-          categoryGroupId: _selectedGroupId,
-          isHidden: _isHidden,
+          // A payment category keeps the card's name, its group and the
+          // visibility the card gives it.
+          name: payment ? null : _nameController.text.trim(),
+          categoryGroupId: payment ? null : _selectedGroupId,
+          isHidden: payment ? null : _isHidden,
           color: _selectedColor,
           icon: _selectedIcon,
         );
@@ -248,8 +261,17 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
+                    if (_paymentCard case final card?) ...[
+                      Text(
+                        l10n.categoryPaymentLocked(card.name),
+                        key: const Key('category.paymentLocked'),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     AppTextField(
                       controller: _nameController,
+                      readOnly: _paymentCard != null,
                       label: l10n.categoryName,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -270,20 +292,32 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                             labelText: l10n.categoryGroup,
                             border: const OutlineInputBorder(),
                           ),
-                          items: groups.map((group) {
-                            return DropdownMenuItem(
-                              value: group.id,
-                              child: Text(
-                                group.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedGroupId = value;
-                            });
-                          },
+                          items: groups
+                              .where(
+                                (group) =>
+                                    // Only payment categories live in the
+                                    // Credit Card Payments group.
+                                    group.id == _selectedGroupId ||
+                                    (group.id == CardPayments.groupId) ==
+                                        (_paymentCard != null),
+                              )
+                              .map((group) {
+                                return DropdownMenuItem(
+                                  value: group.id,
+                                  child: Text(
+                                    group.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              })
+                              .toList(),
+                          onChanged: _paymentCard != null
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    _selectedGroupId = value;
+                                  });
+                                },
                           validator: (value) =>
                               value == null ? l10n.fieldRequired : null,
                         );
@@ -293,11 +327,12 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                           LoadErrorView(error: e, stackTrace: s, compact: true),
                     ),
                     const SizedBox(height: 16),
-                    SwitchListTile(
-                      title: Text(l10n.hideCategory),
-                      value: _isHidden,
-                      onChanged: (val) => setState(() => _isHidden = val),
-                    ),
+                    if (_paymentCard == null)
+                      SwitchListTile(
+                        title: Text(l10n.hideCategory),
+                        value: _isHidden,
+                        onChanged: (val) => setState(() => _isHidden = val),
+                      ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.color,

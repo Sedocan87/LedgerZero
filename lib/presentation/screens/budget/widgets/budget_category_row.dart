@@ -230,6 +230,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
 
   void _showQuickActions() {
     final target = _target();
+    final payment = widget.viewModel.payment;
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -252,22 +253,51 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                   _autoAssign(AutoAssignRule.lastMonthBudgeted, target);
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.receipt_long_outlined),
-                title: Text(AppLocalizations.of(context)!.budgetLastMonthSpent),
-                onTap: () {
-                  Navigator.pop(context);
-                  _autoAssign(AutoAssignRule.lastMonthSpent, target);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.analytics_outlined),
-                title: Text(AppLocalizations.of(context)!.budgetAverageSpent),
-                onTap: () {
-                  Navigator.pop(context);
-                  _autoAssign(AutoAssignRule.averageSpent, target);
-                },
-              ),
+              // Nothing is spent from a payment category: it gets "cover
+              // the card balance" instead of the spending-based fills.
+              if (payment != null)
+                ListTile(
+                  key: const Key('budget.coverCardBalance'),
+                  leading: const Icon(Icons.credit_score_outlined),
+                  title: Text(
+                    AppLocalizations.of(context)!.cardPaymentCoverBalance,
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (payment.missing > 0) {
+                      _onSubmit(
+                        _currentBudgeted(target) + payment.missing,
+                        target,
+                      );
+                    } else {
+                      target.messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(target.l10n.cardPaymentNothingMissing),
+                        ),
+                      );
+                    }
+                  },
+                )
+              else ...[
+                ListTile(
+                  leading: const Icon(Icons.receipt_long_outlined),
+                  title: Text(
+                    AppLocalizations.of(context)!.budgetLastMonthSpent,
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _autoAssign(AutoAssignRule.lastMonthSpent, target);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.analytics_outlined),
+                  title: Text(AppLocalizations.of(context)!.budgetAverageSpent),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _autoAssign(AutoAssignRule.averageSpent, target);
+                  },
+                ),
+              ],
               ListTile(
                 leading: const Icon(Icons.money_off),
                 title: Text(AppLocalizations.of(context)!.budgetZeroOut),
@@ -318,6 +348,11 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
         alpha: 0.1,
       ); // M3 way: tertiaryContainer
       textColor = AppColors.success;
+    } else if (available < 0 && widget.viewModel.isCreditOverspent) {
+      // Credit overspending (card spending the category could not cover):
+      // card debt, not charged to next month's To Be Budgeted.
+      bubbleColor = AppColors.warning.withValues(alpha: 0.12);
+      textColor = AppColors.warning;
     } else if (available < 0) {
       bubbleColor = AppColors.expense.withValues(
         alpha: 0.1,
@@ -397,7 +432,27 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
                   ),
                 ],
               ),
-              if (standard && (budgeted > 0 || spent > 0)) ...[
+              if (widget.viewModel.payment case final payment?
+                  when payment.debt > 0 || payment.missing > 0) ...[
+                const SizedBox(height: 2),
+                Text(
+                  payment.missing > 0
+                      ? l10n?.cardPaymentMissing(
+                              fmt.formatMoney(payment.missing),
+                            ) ??
+                            ''
+                      : l10n?.cardPaymentCovered ?? '',
+                  key: Key('budget.cardMissing.${category.id}'),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: payment.missing > 0
+                        ? AppColors.warning
+                        : AppColors.success,
+                  ),
+                ),
+              ],
+              if (standard &&
+                  widget.viewModel.payment == null &&
+                  (budgeted > 0 || spent > 0)) ...[
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.full),
@@ -463,23 +518,30 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     );
 
     // Available Column (Bubble)
-    final availableCell = Container(
-      alignment: Alignment.centerRight,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: BorderRadius.circular(AppRadius.full),
-        ),
-        child: _FittedAmount(
-          available,
-          amountContext: AmountContext.available,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+    final availableBubble = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bubbleColor,
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      child: _FittedAmount(
+        available,
+        amountContext: AmountContext.available,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.bold,
         ),
       ),
+    );
+    final availableCell = Container(
+      alignment: Alignment.centerRight,
+      child: available < 0 && widget.viewModel.isCreditOverspent
+          ? Tooltip(
+              key: Key('budget.creditOverspent.${category.id}'),
+              message: l10n?.budgetCreditOverspent ?? '',
+              child: availableBubble,
+            )
+          : availableBubble,
     );
 
     // Progress Bar Mode (Comparison/Simple)

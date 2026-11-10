@@ -450,7 +450,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           clearIcon: _selectedIcon == null,
           updatedAt: DateTime.now().toUtc(),
         );
-        // One unit of work with the release.
+        // One unit of work with the release (and, for a card that leaves
+        // the budget or stops being a credit card, its payment category).
         released = await saveAccountWithRelease(ref, updatedAccount, release);
       } else {
         final newAccount = Account(

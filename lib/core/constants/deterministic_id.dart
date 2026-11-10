@@ -11,6 +11,8 @@ import 'package:uuid/uuid.dart';
 /// * seeded default group: `default-group:<name>`
 /// * seeded default category: `default-category:<group>/<name>`
 /// * scheduled occurrence: `scheduled:<scheduledId>:<yyyy-MM-dd>`
+/// * payment category of a credit card: `card-payment:<accountId>`
+/// * the "Credit Card Payments" group: `card-payment-group`
 abstract final class DeterministicId {
   /// Fixed LedgerZero namespace for all name-based ids. Never change it:
   /// existing ids are derived from it.
@@ -35,6 +37,15 @@ abstract final class DeterministicId {
   /// Id of a seeded default category.
   static String defaultCategory(String group, String name) =>
       of('default-category:$group/$name');
+
+  /// Id of the payment category of the credit-card account [accountId]
+  /// (see `CardPayments`): derived from the account, so every device that
+  /// has the account creates the same category row.
+  static String cardPayment(String accountId) => of('card-payment:$accountId');
+
+  /// Id of the "Credit Card Payments" group that holds the payment
+  /// categories.
+  static final String cardPaymentGroup = of('card-payment-group');
 
   /// Id of the transaction materialised from schedule [scheduledId] for the
   /// calendar day [date].

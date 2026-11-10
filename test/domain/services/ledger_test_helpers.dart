@@ -12,16 +12,24 @@ import 'package:ledger_zero/domain/services/undo_service.dart';
 
 import '../../helpers/test_database.dart';
 
-/// Budget invariant for [month]:
+/// Budget identity for [month] (docs/BUDGETING_RULES.md, "The budget
+/// identity"):
 ///
-/// SUM(available of every category) + To Be Budgeted
+/// SUM(available of every category, payment categories included)
+///   + To Be Budgeted
 ///   + held for later months (the budgets after it that the money arriving
 ///     after it does not cover)
-///   == SUM over on-budget accounts of (starting balance, once the account
-///      exists, + non-deleted, non-split-child rows dated before the next
-///      month).
+///   + credit overspending shown in the month
+///   == cash: SUM over on-budget accounts that are not budget credit cards
+///      of (starting balance, once the account exists, + non-deleted,
+///      non-split-child rows dated before the next month)
+///    + card income: SUM over budget credit cards of (a positive starting
+///      balance, once the card exists, + uncategorised inflows that reach
+///      To Be Budgeted, dated before the next month).
 ///
-/// See docs/BUDGETING_RULES.md, "The invariant".
+/// Without credit cards this is the old identity (SUM(available) + TBB +
+/// held == SUM(on-budget balances)). The right-hand side is computed here
+/// with raw SQL, independently of the service.
 Future<void> expectLedgerInvariant(TestDatabase t, DateTime month) async {
   final categories = await t.categories.getAllCategories();
   var available = 0;
@@ -30,19 +38,93 @@ Future<void> expectLedgerInvariant(TestDatabase t, DateTime month) async {
   }
   final tbb = await t.budgeting.calculateTBB(month);
   final held = await t.budgeting.calculateHeldForLaterMonths(month);
+  final credit = await t.budgeting.calculateCreditOverspending(month);
+  final money = await budgetMoneyThrough(t, month);
   expect(
-    available + tbb + held,
-    await onBudgetBalancesThrough(t, month),
+    available + tbb + held + credit,
+    money.cash + money.cardIncome,
     reason:
-        'SUM(available) + TBB + held for later months must equal '
-        'SUM(balances) for $month (available $available, TBB $tbb, '
-        'held $held)',
+        'SUM(available) + TBB + held + credit overspending must equal cash '
+        '+ card income for $month (available $available, TBB $tbb, '
+        'held $held, credit overspending $credit, cash ${money.cash}, '
+        'card income ${money.cardIncome})',
   );
 }
 
-/// SUM of the on-budget account balances counting rows dated before the
-/// month after [month]. A starting balance counts from the month the
-/// account was created in, or from its first transaction if earlier.
+/// The right-hand side of the budget identity for [month] (see
+/// [expectLedgerInvariant]), from raw SQL.
+Future<({int cash, int cardIncome})> budgetMoneyThrough(
+  TestDatabase t,
+  DateTime month,
+) async {
+  final end = CalendarDate.endOfMonthUtc(month);
+  final firstDates = await t.budgets.getFirstTransactionDates();
+  var cash = 0;
+  var cardIncome = 0;
+  for (final a in await t.accounts.getAllAccounts()) {
+    if (!a.onBudget) {
+      continue;
+    }
+    final card = isBudgetCard(a);
+    // The local calendar day of creation, as in the service.
+    final createdAt = a.createdAt;
+    final created = createdAt == null
+        ? null
+        : CalendarDate.today(now: createdAt);
+    final first = firstDates[a.id];
+    final start = created == null
+        ? null
+        : (first != null && first.isBefore(created) ? first : created);
+    final exists = start == null || start.isBefore(end);
+    final rows = await _sum(
+      t,
+      'is_deleted = 0 AND parent_transaction_id IS NULL AND date < ? '
+      'AND account_id = ?',
+      [Variable.withDateTime(end), Variable.withString(a.id)],
+    );
+    if (!card) {
+      cash += (exists ? a.startingBalance : 0) + rows;
+      continue;
+    }
+    if (exists && a.startingBalance > 0) {
+      cardIncome += a.startingBalance;
+    }
+    cardIncome += await _sum(
+      t,
+      'is_deleted = 0 AND category_id IS NULL AND amount > 0 AND date < ? '
+      'AND account_id = ? '
+      'AND NOT EXISTS (SELECT 1 FROM transactions c '
+      'WHERE c.parent_transaction_id = transactions.id AND c.is_deleted = 0) '
+      'AND (transfer_account_id IS NULL OR transfer_account_id IN '
+      '(SELECT id FROM accounts WHERE on_budget = 0))',
+      [Variable.withDateTime(end), Variable.withString(a.id)],
+    );
+  }
+  return (cash: cash, cardIncome: cardIncome);
+}
+
+/// Whether [a] is a budget credit card (credit, on budget, shared), written
+/// out here rather than taken from the code under test.
+bool isBudgetCard(Account a) =>
+    a.type == AccountType.credit &&
+    a.onBudget &&
+    a.owner == AccountOwner.shared;
+
+Future<int> _sum(TestDatabase t, String where, List<Variable> args) async {
+  final row = await t.db
+      .customSelect(
+        'SELECT COALESCE(SUM(amount), 0) AS total FROM transactions '
+        'WHERE $where',
+        variables: args,
+      )
+      .getSingle();
+  return row.read<int>('total');
+}
+
+/// SUM of the on-budget account balances (cards included) counting rows
+/// dated before the month after [month]. A starting balance counts from
+/// the month the account was created in, or from its first transaction if
+/// earlier.
 Future<int> onBudgetBalancesThrough(TestDatabase t, DateTime month) async {
   final end = CalendarDate.endOfMonthUtc(month);
   final firstDates = await t.budgets.getFirstTransactionDates();
@@ -51,7 +133,6 @@ Future<int> onBudgetBalancesThrough(TestDatabase t, DateTime month) async {
     if (!a.onBudget) {
       continue;
     }
-    // The local calendar day of creation, as in the service.
     final createdAt = a.createdAt;
     final created = createdAt == null
         ? null

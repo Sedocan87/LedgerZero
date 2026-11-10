@@ -4,9 +4,12 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
+import 'package:ledger_zero/domain/services/budgeting_service.dart'
+    show CardPaymentStatus;
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
@@ -97,6 +100,20 @@ final tbbProvider = FutureProvider.autoDispose.family<int, DateTime>((
   ref.watch(ledgerChangesProvider);
   return ref.watch(budgetingServiceProvider).calculateTBB(month);
 });
+
+/// The payment category of budget credit card [accountId] in the current
+/// month (what it holds, what is still missing to pay the card); null when
+/// the account is not a budget credit card. For the card's account screen.
+final cardPaymentStatusProvider = FutureProvider.autoDispose
+    .family<CardPaymentStatus?, String>((ref, accountId) {
+      ref.watch(ledgerChangesProvider);
+      return ref
+          .watch(budgetingServiceProvider)
+          .calculateCardPaymentStatus(
+            accountId,
+            ref.watch(currentMonthProvider),
+          );
+    });
 
 /// Income of a budget month, shown under To Be Budgeted.
 ///
@@ -253,13 +270,29 @@ class BudgetCategoryViewModel {
   final int available;
   final int goalTarget;
 
+  /// The credit part (positive) of a negative [available]: card spending
+  /// the category could not cover (shown in the warning colour when it is
+  /// all of the overspending; cash overspending is in the error colour).
+  final int creditOverspent;
+
+  /// For a credit card's payment category: what it holds and what is still
+  /// missing to pay the card; null for every other category.
+  final CardPaymentStatus? payment;
+
   const BudgetCategoryViewModel({
     required this.category,
     required this.budgeted,
     required this.activity,
     required this.available,
     required this.goalTarget,
+    this.creditOverspent = 0,
+    this.payment,
   });
+
+  /// Whether the category is overspent only by card spending (credit
+  /// overspending, which becomes card debt instead of being charged to To
+  /// Be Budgeted).
+  bool get isCreditOverspent => available < 0 && creditOverspent >= -available;
 }
 
 /// Id of the pseudo-group that collects hidden categories with money.
@@ -323,6 +356,15 @@ final budgetViewModelProvider =
         categories,
       );
 
+      // The credit cards' payment categories: what is still missing.
+      final payments = {
+        for (final MapEntry(key: accountId, value: status)
+            in (await budgetingService.calculateCardPaymentStatuses(
+              month,
+            )).entries)
+          CardPayments.categoryId(accountId): status,
+      };
+
       // Sort groups by sortOrder
       final sortedGroups = List<CategoryGroup>.from(groups)
         ..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
@@ -335,6 +377,8 @@ final budgetViewModelProvider =
           activity: catPerf?['activity'] ?? 0,
           available: catPerf?['available'] ?? 0,
           goalTarget: goalTargets[category.id] ?? 0,
+          creditOverspent: catPerf?['creditOverspent'] ?? 0,
+          payment: payments[category.id],
         );
       }
 

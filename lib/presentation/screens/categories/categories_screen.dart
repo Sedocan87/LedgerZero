@@ -9,6 +9,8 @@ import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -123,7 +125,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               in await ref
                   .read(categoryRepositoryProvider)
                   .getAllCategoryGroups())
-            if (g.id != group.id) g,
+            if (g.id != group.id && g.id != CardPayments.groupId) g,
         ]..sort((a, b) => (a.sortOrder ?? 0).compareTo(b.sortOrder ?? 0));
         if (!context.mounted) {
           return;
@@ -226,6 +228,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   Widget build(BuildContext context) {
     final groupsAsync = ref.watch(categoryGroupsWithCategoriesProvider);
     final l10n = AppLocalizations.of(context)!;
+    // The payment categories of open budget cards: no delete (see
+    // CardPayments); their group neither.
+    final protectedPayments = {
+      for (final a
+          in ref.watch(accountsProvider).valueOrNull ?? const <Account>[])
+        if (CardPayments.isActive(a)) CardPayments.categoryId(a.id),
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -387,10 +396,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           value: 'reorder',
                           child: Text(l10n.reorderCategories),
                         ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text(l10n.delete),
-                        ),
+                        if (groupWithCats.group.id != CardPayments.groupId)
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text(l10n.delete),
+                          ),
                       ],
                     ),
                   ],
@@ -428,10 +438,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                           value: 'edit',
                           child: Text(l10n.editCategory),
                         ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Text(l10n.delete),
-                        ),
+                        if (!protectedPayments.contains(category.id))
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text(l10n.delete),
+                          ),
                       ],
                       onSelected: (val) {
                         if (val == 'edit') {

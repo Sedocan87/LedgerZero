@@ -1,15 +1,22 @@
-// The budget identity (decision D3) on a real database:
+// The budget identity (decision D3, with credit cards) on a real database:
 //
-//   SUM over categories of available(M) + TBB(M) + held for later months(M)
-//     == SUM of on-budget account balances counting transactions up to
-//        end of M (a starting balance counts once the account exists)
+//   SUM over categories of available(M) (payment categories included)
+//     + TBB(M) + held for later months(M) + credit overspending(M)
+//     == cash(M) + card income(M)
 //
+// (see expectLedgerInvariant and docs/BUDGETING_RULES.md, "The budget
+// identity"),
 // plus targeted regression tests for the ledger-math findings.
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
+import 'package:ledger_zero/domain/services/account_service.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
@@ -46,27 +53,9 @@ void main() {
 
   tearDown(() => t.close());
 
-  /// SUM(available) over all categories at the end of [month].
-  Future<int> sumAvailable(DateTime month) async {
-    var total = 0;
-    for (final category in await t.categories.getAllCategories()) {
-      total += await t.budgeting.calculateCategoryAvailable(category.id, month);
-    }
-    return total;
-  }
-
-  Future<void> expectInvariant(DateTime month) async {
-    final available = await sumAvailable(month);
-    final tbb = await t.budgeting.calculateTBB(month);
-    final held = await t.budgeting.calculateHeldForLaterMonths(month);
-    expect(
-      available + tbb + held,
-      await onBudgetBalancesThrough(t, month),
-      reason:
-          'invariant at ${CalendarDate.monthKey(month)} '
-          '(available $available, TBB $tbb, held for later months $held)',
-    );
-  }
+  /// The budget identity (see [expectLedgerInvariant]).
+  Future<void> expectInvariant(DateTime month) =>
+      expectLedgerInvariant(t, month);
 
   test('invariant holds for a full two-month scenario', () async {
     final groceries = await t.categoryId('Groceries');
@@ -204,10 +193,20 @@ void main() {
     await expectInvariant(feb);
 
     // Hand-computed TBB for January:
-    // starting balances 1000 - 300 = 700; ready-to-assign rows: income
-    // 2000 + uncategorised split line 700 = 2700; budgeted 300 in January
-    // and 200 in February (assigned ahead, so not available in January).
-    expect(await t.budgeting.calculateTBB(jan), 70000 + 270000 - 30000 - 20000);
+    // starting balances 1000 (the card's 300 of existing debt is not
+    // budgeted money: its payment category shows it as missing);
+    // ready-to-assign rows: income 2000 + uncategorised split line 700 =
+    // 2700; budgeted 300 in January and 200 in February (assigned ahead, so
+    // not available in January).
+    expect(
+      await t.budgeting.calculateTBB(jan),
+      100000 + 270000 - 30000 - 20000,
+    );
+    // The 80 of dining on the card was funded (dining had 100 budgeted):
+    // it moved to the card's payment category.
+    final status = await t.budgeting.calculateCardPaymentStatus(card, jan);
+    expect(status, const CardPaymentStatus(available: 8000, balance: -38000));
+    expect(status!.missing, 30000);
     // Income for January excludes the split parent and the transfer.
     expect(await t.budgeting.calculateTotalIncomeForMonth(jan), 270000);
     // Spending for January: 150 + 80 + 70 + 50 (split lines, not parent).
@@ -241,16 +240,22 @@ void main() {
     });
 
     test(
-      'starting balances are budgetable (credit debt reduces TBB)',
+      'starting balances are budgetable; existing card debt is not '
+      'charged to TBB but shown as missing on the payment category',
       () async {
         await t.addAccount(name: 'Checking', startingBalance: 50000);
-        await t.addAccount(
+        final card = await t.addAccount(
           name: 'Card',
           type: AccountType.credit,
           startingBalance: -20000,
         );
         final thisMonth = CalendarDate.startOfMonthUtc(CalendarDate.today());
-        expect(await t.budgeting.calculateTBB(thisMonth), 30000);
+        expect(await t.budgeting.calculateTBB(thisMonth), 50000);
+        final status = await t.budgeting.calculateCardPaymentStatus(
+          card.id,
+          thisMonth,
+        );
+        expect(status!.missing, 20000);
         await expectInvariant(thisMonth);
       },
     );
@@ -375,7 +380,11 @@ void main() {
       expect(await t.budgeting.calculateTBB(feb), 75000);
       expect(await t.budgeting.calculateTBB(mar), 75000);
       final batch = await t.budgeting.calculateBatchCategoryPerformance(feb);
-      expect(batch[groceries], {'activity': 0, 'available': 0});
+      expect(batch[groceries], {
+        'activity': 0,
+        'available': 0,
+        'creditOverspent': 0,
+      });
       await expectInvariant(jan);
       await expectInvariant(feb);
       await expectInvariant(mar);
@@ -718,5 +727,653 @@ void main() {
       Map.fromEntries(await container.read(topPayeesProvider.future))['Shop'],
       10000,
     );
+  });
+
+  group('credit cards (YNAB payment categories)', () {
+    late String checking;
+    late String card;
+    late String payment;
+    late String groceries;
+    late String dining;
+    final mar = DateTime.utc(2024, 3, 1);
+
+    setUp(() async {
+      groceries = await t.categoryId('Groceries');
+      dining = await t.categoryId('Dining Out');
+      checking = (await t.addAccount(name: 'Checking')).id;
+      card = (await t.addAccount(name: 'Visa', type: AccountType.credit)).id;
+      payment = CardPayments.categoryId(card);
+      // 1,000 of income in January (both accounts exist from January).
+      await t.addTransaction(accountId: checking, amount: 100000, date: jan);
+      // A purchase and its return, so the card exists from January too.
+      await t.addTransaction(
+        accountId: card,
+        amount: -1,
+        categoryId: dining,
+        date: jan,
+      );
+      await t.addTransaction(
+        accountId: card,
+        amount: 1,
+        categoryId: dining,
+        date: jan,
+      );
+    });
+
+    Future<String> spend(
+      String account,
+      int amount, {
+      String? category,
+      DateTime? date,
+      String? transferTo,
+      List<SplitLineInput> splits = const [],
+    }) async => (await service.save(
+      TransactionInput(
+        accountId: account,
+        date: date ?? DateTime.utc(2024, 1, 10),
+        amount: amount,
+        categoryId: category,
+        transferAccountId: transferTo,
+        splits: splits,
+      ),
+    )).id;
+
+    Future<int> available(String category, [DateTime? month]) =>
+        t.budgeting.calculateCategoryAvailable(category, month ?? jan);
+
+    Future<Map<String, int>> performance(
+      String category, [
+      DateTime? m,
+    ]) async =>
+        (await t.budgeting.calculateBatchCategoryPerformance(
+          m ?? jan,
+        ))[category] ??
+        const {};
+
+    Future<CardPaymentStatus> status([DateTime? month]) async =>
+        (await t.budgeting.calculateCardPaymentStatus(card, month ?? jan))!;
+
+    Future<void> expectAll(List<DateTime> months) async {
+      for (final m in months) {
+        await expectInvariant(m);
+      }
+    }
+
+    // The table the owner agreed to (amounts in cents).
+    test('table 1: 50 of groceries on the card, groceries had 200 -> '
+        'groceries 150, Visa payment +50', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await spend(card, -5000, category: groceries);
+      expect(await available(groceries), 15000);
+      expect(await available(payment), 5000);
+      expect(await performance(payment), {
+        'activity': 5000,
+        'available': 5000,
+        'creditOverspent': 0,
+      });
+      expect((await status()).missing, 0);
+      expect(await t.budgeting.calculateTBB(jan), 80000);
+      await expectAll([jan, feb]);
+    });
+
+    test('table 2: paying the card 50 from checking -> Visa payment 0, TBB '
+        'unchanged', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await spend(card, -5000, category: groceries);
+      final before = await t.budgeting.calculateTBB(jan);
+      await spend(
+        checking,
+        -5000,
+        transferTo: card,
+        date: DateTime.utc(2024, 1, 20),
+      );
+      expect(await available(payment), 0);
+      expect((await performance(payment))['activity'], 0);
+      expect(await t.budgeting.calculateTBB(jan), before);
+      expect(await status(), const CardPaymentStatus(available: 0, balance: 0));
+      // Payments are not spending.
+      expect(await t.budgeting.calculateTotalSpendingForMonth(jan), -5000);
+      await expectAll([jan, feb]);
+    });
+
+    test('table 3: 50 on the card, groceries had only 20 -> groceries -30 '
+        '(credit overspending), Visa +20, the 30 is debt; next month TBB is '
+        'not reduced', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 2000, jan);
+      await spend(card, -5000, category: groceries);
+      expect(await available(groceries), -3000);
+      expect(await performance(groceries), {
+        'activity': -5000,
+        'available': -3000,
+        'creditOverspent': 3000,
+      });
+      expect(await available(payment), 2000);
+      final s = await status();
+      expect(s.debt, 5000);
+      expect(s.missing, 3000);
+      expect(await t.budgeting.calculateCreditOverspending(jan), 3000);
+      final tbbJan = await t.budgeting.calculateTBB(jan);
+      expect(tbbJan, 98000);
+      // February: groceries starts at 0, To Be Budgeted is not charged.
+      expect(await available(groceries, feb), 0);
+      expect(await t.budgeting.calculateTBB(feb), tbbJan);
+      expect(await t.budgeting.calculateCreditOverspending(feb), 0);
+      expect((await status(feb)).missing, 3000);
+      await expectAll([jan, feb, mar]);
+    });
+
+    test('table 4: a refund on the card reverses the move', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await spend(card, -5000, category: groceries);
+      await spend(
+        card,
+        5000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 12),
+      );
+      expect(await available(groceries), 20000);
+      expect(await available(payment), 0);
+      expect((await status()).missing, 0);
+      await expectAll([jan, feb]);
+    });
+
+    test('table 5: a card added with 1,000 of existing debt -> TBB '
+        'unchanged, the payment category shows 1,000 still to cover', () async {
+      final thisMonth = CalendarDate.startOfMonthUtc(CalendarDate.today());
+      final before = await t.budgeting.calculateTBB(thisMonth);
+      final amex = await t.addAccount(
+        name: 'Amex',
+        type: AccountType.credit,
+        startingBalance: -100000,
+      );
+      expect(await t.budgeting.calculateTBB(thisMonth), before);
+      final s = (await t.budgeting.calculateCardPaymentStatus(
+        amex.id,
+        thisMonth,
+      ))!;
+      expect(s, const CardPaymentStatus(available: 0, balance: -100000));
+      expect(s.missing, 100000);
+      // Covering it: assign to the payment category, then pay.
+      expect(await t.budgeting.coverCardBalance(amex.id, thisMonth), 100000);
+      expect(await t.budgeting.calculateTBB(thisMonth), before - 100000);
+      expect(
+        (await t.budgeting.calculateCardPaymentStatus(
+          amex.id,
+          thisMonth,
+        ))!.missing,
+        0,
+      );
+      await expectInvariant(thisMonth);
+    });
+
+    test('a refund of unfunded spending cancels the debt, not the payment '
+        'category', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 2000, jan);
+      await spend(card, -5000, category: groceries);
+      await spend(
+        card,
+        2000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 12),
+      );
+      // -30 + 20 = -10, all credit; the payment category keeps its 20.
+      expect(await performance(groceries), {
+        'activity': -3000,
+        'available': -1000,
+        'creditOverspent': 1000,
+      });
+      expect(await available(payment), 2000);
+      expect((await status()).missing, 1000);
+      await expectAll([jan, feb]);
+    });
+
+    test('a refund after the card was paid makes the payment category '
+        'negative (YNAB): cash overspending, charged next month', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await spend(card, -5000, category: groceries);
+      await spend(
+        checking,
+        -5000,
+        transferTo: card,
+        date: DateTime.utc(2024, 1, 11),
+      );
+      await spend(
+        card,
+        5000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 12),
+      );
+      expect(await available(groceries), 20000);
+      expect(await available(payment), -5000);
+      expect((await performance(payment))['creditOverspent'], 0);
+      final tbbJan = await t.budgeting.calculateTBB(jan);
+      expect(await t.budgeting.calculateTBB(feb), tbbJan - 5000);
+      await expectAll([jan, feb]);
+    });
+
+    test('cash and credit overspending in one category: only the cash part '
+        'is charged next month', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 2000, jan);
+      await spend(
+        checking,
+        -3000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 5),
+      );
+      await spend(
+        card,
+        -4000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 6),
+      );
+      // 20 - 30 = -10 (cash), then 40 on the card with nothing left: -50,
+      // of which 40 credit.
+      expect(await performance(groceries), {
+        'activity': -7000,
+        'available': -5000,
+        'creditOverspent': 4000,
+      });
+      expect(await available(payment), 0);
+      final tbbJan = await t.budgeting.calculateTBB(jan);
+      expect(await t.budgeting.calculateTBB(feb), tbbJan - 1000);
+      expect((await status(feb)).missing, 4000);
+      await expectAll([jan, feb, mar]);
+    });
+
+    test('money assigned later in the month covers credit overspending: '
+        'it moves to the payment category', () async {
+      await spend(card, -5000, category: groceries);
+      expect(await available(payment), 0);
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 5000, jan);
+      expect(await available(groceries), 0);
+      expect(await available(payment), 5000);
+      await expectAll([jan]);
+    });
+
+    test('a cash refund into a credit-overspent category covers the card '
+        'spending', () async {
+      await spend(card, -5000, category: groceries);
+      await spend(
+        checking,
+        3000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 12),
+      );
+      expect(await available(groceries), -2000);
+      expect(await available(payment), 3000);
+      expect((await performance(groceries))['creditOverspent'], 2000);
+      await expectAll([jan, feb]);
+    });
+
+    test('card rows of one category are processed in date, created_at, id '
+        'order', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 3000, jan);
+      // Same day: the cash row was entered first, so it uses the money.
+      await spend(
+        checking,
+        -3000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 7),
+      );
+      await spend(
+        card,
+        -3000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 7),
+      );
+      expect(await available(payment), 0);
+      expect((await performance(groceries))['creditOverspent'], 3000);
+      // A card row dated earlier is funded first.
+      await spend(
+        card,
+        -1000,
+        category: dining,
+        date: DateTime.utc(2024, 1, 2),
+      );
+      await t.budgeting.setCategoryBudgetedAmount(dining, 1000, jan);
+      await spend(
+        checking,
+        -1000,
+        category: dining,
+        date: DateTime.utc(2024, 1, 3),
+      );
+      expect(await available(payment), 1000);
+      expect((await performance(dining))['creditOverspent'], 0);
+      await expectAll([jan, feb]);
+    });
+
+    test('a split on the card with lines in several categories', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await t.budgeting.setCategoryBudgetedAmount(dining, 1000, jan);
+      await spend(
+        card,
+        -8000,
+        splits: [
+          SplitLineInput(amount: -5000, categoryId: groceries),
+          SplitLineInput(amount: -3000, categoryId: dining),
+        ],
+      );
+      expect(await available(groceries), 15000);
+      expect(await available(dining), -2000);
+      expect((await performance(dining))['creditOverspent'], 2000);
+      expect(await available(payment), 6000);
+      expect((await status()).missing, 2000);
+      await expectAll([jan, feb]);
+    });
+
+    test('uncategorised card spending is unfunded debt; an uncategorised card '
+        'inflow is income', () async {
+      final before = await t.budgeting.calculateTBB(jan);
+      await spend(card, -4000);
+      expect(await t.budgeting.calculateTBB(jan), before);
+      expect((await status()).missing, 4000);
+      // A reward credited to the card.
+      await spend(card, 500, date: DateTime.utc(2024, 1, 15));
+      expect(await t.budgeting.calculateTBB(jan), before + 500);
+      expect(await t.budgeting.calculateTotalIncomeForMonth(jan), 100500);
+      expect((await status()).missing, 3500);
+      await expectAll([jan, feb]);
+    });
+
+    test('a cash advance puts the money into the payment category', () async {
+      await spend(card, -10000, transferTo: checking);
+      expect(await available(payment), 10000);
+      expect((await status()).missing, 0);
+      expect(await t.budgeting.calculateTBB(jan), 100000);
+      await expectAll([jan, feb]);
+    });
+
+    test('a balance transfer between two cards moves the funding with the '
+        'debt, at most what is there', () async {
+      final amex = (await t.addAccount(
+        name: 'Amex',
+        type: AccountType.credit,
+      )).id;
+      final amexPayment = CardPayments.categoryId(amex);
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 3000, jan);
+      await spend(card, -5000, category: groceries);
+      // Visa: debt 50, 30 funded. Amex pays off the whole Visa balance.
+      await spend(
+        amex,
+        -5000,
+        transferTo: card,
+        date: DateTime.utc(2024, 1, 20),
+      );
+      expect(await available(payment), 0);
+      expect(await available(amexPayment), 3000);
+      expect(await t.budgeting.calculateTBB(jan), 97000);
+      expect(
+        (await t.budgeting.calculateCardPaymentStatus(amex, jan))!.missing,
+        2000,
+      );
+      expect((await status()).missing, 0);
+      await expectAll([jan, feb]);
+    });
+
+    test('transfers between a card and an off-budget account', () async {
+      final savings = (await t.addAccount(
+        name: 'Savings',
+        type: AccountType.savings,
+        onBudget: false,
+        startingBalance: 500000,
+      )).id;
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await spend(card, -5000, category: groceries);
+      // Paying the card from savings without a category is money entering
+      // the budget through the card: To Be Budgeted grows.
+      final before = await t.budgeting.calculateTBB(jan);
+      await spend(
+        savings,
+        -2000,
+        transferTo: card,
+        date: DateTime.utc(2024, 1, 12),
+      );
+      expect(await t.budgeting.calculateTBB(jan), before + 2000);
+      expect(await available(payment), 5000);
+      // With a category it is a refund-like inflow into that category.
+      await spend(
+        savings,
+        -1000,
+        transferTo: card,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 13),
+      );
+      expect(await available(groceries), 16000);
+      expect(await available(payment), 4000);
+      // Moving money from the card to savings without a category is
+      // unfunded card debt; with one it is card spending of the category.
+      await spend(
+        card,
+        -700,
+        transferTo: savings,
+        date: DateTime.utc(2024, 1, 14),
+      );
+      expect(await t.budgeting.calculateTBB(jan), before + 2000);
+      await expectAll([jan, feb]);
+    });
+
+    test('budgets of later months (Held) with card spending', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 5000, jan);
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 30000, feb);
+      await t.budgeting.setCategoryBudgetedAmount(payment, 10000, mar);
+      await spend(
+        card,
+        -8000,
+        category: groceries,
+        date: DateTime.utc(2024, 2, 5),
+      );
+      await spend(
+        card,
+        -6000,
+        category: groceries,
+        date: DateTime.utc(2024, 1, 5),
+      );
+      expect(await available(payment, feb), 5000 + 8000);
+      expect(await t.budgeting.calculateHeldForLaterMonths(jan), 40000);
+      await expectAll([jan, feb, mar, DateTime.utc(2024, 4)]);
+    });
+
+    test('assigning, moving money and filling work with the payment '
+        'category', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await t.budgeting.moveMoney(groceries, payment, 5000, jan);
+      expect(await available(payment), 5000);
+      await t.budgeting.copyBudgetFromPreviousMonth(feb);
+      expect(await t.budgeting.calculateCategoryAvailable(payment, feb), 10000);
+      await expectAll([jan, feb]);
+    });
+
+    test('closing the card or taking it off budget releases its payment '
+        'category to TBB', () async {
+      final accountService = AccountService(
+        accountRepository: t.accounts,
+        maintenance: t.maintenance,
+        ruleRepository: t.rules,
+        unitOfWork: t.unitOfWork,
+        budgeting: t.budgeting,
+        categoryRepository: t.categories,
+      );
+      await t.budgeting.setCategoryBudgetedAmount(payment, 4000, jan);
+      final before = await t.budgeting.calculateTBB(jan);
+      expect(await accountService.setClosed(card, true, month: jan), 4000);
+      expect(await t.budgeting.calculateTBB(jan), before + 4000);
+      expect((await t.categories.getCategoryById(payment))!.isHidden, isTrue);
+      await expectAll([jan]);
+      await accountService.setClosed(card, false, month: jan);
+      expect((await t.categories.getCategoryById(payment))!.isHidden, isFalse);
+
+      // Off budget: the card's rows leave the budget, the payment category
+      // holds only its budgets, which are released.
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await spend(card, -5000, category: groceries);
+      await t.budgeting.setCategoryBudgetedAmount(payment, 3000, jan);
+      final account = (await t.accounts.getAccountById(card))!;
+      await t.accounts.updateAccount(account.copyWith(onBudget: false));
+      expect(await available(payment), 3000);
+      expect(await t.budgeting.releasePaymentCategory(card, jan), 3000);
+      expect(await available(payment), 0);
+      await expectAll([jan, feb]);
+    });
+
+    test('deleting the card deletes its payment category', () async {
+      final accountService = AccountService(
+        accountRepository: t.accounts,
+        maintenance: t.maintenance,
+        ruleRepository: t.rules,
+        unitOfWork: t.unitOfWork,
+        budgeting: t.budgeting,
+        categoryRepository: t.categories,
+      );
+      await t.budgeting.setCategoryBudgetedAmount(payment, 4000, jan);
+      await accountService.deleteAccount(card);
+      expect(await t.categories.getCategoryById(payment), isNull);
+      await expectAll([jan]);
+    });
+
+    test('payment-category activity and card payments are not spending in '
+        'the reports', () async {
+      await t.budgeting.setCategoryBudgetedAmount(groceries, 20000, jan);
+      await spend(card, -5000, category: groceries);
+      await spend(
+        checking,
+        -5000,
+        transferTo: card,
+        date: DateTime.utc(2024, 1, 20),
+      );
+      expect(await t.budgeting.calculateTotalSpendingForMonth(jan), -5000);
+      expect(await t.budgeting.calculateCategoryActivity(payment, jan), 0);
+    });
+
+    for (final seed in [1, 2, 3, 4, 5, 6, 7, 8]) {
+      test(
+        'randomised ledger with cards keeps the identity (seed $seed)',
+        () async {
+          final random = Random(seed);
+          final amex = (await t.addAccount(
+            name: 'Amex',
+            type: AccountType.credit,
+            startingBalance: -25000,
+          )).id;
+          final wallet = (await t.addAccount(name: 'Wallet')).id;
+          final savings = (await t.addAccount(
+            name: 'Savings',
+            onBudget: false,
+            startingBalance: 200000,
+          )).id;
+          await t.addTransaction(accountId: amex, amount: -100, date: jan);
+          await t.addTransaction(accountId: wallet, amount: 3000, date: jan);
+          final onBudget = [checking, wallet, card, amex];
+          final cards = [card, amex];
+          final cats = [
+            groceries,
+            dining,
+            await t.categoryId('Fun Money'),
+            await t.categoryId('Vacation'),
+          ];
+          final payments = [payment, CardPayments.categoryId(amex)];
+          final months = [jan, feb, mar, DateTime.utc(2024, 4)];
+          T pick<T>(List<T> list) => list[random.nextInt(list.length)];
+          int amount() => (random.nextInt(200) + 1) * 100;
+
+          for (var i = 0; i < 60; i++) {
+            final month = pick(months.take(3).toList());
+            final date = DateTime.utc(
+              month.year,
+              month.month,
+              1 + random.nextInt(27),
+            );
+            switch (random.nextInt(11)) {
+              case 0 || 1 || 2:
+                await spend(
+                  pick(onBudget),
+                  -amount(),
+                  category: pick(cats),
+                  date: date,
+                );
+              case 3:
+                await spend(
+                  pick(onBudget),
+                  amount(),
+                  category: pick(cats),
+                  date: date,
+                );
+              case 4:
+                await spend(
+                  pick(cards),
+                  random.nextBool() ? -amount() : amount(),
+                  date: date,
+                );
+              case 5:
+                await spend(
+                  pick([checking, wallet]),
+                  -amount(),
+                  transferTo: pick(cards),
+                  date: date,
+                );
+              case 6:
+                final from = pick(cards);
+                await spend(
+                  from,
+                  -amount(),
+                  transferTo: from == card ? amex : card,
+                  date: date,
+                );
+              case 7:
+                await spend(
+                  pick(cards),
+                  -amount(),
+                  transferTo: checking,
+                  date: date,
+                );
+              case 8:
+                await spend(
+                  savings,
+                  -amount(),
+                  transferTo: pick(cards),
+                  category: random.nextBool() ? pick(cats) : null,
+                  date: date,
+                );
+              case 9:
+                final a = amount();
+                final b = amount();
+                await spend(
+                  pick(cards),
+                  -(a + b),
+                  splits: [
+                    SplitLineInput(amount: -a, categoryId: pick(cats)),
+                    SplitLineInput(amount: -b, categoryId: pick(cats)),
+                  ],
+                  date: date,
+                );
+              default:
+                await t.budgeting.addToCategoryBudget(
+                  pick([...cats, ...payments]),
+                  amount(),
+                  pick(months),
+                );
+            }
+          }
+          if (random.nextBool()) {
+            await t.budgeting.moveMoney(cats.first, payments.first, 1500, feb);
+          }
+          await expectAll(months);
+          // Deterministic: the same numbers when computed again.
+          final first = await t.budgeting.calculateBatchCategoryPerformance(
+            feb,
+          );
+          expect(
+            await t.budgeting.calculateBatchCategoryPerformance(feb),
+            first,
+          );
+          // Per category and batch agree.
+          for (final c in [...cats, ...payments]) {
+            expect(
+              await t.budgeting.calculateCategoryAvailable(c, feb),
+              first[c]?['available'] ?? 0,
+            );
+          }
+        },
+      );
+    }
   });
 }

@@ -5236,4 +5236,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String ynabImportCurrencyFixed(String currency) {
     return 'Accounts in your budget use the budget currency ($currency), so the imported accounts do too.';
   }
+
+  @override
+  String get seedGroupCardPayments => 'Credit Card Payments';
+
+  @override
+  String get txPaymentCategory =>
+      'A credit card payment category cannot be used for a transaction. Pick the category the money was spent on; the payment category fills itself.';
+
+  @override
+  String cardPaymentMissing(String amount) {
+    return 'Still missing: $amount';
+  }
+
+  @override
+  String get cardPaymentCovered => 'Card balance covered';
+
+  @override
+  String get cardPaymentCoverBalance => 'Cover the card balance';
+
+  @override
+  String get cardPaymentNothingMissing => 'Nothing is missing for this card.';
+
+  @override
+  String get budgetCreditOverspent =>
+      'Credit overspending: card spending this category could not cover. It becomes card debt and is not taken from next month\'s To Be Budgeted.';
+
+  @override
+  String get helpCardPaymentsTitle => 'Credit card payments';
+
+  @override
+  String get helpCardPaymentsBody =>
+      'Each credit card in the budget has a payment category named after it. When you pay with the card, the money budgeted in the spending category moves here, so it is ready when the bill comes. Paying the card from your checking account takes it out again. What the category could not cover shows in orange (credit overspending) and stays as card debt: the payment row shows it as still missing.';
+
+  @override
+  String get helpCardPaymentsSteps =>
+      'Spend on the card as usual, with the category you spent on.\nPay the card with a transfer from checking to the card.\nExisting debt or orange categories: assign the missing amount to the payment category (long-press it, Cover the card balance).';
+
+  @override
+  String get guideCreditCardsBody =>
+      'Credit cards: spending on a card moves the money from its category to the card\'s payment category in the group Credit Card Payments. If the category did not have enough, it turns orange instead of red: that part is card debt, not taken from next month\'s To Be Budgeted. Assign money to the payment category to pay it off.';
+
+  @override
+  String get accountCardPaymentTitle => 'Payment category';
+
+  @override
+  String accountCardPaymentAvailable(String amount) {
+    return 'Set aside to pay the card: $amount';
+  }
+
+  @override
+  String categoryPaymentLocked(String card) {
+    return 'This is the payment category of the card $card. It is named after the card, stays in Credit Card Payments and cannot be deleted while the card is open and in the budget.';
+  }
 }

@@ -11,6 +11,10 @@ import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
+import 'package:ledger_zero/presentation/providers/budget_provider.dart';
+import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
+import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/presentation/widgets/charts/balance_trend_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/presentation/widgets/budget_currency_dialogs.dart';
@@ -87,12 +91,20 @@ class AccountDetailScreen extends ConsumerWidget {
       }
     }
     try {
-      await ref
+      final released = await ref
           .read(accountServiceProvider)
           .setClosed(accountId, closed, currency: relabel);
       if (closed) {
         messenger.showSnackBar(
-          SnackBar(content: Text(l10n.accountClosedMessage)),
+          SnackBar(
+            content: Text(
+              released > 0
+                  ? l10n.accountReleased(
+                      ref.read(appFormatterProvider).formatMoney(released),
+                    )
+                  : l10n.accountClosedMessage,
+            ),
+          ),
         );
       }
     } catch (e, st) {
@@ -329,6 +341,8 @@ class AccountDetailScreen extends ConsumerWidget {
           }
           return Column(
             children: [
+              if (CardPayments.isBudgetCard(account))
+                _CardPaymentCard(account: account),
               TransactionListChartWrapper(
                 accountId: accountId,
                 startingBalance: account.startingBalance,
@@ -345,6 +359,54 @@ class AccountDetailScreen extends ConsumerWidget {
         },
         loading: () => const AppLoadingIndicator(),
         error: (e, s) => LoadErrorView(error: e, stackTrace: s),
+      ),
+    );
+  }
+}
+
+/// A budget credit card's payment category: what is set aside to pay the
+/// card and what is still missing (see docs/BUDGETING_RULES.md, "Credit
+/// cards").
+class _CardPaymentCard extends ConsumerWidget {
+  const _CardPaymentCard({required this.account});
+
+  final Account account;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(cardPaymentStatusProvider(account.id)).valueOrNull;
+    if (status == null) {
+      return const SizedBox.shrink();
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final fmt = ref.watch(appFormatterProvider);
+    String money(int amount) =>
+        fmt.formatMoney(amount, currencyCode: account.currency);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Card(
+        key: const Key('account.cardPayment'),
+        child: ListTile(
+          leading: const Icon(Icons.credit_score_outlined),
+          title: Text(l10n.accountCardPaymentTitle),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.accountCardPaymentAvailable(money(status.available))),
+              Text(
+                status.missing > 0
+                    ? l10n.cardPaymentMissing(money(status.missing))
+                    : l10n.cardPaymentCovered,
+                style: TextStyle(
+                  color: status.missing > 0
+                      ? AppColors.warning
+                      : AppColors.success,
+                ),
+              ),
+            ],
+          ),
+          trailing: const InfoButton(HelpTopic.cardPayments),
+        ),
       ),
     );
   }

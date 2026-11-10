@@ -240,6 +240,38 @@ class BudgetRepositoryImpl implements BudgetRepository {
     }
   }
 
+  @override
+  Future<List<CardLedgerRow>> getCardLedgerRows(
+    DateTime endExclusive, {
+    required Set<String> cardIds,
+    required Set<String> paymentCategoryIds,
+    String? categoryId,
+  }) async {
+    try {
+      return await _budgetsDao.getCardLedgerRows(
+        endExclusive,
+        cardIds: cardIds,
+        paymentCategoryIds: paymentCategoryIds,
+        categoryId: categoryId,
+      );
+    } catch (e, stackTrace) {
+      Logger.error('Failed to read credit card rows', e, stackTrace);
+      throw DatabaseException('Failed to read credit card rows', e);
+    }
+  }
+
+  @override
+  Future<Map<String, int>> getBalanceChangesBefore(
+    DateTime endExclusive,
+  ) async {
+    try {
+      return await _budgetsDao.getBalanceChangesBefore(endExclusive);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to sum account balances', e, stackTrace);
+      throw DatabaseException('Failed to sum account balances', e);
+    }
+  }
+
   Budget _mapToDomain(db.Budget b) {
     return Budget(
       id: b.id,

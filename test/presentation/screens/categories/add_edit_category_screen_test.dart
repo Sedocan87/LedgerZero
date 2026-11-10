@@ -15,10 +15,15 @@ import '../../../mocks/repository_mocks.mocks.dart';
 void main() {
   late MockCategoryRepository categories;
   late MockTransactionRepository transactions;
+  late MockAccountRepository accounts;
 
   setUp(() {
     categories = MockCategoryRepository();
     transactions = MockTransactionRepository();
+    // The editor looks up whether the category is a card's payment
+    // category.
+    accounts = MockAccountRepository();
+    when(accounts.getAllAccounts()).thenAnswer((_) async => []);
     when(
       categories.watchAllCategoryGroups(),
     ).thenAnswer((_) => Stream.value([]));
@@ -37,6 +42,7 @@ void main() {
         overrides: [
           categoryRepositoryProvider.overrideWithValue(categories),
           transactionRepositoryProvider.overrideWithValue(transactions),
+          accountRepositoryProvider.overrideWithValue(accounts),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

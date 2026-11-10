@@ -8233,6 +8233,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accounts in your budget use the budget currency ({currency}), so the imported accounts do too.'**
   String ynabImportCurrencyFixed(String currency);
+
+  /// Name of the category group that holds one payment category per credit card
+  ///
+  /// In en, this message translates to:
+  /// **'Credit Card Payments'**
+  String get seedGroupCardPayments;
+
+  /// Transaction form: error when a transaction is categorised into a credit card payment category
+  ///
+  /// In en, this message translates to:
+  /// **'A credit card payment category cannot be used for a transaction. Pick the category the money was spent on; the payment category fills itself.'**
+  String get txPaymentCategory;
+
+  /// Budget row of a credit card payment category: what is still missing to pay the card in full
+  ///
+  /// In en, this message translates to:
+  /// **'Still missing: {amount}'**
+  String cardPaymentMissing(String amount);
+
+  /// Budget row of a credit card payment category: the money for the whole card balance is there
+  ///
+  /// In en, this message translates to:
+  /// **'Card balance covered'**
+  String get cardPaymentCovered;
+
+  /// Quick action of a credit card payment category: assign what is still missing to pay the card in full
+  ///
+  /// In en, this message translates to:
+  /// **'Cover the card balance'**
+  String get cardPaymentCoverBalance;
+
+  /// Snack bar after Cover the card balance when nothing was missing
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is missing for this card.'**
+  String get cardPaymentNothingMissing;
+
+  /// Tooltip and screen reader text of a category's available amount when it is negative because of credit card spending
+  ///
+  /// In en, this message translates to:
+  /// **'Credit overspending: card spending this category could not cover. It becomes card debt and is not taken from next month\'s To Be Budgeted.'**
+  String get budgetCreditOverspent;
+
+  /// Help sheet title: the credit card payment categories
+  ///
+  /// In en, this message translates to:
+  /// **'Credit card payments'**
+  String get helpCardPaymentsTitle;
+
+  /// Help sheet body: the credit card payment categories
+  ///
+  /// In en, this message translates to:
+  /// **'Each credit card in the budget has a payment category named after it. When you pay with the card, the money budgeted in the spending category moves here, so it is ready when the bill comes. Paying the card from your checking account takes it out again. What the category could not cover shows in orange (credit overspending) and stays as card debt: the payment row shows it as still missing.'**
+  String get helpCardPaymentsBody;
+
+  /// Help sheet steps (one per line): the credit card payment categories
+  ///
+  /// In en, this message translates to:
+  /// **'Spend on the card as usual, with the category you spent on.\nPay the card with a transfer from checking to the card.\nExisting debt or orange categories: assign the missing amount to the payment category (long-press it, Cover the card balance).'**
+  String get helpCardPaymentsSteps;
+
+  /// User guide, overspending chapter: paragraph about credit cards
+  ///
+  /// In en, this message translates to:
+  /// **'Credit cards: spending on a card moves the money from its category to the card\'s payment category in the group Credit Card Payments. If the category did not have enough, it turns orange instead of red: that part is card debt, not taken from next month\'s To Be Budgeted. Assign money to the payment category to pay it off.'**
+  String get guideCreditCardsBody;
+
+  /// Account screen of a credit card: title of the card's payment category figures
+  ///
+  /// In en, this message translates to:
+  /// **'Payment category'**
+  String get accountCardPaymentTitle;
+
+  /// Account screen of a credit card: what its payment category holds
+  ///
+  /// In en, this message translates to:
+  /// **'Set aside to pay the card: {amount}'**
+  String accountCardPaymentAvailable(String amount);
+
+  /// Category editor and categories screen: why a payment category cannot be renamed, moved or deleted
+  ///
+  /// In en, this message translates to:
+  /// **'This is the payment category of the card {card}. It is named after the card, stays in Credit Card Payments and cannot be deleted while the card is open and in the budget.'**
+  String categoryPaymentLocked(String card);
 }
 
 class _AppLocalizationsDelegate

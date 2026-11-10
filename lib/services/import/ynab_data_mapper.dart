@@ -13,6 +13,7 @@ import 'package:ledger_zero/services/import/ynab_import_service.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
@@ -45,8 +46,17 @@ import 'package:uuid/uuid.dart';
 /// * Accounts are created with a starting balance of 0. YNAB's own
 ///   "Starting Balance" row (category "Inflow: Ready to Assign" /
 ///   "Inflow: To be Budgeted") is imported as an uncategorised transaction,
-///   so it counts towards To Be Budgeted exactly once; a credit card's
-///   negative starting balance reduces it the same way.
+///   so it counts towards To Be Budgeted exactly once. A credit card's
+///   negative starting balance row is uncategorised card spending: existing
+///   debt, which does not reduce To Be Budgeted (as in YNAB) and shows as
+///   missing on the card's payment category.
+/// * nYNAB's "Credit Card Payments" group: each of its categories is named
+///   after a credit card account. The account becomes a credit card (the
+///   name heuristic aside), and the category maps onto that card's payment
+///   category (`CardPayments`), which receives its budgeted amounts; no
+///   ordinary category is created for it. One whose card is not imported
+///   as a budget card becomes an ordinary category, so its money is kept.
+///   Payments to a card are transfers like any other.
 /// * Transfers become two legs linked both ways (decision D4); see
 ///   [_pairTransfers]. A transfer row whose other leg is missing, or whose
 ///   both legs carry a category, is imported as a normal row without a
@@ -103,6 +113,24 @@ class YnabDataMapper {
         category == 'deferred income subcategory';
   }
 
+  /// Whether [groupName] is nYNAB's "Credit Card Payments" group: one
+  /// category per credit card account, named after the card.
+  static bool isCardPaymentGroup(String? groupName) =>
+      groupName?.trim().toLowerCase() == 'credit card payments';
+
+  /// The names of the cards that have a category in YNAB's Credit Card
+  /// Payments group.
+  static Set<String> cardPaymentNames(YnabImportData data) {
+    final groups = {
+      for (final g in data.categoryGroups)
+        if (isCardPaymentGroup(g.name)) g.id,
+    };
+    return {
+      for (final c in data.categories)
+        if (groups.contains(c.groupId)) c.name,
+    };
+  }
+
   /// Imports [data]; new accounts get [currency] (ISO code).
   Future<YnabImportSummary> importData(
     YnabImportData data, {
@@ -111,15 +139,20 @@ class YnabDataMapper {
     Logger.info('Starting YNAB import...');
 
     final summary = await _unitOfWork.run(() async {
-      // 1. Categories & Groups: "Group:Category" -> LedgerZero id
-      final categoryNameMap = await _importCategories(data);
-
-      // 2. Accounts (tracking accounts off budget)
+      // 1. Accounts (tracking accounts off budget). First: a budget credit
+      // card brings its payment category, which YNAB's Credit Card
+      // Payments category of the same name maps onto.
       final accountIdMap = await _importAccounts(data, currency);
       final onBudgetIds = {
         for (final a in data.accounts)
           if (a.onBudget && accountIdMap.containsKey(a.id)) accountIdMap[a.id]!,
       };
+
+      // 2. Categories & Groups: "Group:Category" -> LedgerZero id; the
+      // payment categories only for the budgets.
+      final categoryNameMap = await _importCategories(data);
+      final paymentMap = await _cardPaymentCategories(data, accountIdMap);
+      final budgetCategoryMap = {...categoryNameMap, ...paymentMap};
 
       // 3. Transactions (and Payees)
       final payees = _PayeeResolver(
@@ -143,7 +176,7 @@ class YnabDataMapper {
       );
 
       // 5. Budget Allocations
-      await _importBudgets(data, categoryNameMap);
+      await _importBudgets(data, budgetCategoryMap);
 
       return YnabImportSummary(
         accounts: data.accounts.length,
@@ -191,10 +224,29 @@ class YnabDataMapper {
     final existingGroups = await _categoryRepo.getAllCategoryGroups();
     final groupNameMap = {for (var g in existingGroups) g.name: g.id};
 
+    // YNAB's Credit Card Payments categories of the imported budget cards
+    // become those cards' payment categories ([_cardPaymentCategories]);
+    // any other one (its card is not a budget card here) is imported as an
+    // ordinary category, in an ordinary group: never into the app's own
+    // Credit Card Payments group, even when the names match.
+    final mapped = await _budgetCardNames(data);
+    for (final g in data.categoryGroups) {
+      if (isCardPaymentGroup(g.name) &&
+          groupNameMap[g.name] == CardPayments.groupId) {
+        groupNameMap.remove(g.name);
+      }
+    }
+
     // 1. Groups
     for (final yGroup in data.categoryGroups) {
       if (yGroup.name == 'Internal Master Category' ||
           yGroup.name.trim().toLowerCase() == 'inflow') {
+        continue;
+      }
+      if (isCardPaymentGroup(yGroup.name) &&
+          data.categories
+              .where((c) => c.groupId == yGroup.id)
+              .every((c) => mapped.contains(c.name))) {
         continue;
       }
       if (!groupNameMap.containsKey(yGroup.name)) {
@@ -220,7 +272,8 @@ class YnabDataMapper {
 
     final catNameMap = <String, String>{};
     for (var c in existingCategories) {
-      if (c.categoryGroupId != null) {
+      if (c.categoryGroupId != null &&
+          c.categoryGroupId != CardPayments.groupId) {
         final gName = groupIdToName[c.categoryGroupId!];
         if (gName != null) {
           catNameMap['$gName:${c.name}'] = c.id;
@@ -239,6 +292,9 @@ class YnabDataMapper {
 
       if (yCat.name == 'Uncategorized' ||
           isReadyToAssignCategory(sourceGroup.name, yCat.name)) {
+        continue;
+      }
+      if (isCardPaymentGroup(sourceGroup.name) && mapped.contains(yCat.name)) {
         continue;
       }
 
@@ -271,6 +327,49 @@ class YnabDataMapper {
     return catNameMap;
   }
 
+  /// The names of the YNAB Credit Card Payments categories whose card is
+  /// imported as a budget credit card (it has a payment category here).
+  Future<Set<String>> _budgetCardNames(YnabImportData data) async {
+    final names = cardPaymentNames(data);
+    final cards = {
+      for (final a in await _accountRepo.getAllAccounts())
+        if (CardPayments.isBudgetCard(a)) a.name,
+    };
+    return {
+      for (final a in data.accounts)
+        if (names.contains(a.name) && cards.contains(a.name)) a.name,
+    };
+  }
+
+  /// `Credit Card Payments:<card>` -> the payment category of the imported
+  /// budget card of that name (see `CardPayments`), so its budgeted
+  /// amounts go there.
+  Future<Map<String, String>> _cardPaymentCategories(
+    YnabImportData data,
+    Map<String, String> accountIdMap,
+  ) async {
+    final byName = {
+      for (final a in await _accountRepo.getAllAccounts())
+        if (CardPayments.isBudgetCard(a)) a.name: a.id,
+    };
+    final groupNames = {for (final g in data.categoryGroups) g.id: g.name};
+    final result = <String, String>{};
+    for (final c in data.categories) {
+      final group = groupNames[c.groupId];
+      if (!isCardPaymentGroup(group)) {
+        continue;
+      }
+      final imported = data.accounts.any(
+        (a) => a.name == c.name && accountIdMap.containsKey(a.id),
+      );
+      final accountId = byName[c.name];
+      if (imported && accountId != null) {
+        result['$group:${c.name}'] = CardPayments.categoryId(accountId);
+      }
+    }
+    return result;
+  }
+
   Future<Map<String, String>> _importAccounts(
     YnabImportData data,
     String currency,
@@ -279,6 +378,9 @@ class YnabDataMapper {
 
     final existingAccounts = await _accountRepo.getAllAccounts();
     final accNameMap = {for (var a in existingAccounts) a.name: a.id};
+    // An account with a category in YNAB's Credit Card Payments group is a
+    // credit card, whatever its name suggests.
+    final cards = cardPaymentNames(data);
 
     for (final yAcc in data.accounts) {
       // Closed accounts are imported too (as closed), with their
@@ -293,7 +395,9 @@ class YnabDataMapper {
           Account(
             id: accId,
             name: yAcc.name,
-            type: yAcc.type,
+            type: yAcc.onBudget && cards.contains(yAcc.name)
+                ? AccountType.credit
+                : yAcc.type,
             currency: currency,
             startingBalance: 0,
             isClosed: yAcc.isClosed,

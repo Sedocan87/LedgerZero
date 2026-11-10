@@ -168,12 +168,31 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   /// Be Budgeted). Uncategorised split children count too: they are the
   /// part of a split that was not assigned to a category (the parent itself
   /// is excluded).
+  ///
+  /// An uncategorised outflow of a budget credit card is left out: YNAB's
+  /// "Uncategorized" card spending, credit overspending that becomes card
+  /// debt the payment category does not cover (see docs/BUDGETING_RULES.md,
+  /// "Credit cards"). Uncategorised card inflows (rewards, a statement
+  /// credit, money moved in from an off-budget account) count as income.
   Expression<bool> get _readyToAssignRow =>
       transactions.isDeleted.equals(false) &
       transactions.categoryId.isNull() &
       _inBudgetAccount &
       (transactions.transferAccountId.isNull() | _transferAcrossBudget) &
-      _isNotSplitParent;
+      _isNotSplitParent &
+      _notCardOutflow;
+
+  /// SQL condition: the account of the row of table `transactions` is a
+  /// budget credit card (credit type, on budget, shared), see
+  /// `CardPayments.isBudgetCard`.
+  static const String budgetCardAccountCondition =
+      'transactions.account_id IN (SELECT id FROM accounts '
+      "WHERE on_budget = 1 AND type = 'credit' AND owner_id IS NULL)";
+
+  /// The row is not an outflow of a budget credit card.
+  static const CustomExpression<bool> _notCardOutflow = CustomExpression(
+    'NOT (transactions.amount < 0 AND $budgetCardAccountCondition)',
+  );
 
   /// Non-deleted transactions with `start <= date < endExclusive`.
   ///

@@ -1361,5 +1361,19 @@
   "budgetCurrencyMixedPickAccount": "Welches Konto verlässt das Budget?",
   "accountCurrencyJoinTitle": "Nicht in der Budgetwährung",
   "accountCurrencyJoinBody": "Dieses Konto ist in {account}, Ihr Budget in {budget}. Beträge werden nie umgerechnet, daher kann ein Konto in einer anderen Währung nicht im Budget sein.\n\nWurde {account} versehentlich gewählt, stellen Sie das Konto auf {budget} um (Beträge werden NICHT umgerechnet: Aus 100 {account} werden 100 {budget}). Andernfalls lassen Sie es außerhalb des Budgets.",
-  "ynabImportCurrencyFixed": "Konten in Ihrem Budget verwenden die Budgetwährung ({currency}), daher auch die importierten Konten."
+  "ynabImportCurrencyFixed": "Konten in Ihrem Budget verwenden die Budgetwährung ({currency}), daher auch die importierten Konten.",
+  "seedGroupCardPayments": "Kreditkartenzahlungen",
+  "txPaymentCategory": "Eine Kreditkartenzahlungs-Kategorie kann nicht für eine Buchung verwendet werden. Wählen Sie die Kategorie, für die das Geld ausgegeben wurde; die Zahlungskategorie füllt sich selbst.",
+  "cardPaymentMissing": "Noch offen: {amount}",
+  "cardPaymentCovered": "Kartensaldo gedeckt",
+  "cardPaymentCoverBalance": "Kartensaldo decken",
+  "cardPaymentNothingMissing": "Für diese Karte fehlt nichts.",
+  "budgetCreditOverspent": "Kreditüberziehung: Kartenausgaben, die diese Kategorie nicht decken konnte. Sie werden zu Kartenschulden und nicht vom „Zu budgetieren“ des nächsten Monats abgezogen.",
+  "helpCardPaymentsTitle": "Kreditkartenzahlungen",
+  "helpCardPaymentsBody": "Jede Kreditkarte im Budget hat eine Zahlungskategorie mit ihrem Namen. Zahlen Sie mit der Karte, wandert das in der Ausgabenkategorie budgetierte Geld hierher und liegt bereit, wenn die Abrechnung kommt. Bezahlen Sie die Karte vom Girokonto, wird es wieder entnommen. Was die Kategorie nicht decken konnte, erscheint orange (Kreditüberziehung) und bleibt als Kartenschuld: Die Zahlungszeile zeigt es als noch offen.",
+  "helpCardPaymentsSteps": "Zahlen Sie wie gewohnt mit der Karte, mit der Kategorie der Ausgabe.\nBezahlen Sie die Karte mit einer Umbuchung vom Girokonto auf die Karte.\nBestehende Schulden oder orange Kategorien: Weisen Sie den offenen Betrag der Zahlungskategorie zu (lange drücken, Kartensaldo decken).",
+  "guideCreditCardsBody": "Kreditkarten: Eine Ausgabe mit der Karte verschiebt das Geld aus ihrer Kategorie in die Zahlungskategorie der Karte in der Gruppe Kreditkartenzahlungen. Reichte die Kategorie nicht, wird sie orange statt rot: Dieser Teil ist Kartenschuld und wird nicht vom „Zu budgetieren“ des nächsten Monats abgezogen. Weisen Sie der Zahlungskategorie Geld zu, um sie abzuzahlen.",
+  "accountCardPaymentTitle": "Zahlungskategorie",
+  "accountCardPaymentAvailable": "Zur Zahlung der Karte zurückgelegt: {amount}",
+  "categoryPaymentLocked": "Dies ist die Zahlungskategorie der Karte {card}. Sie trägt den Namen der Karte, bleibt in Kreditkartenzahlungen und kann nicht gelöscht werden, solange die Karte offen und im Budget ist."
 }

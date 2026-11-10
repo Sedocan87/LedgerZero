@@ -30,7 +30,11 @@ void main() {
 
     expect(await t.budgeting.calculateCategoryAvailable(groceries, month), 0);
     final batch = await t.budgeting.calculateBatchCategoryPerformance(month);
-    expect(batch[groceries], {'activity': -30, 'available': 0});
+    expect(batch[groceries], {
+      'activity': -30,
+      'available': 0,
+      'creditOverspent': 0,
+    });
   });
 
   test(

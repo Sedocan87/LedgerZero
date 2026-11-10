@@ -190,6 +190,17 @@ sent yet competes the same way — it does not win automatically.
   keeps its language, and the other phone's untouched seeds lose
   deterministically (no conflict entries: nothing the user decided was
   lost). A category renamed on either phone is newer and wins.
+* Credit-card payment categories (BUDGETING_RULES.md, "Credit cards")
+  are ordinary category rows whose ids are derived from the card's
+  account id (`DeterministicId.cardPayment`), in a group with a fixed id
+  stamped like the seeds. The phone where the card is created, renamed,
+  closed or moved writes the category in the same transaction as the
+  account, so they travel together. A self-heal at start-up and after
+  every sync that applied changes creates a missing one and fixes name,
+  group and visibility, stamped with the fixed old `cardPaymentHealStamp`:
+  two phones healing at once write identical rows, and a real edit on
+  either phone is always newer and wins
+  (`test/services/sync/card_payment_sync_test.dart`).
 
 ## 6. Foreign keys
 

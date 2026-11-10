@@ -37,24 +37,9 @@ YnabDataMapper _mapper(
   unitOfWork: t.unitOfWork,
 );
 
-/// Asserts SUM(available) + TBB == SUM(on-budget account balances) for
-/// [month].
-Future<void> _expectInvariant(TestDatabase t, DateTime month) async {
-  final categories = await t.categories.getAllCategories();
-  var available = 0;
-  for (final c in categories) {
-    available += await t.budgeting.calculateCategoryAvailable(c.id, month);
-  }
-  final tbb = await t.budgeting.calculateTBB(month);
-  final onBudget = {
-    for (final a in await t.accounts.getAllAccounts())
-      if (a.onBudget) a.id,
-  };
-  final balances = (await t.accounts.getAccountBalances()).entries
-      .where((e) => onBudget.contains(e.key))
-      .fold<int>(0, (sum, e) => sum + e.value);
-  expect(available + tbb, balances, reason: 'available + TBB == balances');
-}
+/// Asserts the budget identity for [month] (see [expectLedgerInvariant]).
+Future<void> _expectInvariant(TestDatabase t, DateTime month) =>
+    expectLedgerInvariant(t, month);
 
 Future<String> _accountId(TestDatabase t, String name) async =>
     (await t.accounts.getAllAccounts()).firstWhere((a) => a.name == name).id;
@@ -154,9 +139,12 @@ void main() {
       expect(balances[checking], 100000 - 20000 - 40000);
       expect(balances[card], -30000 + 20000 - 5000);
 
-      // TBB = +1000 - 300 (starting balance rows) - 650 budgeted (the
-      // Vacation fund exists only in Budget.csv and is created too).
-      expect(await t.budgeting.calculateTBB(january), 5000);
+      // TBB = +1000 (checking's starting balance row) - 650 budgeted (the
+      // Vacation fund exists only in Budget.csv and is created too). The
+      // card's starting balance row is existing debt: uncategorised card
+      // spending, which the card's payment category shows as missing
+      // instead of To Be Budgeted.
+      expect(await t.budgeting.calculateTBB(january), 35000);
       expect(data.categoriesOnlyInBudget, 1);
       final vacation = await _categoryIdIn(t, 'Savings', 'Vacation');
       expect(

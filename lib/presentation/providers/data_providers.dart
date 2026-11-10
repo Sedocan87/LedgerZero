@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
@@ -135,11 +136,22 @@ final categoryGroupsWithCategoriesProvider =
       (ref) => _grouped(ref, includeHidden: true),
     );
 
-/// Visible categories by (sorted) category group (pickers).
+/// Visible categories by (sorted) category group (pickers), without the
+/// credit-card payment categories: a transaction cannot be categorised into
+/// one (see `CardPayments`), so their group is left out too.
 final categoryHierarchyProvider =
     Provider<AsyncValue<Map<CategoryGroup, List<Category>>>>((ref) {
-      return _grouped(
-        ref,
-        includeHidden: false,
-      ).whenData((list) => {for (final g in list) g.group: g.categories});
+      final payment = CardPayments.categoryIds(
+        ref.watch(accountsProvider).valueOrNull ?? const <Account>[],
+      );
+      return _grouped(ref, includeHidden: false).whenData(
+        (list) => {
+          for (final g in list)
+            if (g.group.id != CardPayments.groupId)
+              g.group: [
+                for (final c in g.categories)
+                  if (!payment.contains(c.id)) c,
+              ],
+        },
+      );
     });

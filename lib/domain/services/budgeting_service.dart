@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
@@ -45,8 +46,18 @@ enum AutoAssignRule {
 ///   - held(M), the part of the budgets of later months that the money
 ///   arriving in those months does not cover
 ///   (see [calculateHeldForLaterMonths]).
+/// * Credit cards: every budget credit card has a payment category
+///   (`CardPayments`). Card spending moves the part its category can cover
+///   to the payment category; the rest is credit overspending, reset at
+///   the end of the month without a charge (card debt). Payments to the
+///   card are payment-category activity. See [_rollTo] and [_CardMonth].
 /// * Invariant: SUM(available(M)) + TBB(M) + held(M)
-///   == SUM(account balances counting transactions up to end of M).
+///   + credit overspending(M)
+///   == SUM(balances of the on-budget accounts that are not budget cards,
+///      up to end of M) + card income(M) (positive card starting balances
+///      and uncategorised card inflows). Without cards: SUM(available) +
+///   TBB + held == SUM(on-budget balances). See docs/BUDGETING_RULES.md,
+///   "The budget identity".
 class BudgetingService {
   final TransactionRepository _transactionRepository;
   final BudgetRepository _budgetRepository;
@@ -67,14 +78,18 @@ class BudgetingService {
   /// Calculates "To Be Budgeted" (TBB) at the end of [targetMonth]:
   ///
   /// TBB = SUM(starting balances of the on-budget accounts that exist by
-  ///       the month, see [_startingBalances])
+  ///       the month, see [_startingBalances]; a budget credit card's
+  ///       negative starting balance, existing debt, counts as 0)
   ///     + SUM(uncategorised, non-split-parent rows of on-budget accounts up
   ///       to the end of the month, both signs, transfer legs only when the
-  ///       other account is off-budget)
+  ///       other account is off-budget; uncategorised outflows of a budget
+  ///       credit card are left out: unfunded card debt, not spending of
+  ///       To Be Budgeted)
   ///     - SUM(budgeted up to and including the month)
   ///     - SUM(cash overspending of the months before it: a negative
   ///       category balance is not carried into the next month's category
-  ///       but taken out of To Be Budgeted, see [_rollTo])
+  ///       but taken out of To Be Budgeted, see [_rollTo]; credit
+  ///       overspending is not charged, it is card debt)
   ///     - the money held for later months ([calculateHeldForLaterMonths]):
   ///       what is budgeted in the months after it beyond the money that
   ///       arrives in those months.
@@ -167,6 +182,7 @@ class BudgetingService {
     var always = 0;
     final byMonth = <String, int>{};
     final positiveByMonth = <String, int>{};
+    final startMonth = <String, String?>{};
     for (final account in accounts) {
       if (!account.onBudget) {
         continue;
@@ -179,18 +195,26 @@ class BudgetingService {
       final start = created == null
           ? null
           : (first != null && first.isBefore(created) ? first : created);
+      startMonth[account.id] = start == null
+          ? null
+          : CalendarDate.monthKey(start);
+      // Existing card debt is not budgeted money: the card's payment
+      // category shows it as still to cover instead.
+      final balance =
+          CardPayments.isBudgetCard(account) && account.startingBalance < 0
+          ? 0
+          : account.startingBalance;
       if (start == null) {
-        always += account.startingBalance;
+        always += balance;
       } else {
         final key = CalendarDate.monthKey(start);
-        byMonth[key] = (byMonth[key] ?? 0) + account.startingBalance;
-        if (account.startingBalance > 0) {
-          positiveByMonth[key] =
-              (positiveByMonth[key] ?? 0) + account.startingBalance;
+        byMonth[key] = (byMonth[key] ?? 0) + balance;
+        if (balance > 0) {
+          positiveByMonth[key] = (positiveByMonth[key] ?? 0) + balance;
         }
       }
     }
-    return _StartingBalances(always, byMonth, positiveByMonth);
+    return _StartingBalances(always, byMonth, positiveByMonth, startMonth);
   }
 
   /// Rolls every category (or only [categoryId]) forward month by month
@@ -198,21 +222,50 @@ class BudgetingService {
   ///
   /// `available(M) = max(0, available(M - 1)) + budgeted(M) + activity(M)`
   ///
-  /// A negative balance at the end of a month (cash overspending) does not
-  /// reduce the category in the next month; it is counted in
-  /// [_Rollover.overspentBefore] and taken out of To Be Budgeted there
-  /// instead. Two grouped queries and an in-memory loop, whatever the
-  /// number of months and categories.
+  /// A negative balance at the end of a month does not reduce the category
+  /// in the next month. Its cash part (cash overspending) is counted in
+  /// [_Rollover.overspentBefore] and taken out of To Be Budgeted there; its
+  /// credit part (card spending the category could not cover) is counted
+  /// in [_Rollover.creditOverspentBefore] and is not charged: it is card
+  /// debt the payment category does not cover.
+  ///
+  /// Credit cards (docs/BUDGETING_RULES.md, "Credit cards"): a (month,
+  /// category) with card rows, the payment categories and the card legs of
+  /// transfers within the budget are processed row by row in a fixed order
+  /// (date, `created_at`, id), see [_CardMonth]; every other (month,
+  /// category) adds its summed activity. Three grouped queries and one
+  /// query of individual card-related rows, whatever the number of months.
   Future<_Rollover> _rollTo(DateTime month, {String? categoryId}) async {
     final monthKey = CalendarDate.monthKey(month);
+    final end = CalendarDate.endOfMonthUtc(month);
+    final accounts = await _accountRepository.getAllAccounts();
+    final paymentOf = <String, String>{
+      for (final a in accounts)
+        if (CardPayments.isBudgetCard(a)) a.id: CardPayments.categoryId(a.id),
+    };
+    final paymentIds = paymentOf.values.toSet();
+    // A payment category depends on the spending of every category; any
+    // other category only on its own rows.
+    final only = categoryId != null && !paymentIds.contains(categoryId)
+        ? categoryId
+        : null;
+
     final budgets = await _budgetRepository.getBudgetsUpToMonth(
       monthKey,
-      categoryId: categoryId,
+      categoryId: only,
     );
     final activity = await _budgetRepository.getMonthlyCategoryActivity(
-      CalendarDate.endOfMonthUtc(month),
-      categoryId: categoryId,
+      end,
+      categoryId: only,
     );
+    final cardRows = paymentOf.isEmpty
+        ? const <CardLedgerRow>[]
+        : await _budgetRepository.getCardLedgerRows(
+            end,
+            cardIds: paymentOf.keys.toSet(),
+            paymentCategoryIds: paymentIds,
+            categoryId: only,
+          );
 
     final budgetedByMonth = <String, Map<String, int>>{};
     var budgetedThrough = 0;
@@ -226,27 +279,56 @@ class BudgetingService {
       ofMonth[id] = (ofMonth[id] ?? 0) + b.budgeted;
     }
 
-    final months = {...budgetedByMonth.keys, ...activity.keys}.toList()..sort();
+    // Rows processed one by one replace the summed activity of their
+    // (month, category).
+    final rowsByMonth = <String, List<CardLedgerRow>>{};
+    final processed = <String, Set<String>>{};
+    for (final row in cardRows) {
+      final key = CalendarDate.monthKey(row.date);
+      rowsByMonth.putIfAbsent(key, () => []).add(row);
+      if (row.categoryId case final c?) {
+        processed.putIfAbsent(key, () => {}).add(c);
+      }
+    }
+
+    final months = {
+      ...budgetedByMonth.keys,
+      ...activity.keys,
+      ...rowsByMonth.keys,
+    }.where((m) => m.compareTo(monthKey) <= 0).toList()..sort();
     final available = <String, int>{};
     var overspentBefore = 0;
+    var creditOverspentBefore = 0;
+    var credit = _CardMonth(available, paymentOf);
     if (months.isEmpty) {
       return _Rollover(
         available: available,
         overspentBefore: 0,
+        creditOverspentBefore: 0,
         budgetedThrough: budgetedThrough,
+        creditOverspent: const {},
+        paymentActivity: const {},
       );
     }
     final first = CalendarDate.parseMonthKey(months.first);
     final count = _monthsDifference(first, month) + 1;
     for (var i = 0; i < count; i++) {
       if (i > 0) {
-        // Month boundary: last month's overspending leaves the category.
+        // Month boundary: last month's overspending leaves the category;
+        // its cash part is charged to To Be Budgeted, its credit part is
+        // card debt.
         for (final entry in available.entries.toList()) {
           if (entry.value < 0) {
-            overspentBefore -= entry.value;
+            final creditPart = math.min(
+              credit.creditOverspent(entry.key),
+              -entry.value,
+            );
+            creditOverspentBefore += creditPart;
+            overspentBefore += -entry.value - creditPart;
             available[entry.key] = 0;
           }
         }
+        credit = _CardMonth(available, paymentOf);
       }
       final key = CalendarDate.monthKey(
         DateTime.utc(first.year, first.month + i, 1),
@@ -255,15 +337,29 @@ class BudgetingService {
           in (budgetedByMonth[key] ?? const <String, int>{}).entries) {
         available[id] = (available[id] ?? 0) + amount;
       }
+      final skip = processed[key] ?? const <String>{};
       for (final MapEntry(key: id, value: amount)
           in (activity[key] ?? const <String, int>{}).entries) {
-        available[id] = (available[id] ?? 0) + amount;
+        if (!skip.contains(id)) {
+          available[id] = (available[id] ?? 0) + amount;
+        }
+      }
+      final rows = rowsByMonth[key];
+      if (rows != null) {
+        rows.sort(CardLedgerRow.compare);
+        rows.forEach(credit.apply);
       }
     }
     return _Rollover(
       available: available,
       overspentBefore: overspentBefore,
+      creditOverspentBefore: creditOverspentBefore,
       budgetedThrough: budgetedThrough,
+      creditOverspent: {
+        for (final id in available.keys)
+          if (credit.creditOverspent(id) > 0) id: credit.creditOverspent(id),
+      },
+      paymentActivity: credit.paymentActivity,
     );
   }
 
@@ -804,6 +900,19 @@ class BudgetingService {
     return released;
   }
 
+  /// Releases what the payment category of card [accountId] holds in
+  /// [month] to To Be Budgeted ([releaseFromCategory] with its available
+  /// amount), after the card was closed, taken off the budget or changed to
+  /// another account type. What cannot be released that way (money moved
+  /// there by card spending rather than budgeted) stays in the hidden
+  /// category, which the budget screen then lists under "Hidden
+  /// categories". Returns the amount released.
+  Future<int> releasePaymentCategory(String accountId, DateTime month) async {
+    final categoryId = CardPayments.categoryId(accountId);
+    final available = await calculateCategoryAvailable(categoryId, month);
+    return releaseFromCategory(categoryId, available, month);
+  }
+
   // --- Filling a new month ---
 
   /// The sync timestamp of an automatic fill of [month]: its first day,
@@ -944,9 +1053,19 @@ class BudgetingService {
 
   /// Calculates activity and available amounts for all categories in a specific [month].
   ///
-  /// Returns a map where the key is categoryId and the value is another map with 'activity' and 'available' keys.
-  /// Three grouped queries (activity in the month, activity per month,
-  /// budgets up to the month) and one in-memory rollover ([_rollTo]).
+  /// Returns a map where the key is categoryId and the value is another
+  /// map with 'activity', 'available' and 'creditOverspent' keys:
+  ///
+  /// * activity: the category's transactions in the month; for a payment
+  ///   category the money moved in by card spending, minus refunds moved
+  ///   back and payments to the card ([_Rollover.paymentActivity]);
+  /// * creditOverspent: the part of a negative available that is credit
+  ///   overspending (card spending the category could not cover), 0 when
+  ///   it is cash overspending or not overspent.
+  ///
+  /// Grouped queries (activity in the month, activity per month, budgets
+  /// up to the month), the card rows and one in-memory rollover
+  /// ([_rollTo]).
   Future<Map<String, Map<String, int>>> calculateBatchCategoryPerformance(
     DateTime month,
   ) async {
@@ -958,13 +1077,81 @@ class BudgetingService {
     final roll = await _rollTo(month);
 
     final Map<String, Map<String, int>> result = {};
-    for (final catId in {...currentActivityMap.keys, ...roll.available.keys}) {
+    for (final catId in {
+      ...currentActivityMap.keys,
+      ...roll.available.keys,
+      ...roll.paymentActivity.keys,
+    }) {
       result[catId] = {
-        'activity': currentActivityMap[catId] ?? 0,
+        'activity':
+            (currentActivityMap[catId] ?? 0) +
+            (roll.paymentActivity[catId] ?? 0),
         'available': roll.available[catId] ?? 0,
+        'creditOverspent': roll.creditOverspent[catId] ?? 0,
       };
     }
     return result;
+  }
+
+  /// The payment category of every budget credit card in [month]: account
+  /// id -> [CardPaymentStatus] (what it holds, the card balance at the end
+  /// of the month, what is still missing to pay the card in full).
+  Future<Map<String, CardPaymentStatus>> calculateCardPaymentStatuses(
+    DateTime month,
+  ) async {
+    final accounts = [
+      for (final a in await _accountRepository.getAllAccounts())
+        if (CardPayments.isBudgetCard(a)) a,
+    ];
+    if (accounts.isEmpty) {
+      return const {};
+    }
+    final roll = await _rollTo(month);
+    final starting = await _startingBalances();
+    final changes = await _budgetRepository.getBalanceChangesBefore(
+      CalendarDate.endOfMonthUtc(month),
+    );
+    return {
+      for (final a in accounts)
+        a.id: CardPaymentStatus(
+          available: roll.available[CardPayments.categoryId(a.id)] ?? 0,
+          balance:
+              (starting.existsBy(a.id, month) ? a.startingBalance : 0) +
+              (changes[a.id] ?? 0),
+        ),
+    };
+  }
+
+  /// [calculateCardPaymentStatuses] of one card; null when [accountId] is
+  /// not a budget credit card.
+  Future<CardPaymentStatus?> calculateCardPaymentStatus(
+    String accountId,
+    DateTime month,
+  ) async => (await calculateCardPaymentStatuses(month))[accountId];
+
+  /// Total credit overspending (positive minor units) shown in [month]:
+  /// the card spending the categories could not cover, which resets at the
+  /// end of the month without a charge to To Be Budgeted (it is card
+  /// debt). A term of the budget identity, see docs/BUDGETING_RULES.md.
+  Future<int> calculateCreditOverspending(DateTime month) async {
+    final roll = await _rollTo(month);
+    return roll.creditOverspent.values.fold<int>(0, (a, b) => a + b);
+  }
+
+  /// Adds what card [accountId]'s payment category is still missing in
+  /// [month] ([CardPaymentStatus.missing]) to its budget, so the card can
+  /// be paid in full. Returns the amount added (0 when nothing is missing).
+  Future<int> coverCardBalance(String accountId, DateTime month) async {
+    final status = await calculateCardPaymentStatus(accountId, month);
+    final missing = status?.missing ?? 0;
+    if (missing > 0) {
+      await addToCategoryBudget(
+        CardPayments.categoryId(accountId),
+        missing,
+        month,
+      );
+    }
+    return missing;
   }
 
   /// Calculates goal targets for a batch of categories for the given month.
@@ -1041,6 +1228,37 @@ class BudgetingService {
   }
 }
 
+/// The payment category of a budget credit card in a month (minor units).
+class CardPaymentStatus {
+  /// What the payment category holds at the end of the month.
+  final int available;
+
+  /// The card balance at the end of the month (negative: debt).
+  final int balance;
+
+  const CardPaymentStatus({required this.available, required this.balance});
+
+  /// The card's debt (0 when it has no debt).
+  int get debt => balance < 0 ? -balance : 0;
+
+  /// What the payment category still needs to pay the card in full:
+  /// `max(0, -balance - available)`.
+  int get missing => math.max(0, debt - available);
+
+  @override
+  bool operator ==(Object other) =>
+      other is CardPaymentStatus &&
+      other.available == available &&
+      other.balance == balance;
+
+  @override
+  int get hashCode => Object.hash(available, balance);
+
+  @override
+  String toString() =>
+      'CardPaymentStatus(available: $available, balance: $balance)';
+}
+
 /// What a month operation (copy from the month before, apply a template,
 /// reset) changed in [month]: the amounts before and after, for the
 /// categories whose amount changed. Undo writes [before], redo [after].
@@ -1068,18 +1286,182 @@ class _Rollover {
   /// neither budgets nor activity are absent).
   final Map<String, int> available;
 
-  /// Overspending (positive minor units) of all months before the month,
-  /// charged to its To Be Budgeted.
+  /// Cash overspending (positive minor units) of all months before the
+  /// month, charged to its To Be Budgeted.
   final int overspentBefore;
+
+  /// Credit overspending (positive minor units) of all months before the
+  /// month: card spending no category covered, reset without a charge.
+  final int creditOverspentBefore;
 
   /// Everything budgeted up to and including the month.
   final int budgetedThrough;
 
+  /// categoryId -> the credit part (positive) of its negative available at
+  /// the end of the month; categories without credit overspending are
+  /// absent.
+  final Map<String, int> creditOverspent;
+
+  /// Payment categoryId -> its activity in the month: spending moved in
+  /// from the spending categories, refunds moved back, payments and cash
+  /// advances (minor units, signed).
+  final Map<String, int> paymentActivity;
+
   const _Rollover({
     required this.available,
     required this.overspentBefore,
+    required this.creditOverspentBefore,
     required this.budgetedThrough,
+    required this.creditOverspent,
+    required this.paymentActivity,
   });
+}
+
+/// The credit-card rules of one month, applied row by row in the fixed
+/// order (see docs/BUDGETING_RULES.md, "Credit cards", and
+/// docs/ALGORITHMS.md). Works on the rollover's [available] map, which
+/// already holds the month's starting balances and budgets: money
+/// assigned during the month counts from its first day, as in YNAB.
+///
+/// * Card spending `s` in category X moves `f = min(s, max(0, X))` to the
+///   card's payment category; X goes down by `s`, and `s - f` is credit
+///   overspending of X for that card.
+/// * A card refund `r` in X first cancels X's credit overspending for that
+///   card (the debt it was never funded for shrinks by itself), the rest
+///   is taken back from the payment category; X goes up by `r`.
+/// * Whenever X goes up (a refund on any account), credit overspending
+///   that X's balance no longer shows is covered: that money moves to the
+///   card's payment category, oldest first. So X's credit overspending is
+///   never more than its negative balance.
+/// * Cash rows in X change X only.
+/// * A transfer between a card and a non-card budget account changes the
+///   payment category by minus the card leg: a payment (`+p` on the card)
+///   takes `p` out of it (it can go negative: cash overspending), a cash
+///   advance (`-a`) puts `a` in.
+/// * A balance transfer between two cards moves what the paying-off
+///   card's payment category holds, at most the amount, to the other
+///   card's payment category: the funding follows the debt, and debt that
+///   was not funded stays unfunded without touching To Be Budgeted.
+class _CardMonth {
+  _CardMonth(this.available, this.paymentOf);
+
+  final Map<String, int> available;
+
+  /// Budget card account id -> its payment category id.
+  final Map<String, String> paymentOf;
+
+  /// categoryId -> unfunded card spending (card account id, amount), oldest
+  /// first.
+  final Map<String, List<_Unfunded>> _unfunded = {};
+
+  final Map<String, int> paymentActivity = {};
+
+  int creditOverspent(String categoryId) =>
+      (_unfunded[categoryId] ?? const <_Unfunded>[]).fold(
+        0,
+        (sum, u) => sum + u.amount,
+      );
+
+  void _add(String categoryId, int amount) =>
+      available[categoryId] = (available[categoryId] ?? 0) + amount;
+
+  void _toPayment(String paymentId, int amount) {
+    if (amount == 0) {
+      return;
+    }
+    _add(paymentId, amount);
+    paymentActivity[paymentId] = (paymentActivity[paymentId] ?? 0) + amount;
+  }
+
+  void apply(CardLedgerRow row) {
+    final payment = paymentOf[row.accountId];
+    if (row.isBudgetTransfer) {
+      if (payment == null) {
+        return;
+      }
+      final other = paymentOf[row.transferAccountId];
+      if (other == null) {
+        // Payment (+) or cash advance (-) between the card and a cash
+        // account of the budget.
+        _toPayment(payment, -row.amount);
+      } else if (row.amount > 0) {
+        // Balance transfer: this card's debt went down, the other's up.
+        final move = math.min(row.amount, math.max(0, available[payment] ?? 0));
+        _toPayment(payment, -move);
+        _toPayment(other, move);
+      }
+      return;
+    }
+    final category = row.categoryId!;
+    final amount = row.amount;
+    if (payment == null) {
+      _add(category, amount);
+      if (amount > 0) {
+        _cover(category);
+      }
+      return;
+    }
+    if (amount < 0) {
+      final spent = -amount;
+      final funded = math.min(spent, math.max(0, available[category] ?? 0));
+      _add(category, amount);
+      _toPayment(payment, funded);
+      if (spent > funded) {
+        _unfunded
+            .putIfAbsent(category, () => [])
+            .add(_Unfunded(row.accountId, spent - funded));
+      }
+      return;
+    }
+    // A refund on the card.
+    var cancel = amount;
+    final list = _unfunded[category];
+    if (list != null) {
+      for (final u in list) {
+        if (cancel == 0) {
+          break;
+        }
+        if (u.cardId == row.accountId) {
+          final take = math.min(cancel, u.amount);
+          u.amount -= take;
+          cancel -= take;
+        }
+      }
+      list.removeWhere((u) => u.amount == 0);
+    }
+    _add(category, amount);
+    _toPayment(payment, -cancel);
+    _cover(category);
+  }
+
+  /// Covers credit overspending of [category] that its balance no longer
+  /// shows, oldest first, by moving that money to the cards' payment
+  /// categories.
+  void _cover(String category) {
+    final list = _unfunded[category];
+    if (list == null || list.isEmpty) {
+      return;
+    }
+    final shown = available[category] ?? 0;
+    var excess = creditOverspent(category) - (shown < 0 ? -shown : 0);
+    for (final u in list) {
+      if (excess <= 0) {
+        break;
+      }
+      final take = math.min(excess, u.amount);
+      u.amount -= take;
+      excess -= take;
+      _toPayment(paymentOf[u.cardId]!, take);
+    }
+    list.removeWhere((u) => u.amount == 0);
+  }
+}
+
+class _Unfunded {
+  _Unfunded(this.cardId, this.amount);
+
+  final String cardId;
+  int amount;
 }
 
 /// The starting balances of the on-budget accounts: [always] (accounts
@@ -1093,7 +1475,25 @@ class _StartingBalances {
   /// is charged to its own month like an outflow).
   final Map<String, int> positiveByMonth;
 
-  _StartingBalances(this.always, this.byMonth, this.positiveByMonth);
+  /// On-budget account id -> its start month (`yyyy-MM`), null for an
+  /// account without a creation time (it always counts).
+  final Map<String, String?> startMonth;
+
+  _StartingBalances(
+    this.always,
+    this.byMonth,
+    this.positiveByMonth,
+    this.startMonth,
+  );
+
+  /// Whether on-budget account [accountId] exists by the end of [month].
+  bool existsBy(String accountId, DateTime month) {
+    if (!startMonth.containsKey(accountId)) {
+      return false;
+    }
+    final start = startMonth[accountId];
+    return start == null || start.compareTo(CalendarDate.monthKey(month)) <= 0;
+  }
 
   /// Sum of the starting balances of the accounts that exist by the end of
   /// [month].
