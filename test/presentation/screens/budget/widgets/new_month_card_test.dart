@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/new_month_fill_provider.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/new_month_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -97,6 +98,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(await t.budgeting.isMonthEmpty(march), isTrue);
     expect(card, findsOneWidget);
+  });
+
+  dbTestWidgets('the fill is on the undo stack like other budget changes: '
+      'its Undo does nothing once the stack was cleared (sync, a delete)', (
+    tester,
+  ) async {
+    await pump(tester);
+    final undo = ProviderScope.containerOf(
+      tester.element(card),
+    ).read(undoServiceProvider);
+    await tester.tap(find.text('Fill like February'));
+    await tester.pumpAndSettle();
+    expect(undo.undoCount, 1);
+
+    undo.clear();
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(await t.budgeting.isMonthEmpty(march), isFalse);
   });
 
   dbTestWidgets('"Not now" hides it for this month', (tester) async {
@@ -189,5 +208,37 @@ void main() {
     );
     expect(find.text('Fill anyway'), findsOneWidget);
     expect(await t.budgeting.isMonthEmpty(march), isTrue);
+  });
+
+  dbTestWidgets('a waiting fill is shown when the month before is empty (the '
+      'source is a template), and hidden once the month is budgeted by '
+      'hand', (tester) async {
+    // Nothing budgeted in February: no "Start March like February?".
+    await t.budgeting.resetBudget(february);
+    await pump(tester);
+    expect(card, findsNothing);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(NewMonthCard)),
+    );
+    final controller = container.read(newMonthFillProvider.notifier);
+    await controller.setSource(AutoFillSource.template, templateId: 'lean');
+    controller.state = controller.state.copyWith(
+      waiting: AutoFillWaiting(
+        month: DateTime.utc(2099, 3, 1),
+        total: 150000,
+        missing: 50000,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('budget.autoFillWaiting')), findsOneWidget);
+    expect(find.text('Fill anyway'), findsOneWidget);
+
+    // Budgeted by hand: the wait is over, no card.
+    await tester.runAsync(
+      () => t.budgeting.setCategoryBudgetedAmount(groceries, 5000, march),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('budget.autoFillWaiting')), findsNothing);
   });
 }

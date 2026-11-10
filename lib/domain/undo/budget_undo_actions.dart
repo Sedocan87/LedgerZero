@@ -85,3 +85,50 @@ class BudgetMonthChangeAction implements ReversibleAction {
   Future<void> redo() =>
       _budgetingService.setCategoryBudgetedAmounts(change.after, change.month);
 }
+
+/// Filling the empty categories of [month] with [filled] (category ->
+/// amount), from the new-month card. Undo sets the categories that still
+/// have the filled amount back to zero ([BudgetingService.undoFill], so an
+/// amount changed since is kept); redo fills the ones that are empty again.
+class BudgetFillAction implements ReversibleAction {
+  final BudgetingService _budgetingService;
+  final DateTime month;
+  final Map<String, int> filled;
+
+  BudgetFillAction({
+    required this._budgetingService,
+    required this.month,
+    required this.filled,
+  });
+
+  @override
+  Future<void> undo() => _budgetingService.undoFill(month, filled);
+
+  @override
+  Future<void> redo() => _budgetingService.fillEmptyCategories(month, filled);
+}
+
+/// Adding [amount] (minor units) to the budget of [categoryId] in [month],
+/// e.g. the leftover of the month before budgeted for savings. Undo takes
+/// the same amount off again, whatever else was changed since.
+class BudgetAddAction implements ReversibleAction {
+  final BudgetingService _budgetingService;
+  final String categoryId;
+  final DateTime month;
+  final int amount;
+
+  BudgetAddAction({
+    required this._budgetingService,
+    required this.categoryId,
+    required this.month,
+    required this.amount,
+  });
+
+  @override
+  Future<void> undo() =>
+      _budgetingService.addToCategoryBudget(categoryId, -amount, month);
+
+  @override
+  Future<void> redo() =>
+      _budgetingService.addToCategoryBudget(categoryId, amount, month);
+}

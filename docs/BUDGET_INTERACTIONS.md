@@ -107,7 +107,10 @@ amounts?"); reset always asks.
 * **Apply template**: a *merge*: only the categories in the template are
   set to the template's amounts, every other category keeps its amount
   (the dialog says so). Entries whose category was deleted or hidden are
-  skipped.
+  skipped. The bin icon next to a template deletes it after a confirmation
+  ("Delete template?"); when "Fill new months automatically" uses that
+  template, the dialog says so and the setting switches to the month
+  before (see below).
 * **Copy from previous month**: sets every category budgeted in the month
   before to that amount; other categories keep theirs.
 * **Reset budget**: sets every visible category of the month to 0.
@@ -128,18 +131,24 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   SharedPreferences, `leftover_card_dismissed`), so a later edit does not
   bring the same offer back; Undo of the assignment shows it again. Not
   shown for a new budget: an account created this month has nothing in
-  the month before.
+  the month before. The assignment is a `BudgetAddAction` on the undo
+  stack, like every other budget change.
 * **New-month card**: for the current or a later month with nothing budgeted
   whose previous month has budgets. It shows the total, To Be Budgeted after
   filling and the income still expected, and offers *Fill like (previous
   month)*, *Use a template* (when templates exist) and *Not now* (hides it
-  for that month). Filling shows a snack bar with Undo.
+  for that month). Filling shows a snack bar with Undo (a
+  `BudgetFillAction` on the undo stack; an undo that fails shows the
+  generic error).
 * **Fill new months automatically** (off by default; the month before or a
   template): runs at start-up and on resume, once per month and phone, and
   only when the month is still empty. It starts with the month after it
   was turned on. A card ("November was filled automatically") offers Undo.
-  If the template was deleted, the month before is used and the setting
-  switches to it.
+  If the template was deleted (in the Apply template dialog, on the paired
+  phone or by a restore), the month before is used and the setting
+  switches to it. Only the source changes: the month stays due, so a month
+  that is waiting for its income is still filled when the money arrives
+  or with *Fill anyway*.
 * **It waits for the money.** Before writing, the controller compares the
   planned total with To Be Budgeted of the month
   (`BudgetingService.calculateTBB`). While TBB is short (payday still to
@@ -153,7 +162,10 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   start-up (`_initializeServices`) and on resume (`_bookDueThenFill` in
   `lib/app/app.dart`: the fill is awaited after the catch-up, not started
   next to it), so a salary due on the 1st never causes a wait.
-  A wait is in memory only and is recomputed each time.
+  A wait is in memory only and is recomputed each time. The waiting card
+  does not depend on the month before: with a template as the source and
+  an empty previous month it is shown all the same, and it goes away when
+  the month is budgeted by hand.
 * Both only fill categories that are still at zero (never hidden ones) and
   never overwrite an amount. Undo resets only the categories still at the
   filled amount.
