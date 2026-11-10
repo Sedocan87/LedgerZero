@@ -7,8 +7,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.service.notification.NotificationListenerService
-import androidx.core.app.NotificationManagerCompat
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -76,28 +74,9 @@ class NotificationCaptureChannel(
         CaptureStore.onCaptured = {
             mainHandler.post { channel.invokeMethod("captured", null) }
         }
-        requestRebind()
-    }
-
-    /**
-     * After an app update the system may leave the listener unbound until
-     * the next reboot; asking for a rebind at start brings it back.
-     */
-    private fun requestRebind() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !isAccessGranted()) {
-            return
-        }
-        if (CardNotificationListener.connected != null) {
-            return
-        }
-        try {
-            NotificationListenerService.requestRebind(
-                ComponentName(activity, CardNotificationListener::class.java),
-            )
-        } catch (_: Exception) {
-            // Not granted after all, or the system refuses; the settings
-            // screen shows that the listener is not connected.
-        }
+        // After an app update the system may leave the listener unbound
+        // until the next reboot; asking for a rebind brings it back.
+        CardNotificationListener.requestRebindIfNeeded(activity)
     }
 
     /** Stops forwarding captures (the engine is going away). */
@@ -110,7 +89,12 @@ class NotificationCaptureChannel(
         try {
             when (call.method) {
                 "isAccessGranted" -> result.success(isAccessGranted())
-                "isListenerConnected" -> result.success(CardNotificationListener.connected != null)
+                "isListenerConnected" -> {
+                    // Asked at start and on every resume: a listener the
+                    // system dropped meanwhile is asked back.
+                    CardNotificationListener.requestRebindIfNeeded(activity)
+                    result.success(CardNotificationListener.connected != null)
+                }
                 "storageResetAt" -> result.success(store.storageResetAt())
                 "acknowledgeStorageReset" -> {
                     store.acknowledgeStorageReset()
@@ -134,6 +118,7 @@ class NotificationCaptureChannel(
                         call.argument<String>("status") ?: CaptureStore.STATUS_PENDING,
                         call.argument<String>("transactionId"),
                         call.argument<String>("error"),
+                        call.argument<Boolean>("byUser") ?: false,
                     )
                     result.success(null)
                 }
@@ -157,9 +142,7 @@ class NotificationCaptureChannel(
         }
     }
 
-    private fun isAccessGranted(): Boolean =
-        NotificationManagerCompat.getEnabledListenerPackages(activity)
-            .contains(activity.packageName)
+    private fun isAccessGranted(): Boolean = CardNotificationListener.isAccessGranted(activity)
 
     private fun openAccessSettings() {
         val component = ComponentName(activity, CardNotificationListener::class.java)

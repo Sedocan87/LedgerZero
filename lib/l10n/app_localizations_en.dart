@@ -4810,4 +4810,77 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get cardNotificationsHeldUnclear =>
+      'Has an amount, but does not clearly say that you paid';
+
+  @override
+  String get cardNotificationsHeldSeveralAmounts =>
+      'Names several amounts: add each payment yourself';
+
+  @override
+  String cardNotificationsHeldReplaces(String amount) {
+    return 'Is this the final amount of the $amount that was reserved earlier? Replace changes that transaction; Add separately keeps both.';
+  }
+
+  @override
+  String get cardNotificationsReplace => 'Replace';
+
+  @override
+  String get cardNotificationsAddSeparately => 'Add separately';
+
+  @override
+  String get cardNotificationsAuthorisationMemo =>
+      'Reserved amount, the final amount may differ';
+
+  @override
+  String get cardNotificationsAttentionTitle =>
+      'Card notifications need a look';
+
+  @override
+  String get cardNotificationsAttentionAccess =>
+      'Notification access is off, so no payments are captured.';
+
+  @override
+  String get cardNotificationsAttentionListener =>
+      'Android has not connected the notification listener, so no payments are captured.';
+
+  @override
+  String cardNotificationsAttentionStorageReset(String date) {
+    return 'The capture storage was reset on $date; notifications captured before then were lost.';
+  }
+
+  @override
+  String cardNotificationsAttentionWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count captured notifications are waiting for you',
+      one: '1 captured notification is waiting for you',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payments could not be added',
+      one: '1 payment could not be added',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items need your attention',
+      one: '1 item needs your attention',
+    );
+    return '$_temp0';
+  }
 }

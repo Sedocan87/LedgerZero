@@ -4847,4 +4847,77 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get cardNotificationsHeldUnclear =>
+      'Nennt einen Betrag, sagt aber nicht eindeutig, dass Sie bezahlt haben';
+
+  @override
+  String get cardNotificationsHeldSeveralAmounts =>
+      'Nennt mehrere Beträge: Fügen Sie jede Zahlung selbst hinzu';
+
+  @override
+  String cardNotificationsHeldReplaces(String amount) {
+    return 'Ist das der endgültige Betrag der zuvor vorgemerkten $amount? „Ersetzen“ ändert diese Transaktion, „Einzeln hinzufügen“ behält beide.';
+  }
+
+  @override
+  String get cardNotificationsReplace => 'Ersetzen';
+
+  @override
+  String get cardNotificationsAddSeparately => 'Einzeln hinzufügen';
+
+  @override
+  String get cardNotificationsAuthorisationMemo =>
+      'Vorgemerkter Betrag, der endgültige Betrag kann abweichen';
+
+  @override
+  String get cardNotificationsAttentionTitle =>
+      'Kartenbenachrichtigungen brauchen einen Blick';
+
+  @override
+  String get cardNotificationsAttentionAccess =>
+      'Der Benachrichtigungszugriff ist aus, es werden keine Zahlungen erfasst.';
+
+  @override
+  String get cardNotificationsAttentionListener =>
+      'Android hat den Benachrichtigungsdienst nicht verbunden, es werden keine Zahlungen erfasst.';
+
+  @override
+  String cardNotificationsAttentionStorageReset(String date) {
+    return 'Der Erfassungsspeicher wurde am $date zurückgesetzt; davor erfasste Benachrichtigungen sind verloren.';
+  }
+
+  @override
+  String cardNotificationsAttentionWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count erfasste Benachrichtigungen warten auf Sie',
+      one: '1 erfasste Benachrichtigung wartet auf Sie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Zahlungen konnten nicht hinzugefügt werden',
+      one: '1 Zahlung konnte nicht hinzugefügt werden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardNotificationsAttentionBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Einträge brauchen Ihre Aufmerksamkeit',
+      one: '1 Eintrag braucht Ihre Aufmerksamkeit',
+    );
+    return '$_temp0';
+  }
 }

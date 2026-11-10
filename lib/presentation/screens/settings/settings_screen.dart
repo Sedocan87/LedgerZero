@@ -555,7 +555,22 @@ class SettingsScreen extends ConsumerWidget {
                   leading: const Icon(Icons.credit_card),
                   title: Text(l10n.cardNotifications),
                   subtitle: Text(l10n.cardNotificationsSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
+                  // Capture that stopped, and payments that wait.
+                  trailing: switch (ref
+                      .watch(captureAttentionProvider)
+                      .badgeCount) {
+                    0 => const Icon(Icons.chevron_right),
+                    final count => Badge(
+                      key: const Key('settings.cardNotifications.badge'),
+                      label: Text(
+                        '$count',
+                        semanticsLabel: l10n.cardNotificationsAttentionBadge(
+                          count,
+                        ),
+                      ),
+                      child: const Icon(Icons.chevron_right),
+                    ),
+                  },
                   onTap: () => context.push('/settings/card-notifications'),
                 ),
               ListTile(

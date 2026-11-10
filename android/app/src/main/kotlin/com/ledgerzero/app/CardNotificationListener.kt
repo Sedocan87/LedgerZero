@@ -1,11 +1,14 @@
 package com.ledgerzero.app
 
 import android.app.Notification
+import android.content.ComponentName
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.core.app.NotificationManagerCompat
 
 /**
  * Captures notifications of the apps the user chose in Settings > Card
@@ -37,6 +40,36 @@ class CardNotificationListener : NotificationListenerService() {
 
         fun recentApps(): Map<String, String> = synchronized(recentApps) {
             LinkedHashMap(recentApps)
+        }
+
+        /** Whether the user granted notification access to this app. */
+        fun isAccessGranted(context: Context): Boolean =
+            NotificationManagerCompat.getEnabledListenerPackages(context)
+                .contains(context.packageName)
+
+        /**
+         * Asks the system to bind the listener when access is granted but
+         * it is not connected: after an app update (and on some devices
+         * after the process was killed) Android may leave it unbound until
+         * the next reboot. Called when the activity starts, when the app
+         * was updated ([PackageReplacedReceiver]) and whenever the Dart
+         * side asks whether the listener is connected.
+         */
+        fun requestRebindIfNeeded(context: Context) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
+                connected != null ||
+                !isAccessGranted(context)
+            ) {
+                return
+            }
+            try {
+                NotificationListenerService.requestRebind(
+                    ComponentName(context, CardNotificationListener::class.java),
+                )
+            } catch (_: Exception) {
+                // Not granted after all, or the system refuses; the app
+                // shows that the listener is not connected.
+            }
         }
 
         /** The user-visible name of [packageName], or the package name. */

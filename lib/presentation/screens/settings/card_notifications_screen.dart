@@ -100,6 +100,11 @@ class _CardNotificationsScreenState
   String? _error;
   List<CaptureSource> _sources = const [];
   List<HeldCapture> _held = const [];
+
+  /// Logged payments held as duplicates / whose booking failed (the log
+  /// has the details).
+  int _duplicates = 0;
+  int _failed = 0;
   StreamSubscription<void>? _capturedSubscription;
 
   NotificationCaptureChannel get _channel =>
@@ -150,6 +155,7 @@ class _CardNotificationsScreenState
       final storageReset = await _channel.storageResetAt();
       final sources = await _channel.getSources();
       final held = await _service.held();
+      final log = await _channel.log();
       if (!mounted) {
         return;
       }
@@ -159,6 +165,10 @@ class _CardNotificationsScreenState
         _storageReset = storageReset;
         _sources = sources;
         _held = held;
+        _duplicates = log
+            .where((n) => n.status == CaptureStatus.duplicate)
+            .length;
+        _failed = log.where((n) => n.status == CaptureStatus.failed).length;
       });
     } catch (e, stackTrace) {
       Logger.error('Loading card notification settings failed', e, stackTrace);
@@ -171,6 +181,13 @@ class _CardNotificationsScreenState
       _error = error;
       _loading = false;
     });
+    // What this screen shows need not be announced on Home again.
+    final attention = ref.read(captureAttentionProvider.notifier);
+    unawaited(
+      attention
+          .refresh(run: process ? run : null, error: error)
+          .then((_) => attention.markSeen()),
+    );
     final l10n = AppLocalizations.of(context)!;
     final lines = [
       if (run.added > 0) l10n.cardNotificationsAdded(run.added),
@@ -403,6 +420,23 @@ class _CardNotificationsScreenState
     await _reload();
   }
 
+  /// Answers whether [held] is the final amount of the authorisation
+  /// booked earlier.
+  Future<void> _resolveAuthorisation(
+    HeldCapture held, {
+    required bool replace,
+  }) async {
+    try {
+      await _service.resolveAuthorisation(
+        held.notification.id,
+        replace: replace,
+      );
+    } catch (e, stackTrace) {
+      Logger.error('Booking a captured notification failed', e, stackTrace);
+    }
+    await _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -530,9 +564,33 @@ class _CardNotificationsScreenState
                               l10n.cardNotificationsHeldNoAccount,
                             CaptureHoldReason.foreignCurrency =>
                               l10n.cardNotificationsHeldForeignCurrency,
+                            CaptureHoldReason.unclear =>
+                              l10n.cardNotificationsHeldUnclear,
+                            CaptureHoldReason.severalAmounts =>
+                              l10n.cardNotificationsHeldSeveralAmounts,
+                            CaptureHoldReason.replacesAuthorisation =>
+                              l10n.cardNotificationsHeldReplaces(
+                                formatter.formatMoney(
+                                  (held.replaces?.amount ?? 0).abs(),
+                                  currencyCode: held.parse.currency?.length == 3
+                                      ? held.parse.currency
+                                      : null,
+                                ),
+                              ),
                           },
                           onAdd: () => _addManually(held),
                           onDismiss: () => _dismiss(held),
+                          onReplace:
+                              held.reason ==
+                                  CaptureHoldReason.replacesAuthorisation
+                              ? () => _resolveAuthorisation(held, replace: true)
+                              : null,
+                          onAddSeparately:
+                              held.reason ==
+                                  CaptureHoldReason.replacesAuthorisation
+                              ? () =>
+                                    _resolveAuthorisation(held, replace: false)
+                              : null,
                         ),
                     ],
                   ),
@@ -540,6 +598,33 @@ class _CardNotificationsScreenState
                   SettingsSection(
                     title: l10n.cardNotificationsLogTitle,
                     children: [
+                      // Payments that were not added; the log says which.
+                      if (_duplicates > 0)
+                        ListTile(
+                          key: const Key('cardNotifications.duplicates'),
+                          leading: Icon(
+                            Icons.content_copy_outlined,
+                            color: scheme.error,
+                          ),
+                          title: Text(
+                            l10n.cardNotificationsDuplicatesHeld(_duplicates),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _openLog,
+                        ),
+                      if (_failed > 0)
+                        ListTile(
+                          key: const Key('cardNotifications.failed'),
+                          leading: Icon(
+                            Icons.error_outline,
+                            color: scheme.error,
+                          ),
+                          title: Text(
+                            l10n.cardNotificationsAttentionFailed(_failed),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _openLog,
+                        ),
                       ListTile(
                         key: const Key('cardNotifications.log'),
                         leading: const Icon(Icons.history),
@@ -573,6 +658,8 @@ class _HeldTile extends StatelessWidget {
     required this.reason,
     required this.onAdd,
     required this.onDismiss,
+    this.onReplace,
+    this.onAddSeparately,
   });
 
   final HeldCapture held;
@@ -580,6 +667,12 @@ class _HeldTile extends StatelessWidget {
   final String reason;
   final VoidCallback onAdd;
   final VoidCallback onDismiss;
+
+  /// For a payment that may be the final amount of an authorisation:
+  /// change that transaction, or book this one next to it. They take the
+  /// place of "Add".
+  final VoidCallback? onReplace;
+  final VoidCallback? onAddSeparately;
 
   @override
   Widget build(BuildContext context) {
@@ -607,18 +700,34 @@ class _HeldTile extends StatelessWidget {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: onDismiss,
-                child: Text(l10n.cardNotificationsDismiss),
-              ),
-              TextButton(
-                onPressed: onAdd,
-                child: Text(l10n.cardNotificationsAddManually),
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onDismiss,
+                  child: Text(l10n.cardNotificationsDismiss),
+                ),
+                if (onAddSeparately != null)
+                  TextButton(
+                    key: Key('cardNotifications.addSeparately.${n.id}'),
+                    onPressed: onAddSeparately,
+                    child: Text(l10n.cardNotificationsAddSeparately),
+                  ),
+                if (onReplace != null)
+                  TextButton(
+                    key: Key('cardNotifications.replace.${n.id}'),
+                    onPressed: onReplace,
+                    child: Text(l10n.cardNotificationsReplace),
+                  ),
+                if (onReplace == null && onAddSeparately == null)
+                  TextButton(
+                    onPressed: onAdd,
+                    child: Text(l10n.cardNotificationsAddManually),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
