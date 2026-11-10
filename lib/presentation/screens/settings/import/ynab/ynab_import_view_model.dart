@@ -1,6 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/services/budget_currency.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/core/utils/picked_file.dart';
 import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
@@ -21,7 +23,14 @@ final ynabImportViewModelProvider =
         importService: ref.watch(ynabImportServiceProvider),
         dataMapper: ref.watch(ynabDataMapperProvider),
         history: ref.watch(ynabImportHistoryProvider),
-        defaultCurrency: ref.read(settingsProvider).currency,
+        defaultCurrency: ref.read(budgetCurrencyProvider).currency,
+        fixedCurrency: () async {
+          final budget = BudgetCurrency.of(
+            await ref.read(accountRepositoryProvider).getAllAccounts(),
+            setting: ref.read(settingsProvider).currency,
+          );
+          return budget.isFixed ? budget.currency : null;
+        },
       );
     });
 
@@ -51,11 +60,13 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     required YnabDataMapper dataMapper,
     YnabImportHistory? history,
     String defaultCurrency = defaultCurrencyCode,
+    Future<String?> Function()? fixedCurrency,
   }) : this._(
          importService,
          dataMapper,
          history ?? InMemoryYnabImportHistory(),
          defaultCurrency,
+         fixedCurrency,
        );
 
   YnabImportViewModel._(
@@ -63,7 +74,13 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     this._dataMapper,
     this._history,
     String defaultCurrency,
+    this._fixedCurrency,
   ) : super(YnabImportState(currency: defaultCurrency));
+
+  /// The budget currency once accounts are in the budget (null before):
+  /// the imported accounts then use it whatever was chosen, so no account
+  /// in another currency joins the budget (amounts are never converted).
+  final Future<String?> Function()? _fixedCurrency;
 
   /// Marks the account [accountId] of the parsed data as a tracking
   /// (off-budget) account or a budget account.
@@ -361,9 +378,10 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
     );
 
     try {
+      final currency = await _fixedCurrency?.call() ?? state.currency;
       final summary = await _dataMapper.importData(
         state.parsedData!,
-        currency: state.currency,
+        currency: currency,
       );
       final fingerprint = state.parsedData!.fingerprint;
       if (fingerprint != null) {

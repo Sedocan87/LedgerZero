@@ -69,6 +69,47 @@ void main() {
     expect(container.read(ynabImportViewModelProvider).currency, 'CHF');
   });
 
+  test('with accounts in the budget, the imported accounts use the budget '
+      'currency whatever was chosen', () async {
+    SharedPreferences.setMockInitialValues({'settings_currency': 'EUR'});
+    final prefs = await SharedPreferences.getInstance();
+    final t = TestDatabase();
+    addTearDown(t.close);
+    await t.addAccount(id: 'giro', name: 'Giro', currency: 'EUR');
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(t.db),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+    final sub = container.listen(ynabImportViewModelProvider, (_, _) {});
+    addTearDown(sub.close);
+    final vm = container.read(ynabImportViewModelProvider.notifier);
+    vm.setMethod(YnabImportMethod.nynabCsv);
+    vm.selectFiles(
+      register: MemoryPlatformFile(
+        name: 'Register.csv',
+        bytes: _register.codeUnits,
+      ),
+      budget: MemoryPlatformFile(name: 'Budget.csv', bytes: _budget.codeUnits),
+    );
+    await vm.validateAndParse();
+    vm.setCurrency('CHF');
+    await vm.startImport();
+    expect(
+      container.read(ynabImportViewModelProvider).currentStep,
+      YnabImportStep.success,
+    );
+
+    final created = [
+      for (final a in await t.accounts.getAllAccounts())
+        if (a.id != 'giro') a,
+    ];
+    expect(created, isNotEmpty);
+    expect(created.map((a) => a.currency).toSet(), {'EUR'});
+  });
+
   test('the preview warns when the same export was imported before', () async {
     final t = TestDatabase();
     addTearDown(t.close);
