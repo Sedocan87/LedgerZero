@@ -1006,12 +1006,16 @@ class CsvImportService {
       }
       final key = _categoryKey(name);
       String? id = byName[key];
-      if (id == null && key.contains(':')) {
-        final colon = key.indexOf(':');
-        final qualified =
-            '${key.substring(0, colon).trim()}:'
-            '${key.substring(colon + 1).trim()}';
-        id = byQualified[qualified];
+      // "Group: Category"; a name may contain a colon itself, so every
+      // colon is tried as the separator.
+      for (
+        var colon = key.indexOf(':');
+        id == null && colon != -1;
+        colon = key.indexOf(':', colon + 1)
+      ) {
+        id =
+            byQualified['${key.substring(0, colon).trim()}:'
+                '${key.substring(colon + 1).trim()}'];
       }
       row.categoryId = id;
     }

@@ -188,6 +188,9 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
       final categories = await ref
           .read(categoryRepositoryProvider)
           .getAllCategories();
+      final groups = await ref
+          .read(categoryRepositoryProvider)
+          .getAllCategoryGroups();
       final accounts = await ref
           .read(accountRepositoryProvider)
           .getAllAccounts();
@@ -197,7 +200,10 @@ class _FilteredExportDialogState extends ConsumerState<FilteredExportDialog> {
       ).exportTransactionsToCsv(
         transactions: transactions,
         payeeNames: {for (final p in payees) p.id: p.name},
-        categoryNames: {for (final c in categories) c.id: c.name},
+        categoryNames: TransactionExportService.qualifiedCategoryNames(
+          categories,
+          groups,
+        ),
         accountNames: {for (final a in accounts) a.id: a.name},
         filenamePrefix: 'filtered_transactions',
         shareText: shareText,

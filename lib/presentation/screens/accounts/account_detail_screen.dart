@@ -198,12 +198,18 @@ class AccountDetailScreen extends ConsumerWidget {
       final categories = await ref
           .read(categoryRepositoryProvider)
           .getAllCategories();
+      final groups = await ref
+          .read(categoryRepositoryProvider)
+          .getAllCategoryGroups();
       await TransactionExportService(
         files: ref.read(exportFileServiceProvider),
       ).exportTransactionsToCsv(
         transactions: transactions,
         payeeNames: {for (final p in payees) p.id: p.name},
-        categoryNames: {for (final c in categories) c.id: c.name},
+        categoryNames: TransactionExportService.qualifiedCategoryNames(
+          categories,
+          groups,
+        ),
         accountNames: {account.id: account.name},
         filenamePrefix: 'export_${account.name.replaceAll(' ', '_')}',
         shareText: l10n.transactionsShareText,

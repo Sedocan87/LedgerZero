@@ -1,4 +1,6 @@
 import 'package:csv/csv.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/money/money.dart';
@@ -10,6 +12,24 @@ class TransactionExportService {
 
   TransactionExportService({ExportFileService? files})
     : _files = files ?? ExportFileService();
+
+  /// The export's category names: category id -> `Group: Category` (the
+  /// bare name for a category without group). A name can exist in several
+  /// groups ("Insurance" under Home and under Car); the qualified form is
+  /// what `CsvImportService.assignCategories` needs to tell them apart, so
+  /// an exported file re-imports with every category.
+  static Map<String, String> qualifiedCategoryNames(
+    List<Category> categories,
+    List<CategoryGroup> groups,
+  ) {
+    final groupNames = {for (final g in groups) g.id: g.name};
+    return {
+      for (final c in categories)
+        c.id: groupNames[c.categoryGroupId] == null
+            ? c.name
+            : '${groupNames[c.categoryGroupId]}: ${c.name}',
+    };
+  }
 
   /// Builds the CSV text. Text cells (payee, memo, names) are neutralised
   /// against formula injection; dates and amounts stay plain values.
@@ -84,7 +104,8 @@ class TransactionExportService {
   ///
   /// [transactions]: The list of transactions to export.
   /// [payeeNames]: A map of payee IDs to names.
-  /// [categoryNames]: A map of category IDs to names.
+  /// [categoryNames]: A map of category IDs to names; pass
+  /// [qualifiedCategoryNames] so the file re-imports (see there).
   /// [accountNames]: A map of account IDs to names.
   /// [filenamePrefix]: The prefix for the filename (default: 'transactions_export').
   /// [shareText]: Localised text for the share sheet.

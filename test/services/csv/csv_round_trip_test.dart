@@ -10,6 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/memory_platform_file.dart';
 import 'package:ledger_zero/core/money/money.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
@@ -153,12 +155,45 @@ void main() {
   });
 
   test('one file for every account, imported with "account from file": '
-      'transfers are linked again, cleared states, categories and a '
-      'sanitised payee survive', () async {
+      'transfers are linked again, cleared states, categories (also a '
+      'name used in two groups, F7) and a sanitised payee survive', () async {
     // Extras the sample ledger lacks: a payee the sanitiser must quote, an
-    // uncleared and a reconciled row.
+    // uncleared and a reconciled row, and one category name in two groups.
     final checking = (await source.accounts.getAllAccounts()).firstWhere(
       (a) => a.name == 'Checking',
+    );
+    for (final db in [source, target]) {
+      for (final (group, category) in [
+        ('g-flat', 'c-flat-insurance'),
+        ('g-vehicle', 'c-vehicle-insurance'),
+      ]) {
+        await db.categories.createCategoryGroup(
+          CategoryGroup(
+            id: group,
+            name: group == 'g-flat' ? 'Flat' : 'Vehicle',
+          ),
+        );
+        await db.categories.createCategory(
+          Category(id: category, name: 'Insurance', categoryGroupId: group),
+        );
+      }
+    }
+    await source.addTransaction(
+      accountId: checking.id,
+      amount: -7000,
+      date: DateTime.utc(2024, 3, 9),
+      categoryId: 'c-flat-insurance',
+    );
+    await source.addTransaction(
+      accountId: checking.id,
+      amount: -5000,
+      date: DateTime.utc(2024, 3, 10),
+      categoryId: 'c-vehicle-insurance',
+    );
+    await source.budgeting.setCategoryBudgetedAmount(
+      'c-flat-insurance',
+      8000,
+      month,
     );
     await source.payees.createPayee(const Payee(id: 'p-fees', name: '-Fees'));
     await source.addTransaction(
@@ -182,10 +217,15 @@ void main() {
     final csv = TransactionExportService().buildCsv(
       transactions: await source.transactions.getAllTransactions(),
       payeeNames: {for (final p in payees) p.id: p.name},
-      categoryNames: {for (final c in categories) c.id: c.name},
+      categoryNames: TransactionExportService.qualifiedCategoryNames(
+        categories,
+        await source.categories.getAllCategoryGroups(),
+      ),
       accountNames: {for (final a in accounts) a.id: a.name},
     );
     expect(csv, contains("'-Fees"), reason: 'the sanitiser quoted it');
+    expect(csv, contains('Flat: Insurance'));
+    expect(csv, contains('Vehicle: Insurance'));
 
     final csvService = CsvImportService();
     final data = await csvService.parseCsvFile(
@@ -250,14 +290,34 @@ void main() {
       accountIdsByName: targetIds,
     );
     for (final budget in await source.budgets.getBudgetsForMonth('2024-03')) {
-      final name = categories.firstWhere((c) => c.id == budget.categoryId).name;
+      final category = categories.firstWhere((c) => c.id == budget.categoryId);
       final id = (await target.categories.getAllCategories())
-          .firstWhere((c) => c.name == name)
+          .firstWhere(
+            (c) =>
+                c.name == category.name &&
+                (category.name != 'Insurance' || c.id == category.id),
+          )
           .id;
       await target.budgeting.setCategoryBudgetedAmount(
         id,
         budget.budgeted,
         month,
+      );
+    }
+    // Both "Insurance" categories got their own transaction back.
+    for (final (id, available) in [
+      ('c-flat-insurance', 1000),
+      ('c-vehicle-insurance', -5000),
+    ]) {
+      expect(
+        await target.budgeting.calculateCategoryAvailable(id, month),
+        available,
+        reason: id,
+      );
+      expect(
+        await source.budgeting.calculateCategoryAvailable(id, month),
+        available,
+        reason: id,
       );
     }
 
