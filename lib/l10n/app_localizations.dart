@@ -8265,6 +8265,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A payee named \"{name}\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"{name}\".'**
   String payeeNameTakenMessage(String name);
+
+  /// Scheduled transaction form: Next date of a finished schedule (it has no next date)
+  ///
+  /// In en, this message translates to:
+  /// **'Finished: nothing more is booked. Pick a next date to restart it.'**
+  String get scheduledFinishedPickNextDate;
 }
 
 class _AppLocalizationsDelegate

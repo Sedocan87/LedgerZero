@@ -21,7 +21,7 @@ are nullable):
 | `memo` | Copied to each occurrence. |
 | `frequency` | `daily`, `weekly`, `monthly`, `yearly` (default monthly). |
 | `interval` | Every N periods (default 1). |
-| `next_date` | Calendar day (UTC midnight) of the next occurrence; `NULL` = finished. |
+| `next_date` | Calendar day (UTC midnight) of the next occurrence; `NULL` = finished. The form shows a finished schedule's next date as "Finished"; saving it (e.g. after changing the memo) keeps it finished, and only picking a next date restarts it. |
 | `end_date` | Optional last allowed date. |
 | `occurrence_count` | Optional number of remaining occurrences. |
 | `anchor_day` | Day of month (1-31) monthly/yearly schedules aim for. |

@@ -58,6 +58,11 @@ class _AddEditScheduledTransactionScreenState
 
   /// Calendar days (UTC midnight).
   DateTime _nextDate = CalendarDate.today();
+
+  /// The loaded schedule is finished (no next date): it stays finished on
+  /// save until the user picks a new next date, so opening and saving it
+  /// does not book an occurrence today.
+  bool _finished = false;
   DateTime? _endDate;
   int? _occurrenceCount;
   bool _autoApprove = false;
@@ -91,7 +96,7 @@ class _AddEditScheduledTransactionScreenState
     _memoText,
     _frequency.name,
     _interval,
-    _nextDate.toIso8601String(),
+    _finished ? null : _nextDate.toIso8601String(),
     _endDate?.toIso8601String(),
     _occurrenceCount,
     _autoApprove,
@@ -124,6 +129,7 @@ class _AddEditScheduledTransactionScreenState
           _isInflow = amount > 0;
           _frequency = transaction.frequency ?? RecurrenceFrequency.monthly;
           _interval = transaction.interval ?? 1;
+          _finished = transaction.nextDate == null;
           _nextDate = transaction.nextDate != null
               ? CalendarDate.normalize(transaction.nextDate!)
               : CalendarDate.today();
@@ -171,7 +177,7 @@ class _AddEditScheduledTransactionScreenState
         frequency: _frequency,
         interval: _interval,
         occurrenceCount: _occurrenceCount,
-        nextDate: _nextDate,
+        nextDate: _finished ? null : _nextDate,
         endDate: _endDate,
         autoApprove: _autoApprove,
         memo: _memo,
@@ -398,8 +404,13 @@ class _AddEditScheduledTransactionScreenState
 
             // Next Date
             ListTile(
+              key: const Key('scheduled_next_date'),
               title: Text(l10n.nextDate),
-              subtitle: Text(fmt.formatDate(_nextDate)),
+              subtitle: Text(
+                _finished
+                    ? l10n.scheduledFinishedPickNextDate
+                    : fmt.formatDate(_nextDate),
+              ),
               trailing: const Icon(AppIcons.calendar),
               onTap: () async {
                 final initial = CalendarDate.toLocalDay(_nextDate);
@@ -422,6 +433,7 @@ class _AddEditScheduledTransactionScreenState
                   setState(() {
                     _nextDate = CalendarDate.fromLocalPick(date);
                     _anchorDay = _nextDate.day;
+                    _finished = false;
                   });
                 }
               },

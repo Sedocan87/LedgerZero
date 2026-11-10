@@ -5206,4 +5206,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String payeeNameTakenMessage(String name) {
     return 'A payee named \"$name\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"$name\".';
   }
+
+  @override
+  String get scheduledFinishedPickNextDate =>
+      'Finished: nothing more is booked. Pick a next date to restart it.';
 }

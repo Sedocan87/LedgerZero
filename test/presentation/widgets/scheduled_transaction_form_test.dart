@@ -481,5 +481,66 @@ void main() {
       expect(saved.nextDate, DateTime.utc(year, 1, 15));
       expect(saved.anchorDay, 15);
     });
+
+    group('a finished schedule (ledger improvement 4)', () {
+      ScheduledTransaction finished() => const ScheduledTransaction(
+        id: 's1',
+        accountId: 'acc1',
+        amount: -5000,
+        frequency: RecurrenceFrequency.monthly,
+        interval: 1,
+        anchorDay: 31,
+        memo: 'Old memo',
+      );
+
+      Future<void> showNextDate(WidgetTester tester) async {
+        await tester.dragUntilVisible(
+          find.text('Next Date'),
+          find.byType(ListView),
+          const Offset(0, -200),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('says so and stays finished when saved', (tester) async {
+        repo.rows['s1'] = finished();
+        await pumpScreen(tester, 's1');
+        await showNextDate(tester);
+        expect(
+          find.text(
+            'Finished: nothing more is booked. Pick a next date to restart it.',
+          ),
+          findsOneWidget,
+        );
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Memo'),
+          'New memo',
+        );
+        await save(tester);
+        final saved = repo.rows['s1']!;
+        expect(saved.memo, 'New memo');
+        expect(saved.nextDate, isNull);
+        expect(saved.anchorDay, 31);
+      });
+
+      testWidgets('a picked next date restarts it', (tester) async {
+        final year = DateTime.now().year + 1;
+        repo.rows['s1'] = finished();
+        await pumpScreen(tester, 's1');
+        await showNextDate(tester);
+        await tester.tap(find.text('Next Date'));
+        await tester.pumpAndSettle();
+        // The picker opens on today; move to a month of next year.
+        await tester.tap(find.byTooltip('Switch to input'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).last, '01/15/$year');
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Finished'), findsNothing);
+        await save(tester);
+        expect(repo.rows['s1']!.nextDate, DateTime.utc(year, 1, 15));
+      });
+    });
   });
 }

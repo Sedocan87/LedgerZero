@@ -5246,4 +5246,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String payeeNameTakenMessage(String name) {
     return 'Es gibt bereits einen Empfänger „$name“. Möchten Sie diesen Empfänger mit ihm zusammenführen? Seine Transaktionen, Planungen und Regeln verwenden dann „$name“.';
   }
+
+  @override
+  String get scheduledFinishedPickNextDate =>
+      'Beendet: Es wird nichts mehr gebucht. Wählen Sie ein nächstes Datum, um sie wieder zu starten.';
 }
