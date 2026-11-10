@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/tables/budgets.dart';
+import 'package:ledger_zero/domain/repositories/budget_repository.dart'
+    show CardLedgerRow;
 
 part 'budgets_dao.g.dart';
 
@@ -198,6 +200,127 @@ class BudgetsDao extends DatabaseAccessor<AppDatabase> with _$BudgetsDaoMixin {
           row.read(transactions.accountId)!: row.read(first)!,
     };
   }
+
+  /// See `BudgetRepository.getCardLedgerRows`. The activity rows use the
+  /// filter of [getMonthlyCategoryActivitySums].
+  Future<List<CardLedgerRow>> getCardLedgerRows(
+    DateTime endExclusive, {
+    required Set<String> cardIds,
+    required Set<String> paymentCategoryIds,
+    String? categoryId,
+  }) async {
+    if (cardIds.isEmpty) {
+      return const [];
+    }
+    final transactions = attachedDatabase.transactions;
+    final end = endExclusive.toUtc();
+    final month = transactions.date.strftime('%Y-%m');
+    var activity =
+        transactions.date.isSmallerThanValue(end) &
+        transactions.isDeleted.equals(false) &
+        transactions.categoryId.isNotNull() &
+        _inBudgetAccount &
+        (transactions.transferAccountId.isNull() | _transferAcrossBudget);
+    if (categoryId != null) {
+      activity = activity & transactions.categoryId.equals(categoryId);
+    }
+
+    // The (month, category) pairs with card spending or refunds.
+    final pairQuery = selectOnly(transactions, distinct: true)
+      ..addColumns([month, transactions.categoryId])
+      ..where(activity & transactions.accountId.isIn(cardIds));
+    final pairs = <String>{};
+    final categories = <String>{};
+    for (final row in await pairQuery.get()) {
+      final m = row.read(month);
+      final c = row.read(transactions.categoryId);
+      if (m != null && c != null) {
+        pairs.add('$m|$c');
+        categories.add(c);
+      }
+    }
+    final payment = categoryId == null
+        ? paymentCategoryIds
+        : paymentCategoryIds.intersection({categoryId});
+    categories.addAll(payment);
+
+    final result = <CardLedgerRow>[];
+    if (categories.isNotEmpty) {
+      final rows =
+          await (select(transactions)..where(
+                (_) => activity & transactions.categoryId.isIn(categories),
+              ))
+              .get();
+      for (final r in rows) {
+        final key = '${_monthKey(r.date)}|${r.categoryId}';
+        if (pairs.contains(key) || payment.contains(r.categoryId)) {
+          result.add(_ledgerRow(r, isBudgetTransfer: false));
+        }
+      }
+    }
+    if (categoryId == null) {
+      final legs =
+          await (select(transactions)..where(
+                (t) =>
+                    t.date.isSmallerThanValue(end) &
+                    t.isDeleted.equals(false) &
+                    t.accountId.isIn(cardIds) &
+                    _transferWithinBudget,
+              ))
+              .get();
+      for (final r in legs) {
+        result.add(_ledgerRow(r, isBudgetTransfer: true));
+      }
+    }
+    return result;
+  }
+
+  static String _monthKey(DateTime date) {
+    final d = date.toUtc();
+    return '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}';
+  }
+
+  static CardLedgerRow _ledgerRow(
+    Transaction r, {
+    required bool isBudgetTransfer,
+  }) => CardLedgerRow(
+    id: r.id,
+    accountId: r.accountId,
+    categoryId: isBudgetTransfer ? null : r.categoryId,
+    amount: r.amount,
+    date: r.date.toUtc(),
+    createdAt: r.createdAt?.toUtc(),
+    transferAccountId: r.transferAccountId,
+    isBudgetTransfer: isBudgetTransfer,
+  );
+
+  /// See `BudgetRepository.getBalanceChangesBefore`.
+  Future<Map<String, int>> getBalanceChangesBefore(
+    DateTime endExclusive,
+  ) async {
+    final transactions = attachedDatabase.transactions;
+    final amount = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..where(
+        transactions.date.isSmallerThanValue(endExclusive.toUtc()) &
+            transactions.isDeleted.equals(false) &
+            transactions.parentTransactionId.isNull(),
+      )
+      ..addColumns([transactions.accountId, amount])
+      ..groupBy([transactions.accountId]);
+    return {
+      for (final row in await query.get())
+        if (row.read(transactions.accountId) != null)
+          row.read(transactions.accountId)!: row.read(amount) ?? 0,
+    };
+  }
+
+  /// The row is a transfer leg whose other account is on budget too.
+  static const CustomExpression<bool> _transferWithinBudget = CustomExpression(
+    'transactions.transfer_account_id IN '
+    '(SELECT id FROM accounts WHERE on_budget = 1)',
+  );
 
   /// The row of table `transactions` belongs to an on-budget account (same
   /// condition as in [TransactionsDao]).

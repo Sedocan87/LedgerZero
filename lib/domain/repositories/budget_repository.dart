@@ -71,4 +71,70 @@ abstract class BudgetRepository {
 
   /// accountId -> date of the account's earliest non-deleted transaction.
   Future<Map<String, DateTime>> getFirstTransactionDates();
+
+  /// The rows the credit-card rules need one by one (dated before
+  /// [endExclusive]), see `BudgetingService` and docs/ALGORITHMS.md:
+  ///
+  /// * every categorised activity row of a (month, category) in which the
+  ///   category has a row in one of the budget cards [cardIds] (spending or
+  ///   a refund), cash rows included, and every activity row categorised
+  ///   into one of [paymentCategoryIds];
+  /// * unless [categoryId] is given: the card legs of transfers between a
+  ///   card and another on-budget account ([CardLedgerRow.isBudgetTransfer]).
+  ///
+  /// With [categoryId], only that category's rows (no transfer legs).
+  Future<List<CardLedgerRow>> getCardLedgerRows(
+    DateTime endExclusive, {
+    required Set<String> cardIds,
+    required Set<String> paymentCategoryIds,
+    String? categoryId,
+  });
+
+  /// accountId -> sum (minor units) of the account's balance rows (not
+  /// deleted, not a split line) dated before [endExclusive]; the starting
+  /// balance is not included. Accounts without such rows are absent.
+  Future<Map<String, int>> getBalanceChangesBefore(DateTime endExclusive);
+}
+
+/// One transaction row as the credit-card rules process it.
+class CardLedgerRow {
+  final String id;
+  final String accountId;
+
+  /// The category; null for a [isBudgetTransfer] leg.
+  final String? categoryId;
+  final int amount;
+  final DateTime date;
+  final DateTime? createdAt;
+  final String? transferAccountId;
+
+  /// The card's leg of a transfer to or from another on-budget account (a
+  /// payment, a cash advance, a balance transfer between two cards).
+  final bool isBudgetTransfer;
+
+  const CardLedgerRow({
+    required this.id,
+    required this.accountId,
+    required this.categoryId,
+    required this.amount,
+    required this.date,
+    required this.createdAt,
+    required this.transferAccountId,
+    required this.isBudgetTransfer,
+  });
+
+  /// The fixed processing order within a month: date, then `created_at`
+  /// (missing first), then id.
+  static int compare(CardLedgerRow a, CardLedgerRow b) {
+    final byDate = a.date.compareTo(b.date);
+    if (byDate != 0) {
+      return byDate;
+    }
+    final ca = a.createdAt?.microsecondsSinceEpoch ?? -1;
+    final cb = b.createdAt?.microsecondsSinceEpoch ?? -1;
+    if (ca != cb) {
+      return ca.compareTo(cb);
+    }
+    return a.id.compareTo(b.id);
+  }
 }
