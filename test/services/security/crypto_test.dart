@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/services/security/crypto/aead.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
-import 'package:ledger_zero/services/security/crypto/recovery_key.dart';
 import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 
 String _hex(List<int> bytes) =>
@@ -140,35 +139,6 @@ void main() {
         ),
         throwsA(isA<AeadAuthenticationException>()),
       );
-    });
-  });
-
-  group('RecoveryKey', () {
-    test('has at least 128 bits and is shown in groups of four', () {
-      final key = RecoveryKey.generate();
-      expect(key.bytes.length * 8, greaterThanOrEqualTo(128));
-      final text = key.format();
-      expect(text, matches(RegExp(r'^([0-9A-Z]{4}-){7}[0-9A-Z]{4}$')));
-    });
-
-    test('parses back tolerating case, spaces, dashes and look-alikes', () {
-      final key = RecoveryKey.generate();
-      final text = key.format();
-      expect(RecoveryKey.tryParse(text)!.bytes, key.bytes);
-      expect(
-        RecoveryKey.tryParse(
-          '  ${text.toLowerCase().replaceAll('-', ' ')}\n',
-        )!.bytes,
-        key.bytes,
-      );
-      final lookAlikes = text.replaceAll('0', 'O').replaceAll('1', 'l');
-      expect(RecoveryKey.tryParse(lookAlikes)!.bytes, key.bytes);
-    });
-
-    test('rejects malformed input', () {
-      expect(RecoveryKey.tryParse(''), isNull);
-      expect(RecoveryKey.tryParse('ABCD-EFGH'), isNull);
-      expect(RecoveryKey.tryParse('U' * 32), isNull);
     });
   });
 }

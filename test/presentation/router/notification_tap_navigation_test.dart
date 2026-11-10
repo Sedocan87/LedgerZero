@@ -25,10 +25,10 @@ import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.d
 import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
-import 'package:ledger_zero/services/security/key_vault.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/app_directories.dart';
 import '../../helpers/security_fakes.dart';
 import '../../helpers/test_database.dart';
 
@@ -40,7 +40,10 @@ class _NoBackupReminder extends Mock implements BackupScheduler {
 void main() {
   late TestDatabase t;
 
-  setUp(() => t = TestDatabase());
+  setUp(() {
+    mockAppDirectories();
+    t = TestDatabase();
+  });
   tearDown(() => t.close());
 
   /// Pumps the real router, onboarded and unlocked, on Home.
@@ -50,6 +53,9 @@ void main() {
     addTearDown(tester.view.reset);
     SharedPreferences.setMockInitialValues({
       'user_onboarded': true,
+      // The app lock is on and its prompt is dismissed: the app stays at
+      // the lock screen until a test unlocks it.
+      kAppLockEnabledKey: true,
       'tutorial_completed_budget_screen_intro': true,
       'tutorial_completed_transaction_entry_intro': true,
       'tutorial_completed_sync_setup_intro': true,
@@ -61,16 +67,9 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         databaseProvider.overrideWithValue(t.db),
         secureStoreProvider.overrideWithValue(store),
-        legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
-        keyVaultProvider.overrideWithValue(
-          KeyVault(store, newKdfParams: fastKdf),
-        ),
-        biometricKeyStoreProvider.overrideWithValue(
-          FakeBiometricKeyStore(available: false),
-        ),
         backupSchedulerProvider.overrideWithValue(_NoBackupReminder()),
         appLockAuthenticatorProvider.overrideWithValue(
-          FakeAppLockAuthenticator(),
+          FakeAppLockAuthenticator(result: AppLockResult.cancelled),
         ),
       ],
     );

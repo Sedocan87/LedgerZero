@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later (android:dataExtractionRules). See
+     docs/PLATFORM_SPECIFICS.md ("Backup and moving to a new phone").
+
+     Cloud backup (Google Drive): nothing. LedgerZero promises "no cloud";
+     the user makes encrypted backups or syncs instead. With an include,
+     only the included files are backed up, and this one names a file that
+     never exists, so the backup is empty.
+
+     Device-to-device transfer (setting up a new phone from the old one, by
+     cable or Wi-Fi): the database (app_flutter/db.sqlite with its WAL) and
+     the app's preferences (FlutterSharedPreferences.xml), so the budget
+     moves to the new phone. Everything else stays behind: the secure
+     storage (flutter_secure_storage: the automatic-backup password and the
+     Wi-Fi pairing secret are encrypted with an Android KeyStore key that
+     cannot move), the card capture store (ledgerzero_capture.xml, also
+     KeyStore-encrypted; it starts empty on the new phone), exports, the
+     sync folder and the automatic backups (external storage). The moved
+     install gets a new sync device id at its first start
+     (lib/services/backup/transferred_install.dart). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="no_cloud_backup" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="root" path="app_flutter/db.sqlite" />
+        <include domain="root" path="app_flutter/db.sqlite-wal" />
+        <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+    </device-transfer>
+</data-extraction-rules>

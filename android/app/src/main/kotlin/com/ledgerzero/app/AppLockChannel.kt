@@ -19,8 +19,8 @@ import io.flutter.plugin.common.MethodChannel
  * PIN, pattern or password (Dart side:
  * lib/services/security/app_lock_authenticator.dart).
  *
- * It gates the UI only; the database key does not depend on it (see
- * DeviceKeyStore). API 30+ allows a strong biometric or the device
+ * It gates the UI only: the database is a plain file in the app's private
+ * storage and does not depend on it. API 30+ allows a strong biometric or the device
  * credential; below API 30 BIOMETRIC_STRONG cannot be combined with
  * DEVICE_CREDENTIAL, so a weak biometric or the device credential is used
  * there.

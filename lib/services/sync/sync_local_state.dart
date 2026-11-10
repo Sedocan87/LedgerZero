@@ -20,8 +20,8 @@ enum FullUpload {
 }
 
 /// Typed access to the `sync_kv` entries. Everything here lives in the
-/// encrypted database, including the derived sync key (never in
-/// SharedPreferences or plain files).
+/// database (and so in its encrypted backups), including the derived sync
+/// key (never in SharedPreferences or other files).
 class SyncLocalState {
   final SyncDao _dao;
 

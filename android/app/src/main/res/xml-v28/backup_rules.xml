@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 9 to 11 (android:fullBackupContent). Every include requires
+     the deviceToDeviceTransfer flag: a cloud backup matches none of them
+     and stays empty, a device-to-device transfer takes the database and the
+     app's preferences (see data_extraction_rules.xml for what stays behind
+     and why). Android 7.0 to 8.1 ignore requireFlags, so they use
+     res/xml/backup_rules.xml, which includes nothing. -->
+<full-backup-content>
+    <include
+        domain="root"
+        path="app_flutter/db.sqlite"
+        requireFlags="deviceToDeviceTransfer" />
+    <include
+        domain="root"
+        path="app_flutter/db.sqlite-wal"
+        requireFlags="deviceToDeviceTransfer" />
+    <include
+        domain="sharedpref"
+        path="FlutterSharedPreferences.xml"
+        requireFlags="deviceToDeviceTransfer" />
+</full-backup-content>

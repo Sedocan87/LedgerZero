@@ -20,10 +20,8 @@ dependencies:
 
   # Database & Persistence
   drift: ^2.35.2
-  # v10: EncryptedSharedPreferences replaced by KeyStore-wrapped AES-GCM;
-  # v9 data is migrated on first access (migrateOnAlgorithmChange). Stay on
-  # v10 until every install has run it once: v11 drops that migration.
-  flutter_secure_storage: ^10.3.4
+  # The automatic-backup password and the Wi-Fi pairing secret (KeyStore).
+  flutter_secure_storage: ^11.2.0
 
   # Cloud Sync
   googleapis: ^17.0.0
@@ -74,7 +72,9 @@ dependencies:
   archive: ^4.0.7
   url_launcher: ^6.3.2
 
-  # SQLCipher is bundled through the sqlite3 build hook (see `hooks` below).
+  # SQLite itself, bundled by the sqlite3 build hook (drift's native
+  # backend). The database is a plain SQLite file in the app's private
+  # storage; backups and sync files are encrypted by the app.
   sqlite3: ^3.7.1
   http: ^1.6.0 # Drive media download client
   qr_flutter: ^4.1.0
@@ -107,9 +107,3 @@ flutter:
     - assets/fonts/Roboto-Bold.ttf
     # Shown on the licence page (Settings > About); see lib/app/licenses.dart.
     - assets/fonts/LICENSE-Roboto.txt
-
-hooks:
-  user_defines:
-    sqlite3:
-      # Bundle SQLCipher instead of plain SQLite so the database is encrypted at rest.
-      source: sqlcipher

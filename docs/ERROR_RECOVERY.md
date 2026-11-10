@@ -4,7 +4,7 @@ This document outlines procedures for recovering from common error scenarios in 
 
 ## 1. Database Corruption
 
-Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.g., unexpected power loss during write).
+LedgerZero uses SQLite in WAL mode, so corruption is rare but possible (e.g., unexpected power loss during write). At start-up a file that is not a readable database is reported as damaged, with **Retry** and **Reset app** (see [TROUBLESHOOTING.md](TROUBLESHOOTING.md#start-up-and-app-lock)).
 
 ### Symptoms
 - App crashes on launch.
@@ -21,7 +21,7 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
 
 2. **Manual Extraction (Advanced)**:
    - The database is `db.sqlite` in the app's documents directory (`/data/data/com.ledgerzero.app/app_flutter/`).
-   - It is encrypted with SQLCipher under a random data key that is never shown or exported, so a copied file cannot be opened with an SQLite browser. Restore a backup instead.
+   - It is a plain SQLite file, but it lives in the app's private storage: without root or a debug build it cannot be copied off the phone. Use a backup or the JSON/CSV export instead.
 
 ## 2. Synchronization Issues
 
@@ -76,27 +76,26 @@ Since LedgerZero uses SQLite with SQLCipher, corruption is rare but possible (e.
     removed from Sync settings. Then set up sync on one device and join on
     the others. Wi-Fi sync: tap *Turn off* on both phones and pair again.
 
-## 3. App Lock and Database Key
+## 3. App Lock and Start-up
 
-There is no master password. The database key lives in the phone's
-KeyStore; the app lock uses the phone's own screen lock (fingerprint,
-face, PIN, pattern or password).
+There is no master password and no database key. The app lock uses the
+phone's own screen lock (fingerprint, face, PIN, pattern or password) and
+gates the screen only.
 
 ### Symptoms
 - The app lock does not accept you: use the phone's PIN, pattern or
   password, the same way the lock screen does.
-- "The key data of this app is missing".
+- "LedgerZero cannot read the data on this phone" (damaged database) or
+  "saved by an early test version".
 
 ### Recovery Steps
-1. **"The key data of this app is missing"** (the KeyStore entry holding the
-   database key was removed, e.g. after a security reset of the phone): the
-   data on this phone cannot be opened any more. The lock screen offers
-   **Reset app**; after typing the confirmation word it performs the
-   factory reset (database with its WAL/SHM files and any restore leftover,
-   key entries, preferences, exported files, local sync files and the
-   Wi-Fi pairing; it also signs out of Google Drive, best effort) and
-   returns to onboarding, where you can set up the app and restore a
-   backup.
+1. **Damaged database or early test version**: the lock screen offers
+   **Reset app** next to **Retry**; after typing the confirmation word it
+   performs the factory reset (database with its WAL/SHM files and any
+   restore leftover, the stored automatic-backup password, preferences,
+   exported files, local sync files and the Wi-Fi pairing; it also signs out
+   of Google Drive, best effort) and returns to onboarding, where you can
+   set up the app and restore a backup.
 2. **Backup**: restore it in Settings > Backup & Export with its backup
    password (chosen when the backup was made). If automatic backups were
    on, the reset keeps them: **Restore an automatic backup** lists them,
@@ -105,7 +104,7 @@ face, PIN, pattern or password).
    sync, the shared data comes back from the sync folder after joining it
    again (personal transactions do not — they exist only in this phone's
    backups).
-   See [ENCRYPTION_TROUBLESHOOTING.md](ENCRYPTION_TROUBLESHOOTING.md).
+   See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#start-up-and-app-lock).
 
 ## 4. Application Crashes
 

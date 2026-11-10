@@ -5,7 +5,7 @@
 # Google Sign-In (Play services auth, used for Google Drive sync).
 -keep class com.google.android.gms.** { *; }
 
-# SQLCipher is a native library bundled by the sqlite3 build hook and loaded
+# SQLite is a native library bundled by the sqlite3 build hook and loaded
 # through dart:ffi: it has no Java classes to keep.
 
 # Keep generic signatures and annotations that plugins read reflectively.

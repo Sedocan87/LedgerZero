@@ -6,7 +6,6 @@ import 'package:drift/native.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/data/database/database.dart';
-import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/services/backup/backup_format.dart';
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
 import 'package:ledger_zero/services/sync/sync_local_state.dart';
@@ -19,7 +18,8 @@ export 'package:ledger_zero/services/backup/backup_format.dart'
         BackupException,
         BackupAuthenticationException,
         BackupFormatException,
-        BackupTooNewException;
+        BackupTooNewException,
+        BackupTooOldException;
 
 /// Closes and reopens the app's database connection around a file swap.
 abstract class DatabaseLifecycle {
@@ -35,12 +35,12 @@ abstract class DatabaseLifecycle {
 /// Full restore:
 /// 1. decrypt into a temporary plain file (app temp directory);
 /// 2. validate it: `integrity_check`, required tables, schema version
-///    between 1 and [AppDatabase.schemaVersion]; older schemas are migrated
-///    by opening the file through [AppDatabase];
+///    between [AppDatabase.minimumSchemaVersion] and
+///    [AppDatabase.schemaVersion] (older backups are refused with
+///    [BackupTooOldException]);
 /// 3. empty `pending_sync_changes` (see [SyncRebootstrap]);
-/// 4. build a new database encrypted with the current data key
-///    (`ATTACH ... KEY` + `sqlcipher_export`, on a background isolate) next
-///    to the live file and check it opens with that key;
+/// 4. copy it next to the live file (`<db>.restore-new`) and check the copy
+///    (`integrity_check`, on a background isolate);
 /// 5. mark sync for re-bootstrap, write the restore marker
 ///    (`<db>.restoring`), close the connection, move the live file to
 ///    `<db>.previous`, move the new file into place, reopen through
@@ -54,7 +54,6 @@ class RestoreService {
   final AppDatabase Function() _currentDb;
   final DatabaseLifecycle? _lifecycle;
   final Future<File> Function()? _databaseFile;
-  final Uint8List Function()? _dataKey;
   final SyncRebootstrap? _rebootstrap;
   final Future<Directory> Function() _tempDirectory;
 
@@ -62,7 +61,6 @@ class RestoreService {
     this._currentDb, {
     this._lifecycle,
     this._databaseFile,
-    this._dataKey,
     this._rebootstrap,
     Future<Directory> Function()? tempDirectory,
   }) : _tempDirectory = tempDirectory ?? getTemporaryDirectory;
@@ -83,8 +81,7 @@ class RestoreService {
   }) async {
     final lifecycle = _lifecycle;
     final databaseFile = _databaseFile;
-    final dataKey = _dataKey;
-    if (lifecycle == null || databaseFile == null || dataKey == null) {
+    if (lifecycle == null || databaseFile == null) {
       throw StateError('RestoreService is not configured for full restores');
     }
     final prepared = await prepareRestore(backupFile, password: password);
@@ -101,8 +98,7 @@ class RestoreService {
   }) async {
     final lifecycle = _lifecycle;
     final databaseFile = _databaseFile;
-    final dataKey = _dataKey;
-    if (lifecycle == null || databaseFile == null || dataKey == null) {
+    if (lifecycle == null || databaseFile == null) {
       throw StateError('RestoreService is not configured for full restores');
     }
     final work = await _workDirectory('restore');
@@ -174,8 +170,7 @@ class RestoreService {
     final staged = RestoreFiles(dbFile).staged;
     try {
       await deleteDatabaseFileSet(staged);
-      final keyBytes = Uint8List.fromList(_dataKey!());
-      await Isolate.run(() => _buildEncryptedCopy(plain, staged, keyBytes));
+      await Isolate.run(() => _buildCopy(plain, staged));
       // The flag goes first: sync is paused by the lifecycle, and a run that
       // starts after the reopen must already see it.
       await _rebootstrap?.markRequired();
@@ -195,22 +190,10 @@ class RestoreService {
     }
   }
 
-  /// Validates the decrypted plain database [plain], migrates an older
-  /// schema and clears its sync queue. Returns the schema version.
+  /// Validates the decrypted plain database [plain] and clears its sync
+  /// queue. Returns the schema version.
   Future<int> prepareRestoredDatabase(File plain) async {
-    var version = _validate(plain);
-    if (version < _currentSchemaVersion) {
-      final migrating = AppDatabase(NativeDatabase(plain));
-      try {
-        await migrating.customSelect('SELECT 1').get();
-      } finally {
-        await migrating.close();
-      }
-      version = _validate(plain);
-      if (version != _currentSchemaVersion) {
-        throw const BackupFormatException('Backup could not be upgraded');
-      }
-    }
+    final version = _validate(plain);
     final db = sqlite.sqlite3.open(plain.path);
     try {
       db.execute('DELETE FROM pending_sync_changes');
@@ -219,8 +202,6 @@ class RestoreService {
         SyncLocalState.deviceIdKey,
       ]);
       db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
-    } on sqlite.SqliteException {
-      // Table absent in very old schemas.
     } finally {
       db.close();
     }
@@ -360,25 +341,21 @@ class RestoreService {
       if (version > _currentSchemaVersion) {
         throw const BackupTooNewException();
       }
+      if (version < AppDatabase.minimumSchemaVersion) {
+        throw BackupTooOldException(version);
+      }
       return version;
     } finally {
       db.close();
     }
   }
 
-  /// Runs on a background isolate: `sqlcipher_export` of a whole database
+  /// Runs on a background isolate: copying and checking a whole database
   /// would otherwise block the UI long enough for an ANR.
-  static void _buildEncryptedCopy(File plain, File target, Uint8List keyBytes) {
-    final key = RawSqlCipherKey(keyBytes);
-    final db = sqlite.sqlite3.open(plain.path);
-    try {
-      SqlCipher.exportTo(db, target, key);
-    } finally {
-      db.close();
-    }
+  static void _buildCopy(File plain, File target) {
+    plain.copySync(target.path);
     final check = sqlite.sqlite3.open(target.path);
     try {
-      SqlCipher.applyKey(check, key);
       final integrity = check.select('PRAGMA integrity_check');
       if (integrity.isEmpty || integrity.first.values.first != 'ok') {
         throw const BackupException('Restored database failed its check');

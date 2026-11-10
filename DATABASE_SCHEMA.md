@@ -1,14 +1,20 @@
 # Database Schema
 
 LedgerZero stores everything in one [Drift](https://drift.simonbinder.eu/)
-database (SQLite built as SQLCipher, encrypted with a random data key; see
-[docs/ENCRYPTION.md](docs/ENCRYPTION.md)). Tables are defined in
+database: a plain SQLite file in the app's private storage (not encrypted by
+the app; backups and sync files are, see [docs/SECURITY.md](docs/SECURITY.md)
+and [docs/ENCRYPTION.md](docs/ENCRYPTION.md)). Tables are defined in
 `lib/data/database/tables/`, the database and its migrations in
 `lib/data/database/database.dart`.
 
-**Current schema version: 18.** The tables below are generated from the
-exported schema `drift_schemas/drift_schema_v18.json`, which the migration
-tests (`test/database/migration_test.dart`) compare against the code.
+**Current schema version: 20**, also the baseline: databases and backups
+with an older schema (development builds only) are not upgraded; opening
+one offers the reset, restoring one is refused. `drift_schemas/` keeps only
+`drift_schema_v20.json`, which the schema tests
+(`test/database/migration_test.dart`) compare against the code; the next
+schema change adds its dump and a v20 -> v21 step. The tables below were
+generated from the v18 dump; v19 and v20 added the account columns listed
+in the version history.
 
 ## Version history (recent)
 
@@ -18,6 +24,8 @@ tests (`test/database/migration_test.dart`) compare against the code.
 | 16 | `scheduled_transactions.memo` and `scheduled_transactions.anchor_day`. |
 | 17 | Sync format v2 bookkeeping tables (`sync_*`), `pending_sync_changes.old_updated_at`; the v1 `sync_log` table was dropped. |
 | 18 | The unused quick-add keyword table `parsing_rules` (never synced, never written by the app) was dropped (`DROP TABLE IF EXISTS`). Upgrades from v11 or older no longer create it in the v12 step. |
+| 19 | `accounts.on_budget` (off-budget tracking accounts). |
+| 20 | Personal accounts: `accounts.owner_id`, `accounts.shared_balance` and the personal balance triggers. First schema of the released app; the upgrade steps from v1–v19 were removed. |
 
 ## Conventions
 
@@ -294,7 +302,7 @@ Table constraints: `PRIMARY KEY (device_id)`
 
 ### `sync_kv`
 
-Sync state that must live in the encrypted database (`sync_key`, `sync_id`, `own_sequence`, `full_upload_required`, `own_snapshots`, `snapshot_clock_started`). Local only.
+Sync state that must live in the database (`sync_key`, `sync_id`, `own_sequence`, `full_upload_required`, `own_snapshots`, `snapshot_clock_started`). Local only.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|

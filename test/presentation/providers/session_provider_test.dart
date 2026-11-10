@@ -12,7 +12,6 @@ import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
-import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,7 +43,7 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
-  test('closed: there is no database, not even an unkeyed one', () {
+  test('closed: there is no database', () {
     expect(
       () => container.read(databaseProvider),
       throwsA(isA<DatabaseLockedException>()),
@@ -52,53 +51,44 @@ void main() {
     expect(container.read(appLockStateProvider), AppLockState.locked);
   });
 
-  test(
-    'open opens a keyed database; close closes it and zeroes the key',
-    () async {
-      final states = <AppLockState>[];
-      container.listen(
-        appLockStateProvider,
-        (_, next) => states.add(next),
-        fireImmediately: true,
-      );
+  test('open opens the database; close closes it', () async {
+    final states = <AppLockState>[];
+    container.listen(
+      appLockStateProvider,
+      (_, next) => states.add(next),
+      fireImmediately: true,
+    );
 
-      final dek = secureRandomBytes(32);
-      container.read(sessionProvider.notifier).open(dek);
-      await pumpEventQueue();
-      // The session is independent of the UI lock.
-      expect(container.read(authProvider).isAuthenticated, isFalse);
+    container.read(sessionProvider.notifier).open();
+    await pumpEventQueue();
+    // The session is independent of the UI lock.
+    expect(container.read(authProvider).isAuthenticated, isFalse);
 
-      final db = container.read(databaseProvider);
-      await db
-          .into(db.accounts)
-          .insert(
-            AccountsCompanion.insert(id: 'a', name: 'A', type: 'checking'),
-          );
-      final key = container.read(sessionProvider).key!;
+    final db = container.read(databaseProvider);
+    await db
+        .into(db.accounts)
+        .insert(AccountsCompanion.insert(id: 'a', name: 'A', type: 'checking'));
+    await container.read(sessionProvider.notifier).close();
+    await pumpEventQueue();
 
-      await container.read(sessionProvider.notifier).close();
-      await pumpEventQueue();
+    expect(states, [
+      AppLockState.locked,
+      AppLockState.unlocked,
+      AppLockState.locked,
+    ]);
+    // The old connection is closed.
+    await expectLater(db.select(db.accounts).get(), throwsA(anything));
+    expect(
+      () => container.read(databaseProvider),
+      throwsA(isA<DatabaseLockedException>()),
+    );
 
-      expect(states, [
-        AppLockState.locked,
-        AppLockState.unlocked,
-        AppLockState.locked,
-      ]);
-      expect(key.isDestroyed, isTrue);
-      // The old connection is closed.
-      await expectLater(db.select(db.accounts).get(), throwsA(anything));
-      expect(
-        () => container.read(databaseProvider),
-        throwsA(isA<DatabaseLockedException>()),
-      );
-
-      // Opening again with the same key reopens the same data.
-      container.read(sessionProvider.notifier).open(dek);
-      final reopened = container.read(databaseProvider);
-      expect((await reopened.select(reopened.accounts).get()).single.id, 'a');
-      await container.read(sessionProvider.notifier).close();
-    },
-  );
+    // Opening again reopens the same data.
+    container.read(sessionProvider.notifier).open();
+    final reopened = container.read(databaseProvider);
+    expect((await reopened.select(reopened.accounts).get()).single.id, 'a');
+    await container.read(sessionProvider.notifier).close();
+  });
 
   group('AutoLockService', () {
     late DateTime now;
@@ -120,7 +110,7 @@ void main() {
 
     setUp(() {
       now = DateTime.utc(2026, 1, 1, 12);
-      container.read(sessionProvider.notifier).open(secureRandomBytes(32));
+      container.read(sessionProvider.notifier).open();
       container.read(authProvider.notifier).setAuthenticated(true);
     });
 

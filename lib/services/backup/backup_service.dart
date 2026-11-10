@@ -86,30 +86,11 @@ class BackupService {
     await _backupScheduler?.recordBackupSuccess();
   }
 
-  /// Writes an unencrypted copy of the open database to [target].
-  ///
-  /// Under SQLCipher `VACUUM INTO` would copy the main database's key, so the
-  /// copy is made with `ATTACH ... KEY ''` + `sqlcipher_export`. Plain SQLite
-  /// (only possible in tests) falls back to `VACUUM INTO`.
+  /// Writes a consistent copy of the open database to [target] with
+  /// `VACUUM INTO` (the schema version, `user_version`, is copied too).
   Future<void> writePlaintextSnapshot(File target) async {
     await _deleteDatabaseFiles(target);
-    if (await _db.hasCipherSupport) {
-      final version = await _db.customSelect('PRAGMA user_version').getSingle();
-      final userVersion = version.data.values.first as int;
-      await _db.customStatement("ATTACH DATABASE ? AS lz_export KEY ''", [
-        target.path,
-      ]);
-      try {
-        await _db.customSelect("SELECT sqlcipher_export('lz_export')").get();
-        await _db.customStatement(
-          'PRAGMA lz_export.user_version = $userVersion',
-        );
-      } finally {
-        await _db.customStatement('DETACH DATABASE lz_export');
-      }
-    } else {
-      await _db.customStatement('VACUUM INTO ?', [target.path]);
-    }
+    await _db.customStatement('VACUUM INTO ?', [target.path]);
   }
 
   /// Uploads [backupFile] to [target]. Errors are not swallowed: a failed

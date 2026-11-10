@@ -10,6 +10,15 @@ report notes and the local sync state). App settings live in the phone's
 preferences and are not part of it. It is the recommended way to protect
 your data against loss.
 
+**Your budget exists only on this phone.** If the phone is lost or reset,
+the budget is gone, unless a backup file is kept somewhere else (a
+computer, a cloud folder) or a second phone syncs with this one. The
+database on the phone is not encrypted by the app (it is protected by
+Android's app sandbox and your screen lock); backups and sync files are
+encrypted. The Backup screen and onboarding say so. Android's own cloud
+backup never copies the budget; its device-to-device transfer to a new
+phone does (section 7).
+
 **Personal accounts:** the transactions of your personal accounts never
 sync to the other phone, so they exist only on this phone and in this
 phone's backups. The Backup screen reminds you of this and shows a
@@ -56,17 +65,20 @@ backup on the phone without you doing anything:
   (`Android/data/com.ledgerzero.app/files/backups`, reachable over USB and
   in file managers; the Backup screen shows the exact path). The last 7
   are kept.
-* They are what you restore from when the phone's key store loses the
-  database key: the data on the phone cannot be opened any more, but the
-  automatic backups still open with their password (see
-  [ERROR_RECOVERY.md](ERROR_RECOVERY.md), section 3). A factory reset of
-  the app keeps them for that reason; **Delete the automatic backups**
+* They are what you restore from when the database on the phone cannot be
+  opened any more (a damaged file): the automatic backups still open with
+  their password (see [ERROR_RECOVERY.md](ERROR_RECOVERY.md), section 3).
+  A factory reset of the app keeps them for that reason; **Delete the automatic backups**
   removes them.
 * They do **not** survive a lost phone, a factory reset of the phone or an
   uninstall. Copy the folder to a computer now and then, or export a
   backup through the share sheet.
 * The password is stored in the phone's secure storage so the backups can
-  run unattended. Turning the feature off forgets it; the files stay.
+  run unattended. Turning the feature off forgets it; the files stay. If
+  the secure storage loses it (the key store was reset) or the app moved
+  to a new phone (the stored password does not move along), the switch
+  says "The backup password is no longer stored on this phone": turn the
+  feature off and on again to enter it.
 * An automatic backup does **not** count as a backup for the reminder
   (section 6) or for the "Back up now" nudge shown while personal
   accounts exist: the file is on the phone and is lost with it. Both keep
@@ -93,8 +105,9 @@ first and then runs the normal restore (confirmation, password, warnings).
      transactions gone from this phone;
    * it is **older than 180 days**: items deleted on another phone since
      then may come back, because sync no longer remembers those deletions.
-5. The backup is upgraded if it comes from an older version and
-   re-encrypted with this device's key. The app reopens the data directly;
+5. The backup replaces the database. Backups of development builds before
+   schema v20 are refused ("made by an early test version"). The app
+   reopens the data directly;
    no restart is needed. If anything fails, your current data is kept; if
    the app is killed in the middle, the next start finishes the restore.
 6. If you use sync, the device resynchronises after a restore: changes made
@@ -199,3 +212,27 @@ that leaves the phone.
 The reminder notification prompts you to open the app and create a backup.
 It counts from the last backup that actually left the phone (shared or
 uploaded), whether automatic backups are on or not.
+
+## 7. Moving to a new phone
+
+* **Android's transfer** (when the new phone is set up from the old one, by
+  cable or over Wi-Fi; Android 9 and later): the database and the app's
+  settings move along. Google's cloud backup is never used: it stays empty
+  on every Android version. On Android 7 and 8 nothing moves (those
+  versions cannot tell the transfer from a cloud backup); use a backup file
+  or sync there.
+* The moved app is a new sync device: at its first start it notices that
+  its settings came from another phone (an install marker in Android's
+  no-backup folder, which never moves), drops the old phone's sync device
+  id, empties the change queue and rebuilds its sync state at the next sync
+  like after a restore, so both phones can stay in use
+  (`lib/services/backup/transferred_install.dart`).
+* What does not move and is set up again on the new phone: the Wi-Fi sync
+  pairing (pair again), the Google Drive sign-in (sign in again), the
+  automatic-backup password (turn automatic backups off and on again),
+  card notification access and its log (turn it on again), the automatic
+  backup files (they are in the old phone's `Android/data` folder; copy
+  them over if you want them).
+* **Without the transfer**: make a backup on the old phone, copy the
+  `.lzbk` file to the new phone and restore it there, or set up sync on
+  both phones.

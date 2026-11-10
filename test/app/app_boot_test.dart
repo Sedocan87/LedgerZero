@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 // Boot smoke test of the whole app widget (MyApp): the first launch opens
 // the onboarding, a returning user the login screen. Router details are in
 // test/presentation/router/app_router_test.dart.
@@ -30,7 +29,6 @@ import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/services/notifications/local_notifications_client.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
-import 'package:ledger_zero/services/security/device_key_store.dart';
 import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -154,10 +152,6 @@ void main() {
           appLockAuthenticatorProvider.overrideWithValue(
             FakeAppLockAuthenticator(result: AppLockResult.cancelled),
           ),
-          legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
-          biometricKeyStoreProvider.overrideWithValue(
-            FakeBiometricKeyStore(available: false),
-          ),
           notificationServiceProvider.overrideWithValue(
             NotificationService(client: notifications),
           ),
@@ -201,11 +195,7 @@ void main() {
   testWidgets('a returning user with the app lock starts at the lock screen', (
     tester,
   ) async {
-    await boot(
-      tester,
-      {'user_onboarded': true, kAppLockEnabledKey: true},
-      secrets: {DeviceKeyStore.storageKey: base64Encode(Uint8List(32))},
-    );
+    await boot(tester, {'user_onboarded': true, kAppLockEnabledKey: true});
     expect(find.byType(LockScreen), findsOneWidget);
     expect(find.text('LedgerZero is locked'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
@@ -231,11 +221,7 @@ void main() {
 
   testWidgets('an unlock asks for the notification permission only when a '
       'notification needed it meanwhile', (tester) async {
-    await boot(
-      tester,
-      {'user_onboarded': true, kAppLockEnabledKey: true},
-      secrets: {DeviceKeyStore.storageKey: base64Encode(Uint8List(32))},
-    );
+    await boot(tester, {'user_onboarded': true, kAppLockEnabledKey: true});
     expect(notifications.permissionRequests, 0);
     final container = ProviderScope.containerOf(
       tester.element(find.byType(LockScreen)),
@@ -278,17 +264,9 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          secureStoreProvider.overrideWithValue(
-            InMemorySecureStore({
-              DeviceKeyStore.storageKey: base64Encode(Uint8List(32)),
-            }),
-          ),
+          secureStoreProvider.overrideWithValue(InMemorySecureStore()),
           appLockAuthenticatorProvider.overrideWithValue(
             FakeAppLockAuthenticator(result: AppLockResult.cancelled),
-          ),
-          legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
-          biometricKeyStoreProvider.overrideWithValue(
-            FakeBiometricKeyStore(available: false),
           ),
           notificationServiceProvider.overrideWithValue(
             NotificationService(client: notifications),
@@ -347,17 +325,9 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          secureStoreProvider.overrideWithValue(
-            InMemorySecureStore({
-              DeviceKeyStore.storageKey: base64Encode(Uint8List(32)),
-            }),
-          ),
+          secureStoreProvider.overrideWithValue(InMemorySecureStore()),
           appLockAuthenticatorProvider.overrideWithValue(
             FakeAppLockAuthenticator(result: AppLockResult.cancelled),
-          ),
-          legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
-          biometricKeyStoreProvider.overrideWithValue(
-            FakeBiometricKeyStore(available: false),
           ),
           notificationServiceProvider.overrideWithValue(
             NotificationService(client: notifications),

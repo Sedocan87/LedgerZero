@@ -1,6 +1,6 @@
 # Repository Pattern
 
-How LedgerZero gets from the UI to the encrypted database, and where each
+How LedgerZero gets from the UI to the database, and where each
 kind of code belongs.
 
 ```
@@ -8,7 +8,7 @@ presentation (Riverpod providers, screens)
   -> domain services (lib/domain/services)        multi-step business rules
     -> repository interfaces (lib/domain/repositories)
       <- repository implementations (lib/data/repositories)
-        -> DAOs (lib/data/database/daos) -> AppDatabase (Drift on SQLCipher)
+        -> DAOs (lib/data/database/daos) -> AppDatabase (Drift on SQLite)
 ```
 
 ## Layers

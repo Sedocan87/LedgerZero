@@ -1,11 +1,12 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Minimal key-value interface over the platform keystore, so key logic can
-/// be tested with an in-memory fake.
+/// Minimal key-value interface over the platform keystore, so the code that
+/// uses it can be tested with an in-memory fake.
 ///
-/// Holds the database key ([DeviceKeyStore]; the platform encrypts it with
-/// a KeyStore-held key) and, on installs from before it, the wrapped key
-/// vault.
+/// Holds two secrets: the password of the automatic backups and the Wi-Fi
+/// sync pairing. Both can be entered again, so losing them never blocks the
+/// app: the user re-enters the backup password or pairs again. (The
+/// database is not here: it is a plain file in the app's private storage.)
 abstract class SecureStore {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
@@ -17,33 +18,14 @@ class FlutterSecureStore implements SecureStore {
 
   const FlutterSecureStore(this._storage);
 
-  /// Storage for everything written by the current key design.
-  ///
-  /// iOS: keychain items readable after first unlock, never migrated to
-  /// another device or included in unencrypted backups (`ThisDeviceOnly`).
-  /// Android: AES-GCM data with a KeyStore-held RSA-OAEP wrapping key
-  /// (flutter_secure_storage v10). `resetOnError: false` so a keystore error
-  /// is reported instead of silently erasing the wrapped key.
+  /// Android: AES-GCM data with a KeyStore-held wrapping key. Its files are
+  /// never backed up or moved to a new phone (the KeyStore key cannot go
+  /// along; see android/app/src/main/res/xml/data_extraction_rules.xml).
+  /// `resetOnError`: when the KeyStore key is gone (some vendors wipe it on
+  /// a screen lock change), the unreadable entries are deleted and read as
+  /// missing instead of failing every time.
   factory FlutterSecureStore.current() => const FlutterSecureStore(
-    FlutterSecureStorage(
-      aOptions: AndroidOptions(resetOnError: false),
-      iOptions: IOSOptions(
-        accessibility: KeychainAccessibility.first_unlock_this_device,
-        synchronizable: false,
-      ),
-    ),
-  );
-
-  /// Storage as written by the pre-v2 design, used only to read and then
-  /// delete legacy entries. On iOS the keychain query includes the
-  /// accessibility class, so legacy items are only found with the old one.
-  /// On Android v10 migrates the old EncryptedSharedPreferences data on
-  /// first access.
-  factory FlutterSecureStore.legacy() => const FlutterSecureStore(
-    FlutterSecureStorage(
-      aOptions: AndroidOptions(resetOnError: false),
-      iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    ),
+    FlutterSecureStorage(aOptions: AndroidOptions(resetOnError: true)),
   );
 
   @override

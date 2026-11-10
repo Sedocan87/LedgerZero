@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
@@ -36,7 +34,7 @@ class _FakeCapture implements NotificationCaptureService {
 
 class _OpenSession extends SessionController {
   @override
-  SessionState build() => SessionState.unlocked(DatabaseKey(Uint8List(32)));
+  SessionState build() => const SessionState.open();
 }
 
 void main() {

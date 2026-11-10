@@ -147,6 +147,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     return switch (error) {
       BackupAuthenticationException() => l10n.restoreWrongPassword,
       BackupTooNewException() => l10n.restoreNewerVersion,
+      BackupTooOldException() => l10n.restoreOlderVersion,
       BackupFormatException() => l10n.restoreInvalidFile,
       _ => l10n.restoreFailed,
     };
@@ -430,6 +431,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final String status;
     if (!enabled) {
       status = l10n.autoBackupStatusOff;
+    } else if (error == AutoBackupService.passwordMissingError) {
+      status = l10n.autoBackupPasswordMissing;
     } else if (error != null) {
       status = l10n.autoBackupStatusFailed(
         formatter.formatDateTime(service.lastAttempt ?? DateTime.now()),
@@ -765,6 +768,15 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            // The data exists only on this phone (docs/SECURITY.md).
+            Card(
+              key: const ValueKey('backupDataLossWarning'),
+              child: ListTile(
+                leading: const Icon(Icons.phone_android),
+                title: Text(l10n.dataLossWarning),
+              ),
+            ),
+            const SizedBox(height: 16),
             _buildAutoBackupSection(l10n),
             const SizedBox(height: 32),
             Text(

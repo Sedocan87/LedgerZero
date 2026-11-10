@@ -1,4 +1,4 @@
-// Multi-device sync simulation: real in-memory databases (SQLCipher), real
+// Multi-device sync simulation: real in-memory databases (SQLite), real
 // engines, a fake in-memory cloud folder. See docs/SYNC_ARCHITECTURE.md.
 import 'dart:io';
 import 'dart:math';

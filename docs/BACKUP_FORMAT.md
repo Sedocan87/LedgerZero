@@ -31,7 +31,7 @@ offset  size  content
 ```
 
 * **Key**: `Argon2id(backup password, salt, m, t, p)`, 32 bytes. The same
-  KDF and default cost as the master-password key (see
+  KDF and default cost as the sync passphrase (see
   [ENCRYPTION.md](ENCRYPTION.md)); the parameters are read from the header,
   so they can be raised in later versions. `"alg": "pbkdf2-sha256"` with
   `"i"` iterations is also accepted.
@@ -51,10 +51,9 @@ use is bounded by the chunk size.
 
 ### Contents
 
-The database is exported with `ATTACH DATABASE ... KEY ''` and
-`SELECT sqlcipher_export(...)`, so it is a plain SQLite file independent of
-the device key (`VACUUM INTO` would have copied the device key). The
-schema version (`PRAGMA user_version`) is preserved.
+The database is copied with `VACUUM INTO` into a temporary file (a
+consistent snapshot of the open database). The schema version (`PRAGMA
+user_version`) is preserved.
 
 ## Version 1 (read only)
 
@@ -67,39 +66,38 @@ Files written before format v2 have no header:
 | AES-256-GCM(gzip(database)) + tag | rest |
 
 Key: PBKDF2-HMAC-SHA256(password, salt, 100,000 iterations, 32 bytes).
-These files can still be restored. Note: v1 backups made by an install whose
-database was encrypted contain a database that is still encrypted with that
-install's old key (the old code used `VACUUM INTO`); such files cannot be
-restored and are reported as "not a LedgerZero backup that can be restored".
+These files can still be decrypted, but they were written by development
+builds with a schema below v20, so the restore refuses them (see below).
 
 ## Restore
 
 1. Decrypt into the app's temporary directory.
 2. Validate: `PRAGMA integrity_check`, required tables (accounts,
    transactions, categories, category_groups, budgets, payees),
-   `user_version` between 1 and the current schema version. A backup from a
-   newer version is refused.
-3. Older schemas are migrated by opening the file through `AppDatabase`.
-4. `pending_sync_changes` is emptied and `sync_kv.device_id` removed (the
+   `user_version` between 20 (`AppDatabase.minimumSchemaVersion`) and the
+   current schema version. A backup from a newer version is refused
+   (`BackupTooNewException`); one below v20 comes only from development
+   builds and is refused too (`BackupTooOldException`, "made by an early
+   test version"): older schemas are not upgraded any more.
+3. `pending_sync_changes` is emptied and `sync_kv.device_id` removed (the
    restoring phone keeps its own sync device id).
-5. The backup is inspected (member id, personal accounts, creation time)
+4. The backup is inspected (member id, personal accounts, creation time)
    so the app can warn before replacing the data
    (`RestoreService.prepareRestore`; see BACKUP_AND_EXPORT.md).
-6. A new database encrypted with the current device data key is built next
-   to the live file (`<db>.restore-new`; `ATTACH ... KEY "x'..'"` +
-   `sqlcipher_export` on a background isolate) and checked.
-7. Sync is paused and `sync_rebootstrap_required` is set. The restore
+5. The file is copied next to the live file (`<db>.restore-new`) and the
+   copy is checked (`integrity_check`), on a background isolate.
+6. Sync is paused and `sync_rebootstrap_required` is set. The restore
    marker `<db>.restoring` is written, the connection is closed, the live
    file is moved to `<db>.previous`, the new file is moved into place and
    reopened, and a query is run. On success `<db>.previous` and the marker
    are deleted and the queued (not yet uploaded) sync change files are
    discarded; on failure the previous file is moved back and reopened and
    the flag is cleared (see [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md)).
-8. The temporary plain file is always deleted.
+7. The temporary plain file is always deleted.
 
 If the process dies between the move and the rename, the next open
 (`recoverInterruptedRestore`) finishes the swap deterministically: a live
-file that opens with the device key is kept; otherwise the staged file
+file that opens as a database is kept; otherwise the staged file
 (verified before the swap) is moved into place; otherwise the previous
 file is moved back. A fresh database is never created while a previous or
 staged copy exists. The factory reset deletes every variant.

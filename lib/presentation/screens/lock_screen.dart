@@ -1,21 +1,17 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/connection.dart';
-import 'package:ledger_zero/data/database/sqlcipher.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
-import 'package:ledger_zero/presentation/screens/legacy_unlock_view.dart';
 import 'package:ledger_zero/presentation/widgets/security/reset_app_dialog.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
-import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 
 enum _Phase {
@@ -25,15 +21,12 @@ enum _Phase {
   /// Waiting for the fingerprint/face or device PIN.
   locked,
 
-  /// An install from before the device key: unlock once with the master
-  /// password.
-  legacy,
+  /// The database file is not a readable database (damaged).
+  damaged,
 
-  /// The database key is missing or does not open the database.
-  keyError,
-
-  /// The key store failed to answer (it may work on the next try).
-  readError,
+  /// The database was made by an early test version (schema below
+  /// `AppDatabase.minimumSchemaVersion`) that this version does not open.
+  tooOld,
 
   /// Opening the database file threw (I/O; it may work on the next try).
   openError,
@@ -41,22 +34,22 @@ enum _Phase {
 
 /// Start-up and the app lock.
 ///
-/// Every start passes through here: the database session is opened with
-/// the key from [DeviceKeyStore] (so sync and card capture can run even
-/// while the lock is showing), then the app lock asks for the fingerprint,
-/// face or device PIN if it is on. After the auto-lock time it is shown
-/// over the app (`LockOverlay`); the session stays open.
+/// Every start passes through here: the database is checked and the
+/// session opened (so sync and card capture can run even while the lock is
+/// showing), then the app lock asks for the fingerprint, face or device PIN
+/// if it is on. After the auto-lock time it is shown over the app
+/// (`LockOverlay`); the session stays open. The app lock gates the UI only:
+/// the database is a plain file in the app's private storage.
 ///
 /// The system prompt only opens while the app is in the foreground: a lock
 /// that happened on the way to the background asks when the user returns,
 /// never over another app or the home screen.
 ///
-/// Failures: a key store or file error is retried ("Retry"); the
-/// destructive reset is offered only when the key is missing or does not
-/// open the database, or when a transient error has repeated
-/// [maxTransientFailures] times or is known to be permanent (the KeyStore
-/// wrapping key is gone). A failed prompt keeps the app locked and shows
-/// the system's reason; only a removed screen lock turns the lock off.
+/// Failures: an I/O error is retried ("Retry"), and the destructive reset
+/// is offered next to it once it has repeated [maxTransientFailures] times.
+/// A damaged database file or one from an early test version offers the
+/// reset at once. A failed prompt keeps the app locked and shows the
+/// system's reason; only a removed screen lock turns the lock off.
 class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
 
@@ -69,11 +62,9 @@ class _LockScreenState extends ConsumerState<LockScreen>
   _Phase _phase = _Phase.starting;
   bool _prompting = false;
 
-  /// Starts in a row that ended in [_Phase.readError] or
-  /// [_Phase.openError]; after [maxTransientFailures] (or a key store error
-  /// that is known to be permanent) the reset is offered as well.
+  /// Starts in a row that ended in [_Phase.openError]; after
+  /// [maxTransientFailures] the reset is offered as well.
   int _transientFailures = 0;
-  bool _keyStoreLost = false;
 
   /// The system's reason for the last failed prompt.
   String? _authFailure;
@@ -115,46 +106,29 @@ class _LockScreenState extends ConsumerState<LockScreen>
 
   Future<void> _start() async {
     try {
-      if (!ref.read(sessionProvider).isUnlocked) {
-        final migration = ref.read(legacyKeyMigrationProvider);
-        final Uint8List? dek;
+      if (!ref.read(sessionProvider).isOpen) {
+        final DatabaseFileState state;
         try {
-          dek = await _readKey();
+          state = await checkDatabaseFile(await databaseFile());
         } catch (e, stackTrace) {
-          Logger.error('Reading the database key failed', e, stackTrace);
-          _transientFailures++;
-          _keyStoreLost = _keyStoreLost || isPermanentKeyStoreError(e);
-          _setPhase(_Phase.readError);
-          return;
-        }
-        if (dek == null) {
-          _setPhase(
-            await migration.isPending() ? _Phase.legacy : _Phase.keyError,
-          );
-          return;
-        }
-        final bool opens;
-        try {
-          opens = await _opensDatabase(dek);
-        } catch (e, stackTrace) {
-          // The file could not be opened at all (I/O), which says nothing
-          // about the key: retryable, not the destructive reset.
-          zeroBytes(dek);
+          // The file could not be read at all (I/O): retryable.
           Logger.error('Opening the database file failed', e, stackTrace);
           _transientFailures++;
           _setPhase(_Phase.openError);
           return;
         }
-        if (!opens) {
-          zeroBytes(dek);
-          _setPhase(_Phase.keyError);
-          return;
+        switch (state) {
+          case DatabaseFileState.damaged:
+            _setPhase(_Phase.damaged);
+            return;
+          case DatabaseFileState.tooOld:
+            _setPhase(_Phase.tooOld);
+            return;
+          case DatabaseFileState.missing:
+          case DatabaseFileState.usable:
+            ref.read(sessionProvider.notifier).open();
+            _transientFailures = 0;
         }
-        ref.read(sessionProvider.notifier).open(dek);
-        zeroBytes(dek);
-        _transientFailures = 0;
-        // An interrupted migration may have left the old entries behind.
-        unawaited(migration.deleteLeftovers());
       }
       await _passLock();
     } catch (e, stackTrace) {
@@ -164,53 +138,13 @@ class _LockScreenState extends ConsumerState<LockScreen>
     }
   }
 
-  /// Whether [error] from the key store says the wrapping key is gone for
-  /// good (the Android KeyStore was wiped, e.g. by a vendor's screen-lock
-  /// change), rather than being busy.
-  @visibleForTesting
-  static bool isPermanentKeyStoreError(Object error) {
-    final text = error.toString();
-    return const [
-      'BadPaddingException',
-      'AEADBadTagException',
-      'UnrecoverableKeyException',
-      'KeyStoreException',
-      'InvalidKeyException',
-      'KeyPermanentlyInvalidatedException',
-    ].any(text.contains);
-  }
-
-  /// The transient error has repeated often enough (or is known to be
-  /// permanent) to offer the reset next to "Retry".
-  bool get _offerReset =>
-      _keyStoreLost || _transientFailures >= maxTransientFailures;
-
-  /// The device key; a failing key store is asked up to three times (it
-  /// can fail transiently right after an app update), so a temporary error
-  /// is never shown as missing data.
-  Future<Uint8List?> _readKey() async {
-    final store = ref.read(deviceKeyStoreProvider);
-    for (var attempt = 1; ; attempt++) {
-      try {
-        return await store.read();
-      } catch (_) {
-        if (attempt == 3) {
-          rethrow;
-        }
-        await Future<void>.delayed(Duration(milliseconds: 300 * attempt));
-      }
-    }
-  }
+  /// The transient error has repeated often enough to offer the reset next
+  /// to "Retry".
+  bool get _offerReset => _transientFailures >= maxTransientFailures;
 
   void _retry() {
     _setPhase(_Phase.starting);
     unawaited(_start());
-  }
-
-  static Future<bool> _opensDatabase(Uint8List dek) async {
-    final file = await databaseFile();
-    // A missing file is created on first use with this key.
-    return !file.existsSync() || SqlCipher.canOpen(file, RawSqlCipherKey(dek));
   }
 
   /// Unlocks the UI, asking for the app lock first when it is on.
@@ -275,23 +209,6 @@ class _LockScreenState extends ConsumerState<LockScreen>
     ref.read(authProvider.notifier).setAuthenticated(true);
   }
 
-  /// After the one-time unlock of an older install.
-  Future<void> _adoptLegacyKey(Uint8List dek) async {
-    try {
-      await ref.read(legacyKeyMigrationProvider).adopt(dek);
-      ref.read(sessionProvider.notifier).open(dek);
-    } finally {
-      zeroBytes(dek);
-    }
-    // Whoever had a master password gets the app lock (when the phone
-    // has a screen lock); it can be turned off in Settings.
-    final canLock = await ref
-        .read(appLockAuthenticatorProvider)
-        .canAuthenticate();
-    await ref.read(appLockEnabledProvider.notifier).set(canLock);
-    _unlockUi();
-  }
-
   Future<void> _resetApp() async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
@@ -301,6 +218,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
     if (confirmed != true || !mounted) {
       return;
     }
+    final before = _phase;
     setState(() => _phase = _Phase.starting);
     try {
       await ref.read(factoryResetServiceProvider).reset();
@@ -312,7 +230,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
       }
     } catch (e, stackTrace) {
       Logger.error('Factory reset failed', e, stackTrace);
-      _setPhase(_Phase.keyError);
+      _setPhase(before);
     }
   }
 
@@ -333,16 +251,13 @@ class _LockScreenState extends ConsumerState<LockScreen>
             child: switch (_phase) {
               _Phase.starting => const CircularProgressIndicator(),
               _Phase.locked => _buildLocked(l10n),
-              _Phase.legacy => LegacyUnlockView(
-                onUnlocked: _adoptLegacyKey,
-                onReset: _resetApp,
-              ),
-              _Phase.keyError => _buildKeyError(l10n),
-              _Phase.readError => _buildTransientError(
+              _Phase.damaged => _buildResetNeeded(
                 l10n,
-                _keyStoreLost
-                    ? l10n.lockScreenReadErrorPersistent
-                    : l10n.lockScreenReadError,
+                l10n.lockScreenDatabaseDamaged,
+              ),
+              _Phase.tooOld => _buildResetNeeded(
+                l10n,
+                l10n.lockScreenDatabaseTooOld,
               ),
               _Phase.openError => _buildTransientError(
                 l10n,
@@ -409,14 +324,16 @@ class _LockScreenState extends ConsumerState<LockScreen>
     );
   }
 
-  Widget _buildKeyError(AppLocalizations l10n) {
+  /// The data on this phone cannot be opened by this version: "Retry"
+  /// and the reset.
+  Widget _buildResetNeeded(AppLocalizations l10n, String message) {
     final error = Theme.of(context).colorScheme.error;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Icon(Icons.error_outline, size: 64, color: error),
         const SizedBox(height: 24),
-        Text(l10n.lockScreenKeyError, textAlign: TextAlign.center),
+        Text(message, textAlign: TextAlign.center),
         const SizedBox(height: 24),
         _retryButton(l10n),
         const SizedBox(height: 16),

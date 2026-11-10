@@ -15,22 +15,22 @@ import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/l10n/default_category_names.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 
-/// The open, encrypted [AppDatabase] for the unlocked session.
+/// The open [AppDatabase] of the session.
 ///
-/// Rebuilt when the session key changes or [databaseGenerationProvider] is
+/// Rebuilt when the session opens again or [databaseGenerationProvider] is
 /// bumped (after a restore); the previous connection is closed. While the
-/// app is locked, reading it throws [DatabaseLockedException]: there is no
-/// unkeyed fallback.
+/// session is closed (factory reset, before start-up opened it), reading it
+/// throws [DatabaseLockedException].
 ///
 /// In tests, override this provider with an in-memory database.
 final databaseProvider = Provider<AppDatabase>((ref) {
-  final key = ref.watch(sessionProvider.select((s) => s.key));
+  final open = ref.watch(sessionProvider.select((s) => s.isOpen));
   ref.watch(databaseGenerationProvider);
-  if (key == null || key.isDestroyed) {
+  if (!open) {
     throw const DatabaseLockedException();
   }
   final db = AppDatabase(
-    openEncryptedConnection(key.bytes),
+    openConnection(),
     // A new database gets its default categories in the app language.
     seedName: defaultCategoryNames(ref.read(appLocalizationsProvider)),
   );
@@ -47,36 +47,6 @@ final Expando<Future<void>> _closing = Expando('closing');
 Future<void> closeDatabaseOnce(AppDatabase db) {
   return _closing[db] ??= db.close().catchError((Object _) {});
 }
-
-enum DatabaseEncryptionStatus { encrypted, plaintext, unknown }
-
-/// What the security screen shows: "encrypted" only when SQLCipher is linked
-/// AND the file on disk does not start with the plain SQLite header (the
-/// connection itself refuses to open without the key).
-final databaseEncryptionStatusProvider =
-    FutureProvider.autoDispose<DatabaseEncryptionStatus>((ref) async {
-      final db = ref.watch(databaseProvider);
-      if (!await db.hasCipherSupport) {
-        return DatabaseEncryptionStatus.plaintext;
-      }
-      // Make sure the file exists (the connection opens lazily).
-      await db.customSelect('SELECT 1').get();
-      final file = await databaseFile();
-      if (!await file.exists()) {
-        return DatabaseEncryptionStatus.unknown;
-      }
-      final raf = await file.open();
-      try {
-        final header = await raf.read(16);
-        const plainHeader = 'SQLite format 3\u0000';
-        if (String.fromCharCodes(header) == plainHeader) {
-          return DatabaseEncryptionStatus.plaintext;
-        }
-        return DatabaseEncryptionStatus.encrypted;
-      } finally {
-        await raf.close();
-      }
-    });
 
 /// Provides the [AccountsDao].
 final accountsDaoProvider = Provider<AccountsDao>((ref) {
