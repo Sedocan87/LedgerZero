@@ -8359,6 +8359,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Closed'**
   String get accountsGroupClosed;
+
+  /// Pro screen title and Settings entry (product name, not translated)
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero Pro'**
+  String get proTitle;
+
+  /// Pro screen: line under the title
+  ///
+  /// In en, this message translates to:
+  /// **'Pay once. No subscription.'**
+  String get proTagline;
+
+  /// Pro screen: why it opened; feature is a feature name such as 'Wi-Fi sync'
+  ///
+  /// In en, this message translates to:
+  /// **'{feature} is part of LedgerZero Pro.'**
+  String proFeatureIsPro(String feature);
+
+  /// Pro feature name
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi sync'**
+  String get proFeatureWifiSync;
+
+  /// Pro feature description
+  ///
+  /// In en, this message translates to:
+  /// **'Share one budget between the phones in your household. Each phone that syncs needs Pro.'**
+  String get proFeatureWifiSyncDescription;
+
+  /// Pro feature name
+  ///
+  /// In en, this message translates to:
+  /// **'Card notifications'**
+  String get proFeatureCardCapture;
+
+  /// Pro feature description
+  ///
+  /// In en, this message translates to:
+  /// **'Book card payments automatically from your bank\'s notifications.'**
+  String get proFeatureCardCaptureDescription;
+
+  /// Pro feature name
+  ///
+  /// In en, this message translates to:
+  /// **'PDF reports'**
+  String get proFeaturePdfReports;
+
+  /// Pro feature description
+  ///
+  /// In en, this message translates to:
+  /// **'Export reports as PDF to print or share.'**
+  String get proFeaturePdfReportsDescription;
+
+  /// Pro feature name
+  ///
+  /// In en, this message translates to:
+  /// **'Budget templates'**
+  String get proFeatureBudgetTemplates;
+
+  /// Pro feature description
+  ///
+  /// In en, this message translates to:
+  /// **'Save a month as a template, apply it later, and fill new months automatically.'**
+  String get proFeatureBudgetTemplatesDescription;
+
+  /// Pro feature name
+  ///
+  /// In en, this message translates to:
+  /// **'Rules'**
+  String get proFeatureRules;
+
+  /// Pro feature description
+  ///
+  /// In en, this message translates to:
+  /// **'Categorise and rename transactions automatically.'**
+  String get proFeatureRulesDescription;
+
+  /// Pro screen: what stays free
+  ///
+  /// In en, this message translates to:
+  /// **'Always free: budgeting with unlimited accounts and transactions, credit cards, CSV and YNAB import, export, backups and the app lock.'**
+  String get proAlwaysFree;
+
+  /// Pro screen: purchase button; price is formatted by Google Play, e.g. €14.99
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Pro for {price}'**
+  String proBuy(String price);
+
+  /// Pro screen: purchase button while the price is not known
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Pro'**
+  String get proBuyNoPrice;
+
+  /// Pro screen: asks Google Play for an earlier purchase
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchase'**
+  String get proRestore;
+
+  /// Pro screen and Settings: Pro was bought
+  ///
+  /// In en, this message translates to:
+  /// **'Pro is unlocked. Thank you!'**
+  String get proUnlocked;
+
+  /// Pro screen: after unlocking, opens the feature that led here
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get proContinue;
+
+  /// Pro screen: purchase with a delayed payment method
+  ///
+  /// In en, this message translates to:
+  /// **'Payment pending. Pro unlocks as soon as Google Play confirms the payment.'**
+  String get proPending;
+
+  /// Pro screen: billing unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play is not available. Make sure the Play Store is installed and signed in, then try again.'**
+  String get proStoreUnavailable;
+
+  /// Snackbar after Restore purchase
+  ///
+  /// In en, this message translates to:
+  /// **'Your purchase was restored. Pro is unlocked.'**
+  String get proRestored;
+
+  /// Snackbar after Restore purchase found nothing
+  ///
+  /// In en, this message translates to:
+  /// **'No purchase found for the Google account signed in to the Play Store.'**
+  String get proNothingToRestore;
+
+  /// Snackbar: purchase failed
+  ///
+  /// In en, this message translates to:
+  /// **'The purchase did not go through. Please try again.'**
+  String get proPurchaseFailed;
+
+  /// Settings: subtitle of the Pro entry while locked
+  ///
+  /// In en, this message translates to:
+  /// **'Sync, card notifications and more. Pay once.'**
+  String get proSettingsSubtitle;
+
+  /// Small badge on features that need Pro
+  ///
+  /// In en, this message translates to:
+  /// **'PRO'**
+  String get proBadge;
+
+  /// Screen reader label of the PRO badge
+  ///
+  /// In en, this message translates to:
+  /// **'Needs LedgerZero Pro'**
+  String get proBadgeSemantics;
+
+  /// Pro screen: switch shown only in development builds
+  ///
+  /// In en, this message translates to:
+  /// **'Pro unlocked (development build)'**
+  String get proDevelopmentUnlock;
+
+  /// Settings/About: the terms of use page
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of use'**
+  String get legalTermsOfUse;
+
+  /// Legal page: the bundled text could not be read
+  ///
+  /// In en, this message translates to:
+  /// **'This page could not be loaded.'**
+  String get legalLoadFailed;
+
+  /// Settings/About: opens the app's page on Google Play
+  ///
+  /// In en, this message translates to:
+  /// **'Rate LedgerZero'**
+  String get rateApp;
+
+  /// Settings: subtitle of Rate LedgerZero
+  ///
+  /// In en, this message translates to:
+  /// **'Tell others what you think on Google Play'**
+  String get rateAppSubtitle;
+
+  /// Snackbar: the Play Store could not be opened
+  ///
+  /// In en, this message translates to:
+  /// **'Google Play could not be opened.'**
+  String get rateAppFailed;
+
+  /// Pro screen: a supervised account's parent has not approved (or declined) the app's latest change, so Pro cannot be bought now (Google Play Age Signals)
+  ///
+  /// In en, this message translates to:
+  /// **'A parent or guardian hasn\'t approved purchases for this account.'**
+  String get proNeedsGuardian;
 }
 
 class _AppLocalizationsDelegate

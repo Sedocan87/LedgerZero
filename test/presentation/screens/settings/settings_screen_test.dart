@@ -77,6 +77,9 @@ void main() {
     expect(find.text('Follow language (MM/dd/yyyy)'), findsOneWidget);
     expect(find.text('First Day of Week'), findsNothing);
 
+    // Below the LedgerZero Pro entry at the top of the list.
+    await tester.ensureVisible(find.text('Language'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Language'));
     await tester.pumpAndSettle();
     await tester.tap(

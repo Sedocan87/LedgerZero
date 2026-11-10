@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/widgets/common/pro_gate.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,6 +70,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   ) async {
     final l10n = AppLocalizations.of(context)!;
 
+    if (format == ExportFormat.pdf &&
+        !await ensureProFeature(context, ref, ProFeature.pdfReports)) {
+      return;
+    }
     // Show loading
     if (!mounted) {
       return;
@@ -467,16 +474,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 }
 
-class _ExportDialog extends StatefulWidget {
+class _ExportDialog extends ConsumerStatefulWidget {
   final Function(ReportType, ExportFormat, String) onExport;
 
   const _ExportDialog({required this.onExport});
 
   @override
-  State<_ExportDialog> createState() => _ExportDialogState();
+  ConsumerState<_ExportDialog> createState() => _ExportDialogState();
 }
 
-class _ExportDialogState extends State<_ExportDialog> {
+class _ExportDialogState extends ConsumerState<_ExportDialog> {
   ReportType _selectedType = ReportType.spendingTrends;
   ExportFormat _selectedFormat = ExportFormat.csv;
 
@@ -538,7 +545,14 @@ class _ExportDialogState extends State<_ExportDialog> {
                 ButtonSegment(
                   value: ExportFormat.pdf,
                   label: SegmentLabel(l10n.pdf),
-                  icon: const Icon(Icons.picture_as_pdf),
+                  // A lock while PDF export needs Pro.
+                  icon: Icon(
+                    ref.watch(
+                          proFeatureAvailableProvider(ProFeature.pdfReports),
+                        )
+                        ? Icons.picture_as_pdf
+                        : Icons.lock_outline,
+                  ),
                 ),
                 ButtonSegment(
                   value: ExportFormat.image,

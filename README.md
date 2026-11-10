@@ -113,11 +113,20 @@ flutter run --flavor development -t lib/main_development.dart -d <android-device
 
 ### Release builds
 
-The Play release is an app bundle of the `production` flavor:
+The Play release is an app bundle of the `production` flavor. Build it with
+the release script, which sets the version automatically (build number =
+commit count, the commit hash shown in About) and checks the legal pages
+and the upload key first (see [docs/RELEASE.md](docs/RELEASE.md)):
+
+```bash
+bash tool/release.sh --bump patch
+# -> build/app/outputs/bundle/productionRelease/app-production-release.aab
+```
+
+The plain command still works (with the pubspec's build number):
 
 ```bash
 flutter build appbundle --release --flavor production -t lib/main_production.dart
-# -> build/app/outputs/bundle/productionRelease/app-production-release.aab
 ```
 
 It needs the upload key (next section). Without `android/key.properties`
@@ -217,4 +226,5 @@ docs/             design and user documentation
 | Backup, import, export | [docs/BACKUP_AND_EXPORT.md](docs/BACKUP_AND_EXPORT.md), [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md), [docs/CSV_FORMAT.md](docs/CSV_FORMAT.md), [docs/YNAB_MIGRATION.md](docs/YNAB_MIGRATION.md) |
 | Platform notes, errors | [docs/PLATFORM_SPECIFICS.md](docs/PLATFORM_SPECIFICS.md), [docs/ERROR_RECOVERY.md](docs/ERROR_RECOVERY.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 | Code and tests | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md), [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md), [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), [docs/TESTING.md](docs/TESTING.md), [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
+| Release, versions, legal pages, icons, Pro | [docs/RELEASE.md](docs/RELEASE.md), [docs/PRO.md](docs/PRO.md) |
 | Plan | [ROADMAP.md](ROADMAP.md) |

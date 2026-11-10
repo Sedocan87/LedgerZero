@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -132,7 +134,9 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
     this._prefs,
     this._budgeting, {
     DateTime Function()? clock,
+    bool Function()? allowed,
   }) : _clock = clock ?? DateTime.now,
+       _allowed = allowed ?? _always,
        super(
          NewMonthFillState(
            source: AutoFillSource.values.firstWhere(
@@ -149,6 +153,10 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
   /// Read when needed: the database is not open while the app is locked.
   final BudgetingService Function() _budgeting;
   final DateTime Function() _clock;
+
+  /// Whether the automatic fill may run (a LedgerZero Pro feature).
+  final bool Function() _allowed;
+  static bool _always() => true;
 
   static const String sourceKey = 'auto_fill_source';
   static const String templateKey = 'auto_fill_template_id';
@@ -227,7 +235,8 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
   }
 
   Future<void> _run({required bool waitForMoney}) async {
-    if (state.source == AutoFillSource.off) {
+    // Off, or LedgerZero Pro (which includes the automatic fill) is locked.
+    if (state.source == AutoFillSource.off || !_allowed()) {
       return;
     }
     final month = _currentMonth;
@@ -326,5 +335,7 @@ final newMonthFillProvider =
       return NewMonthFillController(
         ref.watch(sharedPreferencesProvider),
         () => ref.read(budgetingServiceProvider),
+        allowed: () =>
+            ref.read(proFeatureAvailableProvider(ProFeature.budgetTemplates)),
       );
     });

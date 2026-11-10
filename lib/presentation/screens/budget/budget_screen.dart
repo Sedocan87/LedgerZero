@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/widgets/common/pro_gate.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
@@ -240,11 +242,11 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                 const PopupMenuDivider(),
                 PopupMenuItem(
                   value: 'save_template',
-                  child: Text(l10n.saveAsTemplate),
+                  child: _ProMenuLabel(l10n.saveAsTemplate),
                 ),
                 PopupMenuItem(
                   value: 'apply_template',
-                  child: Text(l10n.applyTemplate),
+                  child: _ProMenuLabel(l10n.applyTemplate),
                 ),
                 const PopupMenuDivider(),
                 PopupMenuItem(
@@ -253,7 +255,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                 ),
                 PopupMenuItem(
                   value: 'auto_fill',
-                  child: Text(l10n.autoFillMenu),
+                  child: _ProMenuLabel(l10n.autoFillMenu),
                 ),
                 PopupMenuItem(value: 'reset', child: Text(l10n.resetBudget)),
               ],
@@ -354,4 +356,21 @@ class _NoAccountsPrompt extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// A budget menu entry of a Pro feature (templates, automatic fill), with
+/// the PRO badge while Pro is locked.
+class _ProMenuLabel extends StatelessWidget {
+  const _ProMenuLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(child: Text(text)),
+      const SizedBox(width: 8),
+      const ProBadge(feature: ProFeature.budgetTemplates),
+    ],
+  );
 }

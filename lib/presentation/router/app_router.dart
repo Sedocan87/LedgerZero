@@ -5,6 +5,10 @@ import 'package:ledger_zero/presentation/screens/settings/income/income_settings
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
+import 'package:ledger_zero/presentation/screens/settings/pro_screen.dart';
+import 'package:ledger_zero/presentation/widgets/common/pro_gate.dart';
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
@@ -118,6 +122,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(
     authProvider.select((s) => (s.isOnboarded, s.hasUnlocked)),
     (_, _) => refresh.changed(),
+  );
+
+  // A Pro feature's screens open the Pro screen while Pro is locked.
+  String? proGate(ProFeature feature, Uri location) => proRedirect(
+    ref.read(proFeatureAvailableProvider(feature)),
+    feature,
+    location,
   );
 
   final router = GoRouter(
@@ -248,14 +259,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
         routes: [
           GoRoute(
+            path: 'pro',
+            name: 'pro',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) {
+              final feature = state.uri.queryParameters['feature'];
+              return ProScreen(
+                feature: ProFeature.values
+                    .where((f) => f.name == feature)
+                    .firstOrNull,
+                next: state.uri.queryParameters['next'],
+              );
+            },
+          ),
+          GoRoute(
             path: 'sync',
             name: 'sync-settings',
+            redirect: (context, state) =>
+                proGate(ProFeature.wifiSync, state.uri),
             builder: (context, state) => const SyncSettingsScreen(),
           ),
           GoRoute(
             path: 'card-notifications',
             name: 'card-notifications',
             parentNavigatorKey: _rootNavigatorKey,
+            redirect: (context, state) =>
+                proGate(ProFeature.cardCapture, state.uri),
             builder: (context, state) => const CardNotificationsScreen(),
             routes: [
               GoRoute(
@@ -379,6 +408,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'rules',
             name: 'rules',
+            redirect: (context, state) => proGate(ProFeature.rules, state.uri),
             builder: (context, state) => const RulesScreen(),
             routes: [
               GoRoute(

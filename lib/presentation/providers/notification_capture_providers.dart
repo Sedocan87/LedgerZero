@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -124,6 +126,11 @@ class CaptureAttentionNotifier extends Notifier<CaptureAttentionState> {
   /// database, not the unlocked UI), then looks at what needs the user.
   Future<void> process() async {
     if (!ref.read(sessionProvider).isOpen) {
+      return;
+    }
+    // Card capture is a LedgerZero Pro feature: while Pro is locked the
+    // captured notifications wait (the native store keeps them).
+    if (!ref.read(proFeatureAvailableProvider(ProFeature.cardCapture))) {
       return;
     }
     final capture = ref.read(notificationCaptureServiceProvider);

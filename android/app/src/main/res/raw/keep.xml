@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resources the app only uses by name (flutter_local_notifications looks the
+     notification icon up at run time): resource shrinking keeps them. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_ledgerzero" />

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/presentation/providers/review_provider.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
@@ -20,9 +23,16 @@ class ToBeBudgetedBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tbbAsync = ref.watch(
-      tbbProvider(ref.watch(selectedBudgetMonthProvider)),
-    );
+    final month = ref.watch(selectedBudgetMonthProvider);
+    final tbbAsync = ref.watch(tbbProvider(month));
+    // The user has just given every euro a place: a good moment to ask for
+    // a rating (rarely, and only after real use; see ReviewPrompter).
+    ref.listen<AsyncValue<int>>(tbbProvider(month), (previous, next) {
+      final before = previous?.valueOrNull;
+      if (before != null && before > 0 && next.valueOrNull == 0) {
+        unawaited(ref.read(reviewPrompterProvider).goodMoment());
+      }
+    });
     final fmt = ref.watch(appFormatterProvider);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;

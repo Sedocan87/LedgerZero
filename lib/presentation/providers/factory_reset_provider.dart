@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/connection.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
@@ -89,6 +91,17 @@ class FactoryResetService {
   }
 }
 
+/// Clears every preference except the LedgerZero Pro purchase: it belongs
+/// to the Google account, not to the budget (Google Play confirms it again
+/// at the next start).
+Future<void> clearPreferencesKeepingPro(SharedPreferences prefs) async {
+  final pro = prefs.getBool(ProController.unlockedKey);
+  await prefs.clear();
+  if (pro != null) {
+    await prefs.setBool(ProController.unlockedKey, pro);
+  }
+}
+
 final factoryResetServiceProvider = Provider<FactoryResetService>((ref) {
   return FactoryResetService(
     closeSession: () => ref.read(sessionProvider.notifier).close(),
@@ -101,7 +114,8 @@ final factoryResetServiceProvider = Provider<FactoryResetService>((ref) {
     deleteErrorReports: () => LocalErrorReportingService().deleteAll(),
     unpairWifiSync: () => ref.read(lanSyncServiceProvider).unpair(),
     deleteSyncFiles: SyncOutbox.deleteAllSyncFiles,
-    clearPreferences: () => ref.read(sharedPreferencesProvider).clear(),
+    clearPreferences: () =>
+        clearPreferencesKeepingPro(ref.read(sharedPreferencesProvider)),
     markNotOnboarded: () {
       ref.read(authProvider.notifier)
         ..setAuthenticated(false)

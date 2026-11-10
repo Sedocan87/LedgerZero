@@ -232,4 +232,18 @@ measured 19.5 MB (18.6 MB after `VACUUM`; `test/performance/database_size_test.d
 * Android backup, if the user has it on, copies the database and the app's
   preferences, end-to-end encrypted, to the user's Google account
   (section 1); nothing else of the app is backed up.
+* LedgerZero Pro is bought through Google Play Billing, the official
+  library that talks to the Play Store app on the phone: the Play Store
+  handles the payment and tells the app whether the signed-in Google
+  account owns Pro. The app sends nothing about the budget to Google, and
+  no third-party purchase service (such as RevenueCat) is used. The unlock
+  is remembered on the phone, so Pro also works offline (see
+  [PRO.md](PRO.md)).
+* "Rate LedgerZero" and the occasional rating prompt use Google Play's
+  In-App Review API; the rating goes to Google Play, the app learns nothing
+  about it.
+* Before a Pro purchase the app may ask Google Play Age Signals whether a
+  parent has approved the app's latest change (Texas, Brazil); the answer
+  is used on the phone for that check only and never stored or sent
+  ([PRO.md](PRO.md)).
 * The app works fully offline.

@@ -102,6 +102,29 @@ void main() {
   }
 
   group('calculator', () {
+    testWidgets('names the category it budgets (the list behind is dimmed)', (
+      tester,
+    ) async {
+      await pump(tester, BudgetCategoryRow(viewModel: vm('1')));
+      final name = vm('1').category.name;
+      await tester.tap(find.text('\$0.00').first);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(BudgetCalculator),
+          matching: find.byKey(const Key('budgetCalculator.title')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('budgetCalculator.title')))
+            .data,
+        name,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     for (final (name, keys) in [
       ('an unfinished expression', ['5', '0', '+']),
       ('a division by zero', ['5', '/', '0']),

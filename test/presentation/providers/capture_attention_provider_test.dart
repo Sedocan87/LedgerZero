@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
@@ -42,9 +43,11 @@ void main() {
   late SharedPreferences prefs;
   final syncStatus = StateProvider<SyncStatus>((ref) => SyncStatus.connected);
 
-  ProviderContainer container({bool unlocked = true}) {
+  ProviderContainer container({bool unlocked = true, bool pro = true}) {
     final container = ProviderContainer(
       overrides: [
+        // These tests use LedgerZero Pro features.
+        proUnlockedProvider.overrideWithValue(pro),
         sharedPreferencesProvider.overrideWithValue(prefs),
         notificationCaptureServiceProvider.overrideWithValue(capture),
         captureSyncStatusProvider.overrideWith((ref) => ref.watch(syncStatus)),
@@ -59,6 +62,18 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     capture = _FakeCapture();
+  });
+
+  test('while LedgerZero Pro is locked nothing is booked', () async {
+    final c = container(pro: false);
+    capture.run = const CaptureRunResult(added: 2);
+    await c.read(captureAttentionProvider.notifier).process();
+    expect(capture.runs, 0);
+    expect(c.read(captureAttentionProvider).showBanner, isFalse);
+
+    final pro = container();
+    await pro.read(captureAttentionProvider.notifier).process();
+    expect(capture.runs, 1);
   });
 
   test('the outcome of a run is kept and shown until the user has seen '

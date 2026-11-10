@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
+import 'package:ledger_zero/presentation/widgets/common/pro_gate.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
 import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/domain/services/budget_currency.dart';
@@ -166,6 +169,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: ListView(
         children: [
+          const _ProTile(),
           // General Settings
           SettingsSection(
             title: l10n.generalSettings,
@@ -566,7 +570,10 @@ class SettingsScreen extends ConsumerWidget {
                   color: Colors.lightBlue,
                 ),
                 title: Text(l10n.syncSettings),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const ProTrailing(
+                  feature: ProFeature.wifiSync,
+                  child: Icon(Icons.chevron_right),
+                ),
                 onTap: () => context.push('/settings/sync'),
               ),
               ListTile(
@@ -613,21 +620,24 @@ class SettingsScreen extends ConsumerWidget {
                   title: Text(l10n.cardNotifications),
                   subtitle: Text(l10n.cardNotificationsSubtitle),
                   // Capture that stopped, and payments that wait.
-                  trailing: switch (ref
-                      .watch(captureAttentionProvider)
-                      .badgeCount) {
-                    0 => const Icon(Icons.chevron_right),
-                    final count => Badge(
-                      key: const Key('settings.cardNotifications.badge'),
-                      label: Text(
-                        '$count',
-                        semanticsLabel: l10n.cardNotificationsAttentionBadge(
-                          count,
+                  trailing: ProTrailing(
+                    feature: ProFeature.cardCapture,
+                    child: switch (ref
+                        .watch(captureAttentionProvider)
+                        .badgeCount) {
+                      0 => const Icon(Icons.chevron_right),
+                      final count => Badge(
+                        key: const Key('settings.cardNotifications.badge'),
+                        label: Text(
+                          '$count',
+                          semanticsLabel: l10n.cardNotificationsAttentionBadge(
+                            count,
+                          ),
                         ),
+                        child: const Icon(Icons.chevron_right),
                       ),
-                      child: const Icon(Icons.chevron_right),
-                    ),
-                  },
+                    },
+                  ),
                   onTap: () => context.push('/settings/card-notifications'),
                 ),
               ListTile(
@@ -638,7 +648,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 title: Text(l10n.rules),
                 subtitle: Text(l10n.rulesSettingsSubtitle),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const ProTrailing(
+                  feature: ProFeature.rules,
+                  child: Icon(Icons.chevron_right),
+                ),
                 onTap: () => context.push('/settings/rules'),
               ),
               ListTile(
@@ -851,4 +864,36 @@ enum _ResetStep { backUp, reset }
 class _SelectionWrapper {
   final String? value;
   const _SelectionWrapper(this.value);
+}
+
+/// LedgerZero Pro: what it unlocks, or a thank-you once bought.
+class _ProTile extends ConsumerWidget {
+  const _ProTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final unlocked = ref.watch(proUnlockedProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          key: const Key('settings.pro'),
+          leading: const SettingsIcon(
+            Icons.workspace_premium,
+            color: Colors.amber,
+          ),
+          title: Text(l10n.proTitle),
+          subtitle: Text(
+            unlocked ? l10n.proUnlocked : l10n.proSettingsSubtitle,
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(proLocation()),
+        ),
+      ),
+    );
+  }
 }

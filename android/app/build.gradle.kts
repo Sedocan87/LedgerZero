@@ -97,6 +97,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Store screenshots (lib/demo/demo_mode.dart): `-Pdemo=true`
+            // gives the debug app its own id, so the demo installs next to
+            // the normal app and never touches its data.
+            if (project.findProperty("demo") == "true") {
+                applicationIdSuffix = ".demo"
+            }
+        }
         release {
             // Without android/key.properties the release build type is
             // configured with the debug key. The development and staging
@@ -127,6 +135,9 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     // BiometricPrompt for the app lock (AppLockChannel.kt).
     implementation("androidx.biometric:biometric:1.1.0")
+    // Google Play's in-app rating dialog (ReviewChannel.kt). Called directly:
+    // the in_app_review plugin does not build with AGP 9.
+    implementation("com.google.android.play:review:2.0.2")
 }
 
 // The production release is what goes to Google Play, and Play accepts only
