@@ -212,4 +212,42 @@ void main() {
     expect((await t.accounts.getAccountById('a'))!.isClosed, isTrue);
     await unmount(tester);
   });
+
+  testWidgets('(ledger improvement 1) the list is paged like the '
+      'Transactions tab and loads more when scrolled', (tester) async {
+    await t.addAccount(id: 'c', name: 'Busy');
+    for (var i = 0; i < 60; i++) {
+      await t.addTransaction(
+        accountId: 'c',
+        amount: -100 - i,
+        date: DateTime.utc(2026, 1, 1).add(Duration(days: i)),
+      );
+    }
+    await pumpScreen(tester, 'c');
+    int loaded() => ProviderScope.containerOf(
+      tester.element(find.byType(TransactionList)),
+    ).read(accountTransactionsProvider('c')).transactions.valueOrNull!.length;
+    expect(loaded(), 50);
+
+    final more = find.byKey(const Key('account.transactions.more'));
+    final list = find.descendant(
+      of: find.byType(TransactionList),
+      matching: find.byType(Scrollable),
+    );
+    // Scrolled to the end of the loaded page, the next one is requested.
+    for (var i = 0; i < 10; i++) {
+      await tester.drag(list, const Offset(0, -800));
+      await tester.pump();
+    }
+    for (var i = 0; i < 3; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(loaded(), 60);
+    expect(more, findsNothing);
+
+    await unmount(tester);
+  });
 }

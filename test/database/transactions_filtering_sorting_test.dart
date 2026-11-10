@@ -284,4 +284,40 @@ void main() {
       });
     });
   });
+
+  test('watchDailyTotals sums the live top-level rows of one account per '
+      'day, oldest first (ledger improvement 1)', () async {
+    Future<void> add(
+      String id,
+      String account,
+      DateTime date,
+      int amount, {
+      String? parent,
+      bool deleted = false,
+    }) => transactionsDao.insertTransaction(
+      TransactionsCompanion(
+        id: Value(id),
+        accountId: Value(account),
+        date: Value(date),
+        amount: Value(amount),
+        parentTransactionId: Value(parent),
+        isDeleted: Value(deleted),
+      ),
+    );
+    final d1 = DateTime.utc(2025, 3, 1);
+    final d2 = DateTime.utc(2025, 3, 2);
+    await add('x1', 'acc2', d2, -300);
+    await add('x2', 'acc2', d2, -200);
+    await add('x3', 'acc2', d1, 1000);
+    await add('split', 'acc2', d1, -400);
+    await add('line1', 'acc2', d1, -100, parent: 'split');
+    await add('line2', 'acc2', d1, -300, parent: 'split');
+    await add('gone', 'acc2', d1, -9999, deleted: true);
+    await add('other', 'acc1', d1, -7777);
+
+    final totals = await transactionsDao.watchDailyTotals('acc2').first;
+    // First the seed's t3 (1000.00 in January), then the two days above.
+    expect(totals.map((d) => d.total), [100000, 600, -500]);
+    expect(totals.skip(1).map((d) => d.date.toUtc()), [d1, d2]);
+  });
 }

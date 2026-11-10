@@ -224,6 +224,27 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       transactions.isDeleted.equals(false) &
       transactions.parentTransactionId.isNull();
 
+  /// Per calendar day, the sum of the [_balanceRow]s of [accountId] (a
+  /// split counts once, by its parent), oldest day first. The account
+  /// screen's balance chart draws the running balance from these, so it
+  /// never loads the account's rows.
+  Stream<List<({DateTime date, int total})>> watchDailyTotals(
+    String accountId,
+  ) {
+    final total = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..addColumns([transactions.date, total])
+      ..where(transactions.accountId.equals(accountId) & _balanceRow)
+      ..groupBy([transactions.date])
+      ..orderBy([OrderingTerm.asc(transactions.date)]);
+    return query.watch().map(
+      (rows) => [
+        for (final row in rows)
+          (date: row.read(transactions.date)!, total: row.read(total) ?? 0),
+      ],
+    );
+  }
+
   /// [_balanceRow]s narrowed for the net worth report: with [currency]
   /// only the rows of accounts in that currency, and without the transfer
   /// legs whose other account is in [excludeTransfersTo] (the partner's

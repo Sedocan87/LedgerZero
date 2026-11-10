@@ -5,10 +5,14 @@ so most performance work is about query shape and rebuild scope.
 
 ## Database
 
-* **Aggregate in SQL, not in Dart.** Balances, TBB, category activity and
-  report totals are `SUM` queries in the DAOs (e.g.
-  `TransactionsDao.getReadyToAssignSum`, `getCategoryActivitySums`). Do not
-  load all transactions to add them up.
+* **Aggregate in SQL, not in Dart.** Balances, TBB, category activity,
+  report totals and the account screen's balance chart are `SUM` queries
+  in the DAOs (e.g. `TransactionsDao.getReadyToAssignSum`,
+  `getCategoryActivitySums`, `watchDailyTotals`). Do not load all
+  transactions to add them up.
+* **Page transaction lists.** The Transactions tab, the filtered lists and
+  the account screen load 50 rows at a time (`TransactionsNotifier`) and
+  ask for the next page near the end of the list.
 * **No N+1 queries.** For per-category numbers use the batch methods
   (`BudgetingService.calculateBatchCategoryPerformance`,
   `calculateBatchGoalTargets`) rather than one query per category in a loop.
