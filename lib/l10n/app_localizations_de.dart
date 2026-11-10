@@ -5175,4 +5175,42 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpCsvStepsV2 =>
       'Zeilen oberhalb der Spaltennamen (Kontodaten) werden übersprungen, und eine Datei ohne Spaltennamen wird erkannt: Prüfen Sie die Zuordnung anhand der Vorschau.\nBeträge können in einer Spalte mit Vorzeichen oder in getrennten Soll- und Haben-Spalten stehen. Erscheinen Ausgaben als Einnahmen, schalten Sie „Negative Werte sind Ausgaben“ aus.\nIm Prüfschritt sind Zeilen abgewählt, die wie vorhandene Buchungen aussehen: Setzen Sie den Haken bei eigenen Buchungen und entfernen Sie ihn bei Zeilen, die Sie nicht möchten.\nIns falsche Konto importiert? „Letzten Import rückgängig machen“ auf diesem Bildschirm nimmt den Import zurück.';
+
+  @override
+  String supportEmailCopied(String email) {
+    return 'Es wurde keine E-Mail-App gefunden. Die Adresse $email wurde in die Zwischenablage kopiert.';
+  }
+
+  @override
+  String get linkCopied =>
+      'Die Seite konnte nicht geöffnet werden. Die Adresse wurde in die Zwischenablage kopiert.';
+
+  @override
+  String get aboutTitle => 'Info';
+
+  @override
+  String aboutApp(String appName) {
+    return 'Über $appName';
+  }
+
+  @override
+  String get aboutSubtitle => 'Version, Lizenzen, Kontakt';
+
+  @override
+  String aboutVersion(String version, String build) {
+    return 'Version $version (Build $build)';
+  }
+
+  @override
+  String get aboutLicenses => 'Open-Source-Lizenzen';
+
+  @override
+  String get aboutLicensesSubtitle =>
+      'Software und Schriften, mit denen diese App gebaut ist';
+
+  @override
+  String get aboutPrivacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get aboutImprint => 'Impressum';
 }

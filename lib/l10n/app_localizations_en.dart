@@ -5136,4 +5136,42 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpCsvStepsV2 =>
       'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.';
+
+  @override
+  String supportEmailCopied(String email) {
+    return 'No e-mail app was found. The address $email has been copied to the clipboard.';
+  }
+
+  @override
+  String get linkCopied =>
+      'The page could not be opened. Its address has been copied to the clipboard.';
+
+  @override
+  String get aboutTitle => 'About';
+
+  @override
+  String aboutApp(String appName) {
+    return 'About $appName';
+  }
+
+  @override
+  String get aboutSubtitle => 'Version, licences, contact';
+
+  @override
+  String aboutVersion(String version, String build) {
+    return 'Version $version (build $build)';
+  }
+
+  @override
+  String get aboutLicenses => 'Open-source licences';
+
+  @override
+  String get aboutLicensesSubtitle =>
+      'Software and fonts this app is built with';
+
+  @override
+  String get aboutPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get aboutImprint => 'Imprint';
 }

@@ -18,6 +18,7 @@ import 'package:ledger_zero/presentation/screens/settings/accessibility_settings
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/presentation/screens/settings/about_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -624,6 +625,9 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // About: version, licences, contact, legal pages.
+          const AboutSettingsSection(),
 
           const SizedBox(height: 32),
         ],

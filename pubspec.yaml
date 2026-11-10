@@ -105,6 +105,8 @@ flutter:
     # Unicode font for PDF reports (the PDF standard fonts lack €, „ “ and –).
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
+    # Shown on the licence page (Settings > About); see lib/app/licenses.dart.
+    - assets/fonts/LICENSE-Roboto.txt
 
 hooks:
   user_defines:
