@@ -151,6 +151,24 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
     });
     _startTutorialWhenLoaded(ref.read(budgetViewModelProvider));
 
+    // Back leaves the search first (and clears the filter); only a second
+    // back leaves the screen.
+    return PopScope(
+      canPop: !_isSearching,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isSearching) {
+          _toggleSearch();
+        }
+      },
+      child: _buildScaffold(context, l10n, theme),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    AppLocalizations l10n,
+    ThemeData theme,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: _isSearching
@@ -241,7 +259,11 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
             ),
             const SettingsAction(),
           ] else
-            IconButton(icon: const Icon(Icons.close), onPressed: _toggleSearch),
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: l10n.close,
+              onPressed: _toggleSearch,
+            ),
         ],
       ),
       body: Center(
