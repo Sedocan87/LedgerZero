@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
@@ -11,6 +12,9 @@ import 'package:ledger_zero/presentation/screens/settings/income/income_settings
 import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
+/// To Be Budgeted of the selected month: a tonal block with the label, the
+/// amount (long-press and drag it onto a category to assign it), a status
+/// chip and the month's income line.
 class ToBeBudgetedBanner extends ConsumerWidget {
   const ToBeBudgetedBanner({super.key});
 
@@ -20,150 +24,184 @@ class ToBeBudgetedBanner extends ConsumerWidget {
       tbbProvider(ref.watch(selectedBudgetMonthProvider)),
     );
     final fmt = ref.watch(appFormatterProvider);
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final colors = AppSemanticColors.of(context);
 
-    // While recomputing after a write, the previous value is shown.
-    final tbbValue = tbbAsync.valueOrNull ?? 0;
-    final isNegative = tbbValue < 0;
-    final accentColor = isNegative ? scheme.error : Colors.green.shade700;
-    final cardBgColor = Color.alphaBlend(
-      accentColor.withValues(alpha: 0.06),
-      scheme.surfaceContainerLow,
-    );
-
-    return Card(
-      margin: EdgeInsets.zero,
-      color: cardBgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        side: BorderSide(color: accentColor.withValues(alpha: 0.3), width: 1),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 8.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: accentColor,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              AppLocalizations.of(context)!.toBeBudgeted,
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+      padding: const EdgeInsets.fromLTRB(16.0, 12.0, 4.0, 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.toBeBudgeted,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 2),
-                      tbbAsync.when(
-                        skipLoadingOnReload: true,
-                        data: (tbb) {
-                          final formatted = fmt.formatMoney(tbb);
-                          final textWidget = AmountText(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    tbbAsync.when(
+                      skipLoadingOnReload: true,
+                      data: (tbb) {
+                        final color = tbbAmountColor(context, tbb);
+                        final textWidget = FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: AmountText(
                             tbb,
                             amountContext: AmountContext.toBeBudgeted,
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(
-                                  color: tbb >= 0
-                                      ? Colors.green.shade700
-                                      : scheme.error,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          );
-
-                          if (tbb <= 0) {
-                            return textWidget;
-                          }
-
-                          return LongPressDraggable<int>(
-                            data: tbb,
-                            feedback: Material(
-                              color: Colors.transparent,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: scheme.surfaceContainerHigh,
-                                  borderRadius: BorderRadius.circular(
-                                    AppRadius.full,
-                                  ),
-                                  border: Border.all(
-                                    color: Colors.green.shade700.withValues(
-                                      alpha: 0.4,
+                            maxLines: 1,
+                            style: theme.textTheme.headlineMedium?.tabular
+                                .copyWith(color: color),
+                          ),
+                        );
+                        final amountRow = Wrap(
+                          spacing: 10,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (tbb <= 0)
+                              textWidget
+                            else
+                              LongPressDraggable<int>(
+                                data: tbb,
+                                feedback: Material(
+                                  color: Colors.transparent,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 8,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  formatted,
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green.shade700,
+                                    decoration: BoxDecoration(
+                                      color: scheme.surfaceContainerHigh,
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.full,
                                       ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black26,
+                                          blurRadius: 8,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      fmt.formatMoney(tbb),
+                                      style: theme.textTheme.titleLarge?.tabular
+                                          .copyWith(color: colors.success),
+                                    ),
+                                  ),
                                 ),
+                                childWhenDragging: Opacity(
+                                  opacity: 0.5,
+                                  child: textWidget,
+                                ),
+                                child: textWidget,
                               ),
-                            ),
-                            childWhenDragging: Opacity(
-                              opacity: 0.5,
-                              child: textWidget,
-                            ),
-                            child: textWidget,
-                          );
-                        },
-                        loading: () => const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        error: (err, stack) => LoadErrorView(
-                          error: err,
-                          stackTrace: stack,
-                          compact: true,
-                        ),
+                            TbbStatusChip(tbb: tbb),
+                          ],
+                        );
+                        return amountRow;
+                      },
+                      loading: () => const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                    ],
-                  ),
+                      error: (err, stack) => LoadErrorView(
+                        error: err,
+                        stackTrace: stack,
+                        compact: true,
+                      ),
+                    ),
+                  ],
                 ),
-                const InfoButton(HelpTopic.toBeBudgeted),
-              ],
-            ),
-            Divider(height: 16, color: accentColor.withValues(alpha: 0.2)),
-            const _IncomeLine(),
-          ],
+              ),
+              const InfoButton(HelpTopic.toBeBudgeted),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: _IncomeLine(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The colour of a To Be Budgeted amount: success when there is money to
+/// assign, error when more was assigned than there is, else the text colour.
+Color tbbAmountColor(BuildContext context, int tbb) {
+  final colors = AppSemanticColors.of(context);
+  if (tbb > 0) {
+    return colors.success;
+  }
+  if (tbb < 0) {
+    return colors.error;
+  }
+  return Theme.of(context).colorScheme.onSurface;
+}
+
+/// "Ready to assign" (success), "Overassigned" (error) or "All assigned"
+/// (neutral) next to a To Be Budgeted amount, so its state is not told by
+/// colour alone.
+class TbbStatusChip extends StatelessWidget {
+  const TbbStatusChip({super.key, required this.tbb});
+
+  /// To Be Budgeted (minor units); only its sign matters.
+  final int tbb;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final colors = AppSemanticColors.of(context);
+    final (label, textColor, fill) = switch (tbb.sign) {
+      1 => (
+        l10n.tbbStatusReady,
+        colors.success,
+        AppSemanticColors.tonal(colors.success, scheme.surfaceContainerLow),
+      ),
+      -1 => (
+        l10n.tbbStatusOverassigned,
+        colors.error,
+        AppSemanticColors.tonal(colors.error, scheme.surfaceContainerLow),
+      ),
+      _ => (
+        l10n.tbbStatusAllAssigned,
+        scheme.onSurfaceVariant,
+        scheme.surfaceContainerHigh,
+      ),
+    };
+    return Container(
+      key: const Key('tbb.status'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

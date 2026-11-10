@@ -10,6 +10,8 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/account_detail_screen.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 
 import '../../../domain/services/ledger_test_helpers.dart';
 import '../../../helpers/test_database.dart';
@@ -143,6 +145,53 @@ void main() {
 
     expect(find.text('Transfer to Savings'), findsOneWidget);
     expect(find.text('Transfer from Savings'), findsOneWidget);
+
+    await unmount(tester);
+  });
+
+  testWidgets('(UI refresh) the list uses the shared rows under a heading '
+      'per day with its total', (tester) async {
+    await t.addTransaction(
+      id: 'meter',
+      accountId: 'a',
+      amount: -250,
+      date: DateTime.utc(2026, 3, 9),
+    );
+    await t.db.customStatement(
+      "UPDATE transactions SET memo = 'Parking meter' WHERE id = 'meter'",
+    );
+    await pumpScreen(tester, 'a');
+
+    expect(find.byType(TransactionListItem), findsNWidgets(3));
+    Finder total(DateTime date) => find.descendant(
+      of: find.byWidgetPredicate(
+        (w) => w is TransactionDateHeader && w.date == date,
+      ),
+      matching: find.byKey(const Key('transactions.dayTotal')),
+    );
+    // -10.00 out, +4.00 in.
+    expect(
+      find.descendant(of: total(day), matching: find.text(r'-$6.00')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: total(DateTime.utc(2026, 3, 9)),
+        matching: find.text(r'-$2.50'),
+      ),
+      findsOneWidget,
+    );
+    // Without a payee the memo names the row; a transfer reads "Transfer".
+    expect(find.text('Parking meter'), findsOneWidget);
+    expect(find.text('Transfer'), findsNWidgets(2));
+    // The date is in the heading, not on the rows.
+    expect(
+      find.descendant(
+        of: find.byType(TransactionListItem),
+        matching: find.textContaining('2026'),
+      ),
+      findsNothing,
+    );
 
     await unmount(tester);
   });

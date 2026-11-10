@@ -163,8 +163,8 @@ void main() {
       tester,
       Column(
         children: [
-          BudgetGroupRow(group: group(savingsGroupId)),
-          BudgetGroupRow(group: group('other')),
+          BudgetGroupRow(group: group(savingsGroupId), available: 0),
+          BudgetGroupRow(group: group('other'), available: 0),
         ],
       ),
     );

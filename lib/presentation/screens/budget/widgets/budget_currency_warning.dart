@@ -111,10 +111,7 @@ class BudgetCurrencyWarning extends ConsumerWidget {
       child: Card(
         key: const Key('budget.currencyWarning'),
         color: scheme.errorContainer,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.error.withValues(alpha: 0.25)),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
           child: Column(

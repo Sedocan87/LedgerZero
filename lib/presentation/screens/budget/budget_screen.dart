@@ -188,8 +188,11 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                   ref.read(budgetSearchQueryProvider.notifier).state = value;
                 },
               )
-            : Text(l10n.budget),
+            // The month is the title: chevrons step a month, the name
+            // opens the month picker.
+            : MonthSelector(key: _tutorialKeys.monthSelector),
         centerTitle: false,
+        titleSpacing: _isSearching ? null : 4,
         actions: [
           if (!_isSearching) ...[
             IconButton(
@@ -197,35 +200,20 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
               tooltip: l10n.search,
               onPressed: _toggleSearch,
             ),
-            IconButton(
-              icon: Consumer(
-                builder: (context, ref, child) {
-                  final mode = ref.watch(budgetViewModeProvider);
-                  return Icon(
-                    mode == BudgetViewMode.standard
-                        ? Icons.bar_chart
-                        : Icons.list,
-                  );
-                },
-              ),
-              tooltip: l10n.viewMode,
-              onPressed: () {
-                final current = ref.read(budgetViewModeProvider);
-                ref
-                    .read(budgetViewModeProvider.notifier)
-                    .state = current == BudgetViewMode.standard
-                    ? BudgetViewMode.comparison
-                    : BudgetViewMode.standard;
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.category_outlined),
-              tooltip: l10n.manageCategories,
-              onPressed: () => context.pushNamed('categories'),
-            ),
+            // View mode, categories, templates and the month operations.
             PopupMenuButton<String>(
+              key: const Key('budget.menu'),
               onSelected: (value) async {
-                if (value == 'save_template') {
+                if (value == 'view_mode') {
+                  final current = ref.read(budgetViewModeProvider);
+                  ref
+                      .read(budgetViewModeProvider.notifier)
+                      .state = current == BudgetViewMode.standard
+                      ? BudgetViewMode.comparison
+                      : BudgetViewMode.standard;
+                } else if (value == 'categories') {
+                  await context.pushNamed('categories');
+                } else if (value == 'save_template') {
                   await showSaveTemplateDialog(context, ref);
                 } else if (value == 'apply_template') {
                   await showApplyTemplateDialog(context, ref);
@@ -238,6 +226,18 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
                 }
               },
               itemBuilder: (context) => [
+                CheckedPopupMenuItem(
+                  value: 'view_mode',
+                  checked:
+                      ref.read(budgetViewModeProvider) ==
+                      BudgetViewMode.comparison,
+                  child: Text(l10n.budgetViewProgress),
+                ),
+                PopupMenuItem(
+                  value: 'categories',
+                  child: Text(l10n.manageCategories),
+                ),
+                const PopupMenuDivider(),
                 PopupMenuItem(
                   value: 'save_template',
                   child: Text(l10n.saveAsTemplate),
@@ -272,16 +272,9 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen>
           constraints: const BoxConstraints(maxWidth: 800),
           child: CustomScrollView(
             slivers: [
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: MonthSelector(key: _tutorialKeys.monthSelector),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+                  padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 4.0),
                   child: ToBeBudgetedBanner(key: _tutorialKeys.tbb),
                 ),
               ),
@@ -325,10 +318,6 @@ class _NoAccountsPrompt extends ConsumerWidget {
       child: Card(
         key: const Key('budget.noAccounts'),
         color: scheme.secondaryContainer,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.secondary.withValues(alpha: 0.25)),
-        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

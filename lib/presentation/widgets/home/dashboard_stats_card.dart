@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 
@@ -29,6 +30,7 @@ class DashboardStatsCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Expanded(
+      // A tonal tile (the theme's card: a fill, no outline).
       child: Card(
         // Read as one item: "<title>, <amount>".
         child: MergeSemantics(
@@ -69,7 +71,7 @@ class DashboardStatsCard extends StatelessWidget {
                   child: AmountText(
                     amount,
                     currencyCode: currencyCode,
-                    style: theme.textTheme.headlineSmall?.copyWith(
+                    style: theme.textTheme.headlineSmall?.tabular.copyWith(
                       color: amountColor ?? theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.3,

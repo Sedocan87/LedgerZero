@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
@@ -85,13 +86,13 @@ void main() {
 
     await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
     await tester.pumpAndSettle();
-    expect(find.text('NET WORTH'), findsOneWidget);
+    expect(find.text('Net Worth'), findsOneWidget);
     expect(find.text('\$10,200.00'), findsOneWidget);
     expect(prefs.getString(ToBeBudgetedWidget.pagePrefsKey), 'netWorth');
 
     await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
     await tester.pumpAndSettle();
-    expect(find.text('IN BUDGET ACCOUNTS'), findsOneWidget);
+    expect(find.text('In budget accounts'), findsOneWidget);
     expect(find.text('\$1,200.00'), findsOneWidget);
   });
 
@@ -108,7 +109,31 @@ void main() {
   testWidgets('opens on the page shown last', (tester) async {
     await prefs.setString(ToBeBudgetedWidget.pagePrefsKey, 'inBudget');
     await pump(tester, const [_checking, _savings]);
-    expect(find.text('IN BUDGET ACCOUNTS'), findsOneWidget);
+    expect(find.text('In budget accounts'), findsOneWidget);
+  });
+
+  testWidgets('To Be Budgeted is a tonal block with its state in a chip, '
+      'like the Budget tab', (tester) async {
+    await pump(tester, const []);
+    final context = tester.element(find.byType(ToBeBudgetedWidget));
+    final scheme = Theme.of(context).colorScheme;
+    final block = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byType(ToBeBudgetedWidget),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final decoration = block.decoration! as BoxDecoration;
+    expect(decoration.color, scheme.surfaceContainerLow);
+    expect(decoration.gradient, isNull);
+    expect(decoration.border, isNull);
+    expect(find.text('Ready to assign'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('\$250.00')).style?.color,
+      AppSemanticColors.of(context).success,
+    );
   });
 
   testWidgets('a single page has no swipe affordance', (tester) async {

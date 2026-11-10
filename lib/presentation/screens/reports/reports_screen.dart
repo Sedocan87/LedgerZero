@@ -23,6 +23,8 @@ import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 import 'package:ledger_zero/services/export/csv_sanitizer.dart';
 import 'package:ledger_zero/services/reports/report_export_service.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_bar_title.dart';
+import 'package:ledger_zero/presentation/widgets/common/segment_label.dart';
 
 enum ReportType {
   spendingTrends,
@@ -328,7 +330,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.reports),
+        title: AppBarTitle(l10n.reports),
         actions: [
           const ReportCategoryFilter(),
           IconButton(
@@ -530,17 +532,17 @@ class _ExportDialogState extends State<_ExportDialog> {
               segments: [
                 ButtonSegment(
                   value: ExportFormat.csv,
-                  label: Text(l10n.csv),
+                  label: SegmentLabel(l10n.csv),
                   icon: const Icon(Icons.table_chart),
                 ),
                 ButtonSegment(
                   value: ExportFormat.pdf,
-                  label: Text(l10n.pdf),
+                  label: SegmentLabel(l10n.pdf),
                   icon: const Icon(Icons.picture_as_pdf),
                 ),
                 ButtonSegment(
                   value: ExportFormat.image,
-                  label: Text(l10n.image),
+                  label: SegmentLabel(l10n.image),
                   icon: const Icon(Icons.image),
                 ),
               ],

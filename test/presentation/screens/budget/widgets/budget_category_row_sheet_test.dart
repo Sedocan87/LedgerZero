@@ -15,6 +15,7 @@ import 'package:ledger_zero/presentation/screens/budget/providers/budget_ui_stat
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_calculator.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_list.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_row.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_group_row.dart';
 import 'package:mockito/mockito.dart';
 
 import '../../../../mocks/service_mocks.mocks.dart';
@@ -170,6 +171,62 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('An error occurred'), findsOneWidget);
     expect(find.text('Budget updated'), findsNothing);
+  });
+
+  testWidgets('tapping a row opens its sheet with the full name and the '
+      'activity, which the row itself no longer shows', (tester) async {
+    await pump(
+      tester,
+      SizedBox(
+        width: 392,
+        child: BudgetCategoryRow(
+          viewModel: vm('1', budgeted: 10000, activity: -4250, available: 5750),
+        ),
+      ),
+    );
+    // Budgeted and Available only.
+    expect(find.text('-\$42.50'), findsNothing);
+
+    await tester.tap(find.text('Cat 1'));
+    await tester.pumpAndSettle();
+    final sheet = find.byKey(const Key('budget.rowActivity'));
+    expect(sheet, findsOneWidget);
+    expect(
+      find.descendant(of: sheet, matching: find.text('Cat 1')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.text('Activity: -\$42.50')),
+      findsOneWidget,
+    );
+    expect(find.text('Zero Out'), findsOneWidget);
+  });
+
+  testWidgets('a group header shows the group\'s total available in the '
+      'Available column', (tester) async {
+    await pump(
+      tester,
+      const CustomScrollView(slivers: [BudgetCategoryList()]),
+      overrides: [
+        budgetViewModelProvider.overrideWith(
+          (ref) async => oneGroup([
+            vm('a', budgeted: 1000, available: 1000),
+            vm('b', budgeted: 2000, available: -250),
+          ]),
+        ),
+      ],
+    );
+    final header = find.byType(BudgetGroupRow);
+    expect(
+      find.descendant(of: header, matching: find.text('\$7.50')),
+      findsOneWidget,
+    );
+    // Its right edge lines up with the pills' amounts.
+    final total = tester.getRect(
+      find.descendant(of: header, matching: find.text('\$7.50')),
+    );
+    final pill = tester.getRect(find.text('\$10.00').last);
+    expect(total.right, closeTo(pill.right, 1));
   });
 
   testWidgets('comparison view: a net refund is not shown as spending', (

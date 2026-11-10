@@ -12,8 +12,15 @@ UI), iOS and Android.
   `ColorScheme.fromSeed` from `AppColors.seedColor` (teal,
   `DynamicSchemeVariant.fidelity`). High contrast overrides primary and
   surface with black/white.
-* Use `Theme.of(context).colorScheme` for colours. `AppColors` also defines
-  semantic colours (`income`, `expense`, `success`, `warning`, `error`).
+* Use `Theme.of(context).colorScheme` for colours, and
+  `AppSemanticColors.of(context)` (a `ThemeExtension`) for the colours that
+  carry meaning: `success`, `warning`, `error`, `income`, `expense`. They
+  have light and dark values with at least 4.5:1 text contrast on
+  `surface`, `surfaceContainerLow` and on their own tonal pill
+  (`AppSemanticColors.tonal(color, background)`); `test/app/theme_test.dart`
+  checks this for all four themes. The fixed `AppColors.income` ...
+  constants are tuned for the light theme only; new code should not use
+  them.
 * Text: use `Theme.of(context).textTheme` (`displayLarge` ... `labelSmall`);
   the styles come from `AppTextStyles`.
 * Charts take their colours from the `ChartPalette` theme extension
@@ -21,6 +28,52 @@ UI), iOS and Android.
   `lib/presentation/widgets/charts/chart_palette.dart`): categorical colours
   for slices plus income, expense, net worth, bar, budgeted and spent. It
   follows light, dark and high contrast. Do not hard-code chart colours.
+
+## Typography
+
+* All app text is **Inter** (SIL OFL 1.1), bundled as static TTFs (400,
+  500, 600, 700) under `assets/fonts/Inter/` and declared in pubspec.yaml;
+  the app never downloads a font. Its licence is on the licence page
+  (`lib/app/licenses.dart`). PDF reports keep Roboto (`assets/fonts/`),
+  which has the € sign and German quotes the PDF standard fonts lack.
+* Weights: headlines and titles 600-700, body 400, labels 500
+  (`AppTextStyles`). Inter is about 6% wider than Roboto; check tight rows
+  with real metrics (`budget_row_fit_test.dart` loads the font files).
+* **Every money amount uses tabular figures**, so digits line up in a
+  column: `style.tabular` (the `TabularFigures` extension on `TextStyle`
+  in `lib/app/theme.dart`), e.g.
+  `theme.textTheme.bodyMedium?.tabular`.
+
+## Colour roles
+
+Colour carries state, not decoration:
+
+* Amounts are drawn in `onSurface`; a zero or secondary amount in
+  `onSurfaceVariant`. A budgeted amount is `onSurface` (not the primary
+  colour), even though it is tappable.
+* `success`: money available (a category's Available > 0, a positive To Be
+  Budgeted, income, inflows in lists with a leading "+").
+* `error`: cash overspending, a negative To Be Budgeted.
+* `warning`: credit overspending (card spending a category could not
+  cover) and what is still missing to pay a card.
+* Outflows in lists keep their minus sign but are drawn in `onSurface`,
+  not red; spending totals likewise.
+* A state shown by colour is also said in words where it matters (the To
+  Be Budgeted status chip: "Ready to assign", "Overassigned", "All
+  assigned"), so it does not rely on colour alone.
+* Status pills and chips: text in the state colour on
+  `AppSemanticColors.tonal(color, background)`; the neutral state uses
+  `surfaceContainerHigh` with `onSurfaceVariant` text.
+
+## Surfaces
+
+* Cards and panels are **tonal**: a `surfaceContainerLow` (or
+  `surfaceContainer`) fill, rounded, **no outline**. The theme's
+  `CardThemeData` has no border; do not add `side:` to a card's shape.
+* Lists are plain rows on the page (inset dividers or spacing), not a card
+  per row; a section header is a plain row, not a card.
+* Outlines stay only on text inputs and on genuinely interactive outlined
+  buttons.
 
 ## Spacing and shape
 
@@ -59,6 +112,33 @@ Other shared widgets: pickers in `lib/presentation/widgets/pickers/`
 
 Screens use a plain Material `AppBar`; there is no app-specific app bar
 widget.
+
+## Lists
+
+Lists are plain rows, not cards: inset hairlines between rows, no
+outlines, a tonal highlight (`secondaryContainer`) for selected rows.
+
+* **Transactions** (Transactions tab, account screen, payee screen,
+  Home's recent ones) all use `TransactionListItem`
+  (`lib/presentation/screens/transactions/widgets/`): a 40 dp category
+  badge (`CategoryIconResolver`; a swap icon for transfers, call-split for
+  splits, the tag icon when uncategorised, those three on a neutral
+  badge), the payee in w600, "Category · Account" below, the amount right
+  aligned in tabular figures (inflows green with a "+", outflows in the
+  text colour with a "-") and the cleared toggle (48 dp target, "Uncleared.
+  Tap to change"). Labels come from `transactionLookupsProvider`.
+* **Day headings** (`TransactionDateHeader`) show the weekday and date and
+  the day's total. A list sorted by anything but date has no headings and
+  each row shows its date. Only complete days get a total
+  (`completeDayTotals`): on a paged list the last loaded day may continue
+  on the next page and shows its total once that page is in; a day with
+  rows in several currencies shows none.
+* **Accounts** (`AccountCard`): the account badge, name, type (and
+  "Personal" / "Partner's") on the second line, the balance right aligned
+  (red only for an overdrawn account that is not a credit card), under the
+  headings On budget, Off budget, Closed and the partner's accounts. A
+  heading shows its group's total when the group has more than one
+  account, all in one currency.
 
 ## Text and numbers
 

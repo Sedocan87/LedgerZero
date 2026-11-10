@@ -2,28 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
-import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
 import 'package:ledger_zero/domain/undo/transaction_undo_actions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_dialogs.dart';
-import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/pickers.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_filter_sheet.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
-
-/// Ids of all split parents (labelled "Split" in lists).
-final splitParentIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {
-  return ref.watch(transactionRepositoryProvider).watchSplitParentIds();
-});
+import 'package:ledger_zero/presentation/widgets/common/app_bar_title.dart';
 
 /// The transaction list: the Transactions tab (persisted filter and sort),
 /// or a list with a [fixedFilter] (e.g. a category's activity from the
@@ -174,16 +167,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final state = ref.watch(_provider);
-    final lookups = TransactionLookups(
-      categories: ref.watch(categoryMapProvider).valueOrNull ?? {},
-      payees: ref.watch(payeeMapProvider).valueOrNull ?? {},
-      accounts: {
-        for (final a
-            in ref.watch(accountsProvider).valueOrNull ?? const <Account>[])
-          a.id: a,
-      },
-      splitParents: ref.watch(splitParentIdsProvider).valueOrNull ?? const {},
-    );
+    final lookups = ref.watch(transactionLookupsProvider);
 
     // Back leaves selection or search mode before it leaves the screen
     // (on the Transactions tab it would otherwise leave the app).
@@ -234,6 +218,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 );
               }
               final flattened = flattenByDay(transactions, sort: state.sort);
+              final dayTotals = completeDayTotals(
+                transactions,
+                hasMore: ref.read(_provider.notifier).hasMore,
+                currencyOf: lookups.currencyOf,
+              );
               // Any other order than "newest first" is announced above the
               // list.
               final sortNote = _isDefaultSort(state.sort)
@@ -257,13 +246,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   }
                   final item = flattened[index];
                   if (item is DateTime) {
-                    return TransactionDateHeader(date: item);
+                    final total = dayTotals[item];
+                    return TransactionDateHeader(
+                      date: item,
+                      total: total?.total,
+                      currencyCode: total?.currency,
+                    );
                   }
                   return _buildTransactionItem(
                     item as Transaction,
                     lookups,
                     state,
                     l10n,
+                    // A hairline between rows; none under a day heading.
+                    showDivider: index > 0 && flattened[index - 1] is! DateTime,
                   );
                 },
               );
@@ -292,25 +288,18 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     Transaction tx,
     TransactionLookups lookups,
     TransactionsState state,
-    AppLocalizations l10n,
-  ) {
-    final otherAccount = lookups.accounts[tx.transferAccountId]?.name ?? '';
-    final payeeName = tx.transferAccountId != null
-        ? (tx.amount < 0
-              ? l10n.transferToAccount(otherAccount)
-              : l10n.transferFromAccount(otherAccount))
-        : lookups.payees[tx.payeeId];
-    final categoryName = tx.transferAccountId != null
-        ? l10n.transfer
-        : lookups.splitParents.contains(tx.id)
-        ? l10n.split
-        : lookups.categories[tx.categoryId];
+    AppLocalizations l10n, {
+    required bool showDivider,
+  }) {
     final item = TransactionListItem(
       transaction: tx,
-      payeeName: payeeName,
-      categoryName: categoryName,
+      payeeName: lookups.payeeLabel(tx, l10n),
+      categoryName: lookups.categoryLabel(tx, l10n),
+      category: lookups.categoryOf(tx),
+      isSplit: lookups.isSplit(tx),
       accountName: lookups.accounts[tx.accountId]?.name,
-      currencyCode: lookups.accounts[tx.accountId]?.currency,
+      currencyCode: lookups.currencyOf(tx),
+      showDivider: showDivider,
       isSelectionMode: state.isMultiSelectMode,
       isSelected: state.selectedTransactionIds.contains(tx.id),
       // Sorted by date, the list has a heading for each day.
@@ -341,11 +330,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return Dismissible(
       key: Key(tx.id),
       background: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.error,
-          borderRadius: BorderRadius.circular(14),
-        ),
+        color: Theme.of(context).colorScheme.error,
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20.0),
         child: _SwipeActionLabel(
@@ -354,11 +339,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         ),
       ),
       secondaryBackground: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2E7D32),
-          borderRadius: BorderRadius.circular(14),
-        ),
+        color: const Color(0xFF2E7D32),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20.0),
         child: _SwipeActionLabel(
@@ -384,7 +365,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   Widget _buildAppBarTitle(TransactionsState state, AppLocalizations l10n) {
     if (state.isMultiSelectMode) {
-      return Text(l10n.selectedCount(state.selectedTransactionIds.length));
+      return AppBarTitle(
+        l10n.selectedCount(state.selectedTransactionIds.length),
+      );
     }
     if (_isSearchMode) {
       return TextField(
@@ -398,7 +381,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ref.read(_provider.notifier).updateSearchQuery(value),
       );
     }
-    return Text(widget.fixedFilter?.title ?? l10n.transactions);
+    return AppBarTitle(widget.fixedFilter?.title ?? l10n.transactions);
   }
 
   Widget? _buildAppBarLeading(TransactionsState state) {

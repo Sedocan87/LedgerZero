@@ -4107,5 +4107,19 @@
   "accountCardPaymentAvailable": "Set aside to pay the card: {amount}",
   "@accountCardPaymentAvailable": {"description": "Account screen of a credit card: what its payment category holds", "placeholders": {"amount": {"type": "String", "example": "50,00 €"}}},
   "categoryPaymentLocked": "This is the payment category of the card {card}. It is named after the card, stays in Credit Card Payments and cannot be deleted while the card is open and in the budget.",
-  "@categoryPaymentLocked": {"description": "Category editor and categories screen: why a payment category cannot be renamed, moved or deleted", "placeholders": {"card": {"type": "String", "example": "Visa"}}}
+  "@categoryPaymentLocked": {"description": "Category editor and categories screen: why a payment category cannot be renamed, moved or deleted", "placeholders": {"card": {"type": "String", "example": "Visa"}}},
+  "tbbStatusReady": "Ready to assign",
+  "@tbbStatusReady": {"description": "Status chip next to a positive To Be Budgeted amount (Budget and Home)"},
+  "tbbStatusOverassigned": "Overassigned",
+  "@tbbStatusOverassigned": {"description": "Status chip next to a negative To Be Budgeted amount: more was budgeted than there is"},
+  "tbbStatusAllAssigned": "All assigned",
+  "@tbbStatusAllAssigned": {"description": "Status chip next to a To Be Budgeted of exactly zero"},
+  "budgetViewProgress": "Show progress bars",
+  "@budgetViewProgress": {"description": "Budget menu: switch the category rows to the spent-of-budgeted progress view (checked while it is on)"},
+  "accountsGroupOnBudget": "On budget",
+  "@accountsGroupOnBudget": {"description": "Accounts list: heading above the open accounts that are in the budget"},
+  "accountsGroupOffBudget": "Off budget",
+  "@accountsGroupOffBudget": {"description": "Accounts list: heading above the open accounts outside the budget (they count towards net worth only)"},
+  "accountsGroupClosed": "Closed",
+  "@accountsGroupClosed": {"description": "Accounts list: heading above the closed accounts (shown with the filter \"Show closed accounts\")"}
 }

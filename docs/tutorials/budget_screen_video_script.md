@@ -22,8 +22,9 @@ category to assign part of it.
 
 ## Scene 3: Quick actions (0:55 - 1:20)
 **Visual**: A category with the orange warning icon (below its goal target).
-**Action**: Long-press the row. The **Quick Actions** sheet shows **Budget
-Previous Month**, **Budget Average Spent**, **Zero Out** and **Move Money**.
+**Action**: Tap (or long-press) the row. Its sheet shows the category's
+activity, then **Budget Previous Month**, **Budget Average Spent**, **Zero
+Out** and **Move Money**.
 Choose **Budget Previous Month**.
 **Audio**: "The orange icon means a category is below its goal target.
 Long-press a category for quick actions: copy last month's amount, budget
@@ -40,9 +41,9 @@ Long-press a category that has money left, choose Move Money and move the
 amount to the overspent one."
 
 ## Scene 5: Months and views (1:45 - 2:00)
-**Action**: Use the arrows of the month selector to go to next month. Tap
-the **View Mode** icon in the app bar to switch to the comparison view with
-progress bars, and back.
+**Action**: Use the arrows next to the month in the app bar to go to next
+month (tap the month itself to pick one). In the app bar menu, tick **Show
+progress bars** to switch to the comparison view, and untick it to go back.
 **Audio**: "Use the arrows to plan the next month, and switch the view mode
 to see spending against your budget as progress bars."
 
