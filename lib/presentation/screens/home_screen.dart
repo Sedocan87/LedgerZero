@@ -9,6 +9,7 @@ import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
+import 'package:ledger_zero/presentation/widgets/home/capture_attention_banner.dart';
 import 'package:ledger_zero/presentation/widgets/home/dashboard_stats_widget.dart';
 import 'package:ledger_zero/presentation/widgets/home/home_empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/home/recent_transactions_widget.dart';
@@ -76,6 +77,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
+                      // Card capture that stopped or needs a decision.
+                      const CaptureAttentionBanner(),
                       const ToBeBudgetedWidget(),
                       const SizedBox(height: AppSpacing.md),
                       const DashboardStatsWidget(),

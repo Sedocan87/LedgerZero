@@ -92,23 +92,10 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 
   /// Books card notifications captured since the last run (needs the open
-  /// database, not the unlocked UI).
-  Future<void> _processCapturedNotifications() async {
-    if (!ref.read(sessionProvider).isUnlocked) {
-      return;
-    }
-    final capture = ref.read(notificationCaptureServiceProvider);
-    if (!capture.isSupported) {
-      return;
-    }
-    try {
-      await capture.processPending();
-    } on DatabaseLockedException {
-      // Closed meanwhile (factory reset); runs again when it reopens.
-    } catch (e, stackTrace) {
-      Logger.error('Booking captured card notifications failed', e, stackTrace);
-    }
-  }
+  /// database, not the unlocked UI) and keeps the outcome, the listener
+  /// state and what is waiting for Home and Settings to show.
+  Future<void> _processCapturedNotifications() =>
+      ref.read(captureAttentionProvider.notifier).process();
 
   /// Books the scheduled occurrences that are due by today.
   Future<void> _processDueSchedules() async {
