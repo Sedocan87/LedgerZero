@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
+import 'package:ledger_zero/services/import/import_undo_service.dart';
 import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -21,12 +22,17 @@ class TransactionImportService {
     required this._payeeRepository,
     required this._ruleMatchingService,
     required this._unitOfWork,
+    this._lastImportStore,
   });
 
   final TransactionRepository _transactionRepository;
   final PayeeRepository _payeeRepository;
   final RuleMatchingService _ruleMatchingService;
   final UnitOfWork _unitOfWork;
+
+  /// Where the created transactions are recorded for "undo last import"
+  /// (see [ImportUndoService]); `null`: not recorded.
+  final LastImportStore? _lastImportStore;
 
   /// Imports [rows] in one unit of work (all rows or none) and returns the
   /// number of transactions created.
@@ -68,7 +74,7 @@ class TransactionImportService {
     if (rows.isEmpty) {
       return 0;
     }
-    return _unitOfWork.run(() async {
+    final created = await _unitOfWork.run(() async {
       final rules = await _ruleMatchingService.loadActiveRules();
       final existing = await _payeeRepository.getAllPayees();
       final payeesById = {for (final p in existing) p.id: p};
@@ -151,8 +157,13 @@ class TransactionImportService {
       }
 
       await _transactionRepository.batchCreateTransactions(transactions);
-      return transactions.length;
+      return transactions;
     });
+    final store = _lastImportStore;
+    if (store != null) {
+      await ImportUndoService.record(store, created, DateTime.now().toUtc());
+    }
+    return created.length;
   }
 
   /// Pairs the transfer legs among [rows]: index -> index of the other leg
@@ -309,5 +320,6 @@ final transactionImportServiceProvider = Provider<TransactionImportService>((
     payeeRepository: ref.watch(payeeRepositoryProvider),
     ruleMatchingService: ref.watch(ruleMatchingServiceProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    lastImportStore: ref.watch(lastImportStoreProvider),
   );
 });

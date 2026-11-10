@@ -4992,4 +4992,66 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get ynabImportErrorInvalidYnab4Zip =>
       'Diese ZIP-Datei enthält kein YNAB-4-Budget. Packen Sie den ganzen Ordner mit der Endung .ynab4.';
+
+  @override
+  String get importUndoLast => 'Letzten Import rückgängig machen';
+
+  @override
+  String importUndoLastInfo(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Letzter CSV-Import: $count Transaktionen am $date.',
+      one: 'Letzter CSV-Import: 1 Transaktion am $date.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoConfirm(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count Transaktionen löschen, die der Import vom $date angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.',
+      one:
+          'Die 1 Transaktion löschen, die der Import vom $date angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoKept(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Transaktionen dieses Imports wurden seither bearbeitet, abgeglichen oder aufgeteilt und bleiben erhalten.',
+      one:
+          '1 Transaktion dieses Imports wurde seither bearbeitet, abgeglichen oder aufgeteilt und bleibt erhalten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoNothing =>
+      'Alle Transaktionen des letzten Imports wurden seither geändert oder gelöscht. Es gibt nichts rückgängig zu machen.';
+
+  @override
+  String importUndoDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Import rückgängig gemacht: $count Transaktionen gelöscht',
+      one: 'Import rückgängig gemacht: 1 Transaktion gelöscht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoAction => 'Import rückgängig machen';
+
+  @override
+  String get importUndoFailed =>
+      'Der Import konnte nicht rückgängig gemacht werden. Es wurde nichts geändert.';
 }

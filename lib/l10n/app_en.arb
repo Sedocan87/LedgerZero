@@ -3965,5 +3965,21 @@
   "ynabImportYnab4ZipHint": "If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.",
   "@ynabImportYnab4ZipHint": {"description": "YNAB 4 import: note under the two tiles (Android does not let apps read a picked folder by path)"},
   "ynabImportErrorInvalidYnab4Zip": "This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.",
-  "@ynabImportErrorInvalidYnab4Zip": {"description": "YNAB 4 import error: the picked ZIP has no Budget.ymeta / Budget.yfull"}
+  "@ynabImportErrorInvalidYnab4Zip": {"description": "YNAB 4 import error: the picked ZIP has no Budget.ymeta / Budget.yfull"},
+  "importUndoLast": "Undo last import",
+  "@importUndoLast": {"description": "CSV import screen: button that deletes the transactions the last CSV import created"},
+  "importUndoLastInfo": "{count, plural, =1{Last CSV import: 1 transaction on {date}.} other{Last CSV import: {count} transactions on {date}.}}",
+  "@importUndoLastInfo": {"description": "CSV import screen: what the last import created", "placeholders": {"count": {"type": "int"}, "date": {"type": "String"}}},
+  "importUndoConfirm": "{count, plural, =1{Delete the 1 transaction that the import of {date} created? Payees the import created stay.} other{Delete the {count} transactions that the import of {date} created? Payees the import created stay.}}",
+  "@importUndoConfirm": {"description": "Confirmation before undoing the last CSV import", "placeholders": {"count": {"type": "int"}, "date": {"type": "String"}}},
+  "importUndoKept": "{count, plural, =1{1 transaction of that import was edited, reconciled or split since and is kept.} other{{count} transactions of that import were edited, reconciled or split since and are kept.}}",
+  "@importUndoKept": {"description": "Warning in the undo-import confirmation and result: rows changed since the import are not deleted", "placeholders": {"count": {"type": "int"}}},
+  "importUndoNothing": "Every transaction of the last import was changed or deleted since. There is nothing to undo.",
+  "@importUndoNothing": {"description": "Undo last import: nothing left that can be deleted"},
+  "importUndoDone": "{count, plural, =1{Import undone: 1 transaction deleted} other{Import undone: {count} transactions deleted}}",
+  "@importUndoDone": {"description": "Snackbar after undoing the last CSV import", "placeholders": {"count": {"type": "int"}}},
+  "importUndoAction": "Undo import",
+  "@importUndoAction": {"description": "Button: undo the CSV import (confirmation dialog and the dialog shown right after an import)"},
+  "importUndoFailed": "The import could not be undone. Nothing was changed.",
+  "@importUndoFailed": {"description": "Snackbar when undoing the last import failed"}
 }

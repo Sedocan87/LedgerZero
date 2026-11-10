@@ -8,7 +8,9 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/screens/import/import_undo_dialog.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
+import 'package:ledger_zero/services/import/import_undo_service.dart';
 import 'package:ledger_zero/services/import/transaction_import_service.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -463,6 +465,34 @@ class _ImportConfirmationScreenState
     );
   }
 
+  /// Takes back the import just made (the success dialog's "Undo import")
+  /// and stays on the review, so the user can correct and import again.
+  Future<void> _undoImport() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isImporting = true);
+    try {
+      final done = await ref.read(importUndoServiceProvider).undo();
+      if (done != null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(undoneMessage(l10n, done))),
+        );
+      }
+    } catch (e, st) {
+      Logger.error('Undoing the import failed', e, st);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.importUndoFailed)));
+    } finally {
+      if (mounted) {
+        setState(() => _isImporting = false);
+      }
+    }
+    // The rows are importable again: nothing of them exists any more.
+    final accountId = _accountId;
+    if (mounted && accountId != null) {
+      await _checkDuplicates(accountId);
+    }
+  }
+
   Future<void> _performImport(
     List<ImportTransaction> transactions,
     String accountId,
@@ -485,24 +515,35 @@ class _ImportConfirmationScreenState
         return;
       }
       setState(() => _isImporting = false);
-      await showDialog<void>(
+      final undo = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           title: Text(l10n.importSuccess),
           content: Text(l10n.importedTransactions(count)),
           actions: [
+            // Wrong account, wrong sign, wrong file: take it back at once.
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              key: const Key('import_undo'),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.importUndoAction),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: Text(l10n.transactions),
             ),
           ],
         ),
       );
-      // Navigate with the screen's context once the dialog is gone.
-      if (mounted) {
-        context.go('/transactions');
+      if (!mounted) {
+        return;
       }
+      if (undo == true) {
+        await _undoImport();
+        return;
+      }
+      // Navigate with the screen's context once the dialog is gone.
+      context.go('/transactions');
     } catch (e, st) {
       Logger.error('Importing transactions failed', e, st);
       if (mounted) {

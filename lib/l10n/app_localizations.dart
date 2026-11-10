@@ -7965,6 +7965,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.'**
   String get ynabImportErrorInvalidYnab4Zip;
+
+  /// CSV import screen: button that deletes the transactions the last CSV import created
+  ///
+  /// In en, this message translates to:
+  /// **'Undo last import'**
+  String get importUndoLast;
+
+  /// CSV import screen: what the last import created
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Last CSV import: 1 transaction on {date}.} other{Last CSV import: {count} transactions on {date}.}}'**
+  String importUndoLastInfo(int count, String date);
+
+  /// Confirmation before undoing the last CSV import
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Delete the 1 transaction that the import of {date} created? Payees the import created stay.} other{Delete the {count} transactions that the import of {date} created? Payees the import created stay.}}'**
+  String importUndoConfirm(int count, String date);
+
+  /// Warning in the undo-import confirmation and result: rows changed since the import are not deleted
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 transaction of that import was edited, reconciled or split since and is kept.} other{{count} transactions of that import were edited, reconciled or split since and are kept.}}'**
+  String importUndoKept(int count);
+
+  /// Undo last import: nothing left that can be deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Every transaction of the last import was changed or deleted since. There is nothing to undo.'**
+  String get importUndoNothing;
+
+  /// Snackbar after undoing the last CSV import
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Import undone: 1 transaction deleted} other{Import undone: {count} transactions deleted}}'**
+  String importUndoDone(int count);
+
+  /// Button: undo the CSV import (confirmation dialog and the dialog shown right after an import)
+  ///
+  /// In en, this message translates to:
+  /// **'Undo import'**
+  String get importUndoAction;
+
+  /// Snackbar when undoing the last import failed
+  ///
+  /// In en, this message translates to:
+  /// **'The import could not be undone. Nothing was changed.'**
+  String get importUndoFailed;
 }
 
 class _AppLocalizationsDelegate

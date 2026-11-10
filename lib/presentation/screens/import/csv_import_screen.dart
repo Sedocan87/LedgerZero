@@ -14,6 +14,8 @@ import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/csv/bank_csv_presets.dart';
 import 'package:ledger_zero/services/csv/csv_date_formats.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
+import 'package:ledger_zero/services/import/import_undo_service.dart';
+import 'package:ledger_zero/presentation/screens/import/import_undo_dialog.dart';
 import 'package:ledger_zero/domain/entities/import_profile.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
@@ -432,6 +434,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildFileSelectionCard(theme, l10n),
+                  _buildUndoCard(l10n),
                   if (_csvData != null) ...[
                     const SizedBox(height: 16),
                     _buildConfigurationCard(theme, l10n),
@@ -451,6 +454,38 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  /// "Undo last import", while the last CSV import is on record.
+  Widget _buildUndoCard(AppLocalizations l10n) {
+    final batch = ref.read(lastImportStoreProvider).read();
+    if (batch == null) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Card(
+        child: ListTile(
+          key: const Key('csv_undo_last_import'),
+          leading: const Icon(Icons.undo),
+          title: Text(l10n.importUndoLast),
+          subtitle: Text(
+            l10n.importUndoLastInfo(
+              batch.fingerprints.length,
+              ref
+                  .watch(appFormatterProvider)
+                  .formatDate(batch.importedAt.toLocal()),
+            ),
+          ),
+          onTap: () async {
+            await confirmAndUndoLastImport(context, ref);
+            if (mounted) {
+              setState(() {}); // The record is gone: hide the card.
+            }
+          },
+        ),
+      ),
     );
   }
 

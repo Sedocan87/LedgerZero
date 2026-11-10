@@ -4954,4 +4954,66 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ynabImportErrorInvalidYnab4Zip =>
       'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.';
+
+  @override
+  String get importUndoLast => 'Undo last import';
+
+  @override
+  String importUndoLastInfo(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Last CSV import: $count transactions on $date.',
+      one: 'Last CSV import: 1 transaction on $date.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoConfirm(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Delete the $count transactions that the import of $date created? Payees the import created stay.',
+      one:
+          'Delete the 1 transaction that the import of $date created? Payees the import created stay.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoKept(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count transactions of that import were edited, reconciled or split since and are kept.',
+      one:
+          '1 transaction of that import was edited, reconciled or split since and is kept.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoNothing =>
+      'Every transaction of the last import was changed or deleted since. There is nothing to undo.';
+
+  @override
+  String importUndoDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Import undone: $count transactions deleted',
+      one: 'Import undone: 1 transaction deleted',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoAction => 'Undo import';
+
+  @override
+  String get importUndoFailed =>
+      'The import could not be undone. Nothing was changed.';
 }

@@ -294,4 +294,41 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
+  testWidgets('"Undo import" in the success dialog takes the import back '
+      'and leaves the rows ready to import again (Improvement 6)', (
+    tester,
+  ) async {
+    final rows = [
+      ImportTransaction(
+        date: DateTime.utc(2024, 1, 2),
+        amount: -1234,
+        payeeName: 'Bakery',
+      ),
+      ImportTransaction(
+        date: DateTime.utc(2024, 1, 3),
+        amount: 250000,
+        payeeName: 'Employer',
+      ),
+    ];
+    final t = await pumpReview(
+      tester,
+      rows,
+      seed: (t) => t.addAccount(id: 'a-checking', name: 'Checking'),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await tester.pumpAndSettle();
+    expect(await t.transactions.getAllTransactions(), hasLength(2));
+    expect(find.text('Imported 2 transactions'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('import_undo')));
+    await tester.pumpAndSettle();
+    expect(await t.transactions.getAllTransactions(), isEmpty);
+    expect(find.text('Import undone: 2 transactions deleted'), findsOneWidget);
+    // Still on the review, nothing flagged as a duplicate of itself.
+    expect(find.text('2 transactions'), findsOneWidget);
+    expect(importButton(tester).onPressed, isNotNull);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
+  });
 }

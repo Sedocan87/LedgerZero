@@ -1317,5 +1317,13 @@
   "ynabImportErrorInvalidZip": "Diese ZIP-Datei enthält nicht die CSV-Dateien Register und Budget (oder Plan) eines YNAB-Exports.",
   "ynabImportYnab4Zip": "Gezippter Budget-Ordner (.zip)",
   "ynabImportYnab4ZipHint": "Lässt sich der Ordner auf diesem Telefon nicht lesen, packen Sie den .ynab4-Ordner am Computer als ZIP und wählen Sie die ZIP-Datei hier aus.",
-  "ynabImportErrorInvalidYnab4Zip": "Diese ZIP-Datei enthält kein YNAB-4-Budget. Packen Sie den ganzen Ordner mit der Endung .ynab4."
+  "ynabImportErrorInvalidYnab4Zip": "Diese ZIP-Datei enthält kein YNAB-4-Budget. Packen Sie den ganzen Ordner mit der Endung .ynab4.",
+  "importUndoLast": "Letzten Import rückgängig machen",
+  "importUndoLastInfo": "{count, plural, =1{Letzter CSV-Import: 1 Transaktion am {date}.} other{Letzter CSV-Import: {count} Transaktionen am {date}.}}",
+  "importUndoConfirm": "{count, plural, =1{Die 1 Transaktion löschen, die der Import vom {date} angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.} other{Die {count} Transaktionen löschen, die der Import vom {date} angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.}}",
+  "importUndoKept": "{count, plural, =1{1 Transaktion dieses Imports wurde seither bearbeitet, abgeglichen oder aufgeteilt und bleibt erhalten.} other{{count} Transaktionen dieses Imports wurden seither bearbeitet, abgeglichen oder aufgeteilt und bleiben erhalten.}}",
+  "importUndoNothing": "Alle Transaktionen des letzten Imports wurden seither geändert oder gelöscht. Es gibt nichts rückgängig zu machen.",
+  "importUndoDone": "{count, plural, =1{Import rückgängig gemacht: 1 Transaktion gelöscht} other{Import rückgängig gemacht: {count} Transaktionen gelöscht}}",
+  "importUndoAction": "Import rückgängig machen",
+  "importUndoFailed": "Der Import konnte nicht rückgängig gemacht werden. Es wurde nichts geändert."
 }

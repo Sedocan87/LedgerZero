@@ -10,6 +10,7 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/screens/import/csv_import_screen.dart';
+import 'package:ledger_zero/services/import/import_undo_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/memory_platform_file.dart';
@@ -147,5 +148,72 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
+  });
+  testWidgets('"Undo last import" is offered while an import is on record, '
+      'says what is kept and deletes the rest (Improvement 6)', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final t = TestDatabase();
+    addTearDown(t.close);
+    final account = await t.addAccount(name: 'Checking');
+    final created = [
+      for (final amount in [-100, -200, -300])
+        await t.addTransaction(
+          accountId: account.id,
+          amount: amount,
+          date: DateTime.utc(2026, 10, 1),
+        ),
+    ];
+    await SharedPreferencesLastImportStore(
+      prefs,
+    ).write(ImportBatch.of(created, DateTime.utc(2026, 10, 2, 12)));
+    // One of them was edited after the import.
+    await t.transactions.updateTransaction(
+      created.first.copyWith(memo: 'edited'),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(t.db),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const CsvImportScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final card = find.byKey(const Key('csv_undo_last_import'));
+    expect(card, findsOneWidget);
+    expect(find.textContaining('Last CSV import: 3 transactions'), findsOne);
+
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Delete the 2 transactions'), findsOneWidget);
+    expect(find.byKey(const Key('import_undo_kept')), findsOneWidget);
+    expect(
+      find.textContaining('1 transaction of that import was edited'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Undo import'));
+    await tester.pumpAndSettle();
+    final left = await t.transactions.getAllTransactions();
+    expect(left.map((r) => r.amount), [-100]);
+    expect(find.byKey(const Key('csv_undo_last_import')), findsNothing);
+    expect(
+      find.textContaining('Import undone: 2 transactions deleted'),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
   });
 }
