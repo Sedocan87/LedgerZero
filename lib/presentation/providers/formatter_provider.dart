@@ -9,7 +9,7 @@ import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 
 /// Formats and parses amounts and dates according to the user's settings
-/// (currency, language, number format, date format, first day of week).
+/// (currency, language, number format, date format).
 ///
 /// Amounts are minor units (`int`). Calendar dates are stored as UTC
 /// midnight and are formatted by their own fields; timestamps are shown in
@@ -22,7 +22,6 @@ class AppFormatter {
   final String currency;
 
   final AppDateFormat dateFormat;
-  final AppFirstDayOfWeek firstDayOfWeekSetting;
 
   /// Formatter for amounts.
   final MoneyFormatter money;
@@ -32,7 +31,6 @@ class AppFormatter {
     required this.currency,
     required String decimalSeparator,
     this.dateFormat = AppDateFormat.iso8601,
-    this.firstDayOfWeekSetting = AppFirstDayOfWeek.sunday,
   }) : money = MoneyFormatter(
          locale: locale,
          defaultCurrency: currency,
@@ -57,7 +55,6 @@ class AppFormatter {
           settings.numberFormat.decimalSeparator ??
           decimalSeparatorForLocale(locale),
       dateFormat: settings.dateFormat,
-      firstDayOfWeekSetting: settings.firstDayOfWeek,
     );
   }
 
@@ -93,12 +90,17 @@ class AppFormatter {
   String currencySymbol([String? currencyCode]) =>
       money.symbolFor(currencyCode);
 
+  /// The pattern of the date-format setting; "follow language" resolves
+  /// to the language's ([datePatternForLanguage]).
+  String get datePattern =>
+      dateFormat.pattern ?? datePatternForLanguage(locale);
+
   /// A calendar day using the date-format setting (e.g. `31.12.2024`).
-  String formatDate(DateTime date) => _date(dateFormat.pattern).format(date);
+  String formatDate(DateTime date) => _date(datePattern).format(date);
 
   /// A timestamp (stored in UTC) in local time, e.g. `2024-12-31 18:05`.
   String formatDateTime(DateTime timestamp) =>
-      _date('${dateFormat.pattern} HH:mm').format(timestamp.toLocal());
+      _date('$datePattern HH:mm').format(timestamp.toLocal());
 
   /// Weekday plus date, e.g. `Tue, 31.12.2024`.
   String formatWeekdayDate(DateTime date) =>
@@ -118,18 +120,6 @@ class AppFormatter {
 
   /// Day and abbreviated month, e.g. `Dec 31` / `31. Dez.`.
   String formatMonthDay(DateTime date) => _date('MMMd').format(date);
-
-  /// First day of the week as a [DateTime] weekday constant
-  /// (`DateTime.monday` ... `DateTime.sunday`).
-  int get firstDayOfWeek => firstDayOfWeekSetting.value;
-
-  /// Start of the week containing [day] honouring [firstDayOfWeek]
-  /// (calendar day, UTC midnight).
-  DateTime startOfWeek(DateTime day) {
-    final d = DateTime.utc(day.year, day.month, day.day);
-    final offset = (d.weekday - firstDayOfWeek + 7) % 7;
-    return DateTime.utc(d.year, d.month, d.day - offset);
-  }
 
   final Map<String, DateFormat> _dateFormats = {};
 
@@ -176,6 +166,5 @@ final appFormatterProvider = Provider<AppFormatter>((ref) {
         settings.numberFormat.decimalSeparator ??
         decimalSeparatorForLocale(locale.languageCode),
     dateFormat: settings.dateFormat,
-    firstDayOfWeekSetting: settings.firstDayOfWeek,
   );
 });

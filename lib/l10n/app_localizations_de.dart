@@ -5208,4 +5208,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String factoryResetTypeToConfirm(String word) {
     return 'Alle Daten auf diesem Telefon werden gelöscht, und die Einrichtung beginnt von vorn. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
   }
+
+  @override
+  String get languagePhone => 'Sprache des Telefons';
+
+  @override
+  String languagePhoneCurrent(String language) {
+    return 'Sprache des Telefons ($language)';
+  }
+
+  @override
+  String dateFormatFollowLanguage(String pattern) {
+    return 'Wie Sprache ($pattern)';
+  }
 }

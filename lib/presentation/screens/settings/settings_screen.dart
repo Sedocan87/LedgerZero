@@ -29,6 +29,13 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final themeState = ref.watch(themeProvider);
 
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final languageName = kLanguageEndonyms[languageCode] ?? languageCode;
+
+    String dateFormatLabel(AppDateFormat format) =>
+        format.pattern ??
+        l10n.dateFormatFollowLanguage(datePatternForLanguage(languageCode));
+
     Widget buildOption<T>(BuildContext context, String label, T value) {
       return SimpleDialogOption(
         onPressed: () => Navigator.pop(context, value),
@@ -178,15 +185,22 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.calendar_today),
                 title: Text(l10n.dateFormat),
-                subtitle: Text(settings.dateFormat.pattern),
+                subtitle: Text(dateFormatLabel(settings.dateFormat)),
                 onTap: () async {
                   final selected = await showDialog<AppDateFormat>(
                     context: context,
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.dateFormat),
-                      children: AppDateFormat.values
-                          .map((f) => buildOption(context, f.pattern, f))
-                          .toList(),
+                      children: [
+                        // "Follow language" first: the default.
+                        for (final f in [
+                          AppDateFormat.system,
+                          ...AppDateFormat.values.where(
+                            (f) => f != AppDateFormat.system,
+                          ),
+                        ])
+                          buildOption(context, dateFormatLabel(f), f),
+                      ],
                     ),
                   );
                   if (selected != null) {
@@ -232,48 +246,9 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
-              // First Day of Week
-              ListTile(
-                leading: const Icon(Icons.today),
-                title: Text(l10n.firstDayOfWeek),
-                subtitle: Text(switch (settings.firstDayOfWeek) {
-                  AppFirstDayOfWeek.sunday => l10n.sunday,
-                  AppFirstDayOfWeek.monday => l10n.monday,
-                  AppFirstDayOfWeek.saturday => l10n.saturday,
-                }),
-                onTap: () async {
-                  final selected = await showDialog<AppFirstDayOfWeek>(
-                    context: context,
-                    builder: (context) => SimpleDialog(
-                      title: Text(l10n.firstDayOfWeek),
-                      children: [
-                        buildOption(
-                          context,
-                          l10n.sunday,
-                          AppFirstDayOfWeek.sunday,
-                        ),
-                        buildOption(
-                          context,
-                          l10n.monday,
-                          AppFirstDayOfWeek.monday,
-                        ),
-                        buildOption(
-                          context,
-                          l10n.saturday,
-                          AppFirstDayOfWeek.saturday,
-                        ),
-                      ],
-                    ),
-                  );
-                  if (selected != null) {
-                    unawaited(
-                      ref
-                          .read(settingsProvider.notifier)
-                          .setFirstDayOfWeek(selected),
-                    );
-                  }
-                },
-              ),
+              // No "First day of week": the date pickers start the week
+              // as the app language does (Monday in German), and nothing
+              // else in the app is week-based.
               // Theme
               ListTile(
                 leading: const Icon(Icons.brightness_6),
@@ -330,25 +305,37 @@ class SettingsScreen extends ConsumerWidget {
                 leading: const Icon(Icons.language),
                 title: Text(l10n.language),
                 subtitle: Text(
-                  kLanguageEndonyms[Localizations.localeOf(
-                        context,
-                      ).languageCode] ??
-                      Localizations.localeOf(context).languageCode,
+                  settings.language == null
+                      ? l10n.languagePhoneCurrent(languageName)
+                      : languageName,
                 ),
                 onTap: () async {
-                  final selected = await showDialog<Locale>(
+                  // Wrapped: "phone language" is a null choice, a
+                  // dismissed dialog no choice.
+                  final selected = await showDialog<Wrapped<Locale?>>(
                     context: context,
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.language),
                       children: [
+                        buildOption(
+                          context,
+                          l10n.languagePhone,
+                          const Wrapped<Locale?>(null),
+                        ),
                         for (final entry in kLanguageEndonyms.entries)
-                          buildOption(context, entry.value, Locale(entry.key)),
+                          buildOption(
+                            context,
+                            entry.value,
+                            Wrapped<Locale?>(Locale(entry.key)),
+                          ),
                       ],
                     ),
                   );
                   if (selected != null) {
                     unawaited(
-                      ref.read(settingsProvider.notifier).setLanguage(selected),
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setLanguage(selected.value),
                     );
                   }
                 },

@@ -66,6 +66,37 @@ void main() {
     expect(prefs.getInt('settings_number_format'), AppNumberFormat.comma.index);
   });
 
+  testWidgets('date format follows the language by default; language can '
+      'follow the phone again; no first day of week', (tester) async {
+    SharedPreferences.setMockInitialValues({'settings_language': 'en'});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(_app(prefs));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Follow language (MM/dd/yyyy)'), findsOneWidget);
+    expect(find.text('First Day of Week'), findsNothing);
+
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('Phone language'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(prefs.getString('settings_language'), isNull);
+    expect(find.text('Phone language (English)'), findsOneWidget);
+
+    // A dismissed dialog changes nothing.
+    await tester.tap(find.text('Language'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Phone language (English)'), findsOneWidget);
+  });
+
   testWidgets('Currency picker lists every supported currency', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();

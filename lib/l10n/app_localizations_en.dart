@@ -5169,4 +5169,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String factoryResetTypeToConfirm(String word) {
     return 'All data on this phone is deleted and the setup starts again. This cannot be undone. Type $word to confirm.';
   }
+
+  @override
+  String get languagePhone => 'Phone language';
+
+  @override
+  String languagePhoneCurrent(String language) {
+    return 'Phone language ($language)';
+  }
+
+  @override
+  String dateFormatFollowLanguage(String pattern) {
+    return 'Follow language ($pattern)';
+  }
 }

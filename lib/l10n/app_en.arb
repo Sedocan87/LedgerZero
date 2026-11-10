@@ -4049,5 +4049,11 @@
   "factoryResetBackUpFirst": "Back up first",
   "@factoryResetBackUpFirst": {"description": "Factory reset, first dialog: button that opens Backup & Export instead of resetting"},
   "factoryResetTypeToConfirm": "All data on this phone is deleted and the setup starts again. This cannot be undone. Type {word} to confirm.",
-  "@factoryResetTypeToConfirm": {"description": "Factory reset from Settings, second dialog: the reset is enabled only after typing the confirmation word", "placeholders": {"word": {"type": "String"}}}
+  "@factoryResetTypeToConfirm": {"description": "Factory reset from Settings, second dialog: the reset is enabled only after typing the confirmation word", "placeholders": {"word": {"type": "String"}}},
+  "languagePhone": "Phone language",
+  "@languagePhone": {"description": "Settings > Language: the option that follows the phone's language instead of a fixed one"},
+  "languagePhoneCurrent": "Phone language ({language})",
+  "@languagePhoneCurrent": {"description": "Settings > Language subtitle when the app follows the phone's language; {language} is the language in use, e.g. English", "placeholders": {"language": {"type": "String"}}},
+  "dateFormatFollowLanguage": "Follow language ({pattern})",
+  "@dateFormatFollowLanguage": {"description": "Settings > Date format: the option and subtitle that follow the app language; {pattern} is the resulting pattern, e.g. dd.MM.yyyy", "placeholders": {"pattern": {"type": "String"}}}
 }

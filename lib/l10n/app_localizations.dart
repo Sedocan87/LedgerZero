@@ -8217,6 +8217,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All data on this phone is deleted and the setup starts again. This cannot be undone. Type {word} to confirm.'**
   String factoryResetTypeToConfirm(String word);
+
+  /// Settings > Language: the option that follows the phone's language instead of a fixed one
+  ///
+  /// In en, this message translates to:
+  /// **'Phone language'**
+  String get languagePhone;
+
+  /// Settings > Language subtitle when the app follows the phone's language; {language} is the language in use, e.g. English
+  ///
+  /// In en, this message translates to:
+  /// **'Phone language ({language})'**
+  String languagePhoneCurrent(String language);
+
+  /// Settings > Date format: the option and subtitle that follow the app language; {pattern} is the resulting pattern, e.g. dd.MM.yyyy
+  ///
+  /// In en, this message translates to:
+  /// **'Follow language ({pattern})'**
+  String dateFormatFollowLanguage(String pattern);
 }
 
 class _AppLocalizationsDelegate

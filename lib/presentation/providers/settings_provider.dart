@@ -44,14 +44,28 @@ final deviceLocalesProvider = Provider<List<Locale>>((ref) {
   }
 });
 
+/// Date format preference. [system] follows the app language (see
+/// [datePatternForLanguage]); it is the default, so a user who never chose
+/// one sees dates the way the rest of the app's language writes them. New
+/// values must be appended: the index is persisted.
 enum AppDateFormat {
   iso8601('yyyy-MM-dd'),
   european('dd.MM.yyyy'),
-  us('MM/dd/yyyy');
+  us('MM/dd/yyyy'),
+  system(null);
 
-  final String pattern;
+  /// The fixed pattern, or `null` to follow the language.
+  final String? pattern;
   const AppDateFormat(this.pattern);
 }
+
+/// The date pattern of [AppDateFormat.system] for an app language:
+/// `dd.MM.yyyy` for German, `MM/dd/yyyy` for English (the order of the
+/// English date pickers).
+String datePatternForLanguage(String languageCode) => switch (languageCode) {
+  'de' => AppDateFormat.european.pattern!,
+  _ => AppDateFormat.us.pattern!,
+};
 
 /// Decimal separator preference. [system] follows the app language
 /// (`,` for German, `.` for English). New values must be appended: the
@@ -66,15 +80,6 @@ enum AppNumberFormat {
   const AppNumberFormat(this.decimalSeparator);
 }
 
-enum AppFirstDayOfWeek {
-  sunday(7),
-  monday(1),
-  saturday(6);
-
-  final int value;
-  const AppFirstDayOfWeek(this.value);
-}
-
 /// A generic wrapper to distinguish between "value explicitly passed as null"
 /// versus "value not passed at all" in copyWith.
 class Wrapped<T> {
@@ -86,7 +91,8 @@ class SettingsState {
   final String currency;
   final AppDateFormat dateFormat;
   final AppNumberFormat numberFormat;
-  final AppFirstDayOfWeek firstDayOfWeek;
+
+  /// The chosen app language; `null` follows the phone.
   final Locale? language;
   final String? defaultAccountId;
   final String? defaultCategoryId;
@@ -100,9 +106,8 @@ class SettingsState {
 
   const SettingsState({
     this.currency = 'USD',
-    this.dateFormat = AppDateFormat.iso8601,
+    this.dateFormat = AppDateFormat.system,
     this.numberFormat = AppNumberFormat.system,
-    this.firstDayOfWeek = AppFirstDayOfWeek.sunday,
     this.language,
     this.defaultAccountId,
     this.defaultCategoryId,
@@ -115,7 +120,6 @@ class SettingsState {
     String? currency,
     AppDateFormat? dateFormat,
     AppNumberFormat? numberFormat,
-    AppFirstDayOfWeek? firstDayOfWeek,
     Wrapped<Locale?>? language,
     Wrapped<String?>? defaultAccountId,
     Wrapped<String?>? defaultCategoryId,
@@ -127,7 +131,6 @@ class SettingsState {
       currency: currency ?? this.currency,
       dateFormat: dateFormat ?? this.dateFormat,
       numberFormat: numberFormat ?? this.numberFormat,
-      firstDayOfWeek: firstDayOfWeek ?? this.firstDayOfWeek,
       language: language != null ? language.value : this.language,
       defaultAccountId: defaultAccountId != null
           ? defaultAccountId.value
@@ -150,7 +153,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
   static const String _keyCurrency = 'settings_currency';
   static const String _keyDateFormat = 'settings_date_format';
   static const String _keyNumberFormat = 'settings_number_format';
-  static const String _keyFirstDayOfWeek = 'settings_first_day_of_week';
   static const String _keyLanguage = 'settings_language';
   static const String _keyDefaultAccount = 'settings_default_account';
   static const String _keyDefaultCategory = 'settings_default_category';
@@ -179,10 +181,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
         defaultCurrencyForLocales(
           ref.watch(deviceLocalesProvider).map((l) => l.toString()),
         );
-    final dateFormatIdx = _prefs.getInt(_keyDateFormat) ?? 0;
+    // No choice stored: follow the language. (An explicit choice, including
+    // ISO, was always stored and is kept.)
+    final dateFormatIdx =
+        _prefs.getInt(_keyDateFormat) ?? AppDateFormat.system.index;
     final numberFormatIdx =
         _prefs.getInt(_keyNumberFormat) ?? AppNumberFormat.system.index;
-    final firstDayOfWeekIdx = _prefs.getInt(_keyFirstDayOfWeek) ?? 0;
     final languageCode = _prefs.getString(_keyLanguage);
     final defaultAccountId = _prefs.getString(_keyDefaultAccount);
     final defaultCategoryId = _prefs.getString(_keyDefaultCategory);
@@ -190,13 +194,10 @@ class SettingsNotifier extends Notifier<SettingsState> {
     // Map indices to enums safely
     final dateFormat =
         AppDateFormat.values.elementAtOrNull(dateFormatIdx) ??
-        AppDateFormat.iso8601;
+        AppDateFormat.system;
     final numberFormat =
         AppNumberFormat.values.elementAtOrNull(numberFormatIdx) ??
         AppNumberFormat.system;
-    final firstDayOfWeek =
-        AppFirstDayOfWeek.values.elementAtOrNull(firstDayOfWeekIdx) ??
-        AppFirstDayOfWeek.sunday;
 
     final language = languageCode != null ? Locale(languageCode) : null;
 
@@ -211,7 +212,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
       currency: currency,
       dateFormat: dateFormat,
       numberFormat: numberFormat,
-      firstDayOfWeek: firstDayOfWeek,
       language: language,
       defaultAccountId: defaultAccountId,
       defaultCategoryId: defaultCategoryId,
@@ -234,11 +234,6 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> setNumberFormat(AppNumberFormat numberFormat) async {
     state = state.copyWith(numberFormat: numberFormat);
     await _prefs.setInt(_keyNumberFormat, numberFormat.index);
-  }
-
-  Future<void> setFirstDayOfWeek(AppFirstDayOfWeek firstDayOfWeek) async {
-    state = state.copyWith(firstDayOfWeek: firstDayOfWeek);
-    await _prefs.setInt(_keyFirstDayOfWeek, firstDayOfWeek.index);
   }
 
   Future<void> setLanguage(Locale? language) async {
