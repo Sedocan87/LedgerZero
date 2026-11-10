@@ -32,6 +32,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
@@ -122,6 +123,9 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- The Play Store: whether the in-app rating dialog can be asked
+             for (ReviewChannel.kt). -->
+        <package android:name="com.android.vending" />
         <!-- Known bank, card and wallet apps offered in the card
              notification app picker (NotificationCaptureChannel.KNOWN_APPS). -->
         <package android:name="com.google.android.apps.walletnfcrel" />
