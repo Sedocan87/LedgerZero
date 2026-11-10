@@ -847,6 +847,50 @@ void main() {
     });
   });
 
+  test('(ledger improvement 5) an occurrence in an off-budget account gets '
+      'no category, neither the schedule\'s nor a rule\'s', () async {
+    final groceries = await t.categoryId('Groceries');
+    final depot = (await t.addAccount(name: 'Depot', onBudget: false)).id;
+    await t.rules.createRule(
+      Rule(
+        id: 'r',
+        name: 'r',
+        priority: 0,
+        isActive: true,
+        matchLogic: RuleMatchLogic.and,
+        conditions: const [
+          RuleCondition(
+            type: RuleConditionType.amount,
+            operator: RuleConditionOperator.lessThan,
+            value: '0',
+          ),
+        ],
+        actions: [
+          RuleAction(type: RuleActionType.setCategory, value: groceries),
+        ],
+      ),
+    );
+    await addSchedule(
+      id: 'depot',
+      nextDate: today,
+      categoryId: groceries,
+      account: depot,
+    );
+    await addSchedule(id: 'rule-only', nextDate: today, account: depot);
+    await addSchedule(id: 'on-budget', nextDate: today, categoryId: groceries);
+
+    expect(await service.processDueTransactions(today: today), 3);
+    final rows = {for (final r in await occurrences()) r.accountId + r.id: r};
+    expect(
+      rows.values.where((r) => r.accountId == depot).map((r) => r.categoryId),
+      [null, null],
+    );
+    expect(
+      rows.values.singleWhere((r) => r.accountId == accountId).categoryId,
+      groceries,
+    );
+  });
+
   group('closed accounts, end date and catch-up cap (L3, L7)', () {
     test('a closed account takes no bookings until it is reopened', () async {
       await addSchedule(nextDate: DateTime.utc(2024, 3, 15));

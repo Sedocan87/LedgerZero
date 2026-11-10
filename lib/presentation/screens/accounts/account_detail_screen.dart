@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
+import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
 import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
@@ -8,7 +10,6 @@ import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
-import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/presentation/widgets/charts/balance_trend_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/presentation/widgets/csv_export_format_dialog.dart';
@@ -24,22 +25,24 @@ final accountDetailProvider = StreamProvider.family
       return ref.watch(accountRepositoryProvider).watchAccount(id);
     });
 
-/// The account's transactions, newest first; a split is listed once, by
-/// its parent (which carries the account-side amount).
-final accountTransactionsProvider = StreamProvider.family
-    .autoDispose<List<Transaction>, String>((ref, accountId) {
-      return ref
-          .watch(transactionRepositoryProvider)
-          .watchTransactions(
-            filter: TransactionFilter(
-              accountIds: [accountId],
-              excludeSplitChildren: true,
-            ),
-            sort: const TransactionSort(
-              field: TransactionSortField.date,
-              ascending: false,
-            ),
-          );
+/// The account's transactions, newest first, in pages like the
+/// Transactions tab ([TransactionsNotifier.loadMore]); a split is listed
+/// once, by its parent (which carries the account-side amount). Rebuilt
+/// with the repository when the database is reopened.
+final accountTransactionsProvider = StateNotifierProvider.autoDispose
+    .family<TransactionsNotifier, TransactionsState, String>((ref, accountId) {
+      ref.watch(transactionRepositoryProvider);
+      return TransactionsNotifier.fixed(
+        ref,
+        TransactionFilter(accountIds: [accountId]),
+      );
+    });
+
+/// The account's balance change per day, summed in SQL, for the balance
+/// chart (which so never loads the account's rows).
+final accountDailyTotalsProvider = StreamProvider.autoDispose
+    .family<List<({DateTime date, int total})>, String>((ref, accountId) {
+      return ref.watch(transactionsDaoProvider).watchDailyTotals(accountId);
     });
 
 enum _DeleteAccountChoice { close, delete }
@@ -398,16 +401,16 @@ class TransactionListChartWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(accountTransactionsProvider(accountId));
-    return transactionsAsync.when(
-      data: (transactions) => Padding(
+    final totalsAsync = ref.watch(accountDailyTotalsProvider(accountId));
+    return totalsAsync.when(
+      data: (totals) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: Card(
           clipBehavior: Clip.antiAlias,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: BalanceTrendChart(
-              transactions: transactions,
+            child: BalanceTrendChart.daily(
+              dailyTotals: totals,
               startingBalance: startingBalance,
               currencyCode: currencyCode,
             ),
@@ -432,7 +435,10 @@ class TransactionList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref.watch(accountTransactionsProvider(accountId));
+    final transactionsAsync = ref
+        .watch(accountTransactionsProvider(accountId))
+        .transactions;
+    final notifier = ref.read(accountTransactionsProvider(accountId).notifier);
     final payeeNames = ref.watch(payeeMapProvider).valueOrNull ?? const {};
     final accountNames = ref.watch(accountMapProvider).valueOrNull ?? const {};
     final l10n = AppLocalizations.of(context)!;
@@ -454,10 +460,26 @@ class TransactionList extends ConsumerWidget {
           );
         }
 
+        final hasMore = notifier.hasMore;
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          itemCount: transactions.length,
+          // A progress row at the end while more rows may exist.
+          itemCount: transactions.length + (hasMore ? 1 : 0),
           itemBuilder: (context, index) {
+            // Close to the end of the loaded rows: ask for the next page
+            // (ignored while one is on its way).
+            if (hasMore && index >= transactions.length - 10) {
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => notifier.loadMore(),
+              );
+            }
+            if (index == transactions.length) {
+              return const Padding(
+                key: Key('account.transactions.more'),
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
             final t = transactions[index];
             final String title;
             String subtitle = fmt.formatDate(t.date);

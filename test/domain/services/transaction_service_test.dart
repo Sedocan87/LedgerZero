@@ -1046,6 +1046,21 @@ void main() {
       expect((await row(inside.id)).categoryId, isNull);
     });
 
+    test('(ledger improvement 5) bulk categorize leaves rows of an '
+        'off-budget account without a category', () async {
+      final groceries = await t.categoryId('Groceries');
+      final tracking = (await t.addAccount(name: 'Depot', onBudget: false)).id;
+      final offBudget = await service.save(
+        TransactionInput(accountId: tracking, date: day, amount: -100),
+      );
+      final onBudget = await service.save(
+        TransactionInput(accountId: checking, date: day, amount: -100),
+      );
+      await service.bulkCategorize([offBudget.id, onBudget.id], groceries);
+      expect((await row(offBudget.id)).categoryId, isNull);
+      expect((await row(onBudget.id)).categoryId, groceries);
+    });
+
     test(
       'the payee default category is learnt on create, not on edit',
       () async {

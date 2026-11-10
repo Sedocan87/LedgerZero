@@ -8295,6 +8295,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Follow language ({pattern})'**
   String dateFormatFollowLanguage(String pattern);
+
+  /// Transaction form: hint under the category field of an inflow
+  ///
+  /// In en, this message translates to:
+  /// **'Income goes to To Be Budgeted. Choose a category only for a refund: the money then goes back into that category.'**
+  String get txInflowCategoryHint;
+
+  /// Category picker of an inflow: subtitle of the first entry 'To Be Budgeted' (no category)
+  ///
+  /// In en, this message translates to:
+  /// **'Income you assign to categories in the budget'**
+  String get txInflowToBeBudgetedSubtitle;
+
+  /// Edit transaction screen: shown instead of the form when the transaction does not exist (any more)
+  ///
+  /// In en, this message translates to:
+  /// **'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.'**
+  String get transactionNotFound;
+
+  /// Transaction list: label of the swipe-left action that approves the transaction
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get txSwipeApprove;
+
+  /// Transaction list: line above a list that is not in the default order (newest first). field is Date, Amount or Payee; direction is sortAscending or sortDescending
+  ///
+  /// In en, this message translates to:
+  /// **'Sorted by {field}, {direction}'**
+  String txSortedBy(String field, String direction);
+
+  /// Sort direction, used inside txSortedBy and as the label of the up arrow in the sort menu
+  ///
+  /// In en, this message translates to:
+  /// **'ascending'**
+  String get sortAscending;
+
+  /// Sort direction, used inside txSortedBy and as the label of the down arrow in the sort menu
+  ///
+  /// In en, this message translates to:
+  /// **'descending'**
+  String get sortDescending;
+
+  /// Transaction list, selection mode: tooltip of 'select all' while the paged list has more rows than are loaded
+  ///
+  /// In en, this message translates to:
+  /// **'Select all loaded'**
+  String get txSelectAllLoaded;
+
+  /// Snackbar after 'select all' on a paged transaction list that has more rows than are loaded
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 loaded transaction selected. Scroll down to load more.} other{The {count} loaded transactions are selected. Scroll down to load more.}}'**
+  String txSelectedLoadedOnly(int count);
+
+  /// Snackbar when saving a new transaction (or a transfer leg) into a closed account is rejected
+  ///
+  /// In en, this message translates to:
+  /// **'This account is closed and takes no new transactions. Choose another account or reopen it.'**
+  String get txAccountClosed;
+
+  /// Quick add preview: note under the amount when the typed currency symbol is not the account's currency
+  ///
+  /// In en, this message translates to:
+  /// **'This account is in {currency}: the amount is booked in {currency}, not converted.'**
+  String quickAddCurrencyNotConverted(String currency);
+
+  /// Rule editor: note under a stored condition whose operator its field does not support (e.g. Amount contains)
+  ///
+  /// In en, this message translates to:
+  /// **'Never matches: this field cannot be compared this way. Delete the condition and add it again.'**
+  String get ruleConditionUnevaluable;
+
+  /// Rule editor: snackbar when saving a rule that still has a condition that can never match
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the conditions marked \"Never matches\" first.'**
+  String get ruleSaveUnevaluableCondition;
+
+  /// Rules list: subtitle of a rule with a condition that can never match
+  ///
+  /// In en, this message translates to:
+  /// **'Never matches: a condition compares a field in a way it does not support. Tap to fix.'**
+  String get ruleListUnevaluable;
+
+  /// Payee detail: title of the dialog when renaming a payee to the name of another payee
+  ///
+  /// In en, this message translates to:
+  /// **'Name already in use'**
+  String get payeeNameTakenTitle;
+
+  /// Payee detail: rename refused because another payee has the name; offers to merge
+  ///
+  /// In en, this message translates to:
+  /// **'A payee named \"{name}\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"{name}\".'**
+  String payeeNameTakenMessage(String name);
+
+  /// Scheduled transaction form: Next date of a finished schedule (it has no next date)
+  ///
+  /// In en, this message translates to:
+  /// **'Finished: nothing more is booked. Pick a next date to restart it.'**
+  String get scheduledFinishedPickNextDate;
+
+  /// Transaction list: snackbar (with Undo) after approving by swipe or for the selection
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Transaction approved} other{{count} transactions approved}}'**
+  String txApprovedCount(int count);
+
+  /// Transaction list: snackbar (with Undo) after setting the category of the selection
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Category set} other{Category set for {count} transactions}}'**
+  String txCategorizedCount(int count);
 }
 
 class _AppLocalizationsDelegate

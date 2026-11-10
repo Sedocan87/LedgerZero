@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
@@ -184,6 +185,80 @@ void main() {
     await tester.pumpAndSettle();
 
     expect((await rows(tester)).single.amount, -2000);
+
+    await unmount(tester);
+  });
+
+  testWidgets('a closed account is neither preselected nor offered, and '
+      'the booking goes into the open one (ledger F3)', (tester) async {
+    // The closed account was created first and is a checking account: the
+    // fallback choice used to pick it.
+    await tester.runAsync(() async {
+      await t.addAccount(
+        id: 'savings',
+        name: 'New Savings',
+        type: AccountType.savings,
+      );
+      final old = (await t.accounts.getAccountById('checking'))!;
+      await t.accounts.updateAccount(old.copyWith(isClosed: true));
+    });
+    final parser = _ScriptedParser((_) async => _parsed(500));
+    await pump(tester, parser);
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.text('New Savings'), findsOneWidget);
+    expect(find.text('Checking'), findsNothing);
+
+    await tester.tap(find.text('New Savings'));
+    await tester.pumpAndSettle();
+    expect(find.text('Checking'), findsNothing);
+    await tester.tap(find.text('New Savings').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(input(), 'coffee 5');
+    await tester.pump(NaturalLanguageInputScreen.parseDelay);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(quickAddCreateKey));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+
+    expect((await rows(tester)).single.accountId, 'savings');
+
+    await unmount(tester);
+  });
+
+  testWidgets('the preview shows the amount in the account\'s currency and '
+      'says when a typed symbol is another one (UI F15)', (tester) async {
+    var symbol = '€';
+    final parser = _ScriptedParser(
+      (_) async =>
+          ParsedTransaction(amount: 1200, currency: symbol, confidence: 0.4),
+    );
+    await pump(tester, parser);
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+
+    // The account is in USD: "€12" is booked as 12.00 USD.
+    await tester.enterText(input(), 'coffee €12');
+    await tester.pump(NaturalLanguageInputScreen.parseDelay);
+    await tester.pumpAndSettle();
+    expect(find.text(r'-$12.00'), findsOneWidget);
+    expect(find.textContaining('€'), findsOneWidget); // the input only
+    expect(find.byKey(const Key('quick_add_currency_note')), findsOneWidget);
+    expect(
+      find.text(
+        'This account is in USD: the amount is booked in USD, not converted.',
+      ),
+      findsOneWidget,
+    );
+
+    // The account's own symbol needs no note.
+    symbol = r'$';
+    await tester.enterText(input(), r'coffee $12');
+    await tester.pump(NaturalLanguageInputScreen.parseDelay);
+    await tester.pumpAndSettle();
+    expect(find.text(r'-$12.00'), findsOneWidget);
+    expect(find.byKey(const Key('quick_add_currency_note')), findsNothing);
 
     await unmount(tester);
   });

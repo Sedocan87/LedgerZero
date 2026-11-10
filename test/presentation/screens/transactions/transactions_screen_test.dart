@@ -14,6 +14,7 @@ import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/test_database.dart';
@@ -126,7 +127,9 @@ void main() {
 
     await tester.drag(find.text('Transfer to Savings'), const Offset(600, 0));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete'));
+    // The dialog's button (the swipe strip behind the row says "Delete"
+    // too).
+    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
     await tester.pumpAndSettle();
     final remaining = await liveRows(tester);
     expect(remaining, hasLength(1));
@@ -167,6 +170,199 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Corner Shop'), findsNothing);
     expect(find.text('Transfer to Savings'), findsOneWidget);
+  });
+
+  group('fourth audit', () {
+    Finder appBarTitle(String text) =>
+        find.descendant(of: find.byType(AppBar), matching: find.text(text));
+
+    dbTestWidgets('back leaves selection mode, then search mode, before it '
+        'leaves the screen (UI F11)', (tester) async {
+      await pump(tester);
+      await tester.longPress(find.text('Transfer to Savings'));
+      await tester.pumpAndSettle();
+      expect(appBarTitle('1 selected'), findsOneWidget);
+
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(appBarTitle('1 selected'), findsNothing);
+      expect(appBarTitle('Transactions'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'corner');
+      await tester.pump(TransactionsNotifier.searchDebounce);
+      await tester.pumpAndSettle();
+      expect(find.text('Transfer to Savings'), findsNothing);
+
+      expect(await tester.binding.handlePopRoute(), isTrue);
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+      // The search is gone with its mode.
+      expect(find.text('Transfer to Savings'), findsOneWidget);
+
+      // Nothing left to close: back is the system's again.
+      expect(await tester.binding.handlePopRoute(), isFalse);
+    });
+
+    dbTestWidgets('approving by swipe offers Undo (ledger improvement 3)', (
+      tester,
+    ) async {
+      await tester.runAsync(
+        () => service.save(
+          TransactionInput(
+            accountId: 'checking',
+            date: day,
+            amount: -700,
+            newPayeeName: 'Bakery',
+            approved: false,
+          ),
+        ),
+      );
+      await pump(tester);
+      Future<bool> approved() async => (await liveRows(
+        tester,
+      )).singleWhere((r) => r.amount == -700).approved;
+
+      await tester.drag(find.text('Bakery'), const Offset(-600, 0));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(await approved(), isTrue);
+      expect(find.text('Transaction approved'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(await approved(), isFalse);
+    });
+
+    dbTestWidgets('the swipe actions are labelled', (tester) async {
+      await pump(tester);
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('Corner Shop')),
+      );
+      await gesture.moveBy(const Offset(40, 0));
+      await gesture.moveBy(const Offset(200, 0));
+      await tester.pump();
+      expect(find.text('Delete'), findsOneWidget);
+      await gesture.moveBy(const Offset(-480, 0));
+      await tester.pump();
+      expect(find.text('Approve'), findsOneWidget);
+      await gesture.moveBy(const Offset(240, 0));
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    dbTestWidgets('the active sort is marked in the menu and announced '
+        'above the list; the rows follow it', (tester) async {
+      await pump(tester);
+      // Newest first is the default and needs no note.
+      expect(find.byKey(const Key('transactions.sortNote')), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.sort));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.widgetWithText(PopupMenuItem<TransactionSortField>, 'Date'),
+          matching: find.byIcon(Icons.arrow_downward),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.widgetWithText(PopupMenuItem<TransactionSortField>, 'Amount'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sorted by Amount, ascending'), findsOneWidget);
+      // Lowest amount first, across days: the transfer out (-500.00, the
+      // later day) comes before the shop (-12.34) and the transfer in.
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(top('Transfer to Savings'), lessThan(top('Corner Shop')));
+      expect(top('Corner Shop'), lessThan(top('Transfer from Checking')));
+
+      await tester.tap(find.byIcon(Icons.sort));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(PopupMenuItem<TransactionSortField>, 'Date'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sorted by Date, ascending'), findsOneWidget);
+      // Oldest day first.
+      expect(top('Corner Shop'), lessThan(top('Transfer to Savings')));
+    });
+
+    dbTestWidgets('"select all" on a paged list says that it covers the '
+        'loaded rows only', (tester) async {
+      await tester.runAsync(() async {
+        for (var i = 0; i < TransactionsNotifier.pageSize; i++) {
+          await t.addTransaction(
+            accountId: 'checking',
+            amount: -100 - i,
+            date: DateTime.utc(2024, 1, 1),
+          );
+        }
+      });
+      await pump(tester);
+      await tester.longPress(find.text('Transfer to Savings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Select all loaded'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'The 50 loaded transactions are selected. Scroll down to load more.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('50 selected'), findsOneWidget);
+    });
+
+    dbTestWidgets('"select all" on a fully loaded list says nothing', (
+      tester,
+    ) async {
+      await pump(tester);
+      await tester.longPress(find.text('Transfer to Savings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Select all'));
+      await tester.pumpAndSettle();
+      expect(find.text('3 selected'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
+
+  group('flattenByDay', () {
+    Transaction row(String id, int day, int amount) => Transaction(
+      id: id,
+      accountId: 'a',
+      date: DateTime.utc(2024, 3, day),
+      amount: amount,
+    );
+
+    test('by date: one header per day, in the order of the rows', () {
+      final rows = [row('a', 1, -1), row('b', 1, -2), row('c', 2, -3)];
+      expect(
+        flattenByDay(
+          rows,
+          sort: const TransactionSort(field: TransactionSortField.date),
+        ),
+        [
+          DateTime.utc(2024, 3, 1),
+          rows[0],
+          rows[1],
+          DateTime.utc(2024, 3, 2),
+          rows[2],
+        ],
+      );
+    });
+
+    test('any other order keeps the rows as they are, without headers', () {
+      final rows = [row('a', 2, -1), row('b', 1, -2), row('c', 2, -3)];
+      expect(
+        flattenByDay(
+          rows,
+          sort: const TransactionSort(field: TransactionSortField.amount),
+        ),
+        rows,
+      );
+    });
   });
 
   dbTestWidgets('a fixed-filter list never persists its filter', (

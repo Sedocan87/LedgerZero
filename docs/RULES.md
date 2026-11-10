@@ -16,7 +16,9 @@ Each rule consists of:
 ## Conditions
 
 Supported conditions include:
--   **Payee**: Matches the payee name (e.g., "Uber").
+-   **Payee**: Matches the payee name (e.g., "Uber"). Renaming or merging
+    the payee carries "Payee is <name>" conditions over to the new name
+    (see PAYEE_MANAGEMENT.md); patterns ("contains" etc.) stay as typed.
 -   **Amount**: Compares the *signed* amount in minor units: an outflow is
     negative, so "Amount less than -50.00" matches spending above 50 and
     "Amount greater than 0" matches inflows. The rule editor's field is
@@ -30,6 +32,16 @@ Supported conditions include:
 -   **Ends With**: The text ends with the value.
 -   **Greater Than / Less Than**: Numeric comparison (for Amount).
 -   **Regex**: Regular expression matching.
+
+Payee and Description take Equals, Contains, Starts With, Ends With and
+Regex; Amount takes Equals, Greater Than and Less Than
+(`RuleCondition.operatorsFor`). The condition dialog offers only the
+operators of the chosen field and resets the operator (and the value) when
+the field changes. A stored condition with any other combination (saved by
+an older version, or in an imported rules file) can never match: the
+Rules list shows such a rule as "Never matches", the editor marks the
+condition, and the rule cannot be saved until that condition is deleted.
+Such rules are kept as they are, not deleted or changed automatically.
 
 ## Actions
 

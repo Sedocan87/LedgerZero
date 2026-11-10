@@ -5259,4 +5259,101 @@ class AppLocalizationsDe extends AppLocalizations {
   String dateFormatFollowLanguage(String pattern) {
     return 'Wie Sprache ($pattern)';
   }
+
+  @override
+  String get txInflowCategoryHint =>
+      'Einnahmen fließen in „Zu budgetieren“. Wählen Sie nur für eine Erstattung eine Kategorie: Der Betrag fließt dann in diese Kategorie zurück.';
+
+  @override
+  String get txInflowToBeBudgetedSubtitle =>
+      'Einnahmen, die Sie im Budget auf Kategorien verteilen';
+
+  @override
+  String get transactionNotFound =>
+      'Diese Transaktion gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht, oder sie ist in der wiederhergestellten Sicherung nicht enthalten.';
+
+  @override
+  String get txSwipeApprove => 'Bestätigen';
+
+  @override
+  String txSortedBy(String field, String direction) {
+    return 'Sortiert nach $field, $direction';
+  }
+
+  @override
+  String get sortAscending => 'aufsteigend';
+
+  @override
+  String get sortDescending => 'absteigend';
+
+  @override
+  String get txSelectAllLoaded => 'Alle geladenen auswählen';
+
+  @override
+  String txSelectedLoadedOnly(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count geladenen Transaktionen sind ausgewählt. Scrollen Sie nach unten, um weitere zu laden.',
+      one:
+          '1 geladene Transaktion ausgewählt. Scrollen Sie nach unten, um weitere zu laden.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get txAccountClosed =>
+      'Dieses Konto ist geschlossen und nimmt keine neuen Transaktionen an. Wählen Sie ein anderes Konto oder öffnen Sie es wieder.';
+
+  @override
+  String quickAddCurrencyNotConverted(String currency) {
+    return 'Dieses Konto wird in $currency geführt: Der Betrag wird in $currency gebucht, nicht umgerechnet.';
+  }
+
+  @override
+  String get ruleConditionUnevaluable =>
+      'Trifft nie zu: Dieses Feld lässt sich so nicht vergleichen. Löschen Sie die Bedingung und fügen Sie sie neu hinzu.';
+
+  @override
+  String get ruleSaveUnevaluableCondition =>
+      'Löschen Sie zuerst die mit „Trifft nie zu“ markierten Bedingungen.';
+
+  @override
+  String get ruleListUnevaluable =>
+      'Trifft nie zu: Eine Bedingung vergleicht ein Feld auf eine nicht unterstützte Weise. Tippen Sie zum Korrigieren.';
+
+  @override
+  String get payeeNameTakenTitle => 'Name bereits vergeben';
+
+  @override
+  String payeeNameTakenMessage(String name) {
+    return 'Es gibt bereits einen Empfänger „$name“. Möchten Sie diesen Empfänger mit ihm zusammenführen? Seine Transaktionen, Planungen und Regeln verwenden dann „$name“.';
+  }
+
+  @override
+  String get scheduledFinishedPickNextDate =>
+      'Beendet: Es wird nichts mehr gebucht. Wählen Sie ein nächstes Datum, um sie wieder zu starten.';
+
+  @override
+  String txApprovedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Transaktionen bestätigt',
+      one: 'Transaktion bestätigt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txCategorizedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Kategorie für $count Transaktionen gesetzt',
+      one: 'Kategorie gesetzt',
+    );
+    return '$_temp0';
+  }
 }

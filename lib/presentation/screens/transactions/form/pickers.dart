@@ -18,11 +18,19 @@ class PickerOption<T> {
     required this.label,
     this.subtitle,
     this.section,
+    this.icon,
+    this.key,
   });
 
   final T value;
   final String label;
   final String? subtitle;
+
+  /// Icon of this row instead of the picker's.
+  final IconData? icon;
+
+  /// Key of the row (lets tests find it).
+  final Key? key;
 
   /// Heading the option is listed under (e.g. its category group); options
   /// with the same section must be adjacent.
@@ -154,11 +162,12 @@ class _SearchablePickerSheetState<T>
                 itemBuilder: (context, index) {
                   final option = options[index];
                   final tile = ListTile(
+                    key: option.key,
                     title: Text(option.label),
                     subtitle: option.subtitle == null
                         ? null
                         : Text(option.subtitle!),
-                    leading: Icon(widget.icon),
+                    leading: Icon(option.icon ?? widget.icon),
                     onTap: () => Navigator.pop(context, option.value),
                   );
                   final section = option.section;
@@ -249,6 +258,49 @@ Future<Category?> showCategoryPicker(
               for (final category in entry.value)
                 PickerOption(
                   value: category,
+                  label: category.name,
+                  section: entry.key.name,
+                ),
+          ],
+        ),
+  );
+}
+
+/// What was picked in [showInflowCategoryPicker]: a [category], or `null`
+/// for "To Be Budgeted" (no category).
+class CategoryChoice {
+  const CategoryChoice(this.category);
+
+  final Category? category;
+}
+
+/// Key of the "To Be Budgeted" row of [showInflowCategoryPicker].
+const pickerToBeBudgetedKey = Key('picker_to_be_budgeted');
+
+/// The category picker of an inflow: "To Be Budgeted" (no category, where
+/// income belongs) comes first, then the visible categories by group (for
+/// a refund that goes back into its category). Returns `null` when
+/// dismissed.
+Future<CategoryChoice?> showInflowCategoryPicker(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
+  return showSearchablePicker<CategoryChoice>(
+    context,
+    icon: Icons.label_outline,
+    options: (ref) => ref
+        .watch(categoryHierarchyProvider)
+        .whenData(
+          (hierarchy) => [
+            PickerOption(
+              value: const CategoryChoice(null),
+              label: l10n.toBeBudgeted,
+              subtitle: l10n.txInflowToBeBudgetedSubtitle,
+              icon: Icons.savings_outlined,
+              key: pickerToBeBudgetedKey,
+            ),
+            for (final entry in hierarchy.entries)
+              for (final category in entry.value)
+                PickerOption(
+                  value: CategoryChoice(category),
                   label: category.name,
                   section: entry.key.name,
                 ),

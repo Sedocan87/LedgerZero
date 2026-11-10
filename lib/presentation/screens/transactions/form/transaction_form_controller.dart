@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
@@ -73,7 +75,20 @@ class TransactionFormController extends ChangeNotifier {
   /// Cleared status the counterpart leg had when it was loaded.
   TransactionClearStatus? loadedCounterpartCleared;
 
+  /// The accounts of the edited row and of its counterpart when loaded.
+  /// A reconciled status belongs to the reconciliation of that account: a
+  /// leg moved to another account is not reconciled there (see
+  /// [pickAccount]).
+  String? loadedAccountId;
+  String? loadedTransferAccountId;
+
+  /// The category the form had before it became an inflow (see
+  /// [setFormType]); it comes back when the form leaves inflow without a
+  /// category.
+  String? _categoryBeforeInflow;
+
   bool get isTransfer => formType == TransactionFormType.transfer;
+  bool get isInflow => formType == TransactionFormType.income;
   bool get isEditing => editingId != null;
 
   /// Whether the transaction can have a category, given [accounts] (id ->
@@ -93,10 +108,26 @@ class TransactionFormController extends ChangeNotifier {
   /// Notifies listeners after a field changed.
   void changed() => notifyListeners();
 
+  /// Switches between outflow, inflow and transfer.
+  ///
+  /// Income belongs in To Be Budgeted: only an inflow without a category
+  /// reaches it. A category carried over from the outflow the form showed
+  /// before (the Settings default, a payee's, or one picked for the
+  /// outflow) would book the income into that category unnoticed, so
+  /// becoming an inflow drops it. A refund gets its category picked while
+  /// the form is an inflow.
   void setFormType(TransactionFormType type) {
+    final wasInflow = isInflow;
     formType = type;
     if (type == TransactionFormType.transfer) {
       isSplit = false;
+    }
+    if (isInflow && !wasInflow) {
+      _categoryBeforeInflow = categoryId;
+      categoryId = null;
+    } else if (wasInflow && !isInflow) {
+      categoryId ??= _categoryBeforeInflow;
+      _categoryBeforeInflow = null;
     }
     notifyListeners();
   }
@@ -113,14 +144,63 @@ class TransactionFormController extends ChangeNotifier {
   }
 
   void setCleared(bool value) {
-    cleared = _toggled(value, loadedCleared);
+    cleared = _toggled(
+      value,
+      accountId == loadedAccountId ? loadedCleared : null,
+    );
     notifyListeners();
   }
 
   /// The switch of the transfer's other leg.
   void setCounterpartCleared(bool value) {
-    counterpartCleared = _toggled(value, loadedCounterpartCleared);
+    counterpartCleared = _toggled(
+      value,
+      transferAccountId == loadedTransferAccountId
+          ? loadedCounterpartCleared
+          : null,
+    );
     notifyListeners();
+  }
+
+  /// The user picked the (From) account [id]. A reconciled row moved to
+  /// another account starts uncleared there; moved back, it gets its
+  /// loaded status again.
+  void pickAccount(String id) {
+    accountId = id;
+    cleared = _statusAfterMove(
+      cleared,
+      moved: id != loadedAccountId,
+      loaded: loadedCleared,
+    );
+    notifyListeners();
+  }
+
+  /// The user picked the To account [id] of a transfer; its leg is treated
+  /// like the row in [pickAccount].
+  void pickTransferAccount(String id) {
+    transferAccountId = id;
+    counterpartCleared = _statusAfterMove(
+      counterpartCleared,
+      moved: id != loadedTransferAccountId,
+      loaded: loadedCounterpartCleared,
+    );
+    notifyListeners();
+  }
+
+  TransactionClearStatus _statusAfterMove(
+    TransactionClearStatus current, {
+    required bool moved,
+    required TransactionClearStatus? loaded,
+  }) {
+    if (!isEditing) {
+      return current;
+    }
+    if (moved) {
+      return current == TransactionClearStatus.reconciled
+          ? TransactionClearStatus.uncleared
+          : current;
+    }
+    return loaded ?? current;
   }
 
   /// Switching on returns to `reconciled` when the row was reconciled.
@@ -161,7 +241,51 @@ class TransactionFormController extends ChangeNotifier {
     payeeController.text = name ?? '';
   }
 
-  /// Fills the form from a draft (quick-add hand-off or autosave).
+  /// Whether the form holds something the user typed (see
+  /// [TransactionDraft.hasContent]): what makes a new transaction worth a
+  /// draft, and worth asking before it is thrown away.
+  bool get hasContent => toDraft().hasContent;
+
+  /// Every value the user can change, as one string: two equal fingerprints
+  /// mean nothing was edited in between.
+  String fingerprint() => jsonEncode({
+    ...toDraft().toJson(),
+    'date': date.toIso8601String(),
+    'cleared': cleared.index,
+    'counterpartCleared': counterpartCleared.index,
+    'approved': approved,
+  });
+
+  /// Fills the form from the autosaved draft of a new transaction that was
+  /// interrupted (the app was closed while the form was open).
+  ///
+  /// Unlike [applyDraft] it keeps the form's date (today: a draft from last
+  /// week must not backdate what is entered now) and an account the form
+  /// already has (the caller opened it from that account's screen).
+  void restoreDraft(TransactionDraft draft) {
+    final today = date;
+    final account = accountId;
+    applyDraft(draft);
+    date = today;
+    if (account != null) {
+      accountId = account;
+      if (transferAccountId == account) {
+        transferAccountId = null;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// An empty new transaction in [accountId], dated today.
+  void reset({String? accountId}) {
+    date = CalendarDate.today();
+    this.accountId = accountId;
+    formType = TransactionFormType.expense;
+    frequency = RecurrenceFrequency.monthly;
+    resetForNext();
+  }
+
+  /// Fills the form from the quick-add hand-off.
   void applyDraft(TransactionDraft draft) {
     amountController.text = draft.amountText;
     memoController.text = draft.memo ?? '';
@@ -180,10 +304,12 @@ class TransactionFormController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The form as the autosaved draft. Without the date: a draft is
+  /// restored on another day, and the date it was typed on is not the date
+  /// of what is entered then.
   TransactionDraft toDraft() => TransactionDraft(
     amountText: amountController.text,
     memo: memoController.text.isEmpty ? null : memoController.text,
-    date: date,
     accountId: accountId,
     payeeId: payeeId,
     payeeName: payeeController.text.isEmpty ? null : payeeController.text,
@@ -207,6 +333,8 @@ class TransactionFormController extends ChangeNotifier {
     editingId = t.id;
     loadedCleared = t.cleared;
     loadedCounterpartCleared = counterpart?.cleared;
+    loadedAccountId = t.accountId;
+    loadedTransferAccountId = counterpart?.accountId;
     counterpartCleared =
         counterpart?.cleared ?? TransactionClearStatus.uncleared;
     approved = t.approved;
@@ -254,6 +382,7 @@ class TransactionFormController extends ChangeNotifier {
     memoController.clear();
     setPayee(null, null);
     categoryId = null;
+    _categoryBeforeInflow = null;
     transferAccountId = null;
     cleared = TransactionClearStatus.uncleared;
     counterpartCleared = TransactionClearStatus.uncleared;

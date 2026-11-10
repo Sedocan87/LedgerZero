@@ -146,7 +146,12 @@ on-budget account, not a split parent, and not a transfer leg unless the
 other account is off budget**. Both signs count:
 
 *   An uncategorised inflow (salary, refund you did not categorise, the YNAB
-    "Starting Balance" row) increases TBB.
+    "Starting Balance" row) increases TBB. An inflow *with* a category is a
+    refund: it raises that category's available amount and never reaches
+    TBB. The transaction form and quick add therefore leave an inflow
+    without a category unless the user picks one (see
+    [TRANSACTION_LIFECYCLE.md](TRANSACTION_LIFECYCLE.md), "Income and the
+    category field").
 *   An uncategorised outflow decreases TBB (it is spending nobody budgeted).
 *   A reconciliation adjustment is an uncategorised transaction, so a
     difference found while reconciling changes TBB deliberately.

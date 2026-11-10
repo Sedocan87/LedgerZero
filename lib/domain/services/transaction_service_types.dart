@@ -20,6 +20,9 @@ enum TransactionValidationError {
   /// exchange rates; both legs would carry the same number).
   currencyMismatch,
 
+  /// A new row (or a row moved from another account) in a closed account.
+  closedAccount,
+
   /// A schedule whose end date lies before its next date.
   scheduleEndBeforeNextDate,
 

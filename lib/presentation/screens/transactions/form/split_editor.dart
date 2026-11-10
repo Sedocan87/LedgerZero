@@ -106,6 +106,14 @@ class SplitEditor extends ConsumerWidget {
                               onChanged();
                             }
                           },
+                          // A line without a category flows into To Be
+                          // Budgeted.
+                          onClear: items[index].categoryId == null
+                              ? null
+                              : () {
+                                  items[index].categoryId = null;
+                                  onChanged();
+                                },
                         ),
                       ),
                       IconButton(

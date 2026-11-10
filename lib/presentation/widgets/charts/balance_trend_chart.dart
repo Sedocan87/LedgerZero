@@ -7,12 +7,15 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
 
-/// Running balance of an account over its transactions.
+/// Running balance of an account, one point per day (the balance at the
+/// end of that day).
 ///
 /// Screen readers get a summary: date range and lowest, highest and latest
 /// balance.
 class BalanceTrendChart extends ConsumerWidget {
-  final List<Transaction> transactions;
+  /// Per calendar day, the sum of the account's rows, oldest day first
+  /// (e.g. `TransactionsDao.watchDailyTotals`, aggregated in SQL).
+  final List<({DateTime date, int total})> dailyTotals;
 
   /// The account's starting balance in minor units.
   final int startingBalance;
@@ -20,22 +23,40 @@ class BalanceTrendChart extends ConsumerWidget {
   /// Currency of the account; defaults to the Settings currency.
   final String? currencyCode;
 
-  const BalanceTrendChart({
+  const BalanceTrendChart.daily({
     super.key,
-    required this.transactions,
+    required this.dailyTotals,
     required this.startingBalance,
     this.currencyCode,
   });
+
+  /// From the account's [transactions] (split lines are skipped: their
+  /// parent carries the amount).
+  BalanceTrendChart({
+    super.key,
+    required List<Transaction> transactions,
+    required this.startingBalance,
+    this.currencyCode,
+  }) : dailyTotals = _dailyTotalsOf(transactions);
+
+  static List<({DateTime date, int total})> _dailyTotalsOf(
+    List<Transaction> transactions,
+  ) {
+    final byDay = <DateTime, int>{};
+    for (final t in transactions) {
+      if (t.parentTransactionId == null) {
+        byDay[t.date] = (byDay[t.date] ?? 0) + t.amount;
+      }
+    }
+    final days = byDay.keys.toList()..sort();
+    return [for (final d in days) (date: d, total: byDay[d]!)];
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
 
-    // Split children are already contained in their parent's amount.
-    final sorted =
-        transactions.where((t) => t.parentTransactionId == null).toList()
-          ..sort((a, b) => a.date.compareTo(b.date));
-    if (sorted.isEmpty) {
+    if (dailyTotals.isEmpty) {
       return SizedBox(
         height: 150,
         child: Center(
@@ -53,14 +74,14 @@ class BalanceTrendChart extends ConsumerWidget {
     // Initial point
     points.add(
       DataPoint(
-        sorted.first.date.subtract(const Duration(days: 1)),
+        dailyTotals.first.date.subtract(const Duration(days: 1)),
         startingBalance,
       ),
     );
 
-    for (var t in sorted) {
-      runningBalance += t.amount;
-      points.add(DataPoint(t.date, runningBalance));
+    for (final day in dailyTotals) {
+      runningBalance += day.total;
+      points.add(DataPoint(day.date, runningBalance));
     }
 
     final summary = l10n.chartLineSemantics(

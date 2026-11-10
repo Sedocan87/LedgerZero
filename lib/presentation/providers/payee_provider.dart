@@ -73,6 +73,12 @@ class PayeeController {
     await ref.read(payeeRepositoryProvider).updatePayee(payee);
   }
 
+  /// Renames a payee; rules that match its old name by equality follow.
+  /// Throws `PayeeNameTakenException` when another payee has that name.
+  Future<void> renamePayee(String id, String name) async {
+    await ref.read(payeeServiceProvider).renamePayee(id, name);
+  }
+
   /// Deletes a payee and clears every reference to it (atomic).
   Future<void> deletePayee(String id) async {
     Logger.info('Deleting payee $id');

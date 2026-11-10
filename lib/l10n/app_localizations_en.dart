@@ -5220,4 +5220,100 @@ class AppLocalizationsEn extends AppLocalizations {
   String dateFormatFollowLanguage(String pattern) {
     return 'Follow language ($pattern)';
   }
+
+  @override
+  String get txInflowCategoryHint =>
+      'Income goes to To Be Budgeted. Choose a category only for a refund: the money then goes back into that category.';
+
+  @override
+  String get txInflowToBeBudgetedSubtitle =>
+      'Income you assign to categories in the budget';
+
+  @override
+  String get transactionNotFound =>
+      'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.';
+
+  @override
+  String get txSwipeApprove => 'Approve';
+
+  @override
+  String txSortedBy(String field, String direction) {
+    return 'Sorted by $field, $direction';
+  }
+
+  @override
+  String get sortAscending => 'ascending';
+
+  @override
+  String get sortDescending => 'descending';
+
+  @override
+  String get txSelectAllLoaded => 'Select all loaded';
+
+  @override
+  String txSelectedLoadedOnly(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The $count loaded transactions are selected. Scroll down to load more.',
+      one: '1 loaded transaction selected. Scroll down to load more.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get txAccountClosed =>
+      'This account is closed and takes no new transactions. Choose another account or reopen it.';
+
+  @override
+  String quickAddCurrencyNotConverted(String currency) {
+    return 'This account is in $currency: the amount is booked in $currency, not converted.';
+  }
+
+  @override
+  String get ruleConditionUnevaluable =>
+      'Never matches: this field cannot be compared this way. Delete the condition and add it again.';
+
+  @override
+  String get ruleSaveUnevaluableCondition =>
+      'Delete the conditions marked \"Never matches\" first.';
+
+  @override
+  String get ruleListUnevaluable =>
+      'Never matches: a condition compares a field in a way it does not support. Tap to fix.';
+
+  @override
+  String get payeeNameTakenTitle => 'Name already in use';
+
+  @override
+  String payeeNameTakenMessage(String name) {
+    return 'A payee named \"$name\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"$name\".';
+  }
+
+  @override
+  String get scheduledFinishedPickNextDate =>
+      'Finished: nothing more is booked. Pick a next date to restart it.';
+
+  @override
+  String txApprovedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions approved',
+      one: 'Transaction approved',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txCategorizedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Category set for $count transactions',
+      one: 'Category set',
+    );
+    return '$_temp0';
+  }
 }

@@ -265,10 +265,15 @@ class TransactionsNotifier extends StateNotifier<TransactionsState> {
   }
 }
 
+/// The Transactions tab's list. Rebuilt (a new notifier and a new
+/// subscription) when the repository changes, i.e. when the database is
+/// reopened after a restore: the tab stays alive across the restore, and
+/// the old subscription would keep showing the rows of the old database.
 final transactionsProvider =
     StateNotifierProvider.autoDispose<TransactionsNotifier, TransactionsState>((
       ref,
     ) {
+      ref.watch(transactionRepositoryProvider);
       return TransactionsNotifier(ref);
     });
 
@@ -276,5 +281,8 @@ final transactionsProvider =
 /// args instance passed to the route).
 final filteredTransactionsProvider = StateNotifierProvider.autoDispose
     .family<TransactionsNotifier, TransactionsState, FilteredTransactionsArgs>(
-      (ref, args) => TransactionsNotifier.fixed(ref, args.filter),
+      (ref, args) {
+        ref.watch(transactionRepositoryProvider);
+        return TransactionsNotifier.fixed(ref, args.filter);
+      },
     );

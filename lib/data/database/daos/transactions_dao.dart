@@ -224,6 +224,27 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       transactions.isDeleted.equals(false) &
       transactions.parentTransactionId.isNull();
 
+  /// Per calendar day, the sum of the [_balanceRow]s of [accountId] (a
+  /// split counts once, by its parent), oldest day first. The account
+  /// screen's balance chart draws the running balance from these, so it
+  /// never loads the account's rows.
+  Stream<List<({DateTime date, int total})>> watchDailyTotals(
+    String accountId,
+  ) {
+    final total = transactions.amount.sum();
+    final query = selectOnly(transactions)
+      ..addColumns([transactions.date, total])
+      ..where(transactions.accountId.equals(accountId) & _balanceRow)
+      ..groupBy([transactions.date])
+      ..orderBy([OrderingTerm.asc(transactions.date)]);
+    return query.watch().map(
+      (rows) => [
+        for (final row in rows)
+          (date: row.read(transactions.date)!, total: row.read(total) ?? 0),
+      ],
+    );
+  }
+
   /// [_balanceRow]s narrowed for the net worth report: with [currency]
   /// only the rows of accounts in that currency, and without the transfer
   /// legs whose other account is in [excludeTransfersTo] (the partner's
@@ -646,25 +667,35 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     return query.join([]);
   }
 
+  /// The order of a transaction list. Rows that tie on the sort field keep
+  /// a fixed order, so a list does not reshuffle after a write and a page
+  /// is always a prefix of the next, larger one: by date the later entered
+  /// row (`created_at`, then `id`) counts as the later one; any other
+  /// field falls back to newest first.
   List<OrderingTerm> _buildOrderBy(TransactionSort? sort) {
+    List<OrderingTerm> byDate(OrderingMode mode) => [
+      OrderingTerm(expression: transactions.date, mode: mode),
+      OrderingTerm(expression: transactions.createdAt, mode: mode),
+      OrderingTerm(expression: transactions.id, mode: mode),
+    ];
+
     if (sort == null) {
-      return [
-        OrderingTerm(expression: transactions.date, mode: OrderingMode.desc),
-      ];
+      return byDate(OrderingMode.desc);
     }
 
     final mode = sort.ascending ? OrderingMode.asc : OrderingMode.desc;
-
+    final OrderingTerm first;
     switch (sort.field) {
       case TransactionSortField.date:
-        return [OrderingTerm(expression: transactions.date, mode: mode)];
+        return byDate(mode);
       case TransactionSortField.amount:
-        return [OrderingTerm(expression: transactions.amount, mode: mode)];
+        first = OrderingTerm(expression: transactions.amount, mode: mode);
       case TransactionSortField.payeeName:
-        return [OrderingTerm(expression: payees.name, mode: mode)];
+        first = OrderingTerm(expression: payees.name, mode: mode);
       case TransactionSortField.categoryName:
-        return [OrderingTerm(expression: categories.name, mode: mode)];
+        first = OrderingTerm(expression: categories.name, mode: mode);
     }
+    return [first, ...byDate(OrderingMode.desc)];
   }
 
   Future<List<Transaction>> getTransactions({
