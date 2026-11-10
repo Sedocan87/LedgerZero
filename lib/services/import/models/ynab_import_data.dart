@@ -26,10 +26,10 @@ class YnabAccount {
     this.balance = 0,
   });
 
-  YnabAccount copyWith({bool? onBudget}) => YnabAccount(
+  YnabAccount copyWith({bool? onBudget, AccountType? type}) => YnabAccount(
     id: id,
     name: name,
-    type: type,
+    type: type ?? this.type,
     onBudget: onBudget ?? this.onBudget,
     isClosed: isClosed,
     balance: balance,

@@ -5,6 +5,8 @@ import 'package:crypto/crypto.dart';
 import 'package:ledger_zero/core/utils/text_decoding.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/services/import/models/ynab_import_data.dart';
+import 'package:ledger_zero/services/import/ynab_data_mapper.dart'
+    show YnabDataMapper;
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:path/path.dart' as path;
@@ -380,6 +382,7 @@ class YnabImportService {
 
     // 2. Parse Budget CSV
     var categoriesOnlyInBudget = 0;
+    final budgetOnlyCards = <String>{};
     final budgetRows = _csvRows(budgetCsvContent);
 
     if (budgetRows.isNotEmpty) {
@@ -446,6 +449,9 @@ class YnabImportService {
               YnabCategory(id: key, groupId: group, name: category),
             );
             categoriesOnlyInBudget++;
+            if (YnabDataMapper.isCardPaymentGroup(group)) {
+              budgetOnlyCards.add(category);
+            }
           }
         }
 
@@ -458,6 +464,28 @@ class YnabImportService {
               budgeted: budgeted,
             ),
           );
+        }
+      }
+    }
+
+    // YNAB's Credit Card Payments group names the credit cards: those
+    // accounts are cards whatever their name suggests, and their payment
+    // categories map onto the cards' own (not counted as categories that
+    // only Budget.csv has).
+    final cardGroups = {
+      for (final g in categoryGroups)
+        if (YnabDataMapper.isCardPaymentGroup(g.name)) g.id,
+    };
+    final cardNames = {
+      for (final c in categories)
+        if (cardGroups.contains(c.groupId)) c.name,
+    };
+    for (var i = 0; i < accounts.length; i++) {
+      final a = accounts[i];
+      if (a.onBudget && cardNames.contains(a.name)) {
+        accounts[i] = a.copyWith(type: AccountType.credit);
+        if (budgetOnlyCards.contains(a.name)) {
+          categoriesOnlyInBudget--;
         }
       }
     }
