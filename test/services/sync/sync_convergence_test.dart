@@ -198,4 +198,101 @@ void main() {
       expect(await a.count('SELECT COUNT(*) FROM scheduled_transactions'), 1);
     });
   });
+
+  group('foreign-key repairs', () {
+    test('a repair made on one phone reaches the other when the parent '
+        'comes back (delete on A, later rename on B)', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('extra', 'Extra', 0)",
+      );
+      await a.t!.addAccount(id: 'y', name: 'Savings');
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      // B books into the category and the account and syncs (file 1).
+      await b.t!.addTransaction(
+        id: 'tx',
+        accountId: 'chk',
+        amount: -100,
+        categoryId: 'extra',
+      );
+      await b.exec(
+        'INSERT INTO budgets (id, category_id, month, budgeted) '
+        "VALUES ('bx', 'extra', '2025-01', 700)",
+      );
+      await b.t!.addTransaction(id: 'tx2', accountId: 'y', amount: -200);
+      await b.sync();
+
+      // A, which has not synced yet, deletes both parents.
+      await a.exec("DELETE FROM categories WHERE id = 'extra'");
+      await a.exec("DELETE FROM accounts WHERE id = 'y'");
+
+      // B renames them afterwards (newer than the deletes) and syncs
+      // (file 2).
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await b.exec("UPDATE categories SET name = 'Extras' WHERE id = 'extra'");
+      await b.exec("UPDATE accounts SET name = 'Rainy day' WHERE id = 'y'");
+      await b.sync();
+
+      await syncAll([a, b], rounds: 3);
+
+      // Both parents are back on both phones, and the rows A repaired while
+      // they were missing are the same on both.
+      expect(
+        await a.count("SELECT COUNT(*) FROM categories WHERE id='extra'"),
+        1,
+      );
+      expect(await a.count("SELECT COUNT(*) FROM accounts WHERE id='y'"), 1);
+      await expectConverged([a, b]);
+      expect(await a.count('SELECT COUNT(*) FROM pending_sync_changes'), 0);
+      expect(await b.count('SELECT COUNT(*) FROM pending_sync_changes'), 0);
+      expect(
+        await b.rows('SELECT id, category_id FROM transactions ORDER BY id'),
+        [
+          {'id': 'tx', 'category_id': null},
+        ],
+      );
+      expect(await b.count('SELECT COUNT(*) FROM budgets'), 0);
+    });
+
+    test('a later edit on the other phone wins over the repair', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('extra', 'Extra', 0)",
+      );
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      await b.t!.addTransaction(
+        id: 'tx',
+        accountId: 'chk',
+        amount: -100,
+        categoryId: 'extra',
+      );
+      await b.sync();
+      await a.exec("DELETE FROM categories WHERE id = 'extra'");
+      await a.sync(); // repairs tx: no category
+      // B, which has not seen the delete, moves the transaction to another
+      // category afterwards.
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      final groceries = await b.t!.categoryId('Groceries');
+      await b.exec(
+        "UPDATE transactions SET category_id = '$groceries' WHERE id = 'tx'",
+      );
+
+      await syncAll([a, b], rounds: 3);
+
+      await expectConverged([a, b]);
+      expect(await a.rows('SELECT category_id FROM transactions'), [
+        {'category_id': groceries},
+      ]);
+    });
+  });
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -60,7 +61,12 @@ const int _unsent = 1 << 62;
 ///   different content is recorded in `sync_conflicts`;
 /// * before commit, rows whose parent no longer exists (deleted on another
 ///   device) are repaired: nullable references are cleared, required
-///   references and split children are deleted;
+///   references and split children are deleted. A repair is a local edit
+///   made now (new `updated_at`, captured in `pending_sync_changes`, a
+///   tombstone for a deleted row), so it reaches the other devices under
+///   the normal conflict rule. Without that, a device on which the parent
+///   was never missing (it applied a later version that brought the parent
+///   back) would keep the row as it was, for good;
 /// * [onCommit] runs last in the transaction (advances the high-water mark).
 ///
 /// Any error rolls the whole file back.
@@ -98,7 +104,7 @@ class ChangeApplier {
       for (final change in ordered) {
         await _applyOne(change, header, result, resolvedAt);
       }
-      result.repaired = await _repairForeignKeys();
+      result.repaired = await _repairForeignKeys(resolvedAt);
       await _db.customStatement('DELETE FROM sync_applying');
       if (onCommit != null) {
         await onCommit();
@@ -409,9 +415,10 @@ class ChangeApplier {
     );
   }
 
-  /// Resolves rows that reference a missing parent (see class docs).
-  /// Returns the number of repaired rows.
-  Future<int> _repairForeignKeys() async {
+  /// Resolves rows that reference a missing parent (see class docs): each
+  /// repair is written as a local edit at [now]. Returns the number of
+  /// repaired rows.
+  Future<int> _repairForeignKeys(DateTime now) async {
     var repaired = 0;
     for (var round = 0; round < 16; round++) {
       final violations = await _db
@@ -433,7 +440,7 @@ class ChangeApplier {
         }
         final idRow = await _db
             .customSelect(
-              'SELECT id FROM "$table" WHERE rowid = ?',
+              'SELECT id, updated_at FROM "$table" WHERE rowid = ?',
               variables: [Variable.withInt(rowid)],
             )
             .getSingleOrNull();
@@ -441,18 +448,40 @@ class ChangeApplier {
           continue; // already removed in this round
         }
         final id = idRow.read<String>('id');
+        final previous = idRow.data['updated_at'];
+        // Newer than the version just applied, also when that one carries
+        // a timestamp ahead of this phone's clock.
+        final repairedAt = DateTime.fromMicrosecondsSinceEpoch(
+          math.max(
+            now.microsecondsSinceEpoch,
+            SyncSchema.versionOf(previous) + 1,
+          ),
+          isUtc: true,
+        ).toIso8601String();
         if (_schema.deletesOnMissingParent(table, column)) {
           Logger.info('Sync: deleting $table row whose $column is gone');
           await _db.customStatement('DELETE FROM "$table" WHERE rowid = ?', [
             rowid,
           ]);
-          await _db.syncDao.deleteVersion(table, id);
           await _clearPending(table, id);
+          await _db.customStatement(
+            'INSERT INTO pending_sync_changes '
+            '(table_name, record_id, action, changed_at, old_updated_at) '
+            "VALUES (?, ?, 'DELETE', ?, ?)",
+            [table, id, repairedAt, previous],
+          );
         } else {
           Logger.info('Sync: clearing $table.$column (parent deleted)');
           await _db.customStatement(
-            'UPDATE "$table" SET "$column" = NULL WHERE rowid = ?',
-            [rowid],
+            'UPDATE "$table" SET "$column" = NULL, updated_at = ? '
+            'WHERE rowid = ?',
+            [repairedAt, rowid],
+          );
+          await _db.customStatement(
+            'INSERT INTO pending_sync_changes '
+            '(table_name, record_id, action, changed_at) '
+            "VALUES (?, ?, 'UPDATE', ?)",
+            [table, id, repairedAt],
           );
         }
         repaired++;

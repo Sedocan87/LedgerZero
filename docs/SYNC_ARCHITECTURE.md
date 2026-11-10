@@ -183,13 +183,25 @@ scheduled_transactions, budget_templates, report_notes, import_profiles,
 rules; a test checks it against `PRAGMA foreign_key_list`) and FK checks are
 deferred to commit. Causal ordering (4) guarantees parents created elsewhere
 arrive first. A reference that is still missing at commit means the parent
-was deleted on another device while this row was created or edited. Policy
-(deterministic, so every device ends in the same state):
+was deleted on another device while this row was created or edited. Policy:
 
 * nullable reference (transaction category/payee/transfer account, payee
   defaults, category group, schedule references): set to NULL;
 * required reference (transaction account, budget category) and split
   children whose parent transaction is gone: the row is deleted.
+
+The policy alone does not make the devices agree: a device that applies a
+later version of the parent (an update newer than the delete brings it
+back) never sees the reference missing and would keep the row untouched.
+So a repair is a **local edit** of the repairing device, made at the time
+of the apply: the row gets a new `updated_at` (never older than the
+version just applied) and an entry in `pending_sync_changes`, a deleted
+row a captured delete, which the next run sends as an upsert or a
+tombstone. It then competes under the conflict rule of section 5 like any
+other edit: the other devices take the repaired row, unless the row was
+edited there later, in which case that edit wins everywhere (and is
+repaired again where its parent is still missing). Two devices repairing
+the same row write the same content, so no conflict entry is recorded.
 
 ## 7. Quarantine
 
