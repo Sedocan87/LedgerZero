@@ -2838,7 +2838,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get faqSafeA =>
-      'Ihre Daten liegen nur auf Ihrem Telefon, in einer verschlüsselten Datenbank, deren Schlüssel in der sicheren Hardware des Telefons liegt (Android KeyStore). Die App-Sperre schützt zusätzlich mit Fingerabdruck, Gesicht oder Geräte-PIN. Synchronisierte Daten werden verschlüsselt, bevor sie das Telefon verlassen. Es gibt keine LedgerZero-Server, kein Tracking und keine Analyse.';
+      'Ihre Daten liegen nur auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, den Android vor anderen Apps abschirmt und mit Ihrer Displaysperre schützt. Die App-Sperre schützt zusätzlich mit Fingerabdruck, Gesicht oder Geräte-PIN. Sicherungen und synchronisierte Daten werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt, bevor sie das Telefon verlassen. Es gibt keine LedgerZero-Server, kein Konto, kein Tracking und keine Analyse.';
 
   @override
   String get faqSyncQ => 'Wie teilen mein Partner und ich ein Budget?';
@@ -2938,7 +2938,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onbBenefitDataTitle => 'Ihre Daten bleiben bei Ihnen';
 
   @override
-  String get onbBenefitDataBody => 'Verschlüsselt auf Ihrem Gerät gespeichert.';
+  String get onbBenefitDataBody =>
+      'Nur auf Ihrem Gerät gespeichert. Kein Konto, keine Cloud.';
 
   @override
   String get onbBenefitOfflineTitle => 'Funktioniert offline';
@@ -2959,11 +2960,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbPrivacyEncrypted =>
-      'Alle Daten werden auf Ihrem Gerät mit AES-256 verschlüsselt.';
+      'Sicherungen und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.';
 
   @override
   String get onbPrivacyOwnCloud =>
-      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt über Ihr eigenes Google Drive.';
+      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt über Ihr eigenes WLAN oder Ihr eigenes Google Drive.';
 
   @override
   String get budgetBasicsTitle => 'Budget-Grundlagen';
@@ -3647,7 +3648,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setupDeviceExplanation =>
-      'Ihr Budget wird nur auf diesem Telefon gespeichert, verschlüsselt mit einem Schlüssel, den Android in seinem sicheren Schlüsselspeicher aufbewahrt. Es gibt kein Konto und kein Passwort, das Sie sich merken müssen. Damit Sie mit dem Telefon nichts verlieren, erstellen Sie Sicherungen oder synchronisieren Sie mit einem zweiten Telefon.';
+      'Ihr Budget wird nur auf diesem Telefon gespeichert, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Es gibt kein Konto, keine Cloud und kein Tracking. Die App-Sperre kann zusätzlich nach Fingerabdruck, Gesicht oder Geräte-PIN fragen.';
 
   @override
   String get providerLocalWifi => 'Heim-WLAN (Telefon zu Telefon)';
@@ -4111,7 +4112,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get guideSecurityBody =>
-      'Ihre Daten liegen verschlüsselt auf Ihrem Telefon, der Schlüssel in der sicheren Hardware des Telefons. Die App-Sperre fragt nach Fingerabdruck, Gesicht oder Geräte-PIN, wenn die App im Hintergrund war. Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export und bewahren Sie das Sicherungspasswort gut auf: Ohne es lässt sich eine Sicherung nicht wiederherstellen.';
+      'Ihre Daten liegen nur auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Die App-Sperre fragt nach Fingerabdruck, Gesicht oder Geräte-PIN, wenn die App im Hintergrund war. Geht das Telefon verloren oder wird es zurückgesetzt, sind die Daten mit ihm weg: Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export, kopieren Sie sie vom Telefon weg und bewahren Sie das Sicherungspasswort gut auf: Ohne es lässt sich eine Sicherung nicht wiederherstellen.';
 
   @override
   String get guideImportTitle => 'Importieren';
@@ -4596,7 +4597,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String autoBackupExplanation(int count) {
-    return 'Einmal am Tag speichert die App eine verschlüsselte Sicherung auf diesem Telefon und behält die letzten $count. Sie verwendet das hier gewählte Sicherungspasswort und lässt sich auch dann wiederherstellen, wenn der Schlüssel der App verloren geht. Kopieren Sie den Ordner ab und zu auf einen Computer: Bei einem verlorenen oder zurückgesetzten Telefon sind auch diese Sicherungen weg.';
+    return 'Einmal am Tag speichert die App eine verschlüsselte Sicherung auf diesem Telefon und behält die letzten $count. Sie verwendet das hier gewählte Sicherungspasswort, und eine solche Sicherung lässt sich wie jede andere wiederherstellen. Kopieren Sie den Ordner ab und zu auf einen Computer: Bei einem verlorenen oder zurückgesetzten Telefon sind auch diese Sicherungen weg.';
   }
 
   @override
@@ -5283,4 +5284,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get autoBackupPasswordMissing =>
       'Das Sicherungspasswort ist auf diesem Telefon nicht mehr gespeichert (zum Beispiel nach dem Umzug auf ein neues Telefon). Schalten Sie die automatischen Sicherungen aus und wieder ein, um es einzugeben.';
+
+  @override
+  String get dataLossWarning =>
+      'Geht dieses Telefon verloren oder wird es zurückgesetzt, ist Ihr Budget weg, außer eine Sicherungsdatei liegt an einem anderen Ort oder ein zweites Telefon synchronisiert mit diesem.';
 }

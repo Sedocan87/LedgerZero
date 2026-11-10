@@ -32,14 +32,65 @@ This guide helps you resolve common issues with LedgerZero.
 2. If on Cellular, ensure LedgerZero has permission to use cellular data.
 3. Toggle Airplane mode on/off.
 
-### "Incorrect Password"
-**Cause:** The password does not unlock your data key.
-**Solution:**
-1. Double-check caps lock and spelling.
-2. Use your recovery key (login screen > **Use recovery key**); you will then
-   set a new password.
-3. Without password and recovery key the data cannot be decrypted; reinstall
-   the app and restore a backup. See [ENCRYPTION_TROUBLESHOOTING.md](ENCRYPTION_TROUBLESHOOTING.md).
+## Start-up and app lock
+
+LedgerZero keeps the budget in its private storage on the phone; there is
+no master password and no key to lose. The optional app lock uses your
+fingerprint, face or screen lock (see [SECURITY.md](SECURITY.md)).
+
+### The app lock does not appear or cannot be turned on
+* The app lock needs a screen lock (PIN, pattern or password) on the phone.
+  Set one up in the Android settings, then turn the lock on in
+  **Settings > Security**. Turning it on asks for your fingerprint, face or
+  screen lock once.
+* "This phone has no screen lock any more, so the app lock was turned off":
+  the screen lock was removed in the Android settings. Set one up again and
+  turn the app lock back on.
+
+### "Unlocking did not work: ..."
+The system prompt failed for a reason other than a removed screen lock
+(sensor busy, too many attempts, hardware unavailable). The app stays
+locked; the system's message is shown. Wait a moment and tap **Unlock**
+again, or use the PIN/pattern/password option of the prompt.
+
+### "LedgerZero could not open its database file just now"
+The database file could not be read (storage busy or full). Your data is
+not affected. Tap **Retry** or restart the phone; **Reset app** is offered
+next to **Retry** only after three failed tries.
+
+### "LedgerZero cannot read the data on this phone: the database file is damaged"
+The file is not a readable database any more (see "Database disk image is
+malformed" above). The screen offers **Reset app** next to **Retry**. It
+asks you to type a confirmation word (`RESET`; German `ZURÜCKSETZEN`) and
+then runs the same factory reset as **Settings > Factory Reset**: it
+deletes the database with its `-wal`/`-shm` files, exported files, local
+crash reports and all preferences, and opens onboarding. Automatic backups
+on the phone are kept. Set the app up again, then restore a backup in
+**Settings > Backup & Export** or sync again from your other phone.
+
+### "The data on this phone was saved by an early test version"
+Development builds before schema v20 are not upgraded any more. Reset the
+app as above and set it up again.
+
+## Backups and moving to a new phone
+
+* Backups always need the backup password chosen when the backup was made.
+* "This backup was made by a newer version": update the app first.
+* "This backup was made by an early test version": backups of development
+  builds before schema v20 cannot be restored.
+* "The backup password is no longer stored on this phone": the phone's key
+  store lost it, or the app moved to a new phone (the stored password does
+  not move along). Turn **Automatic backups** off and on again and enter the
+  password.
+* Moving to a new phone: Android's transfer when setting up the new phone
+  (cable or Wi-Fi, Android 9 and later) takes the budget and the settings
+  along; Google's cloud backup never does. On the new phone pair Wi-Fi sync
+  again, sign in to Google Drive again, turn card notifications on again
+  and re-enter the automatic-backup password. Otherwise use a backup file
+  or sync.
+* Entering a backup password or sync passphrase takes up to about a second
+  on a mid-range phone: that is the deliberate cost of Argon2id key
+  derivation, which makes guessing them expensive.
 
 ## Logs & Diagnostics
 

@@ -1,23 +1,56 @@
 # LedgerZero Security Architecture
 
-LedgerZero is local-first: your data lives in an encrypted database on your
-device. This document states what is protected, how, and what is not. The
-key design is described in detail in [ENCRYPTION.md](ENCRYPTION.md).
+LedgerZero is local-first: your budget lives on your phone, in the app's
+private storage. There is no account, no LedgerZero server and no tracking.
+Everything that leaves the phone (backups, sync files) is encrypted with a
+password or passphrase only the user knows. This document states what is
+protected, how, and what is not. The cryptography of backups and sync is
+described in [ENCRYPTION.md](ENCRYPTION.md).
 
 ## 1. Data at rest
 
 | Data | Protection |
 | --- | --- |
-| Database (`db.sqlite` in the app documents directory) | SQLCipher 4 (AES-256), keyed with a random 256-bit data key (DEK) passed as a raw key. The connection refuses to open without the right key or without SQLCipher. |
-| Data key | Stored by flutter_secure_storage 10 (AES-GCM under an Android KeyStore key that needs no user authentication), so the database opens whenever the app runs, also behind the app lock. There is no master password. |
+| Database (`db.sqlite` in the app documents directory, `app_flutter/` on Android) | A plain SQLite file in the app's private storage. Android's app sandbox keeps other apps out; file-based encryption (bound to the screen lock) protects it while the phone is locked after a restart. The app does not encrypt it itself (see section 7). |
 | Backups (`.lzbk`) | Always encrypted (AES-256-GCM, Argon2id from a backup password, streamed in authenticated chunks). See [BACKUP_FORMAT.md](BACKUP_FORMAT.md). |
+| Sync files (Google Drive or Wi-Fi) | Always encrypted (AES-256-GCM under a key from the sync passphrase). See section 5. |
+| Automatic-backup password, Wi-Fi pairing secret | flutter_secure_storage 11 (AES-GCM under an Android KeyStore key). If the KeyStore loses that key, the entries are deleted and read as missing: the user enters the backup password again or pairs again (`resetOnError`, `lib/services/security/secure_store.dart`). Nothing else depends on them. |
 | Exports (CSV, JSON, PDF, PNG, diagnostic log) | Plaintext by design. Written to the app's cache directory (not backed up), deleted once the share sheet completes (on Android 60 s later, because the receiving app may still be reading), and swept at start-up/resume if older than one hour. |
 | Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, kept as a log until the app next runs and for 30 days after they were handled: AES-256-GCM with an Android KeyStore key that needs no user authentication, max. 500 entries (pending ones for 90 days). If the KeyStore key is lost, the log is started over and the user is told the date. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
 | Diagnostic logs / crash reports | Warnings and errors are always written to the app cache directory (so a release build can explain afterwards why something did not happen, e.g. a card notification that could not be booked); info/debug lines only with logging enabled; crash reports only when the user turns them on. All of it with SQL parameters, e-mail addresses, payloads and numbers removed. Never uploaded; shared only by the user, after a preview of the exact text. |
 
-Android: `android:allowBackup="false"`, so Google's auto backup never copies
-the database or key storage. Android's file-based encryption protects all of
-it while the phone has not been unlocked since a restart.
+### Android backup and moving to a new phone
+
+`android:allowBackup="true"` with rules that keep the cloud out
+(`android/app/src/main/res/xml/data_extraction_rules.xml`,
+`res/xml/backup_rules.xml`, `res/xml-v28/backup_rules.xml`):
+
+| Android version | Cloud backup (Google Drive) | Device-to-device transfer (new phone set up from the old one) |
+| --- | --- | --- |
+| 12 and later (`dataExtractionRules`) | nothing | the database (`app_flutter/db.sqlite` and its `-wal`) and the preferences (`FlutterSharedPreferences.xml`) |
+| 9 to 11 (`fullBackupContent`, `res/xml-v28`) | nothing: every include needs `requireFlags="deviceToDeviceTransfer"` | the same files |
+| 7.0 to 8.1 (`fullBackupContent`, `res/xml`) | nothing | nothing: these versions ignore `requireFlags`, so a cloud backup could not be told apart; the budget moves through a backup file or sync |
+
+`allowBackup` has to be true for the transfer (on Android 12 and later
+`false` turns off the cloud backup, and on some devices the transfer too).
+The rules include only the files listed, so everything else stays behind:
+the secure storage (its KeyStore key cannot move), the card capture store
+(KeyStore-encrypted; it starts empty), exports, the sync folder and the
+automatic backups (external storage).
+
+A moved install would keep the old phone's sync device id. Every install
+therefore writes a random install id into its preferences and into a
+marker in `Context.getNoBackupFilesDir()`, which Android never backs up or
+moves (`lib/services/backup/transferred_install.dart`, checked in
+`bootstrap()` before anything reads the device id). Preferences with an id
+that the marker does not have came from another phone: that install drops
+the device id (preferences and `sync_kv`), empties the change queue, sets
+the sync re-bootstrap flag (like a restore, section 4) and forgets the old
+phone's Wi-Fi peers. The rest of what moved is handled where it is used:
+the app lock setting (turned off by the lock screen if the new phone has no
+screen lock), automatic backups (the Backup screen asks for the password
+again), Wi-Fi sync (asks to pair again), Google Drive (sign in again), card
+capture (notification access is granted again).
 
 ## 2. App lock and session
 
@@ -31,10 +64,10 @@ it while the phone has not been unlocked since a restart.
   user out. Every other failure of the prompt (sensor unavailable, lockout,
   missing channel) keeps the app locked and shows the system's reason with
   "Unlock" to try again.
-* **Session**: the start-up screen opens the database with the device key
+* **Session**: the start-up screen checks the database file and opens it
   (`sessionProvider`), then shows the app lock. The session stays open while
   the lock is showing (sync and card capture keep running) and is closed
-  only for a factory reset; closing zeroes the key bytes.
+  only for a factory reset.
 * **Auto-lock** (only with the app lock on): after 1 minute in the
   background by default; "Immediate" locks as soon as the app is hidden or
   paused (not on `inactive`: the notification shade or a system dialog
@@ -42,15 +75,13 @@ it while the phone has not been unlocked since a restart.
   background (monotonic clock and wall clock, the larger wins). OS screens
   the app opens itself (file picker, share sheet, the lock prompt) do not
   lock, for at most 2 minutes each.
-* **Start-up failures**: a key store or database file that fails to open
-  is retried; the destructive "Reset app" is offered only when the key is
-  missing or does not match the database, or after three failed retries
-  (or a key store error that is known to be permanent: the KeyStore
-  wrapping key was wiped). Onboarding never deletes a database that the
-  stored device key opens.
-* **Older installs** with a master password unlock once with the password,
-  recovery key or biometrics; the data key then moves to the device key
-  store and the vault is deleted (see [ENCRYPTION.md](ENCRYPTION.md)).
+* **Start-up failures** (`checkDatabaseFile`,
+  `lib/data/database/connection_native.dart`): a database file that cannot
+  be read at all (I/O) is retried; the destructive "Reset app" is offered
+  next to "Retry" after three failed tries, or at once when the file is not
+  a database (damaged) or was written by an early test version (schema
+  below v20, which is not upgraded any more). Onboarding never deletes a
+  database with accounts in it.
 
 ## 3. Screen privacy
 
@@ -63,13 +94,15 @@ it while the phone has not been unlocked since a restart.
 
 ## 4. Backup and restore
 
-* Backups are snapshots exported with `sqlcipher_export` into a temporary
-  plain file, encrypted, and the plain file deleted.
+* Backups are snapshots written with `VACUUM INTO` into a temporary file,
+  encrypted, and the temporary file deleted.
 * Restore decrypts into the temporary directory, validates the database
-  (integrity, required tables, schema version; older schemas are migrated),
-  re-encrypts it with this device's data key, swaps it in atomically
+  (integrity, required tables, schema version between v20 and the current
+  one; older backups come only from development builds and are refused),
+  copies it next to the live file, checks the copy, swaps it in atomically
   (one previous copy kept until the new database passes a check, rolled back
-  otherwise) and reopens it without restarting the app.
+  otherwise; an interrupted swap is finished at the next start) and reopens
+  it without restarting the app.
 * After a restore the local sync queue is cleared and the
   `sync_rebootstrap_required` flag is set: the next sync rebuilds the
   device's sync state from the latest snapshot and the change files (newer
@@ -81,21 +114,21 @@ it while the phone has not been unlocked since a restart.
   phone on the local Wi-Fi without any cloud (see below).
 * **End-to-end encrypted:** every change file and snapshot is encrypted with
   AES-256-GCM under a key derived from the user's sync passphrase (Argon2id,
-  m = 46 MiB, t = 2, then HKDF bound to the folder's sync id). The cloud folder holds only ciphertext plus a manifest with the
-  KDF salt/parameters and a key-check value. File headers (device id,
-  sequence, schema version, counts, timestamps) are readable but
-  authenticated. Without the passphrase nobody with folder access can read
-  rows or inject them; tampered, truncated or renamed files fail
-  authentication and are quarantined. See
+  m = 46 MiB, t = 2, then HKDF bound to the folder's sync id). The cloud
+  folder holds only ciphertext plus a manifest with the KDF salt/parameters
+  and a key-check value. File headers (device id, sequence, schema version,
+  counts, timestamps) are readable but authenticated. Without the passphrase
+  nobody with folder access can read rows or inject them; tampered,
+  truncated or renamed files fail authentication and are quarantined. See
   [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md).
-* The derived sync key is stored only inside the encrypted database (and
-  therefore in encrypted backups). The passphrase is never stored.
+* The derived sync key is stored inside the database (`sync_kv`), and
+  therefore in backups (which are encrypted). The passphrase is never
+  stored.
 * Remote file names are validated against a strict pattern before use and
   never become local paths.
 * Sync runs whenever the database is open, also behind the app lock (the
   controller follows `appLockStateProvider`, which is the database session,
   and cancels a running sync when it closes).
-
 * **Wi-Fi sync**: the paired phones authenticate every request and
   response with HMAC-SHA256 under a random 256-bit pair key (with a 2-minute
   time window and replay protection); discovery beacons are tagged with it
@@ -107,20 +140,29 @@ it while the phone has not been unlocked since a restart.
 
 ## 6. Application security
 
-* SQL uses bound parameters (Drift). The only interpolated statements are
-  `PRAGMA key/rekey` with a hex string generated from bytes.
+* SQL uses bound parameters (Drift). Interpolated statements contain only
+  values the app generates (`PRAGMA user_version = <int>`, table names from
+  a fixed list).
 * CSV exports neutralise cells starting with `=`, `+`, `-`, `@`, tab or CR
   (prefix `'`) to prevent spreadsheet formula injection; amounts and dates
   produced by the app are written as plain values.
 * Logging: no e-mail addresses, sync change payloads or authentication state are
   logged; debug output of the router is removed.
 * Randomness: `Random.secure()`.
-* SQLCipher binaries are verified by SHA-256 hashes pinned in the `sqlite3`
+* The SQLite binaries are verified by SHA-256 hashes pinned in the `sqlite3`
   package (see [ENCRYPTION.md](ENCRYPTION.md#supply-chain)).
 * Android release builds use R8 shrinking/obfuscation.
 
 ## 7. What is not protected
 
+* **The database file is not encrypted by the app.** Anyone or anything that
+  can read the app's private storage can read the budget: code running as
+  the app or as root on a rooted or exploited phone, a forensic tool on an
+  unlocked phone, `adb backup` / `run-as` on a debug build. The app lock
+  does not stop that; it gates the UI only. This was decided in exchange
+  for a budget that can move to a new phone (device-to-device transfer) and
+  for no key to lose: Android's sandbox and file-based encryption cover the
+  realistic cases (another app, a stolen locked phone).
 * Sync metadata visible in the cloud folder: file names (random device ids
   and sequence numbers), file sizes and times, and the authenticated file
   headers (schema version, change counts, newest change time). On the local
@@ -129,26 +171,21 @@ it while the phone has not been unlocked since a restart.
   and the discovery beacons (device id and name).
 * Anyone who sees the pairing QR code (or its text) can join the shared
   budget; the app warns when showing it.
-* A weak sync passphrase: the KDF slows guessing, but anyone with folder
-  access can try passphrases offline against the manifest.
+* A weak sync passphrase or backup password: the KDF slows guessing, but
+  anyone with the folder or the backup file can try passwords offline.
 * Data on screen while the app is unlocked.
-* Code running as the app on a rooted or exploited phone: the device key
-  needs no user authentication, so such code can open the database even
-  while the app lock is showing. (The app lock gates the UI only. This was
-  accepted in exchange for no master password to lose and for background
-  work.)
-* Strings and native copies of the key (SQLCipher holds its own copy while
-  the database is open) cannot be wiped from Dart.
+* Strings in memory cannot be wiped from Dart.
 * Plaintext exports once the user has shared them with another app.
-* Losing the phone (or a factory reset of the phone) loses the data unless
-  there is a backup or a second synced phone; the key never leaves the
-  device. A KeyStore failure alone is covered by the automatic backups
-  (Settings > Backup & Export): they are encrypted with a user-chosen
-  password, live in the app's external files folder and are kept by the
-  reset that such a failure forces ([BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md)).
+* **Losing the phone (or a factory reset of the phone) loses the data**
+  unless there is a backup file somewhere else or a second phone that
+  syncs; onboarding and the Backup screen say so. Automatic backups
+  (Settings > Backup & Export) live on the phone and go with it; they cover
+  a database that cannot be opened any more and are kept by the reset that
+  such a failure needs ([BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md)).
 
 ## 8. Privacy
 
 * No analytics or tracking SDKs; nothing is sent anywhere except to the cloud
   storage the user configured.
+* No cloud backup by Android (section 1).
 * The app works fully offline.

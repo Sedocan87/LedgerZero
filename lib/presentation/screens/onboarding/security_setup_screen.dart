@@ -180,6 +180,11 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
               ),
               const SizedBox(height: 16),
               Text(l10n.setupDeviceExplanation),
+              const SizedBox(height: 16),
+              Text(
+                l10n.dataLossWarning,
+                key: const Key('setup_data_loss_warning'),
+              ),
               const SizedBox(height: 24),
               SwitchListTile(
                 key: const Key('setup_app_lock'),

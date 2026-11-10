@@ -53,8 +53,9 @@ are deleted at the next run.
   `sync_device_id`, with a copy in `sync_kv.device_id` that wins when the
   two differ, so lost preferences do not orphan queued files; a restore
   strips the id from the restored database so another phone's backup
-  never clones it); the sequence is per device, monotonic, stored in the
-  encrypted database and never lower than the highest own sequence found in
+  never clones it, and an install that Android moved to a new phone drops
+  it at its first start, see SECURITY.md); the sequence is per device,
+  monotonic, stored in the database and never lower than the highest own sequence found in
   the folder (so a restored database cannot reuse a name).
 * Every remote name is validated with a strict regex and `basename` checks
   (`SyncFileName.tryParse`) before anything else; anything else is ignored
@@ -81,7 +82,7 @@ value (a known constant encrypted with the key) are in
   explains that it is needed on every device and cannot be recovered.
 * Further devices: the user enters the passphrase; a wrong one fails the
   key check and is rejected.
-* The derived key is stored only in the encrypted database (`sync_kv`), never
+* The derived key is stored only in the database (`sync_kv`), never
   in SharedPreferences or files. Each run verifies it against the manifest;
   if the folder was reset (other `syncId`) the key is forgotten and the user
   is asked again.

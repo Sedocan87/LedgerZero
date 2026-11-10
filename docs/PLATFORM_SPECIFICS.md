@@ -32,7 +32,7 @@ This document outlines the platform-specific implementations, configurations, an
 - **Permissions** (`android/app/src/main/AndroidManifest.xml`):
   - `INTERNET`: Required for cloud synchronization (Google Drive).
   - `ACCESS_NETWORK_STATE`: Used to detect Wi-Fi vs. cellular connections.
-  - `USE_BIOMETRIC`: Required for `BiometricPrompt` (biometric unlock).
+  - `USE_BIOMETRIC`: Required for `BiometricPrompt` (the app lock).
   - `VIBRATE`: For haptic feedback.
   - `POST_NOTIFICATIONS`: For local notifications (sync alerts, reminders).
     Asked when a notification is first needed (a reminder is scheduled, a
@@ -69,9 +69,17 @@ This document outlines the platform-specific implementations, configurations, an
 iOS is not supported in v1. The Flutter code and the `ios/` project stay in
 the repository, but iOS is not built, tested or documented.
 
-## Biometric Authentication
-- **Implementation**: app-owned platform code behind the `com.ledgerzero.app/biometric_key` method channel (`lib/services/security/biometric_key_store.dart`); see [ENCRYPTION.md](ENCRYPTION.md#biometric-unlock).
-- **Android**: `BiometricKeyChannel.kt` (Keystore key + `BiometricPrompt.CryptoObject`, BIOMETRIC_STRONG, `androidx.biometric`). `MainActivity.kt` extends `FlutterFragmentActivity`, as `BiometricPrompt` requires, and sets `FLAG_SECURE`.
+## App lock (biometric authentication)
+- **Implementation**: `lib/services/security/app_lock_authenticator.dart` behind the `com.ledgerzero.app/app_lock` method channel; see [ENCRYPTION.md](ENCRYPTION.md#app-lock). It gates the UI only and releases no key.
+- **Android**: `AppLockChannel.kt` (`BiometricPrompt` without a CryptoObject: BIOMETRIC_STRONG or DEVICE_CREDENTIAL, below API 30 BIOMETRIC_WEAK or DEVICE_CREDENTIAL; `androidx.biometric`). `MainActivity.kt` extends `FlutterFragmentActivity`, as `BiometricPrompt` requires, and sets `FLAG_SECURE`.
 
 ## File System Access
-- **Path Provider**: The encrypted database (`db.sqlite`) lives in the application documents directory. Exports, backups being built and restores in progress use the temporary/cache directory (not backed up); diagnostic logs use the cache directory.
+- **Path Provider**: The database (`db.sqlite`, a plain SQLite file) lives in the application documents directory (`app_flutter/` in the app's private storage). Exports, backups being built and restores in progress use the temporary/cache directory (not backed up); diagnostic logs use the cache directory.
+- **No-backup directory**: `Context.getNoBackupFilesDir()` (method channel `com.ledgerzero.app/install`, `MainActivity.kt`) holds the install marker that tells a moved install from the original; Android never backs it up or moves it.
+
+## Backup and moving to a new phone (Android)
+- `android:allowBackup="true"`, `android:dataExtractionRules="@xml/data_extraction_rules"` (Android 12+), `android:fullBackupContent="@xml/backup_rules"` (Android 7–11; `res/xml-v28/backup_rules.xml` for 9–11).
+- **Cloud backup**: nothing on any version. Each rule file includes only a file that never exists (Android 12+, 7–8.1) or only files that require `requireFlags="deviceToDeviceTransfer"` (9–11), so a cloud backup is always empty.
+- **Device-to-device transfer**: `app_flutter/db.sqlite`, `app_flutter/db.sqlite-wal` (domain `root`) and `FlutterSharedPreferences.xml` (domain `sharedpref`) on Android 9 and later. Android 7.0–8.1 ignore `requireFlags` (it needs API 28), so transfer and cloud backup cannot be told apart there and nothing is transferred.
+- Left out on purpose: the flutter_secure_storage files (KeyStore-encrypted; the key cannot move), the card capture store (`ledgerzero_capture.xml`, KeyStore-encrypted), the cache, exports, the sync folder and the automatic backups (external storage).
+- A moved install gets a new sync device id at its first start; see [SECURITY.md](SECURITY.md#android-backup-and-moving-to-a-new-phone) and [BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md#7-moving-to-a-new-phone). Verifying the transfer needs two real phones (`adb shell bmgr` can simulate a transport but not a real transfer).

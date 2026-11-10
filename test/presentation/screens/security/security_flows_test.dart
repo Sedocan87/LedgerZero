@@ -130,9 +130,8 @@ void main() {
       await prefs.setBool('user_onboarded', false);
     });
 
-    testWidgets('opens the session and offers the app lock', (
-      tester,
-    ) async {
+    testWidgets('opens the session, offers the app lock and says that the '
+        'data is lost with the phone', (tester) async {
       final container = await pumpApp(tester, const SecuritySetupScreen());
       await tester.pumpAndSettle();
       expect(
@@ -142,6 +141,7 @@ void main() {
         isTrue,
         reason: 'on by default when the phone has a screen lock',
       );
+      expect(find.byKey(const Key('setup_data_loss_warning')), findsOneWidget);
 
       await tester.tap(find.text('Continue'));
       await waitUntil(tester, () => shows('first account'));

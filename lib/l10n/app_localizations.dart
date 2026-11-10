@@ -4852,7 +4852,7 @@ abstract class AppLocalizations {
   /// FAQ answer
   ///
   /// In en, this message translates to:
-  /// **'Your data is stored only on your phone, in an encrypted database whose key is kept in the phone’s secure hardware (Android KeyStore). The app lock adds your fingerprint, face or phone PIN. Synced data is encrypted before it leaves the phone. There are no LedgerZero servers, no tracking and no analytics.'**
+  /// **'Your data is stored only on your phone, in LedgerZero’s private app storage, which Android keeps away from other apps and protects with your screen lock. The app lock adds your fingerprint, face or phone PIN. Backups and synced data are encrypted with your password or passphrase before they leave the phone. There are no LedgerZero servers, no account, no tracking and no analytics.'**
   String get faqSafeA;
 
   /// FAQ question
@@ -5026,7 +5026,7 @@ abstract class AppLocalizations {
   /// Onboarding benefit
   ///
   /// In en, this message translates to:
-  /// **'Stored on your device and encrypted.'**
+  /// **'Stored only on your device. No account, no cloud.'**
   String get onbBenefitDataBody;
 
   /// Onboarding benefit
@@ -5062,13 +5062,13 @@ abstract class AppLocalizations {
   /// Onboarding privacy point
   ///
   /// In en, this message translates to:
-  /// **'All data is encrypted on your device with AES-256.'**
+  /// **'Backups and sync files are encrypted with your password or passphrase.'**
   String get onbPrivacyEncrypted;
 
   /// Onboarding privacy point
   ///
   /// In en, this message translates to:
-  /// **'We never see your financial data. Sync runs through your own Google Drive, end-to-end encrypted.'**
+  /// **'We never see your financial data. Sync runs over your own Wi-Fi or through your own Google Drive, end-to-end encrypted.'**
   String get onbPrivacyOwnCloud;
 
   /// App bar title of the onboarding budgeting explanation
@@ -6106,7 +6106,7 @@ abstract class AppLocalizations {
   /// No description provided for @setupDeviceExplanation.
   ///
   /// In en, this message translates to:
-  /// **'Your budget is stored only on this phone, encrypted with a key that Android keeps in its secure key store. There is no account and no password to remember. So you don\'t lose anything with your phone, create backups or sync with a second phone.'**
+  /// **'Your budget is stored only on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. There is no account, no cloud and no tracking. The app lock can also ask for your fingerprint, face or phone PIN.'**
   String get setupDeviceExplanation;
 
   /// No description provided for @providerLocalWifi.
@@ -6856,7 +6856,7 @@ abstract class AppLocalizations {
   /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Your data is stored encrypted on your phone, and the key is kept in the phone’s secure hardware. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. Create encrypted backups regularly in Settings > Backup & Export and keep the backup password safe: without it a backup cannot be restored.'**
+  /// **'Your data is stored only on your phone, in LedgerZero’s private app storage, protected by Android and your screen lock. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. If the phone is lost or reset, the data is gone with it: create encrypted backups regularly in Settings > Backup & Export, copy them off the phone, and keep the backup password safe: without it a backup cannot be restored.'**
   String get guideSecurityBody;
 
   /// User guide chapter title
@@ -7432,7 +7432,7 @@ abstract class AppLocalizations {
   /// Backup screen, automatic backups explanation
   ///
   /// In en, this message translates to:
-  /// **'Once a day the app saves an encrypted backup on this phone and keeps the last {count}. It uses the backup password you choose here and can be restored even when the app’s key is lost. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.'**
+  /// **'Once a day the app saves an encrypted backup on this phone and keeps the last {count}. It uses the backup password you choose here, and a backup restores like any other. Copy the folder to a computer now and then: a lost or reset phone takes these backups with it.'**
   String autoBackupExplanation(int count);
 
   /// Switch title
@@ -8283,6 +8283,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The backup password is no longer stored on this phone (for example after moving to a new phone). Turn automatic backups off and on again to enter it.'**
   String get autoBackupPasswordMissing;
+
+  /// Onboarding (security step) and Backup screen: the data exists only on the phone
+  ///
+  /// In en, this message translates to:
+  /// **'If this phone is lost or reset, your budget is gone, unless a backup file is kept somewhere else or a second phone syncs with this one.'**
+  String get dataLossWarning;
 }
 
 class _AppLocalizationsDelegate

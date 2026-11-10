@@ -2,7 +2,7 @@
 
 **Goal:** a privacy-first, one-time-purchase envelope budgeting app for Android. It should be good enough that someone tired of YNAB's subscription would pay €29–49 for it.
 
-**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, encrypted local database, backup and restore, sync via Google Drive or phone to phone on the home Wi-Fi. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
+**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, local database on the phone (no account, no cloud, no tracking), app lock, encrypted backup and restore, sync via Google Drive or phone to phone on the home Wi-Fi. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
 
 **Out of scope for v1:** PDF/OCR import, ML categorisation, Mint import, desktop and web, home-screen widgets. All of these were removed on the `slim-down` branch and remain in `main`'s history if needed later.
 
@@ -22,7 +22,7 @@
 - [x] **`BudgetingService` audit.** One budget identity (balances, activity, TBB) with an invariant test (`budget_invariant_test.dart`) and table-driven tests; dates are UTC calendar days.
 - [x] **Round-trip tests.** Backup → restore (`backup_restore_roundtrip_test.dart`, plus on-device), CSV export → import (`csv_round_trip_test.dart`), YNAB import tests, undo round trips.
 
-**Security**
+**Security** (the database encryption below was removed in 2026-11: the database is a plain SQLite file in the app's private storage, backups and sync stay encrypted; see docs/SECURITY.md)
 - [x] **Fail closed.** The connection refuses to open without a key and checks `PRAGMA cipher_version` (`lib/data/database/sqlcipher.dart`).
 - [x] **Raw hex key.** A random 256-bit data key is passed as `PRAGMA key = "x'…'"`.
 - [x] **Key handling reviewed.** Key vault with Argon2id (46 MiB, 2 passes) password wrapping, independent recovery key, optional hardware-bound biometric wrap; password change only re-wraps; legacy installs migrate on first login (`lib/services/security/key_vault.dart`, docs/ENCRYPTION.md).
@@ -41,7 +41,7 @@
 - [x] **Integration tests** (onboarding → budget, relaunch/unlock, CSV import, lock; backup/restore; v14 → v17 upgrade) pass on the iOS Simulator and an Android emulator.
 - [ ] **Manual smoke test on a real Android phone**, every flow from onboarding to sync (see the real-device list below).
 
-**Exit criteria:** all tests green ✅; money stored as integers ✅; encrypted DB verified on simulator/emulator ✅ and on real phones (open); two-device sync matrix on real devices (open); no crashes across a full manual run (open).
+**Exit criteria:** all tests green ✅; money stored as integers ✅; database, encrypted backups and app lock verified on simulator/emulator ✅ and on real phones (open); two-device sync matrix on real devices (open); no crashes across a full manual run (open).
 
 ## Audit fixes (2026-10)
 
@@ -116,15 +116,16 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 
 - [x] v1 is Android only; iCloud sync and backup removed (ios/ kept for later).
 - [x] Wi-Fi sync between paired phones (a household sharing one budget): QR pairing, signed local HTTP exchange of the encrypted change files, UDP discovery (docs/SYNC_ARCHITECTURE.md, "Local Wi-Fi").
-- [x] No master password: the database key is kept by the Android KeyStore (flutter_secure_storage) and the database opens at every start, also behind the app lock. App lock = fingerprint/face/device PIN (BiometricPrompt), a UI gate; auto-lock locks only the UI. Older installs unlock once with the password, recovery key or biometrics and move the key (docs/ENCRYPTION.md). Sync and backups stay end-to-end encrypted.
+- [x] No master password: the database key is kept by the Android KeyStore (flutter_secure_storage) and the database opens at every start, also behind the app lock. App lock = fingerprint/face/device PIN (BiometricPrompt), a UI gate; auto-lock locks only the UI. Older installs unlock once with the password, recovery key or biometrics and move the key (docs/ENCRYPTION.md). Sync and backups stay end-to-end encrypted. (Superseded 2026-11: no database key and no encrypted database any more; see docs/SECURITY.md.)
 
 ## Follow-ups
 
 **Real-device verification** (cannot be done on simulators/emulators)
 - [ ] App lock on real phones: fingerprint, face and PIN/pattern prompts (Pixel 8, Xiaomi), auto-lock, and removing the screen lock turning the app lock off.
-- [ ] One-time migration of the existing master-password installs on the Pixel 8 and the Xiaomi (take a backup first): unlock once, data intact, app lock on.
 - [ ] FLAG_SECURE on Android.
-- [ ] `flutter_secure_storage` v9 → v10 migration on a real Android install that has v9 data (then move to v11, which drops the migration).
+- [ ] `flutter_secure_storage` 11 on a real phone: automatic-backup password and Wi-Fi pairing kept across restarts; after a KeyStore reset they are forgotten and asked for again, the app starts normally.
+- [ ] Moving to a new phone with Android's device-to-device transfer (two real phones, Android 12+ and one on 9–11 if available): budget and settings arrive, Google's cloud backup holds nothing (`adb shell bmgr` / Settings > Backup), the new phone gets its own sync device id and both phones keep syncing; Wi-Fi pairing, Drive sign-in, card notifications and the automatic-backup password are set up again.
+- [ ] Restore of a backup on a real phone (plain database file swapped in, app reopens it without a restart).
 - [ ] Argon2id time (46 MiB, 2 passes) for the sync passphrase and backup password on a mid-range Android phone stays under ~1.5 s.
 - [ ] Two-device sync matrix with real accounts: Android↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
 - [ ] Wi-Fi sync on two real phones on a real home router: QR scan, discovery (routers that block broadcasts or client-to-client traffic), Xiaomi battery saver, merging the second phone's existing data.

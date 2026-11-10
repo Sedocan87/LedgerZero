@@ -1,10 +1,11 @@
 # LedgerZero
 
 LedgerZero is a local-first envelope budgeting app (zero-based, YNAB-style)
-for Android, in English and German. All data lives in an encrypted
-database on the phone. Phones sync over the home Wi-Fi or through the
-user's own Google Drive, and backups go to a file or to Drive, all end-to-end
-encrypted. No account, no server. It is planned as a one-time
+for Android, in English and German. Offline. No account, no cloud, no
+tracking. App lock with fingerprint. Backups and sync are encrypted. All
+data lives on the phone, in the app's private storage; phones sync over the
+home Wi-Fi or through the user's own Google Drive, and backups go to a file
+or to Drive, end-to-end encrypted with the user's password or passphrase. It is planned as a one-time
 purchase (see [ROADMAP.md](ROADMAP.md)). Version 0.1.0, not released yet.
 
 v1 is Android only. The Flutter code and the `ios/` project stay in the
@@ -38,25 +39,28 @@ presentation  Riverpod 2 providers, go_router, screens and widgets
 domain        entities, repository interfaces, services (TransactionService,
     |         BudgetingService, ...), undo, use cases
     |
-data          Drift database (SQLCipher), DAOs, repository implementations
+data          Drift database (SQLite), DAOs, repository implementations
 services      backup, sync, security, import/export, NLP, notifications, reports
 core          money, calendar dates, formatting helpers, constants, errors
 ```
 
-- **Database:** [Drift](https://drift.simonbinder.eu/) on SQLCipher (the
-  `sqlite3` package's build hook bundles SQLCipher, see `hooks:` in
-  `pubspec.yaml`). Schema version 20; see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
-  and [REPOSITORY_PATTERN.md](REPOSITORY_PATTERN.md).
+- **Database:** [Drift](https://drift.simonbinder.eu/) on SQLite (bundled
+  by the `sqlite3` package's build hook), a plain file in the app's private
+  storage. Schema version 20, also the baseline (older development schemas
+  are not upgraded); see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) and
+  [REPOSITORY_PATTERN.md](REPOSITORY_PATTERN.md).
 - **Money** is always an `int` of minor units (hundredths) for every
   currency; doubles exist only for chart coordinates and percentages
   (`lib/core/money/`). Balances, activity and To Be Budgeted are computed,
   never stored ([docs/BUDGETING_RULES.md](docs/BUDGETING_RULES.md)).
 - **Dates** are stored in UTC; date-only values are UTC midnight of the
   calendar day the user picked (`lib/core/time/`).
-- **Key vault:** a random 256-bit data key encrypts the database (raw hex
-  SQLCipher key). Without the key the database does not open. See
-  [docs/ENCRYPTION.md](docs/ENCRYPTION.md) and
-  [docs/SECURITY.md](docs/SECURITY.md).
+- **Security:** the database is protected by Android's app sandbox and the
+  phone's screen lock, not encrypted by the app; the optional app lock
+  gates the UI. Android's cloud backup is off; its device-to-device
+  transfer moves the budget to a new phone, which then becomes a sync
+  device of its own. See [docs/SECURITY.md](docs/SECURITY.md) and
+  [docs/ENCRYPTION.md](docs/ENCRYPTION.md).
 - **Sync v2:** each sync run uploads one AES-256-GCM encrypted change file
   to the user's Google Drive (`drive.file` scope); the key
   comes from a separate sync passphrase. Rows merge last-writer-wins by
@@ -214,7 +218,7 @@ docs/             design and user documentation
 | Budget maths, To Be Budgeted | [docs/BUDGETING_RULES.md](docs/BUDGETING_RULES.md), [docs/BUDGET_INTERACTIONS.md](docs/BUDGET_INTERACTIONS.md) |
 | Transactions, scheduled transactions, payees, rules | [docs/TRANSACTION_LIFECYCLE.md](docs/TRANSACTION_LIFECYCLE.md), [docs/SCHEDULED_TRANSACTIONS.md](docs/SCHEDULED_TRANSACTIONS.md), [docs/PAYEE_MANAGEMENT.md](docs/PAYEE_MANAGEMENT.md), [docs/RULES.md](docs/RULES.md) |
 | Quick add parser | [docs/NATURAL_LANGUAGE_FORMATS.md](docs/NATURAL_LANGUAGE_FORMATS.md) |
-| Encryption and security | [docs/ENCRYPTION.md](docs/ENCRYPTION.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ENCRYPTION_TROUBLESHOOTING.md](docs/ENCRYPTION_TROUBLESHOOTING.md) |
+| Encryption and security | [docs/SECURITY.md](docs/SECURITY.md), [docs/ENCRYPTION.md](docs/ENCRYPTION.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 | Sync | [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md), [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md), [docs/DELTA_SCHEMA_MIGRATION.md](docs/DELTA_SCHEMA_MIGRATION.md), [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md), [docs/OFFLINE_CAPABILITIES.md](docs/OFFLINE_CAPABILITIES.md) |
 | Backup, import, export | [docs/BACKUP_AND_EXPORT.md](docs/BACKUP_AND_EXPORT.md), [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md), [docs/CSV_FORMAT.md](docs/CSV_FORMAT.md), [docs/YNAB_MIGRATION.md](docs/YNAB_MIGRATION.md) |
 | Platform notes, errors | [docs/PLATFORM_SPECIFICS.md](docs/PLATFORM_SPECIFICS.md), [docs/ERROR_RECOVERY.md](docs/ERROR_RECOVERY.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |

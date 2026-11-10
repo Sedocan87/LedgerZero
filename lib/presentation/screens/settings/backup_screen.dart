@@ -768,6 +768,15 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            // The data exists only on this phone (docs/SECURITY.md).
+            Card(
+              key: const ValueKey('backupDataLossWarning'),
+              child: ListTile(
+                leading: const Icon(Icons.phone_android),
+                title: Text(l10n.dataLossWarning),
+              ),
+            ),
+            const SizedBox(height: 16),
             _buildAutoBackupSection(l10n),
             const SizedBox(height: 32),
             Text(
