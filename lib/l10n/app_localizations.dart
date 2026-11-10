@@ -8199,6 +8199,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The money could not be moved. Nothing was changed.'**
   String get moveMoneyFailed;
+
+  /// Factory reset, first dialog: paragraph after the warning that offers a backup first
+  ///
+  /// In en, this message translates to:
+  /// **'Make a backup first if you might want this data back.'**
+  String get factoryResetBackupOffer;
+
+  /// Factory reset, first dialog: button that opens Backup & Export instead of resetting
+  ///
+  /// In en, this message translates to:
+  /// **'Back up first'**
+  String get factoryResetBackUpFirst;
+
+  /// Factory reset from Settings, second dialog: the reset is enabled only after typing the confirmation word
+  ///
+  /// In en, this message translates to:
+  /// **'All data on this phone is deleted and the setup starts again. This cannot be undone. Type {word} to confirm.'**
+  String factoryResetTypeToConfirm(String word);
 }
 
 class _AppLocalizationsDelegate

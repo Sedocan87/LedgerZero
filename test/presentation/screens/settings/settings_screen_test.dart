@@ -292,12 +292,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Factory Reset'));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.text('Factory Reset'),
-      ),
+    await tester.tap(find.byKey(const Key('settings.factoryResetContinue')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('login_reset_confirm_field')),
+      'RESET',
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('login_reset_confirm')));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -307,6 +309,121 @@ void main() {
     );
     expect(find.byType(SettingsScreen), findsOneWidget);
   });
+
+  group('factory reset', () {
+    late _RecordingFactoryReset service;
+
+    /// Settings under a router with a stand-in Backup screen.
+    Future<void> pumpSettings(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      service = _RecordingFactoryReset();
+      final router = GoRouter(
+        initialLocation: '/settings',
+        routes: [
+          GoRoute(
+            path: '/settings',
+            builder: (_, _) => const SettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'backup',
+                builder: (_, _) => const Text('backup screen'),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/onboarding',
+            builder: (_, _) => const Text('onboarding'),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            factoryResetServiceProvider.overrideWithValue(service),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Factory Reset'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Factory Reset'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('needs the typed confirmation word', (tester) async {
+      await pumpSettings(tester);
+      expect(
+        find.textContaining(
+          'Make a backup first if you might want this data back.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('settings.factoryResetContinue')));
+      await tester.pumpAndSettle();
+
+      final confirm = find.byKey(const Key('login_reset_confirm'));
+      bool enabled() => tester.widget<TextButton>(confirm).onPressed != null;
+      expect(enabled(), isFalse);
+      await tester.enterText(
+        find.byKey(const Key('login_reset_confirm_field')),
+        'RESE',
+      );
+      await tester.pumpAndSettle();
+      expect(enabled(), isFalse);
+      await tester.enterText(
+        find.byKey(const Key('login_reset_confirm_field')),
+        'reset',
+      );
+      await tester.pumpAndSettle();
+      expect(enabled(), isTrue);
+      expect(service.resets, 0);
+
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(service.resets, 1);
+      expect(find.text('onboarding'), findsOneWidget);
+    });
+
+    testWidgets('"Back up first" opens Backup and resets nothing', (
+      tester,
+    ) async {
+      await pumpSettings(tester);
+      await tester.tap(
+        find.byKey(const Key('settings.factoryResetBackUpFirst')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('backup screen'), findsOneWidget);
+      expect(service.resets, 0);
+    });
+
+    testWidgets('Cancel resets nothing', (tester) async {
+      await pumpSettings(tester);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(service.resets, 0);
+    });
+  });
+}
+
+class _RecordingFactoryReset extends Fake implements FactoryResetService {
+  int resets = 0;
+
+  @override
+  Future<void> reset() async => resets++;
 }
 
 class _FailingFactoryReset extends Fake implements FactoryResetService {

@@ -15,6 +15,7 @@ import 'package:ledger_zero/presentation/providers/notification_capture_provider
 import 'package:ledger_zero/presentation/screens/settings/app_cache.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
+import 'package:ledger_zero/presentation/widgets/security/reset_app_dialog.dart';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -60,28 +61,57 @@ class SettingsScreen extends ConsumerWidget {
       }
     }
 
+    // First the warning with a way to back up, then the typed confirmation
+    // the lock-screen reset uses: a stray second tap must not wipe it all.
     Future<void> factoryReset(BuildContext context, WidgetRef ref) async {
-      final confirmed = await showDialog<bool>(
+      final step = await showDialog<_ResetStep>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(l10n.factoryResetTitle),
-          content: Text(l10n.factoryResetConfirmation),
+          content: Text(
+            '${l10n.factoryResetConfirmation}\n\n'
+            '${l10n.factoryResetBackupOffer}',
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(context),
               child: Text(l10n.cancel),
             ),
             TextButton(
+              key: const Key('settings.factoryResetBackUpFirst'),
+              onPressed: () => Navigator.pop(context, _ResetStep.backUp),
+              child: Text(l10n.factoryResetBackUpFirst),
+            ),
+            TextButton(
+              key: const Key('settings.factoryResetContinue'),
               style: TextButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.factoryReset),
+              onPressed: () => Navigator.pop(context, _ResetStep.reset),
+              child: Text(l10n.continueAction),
             ),
           ],
         ),
       );
-
+      if (!context.mounted) {
+        return;
+      }
+      if (step == _ResetStep.backUp) {
+        unawaited(context.push('/settings/backup'));
+        return;
+      }
+      if (step != _ResetStep.reset) {
+        return;
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => ResetAppDialog(
+          l10n: l10n,
+          title: l10n.factoryResetTitle,
+          body: l10n.factoryResetTypeToConfirm(l10n.loginResetConfirmWord),
+          confirmLabel: l10n.factoryReset,
+        ),
+      );
       if (confirmed != true) {
         return;
       }
@@ -660,6 +690,9 @@ class _BackHomeButton extends StatelessWidget {
     );
   }
 }
+
+/// The answer to the first factory-reset dialog.
+enum _ResetStep { backUp, reset }
 
 class _SelectionWrapper {
   final String? value;

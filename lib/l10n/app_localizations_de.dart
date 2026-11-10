@@ -5196,4 +5196,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get moveMoneyFailed =>
       'Das Geld konnte nicht verschoben werden. Es wurde nichts geändert.';
+
+  @override
+  String get factoryResetBackupOffer =>
+      'Erstellen Sie zuerst eine Sicherung, falls Sie diese Daten noch einmal brauchen könnten.';
+
+  @override
+  String get factoryResetBackUpFirst => 'Zuerst sichern';
+
+  @override
+  String factoryResetTypeToConfirm(String word) {
+    return 'Alle Daten auf diesem Telefon werden gelöscht, und die Einrichtung beginnt von vorn. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
+  }
 }

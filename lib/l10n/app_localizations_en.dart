@@ -5157,4 +5157,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get moveMoneyFailed =>
       'The money could not be moved. Nothing was changed.';
+
+  @override
+  String get factoryResetBackupOffer =>
+      'Make a backup first if you might want this data back.';
+
+  @override
+  String get factoryResetBackUpFirst => 'Back up first';
+
+  @override
+  String factoryResetTypeToConfirm(String word) {
+    return 'All data on this phone is deleted and the setup starts again. This cannot be undone. Type $word to confirm.';
+  }
 }
