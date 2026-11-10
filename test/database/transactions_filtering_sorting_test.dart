@@ -213,5 +213,75 @@ void main() {
       expect(results[0].id, 't1'); // Groceries
       expect(results[1].id, 't2'); // Shopping
     });
+
+    group('a stable order within a day (ledger improvement 2)', () {
+      // Same day, inserted in this order; created_at says which was
+      // entered first, the id breaks a remaining tie.
+      setUp(() async {
+        final day = DateTime.utc(2025, 2, 1);
+        for (final (id, created) in [
+          ('s-b', DateTime.utc(2025, 2, 1, 8)),
+          ('s-c', DateTime.utc(2025, 2, 1, 9)),
+          ('s-a', DateTime.utc(2025, 2, 1, 9)),
+          ('s-d', DateTime.utc(2025, 2, 1, 10)),
+        ]) {
+          await transactionsDao.insertTransaction(
+            TransactionsCompanion(
+              id: Value(id),
+              accountId: const Value('acc1'),
+              date: Value(day),
+              amount: const Value(-100),
+              createdAt: Value(created),
+            ),
+          );
+        }
+      });
+
+      const sameDay = TransactionFilter(accountIds: ['acc1']);
+      Future<List<String>> ids(TransactionSort? sort, {int? limit}) async => [
+        for (final t in await transactionsDao.getTransactions(
+          filter: sameDay,
+          sort: sort,
+          limit: limit,
+        ))
+          if (t.id.startsWith('s-')) t.id,
+      ];
+
+      test(
+        'newest first: the latest entered row of a day comes first',
+        () async {
+          expect(await ids(null), ['s-d', 's-c', 's-a', 's-b']);
+          expect(
+            await ids(
+              const TransactionSort(
+                field: TransactionSortField.date,
+                ascending: false,
+              ),
+            ),
+            ['s-d', 's-c', 's-a', 's-b'],
+          );
+        },
+      );
+
+      test('oldest first reverses it', () async {
+        expect(
+          await ids(const TransactionSort(field: TransactionSortField.date)),
+          ['s-b', 's-a', 's-c', 's-d'],
+        );
+      });
+
+      test('equal amounts keep the date order', () async {
+        expect(
+          await ids(const TransactionSort(field: TransactionSortField.amount)),
+          ['s-d', 's-c', 's-a', 's-b'],
+        );
+      });
+
+      test('a page is a prefix of the next, larger page', () async {
+        final all = await ids(null);
+        expect(await ids(null, limit: 2), all.take(2).toList());
+        expect(await ids(null, limit: 3), all.take(3).toList());
+      });
+    });
   });
 }
