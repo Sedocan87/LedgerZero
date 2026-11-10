@@ -5198,4 +5198,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ruleListUnevaluable =>
       'Never matches: a condition compares a field in a way it does not support. Tap to fix.';
+
+  @override
+  String get payeeNameTakenTitle => 'Name already in use';
+
+  @override
+  String payeeNameTakenMessage(String name) {
+    return 'A payee named \"$name\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"$name\".';
+  }
 }

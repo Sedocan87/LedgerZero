@@ -4061,5 +4061,9 @@
   "ruleSaveUnevaluableCondition": "Delete the conditions marked \"Never matches\" first.",
   "@ruleSaveUnevaluableCondition": {"description": "Rule editor: snackbar when saving a rule that still has a condition that can never match"},
   "ruleListUnevaluable": "Never matches: a condition compares a field in a way it does not support. Tap to fix.",
-  "@ruleListUnevaluable": {"description": "Rules list: subtitle of a rule with a condition that can never match"}
+  "@ruleListUnevaluable": {"description": "Rules list: subtitle of a rule with a condition that can never match"},
+  "payeeNameTakenTitle": "Name already in use",
+  "@payeeNameTakenTitle": {"description": "Payee detail: title of the dialog when renaming a payee to the name of another payee"},
+  "payeeNameTakenMessage": "A payee named \"{name}\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"{name}\".",
+  "@payeeNameTakenMessage": {"description": "Payee detail: rename refused because another payee has the name; offers to merge", "placeholders": {"name": {"type": "String"}}}
 }

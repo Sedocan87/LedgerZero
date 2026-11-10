@@ -8253,6 +8253,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Never matches: a condition compares a field in a way it does not support. Tap to fix.'**
   String get ruleListUnevaluable;
+
+  /// Payee detail: title of the dialog when renaming a payee to the name of another payee
+  ///
+  /// In en, this message translates to:
+  /// **'Name already in use'**
+  String get payeeNameTakenTitle;
+
+  /// Payee detail: rename refused because another payee has the name; offers to merge
+  ///
+  /// In en, this message translates to:
+  /// **'A payee named \"{name}\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"{name}\".'**
+  String payeeNameTakenMessage(String name);
 }
 
 class _AppLocalizationsDelegate

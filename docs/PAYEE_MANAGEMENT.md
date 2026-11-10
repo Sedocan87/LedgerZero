@@ -29,6 +29,14 @@ existing "Corner Shop".
 ## Payee detail
 
 * Rename, favourite (star), icon, colour, notes.
+* **Rename** (`PayeeService.renamePayee`): a name that another payee
+  already has (ignoring case) is refused, because two payees with one name
+  cannot be told apart when the name is typed, imported or matched by a
+  rule; the dialog offers to merge into that payee instead. Rule conditions
+  "Payee is <old name>" are changed to the new name in the same unit of
+  work, unless another payee still has the old name (a duplicate from
+  before names were checked). Conditions with "contains", "starts with",
+  "ends with" or a pattern are left as typed.
 * **Auto category**: the category pre-filled when this payee is picked in
   a new outflow (an inflow stays in To Be Budgeted unless a category is
   picked for it). It is also learned: saving a new transaction with this
@@ -52,7 +60,10 @@ Menu > Merge on the payee to remove (the source), then pick the target.
    transactions (including soft-deleted ones), scheduled transactions,
    quick-add parsing rules and parsing history;
 2. rule actions that set the source payee are changed to the target;
-3. the source payee is deleted.
+3. the source payee is deleted;
+4. rule conditions "Payee is <source name>" are changed to the target's
+   name (unless another payee still has the source's name), so a rule such
+   as the suggested "Rewe -> Groceries" keeps matching.
 
 Merging is not on the undo stack; the confirmation dialog says so.
 

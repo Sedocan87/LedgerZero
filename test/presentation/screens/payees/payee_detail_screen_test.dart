@@ -248,4 +248,98 @@ void main() {
 
     await unmount(tester);
   });
+
+  group('rename (ledger F6)', () {
+    /// The screen pushed above a home route, so leaving it can be seen.
+    Future<void> pumpPushed(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(t.db),
+            appFormatterProvider.overrideWithValue(fmt),
+          ],
+          child: MaterialApp(
+            navigatorKey: navigator,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const Text('home', key: Key('home')),
+          ),
+        ),
+      );
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const PayeeDetailScreen(payeeId: 'p'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// Lets the database work started by a tap finish.
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pumpAndSettle();
+      }
+    }
+
+    Future<void> renameTo(WidgetTester tester, String name) async {
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rename'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(TextField),
+        ),
+        name,
+      );
+      await tester.tap(find.byTooltip('Save'));
+      await settle(tester);
+    }
+
+    testWidgets('a name another payee has is refused; Merge merges into '
+        'that payee', (tester) async {
+      await t.payees.createPayee(const Payee(id: 'other', name: 'Corner'));
+      await t.addTransaction(
+        id: 'tx',
+        accountId: 'eur',
+        amount: -100,
+        date: day,
+        payeeId: 'p',
+      );
+      await pumpPushed(tester);
+      await renameTo(tester, 'corner');
+      expect(find.byKey(const Key('payee.nameTaken')), findsOneWidget);
+      expect(
+        (await tester.runAsync(() => t.payees.getPayeeById('p')))!.name,
+        'Shop',
+      );
+
+      await tester.tap(find.byKey(const Key('payee.nameTaken.merge')));
+      await settle(tester);
+      expect(find.byKey(const Key('home')), findsOneWidget);
+      expect(await t.payees.getPayeeById('p'), isNull);
+      expect((await t.transactions.getTransactionById('tx'))!.payeeId, 'other');
+      await unmount(tester);
+    });
+
+    testWidgets('a free name is saved', (tester) async {
+      await pumpPushed(tester);
+      await renameTo(tester, 'Shop North');
+      expect(find.byKey(const Key('payee.nameTaken')), findsNothing);
+      expect(
+        (await tester.runAsync(() => t.payees.getPayeeById('p')))!.name,
+        'Shop North',
+      );
+      await unmount(tester);
+    });
+  });
 }

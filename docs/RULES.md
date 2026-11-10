@@ -16,7 +16,9 @@ Each rule consists of:
 ## Conditions
 
 Supported conditions include:
--   **Payee**: Matches the payee name (e.g., "Uber").
+-   **Payee**: Matches the payee name (e.g., "Uber"). Renaming or merging
+    the payee carries "Payee is <name>" conditions over to the new name
+    (see PAYEE_MANAGEMENT.md); patterns ("contains" etc.) stay as typed.
 -   **Amount**: Compares the *signed* amount in minor units: an outflow is
     negative, so "Amount less than -50.00" matches spending above 50 and
     "Amount greater than 0" matches inflows. The rule editor's field is

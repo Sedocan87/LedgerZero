@@ -5238,4 +5238,12 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get ruleListUnevaluable =>
       'Trifft nie zu: Eine Bedingung vergleicht ein Feld auf eine nicht unterstützte Weise. Tippen Sie zum Korrigieren.';
+
+  @override
+  String get payeeNameTakenTitle => 'Name bereits vergeben';
+
+  @override
+  String payeeNameTakenMessage(String name) {
+    return 'Es gibt bereits einen Empfänger „$name“. Möchten Sie diesen Empfänger mit ihm zusammenführen? Seine Transaktionen, Planungen und Regeln verwenden dann „$name“.';
+  }
 }
