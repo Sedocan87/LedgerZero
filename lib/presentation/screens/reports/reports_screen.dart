@@ -23,6 +23,7 @@ import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 import 'package:ledger_zero/services/export/csv_sanitizer.dart';
 import 'package:ledger_zero/services/reports/report_export_service.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_bar_title.dart';
 
 enum ReportType {
   spendingTrends,
@@ -328,7 +329,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.reports),
+        title: AppBarTitle(l10n.reports),
         actions: [
           const ReportCategoryFilter(),
           IconButton(

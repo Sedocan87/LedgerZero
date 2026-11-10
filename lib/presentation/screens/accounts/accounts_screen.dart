@@ -18,6 +18,7 @@ import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_sort_provider.dart';
 import 'package:ledger_zero/presentation/screens/accounts/providers/account_filter_provider.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_bar_title.dart';
 
 /// Remembers that the hint above the partner's accounts was dismissed.
 const partnerAccountsHintKey = 'hint_partner_accounts_seen';
@@ -61,7 +62,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                       .update((state) => state.copyWith(searchQuery: value));
                 },
               )
-            : Text(l10n.accounts),
+            : AppBarTitle(l10n.accounts),
         actions: [
           if (_isSearching)
             IconButton(

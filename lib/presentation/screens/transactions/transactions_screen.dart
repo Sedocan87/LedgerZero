@@ -16,6 +16,7 @@ import 'package:ledger_zero/presentation/screens/transactions/widgets/transactio
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
 import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 import 'package:ledger_zero/presentation/widgets/common/settings_action.dart';
+import 'package:ledger_zero/presentation/widgets/common/app_bar_title.dart';
 
 /// The transaction list: the Transactions tab (persisted filter and sort),
 /// or a list with a [fixedFilter] (e.g. a category's activity from the
@@ -364,7 +365,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   Widget _buildAppBarTitle(TransactionsState state, AppLocalizations l10n) {
     if (state.isMultiSelectMode) {
-      return Text(l10n.selectedCount(state.selectedTransactionIds.length));
+      return AppBarTitle(
+        l10n.selectedCount(state.selectedTransactionIds.length),
+      );
     }
     if (_isSearchMode) {
       return TextField(
@@ -378,7 +381,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ref.read(_provider.notifier).updateSearchQuery(value),
       );
     }
-    return Text(widget.fixedFilter?.title ?? l10n.transactions);
+    return AppBarTitle(widget.fixedFilter?.title ?? l10n.transactions);
   }
 
   Widget? _buildAppBarLeading(TransactionsState state) {
