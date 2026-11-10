@@ -87,8 +87,8 @@ void main() {
     );
     addTearDown(scoped.dispose);
     scoped.listen(transactionsProvider, (_, _) {});
-    final args = FilteredTransactionsArgs(
-      filter: const TransactionFilter(accountIds: ['a']),
+    const args = FilteredTransactionsArgs(
+      filter: TransactionFilter(accountIds: ['a']),
       title: 'Activity',
     );
     scoped.listen(filteredTransactionsProvider(args), (_, _) {});
