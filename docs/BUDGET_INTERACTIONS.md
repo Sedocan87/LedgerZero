@@ -25,23 +25,46 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
   section.
 * App bar: search (filters categories by name), view mode toggle, manage
   categories (`/budget/categories`), and a menu with save as template, apply
-  template, copy from previous month and reset budget.
+  template, copy from previous month and reset budget. While the search is
+  open, the system back button closes it and clears the filter; the next
+  back leaves the screen.
+* **Row layout.** On a phone the name and three amounts do not fit side by
+  side (at 360 dp even "250,00 €" was cut off), so below 460 dp of row
+  content (`budgetRowIsCompact`) the category name has its own line and
+  Budgeted, Activity and Available sit under it in three equal columns; the
+  column header and the totals footer use the same columns. From 460 dp on
+  (tablets, landscape) the row is one line, 3:2:2:2. In both layouts an
+  amount is never ellipsised: it uses tabular figures and, if it is still
+  wider than its cell (six digits, a large font scale), it is scaled down
+  to fit. `test/presentation/screens/budget/widgets/budget_row_fit_test.dart`
+  checks this with real Roboto metrics at 360 and 412 dp.
+* Rows are keyed by category id, and a sheet or dialog opened from a row
+  keeps the category, the month and the services it needs from the moment
+  it opened. A sync that adds, hides or deletes a category while the
+  calculator is open therefore cannot redirect the amount to another
+  category or lose it.
 
 View modes (`BudgetViewMode`):
 
 * **standard**: Budgeted, Activity and Available columns.
-* **comparison**: a "spent of budgeted" progress bar per category.
+* **comparison**: a "spent of budgeted" progress bar per category. "Spent"
+  is net spending, `max(0, -activity)`: a category whose refunds exceed its
+  spending shows 0, not the refund as overspending.
 
 ## Assigning money to a category
 
 1. In standard mode, tap the Budgeted cell. A calculator bottom sheet
    (`BudgetCalculator`) opens with the current value; it accepts an amount
    or an arithmetic expression.
-2. On submit, `BudgetingService.setCategoryBudgetedAmount` writes the
-   month's budget row (created with its deterministic id if missing). A
-   negative result is rejected with a message (it would raise To Be
-   Budgeted).
-3. A `BudgetChangeAction` is pushed on the undo stack and a snackbar offers
+2. OK parses the input before the sheet closes. An unfinished or
+   impossible expression (`50+`, `5/0`) and a negative result (it would
+   raise To Be Budgeted) keep the calculator open with a message under the
+   value; the next key clears the message.
+3. `BudgetingService.setCategoryBudgetedAmount` writes the month's budget
+   row (created with its deterministic id if missing). If the write fails
+   (the category was deleted by sync meanwhile), the generic error snackbar
+   is shown; the same goes for the quick actions.
+4. A `BudgetChangeAction` is pushed on the undo stack and a snackbar offers
    Undo. If the undo fails (the category was deleted meanwhile), the
    generic error snackbar is shown.
 
@@ -60,7 +83,9 @@ The first four record an undo action like a manual edit. The goal-based
 ## Moving money
 
 `MoveMoneyModal` asks for source category, target category and a positive
-amount; source and target must differ. Hidden categories are not offered,
+amount; source and target must differ. That message and a failed write are
+shown inside the sheet, above the Save button (a snack bar would appear on
+the screen underneath, hidden by the sheet). Hidden categories are not offered,
 except the one the modal was opened from (so money can be moved out of a
 hidden category from the Hidden categories section). `BudgetingService.moveMoney`
 decrements the source's and increments the target's budget for the selected

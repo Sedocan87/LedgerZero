@@ -5192,4 +5192,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String budgetTemplateDeleted(String name) {
     return 'Vorlage „$name“ gelöscht';
   }
+
+  @override
+  String get moveMoneyFailed =>
+      'Das Geld konnte nicht verschoben werden. Es wurde nichts geändert.';
 }

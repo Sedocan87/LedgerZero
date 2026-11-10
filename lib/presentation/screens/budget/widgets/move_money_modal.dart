@@ -33,6 +33,10 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
   String? _toCategoryId;
   bool _isLoading = false;
 
+  /// Shown above the button. A snack bar would appear on the screen
+  /// underneath, hidden by this sheet, and the button would seem dead.
+  String? _error;
+
   @override
   void initState() {
     super.initState();
@@ -56,16 +60,15 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
 
     // Prevent moving to same category
     if (_fromCategoryId == _toCategoryId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.moveMoneySameCategory),
-        ),
-      );
+      setState(() {
+        _error = AppLocalizations.of(context)!.moveMoneySameCategory;
+      });
       return;
     }
 
     setState(() {
       _isLoading = true;
+      _error = null;
     });
 
     try {
@@ -122,9 +125,9 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
     } catch (e, st) {
       Logger.error('Action failed', e, st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
-        );
+        setState(() {
+          _error = AppLocalizations.of(context)!.moveMoneyFailed;
+        });
       }
     } finally {
       if (mounted) {
@@ -175,7 +178,10 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  key: ValueKey(_fromCategoryId),
+                  // Not the bare id: with the same category picked in
+                  // both fields the two siblings would share a key, which
+                  // breaks the sheet before "must be different" is shown.
+                  key: ValueKey('from:$_fromCategoryId'),
                   initialValue: _fromCategoryId,
                   // Long "Group: Category" names ellipsize on phones.
                   isExpanded: true,
@@ -197,6 +203,7 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                   onChanged: (value) {
                     setState(() {
                       _fromCategoryId = value;
+                      _error = null;
                     });
                   },
                   validator: (value) => value == null
@@ -205,7 +212,7 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  key: ValueKey(_toCategoryId),
+                  key: ValueKey('to:$_toCategoryId'),
                   initialValue: _toCategoryId,
                   // Long "Group: Category" names ellipsize on phones.
                   isExpanded: true,
@@ -227,6 +234,7 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                   onChanged: (value) {
                     setState(() {
                       _toCategoryId = value;
+                      _error = null;
                     });
                   },
                   validator: (value) => value == null
@@ -250,6 +258,19 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
                     return null;
                   },
                 ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      _error!,
+                      key: const Key('moveMoney.error'),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 AppButton.primary(
                   label: AppLocalizations.of(context)!.save,

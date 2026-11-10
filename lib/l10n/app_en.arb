@@ -4041,5 +4041,7 @@
   "budgetTemplateDeleteAutoFill": "New months are filled automatically from this template. After deleting it they are filled like the month before.",
   "@budgetTemplateDeleteAutoFill": {"description": "Extra paragraph of the delete-template confirmation when 'Fill new months automatically' uses the template"},
   "budgetTemplateDeleted": "Template \"{name}\" deleted",
-  "@budgetTemplateDeleted": {"description": "Snackbar after a budget template was deleted", "placeholders": {"name": {"type": "String"}}}
+  "@budgetTemplateDeleted": {"description": "Snackbar after a budget template was deleted", "placeholders": {"name": {"type": "String"}}},
+  "moveMoneyFailed": "The money could not be moved. Nothing was changed.",
+  "@moveMoneyFailed": {"description": "Move money sheet: error shown above the Save button when the write failed"}
 }

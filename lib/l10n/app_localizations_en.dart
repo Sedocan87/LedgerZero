@@ -5153,4 +5153,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String budgetTemplateDeleted(String name) {
     return 'Template \"$name\" deleted';
   }
+
+  @override
+  String get moveMoneyFailed =>
+      'The money could not be moved. Nothing was changed.';
 }

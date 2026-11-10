@@ -8193,6 +8193,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Template \"{name}\" deleted'**
   String budgetTemplateDeleted(String name);
+
+  /// Move money sheet: error shown above the Save button when the write failed
+  ///
+  /// In en, this message translates to:
+  /// **'The money could not be moved. Nothing was changed.'**
+  String get moveMoneyFailed;
 }
 
 class _AppLocalizationsDelegate

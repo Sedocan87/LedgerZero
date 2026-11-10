@@ -127,4 +127,75 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('the same source and target is refused with a message inside '
+      'the sheet, not on the screen under it', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final t = TestDatabase();
+    addTearDown(t.close);
+    final month = DateTime.utc(2024, 5);
+    final groceries = await t.categoryId('Groceries');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(t.db),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          selectedBudgetMonthProvider.overrideWith((ref) => month),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => MoveMoneyModal(
+                    initialFromCategoryId: groceries,
+                    initialToCategoryId: groceries,
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).last, '100');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    const message = 'Source and destination categories must be different';
+    expect(
+      find.descendant(
+        of: find.byType(MoveMoneyModal),
+        matching: find.text(message),
+      ),
+      findsOneWidget,
+    );
+    // Not a snack bar on the scaffold the sheet covers.
+    expect(find.byType(SnackBar), findsNothing);
+    // Still open, nothing written.
+    expect(find.byType(MoveMoneyModal), findsOneWidget);
+    expect(
+      await tester.runAsync(
+        () => t.budgets.getBudgetByCategoryAndMonth(
+          groceries,
+          CalendarDate.monthKey(month),
+        ),
+      ),
+      isNull,
+    );
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
 }
