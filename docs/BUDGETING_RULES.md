@@ -23,12 +23,14 @@ day.
     category and month, id `UUIDv5("budget:<categoryId>:<yyyy-MM>")`).
 *   **Available(category, M)** = max(0, Available(category, M - 1))
     + budgeted in M + activity in M. A positive balance rolls over into the
-    next month. A negative balance (cash overspending) does not: the
-    category starts the next month at zero and the overspent amount is
-    taken out of that month's To Be Budgeted instead (the YNAB rule), so
-    TBB never overstates the cash that can still be assigned. Within the
-    month the category shows the negative amount, so it can still be
-    covered by moving money before the month ends.
+    next month. A negative balance does not: the category starts the next
+    month at zero. Its cash part (cash overspending) is taken out of that
+    month's To Be Budgeted instead (the YNAB rule), so TBB never overstates
+    the cash that can still be assigned; its credit part (credit
+    overspending, card spending the category could not cover, see
+    "Credit cards") is not charged, it is card debt. Within the month the
+    category shows the negative amount, so it can still be covered by
+    moving money before the month ends.
 
 ## On-budget and off-budget accounts
 
@@ -92,9 +94,11 @@ accounts".
 ## To Be Budgeted (TBB)
 
 `TBB(M) = sum of the starting balances of the on-budget accounts that exist by M`
+`         (a credit card's negative one, existing debt, counts as 0)`
 `       + sum of the transactions that flow into TBB, up to the end of M`
 `       - sum of everything budgeted up to and including M`
 `       - sum of the cash overspending of the months before M`
+`         (credit overspending is never charged)`
 `       - Held(M), the money held for later months (below)`
 
 `Held(M) = max(0, max over the months F after M, up to the last month with a budget, of`
@@ -142,8 +146,9 @@ accounts that start in it.
     that month wherever the user lives.
 
 A transaction flows into TBB when it is **not deleted, uncategorised, in an
-on-budget account, not a split parent, and not a transfer leg unless the
-other account is off budget**. Both signs count:
+on-budget account, not a split parent, not a transfer leg unless the
+other account is off budget, and not an outflow of a budget credit card**
+(that is unfunded card debt, see "Credit cards"). Both signs count:
 
 *   An uncategorised inflow (salary, refund you did not categorise, the YNAB
     "Starting Balance" row) increases TBB. An inflow *with* a category is a
@@ -155,8 +160,10 @@ other account is off budget**. Both signs count:
 *   An uncategorised outflow decreases TBB (it is spending nobody budgeted).
 *   A reconciliation adjustment is an uncategorised transaction, so a
     difference found while reconciling changes TBB deliberately.
-*   Starting balances are budgetable. A credit-card account opened with a
-    negative starting balance (existing debt) reduces TBB by that amount.
+*   Starting balances are budgetable. A credit card's negative starting
+    balance (existing debt) is not: TBB is unchanged and the card's payment
+    category shows the debt as still to cover. A positive one (credit on
+    the card) counts like any other.
 *   Moving money between two on-budget accounts (a transfer: two linked
     rows, uncategorised) never changes TBB.
 *   A split counts through its lines: lines with a category are category
@@ -179,7 +186,11 @@ other account is off budget**. Both signs count:
         month's spending in its category is no spending and never offsets
         another category or another month.
     *   Uncategorised outflows are spending (nobody budgeted them; they
-        reduce TBB). Uncategorised inflows are income, not refunds.
+        reduce TBB, or on a credit card become unfunded card debt).
+        Uncategorised inflows are income, not refunds.
+    *   Card spending counts once, in its category; what the card rules
+        move into a payment category and payments to the card are never
+        spending or income.
     *   Transfers are never spending, also not a categorised transfer to an
         off-budget account (it is neither income nor spending, see above).
     *   A period's spending is the sum of its months. Top Payees nets each
@@ -200,29 +211,72 @@ other account is off budget**. Both signs count:
     the household, so it never moves net worth (the report reconstructs
     the partner's balance from the shared legs on this phone).
 
-### The invariant
+### The budget identity
 
 For every month M:
 
-`sum over categories of Available(M) + TBB(M) + Held(M)
- = sum of the on-budget account balances (starting balances of the
-   accounts that exist by M, plus transactions up to the end of M)`
+```
+  sum over all categories (payment categories included) of Available(M)
++ TBB(M) + Held(M)
++ CreditOverspending(M)
+= Cash(M) + CardIncome(M)
+```
+
+*   **Cash(M)**: the balances of the on-budget accounts that are not budget
+    credit cards (starting balance once the account exists, plus the
+    transactions up to the end of M, a split counted once).
+*   **CardIncome(M)**: the money that reached TBB through a budget credit
+    card: its positive starting balance (once it exists) and its
+    uncategorised inflows up to the end of M (rewards, a statement credit,
+    an uncategorised transfer in from an off-budget account).
+*   **CreditOverspending(M)**: the credit overspending the categories show
+    in M (the positive amount; it resets at the end of M).
+
+The same identity written with all on-budget balances (cards included),
+where `Debt(card, M) = -balance(card, M)`:
+
+```
+  sum over ordinary categories of Available(M) + TBB(M) + Held(M)
+= sum of the on-budget balances(M)
++ sum over cards of (Debt(card, M) - Available(payment category of card, M))
++ CardIncome(M) - CreditOverspending(M)
+```
+
+The middle term is the card debt not covered by its payment category:
+the new part. Without credit cards the identity is the old one:
+`sum of Available(M) + TBB(M) + Held(M) = sum of the on-budget balances`.
 
 Why it holds: summing the available rule over the months gives
 `Available(M) = budgeted through M + activity through M + overspending
-before M` per category (each reset adds back what was negative). Adding
-TBB(M) cancels the budgets through M and the overspending, leaving
-starting balances + rows flowing into TBB + category activity, which is
-the account balances, minus Held(M).
+reset before M` per category, where activity includes what the card
+rules move into and out of payment categories. Adding TBB(M) cancels the
+budgets through M and the cash overspending (charged to TBB); the credit
+overspending reset before M stays. Each card rule keeps both sides equal:
+
+| Event | Categories + TBB | Credit overspending | Cash + card income |
+|---|---|---|---|
+| Cash spending s in X | -s | 0 | -s |
+| Card spending s in X, f of it funded | -s + f | +(s - f) | 0 |
+| Card refund r, c of it cancelling X's credit overspending | +r - (r - c) | -c | 0 |
+| Any inflow that covers credit overspending m | +m (to the payment category) | -m | 0 |
+| Payment p from a cash account | -p | 0 | -p |
+| Cash advance a | +a | 0 | +a |
+| Balance transfer between cards | 0 | 0 | 0 |
+| Uncategorised card spending | 0 | 0 | 0 |
+| Uncategorised card inflow i | +i (TBB) | 0 | +i |
+| End of month, credit overspending o reset | +o | -o | 0 |
+| End of month, cash overspending reset | 0 (TBB pays) | 0 | 0 |
 
 This is checked by `test/domain/services/budget_invariant_test.dart` on a
-real database with several accounts (including a credit card with a
-negative starting balance), income, categorised and uncategorised spending,
-transfers in both directions, an income split and an expense split, a
-deleted row, a reconciliation adjustment and budgets in two months, with
-an off-budget account (its own rows, categorised ones included, and
-transfers to and from it), with money assigned to a later month and with
-overspent categories.
+real database (helper `expectLedgerInvariant`, whose right-hand side is
+raw SQL): several accounts, income, categorised and uncategorised
+spending, transfers in both directions, splits, a deleted row, a
+reconciliation adjustment, budgets in several months, an off-budget
+account, money assigned to later months, overspent categories, and credit
+cards: funded and overspent card spending, refunds, payments, existing
+debt, cash advances, balance transfers, transfers between cards and
+off-budget accounts, splits on a card, and eight randomised ledgers mixing
+all of these over four months.
 
 ## Setting money aside
 
@@ -258,23 +312,125 @@ saved together in one unit of work: either both happen or neither.
 Interest and dividends are not categories: they are uncategorised income
 and flow into TBB (or stay in an off-budget account).
 
-## Credit cards (current behaviour)
+## Credit cards
 
-There are no credit-card payment categories yet. Today a credit card is an
-ordinary budget account:
+LedgerZero handles credit cards the way YNAB does: money for card spending
+is set aside in a payment category as you spend, so you can always see
+what the card will cost you and whether the money is there.
 
-*   Spending on the card with a category reduces that category's available
-    amount and the card balance (it becomes more negative), exactly like
-    spending from checking. The money for it stays "in" the category, not
-    in a payment envelope.
-*   Paying the card from checking is a transfer: both balances change, TBB
-    and categories do not.
-*   Existing card debt entered as a negative starting balance reduces TBB
-    immediately (you have to "cover" it from TBB).
-*   Uncategorised card spending reduces TBB like any uncategorised outflow.
+### Payment categories
 
-So the budget always balances, but it does not show how much of the money in
-your categories is earmarked for paying the card.
+*   Every **budget credit card** (account type Credit card, on budget,
+    shared; a personal account is always off budget) has one payment
+    category, named after the card (e.g. "Visa"), in the group "Credit
+    Card Payments" ("Kreditkartenzahlungen"), listed first.
+*   Its id is derived from the account id
+    (`DeterministicId.cardPayment(accountId)`, the group
+    `DeterministicId.cardPaymentGroup`), so both household phones create
+    identical rows and no column marks it: a category is a payment
+    category exactly when its id is the payment id of an account
+    (`CardPayments`).
+*   It is created with the card, when an account is moved onto the budget
+    or changed to the credit type, and by a self-heal at start-up and
+    after sync applied changes, which also renames, hides and shows it.
+    The self-heal stamps what it writes with a fixed old time
+    (`cardPaymentHealStamp`), so two phones healing at once write
+    identical rows and every real edit wins.
+*   Its name follows the card's name. While the card is open and on
+    budget it cannot be deleted or moved to another group, and its group
+    cannot be deleted. Closing the card, taking it off the budget or
+    changing its type releases what it holds to TBB (the release flow,
+    `BudgetingService.releasePaymentCategory`: budgets are given back,
+    oldest first) and hides it; reopening or moving the card back shows it
+    again. Deleting the card deletes it (its budgets return to TBB).
+*   Transactions cannot be categorised into it (the pickers leave it out,
+    `TransactionService.save` rejects it). Everything else works like any
+    category: assigning, moving money, quick fills, templates, copy from
+    the month before and the automatic month fill.
+
+### What happens to the money
+
+Category X below is the category of a card transaction. All rules run per
+month, in a fixed order (date, then the time it was entered, then id), so
+both phones compute the same numbers:
+
+| Event | Category X | Payment category | TBB |
+|---|---|---|---|
+| Spending s on the card, X has a available | -s | +min(s, max(0, a)) | - |
+| The part X could not cover | shows negative: **credit overspending** | - | - |
+| Refund r on the card | +r | -(r minus what cancels X's credit overspending for this card) | - |
+| Money reaching X later (a budget, a refund) while it is credit-overspent | covers it | +what was covered (oldest first) | - |
+| Payment p to the card from a budget account | - | -p | - |
+| Cash advance a (transfer from the card to a budget account) | - | +a | - |
+| Balance transfer x from card A to card B (A pays B) | - | B: -m, A: +m, m = min(x, max(0, B's payment available)) | - |
+| Uncategorised spending on the card | - | - | - (unfunded debt) |
+| Uncategorised inflow on the card | - | - | +amount |
+| Transfer off-budget account -> card, uncategorised | - | - | +amount |
+| Transfer off-budget account -> card, with category X | like a refund | like a refund | - |
+| Transfer card -> off-budget account, with category X | like card spending | like card spending | - |
+| Transfer card -> off-budget account, uncategorised | - | - | - (unfunded debt) |
+| Negative starting balance (existing debt) | - | - | - (shown as missing) |
+| Positive starting balance | - | - | +amount |
+
+*   **Budgets count from the first day of the month**, as in YNAB: money
+    assigned to X later in the month covers card spending made earlier
+    in it, and moves to the payment category.
+*   **Credit overspending** (warning colour on the budget screen; cash
+    overspending is in the error colour; a category with both shows the
+    error colour) resets at the end of the month **without** being charged
+    to the next month's TBB: it is debt the payment category does not
+    cover ("still missing" on the payment row). Cash overspending keeps
+    its rule (charged to the next month's TBB). A category's negative
+    balance is split into its credit part (the unfunded card spending it
+    still shows) and the cash part (the rest).
+*   **A refund on the card** first cancels the unfunded part of that
+    card's spending in X (the debt shrinks by itself), the rest is taken
+    back from the payment category. A refund after the card was paid can
+    leave the payment category negative (YNAB does the same): that is cash
+    overspending of the payment category, charged to the next month's TBB
+    unless you cover it, e.g. by moving the refund from X.
+*   **Paying more than the payment category holds** makes it negative:
+    cash overspending, charged to the next month's TBB (real money paid
+    debt nobody budgeted). Cover old debt by assigning to the payment
+    category first.
+*   **Cash advance**: the cash arrives in a budget account and the payment
+    category gets the same amount, earmarked to repay it (YNAB records a
+    cash advance as a transfer, with the same effect).
+*   **Balance transfer between two cards**: the debt moves, and so does
+    the money set aside for it, at most what the paid-off card's payment
+    category holds; unfunded debt stays unfunded and TBB is not touched.
+*   **Uncategorised card spending** is what YNAB shows in its
+    "Uncategorized" line as credit overspending: no category pays for it,
+    TBB is unchanged, and the debt shows as still missing on the payment
+    row. **Uncategorised card inflows** are YNAB's "Inflow: Ready to
+    Assign" on a card (a reward, a statement credit): income, into TBB.
+    The payment category is not reduced by it, so after such an inflow
+    the payment category can hold more than the card owes (YNAB behaves
+    the same); the row then shows nothing missing.
+*   **A positive card balance** (credit on the card, from a positive
+    starting balance or an inflow) counts in TBB; spending on the card
+    still moves money to the payment category, which then holds more than
+    the card owes. Move the surplus with care: the money is the card
+    credit already counted in TBB.
+
+### The payment row
+
+The budget screen lists the "Credit Card Payments" group first. A
+payment row shows Budgeted, Activity (spending moved in, minus refunds
+moved back and payments) and Available, and under the name what is still
+missing to pay the card in full: `max(0, -card balance at the end of the
+month - Available)`. Its quick actions add **Cover the card balance**
+(assign what is missing); the spending-based fills (last month's
+spending, average spent) are not offered for it, because nothing is
+spent from a payment category. Budget previous month, zero out and move
+money are. The account screen of a card shows the same two
+figures.
+
+### Reports
+
+Payments to the card are transfers, and moves into payment categories are
+not transactions: neither is spending or income in any report. Card
+spending counts as spending of its category (once), like any other.
 
 ## Deleting things
 
@@ -284,8 +440,9 @@ your categories is earmarked for paying the card.
     and leaves its transactions uncategorised (they then count towards TBB).
 *   Deleting an account deletes its transactions; the other leg of each
     transfer stays in the other account as a normal uncategorised
-    transaction (and therefore counts towards TBB). Closing an account keeps
-    everything and is usually what you want.
+    transaction (and therefore counts towards TBB). A credit card's
+    payment category is deleted with it (its budgets return to TBB).
+    Closing an account keeps everything and is usually what you want.
 *   Deleting one line of a split deletes the whole split (otherwise the
     lines would no longer add up to the account-side amount).
 

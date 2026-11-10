@@ -1,7 +1,7 @@
 # Budget Algorithms
 
 How the budget numbers are computed in code. The rules themselves (what
-counts towards what, the invariant, credit cards) are in
+counts towards what, the budget identity, credit cards) are in
 [BUDGETING_RULES.md](BUDGETING_RULES.md); this page maps them to the
 implementation.
 
@@ -22,7 +22,8 @@ TBB(M) = startingBalancesThrough(M)
 ```
 
 * `startingBalancesThrough(M)`: the starting balances of the on-budget
-  accounts whose start month is `<= M`. The start month is the earlier of
+  accounts whose start month is `<= M` (a budget credit card's negative
+  starting balance counts as 0: existing debt is not budgeted money). The start month is the earlier of
   the calendar day the account was created on (`accounts.created_at` in
   the phone's time zone, like every other month boundary, not the UTC
   month of the instant) and the account's first non-deleted transaction
@@ -30,12 +31,15 @@ TBB(M) = startingBalancesThrough(M)
   account without `created_at` always counts.
 * `getReadyToAssignSum` sums rows that are not deleted, have no category,
   belong to an on-budget account, are not a split parent (no non-deleted
-  child row) and are not a transfer leg unless the other account is
-  off-budget. Both signs count. `beginningOfTime` is year 0, the earliest
+  child row), are not a transfer leg unless the other account is
+  off-budget, and are not an outflow of a budget credit card
+  (`TransactionsDao.budgetCardAccountCondition`: unfunded card debt). Both
+  signs count. `beginningOfTime` is year 0, the earliest
   date SQLite compares, so there is in effect no lower bound (a row
   imported with a mis-parsed year counts here as it does in the account
   balance).
-* Overspending before M is what the rollover charges to TBB.
+* Overspending before M is the cash overspending the rollover charges to
+  TBB (credit overspending is not charged).
 * `held(M)` (`calculateHeldForLaterMonths`): the part of the budgets of
   the months after M that the money arriving in those months does not
   cover. With `budgeted(m)` and `arriving(m)` per month m:
@@ -68,7 +72,9 @@ has a budget row or category activity up to M:
 
 ```
 available(c, m) = max(0, available(c, m - 1)) + budgeted(c, m) + activity(c, m)
-overspending before M = SUM over m < M, c of max(0, -available(c, m))
+credit(c, m)    = the credit overspending c shows at the end of m (<= its negative part)
+overspending before M        = SUM over m < M, c of max(0, -available(c, m)) - credit(c, m)
+credit overspending before M = SUM over m < M, c of credit(c, m)
 ```
 
 Two grouped queries feed it, whatever the number of months and categories:
@@ -79,13 +85,51 @@ non-deleted, on-budget account, split lines included, transfer legs only
 when the transfer crosses the budget boundary). Both live in `BudgetsDao`;
 the activity filter mirrors `TransactionsDao.getCategoryActivitySums`.
 
+### Credit cards (`_CardMonth`)
+
+A third query, `BudgetRepository.getCardLedgerRows(end(M))`, returns rows
+one by one: every activity row of each (month, category) that has a row in
+a budget credit card (cash rows of that category and month included),
+every row categorised into a payment category, and the card legs of
+transfers between a card and another on-budget account. Those (month,
+category) pairs do not use the summed activity; per month, after the
+budgets have been added (money assigned in a month counts from its first
+day), their rows are applied in the order date, `created_at` (missing
+first), id:
+
+```
+card spending s in X:   f = min(s, max(0, available(X)))
+                        available(X) -= s; payment += f; unfunded(X, card) += s - f
+card refund r in X:     c = min(r, unfunded(X, card)); unfunded(X, card) -= c
+                        available(X) += r; payment -= r - c; cover(X)
+cash row a in X:        available(X) += a; if a > 0: cover(X)
+cover(X):               excess = SUM unfunded(X) - max(0, -available(X))
+                        take excess from unfunded(X), oldest first; each card's payment += its part
+payment / cash advance: payment -= card leg amount (payment +p: -p; advance -a: +a)
+card A -> card B (B's leg +x): m = min(x, max(0, payment(B))); payment(B) -= m; payment(A) += m
+```
+
+`credit(X, m)` is `SUM unfunded(X)` at the end of the month; the payment
+categories' activity of the month (`_Rollover.paymentActivity`) is what
+the budget screen shows as their Activity. With a single category asked
+for (`calculateCategoryAvailable`), an ordinary category needs only its
+own rows; a payment category needs the full rollover.
+
+`calculateCardPaymentStatuses(M)` adds the card balance at the end of M
+(`BudgetRepository.getBalanceChangesBefore(end(M))` plus the starting
+balance once the card exists): `missing = max(0, -balance - available)`.
+
 * `calculateCategoryActivity(c, M)`: `getCategoryActivitySum(c, start(M), end(M))`.
 * `calculateCategoryAvailable(c, M)`: the rollover restricted to `c`.
 * `calculateBatchCategoryPerformance(M)` (budget screen): activity in M
   (one grouped query) plus the rollover for all categories.
+* `calculateBatchCategoryPerformance(M)` also returns `creditOverspent`
+  per category (the warning colour on the budget screen) and, for payment
+  categories, the moved amounts as activity.
 * `calculateTBB(M)` uses the same rollover for "budgeted through M" and
-  "overspending before M", so the invariant in BUDGETING_RULES.md
-  (`SUM(available) + TBB + held = balances`) holds by construction.
+  "overspending before M", so the identity in BUDGETING_RULES.md
+  (`SUM(available) + TBB + held + credit overspending = cash + card
+  income`) holds by construction.
 
 ## Writing budgets
 

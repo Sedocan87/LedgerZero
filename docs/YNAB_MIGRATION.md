@@ -65,8 +65,26 @@ changed; please try again.").
   currencies.
 - **Account types**: for nYNAB the type is guessed from the account name;
   check it on each account.
-- **Credit card payment categories**: LedgerZero has none. Payments to a
-  credit card are plain transfers.
+- **Credit card payment categories**: LedgerZero has them too (see
+  BUDGETING_RULES.md, "Credit cards"). nYNAB's **Credit Card Payments**
+  group names one category per card: that account is imported as a credit
+  card (whatever its name suggests), and the category is mapped onto the
+  card's own payment category, which gets its budgeted amounts per month;
+  no ordinary category is created for it. A Credit Card Payments category
+  whose card is not imported as a budget card (a tracking account, a
+  renamed or deleted card) becomes an ordinary category in an ordinary
+  group of that name, so its money is kept. Payments to a card are linked
+  transfers. The card's "Starting Balance" row (existing debt) does not
+  reduce To Be Budgeted; the payment category shows it as still missing,
+  exactly like YNAB's underfunded payment category. After the import, To
+  Be Budgeted and every category's and payment category's Available match
+  YNAB's figures month by month (checked by
+  `test/services/import/ynab_card_payments_test.dart`).
+- **YNAB 4** has no payment categories: card spending and payments import
+  the same way, the cards get their payment categories on import, and
+  card debt that no category covered shows as still missing on them.
+  YNAB 4 accounted for cards differently, so check To Be Budgeted and the
+  card rows after importing.
 - **Ready to Assign**: income assigned to YNAB's "Ready to Assign" / "To be
   Budgeted" is imported without a category and counts towards To Be
   Budgeted.
@@ -91,9 +109,10 @@ changed; please try again.").
   counts towards To Be Budgeted. The result screen says how many tracking
   accounts were created.
 - **Categories only in Budget.csv**: a category you budgeted but never
-  used in a transaction (a sinking fund, a credit card payment category)
-  has no register row. It is created too, so its budgeted amounts are not
-  lost; the preview counts them under "Categories only in Budget.csv".
+  used in a transaction (a sinking fund) has no register row. It is
+  created too, so its budgeted amounts are not lost; the preview counts
+  them under "Categories only in Budget.csv" (a card's payment category
+  is not counted: it maps onto the card's own).
 - **Amount format**: both `$1,234.56` and `1.234,56 €` are read; the
   decimal separator is inferred from the whole export, so `€1.234` (no
   decimals) is one thousand two hundred thirty-four, not 1.23. Any
@@ -104,6 +123,8 @@ changed; please try again.").
   imported as uncategorised transactions, so the Income vs Expense report
   shows them as income in the month they are dated (a credit card's
   negative one as spending). Balances and To Be Budgeted are right.
+- **Group name**: the mapping looks for YNAB's English group name "Credit
+  Card Payments" (the name YNAB's export uses).
 - **Hidden categories** (YNAB 4): imported as hidden categories, so their
   transactions keep their category. LedgerZero cannot hide a whole group;
   every category of a hidden YNAB group is hidden instead.

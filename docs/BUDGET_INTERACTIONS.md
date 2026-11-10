@@ -44,6 +44,19 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
   calculator is open therefore cannot redirect the amount to another
   category or lose it.
 
+* **Credit Card Payments** comes first: one row per budget credit card
+  (its payment category, see BUDGETING_RULES.md, "Credit cards"). Under
+  the name the row says what is still missing to pay the card in full
+  ("Still missing: 30,00 €", warning colour) or "Card balance covered";
+  the ⓘ in the group header explains the group (`HelpTopic.cardPayments`).
+  Its Activity is the spending moved in minus refunds moved back and
+  payments (`calculateBatchCategoryPerformance`).
+* **Overspending colours**: a negative Available is in the error colour
+  when it is cash overspending (charged to next month's To Be Budgeted)
+  and in the warning colour, with a tooltip, when it is all credit
+  overspending (card spending the category could not cover; it becomes
+  card debt). A category with both is shown in the error colour.
+
 View modes (`BudgetViewMode`):
 
 * **standard**: Budgeted, Activity and Available columns.
@@ -79,6 +92,14 @@ View modes (`BudgetViewMode`):
 
 The first four record an undo action like a manual edit. The goal-based
 `underfunded` rule is not offered: goals cannot be set in the app yet.
+
+On a credit card's payment row, *Budget last month's spending* and
+*Average spent* are replaced by **Cover the card balance**: it adds what
+is still missing to the budget (with undo; when nothing is missing a snack
+bar says so). Nothing is spent from a payment category, so the
+spending-based fills would always give 0. Move money, templates, copy from
+previous month and the automatic fill treat payment categories like any
+other category.
 
 ## Moving money
 
@@ -233,6 +254,8 @@ list has its first data, so its last step can point at the list.
 sheet: a short text, steps, and "Open the user guide" at the matching
 chapter (`/settings/help/user-guide?chapter=<GuideChapter>`). Topics
 (`HelpTopic`) and their places: Savings & Investments group header (saving),
+Credit Card Payments group header and a card's account screen (card
+payments),
 To Be Budgeted banner, new-month card, account form (type, Include in
 budget, Personal), Accounts app bar (net worth and badges), transfer
 category hint, Sync settings, CSV import and the app lock switch. The sheet
