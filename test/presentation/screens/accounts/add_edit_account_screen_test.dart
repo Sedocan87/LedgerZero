@@ -557,4 +557,53 @@ void main() {
     expect(repo.updated!.color, isNull);
     expect(repo.updated!.icon, isNull);
   });
+
+  testWidgets('Discard drops the draft: the next "Add account" starts empty', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(MockAccountRepository()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AddEditAccountScreen(),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Giro');
+    await tester.pumpAndSettle();
+    expect(prefs.getString('draft_account_add'), contains('Giro'));
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Discard'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AddEditAccountScreen), findsNothing);
+    expect(prefs.getString('draft_account_add'), isNull);
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Giro'), findsNothing);
+    expect(find.text('Draft restored'), findsNothing);
+  });
 }

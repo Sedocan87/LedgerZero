@@ -628,6 +628,14 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         }
         final shouldPop = await _showExitConfirmation();
         if (shouldPop && context.mounted) {
+          // Discarded: the next "Add account" (and the onboarding step,
+          // which shares the draft) starts empty.
+          if (widget.accountId == null) {
+            await _clearDraft();
+          }
+          if (!context.mounted) {
+            return;
+          }
           setState(() => _isFormDirty = false);
           Navigator.of(context).pop();
         }
