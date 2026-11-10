@@ -226,8 +226,9 @@ void main() {
     expect(find.text("Your partner's accounts"), findsOneWidget);
     expect(find.textContaining('These are your partner'), findsOneWidget);
     expect(find.byKey(const Key('info.accounts')), findsOneWidget);
-    expect(find.text('PERSONAL'), findsOneWidget);
-    expect(find.text("PARTNER'S"), findsOneWidget);
+    // The owner follows the type on the row's second line.
+    expect(find.textContaining(' · Personal'), findsOneWidget);
+    expect(find.textContaining(" · Partner's"), findsOneWidget);
     expect(find.text(r'$4,500.00'), findsOneWidget);
     for (final (key, amount) in [
       ('netWorth.shared', r'$1,000.00'),

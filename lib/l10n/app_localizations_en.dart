@@ -5289,4 +5289,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String categoryPaymentLocked(String card) {
     return 'This is the payment category of the card $card. It is named after the card, stays in Credit Card Payments and cannot be deleted while the card is open and in the budget.';
   }
+
+  @override
+  String get accountsGroupOnBudget => 'On budget';
+
+  @override
+  String get accountsGroupOffBudget => 'Off budget';
+
+  @override
+  String get accountsGroupClosed => 'Closed';
 }

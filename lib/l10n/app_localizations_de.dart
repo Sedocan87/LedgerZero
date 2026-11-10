@@ -5322,4 +5322,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String categoryPaymentLocked(String card) {
     return 'Dies ist die Zahlungskategorie der Karte $card. Sie trägt den Namen der Karte, bleibt in Kreditkartenzahlungen und kann nicht gelöscht werden, solange die Karte offen und im Budget ist.';
   }
+
+  @override
+  String get accountsGroupOnBudget => 'Im Budget';
+
+  @override
+  String get accountsGroupOffBudget => 'Außerhalb des Budgets';
+
+  @override
+  String get accountsGroupClosed => 'Geschlossen';
 }

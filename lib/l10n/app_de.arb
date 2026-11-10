@@ -1375,5 +1375,8 @@
   "guideCreditCardsBody": "Kreditkarten: Eine Ausgabe mit der Karte verschiebt das Geld aus ihrer Kategorie in die Zahlungskategorie der Karte in der Gruppe Kreditkartenzahlungen. Reichte die Kategorie nicht, wird sie orange statt rot: Dieser Teil ist Kartenschuld und wird nicht vom „Zu budgetieren“ des nächsten Monats abgezogen. Weisen Sie der Zahlungskategorie Geld zu, um sie abzuzahlen.",
   "accountCardPaymentTitle": "Zahlungskategorie",
   "accountCardPaymentAvailable": "Zur Zahlung der Karte zurückgelegt: {amount}",
-  "categoryPaymentLocked": "Dies ist die Zahlungskategorie der Karte {card}. Sie trägt den Namen der Karte, bleibt in Kreditkartenzahlungen und kann nicht gelöscht werden, solange die Karte offen und im Budget ist."
+  "categoryPaymentLocked": "Dies ist die Zahlungskategorie der Karte {card}. Sie trägt den Namen der Karte, bleibt in Kreditkartenzahlungen und kann nicht gelöscht werden, solange die Karte offen und im Budget ist.",
+  "accountsGroupOnBudget": "Im Budget",
+  "accountsGroupOffBudget": "Außerhalb des Budgets",
+  "accountsGroupClosed": "Geschlossen"
 }

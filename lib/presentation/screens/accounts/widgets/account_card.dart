@@ -1,125 +1,139 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/app/theme.dart';
-import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
 import 'package:ledger_zero/presentation/widgets/common/account_avatar.dart';
 import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
-import 'package:ledger_zero/presentation/widgets/common/app_card.dart';
 
+/// One row of the accounts list: a plain row, no card.
+///
+/// `[account badge] [name / "Type · Personal"] [balance]`. Whether the
+/// account is in the budget, off budget or closed is said by the group
+/// heading the row sits under.
 class AccountCard extends StatelessWidget {
   final Account account;
   final VoidCallback? onTap;
 
-  const AccountCard({super.key, required this.account, this.onTap});
+  /// A hairline above the row, inset to the text (rows that follow another
+  /// row of the same group).
+  final bool showDivider;
+
+  const AccountCard({
+    super.key,
+    required this.account,
+    this.onTap,
+    this.showDivider = false,
+  });
+
+  /// Left edge of the row's text: the divider starts here.
+  static const double textInset = 16 + 40 + 12;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    final String? typeName = l10n == null ? null : account.type.label(l10n);
-
-    // A personal account is always off-budget: its owner badge says enough.
-    final statusBadge = switch (account.owner) {
+    final typeName = l10n == null
+        ? account.type.name
+        : account.type.label(l10n);
+    // A personal account is always off budget: its owner says enough.
+    final owner = switch (account.owner) {
       AccountOwner.me => l10n?.accountPersonalBadge,
       AccountOwner.partner => l10n?.accountPartnerBadge,
-      AccountOwner.shared when !account.onBudget => l10n?.accountOffBudgetBadge,
       AccountOwner.shared => null,
     };
 
-    // Determine color for balance (red for negative, default for positive)
-    final balanceColor = account.balance < 0
-        ? (isDark ? Colors.red.shade300 : AppColors.expense)
-        : scheme.onSurface;
-
-    return AppCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          AccountAvatar(account: account),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  account.name,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+    final row = LayoutBuilder(
+      builder: (context, constraints) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            AccountAvatar(account: account, size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    account.name,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    _Badge((typeName ?? account.type.name).toUpperCase()),
-                    if (statusBadge != null) _Badge(statusBadge.toUpperCase()),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Amounts are shown in the account's own currency.
-          Flexible(
-            child: AmountText(
-              account.balance,
-              currencyCode: account.currency,
-              amountContext: AmountContext.balance,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: balanceColor,
-                fontWeight: FontWeight.w800,
+                  const SizedBox(height: 2),
+                  Text(
+                    [typeName, ?owner].join(' · '),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.chevron_right_rounded,
-            size: 20,
-            color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A small pill label under the account name.
-class _Badge extends StatelessWidget {
-  const _Badge(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-      ),
-      child: Text(
-        text,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.4,
+            const SizedBox(width: 12),
+            // Amounts are shown in the account's own currency. A long one
+            // shrinks rather than squeezing the name out.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerEnd,
+                child: AmountText(
+                  account.balance,
+                  currencyCode: account.currency,
+                  amountContext: AmountContext.balance,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: _balanceColor(theme, account),
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: _tabularFigures,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (showDivider)
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: textInset,
+            color: scheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 60),
+            child: Center(child: row),
+          ),
+        ),
+      ],
+    );
   }
 }
+
+// Amount style of the accounts list. Kept together so the theme's helpers
+// (tabular figures, semantic colours; DESIGN.md §1-§2) can replace them in
+// one place.
+const _tabularFigures = [FontFeature.tabularFigures()];
+
+/// The text colour, except an overdrawn account (below zero; a credit card
+/// below zero is just its debt, not a state to flag).
+Color _balanceColor(ThemeData theme, Account account) =>
+    account.balance < 0 && account.type != AccountType.credit
+    ? (theme.brightness == Brightness.dark
+          ? Colors.red.shade300
+          : AppColors.expense)
+    : theme.colorScheme.onSurface;
