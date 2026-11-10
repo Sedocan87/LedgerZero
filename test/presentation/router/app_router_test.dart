@@ -327,6 +327,76 @@ void main() {
     await unmount(tester, c);
   });
 
+  testWidgets('back from the first-account step returns to the security '
+      'step, and Continue leads to the account step again without '
+      'finishing onboarding', (tester) async {
+    final dir = Directory.systemTemp.createTempSync('lz_router_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async => dir.path,
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            null,
+          ),
+    );
+    final c = await pumpRouter(tester, onboarded: false);
+    final router = c.read(routerProvider);
+
+    Future<void> continueToAccountStep() async {
+      await tester.tap(find.text('Continue'));
+      for (
+        var i = 0;
+        i < 200 && find.byType(AddEditAccountScreen).evaluate().isEmpty;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      await tester.pumpAndSettle();
+    }
+
+    router.goNamed('security-setup');
+    await tester.pumpAndSettle();
+    await continueToAccountStep();
+    expect(location(c), '/onboarding/first-account');
+    // The session (and so the database and its key) this onboarding
+    // opened: going back must not replace it.
+    final session = c.read(sessionProvider).key;
+    expect(session, isNotNull);
+
+    // System back, then the app bar's back arrow.
+    for (final viaAppBar in [false, true]) {
+      if (viaAppBar) {
+        await tester.tap(find.byType(BackButton));
+      } else {
+        await tester.binding.handlePopRoute();
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(SecuritySetupScreen), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(c.read(authProvider).isOnboarded, isFalse);
+
+      await continueToAccountStep();
+      expect(find.byType(AddEditAccountScreen), findsOneWidget);
+      expect(location(c), '/onboarding/first-account');
+      expect(c.read(authProvider).isOnboarded, isFalse);
+      expect(c.read(sessionProvider).key, same(session));
+      expect(
+        find.text('Your existing data on this phone was found and kept.'),
+        findsNothing,
+      );
+    }
+    await c.read(sessionProvider.notifier).close();
+    await unmount(tester, c);
+  });
+
   testWidgets('literal paths open their own screen, not a sibling :id route', (
     tester,
   ) async {

@@ -578,6 +578,14 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         false;
   }
 
+  /// Back from the onboarding first-account step: the security step it
+  /// came from. (A plain pop showed the welcome slides under it, and going
+  /// through them again took the "existing data kept" branch, which
+  /// finished onboarding without an account or the salary question.)
+  void _backToSecurityStep() {
+    GoRouter.of(context).goNamed('security-setup');
+  }
+
   /// A switch title followed by its ⓘ button.
   Widget _titleWithInfo(String title, HelpTopic topic) => Row(
     children: [
@@ -621,9 +629,16 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         : _currencies;
 
     return PopScope(
-      canPop: !_isFormDirty,
+      // The onboarding step goes back to the security step, not the
+      // slides below it in the stack (see [_backToSecurityStep]).
+      canPop: !_isFormDirty && !widget.finishesOnboarding,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
+          return;
+        }
+        if (!_isFormDirty) {
+          // Only the onboarding step gets here with a clean form.
+          _backToSecurityStep();
           return;
         }
         final shouldPop = await _showExitConfirmation();
@@ -637,7 +652,11 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
             return;
           }
           setState(() => _isFormDirty = false);
-          Navigator.of(context).pop();
+          if (widget.finishesOnboarding) {
+            _backToSecurityStep();
+          } else {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: CallbackShortcuts(

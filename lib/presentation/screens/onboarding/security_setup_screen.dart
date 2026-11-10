@@ -22,8 +22,10 @@ import 'package:ledger_zero/services/security/external_ui_guard.dart';
 /// older version) and opens the session. When a database exists that the
 /// stored device key opens (the onboarding flag was lost, not the data),
 /// nothing is deleted: the session opens on it and onboarding is finished
-/// at once. Turning the app lock on asks for the fingerprint/face or
-/// device PIN once, so the user knows it works.
+/// at once. Back from the first-account step, the session this onboarding
+/// opened is kept and "Continue" returns to that step. Turning the app
+/// lock on asks for the fingerprint/face or device PIN once, so the user
+/// knows it works.
 class SecuritySetupScreen extends ConsumerStatefulWidget {
   const SecuritySetupScreen({super.key});
 
@@ -82,6 +84,24 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
       context,
     )!.setupExistingDataKept;
     var keptExisting = false;
+    final auth = ref.read(authProvider);
+    if (!auth.isOnboarded &&
+        auth.hasUnlocked &&
+        ref.read(sessionProvider).isUnlocked) {
+      // Back here from the first-account step: this onboarding already
+      // created the key and opened the session. Keep them (the database
+      // is not "existing data", and onboarding is not done yet).
+      try {
+        await ref.read(appLockEnabledProvider.notifier).set(_useAppLock);
+      } catch (e, stackTrace) {
+        Logger.error('Saving the app lock choice failed', e, stackTrace);
+      }
+      router.goNamed('first-account');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      return;
+    }
     try {
       final session = ref.read(sessionProvider.notifier);
       await session.close();
