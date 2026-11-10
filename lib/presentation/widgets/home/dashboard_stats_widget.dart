@@ -17,7 +17,10 @@ final monthlyStatsProvider = FutureProvider.autoDispose
 
       final budgetingService = ref.watch(budgetingServiceProvider);
       final income = await budgetingService.calculateTotalIncomeForMonth(month);
-      final spending = await budgetingService.calculateTotalSpendingForMonth(
+      // The service sums outflows as a negative amount; the card is headed
+      // "Total Spending", so it shows what was spent (a month with more
+      // refunds than spending shows a negative amount).
+      final spending = -await budgetingService.calculateTotalSpendingForMonth(
         month,
       );
       return {'income': income, 'spending': spending};
