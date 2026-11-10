@@ -93,4 +93,17 @@ void main() {
       expect(await files.staged.exists(), isFalse);
     });
   });
+
+  test('opening a database older than '
+      'v${AppDatabase.minimumSchemaVersion} fails instead of upgrading '
+      'it', () async {
+    await writeAccount();
+    writeSchemaVersion(AppDatabase.minimumSchemaVersion - 1);
+    final db = AppDatabase(openConnection(file: file));
+    await expectLater(
+      db.select(db.accounts).get(),
+      throwsA(isA<UnsupportedSchemaException>()),
+    );
+    await db.close();
+  });
 }
