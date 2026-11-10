@@ -7,6 +7,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/core/constants/category_constants.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -97,7 +98,13 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
         _selectedGroupId = category.categoryGroupId;
         _isHidden = category.isHidden;
         _selectedColor = category.color;
-        _selectedIcon = category.icon;
+        // The icon it is shown with, so the picker marks it (a seeded or
+        // imported category has no stored icon of its own).
+        _selectedIcon = CategoryIconResolver.keyFor(
+          icon: category.icon,
+          id: category.id,
+          name: category.name,
+        );
         _initial = _fingerprint();
 
         // Load stats

@@ -28,6 +28,7 @@ import 'package:ledger_zero/data/database/daos/sync_dao.dart';
 import 'package:ledger_zero/data/database/daos/transactions_dao.dart';
 import 'package:ledger_zero/data/database/daos/pending_sync_changes_dao.dart';
 import 'package:ledger_zero/core/constants/default_categories.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
 
 // Explicit imports for types used in generated code
@@ -346,6 +347,7 @@ class AppDatabase extends _$AppDatabase {
               id: DeterministicId.defaultCategory(entry.key, catName),
               name: _seedName(catName),
               categoryGroupId: Value(groupId),
+              icon: Value(CategoryIconResolver.keyForDefault(catName)),
               sortOrder: Value(catSort++),
               createdAt: Value(now),
               updatedAt: Value(now),

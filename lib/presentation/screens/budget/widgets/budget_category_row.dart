@@ -21,7 +21,7 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/budget_calculato
 import 'package:ledger_zero/presentation/screens/budget/widgets/move_money_modal.dart';
 import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
-import 'package:ledger_zero/core/constants/category_constants.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/presentation/widgets/common/overflow_tooltip_text.dart';
@@ -333,7 +333,11 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     final catColor = category.color != null
         ? Color(category.color!)
         : theme.colorScheme.primary;
-    final catIcon = categoryIcons[category.icon] ?? Icons.label_outline_rounded;
+    final catIcon = CategoryIconResolver.iconFor(
+      icon: category.icon,
+      id: category.id,
+      name: category.name,
+    );
 
     final budgeted = widget.viewModel.budgeted;
     // Net spending: a category whose refunds exceed its spending has spent

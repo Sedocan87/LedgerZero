@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
@@ -260,6 +261,11 @@ Future<Category?> showCategoryPicker(
                   value: category,
                   label: category.name,
                   section: entry.key.name,
+                  icon: CategoryIconResolver.iconFor(
+                    icon: category.icon,
+                    id: category.id,
+                    name: category.name,
+                  ),
                 ),
           ],
         ),
@@ -303,6 +309,11 @@ Future<CategoryChoice?> showInflowCategoryPicker(BuildContext context) {
                   value: CategoryChoice(category),
                   label: category.name,
                   section: entry.key.name,
+                  icon: CategoryIconResolver.iconFor(
+                    icon: category.icon,
+                    id: category.id,
+                    name: category.name,
+                  ),
                 ),
           ],
         ),
