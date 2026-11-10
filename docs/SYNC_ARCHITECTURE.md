@@ -134,6 +134,12 @@ sent yet competes the same way — it does not win automatically.
   does not know stays local — it may have been deleted elsewhere long
   enough ago for the tombstone to be gone. Joining a *new* folder shares
   everything. Restoring a backup older than 180 days warns the user.
+  Every full upload also sends a tombstone for each row the folder knows
+  (`sync_row_versions`, not deleted) that no longer exists on this device
+  and has no captured delete (app versions before the fourth audit
+  discarded captured changes while disconnected). The time of such a
+  delete is unknown, so the tombstone is stamped just after the version
+  the folder has: an edit made elsewhere since then still wins.
 * **Natural keys**: budgets (category, month) and report notes (date) are
   unique. If an incoming row has the same natural key as a local row with a
   different id, the same rule decides, and only one row is kept. (Budget ids
@@ -356,6 +362,14 @@ household member; see BUDGETING_RULES.md for what users see.
   snapshots. Their captured changes are dropped like the others. Tombstones
   are not filtered (a deleted row's account is unknown; one the partner
   never had changes nothing there).
+* **Moved into a personal account.** A transaction or scheduled
+  transaction the folder already has (an entry in `sync_row_versions`)
+  whose account becomes a personal one is sent as a tombstone, stamped
+  with the edit that moved it, so the partner's copy disappears and the
+  amount is not counted twice (once in the shared account, once in the
+  personal account's shared balance). The row itself stays on the owner's
+  phone. Moving it back into a shared account sends it again as a newer
+  version.
 * **Balance.** Triggers on transactions and accounts keep
   `shared_balance` of this member's personal accounts equal to the computed
   balance. Changing it goes through the accounts sync trigger, so every

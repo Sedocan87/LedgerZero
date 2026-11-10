@@ -19,7 +19,9 @@ import 'package:ledger_zero/services/sync/sync_schema.dart';
 /// cut only between "families" of rows (a split parent and its children, the
 /// two legs of a transfer), upserts come parents-first and deletes
 /// children-first, so a receiver can apply each file on its own. The rows
-/// of personal accounts ([PersonalRows]) are left out.
+/// of personal accounts ([PersonalRows]) are left out; a row the folder
+/// knows that became one (moved into a personal account) is sent as a
+/// tombstone, so the other devices drop their copy.
 class ChangeGenerator {
   final AppDatabase _db;
   final SyncSchema _schema;
@@ -44,6 +46,11 @@ class ChangeGenerator {
   /// has (`sync_row_versions`); a row that old which the folder never saw
   /// is not sent: it may have been deleted elsewhere long enough ago for
   /// the tombstone to be pruned (see `FullUpload.reshare`).
+  ///
+  /// A full upload also sends a tombstone for every row the folder knows
+  /// (`sync_row_versions`, not deleted) that no longer exists here and has
+  /// no captured delete: it was deleted while nothing was captured (an
+  /// older app version discarded captured changes while disconnected).
   ///
   /// Everything happens in one database transaction: the files are written
   /// first, then the pending changes are deleted and the sequence advanced.
@@ -104,6 +111,21 @@ class ChangeGenerator {
             ), () => _Aggregate());
           }
         }
+        // Rows the folder knows that are gone here without a captured
+        // delete: without a tombstone they would stay on the other devices
+        // for good.
+        final live = await (_db.select(
+          _db.syncRowVersions,
+        )..where((t) => t.deleted.equals(false))).get();
+        for (final v in live) {
+          if (_schema[v.syncTable] == null) {
+            continue;
+          }
+          aggregates.putIfAbsent(
+            (v.syncTable, v.rowId),
+            () => _Aggregate()..vanished = true,
+          );
+        }
       }
 
       if (aggregates.isEmpty) {
@@ -125,7 +147,28 @@ class ChangeGenerator {
         final known = versions[k];
         if (row != null) {
           if (personal.isPrivate(table, row)) {
-            return; // stays on this device (personal account)
+            // Stays on this device (personal account). If the folder has
+            // it (it was in a shared account before), the other devices
+            // must drop their copy.
+            if (known != null && !known.deleted) {
+              deletes.add(
+                _Entry(
+                  SyncChange(
+                    table: table,
+                    id: id,
+                    deleted: true,
+                    version: math.max(
+                      SyncSchema.versionOf(row['updated_at']),
+                      known.version + 1,
+                    ),
+                    deviceId: _deviceId,
+                  ),
+                  '$table:$id',
+                  _schema[table]!.rank,
+                ),
+              );
+            }
+            return;
           }
           final version = SyncSchema.versionOf(row['updated_at']);
           if (!aggregate.local &&
@@ -158,14 +201,22 @@ class ChangeGenerator {
             ),
           );
         } else {
-          if (!aggregate.local) {
+          if (!aggregate.local && !aggregate.vanished) {
             return; // vanished during a full upload; nothing was captured
           }
           if (known != null && known.deleted) {
             return; // already a tombstone (e.g. deleted by replay)
           }
+          if (known == null && aggregate.vanished) {
+            return;
+          }
+          // The time of an uncaptured delete is unknown: just after the
+          // version the folder has, so an edit made elsewhere since then
+          // still wins (it is never destroyed by a guess).
           final version = aggregate.deleteVersion > 0
               ? aggregate.deleteVersion
+              : aggregate.vanished
+              ? known!.version + 1
               : (now ?? DateTime.now()).toUtc().microsecondsSinceEpoch;
           deletes.add(
             _Entry(
@@ -345,6 +396,10 @@ class _Aggregate {
 
   /// Tombstone time of the latest captured delete (µs), 0 if none.
   int deleteVersion = 0;
+
+  /// Added by a full upload for a row the folder knows that no longer
+  /// exists here (no captured delete).
+  bool vanished = false;
 }
 
 class _Entry {
