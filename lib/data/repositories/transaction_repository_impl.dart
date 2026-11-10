@@ -353,6 +353,22 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<bool> insertGeneratedTransactionOrIgnore(
+    Transaction transaction,
+  ) async {
+    final stamp = transaction.updatedAt;
+    if (stamp == null) {
+      throw ArgumentError('a generated transaction needs its updatedAt');
+    }
+    return DatabaseErrorHandler.execute(
+      () => _transactionsDao.insertTransactionOrIgnore(
+        _mapToCompanion(transaction).copyWith(updatedAt: Value(stamp.toUtc())),
+      ),
+      context: 'insertGeneratedTransactionOrIgnore',
+    );
+  }
+
+  @override
   Future<bool> isSplitParent(String id) async {
     return DatabaseErrorHandler.execute(
       () => _transactionsDao.isSplitParent(id),

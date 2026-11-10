@@ -166,7 +166,16 @@ sent yet competes the same way — it does not win automatically.
   current categories to the first other group. So rows that reference it
   no longer make the delete fail on a foreign key. Not recorded: a budget
   amount written by the automatic new-month fill (its `updated_at` is the
-  first day of its month, 00:00 UTC; see BUDGET_INTERACTIONS.md).
+  first day of its month, 00:00 UTC; see BUDGET_INTERACTIONS.md), and a
+  scheduled occurrence the catch-up booked here that nobody touched (its
+  `updated_at` is 00:00 UTC of the day before its date).
+* **Rows every phone generates** (new-month fill, scheduled occurrences,
+  the catch-up's advance of a schedule) are stamped with a time that does
+  not depend on when or where they were generated and that is older than
+  any edit a person makes afterwards, so the phone that generates last
+  does not win over the partner's edit, delete or skip
+  (`BudgetingService.automaticFillStamp`, `ScheduleStamps`; see
+  SCHEDULED_TRANSACTIONS.md "Two phones").
 * Seeded default categories use deterministic ids and a fixed timestamp.
   Their names are in the app language, so in a bilingual household the two
   phones seed different names under the same ids. The phone that creates
@@ -312,6 +321,12 @@ and follows `appLockStateProvider`:
   with a paired phone (`LanSyncService.lastPeerExchange`).
 * A run that is still going when the controller is disposed does not
   touch its state.
+* `syncSettled()` completes when the first automatic run after the
+  database opened has ended (or does not run: offline, Wi-Fi only on
+  mobile data, manual, no provider), later when the run in progress has
+  ended. Booking due scheduled transactions and the new-month fill wait
+  for it, at most 10 seconds (`lib/app/app.dart`), so they see what the
+  partner's phone already did.
 * Pause/resume around a restore (section 9).
 * *Disconnect* (Wi-Fi: *Turn off Wi-Fi sync*) and choosing the provider
   "None" ask for confirmation first. With Google Drive, an empty folder

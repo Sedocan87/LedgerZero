@@ -124,6 +124,36 @@ class SyncController extends StateNotifier<SyncState> {
   /// Number of sync runs started (for tests and diagnostics).
   int runCount = 0;
 
+  /// Completed when the first automatic sync after the database opened has
+  /// ended or turned out not to run (see [syncSettled]); replaced when the
+  /// database closes.
+  Completer<void> _initialSync = Completer<void>();
+
+  /// Completes when the sync this phone is doing or about to do has ended:
+  /// the first automatic run after the database opened (also when it
+  /// failed, was skipped because the phone is offline or on mobile data
+  /// with "Wi-Fi only", or will not happen: no provider, manual
+  /// frequency), afterwards the run in progress, if any. Never fails.
+  ///
+  /// Work that writes rows the partner's phone writes too (booking due
+  /// scheduled transactions, the new-month fill) waits for this, with a
+  /// timeout, so it sees what the partner already did.
+  Future<void> syncSettled() {
+    if (!_initialSync.isCompleted) {
+      return _initialSync.future;
+    }
+    final running = _running;
+    return running == null
+        ? Future<void>.value()
+        : running.catchError((Object _) {});
+  }
+
+  void _settleInitialSync() {
+    if (!_initialSync.isCompleted) {
+      _initialSync.complete();
+    }
+  }
+
   SyncController({
     required this._authService,
     required this._prefs,
@@ -203,10 +233,33 @@ class SyncController extends StateNotifier<SyncState> {
       _deps = _dependencies();
     } catch (e) {
       Logger.warning('Sync: database not available: $e');
+      _settleInitialSync();
       return;
     }
     _unlocked = true;
     state = state.copyWith(paused: false);
+    // This session's: a run that outlives it must not settle the next one.
+    final session = _initialSync;
+    void settle() {
+      if (!session.isCompleted) {
+        session.complete();
+      }
+    }
+
+    if (!_automatic) {
+      settle(); // nothing will sync by itself: nobody has to wait
+    }
+    try {
+      await _startSession(settle);
+    } catch (_) {
+      settle();
+      rethrow;
+    }
+  }
+
+  /// Subscriptions, timers and the first automatic sync of a session;
+  /// [settle] is called when that sync has ended or does not run.
+  Future<void> _startSession(void Function() settle) async {
     if (!_legacyQueueRemoved) {
       _legacyQueueRemoved = true;
       unawaited(SyncOutbox.removeLegacyQueue());
@@ -242,7 +295,12 @@ class SyncController extends StateNotifier<SyncState> {
     if (state.selectedProvider == SyncProviderType.none) {
       await _trimCapturedChanges();
     }
-    _requestAutoSync('unlock');
+    if (!_unlocked || !_automatic || _disposed || _pausedForRestore) {
+      settle();
+      return;
+    }
+    Logger.info('Sync requested (unlock)');
+    unawaited(_runSync(automatic: true).whenComplete(settle));
   }
 
   void _onLocked() {
@@ -250,6 +308,10 @@ class SyncController extends StateNotifier<SyncState> {
       return;
     }
     _unlocked = false;
+    // Nobody waits for a sync of a closed database; the next session
+    // starts with a new first sync.
+    _settleInitialSync();
+    _initialSync = Completer<void>();
     unawaited(_lan?.stop());
     _cancellation?.cancel();
     _stopTimersAndSubscriptions();
@@ -978,6 +1040,7 @@ class SyncController extends StateNotifier<SyncState> {
       return;
     }
     _disposed = true;
+    _settleInitialSync();
     _cancellation?.cancel();
     _stopTimersAndSubscriptions();
     _authSub?.cancel();

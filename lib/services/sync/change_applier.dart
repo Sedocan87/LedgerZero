@@ -10,6 +10,7 @@ import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
+import 'package:ledger_zero/domain/services/schedule_stamps.dart';
 
 /// A change file that cannot be applied (unknown table or column, a
 /// constraint that cannot be resolved, ...). The file is quarantined.
@@ -337,6 +338,9 @@ class ChangeApplier {
     if (table == 'budgets' && _isAutomaticFill(local)) {
       return; // nothing the user decided was lost
     }
+    if (table == 'transactions' && _isGeneratedOccurrence(local)) {
+      return; // booked by the catch-up here, untouched since
+    }
     if (local.version == AppDatabase.seedTimestamp.microsecondsSinceEpoch) {
       return; // an untouched default category (seeded, never edited)
     }
@@ -370,6 +374,16 @@ class ChangeApplier {
     } catch (_) {
       return false; // malformed month key
     }
+  }
+
+  /// A scheduled occurrence the catch-up booked on this phone and nobody
+  /// touched since (stamped with [ScheduleStamps.occurrence] of its date).
+  static bool _isGeneratedOccurrence(_Local local) {
+    final date = local.row?['date'];
+    final parsed = date is String ? DateTime.tryParse(date) : null;
+    return parsed != null &&
+        local.version ==
+            ScheduleStamps.occurrence(parsed).microsecondsSinceEpoch;
   }
 
   Future<void> _upsert(SyncedTable table, Map<String, Object?> row) async {

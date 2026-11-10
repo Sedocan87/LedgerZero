@@ -149,8 +149,10 @@ Code: `BudgetingService.fillEmptyCategories` / `planFill` / `undoFill`,
   plain card then offers by hand) and *Fill anyway*. The next start or
   resume tries again, and the card itself triggers the fill when TBB grows
   to cover the total while the budget screen is open (a salary booked by
-  hand or imported). Scheduled income is booked before the fill runs
-  (`_initializeServices`), so a salary due on the 1st never causes a wait.
+  hand or imported). Scheduled income is booked before the fill runs, at
+  start-up (`_initializeServices`) and on resume (`_bookDueThenFill` in
+  `lib/app/app.dart`: the fill is awaited after the catch-up, not started
+  next to it), so a salary due on the 1st never causes a wait.
   A wait is in memory only and is recomputed each time.
 * Both only fill categories that are still at zero (never hidden ones) and
   never overwrite an amount. Undo resets only the categories still at the
