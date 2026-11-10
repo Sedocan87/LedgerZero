@@ -17,6 +17,11 @@ class ImportTransaction {
   /// the file has none (imported rows are then cleared).
   final TransactionClearStatus? cleared;
 
+  /// Whether the file says the row is approved (`Approved` column of our
+  /// own export), or `null` when the file has none (imported rows are
+  /// then approved).
+  final bool? approved;
+
   /// The account name of the file's Account column (an exported file
   /// lists several accounts), or `null`.
   final String? accountName;
@@ -63,6 +68,7 @@ class ImportTransaction {
     this.originalDescription,
     this.categoryName,
     this.cleared,
+    this.approved,
     this.accountName,
     this.transferAccountName,
     this.categoryId,
@@ -84,6 +90,7 @@ class ImportTransaction {
     originalDescription: originalDescription,
     categoryName: categoryName,
     cleared: cleared,
+    approved: approved,
     accountName: accountName,
     transferAccountName: transferAccountName,
     categoryId: categoryId,

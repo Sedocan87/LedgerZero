@@ -34,8 +34,8 @@ class TransactionImportService {
   /// A row goes into [ImportTransaction.accountId] when set ("account from
   /// file" on the review screen), else into [accountId].
   ///
-  /// Each row becomes an approved transaction on its calendar day, cleared
-  /// unless the file's Cleared column said otherwise. Fields are filled in
+  /// Each row becomes a transaction on its calendar day, approved and
+  /// cleared unless the file's Approved or Cleared column said otherwise. Fields are filled in
   /// this order, each step only filling what is still empty:
   ///
   /// 1. The row's own values (amount, memo, and the category of the file's
@@ -92,7 +92,7 @@ class TransactionImportService {
               categoryId: row.categoryId,
               memo: _nonEmpty(row.memo),
               cleared: row.cleared ?? TransactionClearStatus.cleared,
-              approved: true,
+              approved: row.approved ?? true,
               transferAccountId: rows[partner].accountId ?? accountId,
               transferTransactionId: ids[partner],
               createdAt: now,
@@ -111,7 +111,7 @@ class TransactionImportService {
           categoryId: row.categoryId,
           memo: _nonEmpty(row.memo),
           cleared: row.cleared ?? TransactionClearStatus.cleared,
-          approved: true,
+          approved: row.approved ?? true,
           createdAt: now,
           updatedAt: now,
         );

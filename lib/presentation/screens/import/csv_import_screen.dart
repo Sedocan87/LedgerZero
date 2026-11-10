@@ -540,6 +540,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     CsvField.account => l10n.account,
     CsvField.transfer => l10n.csvFieldTransfer,
     CsvField.cleared => l10n.cleared,
+    CsvField.approved => l10n.csvFieldApproved,
     CsvField.fee => l10n.csvFieldFee,
     _ => field,
   };

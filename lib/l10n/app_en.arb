@@ -3927,5 +3927,7 @@
   "importRowNoAccount": "No account in the file – not imported",
   "@importRowNoAccount": {"description": "Import review: under a row left out because its Account cell is empty (Account from file)"},
   "importRowsWithoutAccount": "rows without an account name",
-  "@importRowsWithoutAccount": {"description": "Import review: entry in the list of unmatched account names for rows whose Account cell is empty"}
+  "@importRowsWithoutAccount": {"description": "Import review: entry in the list of unmatched account names for rows whose Account cell is empty"},
+  "csvFieldApproved": "Approved",
+  "@csvFieldApproved": {"description": "CSV import column mapping: the column that says whether a row is approved (our own export writes Yes/No)"}
 }

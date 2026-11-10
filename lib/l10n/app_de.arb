@@ -1298,5 +1298,6 @@
   "importUnknownAccountsNone": "Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: {names}. Wählen Sie das Konto, in das alle Zeilen importiert werden.",
   "importRowAccountNotFound": "Konto „{name}“ nicht gefunden – wird nicht importiert",
   "importRowNoAccount": "Kein Konto in der Datei – wird nicht importiert",
-  "importRowsWithoutAccount": "Zeilen ohne Kontonamen"
+  "importRowsWithoutAccount": "Zeilen ohne Kontonamen",
+  "csvFieldApproved": "Bestätigt"
 }

@@ -37,6 +37,9 @@ class CsvField {
   static const transfer = 'Transfer';
   static const cleared = 'Cleared';
 
+  /// Whether the row is approved (our own export writes `Yes`/`No`).
+  static const approved = 'Approved';
+
   /// A fee charged on top of the amount (Revolut's `Fee`): the row's
   /// amount is reduced by it. Only mapped by a bank preset or by hand.
   static const fee = 'Fee';
@@ -55,6 +58,7 @@ class CsvField {
     account,
     transfer,
     cleared,
+    approved,
     fee,
   ];
 

@@ -210,6 +210,16 @@ void main() {
       payeeId: 'p-fees',
       cleared: TransactionClearStatus.reconciled,
     );
+    // Not approved yet (a captured card payment, for instance).
+    final pending = await source.addTransaction(
+      accountId: checking.id,
+      amount: -700,
+      date: DateTime.utc(2024, 3, 11),
+      payeeId: 'p-fees',
+    );
+    await source.transactions.updateTransaction(
+      pending.copyWith(approved: false),
+    );
 
     final payees = await source.payees.getAllPayees();
     final categories = await source.categories.getAllCategories();
@@ -235,6 +245,7 @@ void main() {
     expect(mapping[CsvField.transfer], 'Transfer');
     expect(mapping[CsvField.account], 'Account');
     expect(mapping[CsvField.cleared], 'Cleared');
+    expect(mapping[CsvField.approved], 'Approved');
     expect(
       csvService
           .validateCsvData(
@@ -259,7 +270,7 @@ void main() {
       groups: await target.categories.getAllCategoryGroups(),
     );
     expect(rows.where((r) => r.hasUnmatchedCategory), isEmpty);
-    expect(rows.where((r) => r.payeeName == '-Fees'), hasLength(2));
+    expect(rows.where((r) => r.payeeName == '-Fees'), hasLength(3));
 
     final targetIds = <String, String>{};
     for (final account in accounts) {
@@ -344,6 +355,15 @@ void main() {
           if (!parents.contains(t.id)) '${t.amount}|${t.cleared.name}',
       ]),
     );
+    // Approved states come back as exported (Improvement 5).
+    expect(
+      imported.map((t) => '${t.amount}|${t.approved}'),
+      unorderedEquals([
+        for (final t in sourceRows)
+          if (!parents.contains(t.id)) '${t.amount}|${t.approved}',
+      ]),
+    );
+    expect(imported.where((t) => !t.approved).map((t) => t.amount), [-700]);
     final targetPayees = await target.payees.getAllPayees();
     expect(targetPayees.map((p) => p.name), contains('-Fees'));
     expect(targetPayees.map((p) => p.name), isNot(contains("'-Fees")));

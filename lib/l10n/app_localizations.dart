@@ -7851,6 +7851,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'rows without an account name'**
   String get importRowsWithoutAccount;
+
+  /// CSV import column mapping: the column that says whether a row is approved (our own export writes Yes/No)
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get csvFieldApproved;
 }
 
 class _AppLocalizationsDelegate

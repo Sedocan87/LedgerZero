@@ -236,6 +236,7 @@ const Map<String, List<String>> _headerKeywords = {
   CsvField.account: ['account', 'konto', 'account name', 'kontoname'],
   CsvField.transfer: ['transfer', 'umbuchung'],
   CsvField.cleared: ['cleared', 'status'],
+  CsvField.approved: ['approved', 'bestätigt'],
   CsvField.fee: [],
 };
 
@@ -272,6 +273,7 @@ const Map<String, List<String>> _headerPenalties = {
   CsvField.account: ['iban', 'number', 'nummer', 'nr', '#'],
   CsvField.transfer: [],
   CsvField.cleared: [],
+  CsvField.approved: [],
   CsvField.fee: [],
 };
 
@@ -313,6 +315,7 @@ const Set<String> _wholeWordFields = {
   CsvField.account,
   CsvField.transfer,
   CsvField.cleared,
+  CsvField.approved,
   CsvField.debitCreditFlag,
   CsvField.debit,
   CsvField.credit,
@@ -906,6 +909,7 @@ class CsvImportService {
           originalDescription: columns.text(row, columns.payee),
           categoryName: _nonEmpty(columns.text(row, columns.category)),
           cleared: parseClearedCell(columns.text(row, columns.cleared)),
+          approved: parseApprovedCell(columns.text(row, columns.approved)),
           accountName: _nonEmpty(columns.text(row, columns.account)),
           transferAccountName: _nonEmpty(columns.text(row, columns.transfer)),
         ),
@@ -960,6 +964,20 @@ class CsvImportService {
       'offen',
     }.contains(value)) {
       return TransactionClearStatus.uncleared;
+    }
+    return null;
+  }
+
+  /// What an `Approved` cell says (our own export writes `Yes`/`No`):
+  /// `null` for an empty or unknown value (the row is then imported
+  /// approved).
+  static bool? parseApprovedCell(String? cell) {
+    final value = cell?.trim().toLowerCase() ?? '';
+    if (const {'yes', 'y', 'true', '1', 'ja', 'x'}.contains(value)) {
+      return true;
+    }
+    if (const {'no', 'n', 'false', '0', 'nein'}.contains(value)) {
+      return false;
     }
     return null;
   }
@@ -1153,6 +1171,7 @@ class _Columns {
       account = _indexOf(headers, mapping[CsvField.account]),
       transfer = _indexOf(headers, mapping[CsvField.transfer]),
       cleared = _indexOf(headers, mapping[CsvField.cleared]),
+      approved = _indexOf(headers, mapping[CsvField.approved]),
       fee = _indexOf(headers, mapping[CsvField.fee]);
 
   final int date;
@@ -1167,6 +1186,7 @@ class _Columns {
   final int account;
   final int transfer;
   final int cleared;
+  final int approved;
   final int fee;
 
   static int _indexOf(List<String> headers, String? header) =>

@@ -4921,4 +4921,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get importRowsWithoutAccount => 'Zeilen ohne Kontonamen';
+
+  @override
+  String get csvFieldApproved => 'Bestätigt';
 }

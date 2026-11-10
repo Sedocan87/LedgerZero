@@ -130,6 +130,7 @@ class BankCsvPreset {
       CsvField.account: null,
       CsvField.transfer: null,
       CsvField.cleared: find(clearedColumn),
+      CsvField.approved: null,
       CsvField.fee: find(feeColumn),
     };
   }

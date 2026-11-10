@@ -95,6 +95,7 @@ void main() {
         CsvField.account: 'Account',
         CsvField.transfer: 'Transfer',
         CsvField.cleared: 'Cleared',
+        CsvField.approved: 'Approved',
         CsvField.fee: null,
       });
     });
