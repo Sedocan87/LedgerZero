@@ -1002,5 +1002,150 @@ void main() {
       final onBudget = {for (final a in data.accounts) a.name: a.onBudget};
       expect(onBudget, {'Checking': true, 'House': false});
     });
+    test('an on-budget savings account that only receives transfers stays '
+        'on budget: no leg facing it has a category (F5)', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          _header,
+          _row(
+            'Giro',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '1000.00',
+          ),
+          _row(
+            'Giro',
+            '02/01/2025',
+            'Rewe',
+            'Alltag',
+            'Lebensmittel',
+            '',
+            '23.45',
+            '',
+          ),
+          // Giro -> Tagesgeld: both on budget, YNAB writes no category.
+          _row(
+            'Giro',
+            '03/01/2025',
+            'Transfer : Tagesgeld',
+            '',
+            '',
+            '',
+            '200.00',
+            '',
+          ),
+          _row(
+            'Tagesgeld',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '5000.00',
+          ),
+          _row(
+            'Tagesgeld',
+            '03/01/2025',
+            'Transfer : Giro',
+            '',
+            '',
+            '',
+            '',
+            '200.00',
+          ),
+          // Giro -> Depot: a tracking account, the Giro leg is categorised.
+          _row(
+            'Giro',
+            '04/01/2025',
+            'Transfer : Depot',
+            'Sparen',
+            'ETF',
+            '',
+            '100.00',
+            '',
+          ),
+          _row(
+            'Depot',
+            '04/01/2025',
+            'Transfer : Giro',
+            '',
+            '',
+            '',
+            '',
+            '100.00',
+          ),
+          // Money back from a tracking account is Ready to Assign.
+          _row(
+            'Giro',
+            '05/01/2025',
+            'Transfer : Darlehen',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '50.00',
+          ),
+          _row(
+            'Darlehen',
+            '05/01/2025',
+            'Transfer : Giro',
+            '',
+            '',
+            '',
+            '50.00',
+            '',
+          ),
+          // No transfer at all: no trace, a tracking account as before.
+          _row(
+            'Haus',
+            '01/01/2025',
+            'Starting Balance',
+            '',
+            '',
+            '',
+            '',
+            '300000.00',
+          ),
+          // Only connected to accounts that have no rows of their own.
+          _row(
+            'Depot',
+            '06/01/2025',
+            'Transfer : Depot 2',
+            '',
+            '',
+            '',
+            '10.00',
+            '',
+          ),
+          _row(
+            'Depot 2',
+            '06/01/2025',
+            'Transfer : Depot',
+            '',
+            '',
+            '',
+            '',
+            '10.00',
+          ),
+        ].join('\n'),
+        budgetCsvContent: '',
+      );
+      expect(
+        {for (final a in data.accounts) a.name: a.onBudget},
+        {
+          'Giro': true,
+          'Tagesgeld': true,
+          'Depot': false,
+          'Darlehen': false,
+          'Haus': false,
+          'Depot 2': false,
+        },
+      );
+    });
   });
 }

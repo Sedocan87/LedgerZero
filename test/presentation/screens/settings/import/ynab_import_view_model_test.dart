@@ -16,7 +16,7 @@ const _register =
     '"Account","Flag","Date","Payee","Category Group/Category","Category Group","Category","Memo","Outflow","Inflow","Cleared"\n'
     '"Checking","","05/03/2025","Starting Balance","Inflow: Ready to Assign","Inflow","Ready to Assign","","\$0.00","\$1,000.00","Cleared"\n'
     '"Checking","","05/04/2025","Shop","Everyday: Food","Everyday","Food","","\$10.00","\$0.00","Cleared"\n'
-    '"Checking","","05/06/2025","Transfer : House","","","","","\$20.00","\$0.00","Cleared"\n'
+    '"Checking","","05/06/2025","Transfer : House","Everyday: Home","Everyday","Home","","\$20.00","\$0.00","Cleared"\n'
     '"House","","05/06/2025","Transfer : Checking","","","","","\$0.00","\$20.00","Cleared"\n';
 const _budget =
     '"Month","Category Group/Category","Category Group","Category","Budgeted","Activity","Available"\n';
@@ -92,7 +92,8 @@ void main() {
     final vm = _viewModel(t, InMemoryYnabImportHistory());
     await vm.validateAndParse();
     final data = vm.state.parsedData!;
-    // Inferred: House has only a transfer leg.
+    // Inferred: House has only a transfer leg, and the Checking leg facing
+    // it carries a category, as YNAB writes it for a tracking account.
     expect(data.accounts.singleWhere((a) => a.id == 'House').onBudget, isFalse);
     expect(data.registerDateFormat, 'MM/dd/yyyy');
     expect(data.dateFormatCandidates, ['MM/dd/yyyy', 'dd/MM/yyyy']);

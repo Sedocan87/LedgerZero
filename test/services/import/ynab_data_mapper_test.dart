@@ -511,10 +511,10 @@ void main() {
         registerCsvContent: register,
         budgetCsvContent: budget,
       );
-      // Savings has only a transfer leg, so it is taken for a tracking
-      // account; the user keeps it on budget in the preview.
+      // Savings has only a transfer leg, but the Checking leg facing it
+      // has no category: a transfer between two budget accounts (F5).
       expect(parsed.accounts.singleWhere((a) => a.name == 'Savings').onBudget,
-          isFalse);
+          isTrue);
       final data = parsed.copyWith(
         accounts: [for (final a in parsed.accounts) a.copyWith(onBudget: true)],
       );

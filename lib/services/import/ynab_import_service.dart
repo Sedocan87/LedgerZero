@@ -153,9 +153,17 @@ class YnabImportService {
   /// file is ambiguous); it must still fit every date.
   ///
   /// Tracking accounts: the CSV does not say which accounts are off
-  /// budget. An account whose rows are only its "Starting Balance" and
-  /// transfer legs is taken to be a tracking account (the user can change
-  /// it in the preview).
+  /// budget, but YNAB leaves a trace. A transfer between two budget
+  /// accounts has no category on either leg, while a transfer between a
+  /// budget account and a tracking account always carries one on the
+  /// budget-side leg (the spending category, "Uncategorized", or
+  /// "Inflow: Ready to Assign" for money coming back). So an account
+  /// whose own rows are only its "Starting Balance" and transfer legs is
+  /// a tracking account when one of the legs facing it in a budget
+  /// account has a category, and a budget account (a savings account that
+  /// is only ever topped up) when none has. Without any such leg there
+  /// is no trace and it is taken to be a tracking account (a house, a
+  /// loan). The user can change every account in the preview.
   Future<YnabImportData> parseCsvExport({
     required String registerCsvContent,
     required String budgetCsvContent,
@@ -315,7 +323,8 @@ class YnabImportService {
       }
       transactions.addAll(_groupRegisterLines(lines));
 
-      // Tracking accounts: only starting balance and transfer legs.
+      // Tracking accounts (see the method comment). Accounts with rows
+      // of their own (purchases, income) are budget accounts.
       final hasOwnRows = <String>{};
       for (final line in lines) {
         final isStart = line.payee.trim().toLowerCase() == 'starting balance';
@@ -323,8 +332,29 @@ class YnabImportService {
           hasOwnRows.add(line.accountName);
         }
       }
+      // The legs in those budget accounts, by the account they face.
+      final facingLegs = <String, int>{};
+      final categorisedFacingLegs = <String, int>{};
+      for (final line in lines) {
+        final target = transferTargetName(line.payee);
+        if (target == null || !hasOwnRows.contains(line.accountName)) {
+          continue;
+        }
+        facingLegs[target] = (facingLegs[target] ?? 0) + 1;
+        if (line.category.trim().isNotEmpty || line.group.trim().isNotEmpty) {
+          categorisedFacingLegs[target] =
+              (categorisedFacingLegs[target] ?? 0) + 1;
+        }
+      }
       for (var i = 0; i < accounts.length; i++) {
-        if (!hasOwnRows.contains(accounts[i].id)) {
+        final id = accounts[i].id;
+        if (hasOwnRows.contains(id)) {
+          continue;
+        }
+        final tracking =
+            !facingLegs.containsKey(id) ||
+            categorisedFacingLegs.containsKey(id);
+        if (tracking) {
           accounts[i] = accounts[i].copyWith(onBudget: false);
         }
       }
