@@ -8013,6 +8013,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The import could not be undone. Nothing was changed.'**
   String get importUndoFailed;
+
+  /// Help topic 'Importing a CSV file': the steps, one per line (replaces helpCsvSteps, whose claims about header lines and debit/credit columns no longer hold)
+  ///
+  /// In en, this message translates to:
+  /// **'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.'**
+  String get helpCsvStepsV2;
 }
 
 class _AppLocalizationsDelegate
