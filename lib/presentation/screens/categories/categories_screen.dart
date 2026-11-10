@@ -406,9 +406,12 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                     ),
                     subtitle: category.isHidden ? Text(l10n.hidden) : null,
                     leading: CircleAvatar(
-                      backgroundColor: category.color != null
-                          ? Color(category.color!)
-                          : Theme.of(context).primaryColor,
+                      backgroundColor: CategoryIconResolver.avatarFor(
+                        color: category.color,
+                        icon: category.icon,
+                        id: category.id,
+                        name: category.name,
+                      ),
                       child: Icon(
                         CategoryIconResolver.iconFor(
                           icon: category.icon,

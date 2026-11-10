@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:ledger_zero/core/constants/category_constants.dart';
 import 'package:ledger_zero/core/constants/default_categories.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
@@ -304,5 +304,172 @@ abstract final class CategoryIconResolver {
   }) {
     final key = keyFor(icon: icon, id: id, name: name);
     return key == null ? defaultCategoryIcon : categoryIcons[key]!;
+  }
+
+  /// The colour family of each icon: what the icon stands for (groceries
+  /// green, electricity amber, water light blue, health red, ...).
+  static const Map<String, MaterialColor> iconSwatches = {
+    'home': Colors.brown,
+    'home_repair': Colors.orange,
+    'furniture': Colors.brown,
+    'household': Colors.cyan,
+    'garden': Colors.green,
+    'electric': Colors.amber,
+    'water': Colors.lightBlue,
+    'heating': Colors.deepOrange,
+    'internet': Colors.indigo,
+    'phone': Colors.blueGrey,
+    'tv': Colors.deepPurple,
+    'utilities': Colors.amber,
+    'insurance': Colors.cyan,
+    'subscriptions': Colors.purple,
+    'groceries': Colors.green,
+    'food': Colors.orange,
+    'coffee': Colors.brown,
+    'drinks': Colors.purple,
+    'transport': Colors.blue,
+    'car_repair': Colors.blueGrey,
+    'car_payment': Colors.indigo,
+    'fuel': Colors.deepOrange,
+    'parking': Colors.blue,
+    'public_transport': Colors.teal,
+    'travel': Colors.lightBlue,
+    'vacation': Colors.cyan,
+    'health': Colors.red,
+    'pharmacy': Colors.pink,
+    'fitness': Colors.lightGreen,
+    'personal_care': Colors.pink,
+    'clothing': Colors.purple,
+    'kids': Colors.orange,
+    'pets': Colors.brown,
+    'gifts': Colors.pink,
+    'charity': Colors.red,
+    'entertainment': Colors.deepPurple,
+    'gaming': Colors.indigo,
+    'music': Colors.purple,
+    'books': Colors.brown,
+    'education': Colors.blue,
+    'fun': Colors.pink,
+    'shopping': Colors.orange,
+    'savings': Colors.teal,
+    'stocks': Colors.green,
+    'crypto': Colors.amber,
+    'bonds': Colors.blueGrey,
+    'retirement': Colors.lime,
+    'credit_card': Colors.pink,
+    'student_loan': Colors.deepPurple,
+    'debt': Colors.red,
+    'taxes': Colors.grey,
+    'finance': Colors.green,
+    'work': Colors.blueGrey,
+    'other': Colors.grey,
+  };
+
+  /// Families for a category with no icon of its own, picked by its id so
+  /// it keeps its colour.
+  static const List<MaterialColor> _fallbackSwatches = [
+    Colors.blue,
+    Colors.teal,
+    Colors.purple,
+    Colors.orange,
+    Colors.indigo,
+    Colors.pink,
+    Colors.green,
+    Colors.deepOrange,
+    Colors.cyan,
+    Colors.brown,
+  ];
+
+  /// The shade of each family used on light surfaces, worked out once.
+  static final Map<MaterialColor, Color> _lightShades = {};
+
+  /// A light surface a little darker than the app's (white rows, light grey
+  /// cards), so the result has a margin on every real one.
+  static const Color _lightReference = Color(0xFFE8E8E8);
+
+  static double _contrast(Color a, Color b) {
+    final la = a.computeLuminance();
+    final lb = b.computeLuminance();
+    final hi = la > lb ? la : lb;
+    final lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  /// The lightest of shades 700, 800 and 900 of [swatch] that stands out
+  /// (3.3:1) on a faint badge of itself over a light surface; families that
+  /// stay too pale (amber, orange) are darkened further.
+  static Color _lightShade(MaterialColor swatch) => _lightShades.putIfAbsent(
+    swatch,
+    () {
+      bool readable(Color c) =>
+          _contrast(
+            c,
+            Color.alphaBlend(c.withValues(alpha: 0.14), _lightReference),
+          ) >=
+          3.3;
+      for (final shade in [swatch.shade700, swatch.shade800, swatch.shade900]) {
+        if (readable(shade)) {
+          return shade;
+        }
+      }
+      var hsl = HSLColor.fromColor(swatch.shade900);
+      while (!readable(hsl.toColor()) && hsl.lightness > 0.1) {
+        hsl = hsl.withLightness(hsl.lightness - 0.03);
+      }
+      return hsl.toColor();
+    },
+  );
+
+  /// The colour family a category is shown in.
+  static MaterialColor swatchFor({
+    String? icon,
+    required String id,
+    required String name,
+  }) {
+    final key = keyFor(icon: icon, id: id, name: name);
+    if (key != null) {
+      return iconSwatches[key] ?? Colors.grey;
+    }
+    // FNV-1a: stable across runs and devices, unlike String.hashCode.
+    var hash = 0x811c9dc5;
+    for (final unit in id.codeUnits) {
+      hash = ((hash ^ unit) * 0x01000193) & 0xffffffff;
+    }
+    return _fallbackSwatches[hash % _fallbackSwatches.length];
+  }
+
+  /// The colour of the icon on a faint badge of the same colour (budget
+  /// rows, pickers): the colour the user chose ([color]), otherwise a shade
+  /// of [swatchFor] that stands out on the [brightness] theme's surface.
+  static Color tintFor({
+    int? color,
+    String? icon,
+    required String id,
+    required String name,
+    required Brightness brightness,
+  }) {
+    if (color != null) {
+      return Color(color);
+    }
+    final swatch = swatchFor(icon: icon, id: id, name: name);
+    if (brightness == Brightness.dark) {
+      return swatch.shade300;
+    }
+    return _lightShade(swatch);
+  }
+
+  /// The background of a round avatar with a white icon (category list):
+  /// the colour the user chose, otherwise a dark enough shade of
+  /// [swatchFor].
+  static Color avatarFor({
+    int? color,
+    String? icon,
+    required String id,
+    required String name,
+  }) {
+    if (color != null) {
+      return Color(color);
+    }
+    return _lightShade(swatchFor(icon: icon, id: id, name: name));
   }
 }

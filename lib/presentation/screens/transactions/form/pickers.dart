@@ -20,6 +20,7 @@ class PickerOption<T> {
     this.subtitle,
     this.section,
     this.icon,
+    this.iconColor,
     this.key,
   });
 
@@ -29,6 +30,10 @@ class PickerOption<T> {
 
   /// Icon of this row instead of the picker's.
   final IconData? icon;
+
+  /// Colour of [icon] on a theme of the given brightness (default: the
+  /// theme's icon colour).
+  final Color Function(Brightness brightness)? iconColor;
 
   /// Key of the row (lets tests find it).
   final Key? key;
@@ -168,7 +173,12 @@ class _SearchablePickerSheetState<T>
                     subtitle: option.subtitle == null
                         ? null
                         : Text(option.subtitle!),
-                    leading: Icon(option.icon ?? widget.icon),
+                    leading: Icon(
+                      option.icon ?? widget.icon,
+                      color: option.iconColor?.call(
+                        Theme.of(context).brightness,
+                      ),
+                    ),
                     onTap: () => Navigator.pop(context, option.value),
                   );
                   final section = option.section;
@@ -266,6 +276,13 @@ Future<Category?> showCategoryPicker(
                     id: category.id,
                     name: category.name,
                   ),
+                  iconColor: (brightness) => CategoryIconResolver.tintFor(
+                    color: category.color,
+                    icon: category.icon,
+                    id: category.id,
+                    name: category.name,
+                    brightness: brightness,
+                  ),
                 ),
           ],
         ),
@@ -313,6 +330,13 @@ Future<CategoryChoice?> showInflowCategoryPicker(BuildContext context) {
                     icon: category.icon,
                     id: category.id,
                     name: category.name,
+                  ),
+                  iconColor: (brightness) => CategoryIconResolver.tintFor(
+                    color: category.color,
+                    icon: category.icon,
+                    id: category.id,
+                    name: category.name,
+                    brightness: brightness,
                   ),
                 ),
           ],
