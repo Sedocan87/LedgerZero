@@ -16,8 +16,10 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
   when the budget or home screen sees the app resume, and a selection that
   still showed the month that was current moves to the new one (a month
   the user navigated to stays). The home screen's month
-  (`selectedHomeMonthProvider`) and the home banner's To Be Budgeted work
-  the same way.
+  (`selectedHomeMonthProvider`, the frameless `‹ month ▾ ›` row above the
+  Income / Spending tiles; it does not go past the current month) and the
+  home panel's To Be Budgeted (the same tonal block and status chip as on
+  the Budget tab, always the current month) work the same way.
 * To Be Budgeted (`ToBeBudgetedBanner`), from `tbbProvider(month)`: a
   tonal block with the label, the amount (success colour when positive,
   error when negative) and a status chip that says the state in words

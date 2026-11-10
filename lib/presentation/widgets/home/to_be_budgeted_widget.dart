@@ -7,6 +7,7 @@ import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/app/theme.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
 import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
@@ -115,39 +116,33 @@ class _ToBeBudgetedWidgetState extends ConsumerState<ToBeBudgetedWidget> {
         _keepPage(index);
 
         final currency = accounts.isEmpty ? null : accounts.first.currency;
+        final scheme = theme.colorScheme;
         final contents = [
           for (final page in pages)
             switch (page) {
-              HomeBalancePage.toBeBudgeted => _tbbContent(tbb),
+              HomeBalancePage.toBeBudgeted => _BalanceContent(
+                label: l10n.toBeBudgeted,
+                amount: tbb,
+                amountContext: AmountContext.toBeBudgeted,
+                amountColor: tbbAmountColor(context, tbb),
+                status: TbbStatusChip(tbb: tbb),
+              ),
               HomeBalancePage.netWorth => _BalanceContent(
-                icon: Icons.trending_up_rounded,
                 label: l10n.netWorth,
                 amount: accounts.fold<int>(0, (sum, a) => sum + a.balance),
                 currencyCode: currency,
-                textColor: Colors.white,
+                amountColor: scheme.onSurface,
               ),
               HomeBalancePage.inBudget => _BalanceContent(
-                icon: Icons.account_balance_outlined,
                 label: l10n.homeBalanceInBudget,
                 amount: accounts
                     .where((a) => a.onBudget)
                     .fold<int>(0, (sum, a) => sum + a.balance),
                 currencyCode: currency,
-                textColor: Colors.white,
+                amountColor: scheme.onSurface,
               ),
             },
         ];
-        final (gradientColors, textColor) = switch (pages[index]) {
-          HomeBalancePage.toBeBudgeted => _tbbColors(tbb, theme),
-          HomeBalancePage.netWorth => (
-            const [Color(0xFF004D40), Color(0xFF00796B)],
-            Colors.white,
-          ),
-          HomeBalancePage.inBudget => (
-            const [Color(0xFF263238), Color(0xFF455A64)],
-            Colors.white,
-          ),
-        };
         final paged = pages.length > 1;
 
         // One screen reader node: the page's label and amount, the page
@@ -158,28 +153,15 @@ class _ToBeBudgetedWidgetState extends ConsumerState<ToBeBudgetedWidget> {
             onTapHint: paged ? l10n.homeBalanceNext : null,
             child: GestureDetector(
               onTap: paged ? () => _showNext(pages, index) : null,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+              // The same tonal block as To Be Budgeted on the Budget tab.
+              child: Container(
                 width: double.infinity,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: gradientColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradientColors.first.withValues(alpha: 0.22),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.lg + 4,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -205,7 +187,7 @@ class _ToBeBudgetedWidgetState extends ConsumerState<ToBeBudgetedWidget> {
                       ],
                     ),
                     if (paged) ...[
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.sm),
                       ExcludeSemantics(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -219,8 +201,8 @@ class _ToBeBudgetedWidgetState extends ConsumerState<ToBeBudgetedWidget> {
                                 width: i == index ? 18 : 6,
                                 height: 6,
                                 decoration: BoxDecoration(
-                                  color: textColor.withValues(
-                                    alpha: i == index ? 0.9 : 0.4,
+                                  color: scheme.onSurfaceVariant.withValues(
+                                    alpha: i == index ? 0.9 : 0.35,
                                   ),
                                   borderRadius: BorderRadius.circular(
                                     AppRadius.full,
@@ -239,10 +221,10 @@ class _ToBeBudgetedWidgetState extends ConsumerState<ToBeBudgetedWidget> {
         );
       },
       loading: () => Container(
-        height: 128,
+        height: 112,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppRadius.xl),
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: const Center(child: CircularProgressIndicator()),
       ),
@@ -250,124 +232,106 @@ class _ToBeBudgetedWidgetState extends ConsumerState<ToBeBudgetedWidget> {
           LoadErrorView(error: err, stackTrace: stack, compact: true),
     );
   }
-
-  /// Gradient and text colour of the To Be Budgeted page. White text on the
-  /// fixed green / red gradients, the theme's text colour on the neutral one.
-  (List<Color>, Color) _tbbColors(int tbb, ThemeData theme) {
-    if (tbb > 0) {
-      return (const [Color(0xFF1B5E20), AppColors.success], Colors.white);
-    } else if (tbb < 0) {
-      return (const [Color(0xFF8E0000), AppColors.expense], Colors.white);
-    }
-    return (
-      [
-        theme.colorScheme.surfaceContainerHighest,
-        theme.colorScheme.surfaceContainer,
-      ],
-      theme.colorScheme.onSurface,
-    );
-  }
-
-  Widget _tbbContent(int tbb) {
-    final theme = Theme.of(context);
-    return _BalanceContent(
-      icon: Icons.account_balance_wallet_outlined,
-      label: AppLocalizations.of(context)!.toBeBudgeted,
-      amount: tbb,
-      amountContext: AmountContext.toBeBudgeted,
-      textColor: _tbbColors(tbb, theme).$2,
-    );
-  }
 }
 
-/// One page of the home banner: a pill label above a large amount.
+/// One page of the home banner: the label above a large amount, with the
+/// To Be Budgeted status chip beside it on that page.
 class _BalanceContent extends StatelessWidget {
   const _BalanceContent({
-    required this.icon,
     required this.label,
     required this.amount,
-    required this.textColor,
+    required this.amountColor,
     this.amountContext = AmountContext.none,
     this.currencyCode,
+    this.status,
   });
 
   /// Same layout with zero-width text: only used to size the page view.
   const _BalanceContent.sizer()
-    : icon = Icons.circle,
-      label = '\u200B',
+    : label = '\u200B',
       amount = null,
-      textColor = Colors.transparent,
+      amountColor = Colors.transparent,
       amountContext = AmountContext.none,
-      currencyCode = null;
+      currencyCode = null,
+      status = const _ChipSizer();
 
-  final IconData icon;
   final String label;
 
   /// `null` for [_BalanceContent.sizer].
   final int? amount;
-  final Color textColor;
+  final Color amountColor;
   final AmountContext amountContext;
   final String? currencyCode;
+
+  /// Shown beside the amount (the To Be Budgeted status chip).
+  final Widget? status;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final amountStyle = theme.textTheme.displaySmall?.copyWith(
-      color: textColor,
-      fontWeight: FontWeight.w800,
+    final amountStyle = theme.textTheme.displaySmall?.tabular.copyWith(
+      color: amountColor,
       letterSpacing: -0.5,
     );
-    final pill = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: textColor.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(AppRadius.full),
+    final labelText = Text(
+      label,
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
       ),
-      child: Row(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 14, color: textColor.withValues(alpha: 0.9)),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: textColor.withValues(alpha: 0.9),
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
+          // The To Be Budgeted amount's label already says what it is.
+          if (amountContext == AmountContext.toBeBudgeted)
+            ExcludeSemantics(child: labelText)
+          else
+            labelText,
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: amount == null
+                      ? Text(label, style: amountStyle)
+                      : AmountText(
+                          amount!,
+                          currencyCode: currencyCode,
+                          amountContext: amountContext,
+                          maxLines: 1,
+                          style: amountStyle,
+                        ),
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
+              if (status case final status?) ...[
+                const SizedBox(width: 10),
+                status,
+              ],
+            ],
           ),
         ],
       ),
     );
+  }
+}
 
+/// An empty status chip of the real one's height, for the sizer.
+class _ChipSizer extends StatelessWidget {
+  const _ChipSizer();
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // The To Be Budgeted amount's label already says what it is.
-          if (amountContext == AmountContext.toBeBudgeted)
-            ExcludeSemantics(child: pill)
-          else
-            pill,
-          const SizedBox(height: AppSpacing.md),
-          if (amount case final amount?)
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: AmountText(
-                amount,
-                currencyCode: currencyCode,
-                amountContext: amountContext,
-                style: amountStyle,
-              ),
-            )
-          else
-            Text(label, style: amountStyle),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text('\u200B', style: Theme.of(context).textTheme.labelMedium),
     );
   }
 }

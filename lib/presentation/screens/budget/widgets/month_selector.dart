@@ -18,7 +18,11 @@ class MonthSelector extends ConsumerWidget {
         ref.read(selectedBudgetMonthProvider.notifier).state = month;
     return MonthSwitcher(
       month: selectedMonth,
-      style: Theme.of(context).appBarTheme.titleTextStyle,
+      // A little under the usual title size: with the chevrons and the
+      // actions, "September 2026" fits a 392 dp phone without shrinking much.
+      style: Theme.of(
+        context,
+      ).appBarTheme.titleTextStyle?.copyWith(fontSize: 18),
       onChanged: select,
       onPick: () async {
         final picked = await showMonthPicker(context, initial: selectedMonth);
@@ -66,7 +70,6 @@ class MonthSwitcher extends ConsumerWidget {
         IconButton(
           icon: const Icon(Icons.chevron_left),
           tooltip: l10n.previousMonth,
-          visualDensity: VisualDensity.compact,
           onPressed: () => onChanged(DateTime.utc(month.year, month.month - 1)),
         ),
         Flexible(
@@ -92,6 +95,7 @@ class MonthSwitcher extends ConsumerWidget {
                       ),
                       Icon(
                         Icons.arrow_drop_down,
+                        size: 20,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ],
@@ -104,7 +108,6 @@ class MonthSwitcher extends ConsumerWidget {
         IconButton(
           icon: const Icon(Icons.chevron_right),
           tooltip: l10n.nextMonth,
-          visualDensity: VisualDensity.compact,
           onPressed: canGoNext
               ? () => onChanged(DateTime.utc(month.year, month.month + 1))
               : null,
