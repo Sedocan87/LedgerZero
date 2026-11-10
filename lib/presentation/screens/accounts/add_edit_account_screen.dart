@@ -432,17 +432,26 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           clearIcon: _selectedIcon == null,
           updatedAt: DateTime.now().toUtc(),
         );
-        await repository.updateAccount(updatedAccount);
         final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
-        final budgeting = ref.read(budgetingServiceProvider);
-        for (final MapEntry(key: categoryId, value: amount)
-            in release.entries) {
-          released += await budgeting.releaseFromCategory(
-            categoryId,
-            amount,
-            month,
-          );
-        }
+        final budgeting = release.isEmpty
+            ? null
+            : ref.read(budgetingServiceProvider);
+        // One unit of work: an account that left the budget without the
+        // release (a failure or the app killed in between) would leave To
+        // Be Budgeted short by its balance, with nothing to retry.
+        released = await ref.read(unitOfWorkProvider).run(() async {
+          await repository.updateAccount(updatedAccount);
+          var total = 0;
+          for (final MapEntry(key: categoryId, value: amount)
+              in release.entries) {
+            total += await budgeting!.releaseFromCategory(
+              categoryId,
+              amount,
+              month,
+            );
+          }
+          return total;
+        });
       } else {
         final newAccount = Account(
           id: const Uuid().v4(),

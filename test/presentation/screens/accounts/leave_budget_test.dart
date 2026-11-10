@@ -7,10 +7,35 @@ import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/presentation/screens/accounts/add_edit_account_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/test_database.dart';
+
+/// A budgeting service whose release fails (e.g. the app killed or a
+/// write error between the two steps).
+class _FailingRelease extends BudgetingService {
+  _FailingRelease(TestDatabase t)
+    : super(
+        transactionRepository: t.transactions,
+        budgetRepository: t.budgets,
+        categoryRepository: t.categories,
+        budgetTemplateRepository: t.budgetTemplates,
+        accountRepository: t.accounts,
+        unitOfWork: t.unitOfWork,
+      );
+
+  @override
+  Future<int> releaseFromCategory(
+    String categoryId,
+    int amount,
+    DateTime month,
+  ) async {
+    throw StateError('release failed');
+  }
+}
 
 /// Taking a savings account out of the budget offers to release the money
 /// budgeted for it, so To Be Budgeted does not go negative.
@@ -27,7 +52,11 @@ void main() {
 
   tearDown(() => t.close());
 
-  Future<void> pump(WidgetTester tester, String accountId) async {
+  Future<void> pump(
+    WidgetTester tester,
+    String accountId, {
+    BudgetingService? budgeting,
+  }) async {
     tester.view.physicalSize = const Size(1000, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -36,6 +65,8 @@ void main() {
         overrides: [
           databaseProvider.overrideWithValue(t.db),
           sharedPreferencesProvider.overrideWithValue(prefs),
+          if (budgeting != null)
+            budgetingServiceProvider.overrideWithValue(budgeting),
           appFormatterProvider.overrideWithValue(
             AppFormatter(locale: 'en', currency: 'USD', decimalSeparator: '.'),
           ),
@@ -138,6 +169,36 @@ void main() {
       ),
     );
     expect(budget!.budgeted, 1000000);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('a failed release leaves the account in the budget', (
+    tester,
+  ) async {
+    final account = await tester.runAsync(
+      () => t.addAccount(
+        name: 'Savings account',
+        type: AccountType.savings,
+        startingBalance: 1000000,
+      ),
+    );
+    final savings = (await tester.runAsync(() => t.categoryId('Savings')))!;
+    await tester.runAsync(
+      () => t.budgeting.setCategoryBudgetedAmount(savings, 1000000, month),
+    );
+    await pump(tester, account!.id, budgeting: _FailingRelease(t));
+
+    await leaveBudget(tester);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('An error occurred'), findsOneWidget);
+
+    final stored = await tester.runAsync(
+      () => t.accounts.getAccountById(account.id),
+    );
+    expect(stored!.onBudget, isTrue);
+    expect(await tester.runAsync(() => t.budgeting.calculateTBB(month)), 0);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });

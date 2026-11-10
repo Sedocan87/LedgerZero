@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
+import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
@@ -215,6 +216,8 @@ void main() {
       ProviderScope(
         overrides: [
           accountRepositoryProvider.overrideWithValue(repo),
+          // Edits run in a unit of work; the repository is a mock.
+          unitOfWorkProvider.overrideWithValue(const ImmediateUnitOfWork()),
           sharedPreferencesProvider.overrideWithValue(prefs),
           _germanFormatter,
         ],
@@ -256,6 +259,8 @@ void main() {
       ProviderScope(
         overrides: [
           accountRepositoryProvider.overrideWithValue(repo),
+          // Edits run in a unit of work; the repository is a mock.
+          unitOfWorkProvider.overrideWithValue(const ImmediateUnitOfWork()),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: MaterialApp(
