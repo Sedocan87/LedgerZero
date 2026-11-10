@@ -6,6 +6,7 @@ import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart'
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
@@ -214,6 +215,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final router = ref.watch(routerProvider);
     // Drops a default account/category that was deleted, closed or hidden.
     ref.watch(settingsDefaultsGuardProvider);
+    // Keeps Settings > Currency equal to the currency of the accounts in
+    // the budget (at start-up, after a sync run, after any account change).
+    ref.watch(budgetCurrencyGuardProvider);
 
     // Start-up work needs the database, not the unlocked UI: it runs as soon
     // as the lock screen has opened the session.

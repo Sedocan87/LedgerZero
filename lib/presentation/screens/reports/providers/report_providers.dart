@@ -6,7 +6,7 @@ import 'package:ledger_zero/domain/entities/spending.dart';
 import 'package:ledger_zero/domain/extensions/transaction_extensions.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_data_models.dart';
 import 'package:ledger_zero/presentation/widgets/charts/chart_palette.dart';
 
@@ -48,11 +48,12 @@ final reportDateRangeProvider = StateProvider<DateTimeRange>((ref) {
 /// If empty, all categories are included.
 final reportCategoryFilterProvider = StateProvider<Set<String>>((ref) => {});
 
-/// The budget currency (Settings). Amounts in different currencies are
-/// never added up, so the net worth report counts the accounts in this
-/// currency only.
+/// The budget currency (the currency of the accounts in the budget, see
+/// [budgetCurrencyProvider]). Amounts in different currencies are never
+/// added up, so the net worth report counts the accounts in this currency
+/// only.
 final reportCurrencyProvider = Provider<String>(
-  (ref) => ref.watch(settingsProvider.select((s) => s.currency)),
+  (ref) => ref.watch(budgetCurrencyProvider.select((b) => b.currency)),
 );
 
 /// The spending rows of the selected range (one grouped query), shared by
