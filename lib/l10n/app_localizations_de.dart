@@ -5459,4 +5459,8 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get rateAppFailed => 'Google Play konnte nicht geöffnet werden.';
+
+  @override
+  String get proNeedsGuardian =>
+      'Ein Elternteil oder Erziehungsberechtigter hat Käufe für dieses Konto nicht genehmigt.';
 }

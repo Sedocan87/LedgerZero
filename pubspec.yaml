@@ -74,6 +74,7 @@ dependencies:
   flutter_zxing: ^3.1.1
   in_app_purchase: ^3.3.1
   in_app_purchase_android: ^0.5.5
+  age_range_signals: ^0.10.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

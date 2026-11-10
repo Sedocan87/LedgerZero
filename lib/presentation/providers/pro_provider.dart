@@ -6,6 +6,7 @@ import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/core/constants/pro_features.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/services/purchases/age_signals.dart';
 import 'package:ledger_zero/services/purchases/play_pro_store.dart';
 import 'package:ledger_zero/services/purchases/pro_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,11 @@ enum ProMessage {
 
   /// The purchase failed (the store's error is in the log).
   failed,
+
+  /// A parent or guardian has not approved (or has declined) the app's
+  /// latest significant change on a supervised account: no new purchase
+  /// (see [blocksPurchases]). Restoring still works.
+  needsGuardian,
 }
 
 class ProState {
@@ -93,6 +99,7 @@ class ProController extends StateNotifier<ProState> {
   ProController({
     required SharedPreferences prefs,
     required ProStore store,
+    this._ageGate,
     this.developmentBuild = false,
   }) : _prefs = prefs,
        _store = store,
@@ -108,6 +115,9 @@ class ProController extends StateNotifier<ProState> {
 
   final SharedPreferences _prefs;
   final ProStore _store;
+
+  /// Asked on Buy only (never at start, never on Restore); null: no check.
+  final AgeSignalsGate? _ageGate;
 
   /// Development builds have a switch that unlocks Pro without a purchase
   /// (their application id has no Play product).
@@ -160,10 +170,22 @@ class ProController extends StateNotifier<ProState> {
 
   /// Opens Google Play's purchase sheet.
   Future<void> buy() async {
-    if (state.unlocked && !state.unlockedForDevelopment) {
+    if (state.busy || (state.unlocked && !state.unlockedForDevelopment)) {
       return;
     }
+    // Claimed before the age check, which can take a few seconds: a second
+    // tap cannot start a second purchase.
     state = state.copyWith(busy: true, clearMessage: true);
+    final ageGate = _ageGate;
+    if (ageGate != null && blocksPurchases(await ageGate.status())) {
+      if (mounted) {
+        state = state.copyWith(busy: false, message: ProMessage.needsGuardian);
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
     final available = state.storeAvailable ?? await _store.isAvailable();
     if (!available) {
       state = state.copyWith(
@@ -290,12 +312,19 @@ final proStoreProvider = Provider<ProStore>((ref) {
   return store;
 });
 
+/// The age check before a purchase (Google Play Age Signals). Created with
+/// the Pro state, but it asks the store only when Buy is tapped.
+final ageSignalsGateProvider = Provider<AgeSignalsGate>(
+  (ref) => AgeSignalsGate(StoreAgeSignals()),
+);
+
 final proControllerProvider = StateNotifierProvider<ProController, ProState>((
   ref,
 ) {
   final controller = ProController(
     prefs: ref.watch(sharedPreferencesProvider),
     store: ref.watch(proStoreProvider),
+    ageGate: ref.watch(ageSignalsGateProvider),
     developmentBuild: ref.watch(isDevelopmentBuildProvider),
   );
   unawaited(controller.refresh());

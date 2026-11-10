@@ -5424,4 +5424,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rateAppFailed => 'Google Play could not be opened.';
+
+  @override
+  String get proNeedsGuardian =>
+      'A parent or guardian hasn\'t approved purchases for this account.';
 }

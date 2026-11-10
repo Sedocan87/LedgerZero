@@ -4187,5 +4187,7 @@
   "rateAppSubtitle": "Tell others what you think on Google Play",
   "@rateAppSubtitle": {"description": "Settings: subtitle of Rate LedgerZero"},
   "rateAppFailed": "Google Play could not be opened.",
-  "@rateAppFailed": {"description": "Snackbar: the Play Store could not be opened"}
+  "@rateAppFailed": {"description": "Snackbar: the Play Store could not be opened"},
+  "proNeedsGuardian": "A parent or guardian hasn't approved purchases for this account.",
+  "@proNeedsGuardian": {"description": "Pro screen: a supervised account's parent has not approved (or declined) the app's latest change, so Pro cannot be bought now (Google Play Age Signals)"}
 }

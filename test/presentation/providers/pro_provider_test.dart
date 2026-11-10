@@ -1,11 +1,16 @@
+import 'dart:async';
+
+import 'package:age_range_signals/age_range_signals.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/constants/pro_features.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/pro_provider.dart';
+import 'package:ledger_zero/services/purchases/age_signals.dart';
 import 'package:ledger_zero/services/purchases/pro_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/fake_age_signals.dart';
 import '../../helpers/fake_pro_store.dart';
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
@@ -18,12 +23,16 @@ void main() {
     Map<String, Object> initial = const {},
     bool development = false,
     bool refresh = true,
+    AgeSignals? age,
   }) async {
     SharedPreferences.setMockInitialValues(initial);
     prefs = await SharedPreferences.getInstance();
     final c = ProController(
       prefs: prefs,
       store: store,
+      ageGate: age == null
+          ? null
+          : AgeSignalsGate(age, timeout: const Duration(milliseconds: 50)),
       developmentBuild: development,
     );
     addTearDown(c.dispose);
@@ -172,6 +181,71 @@ void main() {
       'preferences', () async {
     final c = await controller(initial: {ProController.developmentKey: true});
     expect(c.state.unlocked, isFalse);
+  });
+
+  group('age signals (Google Play Age Signals)', () {
+    test('nothing asks for the age at start or on a store check', () async {
+      final age = FakeAgeSignals();
+      final c = await controller(age: age);
+      await c.refresh();
+      expect(age.calls, 0);
+    });
+
+    test('below 18 on its own or a supervised account (supervised), '
+        'verified and unknown: Buy opens the purchase sheet', () async {
+      for (final status in [
+        AgeSignalsStatus.supervised,
+        AgeSignalsStatus.verified,
+        AgeSignalsStatus.unknown,
+        AgeSignalsStatus.declined,
+      ]) {
+        store = FakeProStore();
+        final c = await controller(age: FakeAgeSignals(status));
+        await c.buy();
+        expect(store.buyCalls, 1, reason: '$status');
+        expect(c.state.message, isNull, reason: '$status');
+      }
+    });
+
+    test('a pending or denied parent approval: no purchase, the guardian '
+        'message, and Restore still works', () async {
+      for (final status in [
+        AgeSignalsStatus.supervisedApprovalPending,
+        AgeSignalsStatus.supervisedApprovalDenied,
+      ]) {
+        store = FakeProStore(ownedAnswer: true);
+        final age = FakeAgeSignals(status);
+        final c = await controller(age: age, refresh: false);
+        await c.buy();
+        expect(store.buyCalls, 0, reason: '$status');
+        expect(c.state.message, ProMessage.needsGuardian);
+        expect(c.state.busy, isFalse);
+
+        await c.restore();
+        expect(c.state.unlocked, isTrue, reason: 'restore for $status');
+        expect(age.calls, 1, reason: 'restore does not ask');
+      }
+    });
+
+    test('a store that does not answer in time does not hold up Buy', () async {
+      final age = FakeAgeSignals(AgeSignalsStatus.supervisedApprovalDenied)
+        ..gate = Completer<void>();
+      final c = await controller(age: age);
+      await c.buy();
+      expect(store.buyCalls, 1);
+    });
+
+    test('a second tap while the age is being asked starts nothing', () async {
+      final age = FakeAgeSignals(AgeSignalsStatus.verified)
+        ..gate = Completer<void>();
+      final c = await controller(age: age);
+      final first = c.buy();
+      await c.buy();
+      age.gate!.complete();
+      await first;
+      expect(store.buyCalls, 1);
+      expect(age.calls, 1);
+    });
   });
 
   group('providers', () {

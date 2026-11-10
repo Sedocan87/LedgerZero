@@ -242,4 +242,8 @@ measured 19.5 MB (18.6 MB after `VACUUM`; `test/performance/database_size_test.d
 * "Rate LedgerZero" and the occasional rating prompt use Google Play's
   In-App Review API; the rating goes to Google Play, the app learns nothing
   about it.
+* Before a Pro purchase the app may ask Google Play Age Signals whether a
+  parent has approved the app's latest change (Texas, Brazil); the answer
+  is used on the phone for that check only and never stored or sent
+  ([PRO.md](PRO.md)).
 * The app works fully offline.

@@ -1415,5 +1415,6 @@
   "legalLoadFailed": "Diese Seite konnte nicht geladen werden.",
   "rateApp": "LedgerZero bewerten",
   "rateAppSubtitle": "Sagen Sie anderen auf Google Play, was Sie denken",
-  "rateAppFailed": "Google Play konnte nicht geöffnet werden."
+  "rateAppFailed": "Google Play konnte nicht geöffnet werden.",
+  "proNeedsGuardian": "Ein Elternteil oder Erziehungsberechtigter hat Käufe für dieses Konto nicht genehmigt."
 }

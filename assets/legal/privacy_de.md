@@ -34,6 +34,12 @@ Sie laden LedgerZero über Google Play herunter, kaufen dort LedgerZero Pro und 
 
 Rechtsgrundlage: Erfüllung des Kaufvertrags (Art. 6 Abs. 1 lit. b DSGVO), unsere steuerrechtlichen Pflichten (Art. 6 Abs. 1 lit. c DSGVO) und unser berechtigtes Interesse an einer funktionierenden und verbesserten App (Art. 6 Abs. 1 lit. f DSGVO).
 
+## Altersangaben
+
+Einige Regionen, etwa Texas und Brasilien, verlangen, dass Apps die Alters- und Zustimmungsangaben des App-Stores beachten. Wenn Sie auf die Schaltfläche zum Kauf von LedgerZero Pro tippen, kann LedgerZero den Dienst „Age Signals“ von Google Play nach Ihrer Altersgruppe fragen und danach, ob ein Elternteil oder Erziehungsberechtigter den letzten Änderungen der App zugestimmt hat. Google Play kann Sie zuerst fragen, ob Sie diese Angaben teilen möchten. Hat ein Elternteil oder Erziehungsberechtigter nicht zugestimmt oder abgelehnt, wird der Kauf nicht angeboten; einen früheren Kauf wiederherzustellen ist immer möglich. Andernfalls laufen Käufe auf einem beaufsichtigten Konto über die Elternfreigabe von Google Play. LedgerZero verwendet die Antwort nur auf Ihrem Handy und nur für diese Prüfung; sie wird nie gespeichert oder an uns gesendet. Google bearbeitet die Anfrage nach der Google-Datenschutzerklärung.
+
+Rechtsgrundlage: unsere rechtlichen Pflichten nach diesen regionalen Gesetzen (Art. 6 Abs. 1 lit. c DSGVO) und unser berechtigtes Interesse, sie überall einzuhalten, wo Sie die App nutzen (Art. 6 Abs. 1 lit. f DSGVO).
+
 ## Kontakt mit uns
 
 Wenn Sie uns schreiben, verwenden wir Ihre E-Mail-Adresse und Ihre Nachricht, um Ihnen zu antworten (Art. 6 Abs. 1 lit. b oder f DSGVO). Wir löschen sie, wenn Ihr Anliegen erledigt ist, sofern wir sie nicht gesetzlich länger aufbewahren müssen.

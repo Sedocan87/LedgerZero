@@ -34,6 +34,12 @@ You download LedgerZero, buy LedgerZero Pro and rate the app through Google Play
 
 Legal basis: performance of the purchase contract (Art. 6(1)(b) GDPR), our legal obligations under tax law (Art. 6(1)(c) GDPR), and our legitimate interest in a working and improving app (Art. 6(1)(f) GDPR).
 
+## Age signals
+
+Some regions, such as Texas and Brazil, require apps to respect age and parental-consent signals from the app store. When you tap the button to buy LedgerZero Pro, LedgerZero may ask Google Play's Age Signals service for your age group and whether a parent or guardian has approved recent changes to the app. Google Play may first ask whether you want to share this. If a parent or guardian has not approved, or has declined, the purchase is not offered; restoring an earlier purchase always works. Otherwise, purchases on a supervised account go through Google Play's own parental approval. LedgerZero uses the answer only on your phone, for this check; it is never stored or sent to us. Google handles the request under the Google Privacy Policy.
+
+Legal basis: our legal obligations under these regional laws (Art. 6(1)(c) GDPR) and our legitimate interest in following them wherever you are (Art. 6(1)(f) GDPR).
+
 ## Contacting us
 
 If you write to us, we use your email address and message to answer you (Art. 6(1)(b) or (f) GDPR). We delete them when your request is settled, unless we have to keep them longer by law.

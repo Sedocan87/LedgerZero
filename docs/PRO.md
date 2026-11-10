@@ -71,6 +71,31 @@ screen all read the set.
 * There is no server-side receipt check: a determined user can patch the
   APK. For a niche one-time purchase that is accepted.
 
+## Age signals (Texas SB 2420, Brazil ECA Digital)
+
+Applied from `AGE_SIGNALS_FIX.md` (age_range_signals 0.8.0+):
+
+* Only `supervisedApprovalPending` and `supervisedApprovalDenied` block a new
+  purchase (`blocksPurchases` in `lib/services/purchases/age_signals.dart`):
+  a parent has not approved, or has declined, the app's latest significant
+  change. `supervised` only means "below 18" (also a teenager on their own
+  account) and does not block; Family Link asks the parent and the purchase
+  arrives as pending. Restore is never checked. The Pro screen and the PRO
+  badges are shown to everyone.
+* Asked on the first tap on Buy in a session, never at start (Play may show
+  its age-sharing sheet), with a 6 s timeout; a timeout or an error counts as
+  `unknown` (no block) and is asked again at the next tap. The answer stays
+  in memory for the session and is never stored, logged or sent (Texas
+  §121.055(b)). The Data safety answer stays "no data collected".
+* The message for a blocked purchase: "A parent or guardian hasn't approved
+  purchases for this account." (EN, DE).
+* No self-declared age anywhere in the app.
+* iOS: the `getRequiredRegulatoryFeatures()` path is in the code but inert;
+  an iOS release would need the Declared Age Range entitlement.
+* Until a significant change is reported in the Play Console, the blocking
+  statuses cannot occur. Before reporting one (a new purchase, ads, a data
+  or rating change), check that they block it.
+
 ## Development builds
 
 The development flavour (`com.ledgerzero.app.dev`) has no Play product. Its

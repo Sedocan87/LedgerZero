@@ -8557,6 +8557,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Google Play could not be opened.'**
   String get rateAppFailed;
+
+  /// Pro screen: a supervised account's parent has not approved (or declined) the app's latest change, so Pro cannot be bought now (Google Play Age Signals)
+  ///
+  /// In en, this message translates to:
+  /// **'A parent or guardian hasn\'t approved purchases for this account.'**
+  String get proNeedsGuardian;
 }
 
 class _AppLocalizationsDelegate

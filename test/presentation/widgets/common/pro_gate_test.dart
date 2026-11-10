@@ -1,3 +1,4 @@
+import 'package:age_range_signals/age_range_signals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,9 +9,11 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/pro_screen.dart';
 import 'package:ledger_zero/presentation/widgets/common/pro_gate.dart';
+import 'package:ledger_zero/services/purchases/age_signals.dart';
 import 'package:ledger_zero/services/purchases/pro_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../helpers/fake_age_signals.dart';
 import '../../../helpers/fake_pro_store.dart';
 
 void main() {
@@ -22,7 +25,11 @@ void main() {
     results.clear();
   });
 
-  Future<void> pump(WidgetTester tester, {bool unlocked = false}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    bool unlocked = false,
+    AgeSignalsStatus age = AgeSignalsStatus.unknown,
+  }) async {
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -70,6 +77,9 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           proStoreProvider.overrideWithValue(store),
+          ageSignalsGateProvider.overrideWithValue(
+            AgeSignalsGate(FakeAgeSignals(age)),
+          ),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -156,5 +166,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pro.unavailable')), findsOneWidget);
     expect(find.text('Unlock Pro'), findsOneWidget);
+  });
+
+  testWidgets('a parent approval that is pending: Buy says so and buys '
+      'nothing; Restore still works', (tester) async {
+    await pump(tester, age: AgeSignalsStatus.supervisedApprovalPending);
+    await tester.tap(find.text('Export PDF'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pro.buy')));
+    await tester.pumpAndSettle();
+    expect(store.buyCalls, 0);
+    expect(
+      find.text(
+        "A parent or guardian hasn't approved purchases for this account.",
+      ),
+      findsOneWidget,
+    );
+
+    store.ownedAnswer = true;
+    await tester.tap(find.byKey(const Key('pro.restore')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pro.unlocked')), findsOneWidget);
+  });
+
+  testWidgets('under 18 (supervised): Buy goes to Google Play, which asks '
+      'the parent', (tester) async {
+    await pump(tester, age: AgeSignalsStatus.supervised);
+    await tester.tap(find.text('Export PDF'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pro.buy')));
+    // The purchase sheet is open: the button shows progress.
+    await tester.pump();
+    await tester.pump();
+    expect(store.buyCalls, 1);
   });
 }

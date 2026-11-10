@@ -45,6 +45,7 @@ class _ProScreenState extends ConsumerState<ProScreen> {
       ProMessage.nothingToRestore => l10n.proNothingToRestore,
       ProMessage.storeUnavailable => l10n.proStoreUnavailable,
       ProMessage.failed => l10n.proPurchaseFailed,
+      ProMessage.needsGuardian => l10n.proNeedsGuardian,
     };
     if (text != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
