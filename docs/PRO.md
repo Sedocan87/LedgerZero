@@ -63,6 +63,11 @@ screen all read the set.
   starts unlocked and Play confirms it.
 * A factory reset keeps the Pro unlock (it belongs to the Google account,
   not to the budget).
+* The Billing library adds the `com.android.vending.BILLING` permission,
+  its purchase activity, and a small Google Play services component
+  (`GoogleApiActivity`, the system dialog that asks to update Play
+  services). It adds no analytics SDK; the app's own code sends nothing
+  about the budget.
 * There is no server-side receipt check: a determined user can patch the
   APK. For a niche one-time purchase that is accepted.
 
