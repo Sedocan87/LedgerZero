@@ -89,16 +89,77 @@ own entry point.
 flutter run --flavor development -t lib/main_development.dart -d <android-device>
 ```
 
-Release builds:
+### Release builds
+
+The Play release is an app bundle of the `production` flavor:
 
 ```bash
-flutter build apk --release --flavor production -t lib/main_production.dart
+flutter build appbundle --release --flavor production -t lib/main_production.dart
+# -> build/app/outputs/bundle/productionRelease/app-production-release.aab
 ```
 
-Android release signing reads `android/key.properties` (`storeFile`,
-`storePassword`, `keyAlias`, `keyPassword`; git-ignored, never commit it or
-the keystore). Without that file release builds are signed with the debug
-key so they still build locally; such APKs cannot be uploaded to Play.
+It needs the upload key (next section). Without `android/key.properties`
+the build stops at once with a message instead of quietly signing with the
+debug key.
+
+To try the minified (R8) release app locally without the upload key, opt in
+to a debug-signed build. Such a bundle or APK is for testing only and
+cannot be uploaded to Play:
+
+```bash
+LEDGERZERO_ALLOW_DEBUG_SIGNED_RELEASE=1 \
+  flutter build appbundle --release --flavor production -t lib/main_production.dart
+```
+
+Release builds of the `development` and `staging` flavors are signed with
+the debug key when there is no `android/key.properties` (with a warning).
+
+### Release signing
+
+One-time setup. The keystore and `android/key.properties` are git-ignored;
+never commit them, and keep the keystore outside the repository.
+
+1. Create the upload keystore (`keytool` comes with the JDK; Android
+   Studio's bundled JBR has it under `bin/`). It asks for a password and for
+   the name fields of the certificate:
+
+   ```bash
+   keytool -genkeypair -v \
+     -keystore ~/keys/ledgerzero-upload.jks \
+     -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+2. Create `android/key.properties`:
+
+   ```properties
+   storeFile=/Users/<you>/keys/ledgerzero-upload.jks
+   storePassword=<the keystore password>
+   keyAlias=upload
+   keyPassword=<the keystore password>
+   ```
+
+   `storeFile` is an absolute path (a relative one is resolved against
+   `android/app`). `keytool` creates a PKCS12 keystore, where the key
+   password is the keystore password.
+
+3. Build the bundle (command above) and check who signed it. The owner must
+   be the name you entered, not `CN=Android Debug`:
+
+   ```bash
+   keytool -printcert -jarfile build/app/outputs/bundle/productionRelease/app-production-release.aab
+   ```
+
+4. Back up the keystore and its password offline (for example a password
+   manager plus a second copy). With Play App Signing, Google holds the app
+   signing key and this key only authorises uploads; a lost upload key can
+   be replaced through Play support, but that takes days.
+
+The SHA-1 of the upload key (and later of the Play app signing key, from
+the Play Console) is what the Google Drive OAuth clients need:
+
+```bash
+keytool -list -v -keystore ~/keys/ledgerzero-upload.jks -alias upload
+```
 
 ### Google Drive sign-in
 
