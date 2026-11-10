@@ -1,0 +1,9 @@
+{
+  "_comment": "Who publishes LedgerZero: shown in the privacy policy, the terms of use and the imprint (in the app and in the web pages made by tool/legal/build_pages.py). tool/release.sh refuses to build a release while name, address or email is empty. address: one line per entry in the list. phone and vatId are optional.",
+  "name": "",
+  "address": [],
+  "email": "support@ledgerzero.app",
+  "phone": "",
+  "vatId": "",
+  "effectiveDate": "2026-11-10"
+}

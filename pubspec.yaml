@@ -74,7 +74,6 @@ dependencies:
   flutter_zxing: ^3.1.1
   in_app_purchase: ^3.3.1
   in_app_purchase_android: ^0.5.5
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -100,6 +99,8 @@ flutter:
     # Shown on the licence page (Settings > About); see lib/app/licenses.dart.
     - assets/fonts/LICENSE-Roboto.txt
     - assets/fonts/Inter/LICENSE.txt
+    # Privacy policy, terms of use, imprint (Settings); see docs/LEGAL.md.
+    - assets/legal/
   # The app's UI font (static TTFs from the Inter 4.1 release, SIL OFL 1.1),
   # bundled so the app never downloads a font.
   fonts:
