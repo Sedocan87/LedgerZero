@@ -19,6 +19,7 @@ import 'package:ledger_zero/services/backup/auto_backup_service.dart';
 import 'package:ledger_zero/services/backup/restore_service.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart'
     show SyncEngineConfig;
+import 'package:ledger_zero/presentation/widgets/csv_export_format_dialog.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 
@@ -605,6 +606,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
   Future<void> _exportAllCsv() => _runExport(() async {
     final shareText = AppLocalizations.of(context)!.transactionsShareText;
+    final format = await chooseTransactionCsvFormat(context);
+    if (format == null) {
+      return;
+    }
     final transactions = await ref
         .read(transactionRepositoryProvider)
         .getAllTransactions();
@@ -612,15 +617,22 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final categories = await ref
         .read(categoryRepositoryProvider)
         .getAllCategories();
+    final groups = await ref
+        .read(categoryRepositoryProvider)
+        .getAllCategoryGroups();
     final accounts = await ref.read(accountRepositoryProvider).getAllAccounts();
     await TransactionExportService(
       files: ref.read(exportFileServiceProvider),
     ).exportTransactionsToCsv(
       transactions: transactions,
       payeeNames: {for (final p in payees) p.id: p.name},
-      categoryNames: {for (final c in categories) c.id: c.name},
+      categoryNames: TransactionExportService.qualifiedCategoryNames(
+        categories,
+        groups,
+      ),
       accountNames: {for (final a in accounts) a.id: a.name},
       shareText: shareText,
+      format: format,
     );
   });
 

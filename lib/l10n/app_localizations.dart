@@ -7935,6 +7935,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stop syncing'**
   String get syncStopAction;
+
+  /// CSV import: warning on the mapping screen and before the review when every amount of the file would become an inflow
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".'**
+  String csvIssueAllInflows(int count);
+
+  /// CSV import: notice before the review that rows with a reverted/failed/declined status are not imported
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row is marked as reverted, failed or declined in the file and is left out.} other{{count} rows are marked as reverted, failed or declined in the file and are left out.}}'**
+  String csvIssueVoidRows(int count);
+
+  /// CSV import column mapping: a fee column whose value is charged on top of the amount
+  ///
+  /// In en, this message translates to:
+  /// **'Fee'**
+  String get csvFieldFee;
+
+  /// Import review: shown under an unchecked row when an existing transaction of the account has the same amount within a few days
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate: {payee} on {date} has the same amount. Check the box if this is a separate transaction.'**
+  String importPossibleDuplicateOf(String payee, String date);
+
+  /// Import review: like importPossibleDuplicateOf when the existing transaction has no payee
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate: a transaction without payee on {date} (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.'**
+  String importPossibleDuplicateOfNoPayee(String date);
+
+  /// Import review banner: number of possible duplicates (same amount within a few days, whatever the payee)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row has the same amount as an existing transaction of the account within {days} days and is unchecked. Check it if it is a separate transaction.} other{{count} rows have the same amount as an existing transaction of the account within {days} days and are unchecked. Check the ones that are separate transactions.}}'**
+  String importPossibleDuplicatesNearby(int count, int days);
+
+  /// Import review: blocking banner when the file's Account column names accounts that do not all match an open account, and some do
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out 1 row; a single account takes every row.} other{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out {count} rows; a single account takes every row.}}'**
+  String importUnknownAccountsPartial(String names, int count);
+
+  /// Import review: blocking banner when none of the account names in the file match an open account
+  ///
+  /// In en, this message translates to:
+  /// **'This file names accounts that are not open accounts here: {names}. Choose the account that all rows go into.'**
+  String importUnknownAccountsNone(String names);
+
+  /// Import review: under a row left out because its account name matches no open account (Account from file)
+  ///
+  /// In en, this message translates to:
+  /// **'Account “{name}” not found – not imported'**
+  String importRowAccountNotFound(String name);
+
+  /// Import review: under a row left out because its Account cell is empty (Account from file)
+  ///
+  /// In en, this message translates to:
+  /// **'No account in the file – not imported'**
+  String get importRowNoAccount;
+
+  /// Import review: entry in the list of unmatched account names for rows whose Account cell is empty
+  ///
+  /// In en, this message translates to:
+  /// **'rows without an account name'**
+  String get importRowsWithoutAccount;
+
+  /// CSV import column mapping: the column that says whether a row is approved (our own export writes Yes/No)
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get csvFieldApproved;
+
+  /// Title of the dialog that asks which CSV variant the transaction export writes (shown in German only)
+  ///
+  /// In en, this message translates to:
+  /// **'CSV format'**
+  String get csvExportFormatTitle;
+
+  /// CSV export format choice: comma-delimited, dot decimals
+  ///
+  /// In en, this message translates to:
+  /// **'Standard (comma-separated)'**
+  String get csvExportFormatStandard;
+
+  /// Subtitle of the standard CSV format choice
+  ///
+  /// In en, this message translates to:
+  /// **'For other apps and scripts. Can be imported again.'**
+  String get csvExportFormatStandardHint;
+
+  /// CSV export format choice for spreadsheet apps set to German: semicolon-delimited, decimal comma, UTF-8 byte order mark
+  ///
+  /// In en, this message translates to:
+  /// **'For Excel (semicolon, decimal comma)'**
+  String get csvExportFormatSpreadsheet;
+
+  /// Subtitle of the Excel CSV format choice
+  ///
+  /// In en, this message translates to:
+  /// **'Opens with the right columns and umlauts in a German Excel. Can be imported again as well.'**
+  String get csvExportFormatSpreadsheetHint;
+
+  /// CSV import mapping screen: switch for files whose first line already is a transaction
+  ///
+  /// In en, this message translates to:
+  /// **'File has no header row'**
+  String get csvNoHeaderRow;
+
+  /// CSV import mapping screen: note under the no-header switch when it is on
+  ///
+  /// In en, this message translates to:
+  /// **'The first line is imported as a transaction. The columns are numbered #1, #2, …; check the mapping against the preview.'**
+  String get csvNoHeaderRowHint;
+
+  /// CSV import mapping screen: button that lets the user type a date pattern
+  ///
+  /// In en, this message translates to:
+  /// **'Other date format…'**
+  String get csvCustomDateFormat;
+
+  /// Helper text of the custom date format field (the pattern letters are not translated)
+  ///
+  /// In en, this message translates to:
+  /// **'d day, M month, y year, H hour, m minute, s second. Examples: d.M.yyyy or MMM d, yyyy'**
+  String get csvCustomDateFormatHelp;
+
+  /// Error under the custom date format field
+  ///
+  /// In en, this message translates to:
+  /// **'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.'**
+  String get csvCustomDateFormatInvalid;
+
+  /// YNAB import error: an amount cell of the register or budget file is not a number
+  ///
+  /// In en, this message translates to:
+  /// **'The amount “{value}” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.'**
+  String ynabImportErrorInvalidAmount(String value);
+
+  /// YNAB import error: the budget/plan CSV lacks columns (listed)
+  ///
+  /// In en, this message translates to:
+  /// **'The budget file is missing required columns: {columns}. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.'**
+  String ynabImportErrorMissingBudgetColumns(String columns);
+
+  /// YNAB import, file step: tile that picks the export ZIP YNAB downloads, instead of the two CSV files
+  ///
+  /// In en, this message translates to:
+  /// **'YNAB export (ZIP file)'**
+  String get ynabImportZipTile;
+
+  /// Subtitle of the export ZIP tile while nothing is picked
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the ZIP that YNAB downloads; both files are taken from it.'**
+  String get ynabImportZipHint;
+
+  /// YNAB import error: the picked ZIP is not a YNAB export
+  ///
+  /// In en, this message translates to:
+  /// **'This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export.'**
+  String get ynabImportErrorInvalidZip;
+
+  /// YNAB 4 import: tile that picks a ZIP of the .ynab4 folder
+  ///
+  /// In en, this message translates to:
+  /// **'Zipped budget folder (.zip)'**
+  String get ynabImportYnab4Zip;
+
+  /// YNAB 4 import: note under the two tiles (Android does not let apps read a picked folder by path)
+  ///
+  /// In en, this message translates to:
+  /// **'If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.'**
+  String get ynabImportYnab4ZipHint;
+
+  /// YNAB 4 import error: the picked ZIP has no Budget.ymeta / Budget.yfull
+  ///
+  /// In en, this message translates to:
+  /// **'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.'**
+  String get ynabImportErrorInvalidYnab4Zip;
+
+  /// CSV import screen: button that deletes the transactions the last CSV import created
+  ///
+  /// In en, this message translates to:
+  /// **'Undo last import'**
+  String get importUndoLast;
+
+  /// CSV import screen: what the last import created
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Last CSV import: 1 transaction on {date}.} other{Last CSV import: {count} transactions on {date}.}}'**
+  String importUndoLastInfo(int count, String date);
+
+  /// Confirmation before undoing the last CSV import
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Delete the 1 transaction that the import of {date} created? Payees the import created stay.} other{Delete the {count} transactions that the import of {date} created? Payees the import created stay.}}'**
+  String importUndoConfirm(int count, String date);
+
+  /// Warning in the undo-import confirmation and result: rows changed since the import are not deleted
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 transaction of that import was edited, reconciled or split since and is kept.} other{{count} transactions of that import were edited, reconciled or split since and are kept.}}'**
+  String importUndoKept(int count);
+
+  /// Undo last import: nothing left that can be deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Every transaction of the last import was changed or deleted since. There is nothing to undo.'**
+  String get importUndoNothing;
+
+  /// Snackbar after undoing the last CSV import
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Import undone: 1 transaction deleted} other{Import undone: {count} transactions deleted}}'**
+  String importUndoDone(int count);
+
+  /// Button: undo the CSV import (confirmation dialog and the dialog shown right after an import)
+  ///
+  /// In en, this message translates to:
+  /// **'Undo import'**
+  String get importUndoAction;
+
+  /// Snackbar when undoing the last import failed
+  ///
+  /// In en, this message translates to:
+  /// **'The import could not be undone. Nothing was changed.'**
+  String get importUndoFailed;
+
+  /// Help topic 'Importing a CSV file': the steps, one per line (replaces helpCsvSteps, whose claims about header lines and debit/credit columns no longer hold)
+  ///
+  /// In en, this message translates to:
+  /// **'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.'**
+  String get helpCsvStepsV2;
 }
 
 class _AppLocalizationsDelegate

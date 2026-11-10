@@ -52,6 +52,61 @@ void main() {
       expect(d.fitsAll, isFalse);
     });
 
+    test('ISO timestamps, German timestamps with seconds and English month '
+        'names are recognised; the day is the one the file writes', () {
+      for (final (values, format, day) in [
+        (
+          ['2024-02-01T10:00:00Z', '2024-02-13T23:59:59Z'],
+          "yyyy-MM-dd'T'HH:mm:ss",
+          DateTime(2024, 2, 1, 10),
+        ),
+        (
+          ['2024-02-01T23:30:00.123+01:00'],
+          "yyyy-MM-dd'T'HH:mm:ss",
+          DateTime(2024, 2, 1, 23, 30),
+        ),
+        (
+          ['01.02.2024 10:00:00', '13.02.2024 09:30:15'],
+          'dd.MM.yyyy HH:mm:ss',
+          DateTime(2024, 2, 1, 10),
+        ),
+        (['01 Feb 2024', '13 Mar 2024'], 'dd MMM yyyy', DateTime(2024, 2, 1)),
+      ]) {
+        final d = detectCsvDateFormat(values);
+        expect(d.format, format, reason: '$values');
+        expect(d.fitsAll, isTrue, reason: '$values');
+        expect(d.ambiguous, isFalse, reason: '$values');
+        expect(parseCsvDate(values.first, format), day);
+      }
+      expect(parseCsvDate('31 Feb 2024', 'dd MMM yyyy'), isNull);
+      expect(parseCsvDate('2024-02-01T10:00', "yyyy-MM-dd'T'HH:mm:ss"), isNull);
+    });
+
+    test('a typed pattern is accepted when it names day, month and year '
+        'and reads its own output back', () {
+      for (final pattern in [
+        'd.M.yyyy',
+        'MMM d, yyyy',
+        "dd/MM/yyyy 'at' HH:mm",
+        'dd-MMM-yy',
+      ]) {
+        expect(isUsableCsvDateFormat(pattern), isTrue, reason: pattern);
+      }
+      // Rejected up front rather than failing on every row: no day, no
+      // year, no pattern letters, or digits intl cannot tell apart.
+      for (final pattern in [
+        '',
+        'MM/yyyy',
+        'hello',
+        'dd.MM',
+        "'ddMMyyyy'",
+        'yyyyMMdd',
+      ]) {
+        expect(isUsableCsvDateFormat(pattern), isFalse, reason: pattern);
+      }
+      expect(parseCsvDate('Feb 1, 2024', 'MMM d, yyyy'), DateTime(2024, 2, 1));
+    });
+
     test('timestamps (Revolut) are recognised', () {
       expect(
         detectCsvDateFormat(['2026-10-17 09:12:33']).format,

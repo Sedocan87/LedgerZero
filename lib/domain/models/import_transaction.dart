@@ -17,6 +17,11 @@ class ImportTransaction {
   /// the file has none (imported rows are then cleared).
   final TransactionClearStatus? cleared;
 
+  /// Whether the file says the row is approved (`Approved` column of our
+  /// own export), or `null` when the file has none (imported rows are
+  /// then approved).
+  final bool? approved;
+
   /// The account name of the file's Account column (an exported file
   /// lists several accounts), or `null`.
   final String? accountName;
@@ -41,10 +46,19 @@ class ImportTransaction {
   bool isSelected;
   bool isDuplicate;
 
-  /// An existing transaction without payee (a hand-entered transfer, for
-  /// instance) has the same day and amount: shown unselected, the user
-  /// decides.
+  /// An existing transaction of the account has the same amount on a
+  /// nearby day (whatever its payee: the same purchase entered by hand, by
+  /// quick-add or under a renamed payee): shown unselected, the user
+  /// decides. [possibleDuplicateDate] and [possibleDuplicatePayee] name
+  /// that transaction.
   bool isPossibleDuplicate;
+
+  /// Day of the existing transaction this row may duplicate.
+  DateTime? possibleDuplicateDate;
+
+  /// Payee name of the existing transaction this row may duplicate
+  /// (`null` when it has none, e.g. a transfer).
+  String? possibleDuplicatePayee;
 
   ImportTransaction({
     required this.date,
@@ -54,6 +68,7 @@ class ImportTransaction {
     this.originalDescription,
     this.categoryName,
     this.cleared,
+    this.approved,
     this.accountName,
     this.transferAccountName,
     this.categoryId,
@@ -62,6 +77,8 @@ class ImportTransaction {
     this.isSelected = true,
     this.isDuplicate = false,
     this.isPossibleDuplicate = false,
+    this.possibleDuplicateDate,
+    this.possibleDuplicatePayee,
   });
 
   /// A copy with the same values and UI state.
@@ -73,6 +90,7 @@ class ImportTransaction {
     originalDescription: originalDescription,
     categoryName: categoryName,
     cleared: cleared,
+    approved: approved,
     accountName: accountName,
     transferAccountName: transferAccountName,
     categoryId: categoryId,
@@ -81,6 +99,8 @@ class ImportTransaction {
     isSelected: isSelected,
     isDuplicate: isDuplicate,
     isPossibleDuplicate: isPossibleDuplicate,
+    possibleDuplicateDate: possibleDuplicateDate,
+    possibleDuplicatePayee: possibleDuplicatePayee,
   );
 
   /// The file named a category that does not exist: the row is imported

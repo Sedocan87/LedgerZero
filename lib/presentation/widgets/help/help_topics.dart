@@ -106,7 +106,7 @@ enum HelpTopic {
       accounts => l10n.helpAccountsSteps,
       transfer => l10n.helpTransferSteps,
       sync => l10n.helpSyncSteps,
-      csvImport => l10n.helpCsvSteps,
+      csvImport => l10n.helpCsvStepsV2,
       accountTypes || appLock => '',
     };
     return [

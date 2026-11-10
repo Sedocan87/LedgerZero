@@ -4964,4 +4964,215 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get syncStopAction => 'Synchronisierung beenden';
+
+  @override
+  String csvIssueAllInflows(int count) {
+    return 'Alle $count Beträge würden als Einnahmen importiert. Wenn dies eine Kartenabrechnung ist, die Ausgaben als positive Zahlen aufführt, schalten Sie „Negative Werte sind Ausgaben“ aus. Hat die Datei getrennte Spalten für Ausgänge und Eingänge, ordnen Sie beide unter „Weitere Spalten“ zu.';
+  }
+
+  @override
+  String csvIssueVoidRows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen sind in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und werden ausgelassen.',
+      one:
+          '1 Zeile ist in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und wird ausgelassen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csvFieldFee => 'Gebühr';
+
+  @override
+  String importPossibleDuplicateOf(String payee, String date) {
+    return 'Mögliches Duplikat: $payee am $date hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.';
+  }
+
+  @override
+  String importPossibleDuplicateOfNoPayee(String date) {
+    return 'Mögliches Duplikat: Eine Buchung ohne Empfänger am $date (z. B. eine Umbuchung) hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.';
+  }
+
+  @override
+  String importPossibleDuplicatesNearby(int count, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen haben denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von $days Tagen und sind abgewählt. Setzen Sie den Haken bei denen, die eigene Buchungen sind.',
+      one:
+          '1 Zeile hat denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von $days Tagen und ist abgewählt. Setzen Sie den Haken, wenn es eine eigene Buchung ist.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsPartial(String names, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt $count Zeilen aus; ein einzelnes Konto nimmt alle Zeilen auf.',
+      one:
+          'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt 1 Zeile aus; ein einzelnes Konto nimmt alle Zeilen auf.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsNone(String names) {
+    return 'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Wählen Sie das Konto, in das alle Zeilen importiert werden.';
+  }
+
+  @override
+  String importRowAccountNotFound(String name) {
+    return 'Konto „$name“ nicht gefunden – wird nicht importiert';
+  }
+
+  @override
+  String get importRowNoAccount =>
+      'Kein Konto in der Datei – wird nicht importiert';
+
+  @override
+  String get importRowsWithoutAccount => 'Zeilen ohne Kontonamen';
+
+  @override
+  String get csvFieldApproved => 'Bestätigt';
+
+  @override
+  String get csvExportFormatTitle => 'CSV-Format';
+
+  @override
+  String get csvExportFormatStandard => 'Standard (durch Kommas getrennt)';
+
+  @override
+  String get csvExportFormatStandardHint =>
+      'Für andere Apps und Skripte. Lässt sich wieder importieren.';
+
+  @override
+  String get csvExportFormatSpreadsheet =>
+      'Für Excel (Semikolon, Dezimalkomma)';
+
+  @override
+  String get csvExportFormatSpreadsheetHint =>
+      'Öffnet sich in einem deutschen Excel mit richtigen Spalten und Umlauten. Lässt sich ebenfalls wieder importieren.';
+
+  @override
+  String get csvNoHeaderRow => 'Datei hat keine Kopfzeile';
+
+  @override
+  String get csvNoHeaderRowHint =>
+      'Die erste Zeile wird als Buchung importiert. Die Spalten heißen #1, #2, …; prüfen Sie die Zuordnung anhand der Vorschau.';
+
+  @override
+  String get csvCustomDateFormat => 'Anderes Datumsformat …';
+
+  @override
+  String get csvCustomDateFormatHelp =>
+      'd Tag, M Monat, y Jahr, H Stunde, m Minute, s Sekunde. Beispiele: d.M.yyyy oder MMM d, yyyy';
+
+  @override
+  String get csvCustomDateFormatInvalid =>
+      'Dieses Muster kann nicht verwendet werden. Es braucht Tag (d), Monat (M) und Jahr (y), getrennt durch Satzzeichen oder Leerzeichen.';
+
+  @override
+  String ynabImportErrorInvalidAmount(String value) {
+    return 'Der Betrag „$value“ im Export konnte nicht gelesen werden. Es wurde nichts importiert. Bitte exportieren Sie erneut aus YNAB, ohne die Dateien zu bearbeiten.';
+  }
+
+  @override
+  String ynabImportErrorMissingBudgetColumns(String columns) {
+    return 'In der Budget-Datei fehlen erforderliche Spalten: $columns. Es wurde nichts importiert. Wählen Sie die Budget- (oder Plan-)Datei eines unveränderten YNAB-Exports.';
+  }
+
+  @override
+  String get ynabImportZipTile => 'YNAB-Export (ZIP-Datei)';
+
+  @override
+  String get ynabImportZipHint =>
+      'Wählen Sie das ZIP, das YNAB herunterlädt; beide Dateien werden daraus übernommen.';
+
+  @override
+  String get ynabImportErrorInvalidZip =>
+      'Diese ZIP-Datei enthält nicht die CSV-Dateien Register und Budget (oder Plan) eines YNAB-Exports.';
+
+  @override
+  String get ynabImportYnab4Zip => 'Gezippter Budget-Ordner (.zip)';
+
+  @override
+  String get ynabImportYnab4ZipHint =>
+      'Lässt sich der Ordner auf diesem Telefon nicht lesen, packen Sie den .ynab4-Ordner am Computer als ZIP und wählen Sie die ZIP-Datei hier aus.';
+
+  @override
+  String get ynabImportErrorInvalidYnab4Zip =>
+      'Diese ZIP-Datei enthält kein YNAB-4-Budget. Packen Sie den ganzen Ordner mit der Endung .ynab4.';
+
+  @override
+  String get importUndoLast => 'Letzten Import rückgängig machen';
+
+  @override
+  String importUndoLastInfo(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Letzter CSV-Import: $count Transaktionen am $date.',
+      one: 'Letzter CSV-Import: 1 Transaktion am $date.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoConfirm(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count Transaktionen löschen, die der Import vom $date angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.',
+      one:
+          'Die 1 Transaktion löschen, die der Import vom $date angelegt hat? Vom Import angelegte Empfänger bleiben erhalten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoKept(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Transaktionen dieses Imports wurden seither bearbeitet, abgeglichen oder aufgeteilt und bleiben erhalten.',
+      one:
+          '1 Transaktion dieses Imports wurde seither bearbeitet, abgeglichen oder aufgeteilt und bleibt erhalten.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoNothing =>
+      'Alle Transaktionen des letzten Imports wurden seither geändert oder gelöscht. Es gibt nichts rückgängig zu machen.';
+
+  @override
+  String importUndoDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Import rückgängig gemacht: $count Transaktionen gelöscht',
+      one: 'Import rückgängig gemacht: 1 Transaktion gelöscht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoAction => 'Import rückgängig machen';
+
+  @override
+  String get importUndoFailed =>
+      'Der Import konnte nicht rückgängig gemacht werden. Es wurde nichts geändert.';
+
+  @override
+  String get helpCsvStepsV2 =>
+      'Zeilen oberhalb der Spaltennamen (Kontodaten) werden übersprungen, und eine Datei ohne Spaltennamen wird erkannt: Prüfen Sie die Zuordnung anhand der Vorschau.\nBeträge können in einer Spalte mit Vorzeichen oder in getrennten Soll- und Haben-Spalten stehen. Erscheinen Ausgaben als Einnahmen, schalten Sie „Negative Werte sind Ausgaben“ aus.\nIm Prüfschritt sind Zeilen abgewählt, die wie vorhandene Buchungen aussehen: Setzen Sie den Haken bei eigenen Buchungen und entfernen Sie ihn bei Zeilen, die Sie nicht möchten.\nIns falsche Konto importiert? „Letzten Import rückgängig machen“ auf diesem Bildschirm nimmt den Import zurück.';
 }

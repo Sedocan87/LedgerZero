@@ -68,9 +68,12 @@ final _reportSpendingRowsProvider =
     });
 
 /// Provider for Spending by Category data.
-/// Returns a Map of Category Name -> spent amount (positive minor units).
-/// Uncategorised outflows are listed as "Uncategorized" (unless a category
-/// filter is set).
+/// Returns a Map of category label -> spent amount (positive minor units),
+/// one entry per category: amounts are summed by category id, never by
+/// name. A name used by several categories of the result ("Insurance"
+/// under Home and under Car) is shown as `Group: Name` so each keeps its
+/// own bar. Uncategorised outflows are listed as "Uncategorized" (unless a
+/// category filter is set).
 final spendingByCategoryProvider = FutureProvider.autoDispose<Map<String, int>>(
   (ref) async {
     final rows = await ref.watch(_reportSpendingRowsProvider.future);
@@ -79,15 +82,40 @@ final spendingByCategoryProvider = FutureProvider.autoDispose<Map<String, int>>(
     final l10n = ref.watch(appLocalizationsProvider);
 
     final spent = Spending(rows, categoryFilter: categoryFilter).byCategory;
-    final categories = await categoryRepo.getAllCategories();
-    final categoryNameMap = {for (var c in categories) c.id: c.name};
+    final categories = {
+      for (final c in await categoryRepo.getAllCategories()) c.id: c,
+    };
+    final groupNames = {
+      for (final g in await categoryRepo.getAllCategoryGroups()) g.id: g.name,
+    };
+    final nameUses = <String, int>{};
+    for (final id in spent.keys) {
+      final name = categories[id]?.name;
+      if (name != null) {
+        nameUses[name] = (nameUses[name] ?? 0) + 1;
+      }
+    }
 
     final result = <String, int>{};
     for (final entry in spent.entries) {
-      final name = entry.key == null
-          ? l10n.uncategorized
-          : (categoryNameMap[entry.key] ?? l10n.unknown);
-      result[name] = (result[name] ?? 0) + entry.value;
+      final category = categories[entry.key];
+      String label;
+      if (entry.key == null) {
+        label = l10n.uncategorized;
+      } else if (category == null) {
+        label = l10n.unknown;
+      } else {
+        final group = groupNames[category.categoryGroupId];
+        label = nameUses[category.name]! > 1 && group != null
+            ? '$group: ${category.name}'
+            : category.name;
+      }
+      // Same name in the same group, or no group to tell them apart.
+      final base = label;
+      for (var n = 2; category != null && result.containsKey(label); n++) {
+        label = '$base ($n)';
+      }
+      result[label] = (result[label] ?? 0) + entry.value;
     }
     return result;
   },

@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
+import 'package:ledger_zero/services/import/import_undo_service.dart';
 import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -21,6 +22,7 @@ class TransactionImportService {
     required this._payeeRepository,
     required this._ruleMatchingService,
     required this._unitOfWork,
+    this._lastImportStore,
   });
 
   final TransactionRepository _transactionRepository;
@@ -28,14 +30,18 @@ class TransactionImportService {
   final RuleMatchingService _ruleMatchingService;
   final UnitOfWork _unitOfWork;
 
+  /// Where the created transactions are recorded for "undo last import"
+  /// (see [ImportUndoService]); `null`: not recorded.
+  final LastImportStore? _lastImportStore;
+
   /// Imports [rows] in one unit of work (all rows or none) and returns the
   /// number of transactions created.
   ///
   /// A row goes into [ImportTransaction.accountId] when set ("account from
   /// file" on the review screen), else into [accountId].
   ///
-  /// Each row becomes an approved transaction on its calendar day, cleared
-  /// unless the file's Cleared column said otherwise. Fields are filled in
+  /// Each row becomes a transaction on its calendar day, approved and
+  /// cleared unless the file's Approved or Cleared column said otherwise. Fields are filled in
   /// this order, each step only filling what is still empty:
   ///
   /// 1. The row's own values (amount, memo, and the category of the file's
@@ -68,7 +74,7 @@ class TransactionImportService {
     if (rows.isEmpty) {
       return 0;
     }
-    return _unitOfWork.run(() async {
+    final created = await _unitOfWork.run(() async {
       final rules = await _ruleMatchingService.loadActiveRules();
       final existing = await _payeeRepository.getAllPayees();
       final payeesById = {for (final p in existing) p.id: p};
@@ -92,7 +98,7 @@ class TransactionImportService {
               categoryId: row.categoryId,
               memo: _nonEmpty(row.memo),
               cleared: row.cleared ?? TransactionClearStatus.cleared,
-              approved: true,
+              approved: row.approved ?? true,
               transferAccountId: rows[partner].accountId ?? accountId,
               transferTransactionId: ids[partner],
               createdAt: now,
@@ -111,7 +117,7 @@ class TransactionImportService {
           categoryId: row.categoryId,
           memo: _nonEmpty(row.memo),
           cleared: row.cleared ?? TransactionClearStatus.cleared,
-          approved: true,
+          approved: row.approved ?? true,
           createdAt: now,
           updatedAt: now,
         );
@@ -151,8 +157,13 @@ class TransactionImportService {
       }
 
       await _transactionRepository.batchCreateTransactions(transactions);
-      return transactions.length;
+      return transactions;
     });
+    final store = _lastImportStore;
+    if (store != null) {
+      await ImportUndoService.record(store, created, DateTime.now().toUtc());
+    }
+    return created.length;
   }
 
   /// Pairs the transfer legs among [rows]: index -> index of the other leg
@@ -193,11 +204,11 @@ class TransactionImportService {
     return partnerOf;
   }
 
-  /// Flags the rows of [rows] that already exist in their account (same
-  /// day, amount and payee name, the file's or the one a rule would set;
-  /// see `CsvImportService.checkForDuplicates`) as duplicates and deselects
-  /// them; rows matching an existing transaction without payee by day and
-  /// amount are marked as possible duplicates.
+  /// Flags the rows of [rows] that already exist in their account and
+  /// deselects them: duplicates (same day, amount and payee name, the
+  /// file's or the one a rule would set) and possible duplicates (same
+  /// amount within a few days, whatever the payee); see
+  /// `CsvImportService.checkForDuplicates`.
   ///
   /// Call it again whenever the target account changes: only the chosen
   /// account's transactions count (a row's own
@@ -216,6 +227,8 @@ class TransactionImportService {
     for (final r in rows) {
       r.isDuplicate = false;
       r.isPossibleDuplicate = false;
+      r.possibleDuplicateDate = null;
+      r.possibleDuplicatePayee = null;
     }
 
     final rules = await _ruleMatchingService.loadActiveRules();
@@ -243,11 +256,15 @@ class TransactionImportService {
           last = r.date;
         }
       }
+      // The possible-duplicate rule looks a few days around each row.
+      const margin = Duration(
+        days: CsvImportService.possibleDuplicateWindowDays + 1,
+      );
       final existing = await _transactionRepository.getTransactions(
         filter: TransactionFilter(
           accountIds: [entry.key],
-          startDate: first.subtract(const Duration(days: 1)),
-          endDate: last.add(const Duration(days: 1)),
+          startDate: first.subtract(margin),
+          endDate: last.add(margin),
           excludeSplitChildren: true,
         ),
       );
@@ -303,5 +320,6 @@ final transactionImportServiceProvider = Provider<TransactionImportService>((
     payeeRepository: ref.watch(payeeRepositoryProvider),
     ruleMatchingService: ref.watch(ruleMatchingServiceProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    lastImportStore: ref.watch(lastImportStoreProvider),
   );
 });

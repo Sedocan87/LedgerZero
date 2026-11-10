@@ -327,4 +327,28 @@ void main() {
     ]);
     expect(imported.map((r) => r.isSelected), [false, false, false, true]);
   });
+  test('a qualified category whose group or name contains a colon is still '
+      'found (F7)', () {
+    final service = CsvImportService();
+    final rows = [
+      for (final name in ['Car: Fixed: Insurance', 'Home: Fees: Bank', 'A: B'])
+        ImportTransaction(
+          date: DateTime.utc(2023, 1, 1),
+          amount: -1,
+          categoryName: name,
+        ),
+    ];
+    service.assignCategories(
+      imported: rows,
+      groups: const [
+        CategoryGroup(id: 'g-car', name: 'Car: Fixed'),
+        CategoryGroup(id: 'g-home', name: 'Home'),
+      ],
+      categories: const [
+        Category(id: 'c-ins', name: 'Insurance', categoryGroupId: 'g-car'),
+        Category(id: 'c-fees', name: 'Fees: Bank', categoryGroupId: 'g-home'),
+      ],
+    );
+    expect(rows.map((r) => r.categoryId), ['c-ins', 'c-fees', null]);
+  });
 }

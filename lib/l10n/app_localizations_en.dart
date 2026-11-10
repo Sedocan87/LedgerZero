@@ -4926,4 +4926,214 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncStopAction => 'Stop syncing';
+
+  @override
+  String csvIssueAllInflows(int count) {
+    return 'All $count amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".';
+  }
+
+  @override
+  String csvIssueVoidRows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows are marked as reverted, failed or declined in the file and are left out.',
+      one:
+          '1 row is marked as reverted, failed or declined in the file and is left out.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csvFieldFee => 'Fee';
+
+  @override
+  String importPossibleDuplicateOf(String payee, String date) {
+    return 'Possible duplicate: $payee on $date has the same amount. Check the box if this is a separate transaction.';
+  }
+
+  @override
+  String importPossibleDuplicateOfNoPayee(String date) {
+    return 'Possible duplicate: a transaction without payee on $date (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.';
+  }
+
+  @override
+  String importPossibleDuplicatesNearby(int count, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows have the same amount as an existing transaction of the account within $days days and are unchecked. Check the ones that are separate transactions.',
+      one:
+          '1 row has the same amount as an existing transaction of the account within $days days and is unchecked. Check it if it is a separate transaction.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsPartial(String names, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This file names accounts that are not open accounts here: $names. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out $count rows; a single account takes every row.',
+      one:
+          'This file names accounts that are not open accounts here: $names. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out 1 row; a single account takes every row.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsNone(String names) {
+    return 'This file names accounts that are not open accounts here: $names. Choose the account that all rows go into.';
+  }
+
+  @override
+  String importRowAccountNotFound(String name) {
+    return 'Account “$name” not found – not imported';
+  }
+
+  @override
+  String get importRowNoAccount => 'No account in the file – not imported';
+
+  @override
+  String get importRowsWithoutAccount => 'rows without an account name';
+
+  @override
+  String get csvFieldApproved => 'Approved';
+
+  @override
+  String get csvExportFormatTitle => 'CSV format';
+
+  @override
+  String get csvExportFormatStandard => 'Standard (comma-separated)';
+
+  @override
+  String get csvExportFormatStandardHint =>
+      'For other apps and scripts. Can be imported again.';
+
+  @override
+  String get csvExportFormatSpreadsheet =>
+      'For Excel (semicolon, decimal comma)';
+
+  @override
+  String get csvExportFormatSpreadsheetHint =>
+      'Opens with the right columns and umlauts in a German Excel. Can be imported again as well.';
+
+  @override
+  String get csvNoHeaderRow => 'File has no header row';
+
+  @override
+  String get csvNoHeaderRowHint =>
+      'The first line is imported as a transaction. The columns are numbered #1, #2, …; check the mapping against the preview.';
+
+  @override
+  String get csvCustomDateFormat => 'Other date format…';
+
+  @override
+  String get csvCustomDateFormatHelp =>
+      'd day, M month, y year, H hour, m minute, s second. Examples: d.M.yyyy or MMM d, yyyy';
+
+  @override
+  String get csvCustomDateFormatInvalid =>
+      'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.';
+
+  @override
+  String ynabImportErrorInvalidAmount(String value) {
+    return 'The amount “$value” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.';
+  }
+
+  @override
+  String ynabImportErrorMissingBudgetColumns(String columns) {
+    return 'The budget file is missing required columns: $columns. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.';
+  }
+
+  @override
+  String get ynabImportZipTile => 'YNAB export (ZIP file)';
+
+  @override
+  String get ynabImportZipHint =>
+      'Pick the ZIP that YNAB downloads; both files are taken from it.';
+
+  @override
+  String get ynabImportErrorInvalidZip =>
+      'This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export.';
+
+  @override
+  String get ynabImportYnab4Zip => 'Zipped budget folder (.zip)';
+
+  @override
+  String get ynabImportYnab4ZipHint =>
+      'If the folder cannot be read on this phone, zip the .ynab4 folder on your computer and pick the ZIP file here.';
+
+  @override
+  String get ynabImportErrorInvalidYnab4Zip =>
+      'This ZIP file does not contain a YNAB 4 budget. Zip the whole folder ending in .ynab4.';
+
+  @override
+  String get importUndoLast => 'Undo last import';
+
+  @override
+  String importUndoLastInfo(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Last CSV import: $count transactions on $date.',
+      one: 'Last CSV import: 1 transaction on $date.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoConfirm(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Delete the $count transactions that the import of $date created? Payees the import created stay.',
+      one:
+          'Delete the 1 transaction that the import of $date created? Payees the import created stay.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUndoKept(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count transactions of that import were edited, reconciled or split since and are kept.',
+      one:
+          '1 transaction of that import was edited, reconciled or split since and is kept.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoNothing =>
+      'Every transaction of the last import was changed or deleted since. There is nothing to undo.';
+
+  @override
+  String importUndoDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Import undone: $count transactions deleted',
+      one: 'Import undone: 1 transaction deleted',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get importUndoAction => 'Undo import';
+
+  @override
+  String get importUndoFailed =>
+      'The import could not be undone. Nothing was changed.';
+
+  @override
+  String get helpCsvStepsV2 =>
+      'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.';
 }

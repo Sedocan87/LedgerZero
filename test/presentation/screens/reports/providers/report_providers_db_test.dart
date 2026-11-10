@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/category.dart';
+import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/screens/reports/providers/report_providers.dart';
@@ -216,6 +218,49 @@ void main() {
     expect(byName['Groceries']!.budgeted, 10000);
     expect(byName['Dining Out']!.actual, 2000);
   });
+  test('spending by category is summed per category, not per name: two '
+      'categories called the same keep their own entry', () async {
+    await t.addAccount(id: 'a1');
+    for (final (group, groupName, category) in [
+      ('g-home', 'Home', 'c-home-insurance'),
+      ('g-car', 'Car', 'c-car-insurance'),
+    ]) {
+      await t.categories.createCategoryGroup(
+        CategoryGroup(id: group, name: groupName),
+      );
+      await t.categories.createCategory(
+        Category(id: category, name: 'Insurance', categoryGroupId: group),
+      );
+    }
+    final groceries = await t.categoryId('Groceries');
+    for (final (category, amount) in [
+      ('c-home-insurance', -7000),
+      ('c-car-insurance', -5000),
+      (groceries, -1500),
+    ]) {
+      await t.addTransaction(
+        accountId: 'a1',
+        amount: amount,
+        categoryId: category,
+        date: DateTime.utc(2024, 2, 3),
+      );
+    }
+
+    expect(await container.read(spendingByCategoryProvider.future), {
+      'Home: Insurance': 7000,
+      'Car: Insurance': 5000,
+      'Groceries': 1500,
+    });
+
+    // With one of them filtered out the name is unique again.
+    container.read(reportCategoryFilterProvider.notifier).state = {
+      'c-car-insurance',
+    };
+    expect(await container.read(spendingByCategoryProvider.future), {
+      'Insurance': 5000,
+    });
+  });
+
   test('net worth: a starting balance counts from the day the account '
       'exists (creation or first transaction, whichever is earlier)', () async {
     // Created mid-February, no transactions.
