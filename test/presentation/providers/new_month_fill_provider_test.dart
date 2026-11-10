@@ -77,6 +77,26 @@ void main() {
     expect(controller().state.note?.total, 130000);
   });
 
+  test('while LedgerZero Pro is locked the automatic fill waits; it runs '
+      'once Pro is unlocked', () async {
+    var pro = false;
+    final c = NewMonthFillController(
+      prefs,
+      () => t.budgeting,
+      clock: () => now,
+      allowed: () => pro,
+    );
+    await c.setSource(AutoFillSource.previousMonth);
+    now = DateTime(2099, 11, 2);
+    await c.runIfDue();
+    expect(await t.budgeting.isMonthEmpty(november), isTrue);
+    expect(c.state.note, isNull);
+
+    pro = true;
+    await c.runIfDue();
+    expect(await budgeted(groceries, november), 30000);
+  });
+
   test('a month that already has budgets is left as it is', () async {
     final c = controller();
     await c.setSource(AutoFillSource.previousMonth);

@@ -92,6 +92,11 @@ class SyncController extends StateNotifier<SyncState> {
   bool _unlocked = false;
   bool _foreground = true;
 
+  /// Wi-Fi sync is part of LedgerZero Pro: while false nothing syncs (as
+  /// with no provider); the setup, the pairing and the changes waiting to
+  /// go out are kept for when Pro is unlocked again.
+  bool _allowed = true;
+
   /// A restore is replacing the database: no run may start.
   bool _pausedForRestore = false;
   static bool _legacyQueueRemoved = false;
@@ -190,12 +195,31 @@ class SyncController extends StateNotifier<SyncState> {
   }
 
   bool get _automatic =>
+      _allowed &&
       state.syncFrequency != SyncFrequency.manual &&
       state.selectedProvider != SyncProviderType.none;
 
   // ---------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------
+
+  /// Whether sync may run (LedgerZero Pro is unlocked). Turning it off stops
+  /// Wi-Fi sync and cancels a run; turning it on starts it again.
+  void setAllowed(bool allowed) {
+    if (_allowed == allowed || _disposed) {
+      return;
+    }
+    _allowed = allowed;
+    if (!allowed) {
+      unawaited(_lan?.stop());
+      _cancellation?.cancel();
+      _debounceTimer?.cancel();
+      _retryTimer?.cancel();
+      return;
+    }
+    unawaited(_startLanIfPaired());
+    _requestAutoSync('pro unlocked');
+  }
 
   /// Called with `appLockStateProvider` (fires immediately).
   Future<void> onLockStateChanged(AppLockState lockState) async {
@@ -423,7 +447,7 @@ class SyncController extends StateNotifier<SyncState> {
   }
 
   Future<void> _runSync({required bool automatic}) {
-    if (_pausedForRestore) {
+    if (_pausedForRestore || !_allowed) {
       return Future.value();
     }
     final running = _running;
@@ -765,6 +789,7 @@ class SyncController extends StateNotifier<SyncState> {
   Future<void> _startLanIfPaired() async {
     final lan = _lan;
     if (lan != null &&
+        _allowed &&
         lan.isPaired &&
         _foreground &&
         _unlocked &&

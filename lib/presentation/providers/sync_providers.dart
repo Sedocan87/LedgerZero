@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/connectivity_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
@@ -111,6 +113,14 @@ final syncControllerProvider = StateNotifierProvider<SyncController, SyncState>(
       lan: lan,
     );
     lan.onActivity = controller.onLanActivity;
+    // Wi-Fi sync is a LedgerZero Pro feature.
+    controller.setAllowed(
+      ref.read(proFeatureAvailableProvider(ProFeature.wifiSync)),
+    );
+    ref.listen<bool>(
+      proFeatureAvailableProvider(ProFeature.wifiSync),
+      (_, allowed) => controller.setAllowed(allowed),
+    );
     ref.listen<AppLockState>(
       appLockStateProvider,
       (_, next) => controller.onLockStateChanged(next),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/widgets/common/pro_gate.dart';
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
@@ -508,6 +510,10 @@ Future<void> showAutoFillSettingsDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
+  if (!await ensureProFeature(context, ref, ProFeature.budgetTemplates) ||
+      !context.mounted) {
+    return;
+  }
   final templates = await ref.read(budgetingServiceProvider).getAllTemplates();
   if (!context.mounted) {
     return;

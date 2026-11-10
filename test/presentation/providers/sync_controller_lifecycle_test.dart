@@ -197,6 +197,35 @@ void main() {
     expect(engine.runs, 1);
   });
 
+  test('while LedgerZero Pro is locked nothing syncs and nobody waits for '
+      'a sync; unlocking Pro syncs right away', () async {
+    final c = await controller(interval: const Duration(milliseconds: 20));
+    c.setAllowed(false);
+    await c.onLockStateChanged(AppLockState.unlocked);
+    // Work that waits for the first sync (scheduled bookings, the new-month
+    // fill) is not held up.
+    await c.syncSettled().timeout(const Duration(milliseconds: 200));
+    await localChange('p1');
+    connectivity.controller.add(ConnectionStatus.offline);
+    connectivity.controller.add(ConnectionStatus.online);
+    c.onAppResumed();
+    await c.syncNow();
+    await settle(200);
+    expect(engine.runs, 0);
+    expect(c.state.pendingChanges, greaterThan(0), reason: 'kept for later');
+
+    c.setAllowed(true);
+    await settle(100);
+    expect(engine.runs, greaterThan(0));
+
+    // Locking Pro again cancels a run in progress.
+    engine.gate = Completer<void>();
+    await c.syncNow().timeout(Duration.zero, onTimeout: () {});
+    c.setAllowed(false);
+    expect(engine.cancellations.last.isCancelled, isTrue);
+    engine.gate!.complete();
+  });
+
   test('periodic timer, reconnect and resume trigger syncs', () async {
     final c = await controller(interval: const Duration(milliseconds: 50));
     await c.onLockStateChanged(AppLockState.unlocked);

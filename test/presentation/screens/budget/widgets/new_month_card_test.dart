@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -54,6 +55,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // These tests use LedgerZero Pro features.
+          proUnlockedProvider.overrideWithValue(true),
           databaseProvider.overrideWithValue(t.db),
           sharedPreferencesProvider.overrideWithValue(prefs),
           selectedBudgetMonthProvider.overrideWith((ref) => march),

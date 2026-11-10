@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/constants/pro_features.dart';
+import 'package:ledger_zero/presentation/widgets/common/pro_gate.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -11,6 +13,10 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/budget_month_act
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 
 Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
+  if (!await ensureProFeature(context, ref, ProFeature.budgetTemplates) ||
+      !context.mounted) {
+    return;
+  }
   final controller = TextEditingController();
   return showDialog(
     context: context,
@@ -127,6 +133,10 @@ Future<void> showApplyTemplateDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
+  if (!await ensureProFeature(context, ref, ProFeature.budgetTemplates) ||
+      !context.mounted) {
+    return;
+  }
   final l10n = AppLocalizations.of(context)!;
   // Fetch templates
   final templates = await ref.read(budgetingServiceProvider).getAllTemplates();
