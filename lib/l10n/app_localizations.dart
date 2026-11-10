@@ -8169,6 +8169,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.'**
   String get helpCsvStepsV2;
+
+  /// Snackbar after tapping Contact support on a phone without a mail app
+  ///
+  /// In en, this message translates to:
+  /// **'No e-mail app was found. The address {email} has been copied to the clipboard.'**
+  String supportEmailCopied(String email);
+
+  /// Snackbar after tapping a web link (privacy policy, imprint) on a phone without a browser
+  ///
+  /// In en, this message translates to:
+  /// **'The page could not be opened. Its address has been copied to the clipboard.'**
+  String get linkCopied;
+
+  /// Settings: title of the last section, which holds the About entry
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutTitle;
+
+  /// Settings tile and title of the About screen
+  ///
+  /// In en, this message translates to:
+  /// **'About {appName}'**
+  String aboutApp(String appName);
+
+  /// Subtitle of the About tile in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'Version, licences, contact'**
+  String get aboutSubtitle;
+
+  /// About screen: app version and build number
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} (build {build})'**
+  String aboutVersion(String version, String build);
+
+  /// About screen: opens the list of licences of the bundled software and fonts
+  ///
+  /// In en, this message translates to:
+  /// **'Open-source licences'**
+  String get aboutLicenses;
+
+  /// Subtitle of the open-source licences entry
+  ///
+  /// In en, this message translates to:
+  /// **'Software and fonts this app is built with'**
+  String get aboutLicensesSubtitle;
+
+  /// About screen: opens the privacy policy in the browser
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get aboutPrivacyPolicy;
+
+  /// About screen: opens the imprint (legal notice, German Impressum) in the browser
+  ///
+  /// In en, this message translates to:
+  /// **'Imprint'**
+  String get aboutImprint;
 }
 
 class _AppLocalizationsDelegate

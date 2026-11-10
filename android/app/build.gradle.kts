@@ -8,12 +8,29 @@ plugins {
 }
 
 // Release signing: android/key.properties (git-ignored, never committed) with
-// storeFile, storePassword, keyAlias and keyPassword. See README.md.
+// storeFile, storePassword, keyAlias and keyPassword. See README.md
+// ("Release signing").
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+if (hasReleaseKeystore) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
+
+fun keystoreProperty(name: String): String =
+    keystoreProperties.getProperty(name)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: throw GradleException(
+            "android/key.properties has no \"$name\". It needs storeFile, " +
+                "storePassword, keyAlias and keyPassword: see README.md " +
+                "(\"Release signing\")."
+        )
+
+// A production release without the upload key is refused (see the task graph
+// check at the end of this file) unless this is set to 1, which is meant for
+// a local smoke build of the minified app only.
+val allowDebugSignedReleaseVariable = "LEDGERZERO_ALLOW_DEBUG_SIGNED_RELEASE"
+val allowDebugSignedRelease =
+    providers.environmentVariable(allowDebugSignedReleaseVariable).orNull == "1"
 
 android {
     namespace = "com.ledgerzero.app"
@@ -61,27 +78,34 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (hasReleaseKeystore) {
             create("release") {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperty("keyAlias")
+                keyPassword = keystoreProperty("keyPassword")
+                // A relative storeFile is resolved against android/app.
+                storeFile = file(keystoreProperty("storeFile"))
+                storePassword = keystoreProperty("storePassword")
+                if (storeFile?.isFile != true) {
+                    throw GradleException(
+                        "android/key.properties: storeFile \"$storeFile\" " +
+                            "does not exist. A relative path is resolved " +
+                            "against android/app."
+                    )
+                }
             }
         }
     }
 
     buildTypes {
         release {
-            // Without android/key.properties (local and CI builds) release
-            // builds fall back to the debug key so that `flutter build apk
-            // --release` works. Such APKs are for testing only and cannot be
-            // uploaded to Play.
-            val releaseConfig = signingConfigs.findByName("release")
-            if (releaseConfig == null) {
-                logger.warn("key.properties not found: signing the release build with the DEBUG key.")
-            }
-            signingConfig = releaseConfig ?: signingConfigs.getByName("debug")
+            // Without android/key.properties the release build type is
+            // configured with the debug key. The development and staging
+            // flavors may be built that way (testing only). The production
+            // flavor may not, unless LEDGERZERO_ALLOW_DEBUG_SIGNED_RELEASE=1
+            // is set: the task graph check at the end of this file stops
+            // the build before anything is compiled.
+            signingConfig = signingConfigs.findByName("release")
+                ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -104,4 +128,45 @@ dependencies {
     // BiometricPrompt + CryptoObject for the biometric key store
     // (BiometricKeyChannel.kt).
     implementation("androidx.biometric:biometric:1.1.0")
+}
+
+// The production release is what goes to Google Play, and Play accepts only
+// the upload key. Building it with the debug key must never happen by
+// accident (a missing or misplaced key.properties), so the build stops here,
+// before any task runs, and says what to do.
+gradle.taskGraph.whenReady {
+    if (hasReleaseKeystore) {
+        return@whenReady
+    }
+    val releaseTasks = allTasks.filter {
+        it.project == project && it.name.contains("Release")
+    }
+    if (releaseTasks.isEmpty()) {
+        return@whenReady
+    }
+    if (releaseTasks.any { it.name.contains("ProductionRelease") }) {
+        if (!allowDebugSignedRelease) {
+            throw GradleException(
+                """
+                |
+                |The production release has no signing key: android/key.properties was not found.
+                |
+                |  * To build the app for Google Play, create the upload keystore and
+                |    android/key.properties as described in README.md ("Release signing").
+                |  * To build a debug-signed release for a local test only (it cannot be
+                |    uploaded to Play), set $allowDebugSignedReleaseVariable=1, for example:
+                |      $allowDebugSignedReleaseVariable=1 flutter build appbundle --release --flavor production -t lib/main_production.dart
+                |
+                """.trimMargin()
+            )
+        }
+        logger.warn(
+            "WARNING: $allowDebugSignedReleaseVariable=1: the production release " +
+                "is signed with the DEBUG key. Do not upload it to Play."
+        )
+    } else {
+        logger.warn(
+            "key.properties not found: signing the release build with the DEBUG key."
+        )
+    }
 }

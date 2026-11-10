@@ -36,8 +36,15 @@ This document outlines the platform-specific implementations, configurations, an
   - `VIBRATE`: For haptic feedback.
   - `POST_NOTIFICATIONS`: For local notifications (sync alerts, reminders).
   - `RECEIVE_BOOT_COMPLETED`: Lets scheduled local notifications survive a reboot.
-- **Camera** (`CAMERA`, added by `mobile_scanner`): only for scanning the
-  Wi-Fi sync pairing code; asked when the scanner opens.
+- **Camera** (`CAMERA`, added by the `camera` plugin): only for scanning the
+  Wi-Fi sync pairing code; asked when the scanner opens. The code is read on
+  the phone by `flutter_zxing` (ZXing C++ through FFI). There is no Google
+  ML Kit and no Play services in the scanner, so it reports nothing to
+  anyone. The app manifest removes what the plugins declare beyond that
+  (`RECORD_AUDIO`, the external-storage permissions, `image_picker`'s file
+  provider and photo-picker module request) and marks the camera as optional
+  (`android.hardware.camera.any`, `required="false"`): the pairing code can
+  also be typed.
 - **Local network**: Wi-Fi sync listens on TCP 47321 and sends/receives UDP
   broadcasts on 47322 while the app is open. See
   [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md#local-wi-fi).
@@ -46,7 +53,12 @@ This document outlines the platform-specific implementations, configurations, an
   notification access; reads notifications of the bank/card apps chosen in
   Settings > Card notifications. `<queries>` lists known bank and wallet
   apps for the app picker. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md).
-- **Deep links**: `ledgerzero://` scheme.
+- **Deep links**: none. The app registers no URL scheme and no app links,
+  and `flutter_deeplinking_enabled` is false on `MainActivity`, so neither
+  web pages nor another app's explicit intent with a URI can open a screen
+  in it. Notification taps
+  carry a payload that the app routes itself
+  (`lib/services/notifications/notification_tap_router.dart`).
 
 ### iOS
 iOS is not supported in v1. The Flutter code and the `ios/` project stay in

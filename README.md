@@ -2,8 +2,9 @@
 
 LedgerZero is a local-first envelope budgeting app (zero-based, YNAB-style)
 for Android, in English and German. All data lives in an encrypted
-database on the phone; sync and backups go to the user's own Google Drive,
-end-to-end encrypted. No account, no server. It is planned as a one-time
+database on the phone. Phones sync over the home Wi-Fi or through the
+user's own Google Drive, and backups go to a file or to Drive, all end-to-end
+encrypted. No account, no server. It is planned as a one-time
 purchase (see [ROADMAP.md](ROADMAP.md)). Version 0.1.0, not released yet.
 
 v1 is Android only. The Flutter code and the `ios/` project stay in the
@@ -21,10 +22,13 @@ repository, but iOS is not built, tested or supported in v1.
 - Reports (spending, trends, income vs. expense, net worth, budget vs.
   actual) with CSV/PDF export.
 - Import from CSV (saved column mappings) and YNAB; CSV export.
-- Master password, recovery key, optional biometric unlock, auto-lock,
-  app-switcher privacy cover.
-- Encrypted backup/restore and encrypted multi-device sync via Google
-  Drive.
+- Optional app lock with the phone's fingerprint, face or screen lock,
+  auto-lock, app-switcher privacy cover.
+- Card capture: optionally turns payment notifications of chosen bank and
+  wallet apps into transactions to review.
+- Encrypted backup/restore and encrypted multi-device sync over the home
+  Wi-Fi (no cloud) or via Google Drive; personal accounts for a household
+  sharing one budget.
 
 ## Architecture
 
@@ -41,7 +45,7 @@ core          money, calendar dates, formatting helpers, constants, errors
 
 - **Database:** [Drift](https://drift.simonbinder.eu/) on SQLCipher (the
   `sqlite3` package's build hook bundles SQLCipher, see `hooks:` in
-  `pubspec.yaml`). Schema version 18; see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
+  `pubspec.yaml`). Schema version 20; see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
   and [REPOSITORY_PATTERN.md](REPOSITORY_PATTERN.md).
 - **Money** is always an `int` of minor units (hundredths) for every
   currency; doubles exist only for chart coordinates and percentages
@@ -50,17 +54,24 @@ core          money, calendar dates, formatting helpers, constants, errors
 - **Dates** are stored in UTC; date-only values are UTC midnight of the
   calendar day the user picked (`lib/core/time/`).
 - **Key vault:** a random 256-bit data key encrypts the database (raw hex
-  SQLCipher key). It is stored only wrapped (AES-256-GCM): by a key derived
-  from the master password (Argon2id), by a recovery key shown at
-  onboarding, and optionally by a hardware-bound biometric key. Without a
-  key the database does not open. See [docs/ENCRYPTION.md](docs/ENCRYPTION.md)
-  and [docs/SECURITY.md](docs/SECURITY.md).
+  SQLCipher key). Without the key the database does not open. See
+  [docs/ENCRYPTION.md](docs/ENCRYPTION.md) and
+  [docs/SECURITY.md](docs/SECURITY.md).
 - **Sync v2:** each sync run uploads one AES-256-GCM encrypted change file
   to the user's Google Drive (`drive.file` scope); the key
   comes from a separate sync passphrase. Rows merge last-writer-wins by
   their UTC `updated_at`; new devices bootstrap from an encrypted snapshot.
   See [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md) and
   [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md).
+- **Wi-Fi sync:** the same change files, exchanged directly between phones
+  on the same network instead of through Drive (Settings > Sync > Home
+  Wi-Fi). One phone shows a pairing QR code (or a code to type), the other
+  scans it; the code carries the shared pair key and sync passphrase.
+  While the app is open each phone serves its sync folder over HTTP on TCP
+  47321 (every request signed with the pair key) and finds the other by UDP
+  broadcast on port 47322. Android stops background apps, so both phones
+  sync when the app is open on both. See the "Local Wi-Fi" section of
+  [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md).
 - **Backups (format v2)** are always encrypted, locally or to the cloud.
   See [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md) and
   [docs/BACKUP_AND_EXPORT.md](docs/BACKUP_AND_EXPORT.md).
@@ -89,16 +100,78 @@ own entry point.
 flutter run --flavor development -t lib/main_development.dart -d <android-device>
 ```
 
-Release builds:
+### Release builds
+
+The Play release is an app bundle of the `production` flavor:
 
 ```bash
-flutter build apk --release --flavor production -t lib/main_production.dart
+flutter build appbundle --release --flavor production -t lib/main_production.dart
+# -> build/app/outputs/bundle/productionRelease/app-production-release.aab
 ```
 
-Android release signing reads `android/key.properties` (`storeFile`,
-`storePassword`, `keyAlias`, `keyPassword`; git-ignored, never commit it or
-the keystore). Without that file release builds are signed with the debug
-key so they still build locally; such APKs cannot be uploaded to Play.
+It needs the upload key (next section). Without `android/key.properties`
+the build stops at once with a message instead of quietly signing with the
+debug key.
+
+To try the minified (R8) release app locally without the upload key, opt in
+to a debug-signed build. Such a bundle or APK is for testing only and
+cannot be uploaded to Play:
+
+```bash
+LEDGERZERO_ALLOW_DEBUG_SIGNED_RELEASE=1 \
+  flutter build appbundle --release --flavor production -t lib/main_production.dart
+```
+
+Release builds of the `development` and `staging` flavors are signed with
+the debug key when there is no `android/key.properties` (with a warning).
+
+### Release signing
+
+One-time setup. The keystore and `android/key.properties` are git-ignored;
+never commit them, and keep the keystore outside the repository.
+
+1. Create the upload keystore (`keytool` comes with the JDK; Android
+   Studio's bundled JBR has it under `bin/`). It asks for a password and for
+   the name fields of the certificate:
+
+   ```bash
+   mkdir -p ~/keys
+   keytool -genkeypair -v \
+     -keystore ~/keys/ledgerzero-upload.jks \
+     -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+2. Create `android/key.properties`:
+
+   ```properties
+   storeFile=/Users/<you>/keys/ledgerzero-upload.jks
+   storePassword=<the keystore password>
+   keyAlias=upload
+   keyPassword=<the keystore password>
+   ```
+
+   `storeFile` is an absolute path (a relative one is resolved against
+   `android/app`). `keytool` creates a PKCS12 keystore, where the key
+   password is the keystore password.
+
+3. Build the bundle (command above) and check who signed it. The owner must
+   be the name you entered, not `CN=Android Debug`:
+
+   ```bash
+   keytool -printcert -jarfile build/app/outputs/bundle/productionRelease/app-production-release.aab
+   ```
+
+4. Back up the keystore and its password offline (for example a password
+   manager plus a second copy). With Play App Signing, Google holds the app
+   signing key and this key only authorises uploads; a lost upload key can
+   be replaced through Play support, but that takes days.
+
+The SHA-1 of the upload key (and later of the Play app signing key, from
+the Play Console) is what the Google Drive OAuth clients need:
+
+```bash
+keytool -list -v -keystore ~/keys/ledgerzero-upload.jks -alias upload
+```
 
 ### Google Drive sign-in
 
@@ -128,7 +201,7 @@ lib/
                   reports, rules, security, sync
   main*.dart      entry points (development, staging, production)
 test/             unit and widget tests
-integration_test/ on-device tests (simulator/emulator)
+integration_test/ on-device tests (Android emulator)
 drift_schemas/    exported schema per version (migration tests)
 tool/             check.sh, schema helper post-processing
 docs/             design and user documentation

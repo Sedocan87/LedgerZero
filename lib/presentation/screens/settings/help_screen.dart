@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:ledger_zero/core/constants/app_links.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/screens/settings/external_links.dart';
 
-class HelpScreen extends StatelessWidget {
+class HelpScreen extends ConsumerWidget {
   const HelpScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.helpAndSupport)),
@@ -40,15 +42,11 @@ class HelpScreen extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            key: const Key('help.contactSupport'),
             leading: const Icon(Icons.email),
             title: Text(l10n.contactSupport),
-            subtitle: Text(l10n.contactSupportSubtitle),
-            onTap: () async {
-              final url = Uri.parse('mailto:support@ledgerzero.app');
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url);
-              }
-            },
+            subtitle: const Text(AppLinks.supportEmail),
+            onTap: () => contactSupport(context, ref),
           ),
         ],
       ),

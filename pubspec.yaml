@@ -1,5 +1,5 @@
 name: ledger_zero
-description: "LedgerZero: local-first envelope budgeting for iOS and Android."
+description: "LedgerZero: local-first envelope budgeting for Android."
 publish_to: 'none'
 
 version: 0.1.0+1
@@ -78,7 +78,10 @@ dependencies:
   sqlite3: ^3.7.1
   http: ^1.6.0 # Drive media download client
   qr_flutter: ^4.1.0
-  mobile_scanner: ^7.4.2
+  # QR scanner for Wi-Fi sync pairing: ZXing C++ through FFI on top of the
+  # camera plugin. No Google ML Kit and no Play services, so nothing in the
+  # scanner reports usage or diagnostics to anyone.
+  flutter_zxing: ^3.1.1
 
 dev_dependencies:
   flutter_test:
@@ -102,6 +105,8 @@ flutter:
     # Unicode font for PDF reports (the PDF standard fonts lack €, „ “ and –).
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
+    # Shown on the licence page (Settings > About); see lib/app/licenses.dart.
+    - assets/fonts/LICENSE-Roboto.txt
 
 hooks:
   user_defines:
