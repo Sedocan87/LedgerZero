@@ -7,6 +7,8 @@ bool _registered = false;
 /// to the licence page (Settings > About > Open-source licences). The
 /// packages' own LICENSE files are collected by the Flutter build.
 ///
+/// * the Inter font files in `assets/fonts/Inter/` (the app's UI font, SIL
+///   Open Font License 1.1);
 /// * the Roboto font files in `assets/fonts/` (PDF reports);
 /// * zxing-cpp and its bundled copy of libzint, which the QR scanner
 ///   package (flutter_zxing) compiles into its native library; the package's
@@ -25,8 +27,14 @@ void registerBundledLicenses() {
 /// which is also the licence of zxing-cpp.
 const String _apacheLicenseAsset = 'assets/fonts/LICENSE-Roboto.txt';
 
+/// The Inter release's licence file (copyright line plus the OFL 1.1 text).
+const String _interLicenseAsset = 'assets/fonts/Inter/LICENSE.txt';
+
 Stream<LicenseEntry> _bundledLicenses() async* {
   final apache = await rootBundle.loadString(_apacheLicenseAsset);
+  yield LicenseEntryWithLineBreaks(const [
+    'Inter',
+  ], await rootBundle.loadString(_interLicenseAsset));
   yield LicenseEntryWithLineBreaks(const ['Roboto'], apache);
   yield LicenseEntryWithLineBreaks(const [
     'zxing-cpp',

@@ -177,8 +177,8 @@ void main() {
     );
   });
 
-  testWidgets('the licence page lists the bundled Roboto font and the '
-      'scanner\'s native libraries', (tester) async {
+  testWidgets('the licence page lists the bundled Inter and Roboto fonts '
+      'and the scanner\'s native libraries', (tester) async {
     LicenseRegistry.reset();
     resetBundledLicensesForTesting();
     addTearDown(() {
@@ -200,13 +200,14 @@ void main() {
 
     expect(find.byType(LicensePage), findsOneWidget);
     expect(find.text('LedgerZero Dev'), findsWidgets);
+    expect(find.text('Inter'), findsOneWidget);
     expect(find.text('Roboto'), findsOneWidget);
     expect(find.text('zxing-cpp'), findsOneWidget);
     expect(find.text('zint'), findsOneWidget);
   });
 
   // A plain test (real async): the licence stream reads an asset.
-  test('the Roboto entry carries the bundled licence text', () async {
+  test('the Inter and Roboto entries carry the bundled licence texts', () async {
     // rootBundle caches the asset's future; one cached by a widget test
     // belongs to that test's fake-async zone and would never complete here.
     rootBundle.clear();
@@ -227,6 +228,15 @@ void main() {
     expect(
       roboto.single.paragraphs.map((p) => p.text).join('\n'),
       contains('Apache License'),
+    );
+    final inter = entries.where((e) => e.packages.contains('Inter'));
+    expect(inter, hasLength(1));
+    expect(
+      inter.single.paragraphs.map((p) => p.text).join('\n'),
+      allOf(
+        contains('The Inter Project Authors'),
+        contains('SIL OPEN FONT LICENSE Version 1.1'),
+      ),
     );
     expect(
       entries.where((e) => e.packages.contains('zxing-cpp')),

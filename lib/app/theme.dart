@@ -6,7 +6,9 @@ class AppColors {
   // We use a modern Teal seed color for a financial/safe yet vibrant look.
   static const Color seedColor = Color(0xFF009688); // Vibrant Teal
 
-  // Semantic Colors
+  // Fixed semantic colours, tuned for the light theme. Screens should use
+  // the theme-aware ones instead (`AppSemanticColors.of(context)`), which
+  // keep 4.5:1 text contrast in light and dark.
   static const Color income = Color(0xFF2E7D32); // Green 800
   static const Color expense = Color(0xFFC62828); // Red 800
   static const Color success = Color(0xFF2E7D32); // Same as income/success
@@ -14,9 +16,114 @@ class AppColors {
   static const Color error = Color(0xFFBA1A1A); // M3 Error
 }
 
+/// The colours that carry meaning (state), for the active theme: light and
+/// dark values that keep at least 4.5:1 text contrast on `surface`,
+/// `surfaceContainerLow` and on their own [tonal] pill
+/// (`test/app/theme_test.dart`).
+///
+/// Colour carries state only (docs/STYLE_GUIDE.md, "Colour roles"): amounts
+/// are drawn in `onSurface`; [success] marks money available and inflows,
+/// [error] cash overspending, [warning] credit overspending. [income] and
+/// [expense] are kept for charts and legends that need a pair.
+@immutable
+class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
+  const AppSemanticColors({
+    required this.income,
+    required this.expense,
+    required this.success,
+    required this.warning,
+    required this.error,
+  });
+
+  /// The semantic colours for [scheme] (its brightness picks the values).
+  factory AppSemanticColors.fromScheme(ColorScheme scheme) {
+    final light = scheme.brightness == Brightness.light;
+    final success = light ? const Color(0xFF1B6E20) : const Color(0xFF81C784);
+    return AppSemanticColors(
+      income: success,
+      expense: light ? const Color(0xFFA8201A) : const Color(0xFFEF9A9A),
+      success: success,
+      warning: light ? const Color(0xFF8A4500) : const Color(0xFFFFB74D),
+      error: scheme.error,
+    );
+  }
+
+  final Color income;
+  final Color expense;
+  final Color success;
+  final Color warning;
+  final Color error;
+
+  /// The theme's semantic colours; a theme without the extension (a test's
+  /// plain `ThemeData`) gets the values for its colour scheme.
+  static AppSemanticColors of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<AppSemanticColors>() ??
+        AppSemanticColors.fromScheme(theme.colorScheme);
+  }
+
+  /// Opacity of [color] in a [tonal] fill.
+  static const double tonalAlpha = 0.14;
+
+  /// A faint fill of [color] over [background], for a status pill or chip
+  /// whose text is drawn in [color].
+  static Color tonal(Color color, Color background) =>
+      Color.alphaBlend(color.withValues(alpha: tonalAlpha), background);
+
+  @override
+  AppSemanticColors copyWith({
+    Color? income,
+    Color? expense,
+    Color? success,
+    Color? warning,
+    Color? error,
+  }) => AppSemanticColors(
+    income: income ?? this.income,
+    expense: expense ?? this.expense,
+    success: success ?? this.success,
+    warning: warning ?? this.warning,
+    error: error ?? this.error,
+  );
+
+  @override
+  AppSemanticColors lerp(AppSemanticColors? other, double t) {
+    if (other == null) {
+      return this;
+    }
+    return AppSemanticColors(
+      income: Color.lerp(income, other.income, t)!,
+      expense: Color.lerp(expense, other.expense, t)!,
+      success: Color.lerp(success, other.success, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+      error: Color.lerp(error, other.error, t)!,
+    );
+  }
+}
+
+/// Tabular (fixed-width) figures, so the digits of amounts in a column line
+/// up: `theme.textTheme.bodyMedium?.tabular`. Every money amount uses it.
+extension TabularFigures on TextStyle {
+  TextStyle get tabular {
+    final features = fontFeatures ?? const <FontFeature>[];
+    if (features.contains(const FontFeature.tabularFigures())) {
+      return this;
+    }
+    return copyWith(
+      fontFeatures: [...features, const FontFeature.tabularFigures()],
+    );
+  }
+}
+
+/// The app's type scale. Every style is Inter (bundled under
+/// `assets/fonts/Inter/`, declared in pubspec.yaml): headlines and titles
+/// 600–700, body 400, labels 500. PDF reports keep Roboto.
 class AppTextStyles {
+  /// The family of all app text.
+  static const String fontFamily = 'Inter';
+
   // Material 3 Typography Scale Mapping — Refined for modern fintech clarity
   static const TextStyle displayLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 57,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.5,
@@ -24,13 +131,23 @@ class AppTextStyles {
   );
 
   static const TextStyle displayMedium = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 45,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.25,
     height: 1.16,
   );
 
+  static const TextStyle displaySmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 36,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.25,
+    height: 1.22,
+  );
+
   static const TextStyle headlineLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 32,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.4,
@@ -38,13 +155,23 @@ class AppTextStyles {
   );
 
   static const TextStyle headlineMedium = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 26,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.3,
     height: 1.28,
   );
 
+  static const TextStyle headlineSmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 24,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.2,
+    height: 1.33,
+  );
+
   static const TextStyle titleLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 20,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.2,
@@ -52,6 +179,7 @@ class AppTextStyles {
   );
 
   static const TextStyle titleMedium = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.1,
@@ -59,6 +187,7 @@ class AppTextStyles {
   );
 
   static const TextStyle titleSmall = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0,
@@ -66,6 +195,7 @@ class AppTextStyles {
   );
 
   static const TextStyle bodyLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.1,
@@ -73,22 +203,41 @@ class AppTextStyles {
   );
 
   static const TextStyle bodyMedium = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.1,
     height: 1.45,
   );
 
+  static const TextStyle bodySmall = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    letterSpacing: 0.2,
+    height: 1.33,
+  );
+
   static const TextStyle labelLarge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 14,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
     height: 1.4,
   );
 
+  static const TextStyle labelMedium = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.3,
+    height: 1.33,
+  );
+
   static const TextStyle labelSmall = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 11,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w500,
     letterSpacing: 0.3,
     height: 1.45,
   );
@@ -133,22 +282,29 @@ class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
+      // Also covers the styles built from the type scale below.
+      fontFamily: AppTextStyles.fontFamily,
       extensions: [
         ChartPalette.fromScheme(colorScheme, highContrast: isHighContrast),
+        AppSemanticColors.fromScheme(colorScheme),
       ],
 
       textTheme:
           const TextTheme(
             displayLarge: AppTextStyles.displayLarge,
             displayMedium: AppTextStyles.displayMedium,
+            displaySmall: AppTextStyles.displaySmall,
             headlineLarge: AppTextStyles.headlineLarge,
             headlineMedium: AppTextStyles.headlineMedium,
+            headlineSmall: AppTextStyles.headlineSmall,
             titleLarge: AppTextStyles.titleLarge,
             titleMedium: AppTextStyles.titleMedium,
             titleSmall: AppTextStyles.titleSmall,
             bodyLarge: AppTextStyles.bodyLarge,
             bodyMedium: AppTextStyles.bodyMedium,
+            bodySmall: AppTextStyles.bodySmall,
             labelLarge: AppTextStyles.labelLarge,
+            labelMedium: AppTextStyles.labelMedium,
             labelSmall: AppTextStyles.labelSmall,
           ).apply(
             bodyColor: colorScheme.onSurface,
@@ -172,6 +328,8 @@ class AppTheme {
         ),
       ),
 
+      // Tonal cards: a fill one step above the page, no outline (outlines
+      // are kept for text inputs and outlined buttons).
       cardTheme: CardThemeData(
         color: colorScheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
@@ -179,10 +337,6 @@ class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.45),
-            width: 1,
-          ),
         ),
       ),
 
