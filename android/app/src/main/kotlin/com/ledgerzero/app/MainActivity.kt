@@ -5,8 +5,13 @@ import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
+    companion object {
+        const val INSTALL_CHANNEL = "com.ledgerzero.app/install"
+    }
+
     private var notificationCapture: NotificationCaptureChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,6 +30,16 @@ class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         AppLockChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        // The directory that Android never backs up or moves to a new phone
+        // (Context.getNoBackupFilesDir): its install marker tells a moved
+        // install from the original (lib/services/backup/transferred_install.dart).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INSTALL_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "noBackupDirectory" -> result.success(noBackupFilesDir.absolutePath)
+                    else -> result.notImplemented()
+                }
+            }
         notificationCapture = NotificationCaptureChannel(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 

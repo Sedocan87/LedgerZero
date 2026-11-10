@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,8 @@ import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/core/performance/performance_monitor.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/error_tracker.dart';
+import 'package:ledger_zero/data/database/connection.dart';
+import 'package:ledger_zero/services/backup/transferred_install.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,16 +19,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// `main_<flavor>.dart` files): on failure it shows [StartupErrorApp],
 /// whose Retry runs it again (every step is safe to repeat).
 ///
-/// [loadPreferences] and [run] are seams for tests.
+/// [loadPreferences], [noBackupDirectory] and [run] are seams for tests.
 Future<void> bootstrap(
   AppEnvironment environment, {
   @visibleForTesting
   Future<SharedPreferences> Function() loadPreferences =
       SharedPreferences.getInstance,
+  @visibleForTesting
+  Future<Directory?> Function() noBackupDirectory =
+      TransferredInstall.platformNoBackupDirectory,
   @visibleForTesting void Function(Widget app) run = runApp,
 }) async {
-  Future<void> retry() =>
-      bootstrap(environment, loadPreferences: loadPreferences, run: run);
+  Future<void> retry() => bootstrap(
+    environment,
+    loadPreferences: loadPreferences,
+    noBackupDirectory: noBackupDirectory,
+    run: run,
+  );
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
@@ -49,6 +59,14 @@ Future<void> bootstrap(
     if (kDebugMode || kProfileMode) {
       PerformanceMonitor.instance.startMonitoring();
     }
+
+    // Before anything reads the sync device id: an install that Android
+    // moved here from another phone becomes a device of its own.
+    await TransferredInstall.checkAtStartup(
+      sharedPreferences,
+      noBackupDirectory: noBackupDirectory,
+      databaseFile: databaseFile,
+    );
 
     run(
       ProviderScope(

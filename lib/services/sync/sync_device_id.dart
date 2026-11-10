@@ -4,13 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 /// This installation's sync device id: a random version-4 UUID created once
-/// and kept in SharedPreferences, with a copy in the encrypted database
+/// and kept in SharedPreferences, with a copy in the database
 /// (`sync_kv.device_id`) so that lost preferences do not mint a new id and
 /// orphan the files queued under the old one. Platform ids are not used:
 /// Android's `Build.ID` is the same on every device with the same firmware.
 ///
 /// A restored backup never carries an id: the restore strips it, so a
 /// backup restored on another phone does not clone the first phone's id.
+/// An install that Android moved to a new phone drops both copies at its
+/// first start (`TransferredInstall`).
 class SyncDeviceId {
   SyncDeviceId._();
 
