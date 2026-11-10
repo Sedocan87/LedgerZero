@@ -127,6 +127,9 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     // BiometricPrompt for the app lock (AppLockChannel.kt).
     implementation("androidx.biometric:biometric:1.1.0")
+    // Google Play's in-app rating dialog (ReviewChannel.kt). Called directly:
+    // the in_app_review plugin does not build with AGP 9.
+    implementation("com.google.android.play:review:2.0.2")
 }
 
 // The production release is what goes to Google Play, and Play accepts only

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/review_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
@@ -44,6 +45,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Exports that outlived a crash or a killed process.
     ref.read(exportFileServiceProvider).sweepStale();
+    // Days of use, for when to ask for a rating.
+    unawaited(ref.read(reviewPrompterProvider).recordActiveDay());
     // Sync lives for the whole app session: it follows the database session
     // (opened at start-up, also behind the app lock) and syncs when it
     // opens, on resume and on local changes.
@@ -84,6 +87,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     ref.read(autoLockServiceProvider).didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
+      unawaited(ref.read(reviewPrompterProvider).recordActiveDay());
       ref.read(exportFileServiceProvider).sweepStale();
       ref.read(syncControllerProvider.notifier).onAppResumed();
       _processCapturedNotifications();

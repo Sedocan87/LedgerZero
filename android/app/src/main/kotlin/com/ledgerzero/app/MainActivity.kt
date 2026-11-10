@@ -30,6 +30,7 @@ class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         AppLockChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        ReviewChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         // The directory that Android never backs up or moves to a new phone
         // (Context.getNoBackupFilesDir): its install marker tells a moved
         // install from the original (lib/services/backup/transferred_install.dart).
