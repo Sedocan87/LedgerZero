@@ -181,11 +181,11 @@ void main() {
           databaseProvider.overrideWithValue(t.db),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: MaterialApp(
+        child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: const CsvImportScreen(),
+          locale: Locale('en'),
+          home: CsvImportScreen(),
         ),
       ),
     );
