@@ -202,15 +202,17 @@ was deleted on another device while this row was created or edited. Policy:
 The policy alone does not make the devices agree: a device that applies a
 later version of the parent (an update newer than the delete brings it
 back) never sees the reference missing and would keep the row untouched.
-So a repair is a **local edit** of the repairing device, made at the time
-of the apply: the row gets a new `updated_at` (never older than the
-version just applied) and an entry in `pending_sync_changes`, a deleted
-row a captured delete, which the next run sends as an upsert or a
-tombstone. It then competes under the conflict rule of section 5 like any
-other edit: the other devices take the repaired row, unless the row was
-edited there later, in which case that edit wins everywhere (and is
-repaired again where its parent is still missing). Two devices repairing
-the same row write the same content, so no conflict entry is recorded.
+So a repair is a **local edit** of the repairing device: the row gets an
+`updated_at` one microsecond after the version it repairs and an entry in
+`pending_sync_changes`, a deleted row a captured delete, which the next
+run sends as an upsert or a tombstone. It then competes under the conflict
+rule of section 5 like any other edit: the devices that have the repaired
+version take the repair, and any later edit of the row wins everywhere
+(and is repaired again where its parent is still missing). The stamp is
+deliberately not the time of the apply: an edit of the row that the
+sender made before the repair but that travels in its next file would
+otherwise lose against it. Two devices repairing the same version write
+the same content, so no conflict entry is recorded.
 
 ## 7. Quarantine
 

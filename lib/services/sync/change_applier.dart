@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' as math;
 
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -64,8 +63,9 @@ const int _unsent = 1 << 62;
 /// * before commit, rows whose parent no longer exists (deleted on another
 ///   device) are repaired: nullable references are cleared, required
 ///   references and split children are deleted. A repair is a local edit
-///   made now (new `updated_at`, captured in `pending_sync_changes`, a
-///   tombstone for a deleted row), so it reaches the other devices under
+///   (`updated_at` one microsecond after the repaired version, captured
+///   in `pending_sync_changes`, a tombstone for a deleted row), so it
+///   reaches the other devices under
 ///   the normal conflict rule. Without that, a device on which the parent
 ///   was never missing (it applied a later version that brought the parent
 ///   back) would keep the row as it was, for good;
@@ -444,8 +444,8 @@ class ChangeApplier {
   }
 
   /// Resolves rows that reference a missing parent (see class docs): each
-  /// repair is written as a local edit at [now]. Returns the number of
-  /// repaired rows.
+  /// repair is written as a local edit ([now] only stamps a row that has
+  /// no timestamp). Returns the number of repaired rows.
   Future<int> _repairForeignKeys(DateTime now) async {
     var repaired = 0;
     for (var round = 0; round < 16; round++) {
@@ -477,13 +477,14 @@ class ChangeApplier {
         }
         final id = idRow.read<String>('id');
         final previous = idRow.data['updated_at'];
-        // Newer than the version just applied, also when that one carries
-        // a timestamp ahead of this phone's clock.
+        // One microsecond after the version it repairs, not the time of
+        // the apply: newer than what every device has (so the repair
+        // reaches them), but older than any later edit of the row,
+        // including one that is already waiting in the sender's next
+        // file, which must still win.
+        final version = SyncSchema.versionOf(previous);
         final repairedAt = DateTime.fromMicrosecondsSinceEpoch(
-          math.max(
-            now.microsecondsSinceEpoch,
-            SyncSchema.versionOf(previous) + 1,
-          ),
+          version > 0 ? version + 1 : now.microsecondsSinceEpoch,
           isUtc: true,
         ).toIso8601String();
         if (_schema.deletesOnMissingParent(table, column)) {

@@ -152,9 +152,7 @@ class ChangeGenerator {
             // this member's accounts), the other devices must drop their
             // copy. Never for a row in the partner's personal account: a
             // stale copy here says nothing about the partner's own row.
-            if (known != null &&
-                !known.deleted &&
-                personal.isOwn(table, row)) {
+            if (known != null && !known.deleted && personal.isOwn(table, row)) {
               deletes.add(
                 _Entry(
                   SyncChange(

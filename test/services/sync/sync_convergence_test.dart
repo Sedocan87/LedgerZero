@@ -322,6 +322,44 @@ void main() {
       expect(await b.count('SELECT COUNT(*) FROM budgets'), 0);
     });
 
+    test('an edit that was already on its way when the repair was made '
+        'is not lost', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await a.exec(
+        'INSERT INTO categories (id, name, is_hidden) '
+        "VALUES ('extra', 'Extra', 0)",
+      );
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      // B books into the category (file 1). A deletes the category. B then
+      // corrects the amount and renames the category (file 2), all before
+      // A syncs.
+      await b.t!.addTransaction(
+        id: 'tx',
+        accountId: 'chk',
+        amount: -100,
+        categoryId: 'extra',
+      );
+      await b.sync();
+      await a.exec("DELETE FROM categories WHERE id = 'extra'");
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await b.exec("UPDATE transactions SET amount = -250 WHERE id = 'tx'");
+      await b.exec("UPDATE categories SET name = 'Extras' WHERE id = 'extra'");
+      await b.sync();
+
+      // A applies file 1 (the category is gone: repair) and then file 2
+      // (the correction, and the category is back) in the same run.
+      await syncAll([a, b], rounds: 3);
+
+      await expectConverged([a, b]);
+      expect(await a.rows('SELECT amount, category_id FROM transactions'), [
+        {'amount': -250, 'category_id': 'extra'},
+      ]);
+    });
+
     test('a later edit on the other phone wins over the repair', () async {
       final a = await device();
       final b = await device();
