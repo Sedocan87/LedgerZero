@@ -7,30 +7,21 @@ This guide helps you resolve common issues with LedgerZero.
 ### "Database disk image is malformed"
 **Cause:** The database file has been corrupted, likely due to a sudden power loss or hardware issue.
 **Solution:**
-1. Restore a backup (`.lzbk`) in Settings > Backup & Export (backups you
-   uploaded are in `LedgerZero/Backups` on Google Drive). See [ERROR_RECOVERY.md](ERROR_RECOVERY.md).
+1. Restore a backup (`.lzbk`) in Settings > Backup & Export (a file you
+   saved elsewhere, or an automatic backup on the phone). See [ERROR_RECOVERY.md](ERROR_RECOVERY.md).
 2. If you have no backup, you may need to reinstall the app (warning: data loss).
 
-### "Your cloud storage is full. Free up space to keep syncing."
-**Cause:** Your Google Drive storage is full.
+### Wi-Fi sync does not sync
+**Cause:** The phones sync only when both are on the same Wi-Fi with
+LedgerZero open (Android stops the app's server in the background). Guest
+networks and some mesh systems block the phones from seeing each other.
 **Solution:**
-1. Free up space on your cloud provider.
-2. Or empty the Trash in your cloud provider.
-
-### "You are not signed in" / "The sign-in has expired"
-**Cause:** The authentication token has expired or is invalid.
-**Solution:**
-1. Go to Settings > Sync Settings.
-2. Tap **Disconnect** and confirm, then connect again and enter your sync
-   passphrase. Changes made in between are kept and sent after you
-   reconnect.
-
-### "No connection to the cloud storage"
-**Cause:** The device cannot reach the internet. Sync tries again when you are online.
-**Solution:**
-1. Check your Wi-Fi or cellular connection.
-2. If on Cellular, ensure LedgerZero has permission to use cellular data.
-3. Toggle Airplane mode on/off.
+1. Open LedgerZero on both phones, on the same Wi-Fi.
+2. Settings > Sync Settings > **Sync Now**.
+3. "The other phone's clock differs by N minutes": set both phones to
+   automatic date and time.
+4. If nothing helps, tap **Turn off Wi-Fi sync** on both phones and pair
+   again.
 
 ## Start-up and app lock
 
@@ -84,10 +75,16 @@ app as above and set it up again.
   password.
 * Moving to a new phone: Android's transfer when setting up the new phone
   (cable or Wi-Fi, Android 9 and later) takes the budget and the settings
-  along; Google's cloud backup never does. On the new phone pair Wi-Fi sync
-  again, sign in to Google Drive again, turn card notifications on again
-  and re-enter the automatic-backup password. Otherwise use a backup file
-  or sync.
+  along; so does setting the new phone up from Android backup (Android 9
+  and later, only if backup was on and the old phone had a screen lock;
+  the copy is up to about a day old). On the new phone pair Wi-Fi sync
+  again, turn card notifications on again and re-enter the
+  automatic-backup password. Otherwise use a backup file or sync.
+* The budget did not come back from Android backup: check on the old phone
+  (if you still have it) that backup is on in Android's settings and that
+  it has a screen lock; without one Android backs up nothing of
+  LedgerZero. A budget above 25 MB is not backed up any more (the Backup
+  screen says so above 20 MB); keep saving backup files then.
 * Entering a backup password or sync passphrase takes up to about a second
   on a mid-range phone: that is the deliberate cost of Argon2id key
   derivation, which makes guessing them expensive.

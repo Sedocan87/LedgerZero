@@ -67,7 +67,7 @@ locking the user out (removing a screen lock needs the old one).
   shade, system dialogs, app switcher, which FLAG_SECURE already covers); a
   timeout locks via a timer while the process runs and is re-checked on
   resume using the larger of a monotonic stopwatch and the wall clock. File
-  pickers, share sheets, system prompts and Google sign-in run inside
+  pickers, share sheets and system prompts run inside
   `ExternalUiGuard.run` and do not trigger the lock; a guard ends after 2
   minutes at the latest, so a platform call that never answers cannot
   switch the auto-lock off. After a guard ends the service waits 3 s
@@ -127,7 +127,7 @@ strength meter (length, character classes, repeats, sequences).
 | Lock / auto-lock | UI only (`isAuthenticated = false`); the database stays open. |
 | Backup | `VACUUM INTO` a temporary file, encrypt it (`BackupFormat`), delete the temporary file. |
 | Restore | Decrypt into the temporary directory, validate, copy next to the live file, check, swap in, reopen. |
-| Factory reset | Close the session, delete DB files, the stored automatic-backup password, exports and diagnostics, unpair Wi-Fi sync and delete the local sync files, clear preferences, sign out of Google Drive (best effort; offline it does not fail the reset). The automatic backup files are kept: after a reset forced by a database that cannot be opened they are what the user restores from. |
+| Factory reset | Close the session, delete DB files, the stored automatic-backup password, exports and diagnostics, unpair Wi-Fi sync and delete the local sync files, clear preferences. The automatic backup files are kept: after a reset forced by a database that cannot be opened they are what the user restores from. |
 
 ## Where secrets are stored
 

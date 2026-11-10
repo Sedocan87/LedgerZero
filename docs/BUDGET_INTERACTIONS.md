@@ -212,7 +212,7 @@ applied by sync alike). While they recompute, the list, the To Be Budgeted
 banner and the home cards keep showing their previous values
 (`skipLoadingOnReload`), so an edit never replaces the screen with a
 spinner or flashes a zero, and the list keeps its scroll position and
-focus. Everything works offline; cloud sync is described in
+focus. Everything works offline; Wi-Fi sync is described in
 [SYNC_ARCHITECTURE.md](SYNC_ARCHITECTURE.md).
 
 ## Income line

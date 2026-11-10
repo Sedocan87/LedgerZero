@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 
 /// The sync folder of Wi-Fi sync, kept on this phone
-/// (`<documents>/sync/lan`). The sync engine reads and writes it like the
-/// Drive folder; the paired phones copy files between their folders.
+/// (`<documents>/sync/lan`). The sync engine reads and writes it like any
+/// sync folder; the paired phones copy files between their folders.
 ///
 /// Only sync file names ([isSyncFileName]) are listed, read or written.
 /// Deleting a file (the engine compacts its own old change files, answers

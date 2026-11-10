@@ -2,8 +2,11 @@
 
 LedgerZero is local-first: your budget lives on your phone, in the app's
 private storage. There is no account, no LedgerZero server and no tracking.
-Everything that leaves the phone (backups, sync files) is encrypted with a
-password or passphrase only the user knows. This document states what is
+Everything the app sends off the phone (backup files, sync files) is
+encrypted with a password or passphrase only the user knows. If the user
+has Android backup switched on, Android itself keeps a copy of the
+database in the user's Google account, end-to-end encrypted so that only
+the phone's screen lock opens it (section 1). This document states what is
 protected, how, and what is not. The cryptography of backups and sync is
 described in [ENCRYPTION.md](ENCRYPTION.md).
 
@@ -11,9 +14,9 @@ described in [ENCRYPTION.md](ENCRYPTION.md).
 
 | Data | Protection |
 | --- | --- |
-| Database (`db.sqlite` in the app documents directory, `app_flutter/` on Android) | A plain SQLite file in the app's private storage. Android's app sandbox keeps other apps out; file-based encryption (bound to the screen lock) protects it while the phone is locked after a restart. The app does not encrypt it itself (see section 7). |
+| Database (`db.sqlite` in the app documents directory, `app_flutter/` on Android) | A plain SQLite file in the app's private storage. Android's app sandbox keeps other apps out; file-based encryption (bound to the screen lock) protects it while the phone is locked after a restart. The app does not encrypt it itself (see section 7). With Android backup on, a copy is in the user's Google account, encrypted by Android with the screen lock (below). |
 | Backups (`.lzbk`) | Always encrypted (AES-256-GCM, Argon2id from a backup password, streamed in authenticated chunks). See [BACKUP_FORMAT.md](BACKUP_FORMAT.md). |
-| Sync files (Google Drive or Wi-Fi) | Always encrypted (AES-256-GCM under a key from the sync passphrase). See section 5. |
+| Sync files (Wi-Fi sync) | Always encrypted (AES-256-GCM under a key from the sync passphrase). See section 5. |
 | Automatic-backup password, Wi-Fi pairing secret | flutter_secure_storage 11 (AES-GCM under an Android KeyStore key). If the KeyStore loses that key, the entries are deleted and read as missing: the user enters the backup password again or pairs again (`resetOnError`, `lib/services/security/secure_store.dart`). Nothing else depends on them. |
 | Exports (CSV, JSON, PDF, PNG, diagnostic log) | Plaintext by design. Written to the app's cache directory (not backed up), deleted once the share sheet completes (on Android 60 s later, because the receiving app may still be reading), and swept at start-up/resume if older than one hour. |
 | Captured card notifications (Android, only when enabled) | Title and text of notifications from the bank/card apps the user chose, kept as a log until the app next runs and for 30 days after they were handled: AES-256-GCM with an Android KeyStore key that needs no user authentication, max. 500 entries (pending ones for 90 days). If the KeyStore key is lost, the log is started over and the user is told the date. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md). |
@@ -21,36 +24,68 @@ described in [ENCRYPTION.md](ENCRYPTION.md).
 
 ### Android backup and moving to a new phone
 
-`android:allowBackup="true"` with rules that keep the cloud out
+`android:allowBackup="true"` with rules that copy only the database and the
+preferences, and only when that is safe
 (`android/app/src/main/res/xml/data_extraction_rules.xml`,
-`res/xml/backup_rules.xml`, `res/xml-v28/backup_rules.xml`):
+`res/xml-v28/backup_rules.xml`, `res/xml/backup_rules.xml`):
 
-| Android version | Cloud backup (Google Drive) | Device-to-device transfer (new phone set up from the old one) |
+| Android version | Cloud backup (Android backup to the user's Google account) | Device-to-device transfer (new phone set up from the old one) |
 | --- | --- | --- |
-| 12 and later (`dataExtractionRules`) | nothing | the database (`app_flutter/db.sqlite` and its `-wal`) and the preferences (`FlutterSharedPreferences.xml`) |
-| 9 to 11 (`fullBackupContent`, `res/xml-v28`) | nothing: every include needs `requireFlags="deviceToDeviceTransfer"` | the same files |
-| 7.0 to 8.1 (`fullBackupContent`, `res/xml`) | nothing | nothing: these versions ignore `requireFlags`, so a cloud backup could not be told apart; the budget moves through a backup file or sync |
+| 12 and later (`dataExtractionRules`) | `app_flutter/db.sqlite`, `app_flutter/db.sqlite-wal`, `FlutterSharedPreferences.xml`, only when end-to-end encrypted: `<cloud-backup disableIfNoEncryptionCapabilities="true">` | the same files |
+| 9 to 11 (`fullBackupContent`, `res/xml-v28`) | the same files, each with `requireFlags="clientSideEncryption"` | the same files, each with `requireFlags="deviceToDeviceTransfer"` (a second include per file: one include with both flags would need both) |
+| 7.0 to 8.1 (`fullBackupContent`, `res/xml`) | nothing (these versions ignore `requireFlags`, so a backup cannot be made to depend on encryption) | nothing; the budget moves through a backup file or sync |
 
-`allowBackup` has to be true for the transfer (on Android 12 and later
-`false` turns off the cloud backup, and on some devices the transfer too).
+"End-to-end encrypted" is Android's client-side encryption: on Android 9
+and later the backup is encrypted on the phone with a key protected by the
+phone's screen lock (PIN, pattern or password) before it is uploaded, so
+neither Google nor anyone with the Google account can read it without that
+screen lock. Without a screen lock (or with backup off) Android reports no
+encryption capability and nothing of LedgerZero is uploaded. The app cannot
+read whether backup is on (that needs a system permission); the Backup
+screen explains it instead.
+
 The rules include only the files listed, so everything else stays behind:
 the secure storage (its KeyStore key cannot move), the card capture store
-(KeyStore-encrypted; it starts empty), exports, the sync folder and the
-automatic backups (external storage).
+(KeyStore-encrypted; it starts empty), the cache and exports, the sync
+folder and the automatic backups (external storage).
 
-A moved install would keep the old phone's sync device id. Every install
-therefore writes a random install id into its preferences and into a
-marker in `Context.getNoBackupFilesDir()`, which Android never backs up or
-moves (`lib/services/backup/transferred_install.dart`, checked in
-`bootstrap()` before anything reads the device id). Preferences with an id
-that the marker does not have came from another phone: that install drops
-the device id (preferences and `sync_kv`), empties the change queue, sets
-the sync re-bootstrap flag (like a restore, section 4) and forgets the old
-phone's Wi-Fi peers. The rest of what moved is handled where it is used:
-the app lock setting (turned off by the lock screen if the new phone has no
-screen lock), automatic backups (the Backup screen asks for the password
-again), Wi-Fi sync (asks to pair again), Google Drive (sign in again), card
-capture (notification access is granted again).
+**Consistency.** The backup copies `db.sqlite` and `db.sqlite-wal`
+together. Android's documentation says the system shuts the app down for
+Auto Backup and skips apps in the foreground; in the framework the backup
+agent can also run inside a still-cached process (and the process is killed
+afterwards). So the app does not rely on being stopped: when it goes to the
+background it runs `PRAGMA wal_checkpoint(TRUNCATE)`
+(`AppDatabase.checkpointWal`, `lib/app/app.dart`), which leaves every
+committed change in `db.sqlite` and an empty WAL, and the WAL is included
+anyway, because `db.sqlite` with its own WAL is a consistent database
+(SQLite applies the WAL on open; the `-shm` index is rebuilt).
+
+**Restore.** Android restores the files when the app is installed again
+(also by `adb install`) and when a new phone is set up from the backup. A
+restored or moved install would keep the old phone's sync device id. Every
+install therefore writes a random install id into its preferences and into
+a marker in `Context.getNoBackupFilesDir()`, which Android never backs up,
+moves or restores, and which an uninstall deletes
+(`lib/services/backup/transferred_install.dart`, checked in `bootstrap()`
+before anything reads the device id). Preferences with an id that the
+marker does not have came from a backup or another phone: that install
+drops the device id (preferences and `sync_kv`), empties the change queue,
+sets the sync re-bootstrap flag (like a restore, section 4) and forgets the
+old phone's Wi-Fi peers. A cloud restore and a transfer are handled the
+same way. The rest of what moved is handled where it is used: the app lock
+setting (turned off by the lock screen if the new phone has no screen
+lock), automatic backups (the Backup screen asks for the password again),
+Wi-Fi sync (asks to pair again), card capture (notification access is
+granted again).
+
+**Age and size.** The cloud copy is as old as Android's last backup (about
+once a day, when the phone is idle and on Wi-Fi). After a restore Wi-Fi
+sync with the partner's phone brings back what the partner has (the
+re-bootstrap rebuilds this phone's sync state from it); a single-phone user
+loses the changes since the last backup, up to about a day. Android backs up
+at most 25 MB per app and stops without a message above that; the Backup
+screen notes a database above 20 MB. A four-year two-person household
+measured 19.5 MB (18.6 MB after `VACUUM`; `test/performance/database_size_test.dart`).
 
 ## 2. App lock and session
 
@@ -110,11 +145,12 @@ capture (notification access is granted again).
 
 ## 5. Synchronisation
 
-* Bring-your-own storage (Google Drive, `drive.file` scope), or phone to
-  phone on the local Wi-Fi without any cloud (see below).
+* Phone to phone on the local Wi-Fi only: the phones sync when both are
+  on the same Wi-Fi with the app open. There is no Google sign-in, no Drive
+  permission and no other transport (removed 2026-11).
 * **End-to-end encrypted:** every change file and snapshot is encrypted with
   AES-256-GCM under a key derived from the user's sync passphrase (Argon2id,
-  m = 46 MiB, t = 2, then HKDF bound to the folder's sync id). The cloud
+  m = 46 MiB, t = 2, then HKDF bound to the folder's sync id). The sync
   folder holds only ciphertext plus a manifest with the KDF salt/parameters
   and a key-check value. File headers (device id, sequence, schema version,
   counts, timestamps) are readable but authenticated. Without the passphrase
@@ -134,9 +170,9 @@ capture (notification access is granted again).
   time window and replay protection); discovery beacons are tagged with it
   too. Pair key and sync passphrase travel only in the pairing QR code
   shown on one phone and scanned on the other, and are stored in the
-  KeyStore-protected secure storage. The files exchanged are the same
-  AES-GCM encrypted change files as on Drive. The server listens only while
-  the app is open.
+  KeyStore-protected secure storage. The files exchanged are the AES-GCM
+  encrypted change files above. The server listens only while the app is
+  open.
 
 ## 6. Application security
 
@@ -160,13 +196,13 @@ capture (notification access is granted again).
   the app or as root on a rooted or exploited phone, a forensic tool on an
   unlocked phone, `adb backup` / `run-as` on a debug build. The app lock
   does not stop that; it gates the UI only. This was decided in exchange
-  for a budget that can move to a new phone (device-to-device transfer) and
-  for no key to lose: Android's sandbox and file-based encryption cover the
+  for a budget that can move to a new phone (device-to-device transfer, or
+  Android backup, end-to-end encrypted by Android) and for no key to lose: Android's sandbox and file-based encryption cover the
   realistic cases (another app, a stolen locked phone).
-* Sync metadata visible in the cloud folder: file names (random device ids
-  and sequence numbers), file sizes and times, and the authenticated file
-  headers (schema version, change counts, newest change time). On the local
-  network, Wi-Fi sync traffic is plain HTTP: others on the network can see
+* Sync metadata: the file names (random device ids and sequence numbers),
+  file sizes and times, and the authenticated file headers (schema version,
+  change counts, newest change time) are readable. On the local network,
+  Wi-Fi sync traffic is plain HTTP: others on the network can see
   that two phones exchange files, their names and sizes (not their content)
   and the discovery beacons (device id and name).
 * Anyone who sees the pairing QR code (or its text) can join the shared
@@ -177,15 +213,23 @@ capture (notification access is granted again).
 * Strings in memory cannot be wiped from Dart.
 * Plaintext exports once the user has shared them with another app.
 * **Losing the phone (or a factory reset of the phone) loses the data**
-  unless there is a backup file somewhere else or a second phone that
-  syncs; onboarding and the Backup screen say so. Automatic backups
+  unless Android backup was on (its copy is up to about a day old), there
+  is a backup file somewhere else or a second phone syncs; onboarding and
+  the Backup screen say so.
+* The Android backup copy is protected by Android's client-side
+  encryption and the screen lock, not by a password of the app: anyone who
+  knows the phone's screen lock and has the Google account can restore it
+  onto a phone. A short PIN is the weakest part of that. Automatic backups
   (Settings > Backup & Export) live on the phone and go with it; they cover
   a database that cannot be opened any more and are kept by the reset that
   such a failure needs ([BACKUP_AND_EXPORT.md](BACKUP_AND_EXPORT.md)).
 
 ## 8. Privacy
 
-* No analytics or tracking SDKs; nothing is sent anywhere except to the cloud
-  storage the user configured.
-* No cloud backup by Android (section 1).
+* No analytics or tracking SDKs, no account and no LedgerZero server. The
+  app itself sends data only to the paired phone (Wi-Fi sync) and to where
+  the user saves or shares a backup file.
+* Android backup, if the user has it on, copies the database and the app's
+  preferences, end-to-end encrypted, to the user's Google account
+  (section 1); nothing else of the app is backed up.
 * The app works fully offline.
