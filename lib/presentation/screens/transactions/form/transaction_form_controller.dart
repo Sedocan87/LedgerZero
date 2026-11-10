@@ -75,6 +75,13 @@ class TransactionFormController extends ChangeNotifier {
   /// Cleared status the counterpart leg had when it was loaded.
   TransactionClearStatus? loadedCounterpartCleared;
 
+  /// The accounts of the edited row and of its counterpart when loaded.
+  /// A reconciled status belongs to the reconciliation of that account: a
+  /// leg moved to another account is not reconciled there (see
+  /// [pickAccount]).
+  String? loadedAccountId;
+  String? loadedTransferAccountId;
+
   /// The category the form had before it became an inflow (see
   /// [setFormType]); it comes back when the form leaves inflow without a
   /// category.
@@ -137,14 +144,63 @@ class TransactionFormController extends ChangeNotifier {
   }
 
   void setCleared(bool value) {
-    cleared = _toggled(value, loadedCleared);
+    cleared = _toggled(
+      value,
+      accountId == loadedAccountId ? loadedCleared : null,
+    );
     notifyListeners();
   }
 
   /// The switch of the transfer's other leg.
   void setCounterpartCleared(bool value) {
-    counterpartCleared = _toggled(value, loadedCounterpartCleared);
+    counterpartCleared = _toggled(
+      value,
+      transferAccountId == loadedTransferAccountId
+          ? loadedCounterpartCleared
+          : null,
+    );
     notifyListeners();
+  }
+
+  /// The user picked the (From) account [id]. A reconciled row moved to
+  /// another account starts uncleared there; moved back, it gets its
+  /// loaded status again.
+  void pickAccount(String id) {
+    accountId = id;
+    cleared = _statusAfterMove(
+      cleared,
+      moved: id != loadedAccountId,
+      loaded: loadedCleared,
+    );
+    notifyListeners();
+  }
+
+  /// The user picked the To account [id] of a transfer; its leg is treated
+  /// like the row in [pickAccount].
+  void pickTransferAccount(String id) {
+    transferAccountId = id;
+    counterpartCleared = _statusAfterMove(
+      counterpartCleared,
+      moved: id != loadedTransferAccountId,
+      loaded: loadedCounterpartCleared,
+    );
+    notifyListeners();
+  }
+
+  TransactionClearStatus _statusAfterMove(
+    TransactionClearStatus current, {
+    required bool moved,
+    required TransactionClearStatus? loaded,
+  }) {
+    if (!isEditing) {
+      return current;
+    }
+    if (moved) {
+      return current == TransactionClearStatus.reconciled
+          ? TransactionClearStatus.uncleared
+          : current;
+    }
+    return loaded ?? current;
   }
 
   /// Switching on returns to `reconciled` when the row was reconciled.
@@ -277,6 +333,8 @@ class TransactionFormController extends ChangeNotifier {
     editingId = t.id;
     loadedCleared = t.cleared;
     loadedCounterpartCleared = counterpart?.cleared;
+    loadedAccountId = t.accountId;
+    loadedTransferAccountId = counterpart?.accountId;
     counterpartCleared =
         counterpart?.cleared ?? TransactionClearStatus.uncleared;
     approved = t.approved;

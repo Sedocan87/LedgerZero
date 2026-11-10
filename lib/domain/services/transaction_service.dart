@@ -236,12 +236,16 @@ class TransactionService {
           date: date,
           amount: -input.amount,
           memo: input.memo,
-          // The cleared state belongs to the counterpart's own account.
-          cleared:
-              input.counterpartCleared ??
-              (sameAccount
-                  ? counterpart!.cleared
-                  : TransactionClearStatus.uncleared),
+          // The cleared state belongs to the counterpart's own account:
+          // a leg that moves there (or is new) starts uncleared and is
+          // never reconciled there.
+          cleared: _statusIn(
+            input.counterpartCleared ??
+                (sameAccount
+                    ? counterpart!.cleared
+                    : TransactionClearStatus.uncleared),
+            stays: sameAccount || existing == null,
+          ),
           approved: input.approved,
           categoryId: transferCategory.counterpart,
           transferAccountId: input.accountId,
@@ -254,6 +258,11 @@ class TransactionService {
       written.add(_deleted(counterpart, now));
     }
 
+    // A reconciled row moved to another account starts uncleared there.
+    final cleared = _statusIn(
+      input.cleared,
+      stays: existing == null || existing.accountId == input.accountId,
+    );
     final primary = Transaction(
       id: primaryId,
       accountId: input.accountId,
@@ -264,7 +273,7 @@ class TransactionService {
           ? transferCategory.primary
           : (input.isSplit ? null : categoryId),
       memo: input.memo,
-      cleared: input.cleared,
+      cleared: cleared,
       approved: input.approved,
       transferAccountId: input.isTransfer ? input.transferAccountId : null,
       transferTransactionId: counterpartId,
@@ -289,7 +298,7 @@ class TransactionService {
           payeeId: payeeId,
           categoryId: onBudget ? line.categoryId : null,
           memo: line.memo,
-          cleared: input.cleared,
+          cleared: cleared,
           approved: input.approved,
           parentTransactionId: primaryId,
           createdAt: old?.createdAt ?? now,
@@ -365,6 +374,17 @@ class TransactionService {
       );
     }
   }
+
+  /// [status] for a row that [stays] in the account it had, else (it moves
+  /// to another account, or is the new leg of an existing transaction)
+  /// with `reconciled` dropped to `uncleared`: a row is only reconciled in
+  /// the account whose reconciliation included it.
+  static TransactionClearStatus _statusIn(
+    TransactionClearStatus status, {
+    required bool stays,
+  }) => !stays && status == TransactionClearStatus.reconciled
+      ? TransactionClearStatus.uncleared
+      : status;
 
   /// A closed account takes no new rows: the row of [input] must already
   /// be in its account, and so must the transfer's other leg in its own,

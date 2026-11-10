@@ -160,7 +160,13 @@ Two rows linked both ways:
 * each leg has its own cleared status: the form shows a switch per leg
   (`TransactionInput.counterpartCleared`); when it is omitted the
   counterpart keeps its own status unless it moves to another account
-  (then it starts `uncleared`).
+  (then it starts `uncleared`);
+* a row is only `reconciled` in the account whose reconciliation included
+  it: a reconciled row or transfer leg moved to another account (after
+  the reconciled-change confirmation) starts `uncleared` there, whatever
+  the input says. The form switches that leg's switch off when its
+  account is changed (and back on when the original account is picked
+  again); switching it on in the new account means `cleared`.
 
 ## Splits
 

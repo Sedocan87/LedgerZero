@@ -117,8 +117,7 @@ class TransactionFormBody extends ConsumerWidget {
               onTap: () async {
                 final picked = await showAccountPicker(context);
                 if (picked != null) {
-                  c.accountId = picked.id;
-                  c.changed();
+                  c.pickAccount(picked.id);
                 }
               },
             ),
@@ -135,8 +134,7 @@ class TransactionFormBody extends ConsumerWidget {
                     currency: accounts[c.accountId]?.currency,
                   );
                   if (picked != null) {
-                    c.transferAccountId = picked.id;
-                    c.changed();
+                    c.pickTransferAccount(picked.id);
                   }
                 },
               ),
