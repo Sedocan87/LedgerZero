@@ -44,15 +44,23 @@ Charts are drawn without animation.
 * `FormUtils.focusFirstError(context)` (used by the transaction and account
   forms) gives haptic feedback and scrolls the first invalid field into
   view. It does not move keyboard focus to that field.
-* Amount cells and the clear-status button are at least
-  `kMinInteractiveDimension` (48 dp) tall.
+* Amount cells, the month chevrons and the clear-status button are at
+  least `kMinInteractiveDimension` (48 dp) tall. A budget category row is
+  56 dp; its budgeted amount is plain text with a 48 dp tap target.
 
 ## Colour
 
 * Colour schemes are generated from the teal seed with
   `ColorScheme.fromSeed`; `test/app/theme_test.dart` checks that
   onPrimary/primary, onPrimaryContainer/primaryContainer, onSurface/surface
-  and onError/error reach WCAG AA (4.5:1) in every theme.
+  and onError/error reach WCAG AA (4.5:1) in every theme, and that the
+  semantic colours (`AppSemanticColors`: success, warning, error, income,
+  expense) keep 4.5:1 on `surface`, `surfaceContainerLow` and their own
+  tonal pill in light, dark and high contrast.
+* State is not told by colour alone: To Be Budgeted has a status chip
+  ("Ready to assign", "Overassigned", "All assigned"), and an amount's
+  screen-reader label says "available" / "overspent" /
+  "overbudgeted".
 * `ChartPalette` (theme extension) keeps chart colours at least 3:1 against
   the surface (4.5:1 in high contrast); see
   `test/presentation/widgets/charts/chart_palette_test.dart`.
@@ -79,6 +87,8 @@ largest system font size; Reduced Motion on.
 
 ## Known gaps
 
-* No audit of large font sizes (text scaling) yet.
+* No audit of large font sizes (text scaling) yet, beyond the budget row
+  (`budget_row_fit_test.dart`: text scale 1.3 at 360 dp, where the name
+  moves to its own line).
 * Form validation does not move focus to the first invalid field.
 * The high-contrast theme only overrides primary and surface colours.
