@@ -330,9 +330,13 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     }
 
     final viewMode = ref.watch(budgetViewModeProvider);
-    final catColor = category.color != null
-        ? Color(category.color!)
-        : theme.colorScheme.primary;
+    final catColor = CategoryIconResolver.tintFor(
+      color: category.color,
+      icon: category.icon,
+      id: category.id,
+      name: category.name,
+      brightness: theme.brightness,
+    );
     final catIcon = CategoryIconResolver.iconFor(
       icon: category.icon,
       id: category.id,

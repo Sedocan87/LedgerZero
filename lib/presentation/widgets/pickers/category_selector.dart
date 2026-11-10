@@ -51,6 +51,13 @@ class CategorySelector extends ConsumerWidget {
                         id: category.id,
                         name: category.name,
                       ),
+                      color: CategoryIconResolver.tintFor(
+                        color: category.color,
+                        icon: category.icon,
+                        id: category.id,
+                        name: category.name,
+                        brightness: Theme.of(context).brightness,
+                      ),
                     ),
                     onTap: () {
                       onSelected(category);
