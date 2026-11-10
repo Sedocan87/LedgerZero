@@ -358,15 +358,17 @@ class AppTheme {
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
+            // 11 sp, no extra tracking: Inter is wider than Roboto, and
+            // "Transactions" must fit a fifth of a 360 dp phone.
             return AppTextStyles.labelSmall.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0,
               color: colorScheme.onSurface,
             );
           }
           return AppTextStyles.labelSmall.copyWith(
-            fontSize: 12,
             fontWeight: FontWeight.w500,
+            letterSpacing: 0,
             color: colorScheme.onSurfaceVariant,
           );
         }),
