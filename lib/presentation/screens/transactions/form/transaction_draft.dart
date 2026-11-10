@@ -16,6 +16,11 @@ class SplitDraft {
   final String? categoryId;
   final String? memo;
 
+  bool get hasContent =>
+      amountText.trim().isNotEmpty ||
+      categoryId != null ||
+      (memo?.trim().isNotEmpty ?? false);
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'amount': amountText,
@@ -36,7 +41,8 @@ class SplitDraft {
 /// Used for the quick-add "Edit details" hand-off (passed as the route's
 /// `extra`) and for the form's autosaved draft. Ids are resolved by the form
 /// whenever the referenced lists load, so late-loading providers never lose
-/// the payee, category or account.
+/// the payee, category or account. The autosaved draft carries no [date]
+/// (see `TransactionFormController.restoreDraft`).
 class TransactionDraft {
   const TransactionDraft({
     this.amountText = '',
@@ -72,6 +78,15 @@ class TransactionDraft {
   final RecurrenceFrequency frequency;
 
   bool get isSplit => splits.isNotEmpty;
+
+  /// Whether the draft holds something the user typed: an amount, a payee,
+  /// a memo or a split line with content. An account, a category or a date
+  /// alone (the form's defaults) are not worth keeping or restoring.
+  bool get hasContent =>
+      amountText.trim().isNotEmpty ||
+      (payeeName?.trim().isNotEmpty ?? false) ||
+      (memo?.trim().isNotEmpty ?? false) ||
+      splits.any((s) => s.hasContent);
 
   Map<String, dynamic> toJson() => {
     'amount': amountText,

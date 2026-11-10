@@ -55,6 +55,31 @@ Income and the category field:
 * Quick add follows the same rule: an inflow takes a category only when
   the text names one, and its preview says "To Be Budgeted" otherwise.
 
+Drafts and unsaved changes in the form
+(`AddEditTransactionScreen`):
+
+* Leaving the form with something unsaved asks "Discard changes?"
+  (`UnsavedChangesGuard`, `lib/presentation/widgets/common/unsaved_changes_guard.dart`):
+  system back, the back gesture and the close button all go through it.
+  For a new transaction "unsaved" means an amount, a payee, a memo or a
+  split line was typed; for an existing one, that a field differs from
+  the loaded row. The schedule, category and rule editors use the same
+  guard; the account form has its own with the same wording.
+* A new transaction is autosaved as a draft (`draft_transaction_new` in
+  the preferences) one second after a change, only while it has content.
+  The draft exists for one case: the app is closed while the form is
+  open. Saving, "Discard" in the prompt and emptying the form remove it,
+  so a cancelled entry never comes back.
+* When a draft is found, the form shows "Draft restored" with a Discard
+  action (which empties the form and removes the draft). The draft never
+  brings a date (the form keeps today), and the account the form was
+  opened with (e.g. from an account's screen) wins over the draft's. A
+  draft without amount, payee, memo and split content is ignored.
+* Editing an existing transaction writes no draft. While the row is being
+  read the form is not shown; a row that does not exist (deleted on the
+  other phone, or gone after restoring a backup) shows "This transaction
+  no longer exists" instead of an empty form, and Save is disabled.
+
 Further rules of `save`:
 
 * The row's account must be on budget for a category to be stored; rows

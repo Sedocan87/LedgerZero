@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +17,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:ledger_zero/presentation/widgets/common/unsaved_changes_guard.dart';
 import 'package:ledger_zero/presentation/widgets/pickers/account_selector.dart';
 import 'package:ledger_zero/presentation/widgets/pickers/category_selector.dart';
 import 'package:ledger_zero/presentation/widgets/pickers/payee_selector.dart';
@@ -49,6 +52,22 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     _loadData();
   }
 
+  /// [_fingerprint] of the rule as it was opened or loaded.
+  String? _initial;
+
+  /// What the user can change, as one string.
+  String _fingerprint() => jsonEncode({
+    'name': _nameController.text,
+    'logic': _matchLogic.name,
+    'active': _isActive,
+    'conditions': [for (final c in _conditions) c.toJson()],
+    'actions': [
+      for (final a in _actions) [a.type.name, a.value],
+    ],
+  });
+
+  bool get _isDirty => _initial != null && _fingerprint() != _initial;
+
   Future<void> _loadData() async {
     if (widget.ruleId != null) {
       final rule = await ref
@@ -69,6 +88,16 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
         _priority = rules.length;
       }
     }
+    if (!mounted) {
+      return;
+    }
+    _initial = _fingerprint();
+    // The unsaved-changes prompt follows the name as it is typed.
+    _nameController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
     setState(() {
       _isLoading = false;
     });
@@ -218,6 +247,10 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     }
     final l10n = AppLocalizations.of(context)!;
 
+    return UnsavedChangesGuard(dirty: _isDirty, child: _buildScaffold(l10n));
+  }
+
+  Widget _buildScaffold(AppLocalizations l10n) {
     return Scaffold(
       appBar: AppBar(
         title: Text(

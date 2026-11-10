@@ -24,6 +24,9 @@ import 'package:ledger_zero/presentation/screens/transactions/form/transaction_d
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_form_body.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_form_controller.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transaction_tutorial_manager.dart';
+import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/unsaved_changes_guard.dart';
 import 'package:uuid/uuid.dart';
 
 export 'package:ledger_zero/presentation/screens/transactions/form/transaction_draft.dart'
@@ -89,6 +92,30 @@ class _AddEditTransactionScreenState
 
   bool get _isEditing => widget.transactionId != null;
 
+  /// Edit mode: the row is being read (the form is not shown, so Save can
+  /// never create a new row from a form that has not loaded yet).
+  late bool _loading = _isEditing;
+
+  /// Edit mode: the row does not exist (any more), e.g. deleted on the
+  /// partner's phone or gone after restoring a backup.
+  bool _notFound = false;
+  Object? _loadError;
+  StackTrace? _loadStackTrace;
+
+  /// Edit mode: [TransactionFormController.fingerprint] of the loaded row.
+  String? _loadedFingerprint;
+
+  /// New transaction: the form was filled from the autosaved draft (shown
+  /// with a Discard action).
+  bool _draftRestored = false;
+
+  /// Whether leaving now would lose something: an edit of the loaded row,
+  /// or anything typed into a new transaction.
+  bool get _isDirty => _isEditing
+      ? _loadedFingerprint != null &&
+            _form.fingerprint() != _loadedFingerprint
+      : _form.hasContent;
+
   @override
   void initState() {
     super.initState();
@@ -97,9 +124,15 @@ class _AddEditTransactionScreenState
       _load(widget.transactionId!);
     } else {
       _form.accountId = widget.initialAccountId;
-      final draft = widget.draft ?? _readAutosavedDraft();
-      if (draft != null) {
-        _form.applyDraft(draft);
+      final handOff = widget.draft;
+      if (handOff != null) {
+        _form.applyDraft(handOff);
+      } else {
+        final stored = _readAutosavedDraft();
+        if (stored != null && stored.hasContent) {
+          _form.restoreDraft(stored);
+          _draftRestored = true;
+        }
       }
       _lastFormType = _form.formType;
       _form.addListener(_scheduleAutosave);
@@ -123,15 +156,45 @@ class _AddEditTransactionScreenState
 
   // --- Loading -----------------------------------------------------------
 
+  /// Reads the row; a missing row or a failed read is shown instead of
+  /// the form (an empty "Edit transaction" form would save a new row).
   Future<void> _load(String id) async {
+    setState(() {
+      _loading = true;
+      _notFound = false;
+      _loadError = null;
+      _loadStackTrace = null;
+    });
+    try {
+      final found = await _read(id);
+      if (mounted) {
+        setState(() => _notFound = !found);
+      }
+    } catch (e, stackTrace) {
+      Logger.error('Loading transaction $id failed', e, stackTrace);
+      if (mounted) {
+        setState(() {
+          _loadError = e;
+          _loadStackTrace = stackTrace;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  /// Fills the form from row [id]; `false` when it does not exist.
+  Future<bool> _read(String id) async {
     final repo = ref.read(transactionRepositoryProvider);
     var t = await repo.getTransactionById(id);
     if (t != null && t.transferTransactionId != null && t.amount > 0) {
       // Edit transfers from their outflow leg ("From" -> "To").
       t = await repo.getTransactionById(t.transferTransactionId!) ?? t;
     }
-    if (t == null || !mounted) {
-      return;
+    if (t == null) {
+      return false;
     }
     if (t.parentTransactionId != null) {
       // A split line is edited as part of its split.
@@ -156,7 +219,7 @@ class _AddEditTransactionScreenState
         ? null
         : await ref.read(payeeRepositoryProvider).getPayeeById(t.payeeId!);
     if (!mounted) {
-      return;
+      return true;
     }
     _form.load(
       t,
@@ -169,9 +232,11 @@ class _AddEditTransactionScreenState
       _form.categoryId = counterpartCategory;
       _form.changed();
     }
+    _loadedFingerprint = _form.fingerprint();
     if (readOnly) {
       setState(() => _readOnly = true);
     }
+    return true;
   }
 
   // --- Settings defaults (new transactions) ------------------------------
@@ -246,15 +311,21 @@ class _AddEditTransactionScreenState
     }
   }
 
+  /// Keeps what was typed into a new transaction for the case that the
+  /// app is closed while the form is open. A form without content (only
+  /// defaults, or everything deleted again) leaves no draft behind.
   void _scheduleAutosave() {
     _autosaveTimer?.cancel();
     _autosaveTimer = Timer(const Duration(seconds: 1), () {
       if (!mounted) {
         return;
       }
-      ref
-          .read(sharedPreferencesProvider)
-          .setString(_draftKey, jsonEncode(_form.toDraft().toJson()));
+      final prefs = ref.read(sharedPreferencesProvider);
+      if (_form.hasContent) {
+        prefs.setString(_draftKey, jsonEncode(_form.toDraft().toJson()));
+      } else {
+        prefs.remove(_draftKey);
+      }
     });
   }
 
@@ -262,6 +333,18 @@ class _AddEditTransactionScreenState
     _autosaveTimer?.cancel();
     await ref.read(sharedPreferencesProvider).remove(_draftKey);
   }
+
+  /// "Discard" on the restored draft: an empty form again.
+  Future<void> _discardRestoredDraft() async {
+    setState(() => _draftRestored = false);
+    _form.reset(accountId: widget.initialAccountId);
+    _defaultCategoryId = null;
+    await _clearDraft();
+    await _applySettingsDefaults();
+  }
+
+  /// Leaves the form through the unsaved-changes prompt.
+  void _close() => Navigator.maybePop(context);
 
   // --- Suggestions --------------------------------------------------------
 
@@ -339,7 +422,7 @@ class _AddEditTransactionScreenState
   }
 
   Future<void> _submit({bool popAfterSave = true}) async {
-    if (_saving || _readOnly) {
+    if (_saving || _readOnly || _loading || _notFound || _loadError != null) {
       return;
     }
     final l10n = AppLocalizations.of(context)!;
@@ -389,6 +472,7 @@ class _AddEditTransactionScreenState
         // `true` tells a caller awaiting the route that it was saved.
         context.pop(true);
       } else {
+        setState(() => _draftRestored = false);
         _form.resetForNext();
         unawaited(_applySettingsDefaults());
       }
@@ -462,64 +546,103 @@ class _AddEditTransactionScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final ready = !_loading && !_notFound && _loadError == null;
+    final scaffold = Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditing ? l10n.editTransaction : l10n.addTransaction),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: l10n.cancel,
+          onPressed: _close,
+        ),
+        actions: [
+          IconButton(
+            key: _tutorialKeys.save,
+            icon: const Icon(Icons.check),
+            tooltip: l10n.save,
+            onPressed: _saving || _readOnly || !ready ? null : _submit,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _loadError != null
+          ? LoadErrorView(
+              error: _loadError!,
+              stackTrace: _loadStackTrace,
+              onRetry: () => _load(widget.transactionId!),
+            )
+          : _notFound
+          ? ErrorView(
+              key: const Key('transaction.notFound'),
+              title: l10n.editTransaction,
+              message: l10n.transactionNotFound,
+            )
+          : Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_draftRestored)
+                      Card(
+                        key: const Key('transaction.draftRestored'),
+                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        child: ListTile(
+                          leading: const Icon(Icons.restore),
+                          title: Text(l10n.draftRestored),
+                          trailing: TextButton(
+                            key: const Key('transaction.discardDraft'),
+                            onPressed: _discardRestoredDraft,
+                            child: Text(l10n.discard),
+                          ),
+                        ),
+                      ),
+                    if (_readOnly)
+                      Card(
+                        key: const Key('transaction.partnerNotice'),
+                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        child: ListTile(
+                          leading: const Icon(Icons.lock_person_outlined),
+                          title: Text(l10n.txPartnerAccount),
+                        ),
+                      ),
+                    AbsorbPointer(
+                      absorbing: _readOnly,
+                      child: TransactionFormBody(
+                        controller: _form,
+                        tutorialKeys: _tutorialKeys,
+                        payeeFocus: _payeeFocus,
+                        onSubmit: _submit,
+                        onPayeeSelected: _onPayeeSelected,
+                        onSaveAndAddAnother: _isEditing
+                            ? null
+                            : () => _submit(popAfterSave: false),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyS, control: true): _submit,
-        const SingleActivator(LogicalKeyboardKey.escape): () => context.pop(),
+        const SingleActivator(LogicalKeyboardKey.escape): _close,
       },
       child: Focus(
         autofocus: true,
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(
-              _isEditing ? l10n.editTransaction : l10n.addTransaction,
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: l10n.cancel,
-              onPressed: () => context.pop(),
-            ),
-            actions: [
-              IconButton(
-                key: _tutorialKeys.save,
-                icon: const Icon(Icons.check),
-                tooltip: l10n.save,
-                onPressed: _saving || _readOnly ? null : _submit,
-              ),
-            ],
-          ),
-          body: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_readOnly)
-                    Card(
-                      key: const Key('transaction.partnerNotice'),
-                      color: Theme.of(context).colorScheme.secondaryContainer,
-                      child: ListTile(
-                        leading: const Icon(Icons.lock_person_outlined),
-                        title: Text(l10n.txPartnerAccount),
-                      ),
-                    ),
-                  AbsorbPointer(
-                    absorbing: _readOnly,
-                    child: TransactionFormBody(
-                      controller: _form,
-                      tutorialKeys: _tutorialKeys,
-                      payeeFocus: _payeeFocus,
-                      onSubmit: _submit,
-                      onPayeeSelected: _onPayeeSelected,
-                      onSaveAndAddAnother: _isEditing
-                          ? null
-                          : () => _submit(popAfterSave: false),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        // Rebuilt with the form, so the prompt follows what was typed; the
+        // scaffold below is not.
+        child: ListenableBuilder(
+          listenable: _form,
+          child: scaffold,
+          builder: (context, child) => UnsavedChangesGuard(
+            // The partner's transfer cannot be edited here.
+            dirty: _isDirty && !_readOnly,
+            onDiscard: _isEditing ? null : _clearDraft,
+            child: child!,
           ),
         ),
       ),

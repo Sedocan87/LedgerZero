@@ -8181,6 +8181,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Income you assign to categories in the budget'**
   String get txInflowToBeBudgetedSubtitle;
+
+  /// Edit transaction screen: shown instead of the form when the transaction does not exist (any more)
+  ///
+  /// In en, this message translates to:
+  /// **'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.'**
+  String get transactionNotFound;
 }
 
 class _AppLocalizationsDelegate

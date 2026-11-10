@@ -16,6 +16,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/picker_field.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/pickers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/form/transaction_dialogs.dart';
+import 'package:ledger_zero/presentation/widgets/common/unsaved_changes_guard.dart';
 import 'package:ledger_zero/presentation/widgets/recurrence/recurrence_selector.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
@@ -72,6 +73,32 @@ class _AddEditScheduledTransactionScreenState
   late bool _isLoading = widget.transactionId != null;
   bool _isSaving = false;
 
+  /// The amount and memo fields as typed (they are read into [_amount] and
+  /// [_memo] on save); `null` until the user types in them.
+  String? _amountText;
+  String? _memoText;
+
+  /// [_fingerprint] of the form as it was opened or loaded.
+  late String _initial = _fingerprint();
+
+  /// What the user can change, as one string.
+  String _fingerprint() => [
+    _accountId,
+    _payeeId,
+    _categoryId,
+    _isInflow,
+    _amountText,
+    _memoText,
+    _frequency.name,
+    _interval,
+    _nextDate.toIso8601String(),
+    _endDate?.toIso8601String(),
+    _occurrenceCount,
+    _autoApprove,
+  ].join('\u0000');
+
+  bool get _isDirty => !_isLoading && _fingerprint() != _initial;
+
   @override
   void initState() {
     super.initState();
@@ -108,6 +135,7 @@ class _AddEditScheduledTransactionScreenState
           _createdAt = transaction.createdAt;
           _memo = transaction.memo;
           _anchorDay = transaction.anchorDay;
+          _initial = _fingerprint();
         });
       }
     } catch (e, stack) {
@@ -213,6 +241,19 @@ class _AddEditScheduledTransactionScreenState
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    return UnsavedChangesGuard(
+      dirty: _isDirty,
+      child: _buildScaffold(l10n, fmt, accountNames, payeeNames, categoryNames),
+    );
+  }
+
+  Widget _buildScaffold(
+    AppLocalizations l10n,
+    AppFormatter fmt,
+    Map<String, String> accountNames,
+    Map<String, String> payeeNames,
+    Map<String, String> categoryNames,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -275,6 +316,7 @@ class _AddEditScheduledTransactionScreenState
                 }
                 return null;
               },
+              onChanged: (value) => setState(() => _amountText = value),
               // A typed sign is ignored: the direction comes from the
               // Outflow | Inflow choice.
               onSaved: (value) => _amount = (fmt.parseAmount(value) ?? 0).abs(),
@@ -331,6 +373,7 @@ class _AddEditScheduledTransactionScreenState
               initialValue: _memo ?? '',
               decoration: InputDecoration(labelText: l10n.memo),
               textCapitalization: TextCapitalization.sentences,
+              onChanged: (value) => setState(() => _memoText = value),
               onSaved: (value) {
                 final memo = value?.trim() ?? '';
                 _memo = memo.isEmpty ? null : memo;

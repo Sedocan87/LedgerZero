@@ -5144,4 +5144,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get txInflowToBeBudgetedSubtitle =>
       'Income you assign to categories in the budget';
+
+  @override
+  String get transactionNotFound =>
+      'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.';
 }

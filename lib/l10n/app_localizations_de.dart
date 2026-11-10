@@ -5183,4 +5183,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get txInflowToBeBudgetedSubtitle =>
       'Einnahmen, die Sie im Budget auf Kategorien verteilen';
+
+  @override
+  String get transactionNotFound =>
+      'Diese Transaktion gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht, oder sie ist in der wiederhergestellten Sicherung nicht enthalten.';
 }

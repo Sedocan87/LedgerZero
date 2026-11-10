@@ -1353,5 +1353,6 @@
   "importUndoFailed": "Der Import konnte nicht rückgängig gemacht werden. Es wurde nichts geändert.",
   "helpCsvStepsV2": "Zeilen oberhalb der Spaltennamen (Kontodaten) werden übersprungen, und eine Datei ohne Spaltennamen wird erkannt: Prüfen Sie die Zuordnung anhand der Vorschau.\nBeträge können in einer Spalte mit Vorzeichen oder in getrennten Soll- und Haben-Spalten stehen. Erscheinen Ausgaben als Einnahmen, schalten Sie „Negative Werte sind Ausgaben“ aus.\nIm Prüfschritt sind Zeilen abgewählt, die wie vorhandene Buchungen aussehen: Setzen Sie den Haken bei eigenen Buchungen und entfernen Sie ihn bei Zeilen, die Sie nicht möchten.\nIns falsche Konto importiert? „Letzten Import rückgängig machen“ auf diesem Bildschirm nimmt den Import zurück.",
   "txInflowCategoryHint": "Einnahmen fließen in „Zu budgetieren“. Wählen Sie nur für eine Erstattung eine Kategorie: Der Betrag fließt dann in diese Kategorie zurück.",
-  "txInflowToBeBudgetedSubtitle": "Einnahmen, die Sie im Budget auf Kategorien verteilen"
+  "txInflowToBeBudgetedSubtitle": "Einnahmen, die Sie im Budget auf Kategorien verteilen",
+  "transactionNotFound": "Diese Transaktion gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht, oder sie ist in der wiederhergestellten Sicherung nicht enthalten."
 }

@@ -4037,5 +4037,7 @@
   "txInflowCategoryHint": "Income goes to To Be Budgeted. Choose a category only for a refund: the money then goes back into that category.",
   "@txInflowCategoryHint": {"description": "Transaction form: hint under the category field of an inflow"},
   "txInflowToBeBudgetedSubtitle": "Income you assign to categories in the budget",
-  "@txInflowToBeBudgetedSubtitle": {"description": "Category picker of an inflow: subtitle of the first entry 'To Be Budgeted' (no category)"}
+  "@txInflowToBeBudgetedSubtitle": {"description": "Category picker of an inflow: subtitle of the first entry 'To Be Budgeted' (no category)"},
+  "transactionNotFound": "This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.",
+  "@transactionNotFound": {"description": "Edit transaction screen: shown instead of the form when the transaction does not exist (any more)"}
 }

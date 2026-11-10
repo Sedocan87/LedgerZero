@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
@@ -183,7 +185,51 @@ class TransactionFormController extends ChangeNotifier {
     payeeController.text = name ?? '';
   }
 
-  /// Fills the form from a draft (quick-add hand-off or autosave).
+  /// Whether the form holds something the user typed (see
+  /// [TransactionDraft.hasContent]): what makes a new transaction worth a
+  /// draft, and worth asking before it is thrown away.
+  bool get hasContent => toDraft().hasContent;
+
+  /// Every value the user can change, as one string: two equal fingerprints
+  /// mean nothing was edited in between.
+  String fingerprint() => jsonEncode({
+    ...toDraft().toJson(),
+    'date': date.toIso8601String(),
+    'cleared': cleared.index,
+    'counterpartCleared': counterpartCleared.index,
+    'approved': approved,
+  });
+
+  /// Fills the form from the autosaved draft of a new transaction that was
+  /// interrupted (the app was closed while the form was open).
+  ///
+  /// Unlike [applyDraft] it keeps the form's date (today: a draft from last
+  /// week must not backdate what is entered now) and an account the form
+  /// already has (the caller opened it from that account's screen).
+  void restoreDraft(TransactionDraft draft) {
+    final today = date;
+    final account = accountId;
+    applyDraft(draft);
+    date = today;
+    if (account != null) {
+      accountId = account;
+      if (transferAccountId == account) {
+        transferAccountId = null;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// An empty new transaction in [accountId], dated today.
+  void reset({String? accountId}) {
+    date = CalendarDate.today();
+    this.accountId = accountId;
+    formType = TransactionFormType.expense;
+    frequency = RecurrenceFrequency.monthly;
+    resetForNext();
+  }
+
+  /// Fills the form from the quick-add hand-off.
   void applyDraft(TransactionDraft draft) {
     amountController.text = draft.amountText;
     memoController.text = draft.memo ?? '';
@@ -202,10 +248,12 @@ class TransactionFormController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The form as the autosaved draft. Without the date: a draft is
+  /// restored on another day, and the date it was typed on is not the date
+  /// of what is entered then.
   TransactionDraft toDraft() => TransactionDraft(
     amountText: amountController.text,
     memo: memoController.text.isEmpty ? null : memoController.text,
-    date: date,
     accountId: accountId,
     payeeId: payeeId,
     payeeName: payeeController.text.isEmpty ? null : payeeController.text,
