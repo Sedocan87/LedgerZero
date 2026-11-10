@@ -254,7 +254,13 @@ files are never deleted.
   snapshot under the normal conflict rule and then the files after the
   snapshot's sequences.
 * A device whose next file was compacted away (offline for more than 30
-  days) bridges the gap with a snapshot that covers it.
+  days) bridges the gap with a snapshot that covers it. That includes a
+  sender that has only a snapshot left in the folder (every change file
+  compacted, nothing written since): a snapshot whose sequence is above
+  this device's progress for its writer counts as a waiting file.
+* A device never downloads its own snapshot at or below its own progress
+  (a phone that is alone in the folder would otherwise fetch them on
+  every run). After a restore the progress is cleared and it is used.
 
 ## 9. Restore
 
@@ -398,7 +404,13 @@ household member; see BUDGETING_RULES.md for what users see.
   balance. Changing it goes through the accounts sync trigger, so every
   balance change gives the row a new `updated_at` and reaches the partner.
   `AccountsDao.balanceExpression` uses `shared_balance` for the partner's
-  accounts and the computed balance for all others. The net worth report
+  accounts and the computed balance for all others. The triggers are off
+  while a change file is applied, so after every run that applied
+  something the engine recomputes the shared balance of this member's
+  personal accounts (`AppDatabase.refreshPersonalBalances`, a local edit
+  when it changes anything). This matters after a restore: the folder
+  gives this phone its own newer account row back, with the balance of
+  transactions the backup does not have. The net worth report
   has no history of the partner's accounts, only the shared legs of
   transfers to and from them: it leaves those legs out and counts each
   partner account at its shared balance minus what the legs moved into it

@@ -2,12 +2,18 @@
 // good: deletes made while disconnected, rows moved into a personal
 // account, foreign-key repairs, compacted files. Real databases and
 // engines over a fake folder (test/helpers/sync_simulation.dart).
+import 'dart:io';
+
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 
 import '../../helpers/sync_simulation.dart';
+import '../../helpers/test_database.dart';
 
 const passphrase = 'correct horse battery staple';
 
@@ -293,6 +299,110 @@ void main() {
       expect(await a.rows('SELECT category_id FROM transactions'), [
         {'category_id': groceries},
       ]);
+    });
+  });
+
+  group('restore', () {
+    test('the shared balance of an own personal account follows the '
+        'restored transactions', () async {
+      final tmp = await Directory.systemTemp.createTemp('lz_restore_');
+      addTearDown(() => tmp.delete(recursive: true));
+      final dbFile = File('${tmp.path}/a.sqlite');
+      final backup = File('${tmp.path}/backup.sqlite');
+      var a = await SimDevice.create(folder, executor: NativeDatabase(dbFile));
+      devices.add(a);
+      final b = await device();
+      await connect([a, b]);
+      var ta = TestDatabase.wrap(a.db);
+      await ta.addAccount(
+        id: 'brk',
+        name: 'Brokerage',
+        startingBalance: 500000,
+        owner: AccountOwner.me,
+      );
+      await ta.addTransaction(id: 'dep', accountId: 'brk', amount: 20000);
+      await syncAll([a, b]);
+      Future<int> onB() async =>
+          (await b.t!.accounts.getAccountById('brk'))!.balance;
+      expect(await onB(), 520000);
+
+      await a.exec('VACUUM INTO ?', [backup.path]);
+      await ta.addTransaction(id: 'dep2', accountId: 'brk', amount: 1000);
+      await syncAll([a, b]);
+      expect(await onB(), 521000);
+
+      // Restore the backup on A (file swap, empty queue, flag).
+      await a.db.close();
+      devices.remove(a);
+      await backup.copy(dbFile.path);
+      final restored = AppDatabase(NativeDatabase(dbFile));
+      await restored.customStatement('DELETE FROM pending_sync_changes');
+      a = a.withDatabase(restored);
+      devices.add(a);
+      ta = TestDatabase.wrap(a.db);
+      final rebootstrap = SyncRebootstrap(a.prefs, a.outbox);
+      await rebootstrap.markRequired();
+      await rebootstrap.discardOutbox();
+
+      await syncAll([a, b]);
+
+      // dep2 exists in no backup and never synced: it is gone, and the
+      // partner must see the balance the owner sees.
+      expect((await ta.accounts.getAccountById('brk'))!.balance, 520000);
+      expect(await onB(), 520000);
+    });
+  });
+
+  group('snapshots', () {
+    const compacting = SyncEngineConfig(
+      kdfParams: fastKdf,
+      snapshotEveryFiles: 1,
+      compactAfter: Duration.zero,
+    );
+
+    test('a phone that missed files which were compacted away catches up '
+        'from the snapshot alone', () async {
+      final a = await device(config: compacting);
+      final b = await device();
+      await connect([a, b]);
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await syncAll([a, b]);
+
+      // B is away; A books, writes a snapshot and compacts its files.
+      await a.t!.addTransaction(id: 't1', accountId: 'chk', amount: -500);
+      await a.sync();
+      await a.sync();
+      expect(
+        folder.syncFiles(device: a.deviceId, kind: SyncFileKind.changes),
+        isEmpty,
+      );
+      expect(
+        folder.syncFiles(device: a.deviceId, kind: SyncFileKind.snapshot),
+        hasLength(1),
+      );
+
+      final report = await b.sync();
+
+      expect(await b.count('SELECT COUNT(*) FROM transactions'), 1);
+      expect(report.waitingDevices, 0);
+      await syncAll([a, b]);
+      await expectConverged([a, b]);
+    });
+
+    test('a phone alone in the folder does not download its own '
+        'snapshots', () async {
+      final a = await device(config: compacting);
+      await connect([a]);
+      await a.t!.addAccount(id: 'chk', name: 'Checking');
+      await a.sync();
+      await a.sync();
+      expect(folder.syncFiles(kind: SyncFileKind.snapshot), isNotEmpty);
+
+      a.transport.downloads = 0;
+      await a.sync();
+
+      // The manifest, nothing else.
+      expect(a.transport.downloads, 1);
     });
   });
 }

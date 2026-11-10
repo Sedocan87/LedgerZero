@@ -639,6 +639,22 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
+  /// Brings `shared_balance` of this member's personal accounts back in
+  /// line with their transactions. The triggers above are off while a
+  /// change file is applied, so an account row replaced by sync (after a
+  /// restore, this phone's own newer row from the folder) carries the
+  /// balance of the moment it was written, not of the transactions that
+  /// are here now. A corrected row is a local edit (new `updated_at`,
+  /// captured), so the partner gets it. Returns the number of corrected
+  /// accounts.
+  Future<int> refreshPersonalBalances() => customUpdate(
+    'UPDATE accounts SET shared_balance = $_ownBalanceSql '
+    'WHERE owner_id = $localMemberSql '
+    'AND shared_balance IS NOT ($_ownBalanceSql)',
+    updates: {accounts},
+    updateKind: UpdateKind.update,
+  );
+
   /// Whether this connection runs on SQLCipher. True means the library can
   /// encrypt; whether the file actually is encrypted is checked by
   /// `databaseEncryptionStatusProvider` (file header + key).
