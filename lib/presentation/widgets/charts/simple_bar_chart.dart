@@ -170,20 +170,12 @@ class BarChartPainter extends CustomPainter {
       valPainter.layout(minWidth: barWidth);
       valPainter.paint(canvas, Offset(left, top - 15));
 
-      // Draw Label (Category Name) - with ellipsis
-      final textSpan = TextSpan(
-        text: entry.key,
-        style: TextStyle(color: labelColor, fontSize: 10),
+      // Category name under the bar, never broken inside a word.
+      final textPainter = fitBarLabel(
+        entry.key,
+        maxWidth: barWidth + spacing,
+        color: labelColor,
       );
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: ui.TextDirection.ltr,
-        textAlign: TextAlign.center,
-        maxLines: 2,
-        ellipsis: '...',
-      );
-      // Allow slightly wider than bar for text
-      textPainter.layout(maxWidth: barWidth + spacing);
 
       // Paint centered under bar
       textPainter.paint(
@@ -220,4 +212,49 @@ class BarChartPainter extends CustomPainter {
     }
     return false;
   }
+}
+
+/// The label under a bar: at most two lines in [maxWidth], broken only
+/// between words. The font shrinks from 10 to 8 px until the longest word
+/// fits; a word that does not fit even then gets one line with an ellipsis
+/// ("Transporta…"), never a word split over two lines ("Groceri" / "es").
+@visibleForTesting
+TextPainter fitBarLabel(
+  String text, {
+  required double maxWidth,
+  required Color color,
+}) {
+  TextPainter painter(double size, int maxLines) => TextPainter(
+    text: TextSpan(
+      text: text,
+      style: TextStyle(color: color, fontSize: size),
+    ),
+    textDirection: ui.TextDirection.ltr,
+    textAlign: TextAlign.center,
+    maxLines: maxLines,
+    ellipsis: '…',
+  );
+  double widestWord(double size) {
+    var widest = 0.0;
+    // A line may also break after "/" ("Rent/" "Mortgage").
+    for (final word in text.split(RegExp(r'(?<=/)|\s+'))) {
+      final p = TextPainter(
+        text: TextSpan(
+          text: word,
+          style: TextStyle(fontSize: size),
+        ),
+        textDirection: ui.TextDirection.ltr,
+      )..layout();
+      widest = max(widest, p.width);
+      p.dispose();
+    }
+    return widest;
+  }
+
+  for (var size = 10.0; size >= 8.0; size -= 0.5) {
+    if (widestWord(size) <= maxWidth) {
+      return painter(size, 2)..layout(maxWidth: maxWidth);
+    }
+  }
+  return painter(8.0, 1)..layout(maxWidth: maxWidth);
 }
