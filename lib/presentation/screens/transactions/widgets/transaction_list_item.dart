@@ -346,9 +346,11 @@ class _CategoryBadge extends StatelessWidget {
 // figures, semantic colours; DESIGN.md §1-§2) can replace them in one place.
 const _tabularFigures = [FontFeature.tabularFigures()];
 
-Color _successColor(ThemeData theme) => theme.brightness == Brightness.dark
-    ? Colors.green.shade300
-    : AppColors.success;
+/// The theme's success colour (contrast-tested in theme_test.dart).
+Color _successColor(ThemeData theme) =>
+    (theme.extension<AppSemanticColors>() ??
+            AppSemanticColors.fromScheme(theme.colorScheme))
+        .success;
 
 /// Inflows in the success colour (with a "+"), outflows in the text colour.
 Color _amountColor(ThemeData theme, int amount) =>

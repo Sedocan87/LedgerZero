@@ -116,7 +116,11 @@ void main() {
       TransactionListItem(transaction: tx(amount: 250000), payeeName: 'Salary'),
     );
     final text = amountText(tester, r'+$2,500.00');
-    expect(text.style!.color, AppColors.success);
+    // The theme's success colour (contrast-tested in theme_test.dart).
+    expect(
+      text.style!.color,
+      AppTheme.lightTheme.extension<AppSemanticColors>()!.success,
+    );
     expect(find.textContaining('2026'), findsOneWidget);
     // No category: the default tag icon on a neutral badge.
     expect(find.text('Uncategorized'), findsOneWidget);

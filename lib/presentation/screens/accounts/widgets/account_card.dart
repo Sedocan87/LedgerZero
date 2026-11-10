@@ -133,7 +133,7 @@ const _tabularFigures = [FontFeature.tabularFigures()];
 /// below zero is just its debt, not a state to flag).
 Color _balanceColor(ThemeData theme, Account account) =>
     account.balance < 0 && account.type != AccountType.credit
-    ? (theme.brightness == Brightness.dark
-          ? Colors.red.shade300
-          : AppColors.expense)
+    ? (theme.extension<AppSemanticColors>() ??
+              AppSemanticColors.fromScheme(theme.colorScheme))
+          .expense
     : theme.colorScheme.onSurface;
