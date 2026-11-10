@@ -123,6 +123,88 @@ void main() {
     expect(container.read(settingsProvider).currency, 'CHF');
   });
 
+  testWidgets('with accounts in the budget, Currency shows their currency '
+      'and relabels them after a confirmation that nothing is converted', (
+    tester,
+  ) async {
+    final t = TestDatabase();
+    addTearDown(t.close);
+    await t.addAccount(id: 'giro', currency: 'EUR', startingBalance: 1000);
+    await t.addAccount(id: 'usd', currency: 'USD', onBudget: false);
+    // This phone still has an older setting.
+    SharedPreferences.setMockInitialValues({'settings_currency': 'GBP'});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          databaseProvider.overrideWithValue(t.db),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('en'),
+          home: SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('EUR, the currency of the accounts in your budget'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('settings.currency')));
+    await tester.pumpAndSettle();
+    // No free picker: one action.
+    expect(find.byKey(const Key('settings.currency.fixed')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings.currency.change')));
+    await tester.pumpAndSettle();
+    final picker = find.byKey(const Key('settings.currency.picker'));
+    expect(
+      find.descendant(of: picker, matching: find.text('EUR')),
+      findsNothing,
+    );
+    await tester.tap(find.descendant(of: picker, matching: find.text('CHF')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Change the budget currency to CHF?'), findsOneWidget);
+    expect(
+      find.textContaining('Amounts are NOT converted: 100 EUR becomes 100 CHF'),
+      findsOneWidget,
+    );
+    // Cancel changes nothing.
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect((await t.accounts.getAccountById('giro'))!.currency, 'EUR');
+
+    await tester.tap(find.byKey(const Key('settings.currency')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settings.currency.change')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('settings.currency.picker')),
+        matching: find.text('CHF'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('budgetCurrency.confirm.change')));
+    await tester.pumpAndSettle();
+
+    final giro = (await t.accounts.getAccountById('giro'))!;
+    expect(giro.currency, 'CHF');
+    expect(giro.startingBalance, 1000);
+    expect((await t.accounts.getAccountById('usd'))!.currency, 'USD');
+    expect(prefs.getString('settings_currency'), 'CHF');
+    expect(
+      find.text('CHF, the currency of the accounts in your budget'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('SettingsScreen shows Scheduled Transactions option', (
     WidgetTester tester,
   ) async {
