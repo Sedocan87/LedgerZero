@@ -40,7 +40,8 @@ class SyncFileHeader {
   final String deviceId;
   final int sequence;
 
-  /// `AppDatabase.schemaVersion` of the writer.
+  /// `SyncSchema.syncVersion` of the writer: the database schema version
+  /// at which its synced tables last changed.
   final int schemaVersion;
   final int changeCount;
 

@@ -53,7 +53,23 @@ class SyncSchema {
   /// content (a conflict is only recorded for real differences).
   static const Set<String> metadataColumns = {'created_at', 'updated_at'};
 
+  /// The version of the **synced part** of the schema: the database schema
+  /// version at which a synced table last changed. It is what change files
+  /// and snapshots carry in their header (`schema`) and what a reader
+  /// compares it with: a file with a higher value is deferred until the app
+  /// is updated (docs/DELTA_SCHEMA_MIGRATION.md).
+  ///
+  /// It is deliberately not `AppDatabase.schemaVersion`: a schema change
+  /// that touches no synced table (a local table, a setting) must not make
+  /// the other phone wait for an update. Raise it to the new database
+  /// schema version whenever a synced table changes; the test "the synced
+  /// schema has not changed without a new sync version"
+  /// (test/services/sync/sync_format_test.dart) fails until that is done.
+  static const int syncVersion = 20;
+
   final Map<String, SyncedTable> tables;
+
+  /// [syncVersion] (the name is the header field's).
   final int schemaVersion;
 
   SyncSchema._(this.tables, this.schemaVersion);
@@ -87,7 +103,10 @@ class SyncSchema {
         tables.length != AppDatabase.syncedTables.length) {
       throw StateError('dependencyOrder does not match syncedTables');
     }
-    return SyncSchema._(tables, db.schemaVersion);
+    if (syncVersion > db.schemaVersion) {
+      throw StateError('syncVersion is ahead of the database schema');
+    }
+    return SyncSchema._(tables, syncVersion);
   }
 
   SyncedTable? operator [](String table) => tables[table];

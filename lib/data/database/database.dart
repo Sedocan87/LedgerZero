@@ -239,11 +239,10 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// They are created idempotently on every open (`IF NOT EXISTS`), for new
   /// and existing databases alike, so adding one needs no schema version
-  /// bump: the schema version is written into every sync change file and a
-  /// phone quarantines files of a newer schema until it is updated, which
-  /// would force both phones of a household to update in lock-step for a
-  /// change that does not touch the data. An index never changes what is
-  /// stored or synced.
+  /// bump and no migration: an index never changes what is stored or
+  /// synced. (Sync does not compare the database schema version: change
+  /// files carry `SyncSchema.syncVersion`, which only changes with the
+  /// synced tables.)
   ///
   /// * [splitParentIndex]: split children by parent. Used by the split
   ///   parent checks (`TransactionsDao.splitParentCondition`, correlated in
