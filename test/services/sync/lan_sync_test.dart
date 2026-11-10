@@ -210,6 +210,60 @@ void main() {
     },
   );
 
+  test('an answered snapshot request is deleted on both phones and not '
+      'answered again', () async {
+    await pairBoth();
+    await a.engine.sync();
+    await b.engine.sync();
+    await a.t.addAccount(id: 'acc-a', name: 'Joint checking');
+    await a.engine.sync();
+
+    // B's copy of A's file is damaged; the user taps "Skip file".
+    final damaged = [
+      for (final name in (await b.service.folder.list()).keys)
+        if (SyncFileName.tryParse(name) case final n?)
+          if (n.deviceId == a.deviceId && n.kind == SyncFileKind.changes) n,
+    ].reduce((x, y) => x.sequence > y.sequence ? x : y).name;
+    final bytes = (await b.service.folder.read(damaged))!;
+    bytes[bytes.length - 3] ^= 0x01;
+    await b.service.folder.write(damaged, bytes);
+    await b.engine.sync();
+    final quarantined = (await b.t.db.syncDao.getQuarantine()).single;
+    await b.engine.skipQuarantined(quarantined.filename);
+    await b.engine.sync(); // writes the request
+    final request = SyncFileName.request(a.deviceId, b.deviceId);
+    expect((await b.service.folder.list()).keys, contains(request));
+
+    await a.engine.sync(); // answers with a snapshot
+    await b.engine.sync(); // repaired
+    expect(await b.accountNames(), ['Joint checking']);
+
+    Future<int> snapshotsOfA() async => [
+      for (final name in (await a.service.folder.list()).keys)
+        if (SyncFileName.tryParse(name) case final n?)
+          if (n.deviceId == a.deviceId && n.kind == SyncFileKind.snapshot) n,
+    ].length;
+    expect(await snapshotsOfA(), 1);
+
+    // Later runs with new changes: the request does not come back, and A
+    // writes no further snapshot.
+    for (var i = 0; i < 3; i++) {
+      await a.t.addAccount(id: 'more-$i', name: 'More $i');
+      await a.engine.sync();
+      await b.engine.sync();
+    }
+    expect((await a.service.folder.list()).keys, isNot(contains(request)));
+    expect((await b.service.folder.list()).keys, isNot(contains(request)));
+    expect(await snapshotsOfA(), 1);
+
+    // A second request later on is a new one and is answered.
+    await b.service.transport.upload(request, Uint8List.fromList([1]));
+    await a.engine.sync();
+    expect((await a.service.folder.list()).keys, isNot(contains(request)));
+    await b.engine.sync();
+    expect((await b.service.folder.list()).keys, isNot(contains(request)));
+  });
+
   test('a phone with another pair key is refused', () async {
     await pairBoth();
     final stranger = LanClient(
@@ -358,6 +412,81 @@ void main() {
       );
     });
 
+    test('a request that names its recipient is refused by any other '
+        'phone', () {
+      final client = LanAuth(key);
+      final body = utf8.encode('{}');
+      ({String value, String nonce}) signed() => client.sign(
+        method: 'POST',
+        path: '/v1/exchange',
+        deviceId: 'dev',
+        body: body,
+        recipient: 'phone-b',
+      );
+      LanAuthCheck check(String value, String? self) => LanAuth(key).check(
+        value: value,
+        method: 'POST',
+        path: '/v1/exchange',
+        body: body,
+        self: self,
+      );
+
+      expect(signed().value, startsWith('v2 '));
+      expect(check(signed().value, 'phone-b'), isA<LanAuthOk>());
+      // Replayed to a third paired phone (same pair key).
+      expect(check(signed().value, 'phone-c'), isA<LanAuthRejected>());
+      expect(check(signed().value, null), isA<LanAuthRejected>());
+    });
+
+    test('a request in the scheme of the previous app version is still '
+        'accepted', () {
+      final signed = LanAuth(key).sign(
+        method: 'GET',
+        path: '/v1/files/x',
+        deviceId: 'dev',
+        body: const [],
+      );
+      expect(signed.value, startsWith('v1 '));
+      expect(
+        LanAuth(key).check(
+          value: signed.value,
+          method: 'GET',
+          path: '/v1/files/x',
+          body: const [],
+          self: 'phone-b',
+        ),
+        isA<LanAuthOk>(),
+      );
+    });
+
+    test('phones switch to recipient-bound requests once each knows the '
+        'other understands them', () async {
+      await pairBoth();
+      // From the pairing code alone B does not know what A understands.
+      await b.engine.sync();
+      expect(b.service.peers[a.deviceId]!.authVersion, 2);
+      expect(a.service.peers[b.deviceId]!.authVersion, 2);
+      // The following exchanges (now signed for the recipient) still work.
+      await a.t.addAccount(id: 'acc-a', name: 'Joint checking');
+      await a.engine.sync();
+      await b.engine.sync();
+      expect(await b.accountNames(), ['Joint checking']);
+    });
+
+    test('a folder state from the previous app version (no scheme field) '
+        'means the old scheme', () {
+      final state = LanFolderState.fromJson({
+        'd': '00000000-0000-4000-8000-000000000001',
+        'n': 'Old build',
+        'p': 47321,
+        'f': <String>[],
+        'x': <String>[],
+        'm': null,
+        't': null,
+      });
+      expect(state.authVersion, 1);
+    });
+
     test('an old request is refused', () {
       final past = LanAuth(
         key,
@@ -378,6 +507,160 @@ void main() {
         ),
         isNull,
       );
+    });
+  });
+
+  group('requests refused before their body is read', () {
+    final key = Uint8List.fromList(List.filled(32, 9));
+    const serverId = '00000000-0000-4000-8000-000000000001';
+    const clientId = '00000000-0000-4000-8000-000000000002';
+    late Directory dir;
+    late LanServer server;
+
+    setUp(() async {
+      dir = await Directory.systemTemp.createTemp('lz_lan_dos_');
+      server = LanServer(
+        folder: LocalSyncFolder(() async => Directory('${dir.path}/lan')),
+        auth: LanAuth(key),
+        deviceId: serverId,
+        deviceName: () => 'Server',
+        peers: LanPeers(InMemoryPrefs()),
+        preferredPort: 0,
+        bindAddress: InternetAddress.loopbackIPv4,
+      );
+      await server.start();
+    });
+
+    tearDown(() async {
+      await server.stop();
+      await dir.delete(recursive: true);
+    });
+
+    /// Sends only the head of a request that announces [contentLength]
+    /// body bytes. Returns the socket and the status line of the answer
+    /// (which completes only if the server answers without the body).
+    Future<(Socket, Future<String>)> head({
+      required String auth,
+      required int contentLength,
+    }) async {
+      final socket = await Socket.connect('127.0.0.1', server.port!);
+      final status = utf8.decoder
+          .bind(socket)
+          .join()
+          .then((text) => text.split('\r\n').first);
+      socket.write(
+        'PUT /v1/files/x HTTP/1.1\r\n'
+        'Host: phone\r\n'
+        '${LanAuth.header}: $auth\r\n'
+        'Content-Length: $contentLength\r\n\r\n',
+      );
+      await socket.flush();
+      return (socket, status);
+    }
+
+    String authAt(DateTime time) =>
+        'v1 $clientId ${time.millisecondsSinceEpoch ~/ 1000} nonce mac';
+
+    Future<String> answer({
+      required String auth,
+      required int contentLength,
+    }) async {
+      final (socket, status) = await head(
+        auth: auth,
+        contentLength: contentLength,
+      );
+      addTearDown(socket.destroy);
+      return status.timeout(const Duration(seconds: 5));
+    }
+
+    test('a malformed auth header', () async {
+      expect(
+        await answer(auth: 'hello', contentLength: 50 * 1024 * 1024),
+        contains('401'),
+      );
+    });
+
+    test('a body above the limit', () async {
+      expect(
+        await answer(
+          auth: authAt(DateTime.now()),
+          contentLength: LanServer.maxBody + 1,
+        ),
+        contains('413'),
+      );
+    });
+
+    test('a large body with a timestamp outside the window', () async {
+      expect(
+        await answer(
+          auth: authAt(DateTime.now().subtract(const Duration(minutes: 10))),
+          contentLength: 50 * 1024 * 1024,
+        ),
+        contains('401'),
+      );
+    });
+
+    test('more large bodies or connections at a time than allowed', () async {
+      final held = <Socket>[];
+      addTearDown(() {
+        for (final socket in held) {
+          socket.destroy();
+        }
+      });
+      // Two uploads announced, none delivered: a third is turned away.
+      for (var i = 0; i < LanServer.maxLargeBodies; i++) {
+        held.add(
+          (await head(
+            auth: authAt(DateTime.now()),
+            contentLength: 50 * 1024 * 1024,
+          )).$1,
+        );
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(
+        await answer(
+          auth: authAt(DateTime.now()),
+          contentLength: 50 * 1024 * 1024,
+        ),
+        contains('503'),
+      );
+      // Small requests still get through until the connection limit.
+      for (
+        var i = LanServer.maxLargeBodies;
+        i < LanServer.maxConnections;
+        i++
+      ) {
+        held.add(
+          (await head(auth: authAt(DateTime.now()), contentLength: 10)).$1,
+        );
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(
+        await answer(auth: authAt(DateTime.now()), contentLength: 10),
+        contains('503'),
+      );
+
+      // Once they are gone the server answers again.
+      for (final socket in held) {
+        socket.destroy();
+      }
+      held.clear();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      final client = LanClient(auth: LanAuth(key), deviceId: clientId);
+      const mine = LanFolderState(
+        deviceId: clientId,
+        deviceName: 'Me',
+        port: null,
+        files: {},
+        deleted: {},
+        manifestHash: null,
+      );
+      final theirs = await client.exchange(
+        LanEndpoint('127.0.0.1', server.port!),
+        mine,
+        recipient: serverId,
+      );
+      expect(theirs.deviceId, serverId);
     });
   });
 

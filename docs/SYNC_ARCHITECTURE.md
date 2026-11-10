@@ -232,8 +232,9 @@ rule) and then forgets the entry; if no snapshot covers it, this device
 writes a small request file `<device>_req_<me>.lzsreq` (no data,
 unauthenticated: a folder member could at most trigger extra snapshots).
 A device that finds a request for itself writes a snapshot on its next
-run and deletes the request. Skipped changes are therefore delayed, not
-lost — unless the sender never comes back.
+run and deletes the request; the requester deletes its own request once
+the gap is repaired, should it still be there. Skipped changes are
+therefore delayed, not lost — unless the sender never comes back.
 
 A file written by a newer app version (schema version above this app's) is
 not applied and not counted as a failure: Sync settings asks the user to
@@ -340,17 +341,40 @@ between their folders.
   runs an HTTP server on TCP 47321 (another free port if taken) serving its
   folder: `POST /v1/exchange` (folder states both ways), `GET` and
   `PUT /v1/files/<name>`. Only sync file names are served or accepted;
-  bodies are limited to 64 MiB. When the engine lists the folder, the
+  bodies are limited to 64 MiB. The signature covers the body, so the
+  body must be read before it can be checked; to keep a stranger on the
+  same Wi-Fi from filling the memory, a request is refused before its
+  body is read when the auth header is not well-formed, when it declares
+  more than 64 MiB, or when it has a body above 1 MiB and a timestamp
+  outside the 2-minute window. At most 8 requests are handled at a time,
+  2 of them with a body above 1 MiB (others get 503; the next exchange
+  retries), and a body must arrive within 60 s. When the engine lists the folder, the
   transport exchanges with every paired phone that has an address: it
   downloads what it lacks and uploads what the other lacks. Each file the
   engine uploads is also pushed to phones reached in the last 10 minutes.
-  Deletions (compaction of a device's own files) are recorded and sent with
-  the next exchange, so the other phone deletes its copy instead of copying
-  the file back.
-* **Authentication.** Every request carries `X-LZ-Auth: v1 <device> <time>
-  <nonce> <HMAC-SHA256>` under the pair key (method, path, device, time,
-  nonce, body hash); the server rejects anything older than 2 minutes or
-  replayed, and signs its response (`X-LZ-Mac`). A request that is signed
+  Deletions are recorded and sent with the next exchange, so the other
+  phone deletes its copy instead of copying the file back: a device's own
+  change files and snapshots (compaction), and snapshot requests it is a
+  party to (the asked phone after answering, the asking phone once
+  repaired). A request has the same name every time, so its recorded
+  deletion is forgotten as soon as the other phone no longer lists the
+  file or a new request of that name is written; otherwise the next
+  request would be swallowed. (Before the fourth audit the deletion of a
+  request was not sent: the asking phone copied it back and the asked
+  phone wrote a full snapshot on every run with new changes.)
+* **Authentication.** Every request carries `X-LZ-Auth: <scheme> <device>
+  <time> <nonce> <HMAC-SHA256>` under the pair key; the server rejects
+  anything older than 2 minutes or replayed, and signs its response
+  (`X-LZ-Mac`). Scheme `v1` signs method, path, device, time, nonce and
+  body hash; `v2` also signs the **recipient's** device id, so a captured
+  request cannot be replayed to another paired phone (which would store
+  the replayer's address for the sender until the next beacon). Servers
+  accept both. A phone signs `v2` only for a peer that announced it in an
+  exchange (`"v": 2` in the folder state, kept per peer), so a phone still
+  on an app version that knows only `v1` keeps syncing, and the two
+  switch by themselves after both are updated. Not covered: a replay to
+  the same phone within 2 minutes of that phone's app restart (the seen
+  nonces are kept in memory). A request that is signed
   under the pair key but outside the 2-minute window gets a signed 401
   with the server's time (`X-LZ-Time`): the client reports the clock
   difference (`clockSkew`; the join says "the other phone's clock differs

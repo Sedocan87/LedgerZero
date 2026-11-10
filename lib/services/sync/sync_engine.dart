@@ -416,6 +416,7 @@ class SyncEngine {
 
     cancel.check();
     final applied = await _applyRemote(remote, key, cancel);
+    await _removeObsoleteRequests(remote);
     if (applied.applied > 0) {
       // Applied account rows keep the shared balance they were written
       // with; this member's personal accounts follow the transactions on
@@ -890,6 +891,34 @@ class SyncEngine {
         if (!remote.hasRequest(name)) {
           await transport.upload(name, _requestBytes);
           Logger.info('Sync: requested a snapshot from $device');
+        }
+      }
+    }
+  }
+
+  /// Deletes this device's own snapshot requests that are no longer needed
+  /// (the gap was repaired). The asked device deletes a request when it
+  /// answers; with Wi-Fi sync that deletion has to travel back to this
+  /// phone's folder, and a phone on an older app version does not send it,
+  /// so the request would be copied to it again and answered with a new
+  /// snapshot on every run.
+  Future<void> _removeObsoleteRequests(_RemoteIndex remote) async {
+    if (remote.requests.isEmpty) {
+      return;
+    }
+    final needs = await _state.needsSnapshot();
+    for (final entry in remote.requests.entries) {
+      if (needs.containsKey(entry.key)) {
+        continue;
+      }
+      for (final file in entry.value) {
+        if (SyncFileName.tryParseRequest(file.name)?.requester != deviceId) {
+          continue;
+        }
+        try {
+          await transport.delete(file);
+        } catch (e) {
+          Logger.warning('Sync: could not remove ${file.name}: $e');
         }
       }
     }
