@@ -490,6 +490,10 @@ void main() {
         german('Du hast diesen Monat 1.020,00 € ausgegeben').kind,
         CaptureKind.ignored,
       );
+      // A period alone does not make a summary.
+      final fee = german('Beitrag für diesen Monat: 9,99 € abgebucht');
+      expect(fee.kind, CaptureKind.outflow);
+      expect(fee.amount, 999);
     });
 
     test('promotions are skipped', () {

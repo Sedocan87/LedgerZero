@@ -237,6 +237,7 @@ class CardNotificationParser {
     final nearby = [?signalTitle, sentence].join('\n');
     final notPayment =
         _notPaymentPhrases.first(nearby) ??
+        (_spendingWords.has(nearby) ? _periodPhrases.first(nearby) : null) ??
         (_priceMove.hasMatch(sentence) ? '%' : null) ??
         _promotionStart.firstMatch(sentence)?.group(1)?.toLowerCase() ??
         (signalTitle == null
@@ -734,22 +735,8 @@ class CardNotificationParser {
   /// Summaries and promotions; they win over payment words in the title or
   /// in the sentence of the amount.
   static final _notPaymentPhrases = _Phrases([
-    'this week',
-    'last week',
-    'this month',
-    'last month',
-    'this year',
     'weekly summary',
     'monthly summary',
-    'diese woche',
-    'dieser woche',
-    'letzte woche',
-    'letzter woche',
-    'diesen monat',
-    'diesem monat',
-    'letzten monat',
-    'letztem monat',
-    'dieses jahr',
     'wochenübersicht',
     'monatsübersicht',
     'wochenrückblick',
@@ -764,6 +751,35 @@ class CardNotificationParser {
     'next order',
     'nächsten einkauf',
     'nächste bestellung',
+  ]);
+
+  /// A period that, together with [_spendingWords], makes a summary ("You
+  /// spent €234.56 this week"). A period alone does not: "Beitrag für
+  /// diesen Monat: 9,99 € abgebucht" is a payment.
+  static final _periodPhrases = _Phrases([
+    'this week',
+    'last week',
+    'this month',
+    'last month',
+    'this year',
+    'diese woche',
+    'dieser woche',
+    'letzte woche',
+    'letzter woche',
+    'diesen monat',
+    'diesem monat',
+    'letzten monat',
+    'letztem monat',
+    'dieses jahr',
+    'diesem jahr',
+  ]);
+
+  static final _spendingWords = _Phrases([
+    'spent',
+    'spending',
+    'expenses',
+    'ausgegeben',
+    'ausgaben',
   ]);
 
   /// A sentence that starts by telling the reader to save or get money.

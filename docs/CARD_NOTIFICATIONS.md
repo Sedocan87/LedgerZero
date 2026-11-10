@@ -187,9 +187,11 @@ part per line they are booked, else it waits).
   or in the clause of the amount, so "Your subscription was cancelled;
   €9.99 refunded" is a refund.
 * Not a payment although payment words occur, in the title or the
-  sentence of the amount: summaries ("this week", "diesen Monat"),
-  promotions ("refer a friend", a sentence starting with "Spare", "Get",
-  "Erhalte"), and a change in per cent next to the amount.
+  sentence of the amount: summaries (a period such as "this week" or
+  "diesen Monat" together with "spent"/"ausgegeben"; "Beitrag für diesen
+  Monat: 9,99 € abgebucht" stays a payment), promotions ("refer a
+  friend", a sentence starting with "Spare", "Get", "Erhalte"), and a
+  change in per cent next to the amount.
 * Direction and nature must be positive:
   * an explicit sign wins (`-` outflow, `+` inflow);
   * else inflow words, also inside German compounds ("Zahlungseingang",
