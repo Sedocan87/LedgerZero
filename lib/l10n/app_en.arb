@@ -3917,5 +3917,15 @@
   "importPossibleDuplicateOfNoPayee": "Possible duplicate: a transaction without payee on {date} (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.",
   "@importPossibleDuplicateOfNoPayee": {"description": "Import review: like importPossibleDuplicateOf when the existing transaction has no payee", "placeholders": {"date": {"type": "String"}}},
   "importPossibleDuplicatesNearby": "{count, plural, =1{1 row has the same amount as an existing transaction of the account within {days} days and is unchecked. Check it if it is a separate transaction.} other{{count} rows have the same amount as an existing transaction of the account within {days} days and are unchecked. Check the ones that are separate transactions.}}",
-  "@importPossibleDuplicatesNearby": {"description": "Import review banner: number of possible duplicates (same amount within a few days, whatever the payee)", "placeholders": {"count": {"type": "int"}, "days": {"type": "int"}}}
+  "@importPossibleDuplicatesNearby": {"description": "Import review banner: number of possible duplicates (same amount within a few days, whatever the payee)", "placeholders": {"count": {"type": "int"}, "days": {"type": "int"}}},
+  "importUnknownAccountsPartial": "{count, plural, =1{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out 1 row; a single account takes every row.} other{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out {count} rows; a single account takes every row.}}",
+  "@importUnknownAccountsPartial": {"description": "Import review: blocking banner when the file's Account column names accounts that do not all match an open account, and some do", "placeholders": {"names": {"type": "String"}, "count": {"type": "int"}}},
+  "importUnknownAccountsNone": "This file names accounts that are not open accounts here: {names}. Choose the account that all rows go into.",
+  "@importUnknownAccountsNone": {"description": "Import review: blocking banner when none of the account names in the file match an open account", "placeholders": {"names": {"type": "String"}}},
+  "importRowAccountNotFound": "Account “{name}” not found – not imported",
+  "@importRowAccountNotFound": {"description": "Import review: under a row left out because its account name matches no open account (Account from file)", "placeholders": {"name": {"type": "String"}}},
+  "importRowNoAccount": "No account in the file – not imported",
+  "@importRowNoAccount": {"description": "Import review: under a row left out because its Account cell is empty (Account from file)"},
+  "importRowsWithoutAccount": "rows without an account name",
+  "@importRowsWithoutAccount": {"description": "Import review: entry in the list of unmatched account names for rows whose Account cell is empty"}
 }

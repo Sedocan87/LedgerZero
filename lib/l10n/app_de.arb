@@ -1293,5 +1293,10 @@
   "csvFieldFee": "Gebühr",
   "importPossibleDuplicateOf": "Mögliches Duplikat: {payee} am {date} hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.",
   "importPossibleDuplicateOfNoPayee": "Mögliches Duplikat: Eine Buchung ohne Empfänger am {date} (z. B. eine Umbuchung) hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.",
-  "importPossibleDuplicatesNearby": "{count, plural, =1{1 Zeile hat denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von {days} Tagen und ist abgewählt. Setzen Sie den Haken, wenn es eine eigene Buchung ist.} other{{count} Zeilen haben denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von {days} Tagen und sind abgewählt. Setzen Sie den Haken bei denen, die eigene Buchungen sind.}}"
+  "importPossibleDuplicatesNearby": "{count, plural, =1{1 Zeile hat denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von {days} Tagen und ist abgewählt. Setzen Sie den Haken, wenn es eine eigene Buchung ist.} other{{count} Zeilen haben denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von {days} Tagen und sind abgewählt. Setzen Sie den Haken bei denen, die eigene Buchungen sind.}}",
+  "importUnknownAccountsPartial": "{count, plural, =1{Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: {names}. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt 1 Zeile aus; ein einzelnes Konto nimmt alle Zeilen auf.} other{Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: {names}. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt {count} Zeilen aus; ein einzelnes Konto nimmt alle Zeilen auf.}}",
+  "importUnknownAccountsNone": "Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: {names}. Wählen Sie das Konto, in das alle Zeilen importiert werden.",
+  "importRowAccountNotFound": "Konto „{name}“ nicht gefunden – wird nicht importiert",
+  "importRowNoAccount": "Kein Konto in der Datei – wird nicht importiert",
+  "importRowsWithoutAccount": "Zeilen ohne Kontonamen"
 }

@@ -42,9 +42,15 @@ class _ImportConfirmationScreenState
   /// columns).
   Map<String, String> _accountIdsByName = const {};
 
-  /// The distinct account names the file carries that all name an existing
-  /// open account; empty when the file has none or one is unknown.
+  /// The distinct account names of the file that name an open account.
   List<String> _fileAccountNames = const [];
+
+  /// The distinct account names of the file that name no open account
+  /// (unknown, renamed or closed since the export).
+  List<String> _unknownAccountNames = const [];
+
+  /// The file has an Account column but some rows leave it empty.
+  bool _rowsWithoutAccountName = false;
 
   @override
   void initState() {
@@ -69,19 +75,28 @@ class _ImportConfirmationScreenState
       final fileNames = {
         for (final t in _transactions)
           if (t.accountName != null) t.accountName!,
-      }.toList();
-      final allKnown =
+      };
+      bool known(String name) =>
+          byName.containsKey(CsvImportService.normalizePayee(name));
+      final matched = fileNames.where(known).toList();
+      final unknown = fileNames.where((n) => !known(n)).toList();
+      final withoutName =
           fileNames.isNotEmpty &&
-          fileNames.every(
-            (n) => byName.containsKey(CsvImportService.normalizePayee(n)),
-          );
+          _transactions.any((t) => t.accountName == null);
       setState(() {
         _accounts = accounts;
         _accountIdsByName = byName;
-        _fileAccountNames = allKnown ? fileNames : const [];
-        _accountId = allKnown
-            ? importAccountFromFileValue
-            : accounts.firstOrNull?.id;
+        _fileAccountNames = matched;
+        _unknownAccountNames = unknown;
+        _rowsWithoutAccountName = withoutName;
+        // A file that names accounts is never put into one account
+        // silently: when every name matches, each row goes into its own
+        // account; otherwise the user has to choose (see the banner).
+        _accountId = fileNames.isEmpty
+            ? accounts.firstOrNull?.id
+            : (unknown.isEmpty && !withoutName
+                  ? importAccountFromFileValue
+                  : null);
       });
       if (_accountId != null) {
         await _checkDuplicates(_accountId!);
@@ -105,10 +120,29 @@ class _ImportConfirmationScreenState
     }
   }
 
-  /// The account every row without its own account goes into.
+  /// The account the rows go into. With "account from file" every
+  /// imported row has its own account (rows without one are left out, see
+  /// [_isLeftOut]), so the value only satisfies the service's signature.
   String? get _defaultAccountId => _accountId == importAccountFromFileValue
-      ? _accounts?.firstOrNull?.id
+      ? _transactions.map((t) => t.accountId).nonNulls.firstOrNull
       : _accountId;
+
+  /// With "account from file": the row's account name matches no open
+  /// account (or the row has none), so the row is not imported.
+  bool _isLeftOut(ImportTransaction t) =>
+      _accountId == importAccountFromFileValue && t.accountId == null;
+
+  /// The rows "account from file" leaves out: their account name matches
+  /// no open account, or they have none.
+  int get _unknownRowCount => _transactions
+      .where(
+        (t) =>
+            t.accountName == null ||
+            !_accountIdsByName.containsKey(
+              CsvImportService.normalizePayee(t.accountName!),
+            ),
+      )
+      .length;
 
   /// Duplicates only count within the account the rows go into.
   Future<void> _checkDuplicates(String accountId) async {
@@ -116,10 +150,15 @@ class _ImportConfirmationScreenState
     _applyRowAccounts(accountId);
     final defaultAccount = _defaultAccountId;
     try {
+      for (final t in _transactions.where(_isLeftOut)) {
+        t.isDuplicate = false;
+        t.isPossibleDuplicate = false;
+      }
       if (defaultAccount != null) {
-        await ref
-            .read(transactionImportServiceProvider)
-            .markDuplicates(_transactions, defaultAccount);
+        await ref.read(transactionImportServiceProvider).markDuplicates([
+          for (final t in _transactions)
+            if (!_isLeftOut(t)) t,
+        ], defaultAccount);
       }
     } catch (e, st) {
       Logger.error('Duplicate check failed', e, st);
@@ -156,7 +195,13 @@ class _ImportConfirmationScreenState
         ?.where((a) => a.id == _defaultAccountId)
         .firstOrNull
         ?.currency;
-    final selected = _transactions.where((t) => t.isSelected).toList();
+    final selected = _transactions
+        .where((t) => t.isSelected && !_isLeftOut(t))
+        .toList();
+    final unknownAccounts = [
+      ..._unknownAccountNames,
+      if (_rowsWithoutAccountName) l10n.importRowsWithoutAccount,
+    ];
     final total = Money.sum(selected.map((t) => t.amount));
     final duplicateCount = _transactions.where((t) => t.isDuplicate).length;
     final possibleCount = _transactions
@@ -195,6 +240,7 @@ class _ImportConfirmationScreenState
                         key: const Key('import_account'),
                         isExpanded: true,
                         initialValue: _accountId,
+                        hint: Text(l10n.selectAccount),
                         items: [
                           if (_fileAccountNames.isNotEmpty)
                             DropdownMenuItem(
@@ -211,6 +257,20 @@ class _ImportConfirmationScreenState
                         ],
                         onChanged: busy ? null : _selectAccount,
                         decoration: InputDecoration(labelText: l10n.account),
+                      ),
+                    if (accounts != null &&
+                        accounts.isNotEmpty &&
+                        unknownAccounts.isNotEmpty)
+                      _Banner(
+                        key: const Key('import_unknown_accounts'),
+                        text: _fileAccountNames.isEmpty
+                            ? l10n.importUnknownAccountsNone(
+                                unknownAccounts.join(', '),
+                              )
+                            : l10n.importUnknownAccountsPartial(
+                                unknownAccounts.join(', '),
+                                _unknownRowCount,
+                              ),
                       ),
                     if (duplicateCount > 0)
                       _Banner(text: l10n.deduplicationComplete(duplicateCount)),
@@ -241,10 +301,14 @@ class _ImportConfirmationScreenState
                     final category = tx.categoryId == null
                         ? null
                         : categoryNames[tx.categoryId];
-                    final flagged = tx.isDuplicate || tx.isPossibleDuplicate;
+                    final leftOut = _isLeftOut(tx);
+                    final flagged =
+                        leftOut || tx.isDuplicate || tx.isPossibleDuplicate;
                     return CheckboxListTile(
-                      value: tx.isSelected,
-                      onChanged: busy ? null : (v) => _toggleSelection(index),
+                      value: tx.isSelected && !leftOut,
+                      onChanged: busy || leftOut
+                          ? null
+                          : (v) => _toggleSelection(index),
                       tileColor: flagged
                           ? theme.colorScheme.errorContainer.withValues(
                               alpha: 0.3,
@@ -287,6 +351,19 @@ class _ImportConfirmationScreenState
                                   )
                                 : fmt.formatDate(tx.date),
                           ),
+                          if (leftOut)
+                            Text(
+                              tx.accountName == null
+                                  ? l10n.importRowNoAccount
+                                  : l10n.importRowAccountNotFound(
+                                      tx.accountName!,
+                                    ),
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                           if (category != null) Text(category),
                           if (tx.hasUnmatchedCategory)
                             Text(
@@ -442,7 +519,7 @@ class _ImportConfirmationScreenState
 }
 
 class _Banner extends StatelessWidget {
-  const _Banner({required this.text, this.warning = true});
+  const _Banner({super.key, required this.text, this.warning = true});
 
   final String text;
   final bool warning;

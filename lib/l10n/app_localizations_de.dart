@@ -4891,4 +4891,34 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String importUnknownAccountsPartial(String names, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt $count Zeilen aus; ein einzelnes Konto nimmt alle Zeilen auf.',
+      one:
+          'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Es wird nichts importiert, bis Sie wählen: „Konto aus der Datei“ importiert die Zeilen der passenden Konten und lässt 1 Zeile aus; ein einzelnes Konto nimmt alle Zeilen auf.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsNone(String names) {
+    return 'Diese Datei nennt Konten, die es hier nicht als offenes Konto gibt: $names. Wählen Sie das Konto, in das alle Zeilen importiert werden.';
+  }
+
+  @override
+  String importRowAccountNotFound(String name) {
+    return 'Konto „$name“ nicht gefunden – wird nicht importiert';
+  }
+
+  @override
+  String get importRowNoAccount =>
+      'Kein Konto in der Datei – wird nicht importiert';
+
+  @override
+  String get importRowsWithoutAccount => 'Zeilen ohne Kontonamen';
 }

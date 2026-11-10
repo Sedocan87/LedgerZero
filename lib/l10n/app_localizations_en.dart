@@ -4854,4 +4854,33 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String importUnknownAccountsPartial(String names, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This file names accounts that are not open accounts here: $names. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out $count rows; a single account takes every row.',
+      one:
+          'This file names accounts that are not open accounts here: $names. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out 1 row; a single account takes every row.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importUnknownAccountsNone(String names) {
+    return 'This file names accounts that are not open accounts here: $names. Choose the account that all rows go into.';
+  }
+
+  @override
+  String importRowAccountNotFound(String name) {
+    return 'Account “$name” not found – not imported';
+  }
+
+  @override
+  String get importRowNoAccount => 'No account in the file – not imported';
+
+  @override
+  String get importRowsWithoutAccount => 'rows without an account name';
 }

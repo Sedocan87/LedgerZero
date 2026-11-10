@@ -7821,6 +7821,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 row has the same amount as an existing transaction of the account within {days} days and is unchecked. Check it if it is a separate transaction.} other{{count} rows have the same amount as an existing transaction of the account within {days} days and are unchecked. Check the ones that are separate transactions.}}'**
   String importPossibleDuplicatesNearby(int count, int days);
+
+  /// Import review: blocking banner when the file's Account column names accounts that do not all match an open account, and some do
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out 1 row; a single account takes every row.} other{This file names accounts that are not open accounts here: {names}. Nothing is imported until you choose: \"Account from file\" imports the rows of the accounts that match and leaves out {count} rows; a single account takes every row.}}'**
+  String importUnknownAccountsPartial(String names, int count);
+
+  /// Import review: blocking banner when none of the account names in the file match an open account
+  ///
+  /// In en, this message translates to:
+  /// **'This file names accounts that are not open accounts here: {names}. Choose the account that all rows go into.'**
+  String importUnknownAccountsNone(String names);
+
+  /// Import review: under a row left out because its account name matches no open account (Account from file)
+  ///
+  /// In en, this message translates to:
+  /// **'Account “{name}” not found – not imported'**
+  String importRowAccountNotFound(String name);
+
+  /// Import review: under a row left out because its Account cell is empty (Account from file)
+  ///
+  /// In en, this message translates to:
+  /// **'No account in the file – not imported'**
+  String get importRowNoAccount;
+
+  /// Import review: entry in the list of unmatched account names for rows whose Account cell is empty
+  ///
+  /// In en, this message translates to:
+  /// **'rows without an account name'**
+  String get importRowsWithoutAccount;
 }
 
 class _AppLocalizationsDelegate
