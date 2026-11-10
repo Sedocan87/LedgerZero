@@ -1369,5 +1369,6 @@
   "lockScreenDatabaseDamaged": "LedgerZero kann die Daten auf diesem Telefon nicht lesen: Die Datenbankdatei ist beschädigt. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.",
   "lockScreenDatabaseTooOld": "Die Daten auf diesem Telefon wurden von einer frühen Testversion von LedgerZero gespeichert, die diese Version nicht mehr öffnet. Setzen Sie die App zurück und richten Sie sie neu ein. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.",
   "securityDataLocationTitle": "Wo Ihre Daten liegen",
-  "securityDataLocationBody": "Nur auf diesem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Sicherungen und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt."
+  "securityDataLocationBody": "Nur auf diesem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Sicherungen und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.",
+  "autoBackupPasswordMissing": "Das Sicherungspasswort ist auf diesem Telefon nicht mehr gespeichert (zum Beispiel nach dem Umzug auf ein neues Telefon). Schalten Sie die automatischen Sicherungen aus und wieder ein, um es einzugeben."
 }

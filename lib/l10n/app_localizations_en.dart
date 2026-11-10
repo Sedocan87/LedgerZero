@@ -5244,4 +5244,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get securityDataLocationBody =>
       'Only on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. Backups and sync files are encrypted with your password or passphrase.';
+
+  @override
+  String get autoBackupPasswordMissing =>
+      'The backup password is no longer stored on this phone (for example after moving to a new phone). Turn automatic backups off and on again to enter it.';
 }

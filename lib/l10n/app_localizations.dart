@@ -8277,6 +8277,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Only on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. Backups and sync files are encrypted with your password or passphrase.'**
   String get securityDataLocationBody;
+
+  /// Backup screen: automatic backups are on but the stored password is gone (Android key store lost it, or the app moved to a new phone)
+  ///
+  /// In en, this message translates to:
+  /// **'The backup password is no longer stored on this phone (for example after moving to a new phone). Turn automatic backups off and on again to enter it.'**
+  String get autoBackupPasswordMissing;
 }
 
 class _AppLocalizationsDelegate

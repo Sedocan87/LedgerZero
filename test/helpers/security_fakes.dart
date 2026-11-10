@@ -14,8 +14,17 @@ class InMemorySecureStore implements SecureStore {
   /// Number of write calls, to assert single-write updates.
   int writeCount = 0;
 
+  /// Reads throw this, like a KeyStore whose key is gone.
+  Object? readError;
+
   @override
-  Future<String?> read(String key) async => values[key];
+  Future<String?> read(String key) async {
+    final error = readError;
+    if (error != null) {
+      throw error;
+    }
+    return values[key];
+  }
 
   @override
   Future<void> write(String key, String value) async {

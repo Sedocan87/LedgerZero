@@ -4093,5 +4093,7 @@
   "securityDataLocationTitle": "Where your data is",
   "@securityDataLocationTitle": {"description": "Settings > Security: title of the row that explains how the data on the phone is protected"},
   "securityDataLocationBody": "Only on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. Backups and sync files are encrypted with your password or passphrase.",
-  "@securityDataLocationBody": {"description": "Settings > Security: how the data on the phone is protected (the database itself is not encrypted by the app)"}
+  "@securityDataLocationBody": {"description": "Settings > Security: how the data on the phone is protected (the database itself is not encrypted by the app)"},
+  "autoBackupPasswordMissing": "The backup password is no longer stored on this phone (for example after moving to a new phone). Turn automatic backups off and on again to enter it.",
+  "@autoBackupPasswordMissing": {"description": "Backup screen: automatic backups are on but the stored password is gone (Android key store lost it, or the app moved to a new phone)"}
 }

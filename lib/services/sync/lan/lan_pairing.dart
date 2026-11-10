@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:ledger_zero/services/security/secure_store.dart';
 
@@ -152,8 +153,24 @@ class LanPairingStore {
 
   static const String storageKey = 'lz_lan_pairing_v1';
 
+  /// The stored pairing; null when there is none or the secure storage
+  /// cannot read it any more (a lost KeyStore key, or the app was moved to
+  /// a new phone): Wi-Fi sync then asks to pair again.
   Future<LanPairing?> read() async {
-    final value = await _store.read(storageKey);
+    final String? value;
+    try {
+      value = await _store.read(storageKey);
+    } catch (e, stackTrace) {
+      Logger.warning(
+        'The Wi-Fi pairing cannot be read; forgetting it',
+        e,
+        stackTrace,
+      );
+      try {
+        await _store.delete(storageKey);
+      } catch (_) {}
+      return null;
+    }
     if (value == null) {
       return null;
     }

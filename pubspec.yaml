@@ -21,7 +21,7 @@ dependencies:
   # Database & Persistence
   drift: ^2.35.2
   # The automatic-backup password and the Wi-Fi pairing secret (KeyStore).
-  flutter_secure_storage: ^10.3.4
+  flutter_secure_storage: ^11.2.0
 
   # Cloud Sync
   googleapis: ^17.0.0

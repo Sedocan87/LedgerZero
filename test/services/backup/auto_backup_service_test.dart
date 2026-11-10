@@ -177,8 +177,20 @@ void main() {
       auto.runNow(),
       throwsA(isA<AutoBackupNotConfiguredException>()),
     );
-    expect(auto.lastError, isNotNull);
+    expect(auto.lastError, AutoBackupService.passwordMissingError);
     expect(auto.isEnabled, isTrue);
+  });
+
+  test('a password the KeyStore cannot read any more is forgotten, and the '
+      'run reports it as missing (the app goes on)', () async {
+    final auto = service();
+    await auto.enable('correct horse battery');
+    store.readError = Exception('javax.crypto.AEADBadTagException');
+    now = now.add(const Duration(days: 1));
+
+    expect(await auto.runIfDue(), isNull);
+    expect(auto.lastError, AutoBackupService.passwordMissingError);
+    expect(store.values.containsKey(AutoBackupService.passwordKey), isFalse);
   });
 
   test('only the newest backups are kept', () async {

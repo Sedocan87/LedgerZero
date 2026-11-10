@@ -353,6 +353,16 @@ void main() {
       );
     });
 
+    test('a pairing the KeyStore cannot read any more is forgotten, so '
+        'Wi-Fi sync asks to pair again', () async {
+      final secure = InMemorySecureStore();
+      final store = LanPairingStore(secure);
+      await store.write(LanPairing.generate());
+      secure.readError = Exception('javax.crypto.AEADBadTagException');
+      expect(await store.read(), isNull);
+      expect(secure.values, isEmpty);
+    });
+
     test('generated passphrases are long and random', () {
       final p1 = LanPairing.generate().passphrase;
       final p2 = LanPairing.generate().passphrase;

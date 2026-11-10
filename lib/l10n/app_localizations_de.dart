@@ -5279,4 +5279,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get securityDataLocationBody =>
       'Nur auf diesem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Sicherungen und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.';
+
+  @override
+  String get autoBackupPasswordMissing =>
+      'Das Sicherungspasswort ist auf diesem Telefon nicht mehr gespeichert (zum Beispiel nach dem Umzug auf ein neues Telefon). Schalten Sie die automatischen Sicherungen aus und wieder ein, um es einzugeben.';
 }

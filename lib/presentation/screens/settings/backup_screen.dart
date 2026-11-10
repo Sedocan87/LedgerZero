@@ -431,6 +431,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final String status;
     if (!enabled) {
       status = l10n.autoBackupStatusOff;
+    } else if (error == AutoBackupService.passwordMissingError) {
+      status = l10n.autoBackupPasswordMissing;
     } else if (error != null) {
       status = l10n.autoBackupStatusFailed(
         formatter.formatDateTime(service.lastAttempt ?? DateTime.now()),
