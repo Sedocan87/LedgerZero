@@ -40,5 +40,6 @@ String Function(String englishName) defaultCategoryNames(
       'Crypto' => l10n.seedCatCrypto,
       'Bonds' => l10n.seedCatBonds,
       'Retirement' => l10n.seedCatRetirement,
+      'Credit Card Payments' => l10n.seedGroupCardPayments,
       _ => englishName,
     };

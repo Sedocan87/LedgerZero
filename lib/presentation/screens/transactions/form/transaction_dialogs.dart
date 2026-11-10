@@ -85,6 +85,7 @@ String transactionValidationMessage(
     TransactionValidationError.scheduleEndBeforeNextDate =>
       l10n.scheduledEndBeforeNext,
     TransactionValidationError.scheduleInvalidInterval => l10n.invalidAmount,
+    TransactionValidationError.paymentCategory => l10n.txPaymentCategory,
     TransactionValidationError.notFound || null => l10n.txSaveFailed,
   };
 }

@@ -5207,4 +5207,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String androidBackupTooLarge(String size) {
     return 'Das Budget belegt $size MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort.';
   }
+
+  @override
+  String get seedGroupCardPayments => 'Kreditkartenzahlungen';
+
+  @override
+  String get txPaymentCategory =>
+      'Eine Kreditkartenzahlungs-Kategorie kann nicht für eine Buchung verwendet werden. Wählen Sie die Kategorie, für die das Geld ausgegeben wurde; die Zahlungskategorie füllt sich selbst.';
 }

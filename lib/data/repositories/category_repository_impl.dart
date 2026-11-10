@@ -190,6 +190,16 @@ class CategoryRepositoryImpl implements CategoryRepository {
         });
   }
 
+  @override
+  Future<void> syncCardPaymentCategories({DateTime? stampedAt}) async {
+    try {
+      await _categoriesDao.syncCardPaymentCategories(stampedAt: stampedAt);
+    } catch (e, stackTrace) {
+      Logger.error('Failed to sync card payment categories', e, stackTrace);
+      throw DatabaseException('Failed to sync card payment categories', e);
+    }
+  }
+
   // Mappers
 
   Category _mapCategoryToDomain(db.Category c) {

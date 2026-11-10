@@ -1,9 +1,12 @@
 import 'package:ledger_zero/core/constants/default_categories.dart';
 import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/reference_maintenance_repository.dart';
 import 'package:ledger_zero/domain/repositories/rule_repository.dart';
@@ -22,6 +25,19 @@ class CategoryGroupNotEmptyException implements Exception {
   String toString() => 'CategoryGroupNotEmptyException($categoryCount)';
 }
 
+/// Thrown when a credit card's payment category (or its group) would be
+/// deleted, or another category moved into that group, while the card is
+/// an open budget card (see `CardPayments`).
+class PaymentCategoryProtectedException implements Exception {
+  const PaymentCategoryProtectedException(this.id);
+
+  /// The category or group.
+  final String id;
+
+  @override
+  String toString() => 'PaymentCategoryProtectedException($id)';
+}
+
 /// Deletes categories and groups without breaking references.
 class CategoryService {
   CategoryService({
@@ -30,9 +46,26 @@ class CategoryService {
     required this._ruleRepository,
     required this._unitOfWork,
     UndoService? undoService,
+    AccountRepository? accountRepository,
   }) : // A named parameter cannot be a private initializing formal.
        // ignore: prefer_initializing_formals
-       _undoService = undoService;
+       _undoService = undoService,
+       // ignore: prefer_initializing_formals
+       _accountRepository = accountRepository;
+
+  /// For the protection of payment categories; without it (sync conflict
+  /// resolution, which applies what the other phone decided) nothing is
+  /// protected.
+  final AccountRepository? _accountRepository;
+
+  /// The ids of the payment categories whose card is an open budget card.
+  Future<Set<String>> _activePaymentCategoryIds() async {
+    final accounts = await _accountRepository?.getAllAccounts();
+    return {
+      for (final a in accounts ?? const <Account>[])
+        if (CardPayments.isActive(a)) CardPayments.categoryId(a.id),
+    };
+  }
 
   final CategoryRepository _categoryRepository;
   final ReferenceMaintenanceRepository _maintenance;
@@ -59,9 +92,20 @@ class CategoryService {
   /// returns to To Be Budgeted) and its transactions become uncategorised
   /// (they then count towards To Be Budgeted as well); other references are
   /// cleared and rule actions setting it are removed.
-  Future<void> deleteCategory(String id, {required String? reassignTo}) {
+  ///
+  /// The payment category of an open budget card cannot be deleted
+  /// ([PaymentCategoryProtectedException]); nor can money and transactions
+  /// be moved into one.
+  Future<void> deleteCategory(String id, {required String? reassignTo}) async {
     if (reassignTo == id) {
       throw ArgumentError.value(reassignTo, 'reassignTo', 'same category');
+    }
+    final protected = await _activePaymentCategoryIds();
+    if (protected.contains(id)) {
+      throw PaymentCategoryProtectedException(id);
+    }
+    if (reassignTo != null && protected.contains(reassignTo)) {
+      throw PaymentCategoryProtectedException(reassignTo);
     }
     return _unitOfWork
         .run(() async {
@@ -84,11 +128,26 @@ class CategoryService {
 
   /// Deletes group [groupId]. Its categories move to [moveCategoriesTo]
   /// (with their budgets and transactions); a group that still has
-  /// categories cannot be deleted without a target.
+  /// categories cannot be deleted without a target. The "Credit Card
+  /// Payments" group cannot be deleted while it holds the payment category
+  /// of an open budget card, and no other group's categories move into it
+  /// ([PaymentCategoryProtectedException]).
   Future<void> deleteCategoryGroup(
     String groupId, {
     required String? moveCategoriesTo,
-  }) {
+  }) async {
+    if (moveCategoriesTo == CardPayments.groupId) {
+      throw PaymentCategoryProtectedException(moveCategoriesTo!);
+    }
+    if (groupId == CardPayments.groupId) {
+      final protected = await _activePaymentCategoryIds();
+      final inGroup = await _categoryRepository.getAllCategories();
+      if (inGroup.any(
+        (c) => c.categoryGroupId == groupId && protected.contains(c.id),
+      )) {
+        throw PaymentCategoryProtectedException(groupId);
+      }
+    }
     return _unitOfWork.run(() async {
       final count = await _maintenance.countCategoriesInGroup(groupId);
       if (count > 0) {

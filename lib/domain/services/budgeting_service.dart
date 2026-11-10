@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/domain/entities/enums/goal_type.dart';
@@ -802,6 +803,19 @@ class BudgetingService {
       }
     });
     return released;
+  }
+
+  /// Releases what the payment category of card [accountId] holds in
+  /// [month] to To Be Budgeted ([releaseFromCategory] with its available
+  /// amount), after the card was closed, taken off the budget or changed to
+  /// another account type. What cannot be released that way (money moved
+  /// there by card spending rather than budgeted) stays in the hidden
+  /// category, which the budget screen then lists under "Hidden
+  /// categories". Returns the amount released.
+  Future<int> releasePaymentCategory(String accountId, DateTime month) async {
+    final categoryId = CardPayments.categoryId(accountId);
+    final available = await calculateCategoryAvailable(categoryId, month);
+    return releaseFromCategory(categoryId, available, month);
   }
 
   // --- Filling a new month ---

@@ -32,7 +32,9 @@ abstract final class DefaultCategories {
       'Renter\'s/Home Insurance',
       'Software Subscriptions',
     ],
-    'Debt Payments': ['Student Loan', 'Car Payment', 'Credit Card'],
+    // No "Credit Card" category: every budget credit card gets its own
+    // payment category in "Credit Card Payments" (see `CardPayments`).
+    'Debt Payments': ['Student Loan', 'Car Payment'],
     'Quality of Life': [
       'Vacation',
       'Fitness',

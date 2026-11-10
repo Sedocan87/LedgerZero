@@ -8151,6 +8151,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The budget takes {size} MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.'**
   String androidBackupTooLarge(String size);
+
+  /// Name of the category group that holds one payment category per credit card
+  ///
+  /// In en, this message translates to:
+  /// **'Credit Card Payments'**
+  String get seedGroupCardPayments;
+
+  /// Transaction form: error when a transaction is categorised into a credit card payment category
+  ///
+  /// In en, this message translates to:
+  /// **'A credit card payment category cannot be used for a transaction. Pick the category the money was spent on; the payment category fills itself.'**
+  String get txPaymentCategory;
 }
 
 class _AppLocalizationsDelegate

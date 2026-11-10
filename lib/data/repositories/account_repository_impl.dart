@@ -41,9 +41,12 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<void> createAccount(domain.Account account) async {
     try {
       Logger.debug('Creating account: ${account.name}');
-      await _accountsDao.insertAccount(
-        await _mapToCompanion(account, isInsert: true),
-      );
+      await _accountsDao.transaction(() async {
+        await _accountsDao.insertAccount(
+          await _mapToCompanion(account, isInsert: true),
+        );
+        await _syncPaymentCategory(account.id);
+      });
       Logger.info('Account created successfully: ${account.id}');
     } catch (e, stackTrace) {
       Logger.error('Failed to create account ${account.id}', e, stackTrace);
@@ -66,6 +69,7 @@ class AccountRepositoryImpl implements AccountRepository {
       }
       await _accountsDao.transaction(() async {
         await _accountsDao.updateAccount(await _mapToCompanion(account));
+        await _syncPaymentCategory(account.id);
         if (wasPersonal && !account.isPersonal) {
           await _accountsDao.queueHistoryForSync(account.id);
         }
@@ -78,6 +82,14 @@ class AccountRepositoryImpl implements AccountRepository {
       throw DatabaseException('Failed to update account ${account.id}', e);
     }
   }
+
+  /// Keeps the credit-card payment category of [accountId] in line with
+  /// the account (created, renamed, hidden or shown), in the same
+  /// transaction as the account write: see `CardPayments`.
+  Future<void> _syncPaymentCategory(String accountId) => _accountsDao
+      .attachedDatabase
+      .categoriesDao
+      .syncCardPaymentCategories(accountId: accountId);
 
   @override
   Future<bool> wasSynced(String id) async {

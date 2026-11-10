@@ -1348,5 +1348,7 @@
   "backupSaveToExplanation": "Mit „Speichern unter…“ wählen Sie, wohin die Datei kommt: in einen Ordner auf dem Telefon, auf einen USB-Stick oder in eine Cloud-App wie Google Drive oder Dropbox. LedgerZero meldet sich nirgends an; das Hochladen übernimmt die gewählte App.",
   "androidBackupTitle": "Android-Sicherung",
   "androidBackupExplanation": "Ist die Android-Sicherung eingeschaltet (bei den meisten Telefonen unter Einstellungen > System > Sicherung), kopiert Android das Budget etwa einmal am Tag in Ihr Google-Konto, Ende-zu-Ende-verschlüsselt mit der Displaysperre dieses Telefons, und stellt es auf einem neuen Telefon wieder her. LedgerZero kann nicht prüfen, ob sie eingeschaltet ist, und ohne Displaysperre sichert Android nichts davon.",
-  "androidBackupTooLarge": "Das Budget belegt {size} MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort."
+  "androidBackupTooLarge": "Das Budget belegt {size} MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort.",
+  "seedGroupCardPayments": "Kreditkartenzahlungen",
+  "txPaymentCategory": "Eine Kreditkartenzahlungs-Kategorie kann nicht für eine Buchung verwendet werden. Wählen Sie die Kategorie, für die das Geld ausgegeben wurde; die Zahlungskategorie füllt sich selbst."
 }

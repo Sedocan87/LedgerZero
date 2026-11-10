@@ -5174,4 +5174,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String androidBackupTooLarge(String size) {
     return 'The budget takes $size MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.';
   }
+
+  @override
+  String get seedGroupCardPayments => 'Credit Card Payments';
+
+  @override
+  String get txPaymentCategory =>
+      'A credit card payment category cannot be used for a transaction. Pick the category the money was spent on; the payment category fills itself.';
 }

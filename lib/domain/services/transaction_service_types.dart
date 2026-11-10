@@ -28,6 +28,11 @@ enum TransactionValidationError {
 
   /// A schedule with an interval below 1.
   scheduleInvalidInterval,
+
+  /// A category that is a credit card's payment category: money gets there
+  /// only by spending on the card, payments and assigning (see
+  /// `CardPayments`).
+  paymentCategory,
 }
 
 /// Exception thrown when transaction validation fails.

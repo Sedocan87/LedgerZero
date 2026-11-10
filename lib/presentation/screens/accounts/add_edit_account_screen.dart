@@ -11,6 +11,7 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
@@ -433,7 +434,12 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           updatedAt: DateTime.now().toUtc(),
         );
         final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
-        final budgeting = release.isEmpty
+        // A card that leaves the budget or stops being a credit card: its
+        // payment category is hidden and gives back what it holds.
+        final releasesPayment =
+            CardPayments.isActive(_existingAccount!) &&
+            !CardPayments.isActive(updatedAccount);
+        final budgeting = release.isEmpty && !releasesPayment
             ? null
             : ref.read(budgetingServiceProvider);
         // One unit of work: an account that left the budget without the
@@ -447,6 +453,12 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
             total += await budgeting!.releaseFromCategory(
               categoryId,
               amount,
+              month,
+            );
+          }
+          if (releasesPayment) {
+            total += await budgeting!.releasePaymentCategory(
+              updatedAccount.id,
               month,
             );
           }

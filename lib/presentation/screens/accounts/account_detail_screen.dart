@@ -63,10 +63,20 @@ class AccountDetailScreen extends ConsumerWidget {
       return;
     }
     try {
-      await ref.read(accountServiceProvider).setClosed(accountId, closed);
+      final released = await ref
+          .read(accountServiceProvider)
+          .setClosed(accountId, closed);
       if (closed) {
         messenger.showSnackBar(
-          SnackBar(content: Text(l10n.accountClosedMessage)),
+          SnackBar(
+            content: Text(
+              released > 0
+                  ? l10n.accountReleased(
+                      ref.read(appFormatterProvider).formatMoney(released),
+                    )
+                  : l10n.accountClosedMessage,
+            ),
+          ),
         );
       }
     } catch (e, st) {

@@ -4053,5 +4053,9 @@
   "androidBackupExplanation": "If Android backup is on (Settings > System > Backup on most phones), Android copies the budget to your Google account about once a day, end-to-end encrypted with this phone’s screen lock, and puts it back on a new phone. LedgerZero cannot check whether it is on, and without a screen lock Android backs up none of it.",
   "@androidBackupExplanation": {"description": "Backup screen: Android backup in one or two sentences (the app cannot read the setting)"},
   "androidBackupTooLarge": "The budget takes {size} MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.",
-  "@androidBackupTooLarge": {"description": "Backup screen: shown when the database is above 20 MB", "placeholders": {"size": {"type": "String", "example": "21"}}}
+  "@androidBackupTooLarge": {"description": "Backup screen: shown when the database is above 20 MB", "placeholders": {"size": {"type": "String", "example": "21"}}},
+  "seedGroupCardPayments": "Credit Card Payments",
+  "@seedGroupCardPayments": {"description": "Name of the category group that holds one payment category per credit card"},
+  "txPaymentCategory": "A credit card payment category cannot be used for a transaction. Pick the category the money was spent on; the payment category fills itself.",
+  "@txPaymentCategory": {"description": "Transaction form: error when a transaction is categorised into a credit card payment category"}
 }

@@ -3,6 +3,7 @@ import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/services/transaction_service_types.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
@@ -209,6 +210,7 @@ class TransactionService {
       await _ensureSameCurrency(account, input.transferAccountId!);
     }
     await _ensureOpenForNewRows(input, account, existing, counterpart);
+    await _ensureNoPaymentCategory(input);
     final before = <String, Transaction?>{
       ?existing?.id: existing,
       ?counterpart?.id: counterpart,
@@ -410,6 +412,30 @@ class TransactionService {
       if (to?.isClosed ?? false) {
         reject(transferAccountId);
       }
+    }
+  }
+
+  /// Ordinary transactions cannot be categorised into a credit card's
+  /// payment category: it is filled by card spending (moved from the
+  /// spending category), emptied by payments to the card, and assigned to
+  /// like any category (see docs/BUDGETING_RULES.md, "Credit cards").
+  Future<void> _ensureNoPaymentCategory(TransactionInput input) async {
+    final used = {
+      ?input.categoryId,
+      for (final line in input.splits) ?line.categoryId,
+    };
+    if (used.isEmpty) {
+      return;
+    }
+    final payment = CardPayments.categoryIds(
+      await _accountRepository.getAllAccounts(),
+    );
+    final hit = used.where(payment.contains);
+    if (hit.isNotEmpty) {
+      throw ValidationException(
+        'Category ${hit.first} is a credit card payment category',
+        TransactionValidationError.paymentCategory,
+      );
     }
   }
 

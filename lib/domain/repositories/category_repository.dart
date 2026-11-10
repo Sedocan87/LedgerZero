@@ -42,4 +42,16 @@ abstract class CategoryRepository {
 
   /// Watches all category groups for changes.
   Stream<List<CategoryGroup>> watchAllCategoryGroups();
+
+  /// Brings the credit-card payment categories in line with the accounts
+  /// (see `CardPayments`): creates missing ones, renames, hides and shows
+  /// them. [stampedAt] is the `updated_at` of the rows it writes (the
+  /// start-up self-heal passes [cardPaymentHealStamp]). Idempotent.
+  Future<void> syncCardPaymentCategories({DateTime? stampedAt});
 }
+
+/// The `updated_at` of rows written by the start-up self-heal of the
+/// payment categories: fixed and old, so two phones healing at the same
+/// time write identical rows and every real edit wins under
+/// last-writer-wins (like `BudgetingService.automaticFillStamp`).
+final DateTime cardPaymentHealStamp = DateTime.utc(2024);

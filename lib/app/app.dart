@@ -22,6 +22,9 @@ import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/presentation/widgets/security/privacy_shield.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/repositories/category_repository.dart'
+    show cardPaymentHealStamp;
+import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/services/security/auto_lock_service.dart';
 
 class MyApp extends ConsumerStatefulWidget {
@@ -178,6 +181,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     if (!mounted) {
       return;
     }
+    unawaited(_healCardPaymentCategories());
     try {
       final scheduled = ref.read(scheduledTransactionServiceProvider);
       await scheduled.processDueTransactions(
@@ -191,6 +195,22 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     }
     // The daily automatic backup, after the books are up to date.
     unawaited(ref.read(autoBackupServiceProvider).runIfDue());
+  }
+
+  /// Self-heal at start-up: every budget credit card has its payment
+  /// category, named like the card and hidden while it is closed (stamped
+  /// with the fixed old [cardPaymentHealStamp]: two phones healing at once
+  /// write identical rows, and every real edit wins).
+  Future<void> _healCardPaymentCategories() async {
+    try {
+      await ref
+          .read(categoryRepositoryProvider)
+          .syncCardPaymentCategories(stampedAt: cardPaymentHealStamp);
+    } on DatabaseLockedException {
+      // Closed while starting up; runs again when it reopens.
+    } catch (e, st) {
+      Logger.error('Healing the card payment categories failed', e, st);
+    }
   }
 
   /// Runs when the UI is ready ([uiReadyProvider]): things the user sees

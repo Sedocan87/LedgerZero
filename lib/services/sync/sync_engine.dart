@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/database.dart';
+import 'package:ledger_zero/domain/repositories/category_repository.dart'
+    show cardPaymentHealStamp;
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
 import 'package:ledger_zero/services/security/crypto/aead.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
@@ -422,6 +424,12 @@ class SyncEngine {
       // with; this member's personal accounts follow the transactions on
       // this phone (they differ after a restore).
       await _db.refreshPersonalBalances();
+      // A card created, renamed, closed or moved on the other phone: its
+      // payment category normally arrives with it; this heals one that did
+      // not (stamped old, so the partner's own row always wins).
+      await _db.categoriesDao.syncCardPaymentCategories(
+        stampedAt: cardPaymentHealStamp,
+      );
     }
 
     if (rebootstrap) {

@@ -104,6 +104,10 @@ class AppDatabase extends _$AppDatabase {
 
   static String _englishName(String name) => name;
 
+  /// The name a default group or category created now gets ([seedName] of
+  /// the constructor): the app language.
+  String seedNameOf(String englishName) => _seedName(englishName);
+
   /// The current schema version (also used to validate restored backups).
   static const int currentSchemaVersion = 20;
 
