@@ -46,8 +46,11 @@ abstract final class CalendarDate {
   /// First day of the following year at UTC midnight (exclusive bound).
   static DateTime endOfYearUtc(int year) => DateTime.utc(year + 1, 1, 1);
 
-  /// The earliest instant used for "all history" queries.
-  static final DateTime beginningOfTime = DateTime.utc(1970, 1, 1);
+  /// The lower bound of "all history" queries: the earliest date SQLite
+  /// can store and compare (year 0), so no row is left out. It was 1970
+  /// once, which dropped rows imported with a mis-parsed year from To Be
+  /// Budgeted while account balances still counted them.
+  static final DateTime beginningOfTime = DateTime.utc(0);
 
   /// `yyyy-MM` key of [date]'s calendar month.
   static String monthKey(DateTime date) =>
