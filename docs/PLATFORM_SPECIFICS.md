@@ -23,7 +23,8 @@ This document outlines the platform-specific implementations, configurations, an
 * **Budget currency**: on a fresh install Settings proposes the currency of
   the device locale (`defaultCurrencyForLocales`, `lib/core/money/currency.dart`:
   `de_DE` -> EUR, `en_US` -> USD, `de_CH` -> CHF; unsupported currencies
-  fall back to USD). The first on-budget account stores it; see
+  fall back to USD). The first on-budget account stores it; afterwards it
+  follows the accounts in the budget on every phone; see
   [BUDGETING_RULES.md](BUDGETING_RULES.md#budget-currency).
 
 ## Permissions & Capabilities
