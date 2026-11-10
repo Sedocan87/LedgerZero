@@ -14,7 +14,7 @@ minute; the third needs an Android emulator (v1 is Android only).
 localisations are up to date with no untranslated messages, runs
 `flutter analyze`, runs `flutter test` (perf tests skipped) and prints a
 summary. `bash tool/check.sh --perf` also runs the perf guards. The host
-suite currently has about 939 unit and widget tests.
+suite currently has about 1,700 unit and widget tests.
 
 ## Device rule
 

@@ -135,6 +135,7 @@ never commit them, and keep the keystore outside the repository.
    the name fields of the certificate:
 
    ```bash
+   mkdir -p ~/keys
    keytool -genkeypair -v \
      -keystore ~/keys/ledgerzero-upload.jks \
      -alias upload -keyalg RSA -keysize 2048 -validity 10000
