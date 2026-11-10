@@ -53,7 +53,10 @@ This document outlines the platform-specific implementations, configurations, an
   notification access; reads notifications of the bank/card apps chosen in
   Settings > Card notifications. `<queries>` lists known bank and wallet
   apps for the app picker. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md).
-- **Deep links**: `ledgerzero://` scheme.
+- **Deep links**: none. The app registers no URL scheme and no app links,
+  so other apps and web pages cannot open a screen in it. Notification taps
+  carry a payload that the app routes itself
+  (`lib/services/notifications/notification_tap_router.dart`).
 
 ### iOS
 iOS is not supported in v1. The Flutter code and the `ios/` project stay in
