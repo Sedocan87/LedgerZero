@@ -462,6 +462,57 @@ void main() {
     expect(repo.created!.currency, 'EUR');
   });
 
+  testWidgets('an off-budget account in another currency cannot join the '
+      'budget unless it is relabelled', (tester) async {
+    SharedPreferences.setMockInitialValues({'settings_currency': 'EUR'});
+    const travel = Account(
+      id: 'travel',
+      name: 'Travel',
+      type: AccountType.checking,
+      currency: 'USD',
+      onBudget: false,
+    );
+    final repo = MockAccountRepository(
+      existing: travel,
+      accounts: const [
+        Account(
+          id: 'a1',
+          name: 'Giro',
+          type: AccountType.checking,
+          currency: 'EUR',
+        ),
+        travel,
+      ],
+    );
+    await pumpForm(tester, repo, accountId: 'travel', keepPrefs: true);
+
+    await tapAndSettle(tester, find.byKey(const Key('account.onBudget')));
+    // Not silently relabelled by the switch.
+    expect(offeredCurrencies(tester), ['EUR', 'USD']);
+    final save = find.widgetWithText(ElevatedButton, 'Save Changes');
+
+    // Refused: nothing saved.
+    await tapAndSettle(tester, save);
+    expect(find.text('Not in the budget currency'), findsOneWidget);
+    expect(
+      find.textContaining('This account is in USD, your budget in EUR'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(repo.updated, isNull);
+
+    // Relabelled on request, then the usual budget-change confirmation.
+    await tapAndSettle(tester, save);
+    await tester.tap(find.byKey(const Key('account.currencyJoin.relabel')));
+    await tester.pumpAndSettle();
+    expect(find.text('Change what you budget?'), findsOneWidget);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(repo.updated!.onBudget, isTrue);
+    expect(repo.updated!.currency, 'EUR');
+  });
+
   testWidgets('a closed on-budget account does not fix the currency', (
     tester,
   ) async {

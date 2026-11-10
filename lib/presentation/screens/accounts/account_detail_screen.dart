@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/transactions_provider.dart';
@@ -12,6 +13,7 @@ import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/presentation/widgets/charts/balance_trend_chart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/presentation/widgets/budget_currency_dialogs.dart';
 import 'package:ledger_zero/presentation/widgets/csv_export_format_dialog.dart';
 import 'package:ledger_zero/services/csv/transaction_export_service.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -62,8 +64,32 @@ class AccountDetailScreen extends ConsumerWidget {
     if (closed && !await _confirmClosingWithSchedules(context, ref)) {
       return;
     }
+    // Reopening a budget account into a budget that has another currency
+    // now: refused, or relabelled if the user says so (amounts are never
+    // converted).
+    String? relabel;
+    if (!closed && context.mounted) {
+      final account = ref.read(accountDetailProvider(accountId)).valueOrNull;
+      final budget = ref.read(budgetCurrencyProvider);
+      if (account != null &&
+          account.onBudget &&
+          budget.isFixed &&
+          account.currency != budget.currency) {
+        if (!await confirmJoinInBudgetCurrency(
+              context,
+              accountCurrency: account.currency,
+              budgetCurrency: budget.currency,
+            ) ||
+            !context.mounted) {
+          return;
+        }
+        relabel = budget.currency;
+      }
+    }
     try {
-      await ref.read(accountServiceProvider).setClosed(accountId, closed);
+      await ref
+          .read(accountServiceProvider)
+          .setClosed(accountId, closed, currency: relabel);
       if (closed) {
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.accountClosedMessage)),

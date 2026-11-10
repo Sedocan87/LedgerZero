@@ -8,18 +8,17 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
-import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/form_utils.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
-import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/accounts/widgets/leave_budget_dialog.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.dart';
 import 'package:ledger_zero/presentation/screens/settings/income/income_settings_screen.dart';
@@ -28,6 +27,7 @@ import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
 import 'package:ledger_zero/presentation/widgets/common/account_avatar.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
+import 'package:ledger_zero/presentation/widgets/budget_currency_dialogs.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 
@@ -385,6 +385,24 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     if (!mounted) {
       return;
     }
+    // An account in another currency cannot join the budget (amounts are
+    // never converted): refused, or relabelled if the user says so.
+    final budgetCurrency = ref.read(budgetCurrencyProvider).currency;
+    final joinsBudget =
+        _onBudget && (_existingAccount == null || !_existingAccount!.onBudget);
+    if (joinsBudget &&
+        _otherOnBudgetExists &&
+        _selectedCurrency != budgetCurrency) {
+      final relabel = await confirmJoinInBudgetCurrency(
+        context,
+        accountCurrency: _selectedCurrency,
+        budgetCurrency: budgetCurrency,
+      );
+      if (!relabel || !mounted) {
+        return;
+      }
+      setState(() => _selectedCurrency = budgetCurrency);
+    }
     // Leaving the budget can release money budgeted for this account.
     var release = const <String, int>{};
     if (_existingAccount != null && _existingAccount!.onBudget != _onBudget) {
@@ -432,26 +450,8 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           clearIcon: _selectedIcon == null,
           updatedAt: DateTime.now().toUtc(),
         );
-        final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
-        final budgeting = release.isEmpty
-            ? null
-            : ref.read(budgetingServiceProvider);
-        // One unit of work: an account that left the budget without the
-        // release (a failure or the app killed in between) would leave To
-        // Be Budgeted short by its balance, with nothing to retry.
-        released = await ref.read(unitOfWorkProvider).run(() async {
-          await repository.updateAccount(updatedAccount);
-          var total = 0;
-          for (final MapEntry(key: categoryId, value: amount)
-              in release.entries) {
-            total += await budgeting!.releaseFromCategory(
-              categoryId,
-              amount,
-              month,
-            );
-          }
-          return total;
-        });
+        // One unit of work with the release.
+        released = await saveAccountWithRelease(ref, updatedAccount, release);
       } else {
         final newAccount = Account(
           id: const Uuid().v4(),
@@ -618,7 +618,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
     final fmt = ref.watch(appFormatterProvider);
     final l10n = AppLocalizations.of(context)!;
     final budgetCurrency = ref.watch(
-      settingsProvider.select((s) => s.currency),
+      budgetCurrencyProvider.select((b) => b.currency),
     );
     _otherOnBudgetExists =
         ref
@@ -811,7 +811,12 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                                   setState(() {
                                     _onBudget = value;
                                     _onBudgetTouched = true;
-                                    if (value && _otherOnBudgetExists) {
+                                    // A new account takes the budget
+                                    // currency; an existing one in another
+                                    // currency is asked about on save.
+                                    if (value &&
+                                        _otherOnBudgetExists &&
+                                        _existingAccount == null) {
                                       _selectedCurrency = budgetCurrency;
                                     }
                                   });
