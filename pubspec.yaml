@@ -1,5 +1,5 @@
 name: ledger_zero
-description: "LedgerZero: local-first envelope budgeting for iOS and Android."
+description: "LedgerZero: local-first envelope budgeting for Android."
 publish_to: 'none'
 
 version: 0.1.0+1

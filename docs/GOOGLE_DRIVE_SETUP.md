@@ -84,15 +84,19 @@ use:
 | `--flavor production` | `com.ledgerzero.app` | release key, **and** the Play App Signing key when distributed through Google Play (Play Console > *Test and release > App integrity*) |
 
 One client holds one SHA-1, so a package signed with two keys needs two
-clients. Until `android/key.properties` exists, release builds are signed
-with the debug key (`android/app/build.gradle.kts`), so the debug SHA-1 is
-also the one for `com.ledgerzero.app`.
+clients. Without `android/key.properties` a production release build stops
+with a message (`android/app/build.gradle.kts`, README "Release signing");
+only a local test build opted in with
+`LEDGERZERO_ALLOW_DEBUG_SIGNED_RELEASE=1` is signed with the debug key, and
+the debug SHA-1 then applies to `com.ledgerzero.app` too. Release builds of
+`development` and `staging` use the debug key while there is no
+`key.properties`.
 
-Debug SHA-1 (Gradle's JDK from Android Studio; the system Java may not
-work):
+Debug SHA-1 (with Android Studio's bundled JBR as `JAVA_HOME`; the system
+Java may not work):
 
 ```sh
-export JAVA_HOME="/Volumes/Lexar2TB/Apps/Android Studio.app/Contents/jbr/Contents/Home"
+export JAVA_HOME="<Android Studio's bundled JBR>"   # macOS: <Android Studio.app>/Contents/jbr/Contents/Home
 "$JAVA_HOME/bin/keytool" -list -v -keystore ~/.android/debug.keystore \
   -alias androiddebugkey -storepass android | grep SHA1
 ```

@@ -2,8 +2,9 @@
 
 LedgerZero is a local-first envelope budgeting app (zero-based, YNAB-style)
 for Android, in English and German. All data lives in an encrypted
-database on the phone; sync and backups go to the user's own Google Drive,
-end-to-end encrypted. No account, no server. It is planned as a one-time
+database on the phone. Phones sync over the home Wi-Fi or through the
+user's own Google Drive, and backups go to a file or to Drive, all end-to-end
+encrypted. No account, no server. It is planned as a one-time
 purchase (see [ROADMAP.md](ROADMAP.md)). Version 0.1.0, not released yet.
 
 v1 is Android only. The Flutter code and the `ios/` project stay in the
@@ -21,10 +22,13 @@ repository, but iOS is not built, tested or supported in v1.
 - Reports (spending, trends, income vs. expense, net worth, budget vs.
   actual) with CSV/PDF export.
 - Import from CSV (saved column mappings) and YNAB; CSV export.
-- Master password, recovery key, optional biometric unlock, auto-lock,
-  app-switcher privacy cover.
-- Encrypted backup/restore and encrypted multi-device sync via Google
-  Drive.
+- Optional app lock with the phone's fingerprint, face or screen lock,
+  auto-lock, app-switcher privacy cover.
+- Card capture: optionally turns payment notifications of chosen bank and
+  wallet apps into transactions to review.
+- Encrypted backup/restore and encrypted multi-device sync over the home
+  Wi-Fi (no cloud) or via Google Drive; personal accounts for a household
+  sharing one budget.
 
 ## Architecture
 
@@ -41,7 +45,7 @@ core          money, calendar dates, formatting helpers, constants, errors
 
 - **Database:** [Drift](https://drift.simonbinder.eu/) on SQLCipher (the
   `sqlite3` package's build hook bundles SQLCipher, see `hooks:` in
-  `pubspec.yaml`). Schema version 18; see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
+  `pubspec.yaml`). Schema version 20; see [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
   and [REPOSITORY_PATTERN.md](REPOSITORY_PATTERN.md).
 - **Money** is always an `int` of minor units (hundredths) for every
   currency; doubles exist only for chart coordinates and percentages
@@ -50,17 +54,24 @@ core          money, calendar dates, formatting helpers, constants, errors
 - **Dates** are stored in UTC; date-only values are UTC midnight of the
   calendar day the user picked (`lib/core/time/`).
 - **Key vault:** a random 256-bit data key encrypts the database (raw hex
-  SQLCipher key). It is stored only wrapped (AES-256-GCM): by a key derived
-  from the master password (Argon2id), by a recovery key shown at
-  onboarding, and optionally by a hardware-bound biometric key. Without a
-  key the database does not open. See [docs/ENCRYPTION.md](docs/ENCRYPTION.md)
-  and [docs/SECURITY.md](docs/SECURITY.md).
+  SQLCipher key). Without the key the database does not open. See
+  [docs/ENCRYPTION.md](docs/ENCRYPTION.md) and
+  [docs/SECURITY.md](docs/SECURITY.md).
 - **Sync v2:** each sync run uploads one AES-256-GCM encrypted change file
   to the user's Google Drive (`drive.file` scope); the key
   comes from a separate sync passphrase. Rows merge last-writer-wins by
   their UTC `updated_at`; new devices bootstrap from an encrypted snapshot.
   See [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md) and
   [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md).
+- **Wi-Fi sync:** the same change files, exchanged directly between phones
+  on the same network instead of through Drive (Settings > Sync > Home
+  Wi-Fi). One phone shows a pairing QR code (or a code to type), the other
+  scans it; the code carries the shared pair key and sync passphrase.
+  While the app is open each phone serves its sync folder over HTTP on TCP
+  47321 (every request signed with the pair key) and finds the other by UDP
+  broadcast on port 47322. Android stops background apps, so both phones
+  sync when the app is open on both. See the "Local Wi-Fi" section of
+  [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md).
 - **Backups (format v2)** are always encrypted, locally or to the cloud.
   See [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md) and
   [docs/BACKUP_AND_EXPORT.md](docs/BACKUP_AND_EXPORT.md).
@@ -189,7 +200,7 @@ lib/
                   reports, rules, security, sync
   main*.dart      entry points (development, staging, production)
 test/             unit and widget tests
-integration_test/ on-device tests (simulator/emulator)
+integration_test/ on-device tests (Android emulator)
 drift_schemas/    exported schema per version (migration tests)
 tool/             check.sh, schema helper post-processing
 docs/             design and user documentation
