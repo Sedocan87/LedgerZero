@@ -54,7 +54,9 @@ This document outlines the platform-specific implementations, configurations, an
   Settings > Card notifications. `<queries>` lists known bank and wallet
   apps for the app picker. See [CARD_NOTIFICATIONS.md](CARD_NOTIFICATIONS.md).
 - **Deep links**: none. The app registers no URL scheme and no app links,
-  so other apps and web pages cannot open a screen in it. Notification taps
+  and `flutter_deeplinking_enabled` is false on `MainActivity`, so neither
+  web pages nor another app's explicit intent with a URI can open a screen
+  in it. Notification taps
   carry a payload that the app routes itself
   (`lib/services/notifications/notification_tap_router.dart`).
 

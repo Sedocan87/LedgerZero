@@ -43,6 +43,14 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- The app opens no screens from links. The activity is exported
+                 (launcher), so another app could still start it with an
+                 explicit intent that carries a URI; without this, Flutter
+                 would hand that URI's path to the router as a route. -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="false"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
