@@ -8169,6 +8169,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.'**
   String get helpCsvStepsV2;
+
+  /// Title of the confirmation before a budget template is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Delete template?'**
+  String get budgetTemplateDeleteTitle;
+
+  /// Body of the confirmation before a budget template is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'The template \"{name}\" is deleted for good. Months already budgeted with it keep their amounts.'**
+  String budgetTemplateDeleteBody(String name);
+
+  /// Extra paragraph of the delete-template confirmation when 'Fill new months automatically' uses the template
+  ///
+  /// In en, this message translates to:
+  /// **'New months are filled automatically from this template. After deleting it they are filled like the month before.'**
+  String get budgetTemplateDeleteAutoFill;
+
+  /// Snackbar after a budget template was deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Template \"{name}\" deleted'**
+  String budgetTemplateDeleted(String name);
 }
 
 class _AppLocalizationsDelegate

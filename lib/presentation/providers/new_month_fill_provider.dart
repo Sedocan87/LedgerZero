@@ -163,18 +163,52 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
   /// Changes the setting. It starts with the next month: the current one
   /// is offered on the budget screen instead.
   Future<void> setSource(AutoFillSource source, {String? templateId}) async {
-    await _prefs.setString(sourceKey, source.name);
-    if (templateId != null) {
-      await _prefs.setString(templateKey, templateId);
-    } else {
-      await _prefs.remove(templateKey);
-    }
+    await _storeSource(source, templateId);
     await _prefs.setString(lastMonthKey, CalendarDate.monthKey(_currentMonth));
     state = NewMonthFillState(
       source: source,
       templateId: templateId,
       note: state.note,
     );
+  }
+
+  /// Stores where the amounts come from and nothing else: unlike
+  /// [setSource] (the user's choice, which starts with the next month) the
+  /// current month is not marked handled and a wait stays as it is.
+  Future<void> _storeSource(AutoFillSource source, String? templateId) async {
+    await _prefs.setString(sourceKey, source.name);
+    if (templateId != null) {
+      await _prefs.setString(templateKey, templateId);
+    } else {
+      await _prefs.remove(templateKey);
+    }
+    state = NewMonthFillState(
+      source: source,
+      templateId: templateId,
+      note: state.note,
+      waiting: state.waiting,
+    );
+  }
+
+  /// Whether the automatic fill takes its amounts from template
+  /// [templateId].
+  bool usesTemplate(String templateId) =>
+      state.source == AutoFillSource.template && state.templateId == templateId;
+
+  /// Call after template [templateId] was deleted. If the automatic fill
+  /// used it, new months are filled like the month before from now on (the
+  /// same fallback as when the template disappears through sync). The
+  /// setting stays on and the current month stays due; a wait that was
+  /// computed from the template's amounts is worked out again.
+  Future<void> templateDeleted(String templateId) async {
+    if (!usesTemplate(templateId)) {
+      return;
+    }
+    await _storeSource(AutoFillSource.previousMonth, null);
+    if (state.waiting != null) {
+      state = state.copyWith(clearWaiting: true);
+      await runIfDue();
+    }
   }
 
   /// Fills the current month if the setting is on, this phone has not
@@ -217,9 +251,12 @@ class NewMonthFillController extends StateNotifier<NewMonthFillState> {
             amounts = Map.of(template.data);
             templateName = template.name;
           } else {
-            // Deleted meanwhile: the month before, from now on.
+            // Deleted meanwhile: the month before, from now on. Only the
+            // source changes; this month is still to be filled (setSource
+            // would mark it handled, and a month waiting for its income
+            // would then never be filled, not even by "Fill anyway").
             Logger.warning('Auto-fill template missing; using last month.');
-            await setSource(AutoFillSource.previousMonth);
+            await _storeSource(AutoFillSource.previousMonth, null);
           }
         }
         final stamp = BudgetingService.automaticFillStamp(month);

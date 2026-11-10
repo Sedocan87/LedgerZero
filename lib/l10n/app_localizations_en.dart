@@ -5136,4 +5136,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpCsvStepsV2 =>
       'Lines above the column names (account details) are skipped, and a file without column names is recognised: check the mapping against the preview.\nAmounts can be in one signed column or in separate debit and credit columns. If spending shows as income, turn off \"Negative values are outflows\".\nOn the review screen, rows that look like transactions you already have are unticked: tick the ones that are separate, untick what you do not want.\nImported into the wrong account? \"Undo last import\" on this screen takes the import back.';
+
+  @override
+  String get budgetTemplateDeleteTitle => 'Delete template?';
+
+  @override
+  String budgetTemplateDeleteBody(String name) {
+    return 'The template \"$name\" is deleted for good. Months already budgeted with it keep their amounts.';
+  }
+
+  @override
+  String get budgetTemplateDeleteAutoFill =>
+      'New months are filled automatically from this template. After deleting it they are filled like the month before.';
+
+  @override
+  String budgetTemplateDeleted(String name) {
+    return 'Template \"$name\" deleted';
+  }
 }

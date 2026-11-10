@@ -201,6 +201,13 @@ final newMonthOfferProvider = FutureProvider.autoDispose
       );
     });
 
+/// Whether nothing is budgeted in [month] yet (every category at zero).
+final budgetMonthEmptyProvider = FutureProvider.autoDispose
+    .family<bool, DateTime>((ref, month) {
+      ref.watch(ledgerChangesProvider);
+      return ref.watch(budgetingServiceProvider).isMonthEmpty(month);
+    });
+
 /// Money the month before [month] left unassigned that is still in To Be
 /// Budgeted (minor units; 0 when there is none to offer). Only for the
 /// current month, and only when the month before was budgeted at all: a

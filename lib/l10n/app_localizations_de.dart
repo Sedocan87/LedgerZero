@@ -5175,4 +5175,21 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpCsvStepsV2 =>
       'Zeilen oberhalb der Spaltennamen (Kontodaten) werden übersprungen, und eine Datei ohne Spaltennamen wird erkannt: Prüfen Sie die Zuordnung anhand der Vorschau.\nBeträge können in einer Spalte mit Vorzeichen oder in getrennten Soll- und Haben-Spalten stehen. Erscheinen Ausgaben als Einnahmen, schalten Sie „Negative Werte sind Ausgaben“ aus.\nIm Prüfschritt sind Zeilen abgewählt, die wie vorhandene Buchungen aussehen: Setzen Sie den Haken bei eigenen Buchungen und entfernen Sie ihn bei Zeilen, die Sie nicht möchten.\nIns falsche Konto importiert? „Letzten Import rückgängig machen“ auf diesem Bildschirm nimmt den Import zurück.';
+
+  @override
+  String get budgetTemplateDeleteTitle => 'Vorlage löschen?';
+
+  @override
+  String budgetTemplateDeleteBody(String name) {
+    return 'Die Vorlage „$name“ wird endgültig gelöscht. Monate, die bereits damit budgetiert wurden, behalten ihre Beträge.';
+  }
+
+  @override
+  String get budgetTemplateDeleteAutoFill =>
+      'Neue Monate werden automatisch aus dieser Vorlage gefüllt. Nach dem Löschen werden sie wie der Vormonat gefüllt.';
+
+  @override
+  String budgetTemplateDeleted(String name) {
+    return 'Vorlage „$name“ gelöscht';
+  }
 }
