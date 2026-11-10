@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late Directory docs;
@@ -65,4 +67,21 @@ void main() {
       expect(log.last, 'onboarding');
     },
   );
+
+  test('a factory reset clears the preferences but keeps the Pro '
+      'purchase', () async {
+    SharedPreferences.setMockInitialValues({
+      ProController.unlockedKey: true,
+      'settings_language': 'de',
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await clearPreferencesKeepingPro(prefs);
+    expect(prefs.getKeys(), {ProController.unlockedKey});
+    expect(prefs.getBool(ProController.unlockedKey), isTrue);
+
+    SharedPreferences.setMockInitialValues({'settings_language': 'de'});
+    final free = await SharedPreferences.getInstance();
+    await clearPreferencesKeepingPro(free);
+    expect(free.getKeys(), isEmpty);
+  });
 }
