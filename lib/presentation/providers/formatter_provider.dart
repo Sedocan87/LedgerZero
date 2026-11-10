@@ -23,6 +23,10 @@ class AppFormatter {
 
   final AppDateFormat dateFormat;
 
+  /// The phone's region (`GB`, `US`, ...), for the "follow language" date
+  /// pattern ([datePatternFor]).
+  final String? region;
+
   /// Formatter for amounts.
   final MoneyFormatter money;
 
@@ -31,6 +35,7 @@ class AppFormatter {
     required this.currency,
     required String decimalSeparator,
     this.dateFormat = AppDateFormat.iso8601,
+    this.region,
   }) : money = MoneyFormatter(
          locale: locale,
          defaultCurrency: currency,
@@ -55,6 +60,7 @@ class AppFormatter {
           settings.numberFormat.decimalSeparator ??
           decimalSeparatorForLocale(locale),
       dateFormat: settings.dateFormat,
+      region: deviceRegionFor(locale, deviceLocales),
     );
   }
 
@@ -91,9 +97,9 @@ class AppFormatter {
       money.symbolFor(currencyCode);
 
   /// The pattern of the date-format setting; "follow language" resolves
-  /// to the language's ([datePatternForLanguage]).
+  /// to the language's and region's ([datePatternFor]).
   String get datePattern =>
-      dateFormat.pattern ?? datePatternForLanguage(locale);
+      dateFormat.pattern ?? datePatternFor(locale, region);
 
   /// A calendar day using the date-format setting (e.g. `31.12.2024`).
   String formatDate(DateTime date) => _date(datePattern).format(date);
@@ -166,5 +172,9 @@ final appFormatterProvider = Provider<AppFormatter>((ref) {
         settings.numberFormat.decimalSeparator ??
         decimalSeparatorForLocale(locale.languageCode),
     dateFormat: settings.dateFormat,
+    region: deviceRegionFor(
+      locale.languageCode,
+      ref.watch(deviceLocalesProvider),
+    ),
   );
 });

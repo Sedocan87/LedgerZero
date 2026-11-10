@@ -430,7 +430,8 @@ void main() {
     const spent = 4500 + 3000 + 2000;
 
     final dashboard = await container.read(monthlyStatsProvider(feb).future);
-    expect(dashboard['spending'], -spent);
+    // Shown as what was spent, like the other reports.
+    expect(dashboard['spending'], spent);
     expect(dashboard['income'], 300000);
 
     final byCategory = await container.read(spendingByCategoryProvider.future);

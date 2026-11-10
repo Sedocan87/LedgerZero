@@ -78,7 +78,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void _showMessage(String text, {SnackBarAction? action}) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(content: Text(text), action: action));
+    messenger.showSnackBar(
+      SnackBar(persist: false, content: Text(text), action: action),
+    );
   }
 
   /// Runs a service call; a reconciled row needs the user's confirmation.
@@ -311,6 +313,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       currencyCode: lookups.accounts[tx.accountId]?.currency,
       isSelectionMode: state.isMultiSelectMode,
       isSelected: state.selectedTransactionIds.contains(tx.id),
+      // Sorted by date, the list has a heading for each day.
+      showDate: state.sort.field != TransactionSortField.date,
       onTap: state.isMultiSelectMode
           ? () => ref.read(_provider.notifier).toggleSelection(tx.id)
           : () => context.pushNamed(

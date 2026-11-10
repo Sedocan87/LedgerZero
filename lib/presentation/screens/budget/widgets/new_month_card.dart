@@ -75,6 +75,7 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
       }
       messenger.showSnackBar(
         SnackBar(
+          persist: false,
           content: Text(l10n.newMonthFilled(filled.length)),
           action: SnackBarAction(
             label: l10n.undo,

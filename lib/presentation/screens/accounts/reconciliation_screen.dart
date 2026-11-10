@@ -136,6 +136,7 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
       final undo = ref.read(undoServiceProvider);
       messenger.showSnackBar(
         SnackBar(
+          persist: false,
           content: Text(message),
           action: SnackBarAction(
             label: l10n.undo,

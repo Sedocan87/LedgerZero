@@ -79,6 +79,7 @@ Future<void> runMonthAction(
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
+        persist: false,
         content: Text(message),
         action: SnackBarAction(
           label: l10n.undo,

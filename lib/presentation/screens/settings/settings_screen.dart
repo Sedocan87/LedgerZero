@@ -40,7 +40,12 @@ class SettingsScreen extends ConsumerWidget {
 
     String dateFormatLabel(AppDateFormat format) =>
         format.pattern ??
-        l10n.dateFormatFollowLanguage(datePatternForLanguage(languageCode));
+        l10n.dateFormatFollowLanguage(
+          datePatternFor(
+            languageCode,
+            deviceRegionFor(languageCode, ref.watch(deviceLocalesProvider)),
+          ),
+        );
 
     Widget buildOption<T>(BuildContext context, String label, T value) {
       return SimpleDialogOption(

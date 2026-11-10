@@ -206,6 +206,7 @@ class _NaturalLanguageInputScreenState
       final undo = ref.read(undoServiceProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          persist: false,
           content: Text(l10n.transactionSaved),
           action: SnackBarAction(
             label: l10n.undo,

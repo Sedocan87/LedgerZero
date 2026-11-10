@@ -183,6 +183,21 @@ void main() {
       await tester.tap(find.widgetWithText(ListTile, 'Corner Shop'));
       await h.settle(tester);
       expect(h.fieldText(tester, 'Payee'), 'Corner Shop');
+      // Not the closed Savings; Checking is the only account left that
+      // takes bookings, so the form starts with it.
+      expect(h.fieldText(tester, 'Account'), 'Checking');
+    });
+
+    dbTestWidgets('with a single account that takes bookings, a new '
+        'transaction starts in it', (tester) async {
+      await close(tester, 'savings');
+      await h.pump(tester, const AddEditTransactionScreen());
+      expect(h.fieldText(tester, 'Account'), 'Checking');
+    });
+
+    dbTestWidgets('with several open accounts and no default, the account '
+        'is left to the user', (tester) async {
+      await h.pump(tester, const AddEditTransactionScreen());
       expect(h.fieldText(tester, 'Account'), '');
     });
 
@@ -204,18 +219,20 @@ void main() {
     });
 
     dbTestWidgets('a form opened for a closed account, or restored with '
-        'one, starts without an account', (tester) async {
+        'one, does not use it', (tester) async {
       await close(tester, 'savings');
       await h.pump(
         tester,
         const AddEditTransactionScreen(initialAccountId: 'savings'),
       );
-      expect(h.fieldText(tester, 'Account'), '');
+      // Not the closed Savings: Checking, the only account left that takes
+      // bookings.
+      expect(h.fieldText(tester, 'Account'), 'Checking');
 
       await storeDraft({'amount': '50', 'accountId': 'savings'});
       await h.pump(tester, const AddEditTransactionScreen());
       expect(banner(), findsOneWidget);
-      expect(h.fieldText(tester, 'Account'), '');
+      expect(h.fieldText(tester, 'Account'), 'Checking');
     });
 
     dbTestWidgets('an existing transaction of a closed account can still '

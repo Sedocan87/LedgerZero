@@ -512,6 +512,7 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           final helpContext = rootNavigator.context;
           messenger.showSnackBar(
             SnackBar(
+              persist: false,
               key: const Key('hint.offBudgetAccount'),
               content: Text(l10n.hintOffBudgetAccount),
               duration: const Duration(seconds: 10),

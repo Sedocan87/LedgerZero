@@ -90,6 +90,7 @@ class _LeftoverCardState extends ConsumerState<LeftoverCard> {
       await _setHandled(month, true);
       messenger.showSnackBar(
         SnackBar(
+          persist: false,
           content: Text(
             l10n.leftoverAssigned(fmt.formatMoney(amount), category.name),
           ),
