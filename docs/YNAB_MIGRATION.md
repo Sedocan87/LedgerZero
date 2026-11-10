@@ -8,11 +8,14 @@ from YNAB 4 (classic desktop app). Format details:
 
 - **nYNAB (web app)**: use YNAB's budget export. It downloads a ZIP with two
   CSV files, `... - Register.csv` (transactions) and `... - Budget.csv`
-  (monthly budgeted amounts). Unzip it and put both files where the phone's
-  file picker can reach them (e.g. Google Drive or Downloads). Do not open
-  and re-save them in a spreadsheet app.
-- **YNAB 4**: copy the budget folder (name ending in `.ynab4`) to a location
-  the phone can open as a folder.
+  or `... - Plan.csv` (monthly budgeted/assigned amounts). Put the ZIP where
+  the phone's file picker can reach it (e.g. Google Drive or Downloads);
+  unzipping is not needed. Do not open and re-save the files in a
+  spreadsheet app.
+- **YNAB 4**: zip the budget folder (name ending in `.ynab4`) on your
+  computer and copy the ZIP to the phone. (Android 11 and later do not let
+  an app read a folder of another app's files that you pick, so picking
+  the folder itself only works on older Android versions.)
 
 ## Steps
 
@@ -21,9 +24,11 @@ from YNAB 4 (classic desktop app). Format details:
 2. Under **Select your YNAB version** choose **nYNAB (CSV Export)** or
    **YNAB 4 (Classic)**.
 3. Pick the files:
-   - nYNAB: select the Register file and the Budget file (both are
-     required).
-   - YNAB 4: select the budget folder.
+   - nYNAB: tap **YNAB export (ZIP file)** and pick the ZIP; the Register
+     and the Budget (or Plan) file are taken from it. Or select the two
+     CSV files one by one (both are required).
+   - YNAB 4: tap **Zipped budget folder (.zip)** and pick the ZIP, or
+     select the budget folder.
 4. Tap **Next: Preview**. The **Import Preview** shows the accounts (with
    type and open/closed, and a **Tracking account** switch), the categories
    per group, and the number of transactions, categories, budget entries
@@ -69,9 +74,15 @@ changed; please try again.").
   in budget" off (see docs/BUDGETING_RULES.md), with their transactions
   (uncategorised: the budget ignores categories on off-budget rows). YNAB 4
   states which accounts are tracking accounts; nYNAB CSV exports do not, so
-  an account whose rows are only its "Starting Balance" and transfers is
-  preset as a tracking account and the preview's **Tracking account**
-  switch lets you change it per account. A transfer between a budget
+  it is inferred. An account with purchases or income of its own is a
+  budget account. An account whose rows are only its "Starting Balance"
+  and transfers is preset as a tracking account when a transfer facing it
+  in a budget account carries a category (YNAB always writes one there
+  for a tracking account), and as a budget account when none does (a
+  savings account that is only topped up from the current account). An
+  account with a starting balance and nothing else is preset as a tracking
+  account. The preview's **Tracking account** switch lets you change it
+  per account; check it before importing. A transfer between a budget
   account and a tracking account is how money leaves or enters the budget:
   the two legs are linked like any transfer, and the category YNAB put on
   the budget-side leg (YNAB requires one for such outflows) stays there, so
@@ -85,7 +96,14 @@ changed; please try again.").
   lost; the preview counts them under "Categories only in Budget.csv".
 - **Amount format**: both `$1,234.56` and `1.234,56 €` are read; the
   decimal separator is inferred from the whole export, so `€1.234` (no
-  decimals) is one thousand two hundred thirty-four, not 1.23.
+  decimals) is one thousand two hundred thirty-four, not 1.23. Any
+  currency symbol or code around the number is accepted (`R1 234.56`,
+  `1 234,56 Kč`, `Rp 1.234`). A cell that is not a number stops the import
+  with an error naming it; it is never read as 0.
+- **Starting balances in reports**: YNAB's "Starting Balance" rows are
+  imported as uncategorised transactions, so the Income vs Expense report
+  shows them as income in the month they are dated (a credit card's
+  negative one as spending). Balances and To Be Budgeted are right.
 - **Hidden categories** (YNAB 4): imported as hidden categories, so their
   transactions keep their category. LedgerZero cannot hide a whole group;
   every category of a hidden YNAB group is hidden instead.
@@ -98,7 +116,9 @@ amounts are overwritten per category and month. Transactions are always
 added, so a second import of the same file duplicates them. The app
 remembers imported exports by their content (on this phone) and the
 preview warns "This export was already imported on …"; the warning does
-not stop the import. There is no undo; create a backup (**Settings >
+not stop the import. There is no undo for the YNAB migration (the "Undo
+last import" of the CSV import does not cover it: the migration also
+creates accounts, categories and budgets); create a backup (**Settings >
 Backup & Export**) before importing into a budget that already has data.
 
 **How are splits handled?**
@@ -121,8 +141,12 @@ preview and pick the other **Date format in Register.csv**.
 |---|---|
 | "Please select both Register.csv and Budget.csv." | Pick both files. |
 | "Register.csv is missing required columns: ..." | Pick the Register file (not Budget) from an unmodified YNAB export. |
+| "The budget file is missing required columns: ..." | Pick the Budget (or Plan) file, not the Register, from an unmodified YNAB export. Nothing was imported. |
+| "The amount "…" in the export could not be read. ..." | A cell of an amount column is not a number. Export again from YNAB without editing the files. |
+| "This ZIP file does not contain the Register and Budget (or Plan) CSV files of a YNAB export." | Pick the ZIP that YNAB's export downloaded, or pick the two CSV files one by one. |
+| "This ZIP file does not contain a YNAB 4 budget. ..." | Zip the whole folder ending in `.ynab4` (it contains `Budget.ymeta`). |
 | "The selected files could not be read. Please check that they are unmodified YNAB exports." | Export again from YNAB and do not edit the files. |
-| "This folder is not a valid YNAB 4 budget. Please select the folder ending in .ynab4." | Select the `.ynab4` folder itself, not its parent or the `data` folder. |
+| "This folder is not a valid YNAB 4 budget. Please select the folder ending in .ynab4." | Select the `.ynab4` folder itself, not its parent or the `data` folder. On Android 11 and later the app usually cannot read a picked folder: zip it on your computer and pick the ZIP. |
 | "The dates in Register.csv do not fit one date format (...). First unreadable date: ..." | The Date column mixes formats or contains a value that is not a date. Export again from YNAB, or fix the value shown. |
 | "This export was already imported on …" (preview warning) | The same file (by content) was imported on this phone before. | Cancel unless you restored a backup from before that import. |
 | "The file could not be opened." / "The folder could not be opened." | Pick the file or folder again. |

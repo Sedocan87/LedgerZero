@@ -138,9 +138,10 @@ The CSV file includes the following columns:
 - `Date` (YYYY-MM-DD)
 - `Account`
 - `Payee`
-- `Category`
+- `Category` (`Group: Category`, so a name used in two groups re-imports)
 - `Memo`
-- `Amount` (plain decimal in major units, e.g. `-12.50`)
+- `Amount` (plain decimal in major units, e.g. `-12.50`; `-12,50` in the
+  Excel variant)
 - `Cleared` (`cleared`, `uncleared`, `reconciled`)
 - `Approved` (`Yes`/`No`)
 - `Transfer` (the other account of a transfer leg, else empty)
@@ -150,6 +151,12 @@ format that re-imports losslessly (see [CSV_FORMAT.md](CSV_FORMAT.md),
 "Export and re-import"). Report CSVs (section 5) are documents for
 reading and use the app language instead. A split transaction is exported
 as its lines (the parent row is left out).
+
+With the app in German each of the three exports first asks for the
+variant: **Standard** (comma-delimited, dot decimals) or **For Excel**
+(semicolon-delimited, decimal comma, UTF-8 byte order mark). A German
+Excel opens the second one with the right columns and umlauts. Both
+variants re-import.
 
 ## 5. Report Exports
 

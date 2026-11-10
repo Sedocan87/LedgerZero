@@ -26,17 +26,25 @@ Shown when you continue from the mapping screen.
 | "N rows have unreadable amounts. Check the Amount column and the decimal separator." (error) | Most amount cells cannot be read: wrong column (e.g. `Lastschrift Ursprungsbetrag` instead of `Betrag`) or wrong **Decimal Separator**. | Map Amount to the signed amount column (or Debit and Credit under **More columns**) and set the separator. |
 | "Day and month could be swapped: both ... fit every date." (warning) | No day above 12 in the file, so `dd/MM` and `MM/dd` both fit; the app language chose. | Check a date on the review screen and switch the **Date Format** if needed. |
 | "N dates are far from the others..." (warning) | A date more than a year from the median, usually a typo in the file. | Check the dates on the review screen. |
+| "All N amounts would be imported as income. ..." (warning, also shown under the sign switch) | Two or more rows and not one outflow: a card statement that lists spending as positive numbers, or only one of two amount columns is mapped. | Turn off **Negative values are outflows**, or map Debit and Credit under **More columns**. If the file really holds income only, continue. |
+| "N rows are marked as reverted, failed or declined in the file and are left out." (notice) | The Cleared/Status column says the row never happened (Revolut `REVERTED`, `FAILED`, `DECLINED`). | Nothing; those rows did not change the balance. |
 
 ## Wrong numbers or signs
 
 - **Amounts 100 times too large or small, or thousands read as decimals**:
   set **Decimal Separator** to match the file (German banks: Comma).
 - **Spending imported as income**: the file lists spending as positive
-  numbers. Turn off **Negative values are outflows**.
-- **Separate debit/credit columns** (`Soll`/`Haben`): leave Amount on
-  *Ignore* and map Debit and Credit under **More columns**. A file with one
-  unsigned amount column and an `S`/`H` column maps the latter as the
-  debit/credit flag.
+  numbers (card statements). Turn off **Negative values are outflows**. The
+  mapping screen warns when every amount would be income.
+- **Separate debit/credit columns** (`Soll`/`Haben`, `Debit Amount`/`Credit
+  Amount`, `Paid out`/`Paid in`, `Money out`/`Money in`,
+  `Withdrawals`/`Deposits`) are mapped as a pair automatically. If your
+  bank names them differently, leave Amount on *Ignore* and map Debit and
+  Credit under **More columns**. A file with one unsigned amount column and
+  an `S`/`H` column maps the latter as the debit/credit flag.
+- **Balance off by a fee** (Revolut): the preset maps the `Fee` column; in
+  other files map **Fee** under **More columns** when the fee comes on top
+  of the amount.
 - **Two-digit years** (`18.10.26`, Sparkasse): use `dd.MM.yy`; `dd.MM.yyyy`
   rejects them instead of importing the year 26.
 
@@ -48,6 +56,22 @@ handled: the first line that names a date and an amount column (or matches
 a bank preset) is the header, and the Configuration card says how many
 lines above it were skipped. If the wrong line was taken, delete the lines
 above the header in a text editor and import again.
+
+## The file has no header row
+
+Some banks (Targobank) start with the first transaction. The import
+recognises this (no line looks like a header and the first line holds a
+date and a number), turns on **File has no header row**, names the columns
+`#1`, `#2`, ... and guesses Date, Amount and Payee from the values; check
+the mapping against the preview. If the first transaction is missing from
+the preview or column names show up as a row, flip the switch.
+
+## The date format is not in the list
+
+Tap **Other date format…** under the dropdown and type the pattern: `d`
+day, `M` month, `y` year, `H` `m` `s` time, text in single quotes literal
+(`d.M.yyyy`, `MMM d, yyyy`, `dd/MM/yyyy 'at' HH:mm`). Month names must be
+English. Patterns without separators (`yyyyMMdd`) are not supported.
 
 ## My bank's format is not recognised
 
@@ -72,12 +96,36 @@ are marked as duplicates and unchecked on the review screen. The payee is
 compared ignoring case and spacing, and the name a rule would set for the
 row counts too, so a file imported before a rule renamed its payees is
 still recognised. The comparison covers the transactions of the account
-chosen at the top of the review screen in the file's date range, and runs
-again when you pick another account. A row whose date and amount match an
-existing transaction without payee (a transfer you entered by hand) is
-marked as a *possible* duplicate and unchecked; check it if it is a
-different transaction. A payee spelled differently by the bank (e.g.
-`UBER *TRIP` vs `Uber Trip`) is not detected; uncheck such rows by hand.
+chosen at the top of the review screen around the file's date range, and
+runs again when you pick another account.
+
+A row with the same amount as an existing transaction of the account at
+most 4 days away, whatever its payee, is marked as a *possible* duplicate
+and unchecked: the purchase you entered by hand that the bank spells
+differently (`UBER *TRIP` vs `Uber Trip`) or books a few days later, or a
+transfer you entered by hand. The label names the transaction it matched.
+Check the box if it is a separate transaction (two bakery visits for the
+same amount in one week look the same to the import). An existing
+transaction more than 4 days away is not detected; uncheck such rows by
+hand.
+
+## The file names accounts that do not exist
+
+A file with an Account column (the app's own export of several accounts)
+whose names do not all match an open account shows a banner listing the
+unmatched names, and Import stays disabled until you choose in the Account
+dropdown: **Account from file** imports the rows of the matching accounts
+and leaves the others out, or pick one account for every row. To import
+the left-out rows as well, create or reopen the account under the name the
+file uses (or rename it) and import again.
+
+## Imported into the wrong account, or with the wrong sign
+
+Tap **Undo import** in the dialog right after the import, or open
+**Import CSV** again and tap **Undo last import**. It deletes the
+transactions that import created; rows you edited, categorised or
+reconciled since are kept and counted in the confirmation. It is available
+until the next import.
 
 ## Category not found
 
@@ -86,7 +134,8 @@ cell names no existing category (the import never creates categories).
 Create the category, or rename it to match, and import again; or import the
 row without a category and categorize it later. Rules and the payee's
 default category still apply to such rows. A category name used in several
-groups must be written as `Group: Category`.
+groups must be written as `Group: Category` (the app's own export writes
+every category that way).
 
 ## No account to import into
 
