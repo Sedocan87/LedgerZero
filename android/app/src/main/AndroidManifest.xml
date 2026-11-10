@@ -10,7 +10,9 @@
          itself, plus permissions for recording video that the app never
          uses: the scanner opens the camera without audio and saves nothing.
          (The manifest merger adds READ_EXTERNAL_STORAGE on its own wherever
-         a library asks for WRITE_EXTERNAL_STORAGE.) -->
+         a library asks for WRITE_EXTERNAL_STORAGE; its "tagged to remove
+         other declarations but no other declaration present" warning about
+         that line is expected.) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
