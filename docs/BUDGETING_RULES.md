@@ -136,7 +136,10 @@ accounts that start in it.
     first transaction if that is earlier (imported or backdated history),
     so a month before the account existed shows nothing of it. There is no
     separate "opening date": the creation time (`accounts.created_at`) and
-    the transactions are the record.
+    the transactions are the record. "The month the account was created
+    in" is the month on the user's calendar at that moment (the phone's
+    time zone), so an account created on the evening of the 31st counts in
+    that month wherever the user lives.
 
 A transaction flows into TBB when it is **not deleted, uncategorised, in an
 on-budget account, not a split parent, and not a transfer leg unless the
