@@ -30,8 +30,13 @@ class CsvImportData {
   /// details, balances) were skipped.
   final int headerLineIndex;
 
-  /// The bank preset whose header fingerprint matched, or `null`.
+  /// The bank preset in use (recognised from the header fingerprint, or
+  /// chosen by the user, see [withPreset]), or `null`.
   final BankCsvPreset? preset;
+
+  /// `false` for a file without a header row (Targobank): [headers] are
+  /// then `#1`, `#2`, ... and the first line is a data row.
+  final bool hasHeader;
 
   CsvImportData({
     required this.headers,
@@ -39,7 +44,19 @@ class CsvImportData {
     required this.delimiter,
     this.headerLineIndex = 0,
     this.preset,
+    this.hasHeader = true,
   });
+
+  /// The same file read with [preset] (the user's choice on the mapping
+  /// screen; `null` for none), so its payee pattern applies.
+  CsvImportData withPreset(BankCsvPreset? preset) => CsvImportData(
+    headers: headers,
+    rows: rows,
+    delimiter: delimiter,
+    headerLineIndex: headerLineIndex,
+    preset: preset,
+    hasHeader: hasHeader,
+  );
 
   /// The values of the column [header] (rows too short for it skipped).
   Iterable<String> columnValues(String? header) sync* {
@@ -337,9 +354,14 @@ class CsvImportService {
     return share > skipLimitMinimum ? share : skipLimitMinimum;
   }
 
+  /// Reads and parses [file] off the UI thread. [headerLineIndex] forces
+  /// the header line instead of detecting it; [hasHeader] says whether the
+  /// file has a header row at all (`null`: detected, see
+  /// [CsvImportData.hasHeader]).
   Future<CsvImportData> parseCsvFile(
     PlatformFile file, {
     int? headerLineIndex,
+    bool? hasHeader,
   }) async {
     String content;
     try {
@@ -353,13 +375,18 @@ class CsvImportService {
       );
     }
 
-    return compute(_parseCsvInternal, _ParseRequest(content, headerLineIndex));
+    return compute(
+      _parseCsvInternal,
+      _ParseRequest(content, headerLineIndex, hasHeader),
+    );
   }
 
-  /// Parses CSV text (see [parseCsvFile]); [headerLineIndex] forces the
-  /// header line instead of detecting it.
-  CsvImportData parseCsvContent(String content, {int? headerLineIndex}) =>
-      _parseCsvInternal(_ParseRequest(content, headerLineIndex));
+  /// Parses CSV text (see [parseCsvFile]).
+  CsvImportData parseCsvContent(
+    String content, {
+    int? headerLineIndex,
+    bool? hasHeader,
+  }) => _parseCsvInternal(_ParseRequest(content, headerLineIndex, hasHeader));
 
   static final RegExp _lineBreak = RegExp(r'\r\n|\r|\n');
 
@@ -367,16 +394,6 @@ class CsvImportService {
     final content = request.content;
     if (content.trim().isEmpty) {
       throw ImportException(ImportFailure.empty, 'The CSV file is empty');
-    }
-
-    // Detect EOL
-    String? eol;
-    if (content.contains('\r\n')) {
-      eol = '\r\n';
-    } else if (content.contains('\n')) {
-      eol = '\n';
-    } else if (content.contains('\r')) {
-      eol = '\r';
     }
 
     // Lines with their start offsets (quoted fields never span the
@@ -391,12 +408,36 @@ class CsvImportService {
     }
     lines.add(content.substring(previous));
 
-    var headerIndex = request.headerLineIndex ?? _detectHeaderLine(lines) ?? 0;
+    final detectedHeader = request.headerLineIndex == null
+        ? _detectHeaderLine(lines)
+        : null;
+    var headerIndex = request.headerLineIndex ?? detectedHeader ?? 0;
     if (headerIndex >= lines.length) {
       headerIndex = 0;
     }
     final delimiter = _delimiterOf(lines[headerIndex]);
     final body = content.substring(lineStarts[headerIndex]);
+    // No header row: said by the caller, or no line looks like a header
+    // and the first line already is a transaction.
+    final hasHeader =
+        request.hasHeader ??
+        !(request.headerLineIndex == null &&
+            detectedHeader == null &&
+            _looksLikeDataRow(_splitLine(lines[headerIndex], delimiter)));
+
+    // The row separator is the line break that ends the first record. A
+    // line break inside a quoted field (a memo) is not one: an LF file
+    // with one CRLF inside a quoted memo must not be split at CRLF only.
+    var eol = _recordEol(body);
+    if (eol == null) {
+      if (content.contains('\r\n')) {
+        eol = '\r\n';
+      } else if (content.contains('\n')) {
+        eol = '\n';
+      } else if (content.contains('\r')) {
+        eol = '\r';
+      }
+    }
 
     // Convert CSV
     final List<List<dynamic>> rawRows;
@@ -418,12 +459,20 @@ class CsvImportService {
       throw ImportException(ImportFailure.empty, 'No rows in the CSV file');
     }
 
-    final headers = _uniqueHeaders(rawRows.first);
+    var width = 0;
+    for (final row in rawRows) {
+      if (row.length > width) {
+        width = row.length;
+      }
+    }
+    final headers = hasHeader
+        ? _uniqueHeaders(rawRows.first)
+        : [for (var i = 1; i <= width; i++) '#$i'];
     // Blank lines (the csv package yields [''] for them) and footer lines
     // without content are dropped; other footer lines (balances) fail the
     // date check and are skipped there.
     final rows = [
-      for (final row in rawRows.skip(1))
+      for (final row in rawRows.skip(hasHeader ? 1 : 0))
         if (row.any((cell) => cell.toString().trim().isNotEmpty)) row,
     ];
 
@@ -432,8 +481,45 @@ class CsvImportService {
       rows: rows,
       delimiter: delimiter,
       headerLineIndex: headerIndex,
-      preset: BankCsvPreset.detect(headers),
+      preset: hasHeader ? BankCsvPreset.detect(headers) : null,
+      hasHeader: hasHeader,
     );
+  }
+
+  /// The line break that ends the first record of [text]: the first one
+  /// outside a quoted field. `null` when there is none.
+  static String? _recordEol(String text) {
+    var inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      final c = text.codeUnitAt(i);
+      if (c == 0x22) {
+        inQuotes = !inQuotes;
+      } else if (!inQuotes && c == 0x0A) {
+        return '\n';
+      } else if (!inQuotes && c == 0x0D) {
+        final crlf = i + 1 < text.length && text.codeUnitAt(i + 1) == 0x0A;
+        return crlf ? '\r\n' : '\r';
+      }
+    }
+    return null;
+  }
+
+  /// Whether [cells] are a transaction rather than column names: one cell
+  /// is a date in a supported format and another one a number.
+  static bool _looksLikeDataRow(List<String> cells) {
+    final dateAt = cells.indexWhere(
+      (cell) => csvDateFormats.any((f) => parseCsvDate(cell, f) != null),
+    );
+    if (dateAt == -1) {
+      return false;
+    }
+    const parser = MoneyParser();
+    for (var i = 0; i < cells.length; i++) {
+      if (i != dateAt && parser.tryParse(cells[i]) != null) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Header names made unique and non-empty.
@@ -503,6 +589,57 @@ class CsvImportService {
       }
     }
     return null;
+  }
+
+  /// The column mapping to start with for [data]: [preset]'s, else by the
+  /// header keywords ([autoMapColumns]), else, for a file without header
+  /// row, guessed from the values ([guessColumnsFromValues]).
+  static Map<String, String?> initialMapping(
+    CsvImportData data, {
+    BankCsvPreset? preset,
+  }) {
+    if (preset == null && !data.hasHeader) {
+      return guessColumnsFromValues(data);
+    }
+    return autoMapColumns(data.headers, preset: preset);
+  }
+
+  /// A mapping for a file without header row, from what the columns hold:
+  /// Date is the first column whose values all fit one date format, Amount
+  /// the first other column of numbers with a decimal separator or a sign
+  /// (an account number or bank code has neither), Payee the longest of
+  /// the remaining columns that are mostly text (not the currency code).
+  /// The user checks it against the preview.
+  static Map<String, String?> guessColumnsFromValues(CsvImportData data) {
+    final mapping = {for (final f in CsvField.all) f: null as String?};
+    const parser = MoneyParser();
+    final amountLike = RegExp(r'[.,+\-−()]');
+    final letters = RegExp(r'\p{L}{2}', unicode: true);
+    var payeeLength = 0;
+    for (final header in data.headers) {
+      final values = [
+        for (final v in data.columnValues(header))
+          if (v.trim().isNotEmpty) v.trim(),
+      ];
+      if (values.isEmpty) {
+        continue;
+      }
+      if (mapping[CsvField.date] == null &&
+          detectCsvDateFormat(values).fitsAll) {
+        mapping[CsvField.date] = header;
+      } else if (mapping[CsvField.amount] == null &&
+          values.every((v) => parser.tryParse(v) != null) &&
+          values.any(amountLike.hasMatch)) {
+        mapping[CsvField.amount] = header;
+      } else if (values.where(letters.hasMatch).length * 2 > values.length) {
+        final length = values.fold(0, (sum, v) => sum + v.length);
+        if (length > payeeLength) {
+          payeeLength = length;
+          mapping[CsvField.payee] = header;
+        }
+      }
+    }
+    return mapping;
   }
 
   /// Maps the fields of [CsvField.all] to [headers]: the bank [preset]'s
@@ -1150,9 +1287,10 @@ class CsvImportService {
 }
 
 class _ParseRequest {
-  const _ParseRequest(this.content, this.headerLineIndex);
+  const _ParseRequest(this.content, this.headerLineIndex, this.hasHeader);
   final String content;
   final int? headerLineIndex;
+  final bool? hasHeader;
 }
 
 /// Column indices of a mapping, with the cell readers shared by validation

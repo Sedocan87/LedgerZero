@@ -30,7 +30,7 @@ _import(
     MemoryPlatformFile(name: name, bytes: bytes),
   );
   expect(data.preset, isNull, reason: 'these files have no preset');
-  final mapping = CsvImportService.autoMapColumns(data.headers);
+  final mapping = CsvImportService.initialMapping(data);
   final dateFormat = _service
       .detectDateFormat(data, mapping, preferDayFirst: preferDayFirst)
       .format;
@@ -177,6 +177,52 @@ void main() {
       outflowIsNegative: true,
     );
     expect(rows.map((r) => r.payeeName), ['Beispiel AG', 'Erstattung Versand']);
+  });
+
+  group('a file without header row (Targobank)', () {
+    test('is recognised: the first transaction is a row, not the header, '
+        'and the columns are guessed from their values', () async {
+      final result = await _import('targobank_headerless.csv');
+      expect(result.data.hasHeader, isFalse);
+      expect(result.data.headers, ['#1', '#2', '#3', '#4', '#5']);
+      expect(result.data.rows, hasLength(3));
+      expect(result.mapping[CsvField.date], '#1');
+      expect(result.mapping[CsvField.amount], '#4');
+      expect(result.mapping[CsvField.payee], '#3');
+      expect(result.validation.isValid, isTrue);
+      expect(result.validation.warnings, isEmpty);
+      expect(result.rows.map((r) => r.amount), [-8000, 250000, -2345]);
+      expect(result.rows.last.payeeName, 'REWE SAGT DANKE 4711 KOELN');
+    });
+
+    test('the user can say so either way', () {
+      const content =
+          '01.10.2026;Bakery;-2,50\n'
+          '02.10.2026;Market;-20,00\n';
+      final forcedHeader = _service.parseCsvContent(content, hasHeader: true);
+      expect(forcedHeader.hasHeader, isTrue);
+      expect(forcedHeader.headers, ['01.10.2026', 'Bakery', '-2,50']);
+      expect(forcedHeader.rows, hasLength(1));
+
+      // A header the keywords do not know, switched off by hand.
+      final unknown = _service.parseCsvContent(
+        'Wann;Wer;Wieviel\n01.10.2026;Bakery;-2,50\n',
+      );
+      expect(unknown.hasHeader, isTrue);
+      expect(unknown.rows, hasLength(1));
+      final noHeader = _service.parseCsvContent(
+        'Wann;Wer;Wieviel\n01.10.2026;Bakery;-2,50\n',
+        hasHeader: false,
+      );
+      expect(noHeader.headers, ['#1', '#2', '#3']);
+      expect(noHeader.rows, hasLength(2));
+    });
+
+    test('a file with a header row is not taken for one without', () async {
+      for (final name in ['lloyds.csv', 'amex_de.csv', 'paypal_de.csv']) {
+        expect((await _import(name)).data.hasHeader, isTrue, reason: name);
+      }
+    });
   });
 
   group('debit/credit pairs', () {
