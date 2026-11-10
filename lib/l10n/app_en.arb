@@ -4055,5 +4055,11 @@
   "txAccountClosed": "This account is closed and takes no new transactions. Choose another account or reopen it.",
   "@txAccountClosed": {"description": "Snackbar when saving a new transaction (or a transfer leg) into a closed account is rejected"},
   "quickAddCurrencyNotConverted": "This account is in {currency}: the amount is booked in {currency}, not converted.",
-  "@quickAddCurrencyNotConverted": {"description": "Quick add preview: note under the amount when the typed currency symbol is not the account's currency", "placeholders": {"currency": {"type": "String"}}}
+  "@quickAddCurrencyNotConverted": {"description": "Quick add preview: note under the amount when the typed currency symbol is not the account's currency", "placeholders": {"currency": {"type": "String"}}},
+  "ruleConditionUnevaluable": "Never matches: this field cannot be compared this way. Delete the condition and add it again.",
+  "@ruleConditionUnevaluable": {"description": "Rule editor: note under a stored condition whose operator its field does not support (e.g. Amount contains)"},
+  "ruleSaveUnevaluableCondition": "Delete the conditions marked \"Never matches\" first.",
+  "@ruleSaveUnevaluableCondition": {"description": "Rule editor: snackbar when saving a rule that still has a condition that can never match"},
+  "ruleListUnevaluable": "Never matches: a condition compares a field in a way it does not support. Tap to fix.",
+  "@ruleListUnevaluable": {"description": "Rules list: subtitle of a rule with a condition that can never match"}
 }

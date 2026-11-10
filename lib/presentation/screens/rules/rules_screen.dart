@@ -285,12 +285,23 @@ class RulesScreen extends ConsumerWidget {
                     return ListTile(
                       key: ValueKey(rule.id),
                       title: Text(rule.name),
-                      subtitle: Text(
-                        l10n.ruleSummary(
-                          l10n.ruleConditionCount(rule.conditions.length),
-                          l10n.ruleActionCount(rule.actions.length),
-                        ),
-                      ),
+                      // A rule with a condition that can never match
+                      // (stored by an older version or imported) says so
+                      // instead of looking active and silently dead.
+                      subtitle: rule.hasUnevaluableCondition
+                          ? Text(
+                              l10n.ruleListUnevaluable,
+                              key: Key('rules.unevaluable.${rule.id}'),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            )
+                          : Text(
+                              l10n.ruleSummary(
+                                l10n.ruleConditionCount(rule.conditions.length),
+                                l10n.ruleActionCount(rule.actions.length),
+                              ),
+                            ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

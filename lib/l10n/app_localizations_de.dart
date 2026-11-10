@@ -5226,4 +5226,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String quickAddCurrencyNotConverted(String currency) {
     return 'Dieses Konto wird in $currency geführt: Der Betrag wird in $currency gebucht, nicht umgerechnet.';
   }
+
+  @override
+  String get ruleConditionUnevaluable =>
+      'Trifft nie zu: Dieses Feld lässt sich so nicht vergleichen. Löschen Sie die Bedingung und fügen Sie sie neu hinzu.';
+
+  @override
+  String get ruleSaveUnevaluableCondition =>
+      'Löschen Sie zuerst die mit „Trifft nie zu“ markierten Bedingungen.';
+
+  @override
+  String get ruleListUnevaluable =>
+      'Trifft nie zu: Eine Bedingung vergleicht ein Feld auf eine nicht unterstützte Weise. Tippen Sie zum Korrigieren.';
 }

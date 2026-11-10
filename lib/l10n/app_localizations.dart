@@ -8235,6 +8235,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This account is in {currency}: the amount is booked in {currency}, not converted.'**
   String quickAddCurrencyNotConverted(String currency);
+
+  /// Rule editor: note under a stored condition whose operator its field does not support (e.g. Amount contains)
+  ///
+  /// In en, this message translates to:
+  /// **'Never matches: this field cannot be compared this way. Delete the condition and add it again.'**
+  String get ruleConditionUnevaluable;
+
+  /// Rule editor: snackbar when saving a rule that still has a condition that can never match
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the conditions marked \"Never matches\" first.'**
+  String get ruleSaveUnevaluableCondition;
+
+  /// Rules list: subtitle of a rule with a condition that can never match
+  ///
+  /// In en, this message translates to:
+  /// **'Never matches: a condition compares a field in a way it does not support. Tap to fix.'**
+  String get ruleListUnevaluable;
 }
 
 class _AppLocalizationsDelegate

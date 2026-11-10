@@ -5186,4 +5186,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String quickAddCurrencyNotConverted(String currency) {
     return 'This account is in $currency: the amount is booked in $currency, not converted.';
   }
+
+  @override
+  String get ruleConditionUnevaluable =>
+      'Never matches: this field cannot be compared this way. Delete the condition and add it again.';
+
+  @override
+  String get ruleSaveUnevaluableCondition =>
+      'Delete the conditions marked \"Never matches\" first.';
+
+  @override
+  String get ruleListUnevaluable =>
+      'Never matches: a condition compares a field in a way it does not support. Tap to fix.';
 }

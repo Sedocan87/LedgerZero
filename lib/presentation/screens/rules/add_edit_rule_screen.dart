@@ -178,6 +178,15 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
       ).showSnackBar(SnackBar(content: Text(l10n.ruleNeedsAction)));
       return;
     }
+    // A condition that can never match (stored by an older version or
+    // imported) is marked in the list; it has to go before the rule is
+    // saved, so a rule that looks active is never silently dead.
+    if (_conditions.any((c) => !c.isEvaluable)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.ruleSaveUnevaluableCondition)),
+      );
+      return;
+    }
 
     final rule = Rule(
       id: widget.ruleId ?? const Uuid().v4(),
@@ -382,7 +391,9 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
 
   void _showAddConditionDialog() {
     RuleConditionType type = RuleConditionType.description;
-    RuleConditionOperator op = RuleConditionOperator.contains;
+    // Only the operators the field is evaluated with are offered; a new
+    // field starts with its default operator.
+    RuleConditionOperator op = RuleCondition.operatorsFor(type).first;
     final valueController = TextEditingController();
     String? valueError;
     final l10n = AppLocalizations.of(context)!;
@@ -410,13 +421,25 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
                       ),
                     )
                     .toList(),
-                onChanged: (v) => setDialogState(() => type = v!),
+                onChanged: (v) => setDialogState(() {
+                  if (v == type) {
+                    return;
+                  }
+                  type = v!;
+                  op = RuleCondition.operatorsFor(type).first;
+                  // A payee name or a text is no amount, and the other way
+                  // round.
+                  valueController.clear();
+                  valueError = null;
+                }),
               ),
               DropdownButtonFormField<RuleConditionOperator>(
+                // A key per field, so the reset operator is shown.
+                key: ValueKey(type),
                 initialValue: op,
                 isExpanded: true,
                 decoration: InputDecoration(labelText: l10n.ruleOperatorLabel),
-                items: RuleConditionOperator.values
+                items: RuleCondition.operatorsFor(type)
                     .map(
                       (e) => DropdownMenuItem(
                         value: e,
@@ -693,6 +716,7 @@ class _ConditionDisplay extends ConsumerWidget {
         ? ref.watch(appFormatterProvider).formatMoney(amountMinor)
         : condition.value;
     final l10n = AppLocalizations.of(context)!;
+    final error = Theme.of(context).colorScheme.error;
     return Wrap(
       spacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -700,6 +724,20 @@ class _ConditionDisplay extends ConsumerWidget {
         Chip(label: Text(condition.type.label(l10n))),
         Text(condition.operator.label(l10n)),
         Text(valueText, style: const TextStyle(fontWeight: FontWeight.bold)),
+        if (!condition.isEvaluable)
+          Row(
+            key: const Key('rule.condition.unevaluable'),
+            children: [
+              Icon(Icons.error_outline, size: 18, color: error),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  l10n.ruleConditionUnevaluable,
+                  style: TextStyle(color: error),
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }

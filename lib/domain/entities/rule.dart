@@ -24,6 +24,11 @@ class Rule {
     required this.actions,
   });
 
+  /// Whether a condition of this rule can never match (see
+  /// [RuleCondition.isEvaluable]). With AND logic the rule never matches;
+  /// with OR the condition is dead weight.
+  bool get hasUnevaluableCondition => conditions.any((c) => !c.isEvaluable);
+
   Rule copyWith({
     String? id,
     String? name,
