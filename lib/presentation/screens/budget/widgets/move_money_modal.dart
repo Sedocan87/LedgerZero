@@ -109,6 +109,7 @@ class _MoveMoneyModalState extends ConsumerState<MoveMoneyModal> {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
+              persist: false,
               content: Text(l10n.moveMoneyDone),
               action: SnackBarAction(
                 label: l10n.undo,

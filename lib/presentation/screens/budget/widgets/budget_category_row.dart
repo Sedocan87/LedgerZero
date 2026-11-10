@@ -147,6 +147,7 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
+        persist: false,
         content: Text(l10n.budgetUpdated),
         action: SnackBarAction(
           label: l10n.undo,

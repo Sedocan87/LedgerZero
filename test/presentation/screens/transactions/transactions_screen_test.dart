@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
@@ -99,6 +100,25 @@ void main() {
 
   Future<List<Transaction>> liveRows(WidgetTester tester) async =>
       (await tester.runAsync(() => t.transactions.getAllTransactions()))!;
+
+  dbTestWidgets('rows show no date under a day heading, but do when '
+      'sorted by something else', (tester) async {
+    await pump(tester);
+    final rowYear = find.descendant(
+      of: find.byType(TransactionListItem),
+      matching: find.textContaining(RegExp(r'\b20\d\d\b')),
+    );
+    expect(find.byType(TransactionDateHeader), findsWidgets);
+    expect(rowYear, findsNothing);
+
+    await tester.tap(find.byTooltip('Sort'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Amount').last);
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.byType(TransactionDateHeader), findsNothing);
+    expect(rowYear, findsWidgets);
+  });
 
   dbTestWidgets('transfers show the other account instead of "No Payee"', (
     tester,

@@ -504,7 +504,9 @@ void main() {
       await pump(tester, const AddEditTransactionScreen());
       await tester.runAsync(() => Future<void>.delayed(Duration.zero));
       await tester.pumpAndSettle();
-      expect(fieldText(tester, 'Account'), '');
+      // Not the closed default Savings: Checking, the only account left
+      // that takes bookings.
+      expect(fieldText(tester, 'Account'), 'Checking');
       expect(fieldText(tester, 'Category'), 'Groceries');
 
       await tester.enterText(find.byKey(const Key('payee_field')), 'Corner');

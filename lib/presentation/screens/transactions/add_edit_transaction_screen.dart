@@ -252,7 +252,8 @@ class _AddEditTransactionScreenState
 
   /// Fills an empty account from the Settings default account (if it is
   /// open and not the partner's) and an outflow's empty category from the
-  /// Settings default category. An account the form was opened with (the
+  /// Settings default category; with no default and a single bookable
+  /// account, that account. An account the form was opened with (the
   /// caller's, a draft's) that takes no new bookings is dropped first, so
   /// the user picks one instead of meeting an error on Save.
   Future<void> _applySettingsDefaults() async {
@@ -280,6 +281,18 @@ class _AddEditTransactionScreenState
     if (accountId != null && _form.accountId == null) {
       if (await _isBookable(accountId) && mounted && _form.accountId == null) {
         _form.accountId = accountId;
+        _form.changed();
+      }
+    }
+    // Only one account takes bookings: there is nothing to choose.
+    if (_form.accountId == null && mounted) {
+      final bookable = [
+        for (final a
+            in await ref.read(accountRepositoryProvider).getAllAccounts())
+          if (!a.isClosed && !a.isPartners) a,
+      ];
+      if (bookable.length == 1 && mounted && _form.accountId == null) {
+        _form.accountId = bookable.single.id;
         _form.changed();
       }
     }
@@ -446,9 +459,9 @@ class _AddEditTransactionScreenState
   // --- Saving -------------------------------------------------------------
 
   void _showMessage(String message, {SnackBarAction? action}) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), action: action));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(persist: false, content: Text(message), action: action),
+    );
   }
 
   Future<void> _submit({bool popAfterSave = true}) async {

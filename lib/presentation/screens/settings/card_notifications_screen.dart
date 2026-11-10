@@ -198,6 +198,7 @@ class _CardNotificationsScreenState
     if (lines.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          persist: false,
           content: Text(lines.join('\n')),
           action: run.duplicates > 0
               ? SnackBarAction(
@@ -326,6 +327,7 @@ class _CardNotificationsScreenState
     if (found > 0 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          persist: false,
           content: Text(
             AppLocalizations.of(
               context,
