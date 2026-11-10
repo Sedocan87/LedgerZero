@@ -8229,6 +8229,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Imprint'**
   String get aboutImprint;
+
+  /// Title of the confirmation before a budget template is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Delete template?'**
+  String get budgetTemplateDeleteTitle;
+
+  /// Body of the confirmation before a budget template is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'The template \"{name}\" is deleted for good. Months already budgeted with it keep their amounts.'**
+  String budgetTemplateDeleteBody(String name);
+
+  /// Extra paragraph of the delete-template confirmation when 'Fill new months automatically' uses the template
+  ///
+  /// In en, this message translates to:
+  /// **'New months are filled automatically from this template. After deleting it they are filled like the month before.'**
+  String get budgetTemplateDeleteAutoFill;
+
+  /// Snackbar after a budget template was deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Template \"{name}\" deleted'**
+  String budgetTemplateDeleted(String name);
+
+  /// Move money sheet: error shown above the Save button when the write failed
+  ///
+  /// In en, this message translates to:
+  /// **'The money could not be moved. Nothing was changed.'**
+  String get moveMoneyFailed;
+
+  /// Factory reset, first dialog: paragraph after the warning that offers a backup first
+  ///
+  /// In en, this message translates to:
+  /// **'Make a backup first if you might want this data back.'**
+  String get factoryResetBackupOffer;
+
+  /// Factory reset, first dialog: button that opens Backup & Export instead of resetting
+  ///
+  /// In en, this message translates to:
+  /// **'Back up first'**
+  String get factoryResetBackUpFirst;
+
+  /// Factory reset from Settings, second dialog: the reset is enabled only after typing the confirmation word
+  ///
+  /// In en, this message translates to:
+  /// **'All data on this phone is deleted and the setup starts again. This cannot be undone. Type {word} to confirm.'**
+  String factoryResetTypeToConfirm(String word);
+
+  /// Settings > Language: the option that follows the phone's language instead of a fixed one
+  ///
+  /// In en, this message translates to:
+  /// **'Phone language'**
+  String get languagePhone;
+
+  /// Settings > Language subtitle when the app follows the phone's language; {language} is the language in use, e.g. English
+  ///
+  /// In en, this message translates to:
+  /// **'Phone language ({language})'**
+  String languagePhoneCurrent(String language);
+
+  /// Settings > Date format: the option and subtitle that follow the app language; {pattern} is the resulting pattern, e.g. dd.MM.yyyy
+  ///
+  /// In en, this message translates to:
+  /// **'Follow language ({pattern})'**
+  String dateFormatFollowLanguage(String pattern);
 }
 
 class _AppLocalizationsDelegate

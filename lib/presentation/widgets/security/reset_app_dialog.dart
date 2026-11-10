@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 
-/// Confirmation for a factory reset from the lock screen: the reset button
-/// is enabled only after typing the localised confirmation word.
+/// Confirmation for a factory reset (lock screen and Settings): the reset
+/// button is enabled only after typing the localised confirmation word.
 class ResetAppDialog extends StatefulWidget {
-  const ResetAppDialog({super.key, required this.l10n});
+  const ResetAppDialog({
+    super.key,
+    required this.l10n,
+    this.title,
+    this.body,
+    this.confirmLabel,
+  });
 
   final AppLocalizations l10n;
+
+  /// Title, text (it names the confirmation word) and reset button label;
+  /// the lock screen's when not given.
+  final String? title;
+  final String? body;
+  final String? confirmLabel;
 
   @override
   State<ResetAppDialog> createState() => _ResetAppDialogState();
@@ -29,13 +41,15 @@ class _ResetAppDialogState extends State<ResetAppDialog> {
   Widget build(BuildContext context) {
     final l10n = widget.l10n;
     return AlertDialog(
-      title: Text(l10n.loginResetAppTitle),
+      title: Text(widget.title ?? l10n.loginResetAppTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.loginResetAppBody(l10n.loginResetConfirmWord)),
+            Text(
+              widget.body ?? l10n.loginResetAppBody(l10n.loginResetConfirmWord),
+            ),
             const SizedBox(height: 16),
             TextField(
               key: const Key('login_reset_confirm_field'),
@@ -62,7 +76,7 @@ class _ResetAppDialogState extends State<ResetAppDialog> {
             foregroundColor: Theme.of(context).colorScheme.error,
           ),
           onPressed: _confirmed ? () => Navigator.pop(context, true) : null,
-          child: Text(l10n.loginResetApp),
+          child: Text(widget.confirmLabel ?? l10n.loginResetApp),
         ),
       ],
     );

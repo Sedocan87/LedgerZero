@@ -76,6 +76,19 @@ class NotificationService {
   void Function(String? payload)? _tapHandler;
   final List<String?> _undeliveredTaps = [];
 
+  /// Runs before a notification is shown or scheduled: the app asks for
+  /// the notification permission there, when a notification is first
+  /// actually needed (not at the end of onboarding). Errors are ignored.
+  Future<void> Function()? beforeUse;
+
+  Future<void> _beforeUse() async {
+    try {
+      await beforeUse?.call();
+    } catch (e, stack) {
+      Logger.error('Notification permission hook failed', e, stack);
+    }
+  }
+
   /// Receives the payload of every tapped notification.
   set tapHandler(void Function(String? payload)? handler) {
     _tapHandler = handler;
@@ -214,6 +227,7 @@ class NotificationService {
         return;
       }
       await initialize();
+      await _beforeUse();
       await _client.zonedSchedule(
         id,
         title,
@@ -282,6 +296,7 @@ class NotificationService {
   ) async {
     try {
       await initialize();
+      await _beforeUse();
       await _client.show(
         id,
         title,

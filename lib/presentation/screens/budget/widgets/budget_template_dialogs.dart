@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/new_month_fill_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_month_actions.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
@@ -60,6 +62,67 @@ Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
   );
 }
 
+/// Asks before deleting [template] (it cannot be brought back) and says
+/// so when the automatic fill uses it: new months are then filled like the
+/// month before ([NewMonthFillController.templateDeleted]). Returns whether
+/// the template was deleted.
+Future<bool> confirmAndDeleteTemplate(
+  BuildContext context,
+  WidgetRef ref,
+  BudgetTemplate template,
+) async {
+  final usedByAutoFill = ref
+      .read(newMonthFillProvider.notifier)
+      .usesTemplate(template.id);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      final l10n = AppLocalizations.of(context)!;
+      return AlertDialog(
+        title: Text(l10n.budgetTemplateDeleteTitle),
+        content: Text(
+          usedByAutoFill
+              ? '${l10n.budgetTemplateDeleteBody(template.name)}\n\n'
+                    '${l10n.budgetTemplateDeleteAutoFill}'
+              : l10n.budgetTemplateDeleteBody(template.name),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            key: const Key('budget.templateDeleteConfirm'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      );
+    },
+  );
+  if (confirmed != true || !context.mounted) {
+    return false;
+  }
+  final l10n = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await ref.read(budgetingServiceProvider).deleteTemplate(template.id);
+    await ref.read(newMonthFillProvider.notifier).templateDeleted(template.id);
+    ref.invalidate(budgetTemplatesProvider);
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.budgetTemplateDeleted(template.name))),
+    );
+    return true;
+  } catch (e, stack) {
+    Logger.error('Deleting a budget template failed', e, stack);
+    messenger.showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
+    return false;
+  }
+}
+
 Future<void> showApplyTemplateDialog(
   BuildContext context,
   WidgetRef ref,
@@ -108,11 +171,12 @@ Future<void> showApplyTemplateDialog(
                         icon: const Icon(Icons.delete),
                         tooltip: AppLocalizations.of(context)!.deleteTemplate,
                         onPressed: () async {
-                          await ref
-                              .read(budgetingServiceProvider)
-                              .deleteTemplate(template.id);
-                          ref.invalidate(budgetTemplatesProvider);
-                          if (context.mounted) {
+                          final deleted = await confirmAndDeleteTemplate(
+                            context,
+                            ref,
+                            template,
+                          );
+                          if (deleted && context.mounted) {
                             Navigator.pop(context);
                           }
                         },

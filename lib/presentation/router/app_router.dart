@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:ledger_zero/presentation/screens/settings/income/income_settings_screen.dart';
 
@@ -66,6 +68,34 @@ class PendingLocation {
 final pendingLocationProvider = Provider<PendingLocation>(
   (ref) => PendingLocation(),
 );
+
+/// Opens [location] from outside the app's own navigation (a notification
+/// tap): Home with the tab bar underneath, then [location] with the screens
+/// above it in the route tree, so back always ends on Home.
+///
+/// A plain `go` replaced the stack with, for example, [Settings, Backup]:
+/// no tab bar, and Settings had nowhere to go back to. A location inside
+/// the tab shell (a tab, or a screen above one) already has the tab bar
+/// underneath and is opened with `go`.
+///
+/// The redirect is synchronous, so each step has landed before the next
+/// one reads the router's current configuration.
+void openOnTopOfHome(GoRouter router, String location) {
+  final matchList = router.configuration.findMatch(Uri.parse(location));
+  if (matchList.isError ||
+      matchList.matches.isEmpty ||
+      matchList.matches.first is ShellRouteMatch) {
+    router.go(location);
+    return;
+  }
+  router.go('/');
+  final chain = matchList.matches.whereType<RouteMatch>().toList();
+  for (var i = 0; i < chain.length; i++) {
+    final isLast = i == chain.length - 1;
+    // The last step keeps the location's query parameters.
+    unawaited(router.push(isLast ? location : chain[i].matchedLocation));
+  }
+}
 
 /// Tells the router that an auth gate changed (onboarding, first unlock),
 /// so it runs its redirect again on the current location.
@@ -188,6 +218,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/filtered-transactions',
         name: 'filtered-transactions',
         parentNavigatorKey: _rootNavigatorKey,
+        // Opened without its filter (a link, a restored location): Home.
+        redirect: (context, state) =>
+            state.extra is FilteredTransactionsArgs ? null : '/',
         builder: (context, state) {
           final args = state.extra as FilteredTransactionsArgs;
           return TransactionsScreen(fixedFilter: args);
@@ -296,6 +329,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'confirm',
                 name: 'import-confirm',
                 parentNavigatorKey: _rootNavigatorKey,
+                // Opened without the parsed rows (a link, a restored
+                // location): Home.
+                redirect: (context, state) =>
+                    state.extra is List<ImportTransaction> ? null : '/',
                 builder: (context, state) {
                   final transactions = state.extra as List<ImportTransaction>;
                   return ImportConfirmationScreen(transactions: transactions);

@@ -12,9 +12,11 @@ import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart'
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/presentation/providers/factory_reset_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
+import 'package:ledger_zero/presentation/providers/notification_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/app_cache.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
+import 'package:ledger_zero/presentation/widgets/security/reset_app_dialog.dart';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -28,6 +30,13 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsProvider);
     final themeState = ref.watch(themeProvider);
+
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final languageName = kLanguageEndonyms[languageCode] ?? languageCode;
+
+    String dateFormatLabel(AppDateFormat format) =>
+        format.pattern ??
+        l10n.dateFormatFollowLanguage(datePatternForLanguage(languageCode));
 
     Widget buildOption<T>(BuildContext context, String label, T value) {
       return SimpleDialogOption(
@@ -61,28 +70,57 @@ class SettingsScreen extends ConsumerWidget {
       }
     }
 
+    // First the warning with a way to back up, then the typed confirmation
+    // the lock-screen reset uses: a stray second tap must not wipe it all.
     Future<void> factoryReset(BuildContext context, WidgetRef ref) async {
-      final confirmed = await showDialog<bool>(
+      final step = await showDialog<_ResetStep>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text(l10n.factoryResetTitle),
-          content: Text(l10n.factoryResetConfirmation),
+          content: Text(
+            '${l10n.factoryResetConfirmation}\n\n'
+            '${l10n.factoryResetBackupOffer}',
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(context),
               child: Text(l10n.cancel),
             ),
             TextButton(
+              key: const Key('settings.factoryResetBackUpFirst'),
+              onPressed: () => Navigator.pop(context, _ResetStep.backUp),
+              child: Text(l10n.factoryResetBackUpFirst),
+            ),
+            TextButton(
+              key: const Key('settings.factoryResetContinue'),
               style: TextButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.factoryReset),
+              onPressed: () => Navigator.pop(context, _ResetStep.reset),
+              child: Text(l10n.continueAction),
             ),
           ],
         ),
       );
-
+      if (!context.mounted) {
+        return;
+      }
+      if (step == _ResetStep.backUp) {
+        unawaited(context.push('/settings/backup'));
+        return;
+      }
+      if (step != _ResetStep.reset) {
+        return;
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => ResetAppDialog(
+          l10n: l10n,
+          title: l10n.factoryResetTitle,
+          body: l10n.factoryResetTypeToConfirm(l10n.loginResetConfirmWord),
+          confirmLabel: l10n.factoryReset,
+        ),
+      );
       if (confirmed != true) {
         return;
       }
@@ -109,7 +147,14 @@ class SettingsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settings)),
+      appBar: AppBar(
+        title: Text(l10n.settings),
+        // Settings as the only page (a restored or redirected location):
+        // a way back to the tabs instead of leaving the app.
+        leading: (ModalRoute.of(context)?.isFirst ?? false)
+            ? const _BackHomeButton()
+            : null,
+      ),
       body: ListView(
         children: [
           // General Settings
@@ -142,15 +187,22 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.calendar_today),
                 title: Text(l10n.dateFormat),
-                subtitle: Text(settings.dateFormat.pattern),
+                subtitle: Text(dateFormatLabel(settings.dateFormat)),
                 onTap: () async {
                   final selected = await showDialog<AppDateFormat>(
                     context: context,
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.dateFormat),
-                      children: AppDateFormat.values
-                          .map((f) => buildOption(context, f.pattern, f))
-                          .toList(),
+                      children: [
+                        // "Follow language" first: the default.
+                        for (final f in [
+                          AppDateFormat.system,
+                          ...AppDateFormat.values.where(
+                            (f) => f != AppDateFormat.system,
+                          ),
+                        ])
+                          buildOption(context, dateFormatLabel(f), f),
+                      ],
                     ),
                   );
                   if (selected != null) {
@@ -196,48 +248,9 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
-              // First Day of Week
-              ListTile(
-                leading: const Icon(Icons.today),
-                title: Text(l10n.firstDayOfWeek),
-                subtitle: Text(switch (settings.firstDayOfWeek) {
-                  AppFirstDayOfWeek.sunday => l10n.sunday,
-                  AppFirstDayOfWeek.monday => l10n.monday,
-                  AppFirstDayOfWeek.saturday => l10n.saturday,
-                }),
-                onTap: () async {
-                  final selected = await showDialog<AppFirstDayOfWeek>(
-                    context: context,
-                    builder: (context) => SimpleDialog(
-                      title: Text(l10n.firstDayOfWeek),
-                      children: [
-                        buildOption(
-                          context,
-                          l10n.sunday,
-                          AppFirstDayOfWeek.sunday,
-                        ),
-                        buildOption(
-                          context,
-                          l10n.monday,
-                          AppFirstDayOfWeek.monday,
-                        ),
-                        buildOption(
-                          context,
-                          l10n.saturday,
-                          AppFirstDayOfWeek.saturday,
-                        ),
-                      ],
-                    ),
-                  );
-                  if (selected != null) {
-                    unawaited(
-                      ref
-                          .read(settingsProvider.notifier)
-                          .setFirstDayOfWeek(selected),
-                    );
-                  }
-                },
-              ),
+              // No "First day of week": the date pickers start the week
+              // as the app language does (Monday in German), and nothing
+              // else in the app is week-based.
               // Theme
               ListTile(
                 leading: const Icon(Icons.brightness_6),
@@ -294,25 +307,37 @@ class SettingsScreen extends ConsumerWidget {
                 leading: const Icon(Icons.language),
                 title: Text(l10n.language),
                 subtitle: Text(
-                  kLanguageEndonyms[Localizations.localeOf(
-                        context,
-                      ).languageCode] ??
-                      Localizations.localeOf(context).languageCode,
+                  settings.language == null
+                      ? l10n.languagePhoneCurrent(languageName)
+                      : languageName,
                 ),
                 onTap: () async {
-                  final selected = await showDialog<Locale>(
+                  // Wrapped: "phone language" is a null choice, a
+                  // dismissed dialog no choice.
+                  final selected = await showDialog<Wrapped<Locale?>>(
                     context: context,
                     builder: (context) => SimpleDialog(
                       title: Text(l10n.language),
                       children: [
+                        buildOption(
+                          context,
+                          l10n.languagePhone,
+                          const Wrapped<Locale?>(null),
+                        ),
                         for (final entry in kLanguageEndonyms.entries)
-                          buildOption(context, entry.value, Locale(entry.key)),
+                          buildOption(
+                            context,
+                            entry.value,
+                            Wrapped<Locale?>(Locale(entry.key)),
+                          ),
                       ],
                     ),
                   );
                   if (selected != null) {
                     unawaited(
-                      ref.read(settingsProvider.notifier).setLanguage(selected),
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setLanguage(selected.value),
                     );
                   }
                 },
@@ -473,8 +498,8 @@ class SettingsScreen extends ConsumerWidget {
                 value: settings.scheduledTransactionNotifications,
                 onChanged: (value) => unawaited(
                   ref
-                      .read(settingsProvider.notifier)
-                      .setScheduledTransactionNotifications(value),
+                      .read(notificationTogglesProvider)
+                      .setScheduledReminders(value),
                 ),
               ),
               SwitchListTile(
@@ -482,9 +507,7 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text(l10n.budgetAlertNotifications),
                 value: settings.budgetAlertNotifications,
                 onChanged: (value) => unawaited(
-                  ref
-                      .read(settingsProvider.notifier)
-                      .setBudgetAlertNotifications(value),
+                  ref.read(notificationTogglesProvider).setBudgetAlerts(value),
                 ),
               ),
               SwitchListTile(
@@ -492,9 +515,7 @@ class SettingsScreen extends ConsumerWidget {
                 title: Text(l10n.syncStatusNotifications),
                 value: settings.syncStatusNotifications,
                 onChanged: (value) => unawaited(
-                  ref
-                      .read(settingsProvider.notifier)
-                      .setSyncStatusNotifications(value),
+                  ref.read(notificationTogglesProvider).setSyncStatus(value),
                 ),
               ),
             ],
@@ -635,6 +656,31 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 }
+
+/// The back arrow of Settings when it is the only page: it and the system
+/// back button lead Home, with the tab bar.
+class _BackHomeButton extends StatelessWidget {
+  const _BackHomeButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          context.go('/');
+        }
+      },
+      child: BackButton(
+        key: const Key('settings.backHome'),
+        onPressed: () => context.go('/'),
+      ),
+    );
+  }
+}
+
+/// The answer to the first factory-reset dialog.
+enum _ResetStep { backUp, reset }
 
 class _SelectionWrapper {
   final String? value;

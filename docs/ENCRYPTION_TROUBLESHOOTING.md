@@ -69,6 +69,8 @@ The screen offers **Reset app**. It asks you to type a confirmation word
 all preferences, and opens onboarding. Set the app up again, then restore a
 backup in **Settings > Backup & Export** or sync again from your other
 phone. (Deleting and reinstalling the app has the same effect.)
+**Settings > Factory Reset** asks for the same word, after a first dialog
+that offers to make a backup instead.
 
 To be safe, keep a recent backup or a second synced phone: the key never
 leaves this phone, so a lost or reset phone means lost data otherwise.

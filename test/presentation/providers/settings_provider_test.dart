@@ -28,6 +28,8 @@ void main() {
     final s = (await start()).read(settingsProvider);
     expect(s.currency, 'USD');
     expect(s.language, isNull);
+    // Dates follow the app language until the user picks a format.
+    expect(s.dateFormat, AppDateFormat.system);
     expect(s.defaultAccountId, isNull);
     expect(s.scheduledTransactionNotifications, isTrue);
     expect(s.budgetAlertNotifications, isTrue);
@@ -98,12 +100,10 @@ void main() {
     await n.setScheduledTransactionNotifications(false);
     await n.setBudgetAlertNotifications(false);
     await n.setSyncStatusNotifications(false);
-    final dateFormat = AppDateFormat.values.last;
+    const dateFormat = AppDateFormat.european;
     final numberFormat = AppNumberFormat.values.last;
-    final firstDay = AppFirstDayOfWeek.values.last;
     await n.setDateFormat(dateFormat);
     await n.setNumberFormat(numberFormat);
-    await n.setFirstDayOfWeek(firstDay);
     expect(c.read(settingsProvider).currency, 'JPY');
 
     final s = (await restart()).read(settingsProvider);
@@ -116,10 +116,22 @@ void main() {
     expect(s.syncStatusNotifications, isFalse);
     expect(s.dateFormat, dateFormat);
     expect(s.numberFormat, numberFormat);
-    expect(s.firstDayOfWeek, firstDay);
 
     // Clearing the language follows the device again.
     await (await restart()).read(settingsProvider.notifier).setLanguage(null);
     expect((await restart()).read(settingsProvider).language, isNull);
+  });
+
+  test('a date format the user chose is kept, ISO included', () async {
+    for (final format in [
+      AppDateFormat.iso8601,
+      AppDateFormat.european,
+      AppDateFormat.us,
+    ]) {
+      final s = (await start({
+        'settings_date_format': format.index,
+      })).read(settingsProvider);
+      expect(s.dateFormat, format);
+    }
   });
 }

@@ -5213,4 +5213,50 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get aboutImprint => 'Impressum';
+
+  @override
+  String get budgetTemplateDeleteTitle => 'Vorlage löschen?';
+
+  @override
+  String budgetTemplateDeleteBody(String name) {
+    return 'Die Vorlage „$name“ wird endgültig gelöscht. Monate, die bereits damit budgetiert wurden, behalten ihre Beträge.';
+  }
+
+  @override
+  String get budgetTemplateDeleteAutoFill =>
+      'Neue Monate werden automatisch aus dieser Vorlage gefüllt. Nach dem Löschen werden sie wie der Vormonat gefüllt.';
+
+  @override
+  String budgetTemplateDeleted(String name) {
+    return 'Vorlage „$name“ gelöscht';
+  }
+
+  @override
+  String get moveMoneyFailed =>
+      'Das Geld konnte nicht verschoben werden. Es wurde nichts geändert.';
+
+  @override
+  String get factoryResetBackupOffer =>
+      'Erstellen Sie zuerst eine Sicherung, falls Sie diese Daten noch einmal brauchen könnten.';
+
+  @override
+  String get factoryResetBackUpFirst => 'Zuerst sichern';
+
+  @override
+  String factoryResetTypeToConfirm(String word) {
+    return 'Alle Daten auf diesem Telefon werden gelöscht, und die Einrichtung beginnt von vorn. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
+  }
+
+  @override
+  String get languagePhone => 'Sprache des Telefons';
+
+  @override
+  String languagePhoneCurrent(String language) {
+    return 'Sprache des Telefons ($language)';
+  }
+
+  @override
+  String dateFormatFollowLanguage(String pattern) {
+    return 'Wie Sprache ($pattern)';
+  }
 }

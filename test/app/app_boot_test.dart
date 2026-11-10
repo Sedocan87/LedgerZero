@@ -11,6 +11,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/app/app.dart';
+import 'package:ledger_zero/presentation/providers/notification_providers.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -228,8 +229,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('an onboarded user is asked for the notification permission '
-      'after the unlock', (tester) async {
+  testWidgets('an unlock asks for the notification permission only when a '
+      'notification needed it meanwhile', (tester) async {
     await boot(
       tester,
       {'user_onboarded': true, kAppLockEnabledKey: true},
@@ -239,6 +240,22 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(LockScreen)),
     );
+    // Nothing to notify about: no prompt.
+    container.read(authProvider.notifier).setAuthenticated(true);
+    await tester.pump();
+    await tester.pump();
+    expect(notifications.permissionRequests, 0);
+
+    // A notification while locked waits for the next unlock.
+    container.read(authProvider.notifier).setAuthenticated(false);
+    await tester.pump();
+    await tester.runAsync(
+      () => container
+          .read(notificationServiceProvider)
+          .showBackupReminderNotification(),
+    );
+    expect(container.read(notificationPermissionGateProvider).pending, isTrue);
+    expect(notifications.permissionRequests, 0);
     container.read(authProvider.notifier).setAuthenticated(true);
     await tester.pump();
     await tester.pump();

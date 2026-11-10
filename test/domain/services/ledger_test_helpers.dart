@@ -51,7 +51,11 @@ Future<int> onBudgetBalancesThrough(TestDatabase t, DateTime month) async {
     if (!a.onBudget) {
       continue;
     }
-    final created = a.createdAt?.toUtc();
+    // The local calendar day of creation, as in the service.
+    final createdAt = a.createdAt;
+    final created = createdAt == null
+        ? null
+        : CalendarDate.today(now: createdAt);
     final first = firstDates[a.id];
     final start = created == null
         ? null

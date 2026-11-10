@@ -6,6 +6,7 @@ import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/budget_template.dart';
+import 'package:ledger_zero/domain/undo/budget_undo_actions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -57,15 +58,33 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final budgeting = ref.read(budgetingServiceProvider);
+    final undoService = ref.read(undoServiceProvider);
     setState(() => _busy = true);
     try {
       final filled = await budgeting.fillEmptyCategories(month, amounts);
+      // On the undo stack like every other budget change: an undo that
+      // fails shows the error, and one made stale (the stack is cleared
+      // when sync or a delete changes the ground under it) does nothing.
+      final action = BudgetFillAction(
+        budgetingService: budgeting,
+        month: month,
+        filled: filled,
+      );
+      if (filled.isNotEmpty) {
+        undoService.addAction(action);
+      }
       messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.newMonthFilled(filled.length)),
           action: SnackBarAction(
             label: l10n.undo,
-            onPressed: () => budgeting.undoFill(month, filled),
+            onPressed: () =>
+                undoService.undo(action).catchError((Object e, StackTrace st) {
+                  Logger.error('Undoing the month fill failed', e, st);
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.errorOccurred)),
+                  );
+                }),
           ),
         ),
       );
@@ -108,13 +127,23 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
   /// Budgeted covers the amounts, fill right away instead of at the next
   /// start (the salary was just booked or imported).
   void _retryWhenCovered(AutoFillWaiting waiting, int tbb) {
-    if (_retrying || tbb < waiting.total) {
+    if (tbb < waiting.total) {
+      return;
+    }
+    _runFillAgain();
+  }
+
+  /// Lets the automatic fill look at the month again after this frame.
+  void _runFillAgain() {
+    if (_retrying) {
       return;
     }
     _retrying = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        await ref.read(newMonthFillProvider.notifier).runIfDue();
+        if (mounted) {
+          await ref.read(newMonthFillProvider.notifier).runIfDue();
+        }
       } finally {
         _retrying = false;
       }
@@ -143,6 +172,26 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
     if (_dismissed.contains(CalendarDate.monthKey(month))) {
       return const SizedBox.shrink();
     }
+    final tbb = ref.watch(tbbProvider(month)).valueOrNull ?? 0;
+    final income = ref.watch(monthIncomeProvider(month)).valueOrNull;
+    final waiting = ref.watch(newMonthFillProvider.select((s) => s.waiting));
+    if (waiting != null && waiting.month == month) {
+      // Before the offer is looked at: with a template as the source the
+      // month before may be empty, and then there is nothing to offer by
+      // hand but still a fill waiting for its money.
+      final empty = ref.watch(budgetMonthEmptyProvider(month)).valueOrNull;
+      if (empty == null) {
+        return const SizedBox.shrink();
+      }
+      if (!empty) {
+        // Budgeted by hand meanwhile: the fill has nothing left to do and
+        // ends the wait on its next run.
+        _runFillAgain();
+        return const SizedBox.shrink();
+      }
+      _retryWhenCovered(waiting, tbb);
+      return _waitingCard(context, waiting, income);
+    }
     final offer = ref.watch(newMonthOfferProvider(month)).valueOrNull;
     if (offer == null || offer.isEmpty) {
       return const SizedBox.shrink();
@@ -151,13 +200,6 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
     final fmt = ref.watch(appFormatterProvider);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final tbb = ref.watch(tbbProvider(month)).valueOrNull ?? 0;
-    final income = ref.watch(monthIncomeProvider(month)).valueOrNull;
-    final waiting = ref.watch(newMonthFillProvider.select((s) => s.waiting));
-    if (waiting != null && waiting.month == month) {
-      _retryWhenCovered(waiting, tbb);
-      return _waitingCard(context, waiting, income);
-    }
     final templates =
         ref.watch(budgetTemplatesProvider).valueOrNull ??
         const <BudgetTemplate>[];
@@ -436,10 +478,22 @@ class AutoFillNoteCard extends ConsumerWidget {
                     label: l10n.undo,
                     onPressed: () async {
                       final messenger = ScaffoldMessenger.of(context);
-                      await controller.undoNote();
-                      messenger.showSnackBar(
-                        SnackBar(content: Text(l10n.autoFillUndone)),
-                      );
+                      try {
+                        await controller.undoNote();
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(l10n.autoFillUndone)),
+                        );
+                      } catch (e, stack) {
+                        // The note stays, so Undo can be tried again.
+                        Logger.error(
+                          'Undoing the automatic fill failed',
+                          e,
+                          stack,
+                        );
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(l10n.errorOccurred)),
+                        );
+                      }
                     },
                   ),
                   AppButton.text(

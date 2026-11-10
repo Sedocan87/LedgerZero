@@ -5174,4 +5174,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutImprint => 'Imprint';
+
+  @override
+  String get budgetTemplateDeleteTitle => 'Delete template?';
+
+  @override
+  String budgetTemplateDeleteBody(String name) {
+    return 'The template \"$name\" is deleted for good. Months already budgeted with it keep their amounts.';
+  }
+
+  @override
+  String get budgetTemplateDeleteAutoFill =>
+      'New months are filled automatically from this template. After deleting it they are filled like the month before.';
+
+  @override
+  String budgetTemplateDeleted(String name) {
+    return 'Template \"$name\" deleted';
+  }
+
+  @override
+  String get moveMoneyFailed =>
+      'The money could not be moved. Nothing was changed.';
+
+  @override
+  String get factoryResetBackupOffer =>
+      'Make a backup first if you might want this data back.';
+
+  @override
+  String get factoryResetBackUpFirst => 'Back up first';
+
+  @override
+  String factoryResetTypeToConfirm(String word) {
+    return 'All data on this phone is deleted and the setup starts again. This cannot be undone. Type $word to confirm.';
+  }
+
+  @override
+  String get languagePhone => 'Phone language';
+
+  @override
+  String languagePhoneCurrent(String language) {
+    return 'Phone language ($language)';
+  }
+
+  @override
+  String dateFormatFollowLanguage(String pattern) {
+    return 'Follow language ($pattern)';
+  }
 }

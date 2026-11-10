@@ -210,6 +210,30 @@ void main() {
       expectPrivateWithDarwin(client.shown[2].details, 'budget_alerts');
     });
 
+    test('beforeUse runs before every notification is shown or scheduled, '
+        'and a failing hook does not stop it', () async {
+      final client = _FakeClient();
+      final service = NotificationService(client: client);
+      final calls = <String>[];
+      service.beforeUse = () async {
+        calls.add(
+          'shown ${client.shown.length} '
+          'scheduled ${client.scheduled.length}',
+        );
+        throw StateError('no activity');
+      };
+      await service.showBackupReminderNotification();
+      await service.scheduleNotification(
+        id: 7,
+        title: 't',
+        body: 'b',
+        scheduledDate: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(calls, ['shown 0 scheduled 0', 'shown 1 scheduled 0']);
+      expect(client.shown, hasLength(1));
+      expect(client.scheduled, hasLength(1));
+    });
+
     test('initialises once and forwards the launch tap', () async {
       final client = _FakeClient(launch: 'sync');
       final service = NotificationService(client: client);

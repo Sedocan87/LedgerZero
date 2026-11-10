@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart';
-import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
@@ -54,13 +53,18 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 
   /// Notification taps (including the one that launched the app) go to the
-  /// tap router, which waits for the unlock before navigating.
+  /// tap router, which waits for the unlock before navigating. The
+  /// permission is asked for when a notification is first needed
+  /// ([NotificationPermissionGate]).
   void _initializeNotifications() {
     final notifications = ref.read(notificationServiceProvider);
     final tapRouter = ref.read(notificationTapRouterProvider);
     notifications.tapHandler = (payload) {
       unawaited(tapRouter.handleTap(payload));
     };
+    notifications.beforeUse = ref
+        .read(notificationPermissionGateProvider)
+        .onUse;
     unawaited(notifications.initialize());
   }
 
@@ -84,6 +88,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         unawaited(_bookDueThenFill());
         unawaited(ref.read(autoBackupServiceProvider).runIfDue());
       }
+      // A notification that came up in the background still needs the
+      // permission.
+      unawaited(ref.read(notificationPermissionGateProvider).onUiReady());
     }
     if (state == AppLifecycleState.paused) {
       ref.read(syncControllerProvider.notifier).onAppPaused();
@@ -172,17 +179,12 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
 
   /// Runs when the UI is ready ([uiReadyProvider]): things the user sees
   /// wait for the app lock and the end of onboarding (the permission prompt
-  /// would otherwise cover them).
+  /// would otherwise cover them). The permission is asked for only if a
+  /// notification needed it meanwhile (e.g. the reminders scheduled at
+  /// start-up), not at the end of onboarding.
   Future<void> _onUiUnlocked() async {
     unawaited(ref.read(notificationTapRouterProvider).onUnlocked());
-    final settings = ref.read(settingsProvider);
-    if (settings.scheduledTransactionNotifications ||
-        settings.budgetAlertNotifications ||
-        settings.syncStatusNotifications) {
-      final notifications = ref.read(notificationServiceProvider);
-      await notifications.initialize();
-      await notifications.requestPermissions();
-    }
+    await ref.read(notificationPermissionGateProvider).onUiReady();
   }
 
   /// Localised memo for generated scheduled occurrences without memo and

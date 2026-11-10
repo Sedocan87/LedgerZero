@@ -432,17 +432,26 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
           clearIcon: _selectedIcon == null,
           updatedAt: DateTime.now().toUtc(),
         );
-        await repository.updateAccount(updatedAccount);
         final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
-        final budgeting = ref.read(budgetingServiceProvider);
-        for (final MapEntry(key: categoryId, value: amount)
-            in release.entries) {
-          released += await budgeting.releaseFromCategory(
-            categoryId,
-            amount,
-            month,
-          );
-        }
+        final budgeting = release.isEmpty
+            ? null
+            : ref.read(budgetingServiceProvider);
+        // One unit of work: an account that left the budget without the
+        // release (a failure or the app killed in between) would leave To
+        // Be Budgeted short by its balance, with nothing to retry.
+        released = await ref.read(unitOfWorkProvider).run(() async {
+          await repository.updateAccount(updatedAccount);
+          var total = 0;
+          for (final MapEntry(key: categoryId, value: amount)
+              in release.entries) {
+            total += await budgeting!.releaseFromCategory(
+              categoryId,
+              amount,
+              month,
+            );
+          }
+          return total;
+        });
       } else {
         final newAccount = Account(
           id: const Uuid().v4(),
@@ -578,6 +587,14 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         false;
   }
 
+  /// Back from the onboarding first-account step: the security step it
+  /// came from. (A plain pop showed the welcome slides under it, and going
+  /// through them again took the "existing data kept" branch, which
+  /// finished onboarding without an account or the salary question.)
+  void _backToSecurityStep() {
+    GoRouter.of(context).goNamed('security-setup');
+  }
+
   /// A switch title followed by its ⓘ button.
   Widget _titleWithInfo(String title, HelpTopic topic) => Row(
     children: [
@@ -621,15 +638,34 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
         : _currencies;
 
     return PopScope(
-      canPop: !_isFormDirty,
+      // The onboarding step goes back to the security step, not the
+      // slides below it in the stack (see [_backToSecurityStep]).
+      canPop: !_isFormDirty && !widget.finishesOnboarding,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
           return;
         }
+        if (!_isFormDirty) {
+          // Only the onboarding step gets here with a clean form.
+          _backToSecurityStep();
+          return;
+        }
         final shouldPop = await _showExitConfirmation();
         if (shouldPop && context.mounted) {
+          // Discarded: the next "Add account" (and the onboarding step,
+          // which shares the draft) starts empty.
+          if (widget.accountId == null) {
+            await _clearDraft();
+          }
+          if (!context.mounted) {
+            return;
+          }
           setState(() => _isFormDirty = false);
-          Navigator.of(context).pop();
+          if (widget.finishesOnboarding) {
+            _backToSecurityStep();
+          } else {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: CallbackShortcuts(

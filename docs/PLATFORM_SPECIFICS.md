@@ -35,6 +35,11 @@ This document outlines the platform-specific implementations, configurations, an
   - `USE_BIOMETRIC`: Required for `BiometricPrompt` (biometric unlock).
   - `VIBRATE`: For haptic feedback.
   - `POST_NOTIFICATIONS`: For local notifications (sync alerts, reminders).
+    Asked when a notification is first needed (a reminder is scheduled, a
+    backup reminder, sync failure or budget alert is about to be shown; at
+    the next unlock or resume if that happened while locked or in the
+    background) and when a notification is turned on in Settings, not at
+    the end of onboarding (`NotificationPermissionGate`).
   - `RECEIVE_BOOT_COMPLETED`: Lets scheduled local notifications survive a reboot.
 - **Camera** (`CAMERA`, added by the `camera` plugin): only for scanning the
   Wi-Fi sync pairing code; asked when the scanner opens. The code is read on

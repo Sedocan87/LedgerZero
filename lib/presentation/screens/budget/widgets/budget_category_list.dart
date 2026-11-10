@@ -117,7 +117,13 @@ class BudgetCategoryList extends ConsumerWidget {
                   );
                 }
                 categoryWidgets.add(
-                  BudgetCategoryRow(viewModel: groupVM.categories[i]),
+                  // Keyed by category: without a key a row's State is
+                  // matched by position, and a sheet opened from it would
+                  // write to whichever category a sync moved there.
+                  BudgetCategoryRow(
+                    key: ValueKey(groupVM.categories[i].category.id),
+                    viewModel: groupVM.categories[i],
+                  ),
                 );
               }
 
@@ -191,62 +197,45 @@ class BudgetListHeader extends StatelessWidget {
       letterSpacing: 0.5,
     );
 
+    Widget label(String text, String tooltip, {bool right = true}) => Tooltip(
+      message: tooltip,
+      child: Text(
+        text.toUpperCase(),
+        textAlign: right ? TextAlign.right : TextAlign.start,
+        style: labelStyle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+    final l10n = AppLocalizations.of(context)!;
+    final category = label(l10n.category, l10n.categoryTooltip, right: false);
+    final budgeted = label(l10n.budgeted, l10n.budgetedTooltip);
+    final activity = label(l10n.activity, l10n.activityTooltip);
+    final available = label(l10n.available, l10n.availableTooltip);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(32.0, 6.0, 32.0, 4.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Tooltip(
-              message: AppLocalizations.of(context)!.categoryTooltip,
-              child: Text(
-                AppLocalizations.of(context)!.category.toUpperCase(),
-                style: labelStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      // Same columns as BudgetCategoryRow: on a phone the three amounts in
+      // equal columns (the name has its own line there), else 3:2:2:2.
+      child: LayoutBuilder(
+        builder: (context, constraints) =>
+            budgetRowIsCompact(constraints.maxWidth)
+            ? Row(
+                children: [
+                  Expanded(child: budgeted),
+                  const SizedBox(width: 4),
+                  Expanded(child: activity),
+                  Expanded(child: available),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(flex: 3, child: category),
+                  Expanded(flex: 2, child: budgeted),
+                  Expanded(flex: 2, child: activity),
+                  Expanded(flex: 2, child: available),
+                ],
               ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Tooltip(
-              message: AppLocalizations.of(context)!.budgetedTooltip,
-              child: Text(
-                AppLocalizations.of(context)!.budgeted.toUpperCase(),
-                textAlign: TextAlign.right,
-                style: labelStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Tooltip(
-              message: AppLocalizations.of(context)!.activityTooltip,
-              child: Text(
-                AppLocalizations.of(context)!.activity.toUpperCase(),
-                textAlign: TextAlign.right,
-                style: labelStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Tooltip(
-              message: AppLocalizations.of(context)!.availableTooltip,
-              child: Text(
-                AppLocalizations.of(context)!.available.toUpperCase(),
-                textAlign: TextAlign.right,
-                style: labelStyle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -280,79 +269,85 @@ class BudgetSummaryFooter extends ConsumerWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.functions_rounded,
-                      size: 18,
-                      color: scheme.primary,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final title = Row(
+                children: [
+                  Icon(
+                    Icons.functions_rounded,
+                    size: 18,
+                    color: scheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!.total.toUpperCase(),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        AppLocalizations.of(context)!.total.toUpperCase(),
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.3,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              );
+              Widget amount(int value, FontWeight weight, Color? color) =>
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      fmt.formatMoney(value),
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: weight,
+                        color: color,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
+                  );
+              final budgeted = amount(totalBudgeted, FontWeight.w700, null);
+              final activity = amount(
+                totalActivity,
+                FontWeight.w600,
+                scheme.onSurfaceVariant,
+              );
+              final available = amount(
+                totalAvailable,
+                FontWeight.w800,
+                totalAvailable < 0 ? scheme.error : scheme.primary,
+              );
+              // Same columns as BudgetCategoryRow.
+              if (budgetRowIsCompact(constraints.maxWidth)) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    title,
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: budgeted),
+                        const SizedBox(width: 4),
+                        Expanded(child: activity),
+                        const SizedBox(width: 4),
+                        Expanded(child: available),
+                      ],
+                    ),
                   ],
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    fmt.formatMoney(totalBudgeted),
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                flex: 2,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    fmt.formatMoney(totalActivity),
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                flex: 2,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    fmt.formatMoney(totalAvailable),
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: totalAvailable < 0 ? scheme.error : scheme.primary,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(flex: 3, child: title),
+                  Expanded(flex: 2, child: budgeted),
+                  const SizedBox(width: 4),
+                  Expanded(flex: 2, child: activity),
+                  const SizedBox(width: 4),
+                  Expanded(flex: 2, child: available),
+                ],
+              );
+            },
           ),
         ),
       ),

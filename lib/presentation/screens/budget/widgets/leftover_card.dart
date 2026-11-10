@@ -5,6 +5,7 @@ import 'package:ledger_zero/core/constants/deterministic_id.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/undo/budget_undo_actions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -72,8 +73,17 @@ class _LeftoverCardState extends ConsumerState<LeftoverCard> {
       return;
     }
     final budgeting = ref.read(budgetingServiceProvider);
+    final undoService = ref.read(undoServiceProvider);
+    final action = BudgetAddAction(
+      budgetingService: budgeting,
+      categoryId: category.id,
+      month: month,
+      amount: amount,
+    );
     try {
-      await budgeting.addToCategoryBudget(category.id, amount, month);
+      await action.redo();
+      // On the undo stack like every other budget change.
+      undoService.addAction(action);
       // Handled: the card must not come back with the same offer after
       // the next edit (e.g. income arriving keeps the leftover unassigned
       // in To Be Budgeted's eyes).
@@ -87,12 +97,13 @@ class _LeftoverCardState extends ConsumerState<LeftoverCard> {
             label: l10n.undo,
             onPressed: () async {
               try {
-                await budgeting.addToCategoryBudget(
-                  category.id,
-                  -amount,
-                  month,
-                );
-                await _setHandled(month, false);
+                final before = undoService.undoCount;
+                await undoService.undo(action);
+                // Only when it was really undone (the action is dropped
+                // from the stack when sync or a delete cleared it).
+                if (undoService.undoCount < before) {
+                  await _setHandled(month, false);
+                }
               } catch (e, stack) {
                 Logger.error('Undoing the leftover failed', e, stack);
                 messenger.showSnackBar(
