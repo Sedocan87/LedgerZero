@@ -20,6 +20,7 @@ import 'package:ledger_zero/presentation/widgets/common/unsaved_changes_guard.da
 import 'package:ledger_zero/presentation/widgets/recurrence/recurrence_selector.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
+import 'package:ledger_zero/presentation/widgets/common/segment_label.dart';
 
 /// Keys of the picker fields (for tests).
 const scheduledAccountFieldKey = Key('scheduled_account_field');
@@ -287,12 +288,12 @@ class _AddEditScheduledTransactionScreenState
               segments: [
                 ButtonSegment(
                   value: false,
-                  label: Text(l10n.outflow),
+                  label: SegmentLabel(l10n.outflow),
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
                 ButtonSegment(
                   value: true,
-                  label: Text(l10n.inflow),
+                  label: SegmentLabel(l10n.inflow),
                   icon: const Icon(Icons.add_circle_outline),
                 ),
               ],

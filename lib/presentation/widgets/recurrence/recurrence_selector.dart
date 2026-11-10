@@ -7,6 +7,7 @@ import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/widgets/common/segment_label.dart';
 
 enum EndCondition { never, onDate, afterOccurrences }
 
@@ -115,22 +116,25 @@ class _RecurrenceSelectorState extends ConsumerState<RecurrenceSelector> {
         SizedBox(
           width: double.infinity,
           child: SegmentedButton<RecurrenceFrequency>(
+            // Four segments share the width: the fill already shows the
+            // choice, a check mark would squeeze the labels.
+            showSelectedIcon: false,
             segments: [
               ButtonSegment(
                 value: RecurrenceFrequency.daily,
-                label: Text(l10n.daily),
+                label: SegmentLabel(l10n.daily),
               ),
               ButtonSegment(
                 value: RecurrenceFrequency.weekly,
-                label: Text(l10n.weekly),
+                label: SegmentLabel(l10n.weekly),
               ),
               ButtonSegment(
                 value: RecurrenceFrequency.monthly,
-                label: Text(l10n.monthly),
+                label: SegmentLabel(l10n.monthly),
               ),
               ButtonSegment(
                 value: RecurrenceFrequency.yearly,
-                label: Text(l10n.yearly),
+                label: SegmentLabel(l10n.yearly),
               ),
             ],
             selected: {frequency},

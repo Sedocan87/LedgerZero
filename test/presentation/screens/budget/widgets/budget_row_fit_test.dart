@@ -5,11 +5,9 @@
 // loads Inter (the app's font, bundled under assets/fonts/Inter) and lays
 // the one-line rows out at common phone widths: 360 dp, 392 dp (the
 // owner's POCO F3) and 412 dp.
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/app/theme.dart';
@@ -26,21 +24,8 @@ import 'package:ledger_zero/presentation/screens/budget/widgets/salary_prompt.da
 import 'package:ledger_zero/presentation/screens/budget/widgets/to_be_budgeted_banner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/real_fonts.dart';
 import '../../../../helpers/test_database.dart';
-
-Future<void> loadInter() async {
-  Future<ByteData> font(String name) async {
-    final bytes = await File('assets/fonts/Inter/$name').readAsBytes();
-    return ByteData.view(bytes.buffer);
-  }
-
-  final loader = FontLoader(AppTextStyles.fontFamily)
-    ..addFont(font('Inter-Regular.ttf'))
-    ..addFont(font('Inter-Medium.ttf'))
-    ..addFont(font('Inter-SemiBold.ttf'))
-    ..addFont(font('Inter-Bold.ttf'));
-  await loader.load();
-}
 
 void main() {
   setUpAll(loadInter);

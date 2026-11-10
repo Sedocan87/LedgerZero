@@ -20,6 +20,7 @@ import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transaction_tutorial_manager.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_button.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_text_field.dart';
+import 'package:ledger_zero/presentation/widgets/common/segment_label.dart';
 
 /// The fields of the add/edit transaction form.
 class TransactionFormBody extends ConsumerWidget {
@@ -76,17 +77,17 @@ class TransactionFormBody extends ConsumerWidget {
               segments: [
                 ButtonSegment(
                   value: TransactionFormType.expense,
-                  label: Text(l10n.outflow),
+                  label: SegmentLabel(l10n.outflow),
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
                 ButtonSegment(
                   value: TransactionFormType.income,
-                  label: Text(l10n.inflow),
+                  label: SegmentLabel(l10n.inflow),
                   icon: const Icon(Icons.add_circle_outline),
                 ),
                 ButtonSegment(
                   value: TransactionFormType.transfer,
-                  label: Text(l10n.transfer),
+                  label: SegmentLabel(l10n.transfer),
                   icon: const Icon(Icons.swap_horiz),
                 ),
               ],
