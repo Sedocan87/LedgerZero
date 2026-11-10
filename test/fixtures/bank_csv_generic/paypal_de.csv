@@ -1,0 +1,4 @@
+"Datum","Uhrzeit","Zeitzone","Beschreibung","Währung","Brutto","Entgelt","Netto","Guthaben","Transaktionscode","Absender E-Mail-Adresse","Name","Name der Bank","Bankkonto","Versandkosten und Bearbeitungsgebühr","Versicherungsbetrag","Umsatzsteuer","Rechnungsnummer"
+"17.10.2026","09:12:33","Europe/Berlin","Zahlung im Einzugsverfahren mit Zahlungsrechnung","EUR","-12,99","0,00","-12,99","0,00","1AB23456CD789012E","max@example.com","Spotify AB","","","0,00","","0,00",""
+"15.10.2026","14:00:05","Europe/Berlin","Allgemeine Zahlung","EUR","50,00","-1,60","48,40","48,40","2BC34567DE890123F","erika@example.com","Erika Musterfrau","","","0,00","","0,00","R-1001"
+"14.10.2026","08:30:00","Europe/Berlin","Website-Zahlung","EUR","-39,90","0,00","-39,90","8,50","3CD45678EF901234G","shop@example.com","Buchhandlung Beispiel","","","4,90","","6,37","B-77"

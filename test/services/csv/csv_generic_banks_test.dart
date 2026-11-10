@@ -76,6 +76,109 @@ void main() {
     ]);
   });
 
+  test('Commerzbank: the own account number is not the payee of inflows '
+      '(F10)', () async {
+    final result = await _import('commerzbank.csv');
+    expect(result.mapping[CsvField.payee], 'Buchungstext');
+    expect(result.mapping[CsvField.inflowPayee], isNull);
+    expect(result.mapping[CsvField.amount], 'Betrag');
+    expect(result.validation.isValid, isTrue);
+    expect(result.rows.map((r) => r.amount), [-8000, 250000, -2345]);
+    expect(result.rows.map((r) => r.payeeName), [
+      'Stadtwerke Köln Abschlag Strom',
+      'Beispiel AG Gehalt 10/2026',
+      'REWE Markt GmbH Köln',
+    ]);
+  });
+
+  test('Consorsbank: the name column beats "Buchungstext" as the payee '
+      '(F10)', () async {
+    final result = await _import('consorsbank.csv');
+    expect(result.mapping[CsvField.payee], 'Sender / Empfänger');
+    expect(result.mapping[CsvField.memo], 'Verwendungszweck');
+    expect(result.mapping[CsvField.amount], 'Betrag in EUR');
+    expect(result.mapping[CsvField.date], 'Buchung');
+    expect(result.validation.isValid, isTrue);
+    expect(result.rows.map((r) => r.amount), [-8000, 250000, -450]);
+    expect(result.rows.map((r) => r.payeeName), [
+      'Stadtwerke München',
+      'Beispiel AG',
+      'Bäckerei Schmidt',
+    ]);
+  });
+
+  test('PayPal (German): the amount is "Netto", not "Versicherungsbetrag" '
+      'or "Umsatzsteuer" (F10)', () async {
+    final result = await _import('paypal_de.csv');
+    expect(result.mapping[CsvField.amount], 'Netto');
+    expect(result.mapping[CsvField.payee], 'Name');
+    expect(result.mapping[CsvField.date], 'Datum');
+    expect(result.validation.isValid, isTrue);
+    expect(result.validation.warnings, isEmpty);
+    expect(result.rows.map((r) => r.amount), [-1299, 4840, -3990]);
+    expect(result.rows.map((r) => r.payeeName), [
+      'Spotify AB',
+      'Erika Musterfrau',
+      'Buchhandlung Beispiel',
+    ]);
+  });
+
+  test('Amex Germany: "Beschreibung" is the payee, "Konto #" is not an '
+      'account name, and the positive charges are flagged (F10)', () async {
+    final result = await _import('amex_de.csv');
+    expect(result.mapping[CsvField.payee], 'Beschreibung');
+    expect(result.mapping[CsvField.account], isNull);
+    expect(result.mapping[CsvField.amount], 'Betrag');
+    expect(
+      result.validation.warnings.map((w) => w.kind),
+      contains(CsvIssueKind.allInflows),
+    );
+    final flipped = await _import('amex_de.csv', outflowIsNegative: false);
+    expect(flipped.validation.warnings, isEmpty);
+    expect(flipped.rows.map((r) => r.amount), [-2345, -4990, -1999]);
+    expect(flipped.rows.first.payeeName, 'REWE MARKT GMBH KOELN');
+  });
+
+  test('compound headers that merely contain an amount keyword are not '
+      'the amount', () {
+    for (final header in [
+      'Versicherungsbetrag',
+      'Umsatzsteuer',
+      'Steuerbetrag',
+      'Versandkosten',
+      'Gebührenbetrag',
+    ]) {
+      final mapping = CsvImportService.autoMapColumns(['Datum', header]);
+      expect(mapping[CsvField.amount], isNull, reason: header);
+    }
+    // A compound that is an amount still matches.
+    expect(
+      CsvImportService.autoMapColumns([
+        'Datum',
+        'Buchungsbetrag',
+      ])[CsvField.amount],
+      'Buchungsbetrag',
+    );
+  });
+
+  test('an empty sender cell keeps the payee of the row (F10)', () {
+    final data = _service.parseCsvContent(
+      'Datum;Empfänger;Zahlungspflichtige*r;Betrag\n'
+      '01.10.2026;Erstattung Versand;;12,00\n'
+      '02.10.2026;Mein Konto;Beispiel AG;2500,00\n',
+    );
+    final mapping = CsvImportService.autoMapColumns(data.headers);
+    expect(mapping[CsvField.inflowPayee], 'Zahlungspflichtige*r');
+    final rows = _service.convertCsvToTransactions(
+      data: data,
+      columnMapping: mapping,
+      dateFormat: 'dd.MM.yyyy',
+      decimalSeparator: ',',
+      outflowIsNegative: true,
+    );
+    expect(rows.map((r) => r.payeeName), ['Beispiel AG', 'Erstattung Versand']);
+  });
+
   group('debit/credit pairs', () {
     for (final (debit, credit) in [
       ('Soll', 'Haben'),

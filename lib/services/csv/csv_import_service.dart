@@ -167,6 +167,8 @@ const Map<String, List<String>> _headerKeywords = {
     'amount (eur)',
     'umsatz in eur',
     'umsatz',
+    'netto',
+    'brutto',
     'value',
     'summe',
   ],
@@ -208,10 +210,6 @@ const Map<String, List<String>> _headerKeywords = {
     'auftraggeber',
     'zahlungspflichtiger',
     'merchant',
-    'description',
-    'desc',
-    'buchungstext',
-    'name',
   ],
   CsvField.inflowPayee: ['zahlungspflichtige', 'auftraggeber', 'sender'],
   CsvField.memo: [
@@ -260,9 +258,41 @@ const Map<String, List<String>> _headerPenalties = {
   CsvField.inflowPayee: ['iban', 'bic'],
   CsvField.memo: ['mandatsreferenz', 'kundenreferenz', 'gläubiger'],
   CsvField.category: [],
-  CsvField.account: ['iban', 'number', 'nummer', 'nr'],
+  CsvField.account: ['iban', 'number', 'nummer', 'nr', '#'],
   CsvField.transfer: [],
   CsvField.cleared: [],
+};
+
+/// Keywords that only count when no header matches a keyword of
+/// [_headerKeywords] for the field: columns that hold the payee in files
+/// without a name column ("Description", Amex's "Beschreibung") but only
+/// the booking type ("Lastschrift") in files that have one (Consorsbank's
+/// "Sender / Empfänger" next to "Buchungstext").
+const Map<String, List<String>> _fallbackKeywords = {
+  CsvField.payee: [
+    'name',
+    'description',
+    'desc',
+    'beschreibung',
+    'buchungstext',
+  ],
+};
+
+/// Word parts that disqualify a header for a field wherever they occur in
+/// it: German compounds such as `Versicherungsbetrag`, `Umsatzsteuer` or
+/// `Auftraggeberkonto` contain a keyword of the field without being it.
+const Map<String, List<String>> _headerPenaltyParts = {
+  CsvField.amount: [
+    'versicherung',
+    'steuer',
+    'versand',
+    'gebühr',
+    'gebuehr',
+    'entgelt',
+    'trinkgeld',
+  ],
+  // The account (number) of the other party, not its name.
+  CsvField.payee: ['auftraggeberkonto', 'empfängerkonto', 'empfaengerkonto'],
 };
 
 /// Fields whose header must equal a keyword or contain it as a whole word
@@ -274,6 +304,8 @@ const Set<String> _wholeWordFields = {
   CsvField.debitCreditFlag,
   CsvField.debit,
   CsvField.credit,
+  // `Auftraggeberkonto` is the user's own account number, not a sender.
+  CsvField.inflowPayee,
 };
 
 class CsvImportService {
@@ -515,18 +547,18 @@ class CsvImportService {
   }
 
   /// The header of [headers] (not in [used]) that fits [field] best by
-  /// [_headerKeywords], or `null`: a header equal to a keyword beats one
-  /// containing it as a whole word, which beats a mere substring; among
-  /// equals the keyword listed first wins.
+  /// [_headerKeywords], else by [_fallbackKeywords], or `null`: a header
+  /// equal to a keyword beats one containing it as a whole word, which
+  /// beats a mere substring; among equals the keyword listed first wins.
   static String? _bestHeader(
     String field,
     List<String> headers,
     List<String> normalized,
     Set<String> used,
   ) {
-    String? best;
-    var bestScore = 0;
-    var bestKeyword = 1 << 20;
+    final penalties = _headerPenalties[field]!;
+    final penaltyParts = _headerPenaltyParts[field] ?? const <String>[];
+    final candidates = <int>[];
     for (var i = 0; i < headers.length; i++) {
       if (used.contains(headers[i])) {
         continue;
@@ -536,29 +568,44 @@ class CsvImportService {
           (h == 'amt' && field == CsvField.amount)) {
         return headers[i];
       }
-      if (_headerPenalties[field]!.any((p) => _containsWord(h, p))) {
+      if (penalties.any((p) => _containsWord(h, p)) ||
+          penaltyParts.any(h.contains)) {
         continue;
       }
-      final keywords = _headerKeywords[field]!;
-      for (var k = 0; k < keywords.length; k++) {
-        final keyword = keywords[k];
-        var score = 0;
-        if (h == keyword) {
-          score = 3;
-        } else if (_containsWord(h, keyword)) {
-          score = 2;
-        } else if (!_wholeWordFields.contains(field) && h.contains(keyword)) {
-          score = 1;
-        }
-        if (score > 0 &&
-            (score > bestScore || (score == bestScore && k < bestKeyword))) {
-          best = headers[i];
-          bestScore = score;
-          bestKeyword = k;
+      candidates.add(i);
+    }
+    for (final keywords in [
+      _headerKeywords[field]!,
+      _fallbackKeywords[field] ?? const <String>[],
+    ]) {
+      String? best;
+      var bestScore = 0;
+      var bestKeyword = 1 << 20;
+      for (final i in candidates) {
+        final h = normalized[i];
+        for (var k = 0; k < keywords.length; k++) {
+          final keyword = keywords[k];
+          var score = 0;
+          if (h == keyword) {
+            score = 3;
+          } else if (_containsWord(h, keyword)) {
+            score = 2;
+          } else if (!_wholeWordFields.contains(field) && h.contains(keyword)) {
+            score = 1;
+          }
+          if (score > 0 &&
+              (score > bestScore || (score == bestScore && k < bestKeyword))) {
+            best = headers[i];
+            bestScore = score;
+            bestKeyword = k;
+          }
         }
       }
+      if (best != null) {
+        return best;
+      }
     }
-    return best;
+    return null;
   }
 
   static final RegExp _wordChar = RegExp(r'[\p{L}\p{N}]', unicode: true);
@@ -810,7 +857,9 @@ class CsvImportService {
 
       var payeeName = columns.text(row, columns.payee);
       if (amount > 0 && columns.inflowPayee != -1) {
-        payeeName = columns.text(row, columns.inflowPayee) ?? payeeName;
+        // An empty sender cell is no sender: the row keeps its payee.
+        payeeName =
+            _nonEmpty(columns.text(row, columns.inflowPayee)) ?? payeeName;
       }
       if (payeeName != null && payeePattern != null) {
         final extracted = payeePattern.firstMatch(payeeName)?.group(1)?.trim();
