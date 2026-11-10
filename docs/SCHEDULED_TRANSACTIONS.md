@@ -16,7 +16,7 @@ are nullable):
 
 | Column | Meaning |
 | --- | --- |
-| `account_id`, `payee_id`, `category_id` | Copied to each occurrence. Schedules cannot be transfers or splits. |
+| `account_id`, `payee_id`, `category_id` | Copied to each occurrence. Schedules cannot be transfers or splits. An occurrence in an off-budget account gets no category (neither the schedule's nor one set by a rule), as a transaction saved there by hand. |
 | `amount` | Minor units, signed (negative = outflow). The form enters it like the transaction form: an Outflow \| Inflow choice (Outflow by default) and an unsigned amount; editing shows the stored side and the absolute amount. Never 0 or empty: the form and `ScheduledTransactionService.saveScheduledTransaction` reject it (`ValidationException`, `TransactionValidationError.zeroAmount`, as for transactions). The same validation rejects an end date before the next date (`scheduleEndBeforeNextDate`) and an interval below 1 (`scheduleInvalidInterval`); the form shows the message. |
 | `memo` | Copied to each occurrence. |
 | `frequency` | `daily`, `weekly`, `monthly`, `yearly` (default monthly). |

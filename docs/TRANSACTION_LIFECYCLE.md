@@ -178,8 +178,8 @@ A parent row plus child rows:
   category (e.g. "Activity" from the budget screen); a search still finds
   the split through its lines (memo, category, amount) and lists the
   parent;
-* bulk categorise skips split parents and transfer legs, except the
-  on-budget leg of a cross-budget transfer.
+* bulk categorise skips split parents, rows of off-budget accounts and
+  transfer legs, except the on-budget leg of a cross-budget transfer.
 
 ## Deletion
 

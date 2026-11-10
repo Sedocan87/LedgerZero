@@ -726,23 +726,30 @@ class TransactionService {
   /// Sets the category of the given rows. Split parents are skipped (their
   /// lines carry the categories), and so are transfer legs unless the
   /// transfer crosses the budget boundary and the row is its on-budget leg
-  /// (the leg that may carry a category, see [_transferCategory]).
+  /// (the leg that may carry a category, see [_transferCategory]), and rows
+  /// of off-budget accounts (a category there counts nowhere, as in
+  /// [save]).
   Future<TransactionChangeSetAction?> bulkCategorize(
     List<String> ids,
     String categoryId,
   ) async {
+    final accounts = <String, Account?>{};
+    Future<Account?> account(String id) async => accounts.containsKey(id)
+        ? accounts[id]
+        : accounts[id] = await _accountRepository.getAccountById(id);
     final eligible = <String>[];
     for (final id in ids) {
       final t = await _transactionRepository.getTransactionById(id);
       if (t == null) {
         continue;
       }
+      final from = await account(t.accountId);
+      if (from == null || !from.onBudget) {
+        continue;
+      }
       if (t.transferAccountId != null) {
-        final from = await _accountRepository.getAccountById(t.accountId);
-        final to = await _accountRepository.getAccountById(
-          t.transferAccountId!,
-        );
-        if (from == null || to == null || !from.onBudget || to.onBudget) {
+        final to = await account(t.transferAccountId!);
+        if (to == null || to.onBudget) {
           continue;
         }
       }

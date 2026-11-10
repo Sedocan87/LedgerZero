@@ -322,8 +322,10 @@ class ScheduledTransactionService {
     // A closed account (or the partner's) takes no bookings; the schedule
     // waits unchanged and is marked in the list.
     final accounts = _accountRepository;
+    var offBudget = false;
     if (accounts != null) {
       final account = await accounts.getAccountById(scheduled.accountId!);
+      offBudget = account != null && !account.onBudget;
       if (account == null || account.isClosed || account.isPartners) {
         Logger.warning(
           'Skipping scheduled transaction $scheduledId: its account is '
@@ -345,7 +347,12 @@ class ScheduledTransactionService {
         );
         break;
       }
-      final occurrence = await _buildOccurrence(current, rules, fallbackMemo);
+      final occurrence = await _buildOccurrence(
+        current,
+        rules,
+        fallbackMemo,
+        offBudget: offBudget,
+      );
       if (await _transactionRepository.insertGeneratedTransactionOrIgnore(
         occurrence,
       )) {
@@ -364,11 +371,16 @@ class ScheduledTransactionService {
     return (schedule: current, created: created);
   }
 
+  /// The transaction of the next occurrence of [schedule]. In an
+  /// [offBudget] account it gets no category (neither the schedule's nor a
+  /// rule's), as a transaction saved there by hand: off-budget money is not
+  /// budgeted, and a category there would count nowhere.
   Future<Transaction> _buildOccurrence(
     ScheduledTransaction schedule,
     List<Rule> rules,
-    String? fallbackMemo,
-  ) async {
+    String? fallbackMemo, {
+    bool offBudget = false,
+  }) async {
     // A schedule without an amount (written before validation existed, or
     // by another device) fails here; the schedule is rolled back and logged.
     validate(schedule);
@@ -400,6 +412,25 @@ class ScheduledTransactionService {
     final hasMemo = transaction.memo != null && transaction.memo!.isNotEmpty;
     if (!hasMemo && transaction.payeeId == null && fallbackMemo != null) {
       transaction = transaction.copyWith(memo: fallbackMemo);
+    }
+    if (offBudget && transaction.categoryId != null) {
+      final t = transaction;
+      transaction = Transaction(
+        id: t.id,
+        accountId: t.accountId,
+        date: t.date,
+        amount: t.amount,
+        payeeId: t.payeeId,
+        memo: t.memo,
+        cleared: t.cleared,
+        approved: t.approved,
+        isDeleted: t.isDeleted,
+        transferAccountId: t.transferAccountId,
+        transferTransactionId: t.transferTransactionId,
+        parentTransactionId: t.parentTransactionId,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      );
     }
     return transaction;
   }
