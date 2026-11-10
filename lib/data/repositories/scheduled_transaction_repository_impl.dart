@@ -7,6 +7,7 @@ import 'package:ledger_zero/data/database/database.dart' as db;
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/extensions/scheduled_transaction_extensions.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
+import 'package:ledger_zero/domain/services/schedule_stamps.dart';
 
 class ScheduledTransactionRepositoryImpl
     implements ScheduledTransactionRepository {
@@ -70,6 +71,35 @@ class ScheduledTransactionRepositoryImpl
     } catch (e, stack) {
       Logger.error('Failed to update scheduled transaction', e, stack);
       throw DatabaseException('Failed to update scheduled transaction', e);
+    }
+  }
+
+  @override
+  Future<void> storeCatchUp(
+    ScheduledTransaction transaction, {
+    required int occurrences,
+  }) async {
+    try {
+      await _dao.transaction(() async {
+        final row = await _dao.getScheduledTransactionById(transaction.id);
+        if (row == null) {
+          return;
+        }
+        final previous = row.updatedAt;
+        final companion = _mapToCompanion(transaction);
+        await _dao.updateScheduledTransaction(
+          previous == null
+              ? companion
+              : companion.copyWith(
+                  updatedAt: Value(
+                    ScheduleStamps.catchUp(previous, occurrences),
+                  ),
+                ),
+        );
+      });
+    } catch (e, stack) {
+      Logger.error('Failed to store the catch-up of a schedule', e, stack);
+      throw DatabaseException('Failed to store the catch-up of a schedule', e);
     }
   }
 

@@ -30,7 +30,12 @@ LedgerZero uses your Google Drive to synchronize data between devices.
 
 - **Sync Failed**: Check your internet connection and try "Sync Now".
 - **Storage Quota**: Ensure your Google Drive has free space.
-- **Multiple Accounts**: Ensure all devices use the same Google account.
+- **Multiple Accounts**: Ensure all devices use the same Google account. A
+  phone signed in to another account sees its own, empty `LedgerZero/Sync`
+  folder and is offered "Set a sync passphrase"; the app says there that
+  both phones need the same account. If you set a passphrase anyway, both
+  phones report successful syncs and never exchange anything: disconnect
+  the second phone and connect it with the first phone's account.
 
 ## Developer setup: Google Cloud (Android)
 

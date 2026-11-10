@@ -68,6 +68,20 @@ class LanSyncService {
   /// minus ours) as last measured; null before the first exchange.
   Duration? get peerClockSkew => _replicator?.lastPeerSkew;
   LanPairing? get pairing => _pairing;
+
+  /// When files were last exchanged with a paired phone (either side
+  /// started it); null before the first exchange.
+  DateTime? get lastPeerExchange {
+    DateTime? latest;
+    for (final peer in peers.all) {
+      final synced = peer.lastSync;
+      if (synced != null && (latest == null || synced.isAfter(latest))) {
+        latest = synced;
+      }
+    }
+    return latest;
+  }
+
   bool get isRunning => _server != null;
   int? get port => _server?.port;
 

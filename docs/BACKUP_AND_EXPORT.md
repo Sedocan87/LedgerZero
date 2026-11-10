@@ -67,7 +67,12 @@ backup on the phone without you doing anything:
   backup through the share sheet.
 * The password is stored in the phone's secure storage so the backups can
   run unattended. Turning the feature off forgets it; the files stay.
-* A successful automatic backup counts as a backup for the reminder.
+* An automatic backup does **not** count as a backup for the reminder
+  (section 6) or for the "Back up now" nudge shown while personal
+  accounts exist: the file is on the phone and is lost with it. Both keep
+  counting from the last backup that left the phone. (Earlier versions
+  recorded it as the last backup; such a stamp is dropped once after the
+  update.)
 
 **Restore an automatic backup** in the Restore section lists them newest
 first and then runs the normal restore (confirmation, password, warnings).
@@ -94,6 +99,13 @@ first and then runs the normal restore (confirmation, password, warnings).
    the app is killed in the middle, the next start finishes the restore.
 6. If you use sync, the device resynchronises after a restore: changes made
    on your other devices after the backup was created will sync back in.
+   So do this phone's own changes that were already synced: the sync
+   folder still has them, and they are applied again under the conflict
+   rule. A restore therefore brings back data that was lost; it does
+   **not** undo a mistake that has already synced (a deleted account, a
+   bad import), and there is no "replace the shared budget with this
+   backup". While a sync provider is set, the confirmation dialog says
+   so.
 
 **Merge transactions from a backup (date range)** copies the transactions of
 a date range — together with the other leg of a transfer and the parts of
@@ -166,9 +178,10 @@ You can export charts and reports as images or PDF documents.
 
 ## 6. Backup Reminder
 
-LedgerZero does not make backups by itself (Android does not let an app
-write to your file storage without interaction). It can remind you to make
-one.
+LedgerZero cannot put a backup somewhere safe by itself (Android does not
+let an app write to your file storage without interaction; the automatic
+backups of section 1b stay on the phone). It can remind you to make one
+that leaves the phone.
 
 ### Configure the reminder
 1. Navigate to **Settings > Backup & Export**.
@@ -178,4 +191,4 @@ one.
 
 The reminder notification prompts you to open the app and create a backup.
 It counts from the last backup that actually left the phone (shared or
-uploaded).
+uploaded), whether automatic backups are on or not.

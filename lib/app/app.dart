@@ -81,8 +81,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       // A payday or a new month may have come while the app was in the
       // background.
       if (ref.read(sessionProvider).isUnlocked) {
-        unawaited(_processDueSchedules());
-        unawaited(ref.read(newMonthFillProvider.notifier).runIfDue());
+        unawaited(_bookDueThenFill());
         unawaited(ref.read(autoBackupServiceProvider).runIfDue());
       }
     }
@@ -97,16 +96,52 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   Future<void> _processCapturedNotifications() =>
       ref.read(captureAttentionProvider.notifier).process();
 
-  /// Books the scheduled occurrences that are due by today.
-  Future<void> _processDueSchedules() async {
+  /// How long booking due schedules waits for the sync that is under way
+  /// (see [_afterSyncPull]). Offline nothing runs and nothing is waited
+  /// for; on a slow connection the schedules book after this at the
+  /// latest.
+  static const Duration _syncWait = Duration(seconds: 10);
+
+  /// Lets the sync that started with this session or this resume finish
+  /// first, so that the catch-up sees what the partner's phone already
+  /// booked, edited, deleted or skipped instead of booking the same
+  /// occurrences again from an older state. Returns at once when no sync
+  /// runs (none set up, manual, offline). The catch-up is also safe
+  /// without it (`ScheduleStamps`); this keeps it from writing rows only
+  /// to lose them.
+  Future<void> _afterSyncPull() async {
+    try {
+      await ref
+          .read(syncControllerProvider.notifier)
+          .syncSettled()
+          .timeout(_syncWait);
+    } catch (_) {
+      // Timed out: book with what this phone has.
+    }
+  }
+
+  /// After a resume: books the scheduled occurrences that are due by today,
+  /// then fills the new month. In this order, like at start-up: scheduled
+  /// income is booked before the fill looks at To Be Budgeted
+  /// (docs/BUDGET_INTERACTIONS.md).
+  Future<void> _bookDueThenFill() async {
+    await _afterSyncPull();
+    if (!mounted) {
+      return;
+    }
     try {
       await ref
           .read(scheduledTransactionServiceProvider)
           .processDueTransactions(fallbackMemo: _scheduledFallbackMemo());
+      await ref.read(newMonthFillProvider.notifier).runIfDue();
     } on DatabaseLockedException {
       // Closed meanwhile; runs again when it reopens.
     } catch (e, stackTrace) {
-      Logger.error('Booking due scheduled transactions failed', e, stackTrace);
+      Logger.error(
+        'Booking due schedules or filling the new month failed',
+        e,
+        stackTrace,
+      );
     }
   }
 
@@ -115,6 +150,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     unawaited(_processCapturedNotifications());
     final notifications = ref.read(notificationServiceProvider);
     await notifications.initialize();
+    // With sync, after the first pull of the session (see there).
+    await _afterSyncPull();
+    if (!mounted) {
+      return;
+    }
     try {
       final scheduled = ref.read(scheduledTransactionServiceProvider);
       await scheduled.processDueTransactions(

@@ -4920,4 +4920,48 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get syncIndicatorUpdateApp =>
+      'App aktualisieren: Ein anderes Gerät verwendet eine neuere Version';
+
+  @override
+  String get notificationSyncUpdateTitle =>
+      'LedgerZero aktualisieren, um weiter zu synchronisieren';
+
+  @override
+  String get notificationSyncUpdateBody =>
+      'Ein anderes Gerät verwendet eine neuere Version von LedgerZero. Dessen Änderungen kommen an, sobald Sie die App aktualisieren.';
+
+  @override
+  String get syncEmptyFolderSameAccountHint =>
+      'Synchronisiert bereits ein anderes Telefon? Dann legen Sie hier keine neue Passphrase fest. Dieser Sync-Ordner ist leer, weil dieses Telefon mit einem anderen Google-Konto angemeldet ist. Beide Telefone müssen dasselbe Google-Konto verwenden: Trennen Sie die Verbindung und verbinden Sie sich mit dem Konto des anderen Telefons.';
+
+  @override
+  String get restoreSyncNoRollbackNote =>
+      'Auf diesem Telefon ist die Synchronisierung eingerichtet: Eine Wiederherstellung macht bereits synchronisierte Änderungen nicht rückgängig, auch nicht die dieses Telefons. Sie kommen aus dem Sync-Ordner zurück. Eine Wiederherstellung bringt verlorene Daten zurück; sie setzt das gemeinsame Budget nicht auf einen früheren Stand zurück.';
+
+  @override
+  String get syncDisconnectConfirmTitle => 'Synchronisierung trennen?';
+
+  @override
+  String get syncDisconnectConfirmMessage =>
+      'Dieses Telefon synchronisiert nicht mehr und vergisst die Sync-Passphrase. Ihre Daten bleiben auf diesem Telefon und auf Ihren anderen Geräten. Um wieder zu synchronisieren, verbinden Sie sich und geben die Passphrase ein; Änderungen aus der Zwischenzeit werden dann gesendet.';
+
+  @override
+  String get lanTurnOffConfirmTitle => 'WLAN-Synchronisierung ausschalten?';
+
+  @override
+  String get lanTurnOffConfirmMessage =>
+      'Dieses Telefon synchronisiert nicht mehr und vergisst die Kopplung. Ihre Daten bleiben auf beiden Telefonen. Um wieder zu synchronisieren, müssen die Telefone mit einem neuen Code erneut gekoppelt werden.';
+
+  @override
+  String get syncProviderNoneConfirmTitle => 'Synchronisierung beenden?';
+
+  @override
+  String get syncProviderNoneConfirmMessage =>
+      'Dieses Telefon tauscht keine Änderungen mehr mit Ihren anderen Geräten aus, bis Sie den Speicherdienst wieder auswählen. Änderungen aus der Zwischenzeit werden dann gesendet.';
+
+  @override
+  String get syncStopAction => 'Synchronisierung beenden';
 }

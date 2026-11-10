@@ -44,8 +44,10 @@ class FakeEngine implements SyncEngine {
     if (e != null) {
       throw e;
     }
-    return const SyncRunReport(setup: SyncSetupStatus.ready);
+    return report;
   }
+
+  SyncRunReport report = const SyncRunReport(setup: SyncSetupStatus.ready);
 
   @override
   Future<SyncSetupStatus> setupStatus() async => SyncSetupStatus.ready;
@@ -336,6 +338,112 @@ void main() {
     },
   );
 
+  test('a run that outlives the controller does not touch its state', () async {
+    final c = controller(frequency: SyncFrequency.manual);
+    await c.onLockStateChanged(AppLockState.unlocked);
+    engine.gate = Completer<void>();
+    final run = c.syncNow();
+    await settle();
+    expect(engine.runs, 1);
+
+    c.dispose(); // cancels the run
+    engine.gate!.complete();
+    // Used to throw "Tried to use SyncController after dispose".
+    await run;
+  });
+
+  group('syncSettled (what booking due schedules waits for)', () {
+    Future<bool> settled(SyncController c) async {
+      var done = false;
+      unawaited(c.syncSettled().then((_) => done = true));
+      await settle(10);
+      return done;
+    }
+
+    test('waits for the first sync after the database opened', () async {
+      final c = controller();
+      expect(await settled(c), isFalse); // the session has not started
+      engine.gate = Completer<void>();
+      await c.onLockStateChanged(AppLockState.unlocked);
+      expect(await settled(c), isFalse);
+      expect(engine.runs, 1);
+
+      engine.gate!.complete();
+      expect(await settled(c), isTrue);
+    });
+
+    test('a failed first sync settles too', () async {
+      final c = controller();
+      engine.error = StateError('boom');
+      await c.onLockStateChanged(AppLockState.unlocked);
+      expect(await settled(c), isTrue);
+    });
+
+    test('offline, manual frequency or no provider: nothing to wait '
+        'for', () async {
+      connectivity.connected = false;
+      final offline = controller();
+      await offline.onLockStateChanged(AppLockState.unlocked);
+      expect(await settled(offline), isTrue);
+      expect(engine.runs, 0);
+
+      final manual = controller(frequency: SyncFrequency.manual);
+      await manual.onLockStateChanged(AppLockState.unlocked);
+      expect(await settled(manual), isTrue);
+
+      final none = controller(provider: 'none');
+      await none.onLockStateChanged(AppLockState.unlocked);
+      expect(await settled(none), isTrue);
+    });
+
+    test('afterwards it follows the run in progress (resume)', () async {
+      final c = controller();
+      await c.onLockStateChanged(AppLockState.unlocked);
+      expect(await settled(c), isTrue);
+
+      engine.gate = Completer<void>();
+      await settle(150); // past the resume threshold
+      c.onAppResumed();
+      expect(await settled(c), isFalse);
+      engine.gate!.complete();
+      expect(await settled(c), isTrue);
+    });
+
+    test('closing the database releases whoever waits; the next session '
+        'waits again', () async {
+      final c = controller();
+      engine.gate = Completer<void>();
+      await c.onLockStateChanged(AppLockState.unlocked);
+      var released = false;
+      unawaited(c.syncSettled().then((_) => released = true));
+      await c.onLockStateChanged(AppLockState.locked);
+      await settle(10);
+      expect(released, isTrue);
+      engine.gate!.complete();
+      await settle(10);
+      expect(await settled(c), isFalse);
+    });
+  });
+
+  test('a newer-schema file or snapshot met by the run is reported', () async {
+    final c = controller(frequency: SyncFrequency.manual);
+    await c.onLockStateChanged(AppLockState.unlocked);
+    await c.syncNow();
+    expect(c.state.newerSchemaPending, isFalse);
+
+    // A snapshot of a newer version leaves no quarantine entry.
+    engine.report = const SyncRunReport(
+      setup: SyncSetupStatus.ready,
+      newerSchemaPending: true,
+    );
+    await c.syncNow();
+    expect(c.state.newerSchemaPending, isTrue);
+
+    engine.report = const SyncRunReport(setup: SyncSetupStatus.ready);
+    await c.syncNow();
+    expect(c.state.newerSchemaPending, isFalse);
+  });
+
   test('a provider saved by an older version (iCloud) means no sync', () async {
     final c = controller(provider: 'iCloud');
     expect(c.state.selectedProvider, SyncProviderType.none);
@@ -397,6 +505,29 @@ void main() {
       expect(c.state.status, SyncStatus.connected);
       expect(c.state.setup, SyncSetupState.needsNewPassphrase);
       expect(engine.runs, 0);
+    });
+
+    test('"last sync" is the last exchange with a paired phone, not the '
+        'last run against the folder on this phone', () async {
+      engine = FakeEngine();
+      await lan.pair(LanPairing.generate());
+      final c = lanController();
+      await c.onLockStateChanged(AppLockState.unlocked);
+      await c.syncNow();
+      expect(engine.runs, greaterThan(0));
+      // The run succeeded, but nobody was reached.
+      expect(c.state.lastSyncTime, isNull);
+
+      final exchanged = DateTime(2031, 5, 4, 12);
+      await lan.peers.upsert(
+        LanPeer(
+          deviceId: '00000000-0000-4000-8000-000000000002',
+          name: 'Other',
+          lastSync: exchanged,
+        ),
+      );
+      await c.syncNow();
+      expect(c.state.lastSyncTime, exchanged);
     });
 
     test('joining with an invalid code or an unreachable phone', () async {

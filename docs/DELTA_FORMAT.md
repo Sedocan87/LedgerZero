@@ -62,7 +62,7 @@ authenticates header and body.
   "kind": "changes",            // or "snapshot"
   "device": "<deviceId>",
   "seq": 42,
-  "schema": 17,                 // AppDatabase.schemaVersion of the writer
+  "schema": 20,                 // SyncSchema.syncVersion of the writer
   "count": 3,                   // number of changes in the body
   "maxVersion": 1792137600000000,
   "vector": {"<deviceId>": 17}, // changes: writer's high-water marks;

@@ -12,6 +12,7 @@ class LanPeer {
     this.port,
     this.lastSeen,
     this.lastSync,
+    this.authVersion,
   });
 
   final String deviceId;
@@ -27,6 +28,10 @@ class LanPeer {
   /// Last successful exchange of files with it.
   final DateTime? lastSync;
 
+  /// The newest request scheme it said it understands (`LanAuth`), null
+  /// until an exchange told (a phone on an older app version: `v1`).
+  final int? authVersion;
+
   bool get hasAddress => host != null && port != null;
 
   LanPeer copyWith({
@@ -35,6 +40,7 @@ class LanPeer {
     int? port,
     DateTime? lastSeen,
     DateTime? lastSync,
+    int? authVersion,
   }) => LanPeer(
     deviceId: deviceId,
     name: name ?? this.name,
@@ -42,6 +48,7 @@ class LanPeer {
     port: port ?? this.port,
     lastSeen: lastSeen ?? this.lastSeen,
     lastSync: lastSync ?? this.lastSync,
+    authVersion: authVersion ?? this.authVersion,
   );
 
   Map<String, Object?> toJson() => {
@@ -51,6 +58,7 @@ class LanPeer {
     'p': port,
     's': lastSeen?.toIso8601String(),
     'y': lastSync?.toIso8601String(),
+    'a': authVersion,
   };
 
   factory LanPeer.fromJson(Map<String, Object?> json) => LanPeer(
@@ -60,6 +68,7 @@ class LanPeer {
     port: json['p'] as int?,
     lastSeen: DateTime.tryParse(json['s'] as String? ?? ''),
     lastSync: DateTime.tryParse(json['y'] as String? ?? ''),
+    authVersion: json['a'] as int?,
   );
 }
 
@@ -108,6 +117,7 @@ class LanPeers {
             port: peer.port,
             lastSeen: peer.lastSeen,
             lastSync: peer.lastSync,
+            authVersion: peer.authVersion,
           );
     await _save();
   }

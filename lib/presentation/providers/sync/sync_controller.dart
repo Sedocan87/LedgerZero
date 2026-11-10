@@ -17,6 +17,7 @@ import 'package:ledger_zero/services/sync/lan/lan_protocol.dart'
 import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
+import 'package:ledger_zero/services/sync/sync_local_state.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
 import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,8 +118,41 @@ class SyncController extends StateNotifier<SyncState> {
   int _lastPending = 0;
   ConnectionStatus? _lastConnection;
 
+  /// The last run met a file or snapshot of a newer app version.
+  bool _newerSchemaReported = false;
+
   /// Number of sync runs started (for tests and diagnostics).
   int runCount = 0;
+
+  /// Completed when the first automatic sync after the database opened has
+  /// ended or turned out not to run (see [syncSettled]); replaced when the
+  /// database closes.
+  Completer<void> _initialSync = Completer<void>();
+
+  /// Completes when the sync this phone is doing or about to do has ended:
+  /// the first automatic run after the database opened (also when it
+  /// failed, was skipped because the phone is offline or on mobile data
+  /// with "Wi-Fi only", or will not happen: no provider, manual
+  /// frequency), afterwards the run in progress, if any. Never fails.
+  ///
+  /// Work that writes rows the partner's phone writes too (booking due
+  /// scheduled transactions, the new-month fill) waits for this, with a
+  /// timeout, so it sees what the partner already did.
+  Future<void> syncSettled() {
+    if (!_initialSync.isCompleted) {
+      return _initialSync.future;
+    }
+    final running = _running;
+    return running == null
+        ? Future<void>.value()
+        : running.catchError((Object _) {});
+  }
+
+  void _settleInitialSync() {
+    if (!_initialSync.isCompleted) {
+      _initialSync.complete();
+    }
+  }
 
   SyncController({
     required this._authService,
@@ -162,7 +196,9 @@ class SyncController extends StateNotifier<SyncState> {
       orElse: () => SyncFrequency.realtime,
     );
     state = state.copyWith(
-      lastSyncTime: lastSync,
+      lastSyncTime: provider == SyncProviderType.localWifi
+          ? _lan?.lastPeerExchange
+          : lastSync,
       selectedProvider: provider,
       wifiOnly: _prefs.getBool(_syncWifiOnlyKey) ?? false,
       syncFrequency: frequency,
@@ -197,10 +233,33 @@ class SyncController extends StateNotifier<SyncState> {
       _deps = _dependencies();
     } catch (e) {
       Logger.warning('Sync: database not available: $e');
+      _settleInitialSync();
       return;
     }
     _unlocked = true;
     state = state.copyWith(paused: false);
+    // This session's: a run that outlives it must not settle the next one.
+    final session = _initialSync;
+    void settle() {
+      if (!session.isCompleted) {
+        session.complete();
+      }
+    }
+
+    if (!_automatic) {
+      settle(); // nothing will sync by itself: nobody has to wait
+    }
+    try {
+      await _startSession(settle);
+    } catch (_) {
+      settle();
+      rethrow;
+    }
+  }
+
+  /// Subscriptions, timers and the first automatic sync of a session;
+  /// [settle] is called when that sync has ended or does not run.
+  Future<void> _startSession(void Function() settle) async {
     if (!_legacyQueueRemoved) {
       _legacyQueueRemoved = true;
       unawaited(SyncOutbox.removeLegacyQueue());
@@ -211,14 +270,18 @@ class SyncController extends StateNotifier<SyncState> {
       onError: (Object e) => Logger.warning('Sync pending watch: $e'),
     );
     _conflictSub = deps.dao.watchConflicts().listen(
-      (c) => _set(state.copyWith(conflicts: [for (final r in c) _conflict(r)])),
+      (c) => _update(
+        (s) => s.copyWith(conflicts: [for (final r in c) _conflict(r)]),
+      ),
       onError: (Object e) => Logger.warning('Sync conflict watch: $e'),
     );
     _quarantineSub = deps.dao.watchQuarantine().listen(
-      (q) => _set(
-        state.copyWith(
+      (q) => _update(
+        (s) => s.copyWith(
           quarantine: [for (final r in q) _quarantined(r)],
-          newerSchemaPending: q.any((e) => e.reason == 'newer_schema'),
+          newerSchemaPending:
+              _newerSchemaReported ||
+              q.any((e) => e.reason == SyncEngine.reasonNewerSchema),
         ),
       ),
       onError: (Object e) => Logger.warning('Sync quarantine watch: $e'),
@@ -230,9 +293,14 @@ class SyncController extends StateNotifier<SyncState> {
     _restartPeriodic();
     await _refreshConnectionState();
     if (state.selectedProvider == SyncProviderType.none) {
-      await _discardCapturedChanges();
+      await _trimCapturedChanges();
     }
-    _requestAutoSync('unlock');
+    if (!_unlocked || !_automatic || _disposed || _pausedForRestore) {
+      settle();
+      return;
+    }
+    Logger.info('Sync requested (unlock)');
+    unawaited(_runSync(automatic: true).whenComplete(settle));
   }
 
   void _onLocked() {
@@ -240,13 +308,17 @@ class SyncController extends StateNotifier<SyncState> {
       return;
     }
     _unlocked = false;
+    // Nobody waits for a sync of a closed database; the next session
+    // starts with a new first sync.
+    _settleInitialSync();
+    _initialSync = Completer<void>();
     unawaited(_lan?.stop());
     _cancellation?.cancel();
     _stopTimersAndSubscriptions();
     _deps = null;
     _engine = null;
     _engineTransport = null;
-    _set(state.copyWith(paused: true));
+    _update((s) => s.copyWith(paused: true));
   }
 
   void _stopTimersAndSubscriptions() {
@@ -286,7 +358,7 @@ class SyncController extends StateNotifier<SyncState> {
   void _onPendingCount(int count) {
     final previous = _lastPending;
     _lastPending = count;
-    _set(state.copyWith(pendingChanges: count));
+    _update((s) => s.copyWith(pendingChanges: count));
     if (count > previous && count > 0 && _automatic && _unlocked) {
       _debounceTimer?.cancel();
       _debounceTimer = Timer(debounce, () => _requestAutoSync('changes'));
@@ -408,9 +480,10 @@ class SyncController extends StateNotifier<SyncState> {
       if (_disposed || !_unlocked) {
         return;
       }
+      final provider = state.selectedProvider;
       final cancellation = _cancellation = SyncCancellation();
       runCount++;
-      _set(state.copyWith(status: SyncStatus.syncing, clearError: true));
+      _update((s) => s.copyWith(status: SyncStatus.syncing, clearError: true));
       final report = await engine.sync(cancellation: cancellation);
       _retries = 0;
       final setup = switch (report.setup) {
@@ -418,11 +491,23 @@ class SyncController extends StateNotifier<SyncState> {
         SyncSetupStatus.needsPassphrase => SyncSetupState.needsPassphrase,
         SyncSetupStatus.ready => SyncSetupState.ready,
       };
-      _set(
-        state.copyWith(
+      _newerSchemaReported = report.newerSchemaPending;
+      // Wi-Fi sync runs against a folder on this phone, so a run succeeds
+      // with nobody reached: "last sync" is the last exchange with a
+      // paired phone instead.
+      final lastSync = report.setup != SyncSetupStatus.ready
+          ? null
+          : provider == SyncProviderType.localWifi
+          ? _lan?.lastPeerExchange
+          : _clock();
+      _update(
+        (s) => s.copyWith(
           status: SyncStatus.connected,
           setup: setup,
-          lastSyncTime: report.setup == SyncSetupStatus.ready ? _clock() : null,
+          lastSyncTime: lastSync,
+          newerSchemaPending:
+              report.newerSchemaPending ||
+              s.quarantine.any((q) => q.reason == SyncEngine.reasonNewerSchema),
           legacyFilesFound: report.legacyFilesFound,
           clockSkewSuspected: report.clockSkewSuspected,
           peerClockSkew: _lan?.peerClockSkew,
@@ -430,7 +515,7 @@ class SyncController extends StateNotifier<SyncState> {
         ),
       );
     } on SyncCancelledException {
-      _set(state.copyWith(status: SyncStatus.connected));
+      _update((s) => s.copyWith(status: SyncStatus.connected));
     } on DatabaseLockedException {
       // Closed while running (factory reset); resumes when it reopens.
     } catch (e, stack) {
@@ -438,8 +523,8 @@ class SyncController extends StateNotifier<SyncState> {
         return;
       }
       Logger.error('Sync failed', e, stack);
-      _set(
-        state.copyWith(
+      _update(
+        (s) => s.copyWith(
           status: SyncStatus.error,
           errorMessage: _describe(e),
           errorKind: e is SyncException ? e.kind : null,
@@ -495,9 +580,11 @@ class SyncController extends StateNotifier<SyncState> {
     return _engine;
   }
 
-  void _set(SyncState next) {
+  /// Applies [change] to the state unless the controller is disposed (a
+  /// run that outlives it must not touch `state`, which throws then).
+  void _update(SyncState Function(SyncState current) change) {
     if (!_disposed && mounted) {
-      state = next;
+      state = change(state);
     }
   }
 
@@ -515,17 +602,26 @@ class SyncController extends StateNotifier<SyncState> {
     }
     _engine = null;
     _engineTransport = null;
+    _newerSchemaReported = false;
     state = state.copyWith(
       selectedProvider: provider,
       status: SyncStatus.disconnected,
       setup: SyncSetupState.unknown,
       clearError: true,
       clearAccount: true,
+      // The other provider's last sync says nothing about this one.
+      lastSyncTime: provider == SyncProviderType.localWifi
+          ? _lan?.lastPeerExchange
+          : null,
+      clearLastSync: true,
     );
     if (provider == SyncProviderType.none) {
-      await _discardCapturedChanges();
+      await _trimCapturedChanges();
     } else {
       await _refreshConnectionState();
+      // What was captured while no provider was set goes out now, not at
+      // the next timer tick.
+      _requestAutoSync('provider');
     }
   }
 
@@ -548,8 +644,8 @@ class SyncController extends StateNotifier<SyncState> {
             await _authService.signInSilently();
           }
           if (await _authService.isSignedIn()) {
-            _set(
-              state.copyWith(
+            _update(
+              (s) => s.copyWith(
                 status: SyncStatus.connected,
                 accountEmail: _authService.currentUser?.email,
               ),
@@ -564,8 +660,8 @@ class SyncController extends StateNotifier<SyncState> {
       }
       await refreshSetup();
     } catch (e) {
-      _set(
-        state.copyWith(
+      _update(
+        (s) => s.copyWith(
           status: SyncStatus.error,
           errorMessage: _describe(e),
           errorKind: e is SyncException ? e.kind : null,
@@ -583,8 +679,8 @@ class SyncController extends StateNotifier<SyncState> {
         return;
       }
       final status = await engine.setupStatus();
-      _set(
-        state.copyWith(
+      _update(
+        (s) => s.copyWith(
           setup: switch (status) {
             SyncSetupStatus.noFolder => SyncSetupState.needsNewPassphrase,
             SyncSetupStatus.needsPassphrase => SyncSetupState.needsPassphrase,
@@ -621,8 +717,8 @@ class SyncController extends StateNotifier<SyncState> {
       }
       await refreshSetup();
     } catch (e) {
-      _set(
-        state.copyWith(
+      _update(
+        (s) => s.copyWith(
           status: SyncStatus.error,
           errorMessage: _describe(e),
           errorKind: e is SyncException ? e.kind : null,
@@ -648,17 +744,18 @@ class SyncController extends StateNotifier<SyncState> {
       await _prefs.remove(_syncProviderKey);
       _engine = null;
       _engineTransport = null;
-      await _discardCapturedChanges();
+      await _trimCapturedChanges();
       state = state.copyWith(
         status: SyncStatus.disconnected,
         selectedProvider: SyncProviderType.none,
         setup: SyncSetupState.unknown,
         clearAccount: true,
         clearError: true,
+        clearLastSync: true,
       );
     } catch (e) {
-      _set(
-        state.copyWith(
+      _update(
+        (s) => s.copyWith(
           status: SyncStatus.error,
           errorMessage: _describe(e),
           errorKind: e is SyncException ? e.kind : null,
@@ -668,13 +765,31 @@ class SyncController extends StateNotifier<SyncState> {
     }
   }
 
-  /// Without sync, captured changes are not needed: enabling sync uploads
-  /// every row. Keeps `pending_sync_changes` from growing forever.
-  Future<void> _discardCapturedChanges() async {
+  /// Keeps `pending_sync_changes` from growing while nothing syncs.
+  ///
+  /// A phone that never had a sync folder needs no captured changes:
+  /// setting sync up uploads every row. Once a folder knows this phone (a
+  /// sync id is stored; it survives Disconnect and provider "None"), the
+  /// captured changes are what the folder is missing, deletes included, so
+  /// they are kept and only squashed to the newest entry per row (all the
+  /// generator and the applier read).
+  Future<void> _trimCapturedChanges() async {
+    final dao = _deps?.dao;
+    if (dao == null) {
+      return;
+    }
     try {
-      await _deps?.dao.customStatement('DELETE FROM pending_sync_changes');
+      if (await SyncLocalState(dao).syncId() == null) {
+        await dao.customStatement('DELETE FROM pending_sync_changes');
+      } else {
+        await dao.customStatement(
+          'DELETE FROM pending_sync_changes WHERE id NOT IN '
+          '(SELECT MAX(id) FROM pending_sync_changes '
+          'GROUP BY table_name, record_id)',
+        );
+      }
     } catch (e) {
-      Logger.warning('Could not clear captured changes: $e');
+      Logger.warning('Could not trim captured changes: $e');
     }
   }
 
@@ -690,9 +805,9 @@ class SyncController extends StateNotifier<SyncState> {
       return false;
     }
     await lan.load();
-    _set(state.copyWith(status: SyncStatus.connected, clearError: true));
+    _update((s) => s.copyWith(status: SyncStatus.connected, clearError: true));
     if (!lan.isPaired) {
-      _set(state.copyWith(setup: SyncSetupState.needsNewPassphrase));
+      _update((s) => s.copyWith(setup: SyncSetupState.needsNewPassphrase));
       return false;
     }
     await _startLanIfPaired();
@@ -723,7 +838,7 @@ class SyncController extends StateNotifier<SyncState> {
       await lan.pair(pairing);
       await _startLanIfPaired();
       await engine.createSyncFolder(pairing.passphrase);
-      _set(state.copyWith(setup: SyncSetupState.ready, clearError: true));
+      _update((s) => s.copyWith(setup: SyncSetupState.ready, clearError: true));
       unawaited(syncNow());
       return LanSetupResult.ok;
     } catch (e, stack) {
@@ -753,7 +868,7 @@ class SyncController extends StateNotifier<SyncState> {
       await _startLanIfPaired();
       await lan.addPeerFromCode(code);
       await engine.joinSyncFolder(code.pairing.passphrase);
-      _set(state.copyWith(setup: SyncSetupState.ready, clearError: true));
+      _update((s) => s.copyWith(setup: SyncSetupState.ready, clearError: true));
       unawaited(syncNow());
       return LanSetupResult.ok;
     } on SyncFolderMissingException {
@@ -761,7 +876,7 @@ class SyncController extends StateNotifier<SyncState> {
       return LanSetupResult.phoneNotFound;
     } on LanClockSkewException catch (e) {
       Logger.warning('Joining Wi-Fi sync: clock skew ${e.skew.inMinutes} min');
-      _set(state.copyWith(peerClockSkew: e.skew));
+      _update((s) => s.copyWith(peerClockSkew: e.skew));
       await lan.unpair();
       return LanSetupResult.clockSkew;
     } catch (e, stack) {
@@ -799,21 +914,21 @@ class SyncController extends StateNotifier<SyncState> {
     }
     try {
       await action(engine);
-      _set(state.copyWith(setup: SyncSetupState.ready, clearError: true));
+      _update((s) => s.copyWith(setup: SyncSetupState.ready, clearError: true));
       unawaited(syncNow());
       return SyncPassphraseResult.ok;
     } on WrongSyncPassphraseException {
       return SyncPassphraseResult.wrongPassphrase;
     } on SyncFolderExistsException {
-      _set(state.copyWith(setup: SyncSetupState.needsPassphrase));
+      _update((s) => s.copyWith(setup: SyncSetupState.needsPassphrase));
       return SyncPassphraseResult.folderExists;
     } on SyncFolderMissingException {
-      _set(state.copyWith(setup: SyncSetupState.needsNewPassphrase));
+      _update((s) => s.copyWith(setup: SyncSetupState.needsNewPassphrase));
       return SyncPassphraseResult.failed;
     } catch (e, stack) {
       Logger.error('Sync passphrase setup failed', e, stack);
-      _set(
-        state.copyWith(
+      _update(
+        (s) => s.copyWith(
           errorMessage: _describe(e),
           errorKind: e is SyncException ? e.kind : null,
           clearError: e is! SyncException,
@@ -924,7 +1039,11 @@ class SyncController extends StateNotifier<SyncState> {
 
   @override
   void dispose() {
+    if (_disposed) {
+      return;
+    }
     _disposed = true;
+    _settleInitialSync();
     _cancellation?.cancel();
     _stopTimersAndSubscriptions();
     _authSub?.cancel();

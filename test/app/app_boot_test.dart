@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 // Boot smoke test of the whole app widget (MyApp): the first launch opens
 // the onboarding, a returning user the login screen. Router details are in
@@ -13,8 +14,15 @@ import 'package:ledger_zero/app/app.dart';
 import 'package:ledger_zero/core/config/app_config.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/presentation/providers/new_month_fill_provider.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
+import 'package:ledger_zero/domain/services/scheduled_transaction_service.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
+import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
+import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
+import 'package:ledger_zero/presentation/providers/sync_providers.dart';
+import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/screens/lock_screen.dart';
@@ -27,6 +35,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../helpers/security_fakes.dart';
+import '../presentation/providers/sync_controller_lifecycle_test.dart'
+    show DummyTransport, FakeAuth, FakeConnectivity, FakeEngine;
+
+/// Counts catch-up runs; books nothing.
+class _RecordingSchedules extends Fake implements ScheduledTransactionService {
+  int runs = 0;
+  int finished = 0;
+  Completer<void>? gate;
+
+  @override
+  Future<int> processDueTransactions({
+    String? fallbackMemo,
+    DateTime? today,
+  }) async {
+    runs++;
+    await gate?.future;
+    finished++;
+    return 0;
+  }
+
+  @override
+  Future<void> rescheduleReminders() async {}
+}
 
 /// Counts permission requests; shows nothing.
 class _CountingNotificationsClient implements LocalNotificationsClient {
@@ -65,6 +96,22 @@ class _CountingNotificationsClient implements LocalNotificationsClient {
 
   @override
   Future<void> requestPermissions() async => permissionRequests++;
+}
+
+/// Counts fill runs and whether every catch-up started so far had ended.
+class _RecordingFill extends NewMonthFillController {
+  _RecordingFill(SharedPreferences prefs, this._schedules)
+    : super(prefs, () => throw StateError('not used'));
+
+  final _RecordingSchedules _schedules;
+  int runs = 0;
+  final bookedBefore = <bool>[];
+
+  @override
+  Future<void> runIfDue() async {
+    runs++;
+    bookedBefore.add(_schedules.finished == _schedules.runs);
+  }
 }
 
 void main() {
@@ -196,6 +243,137 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(notifications.permissionRequests, 1);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('with sync, due schedules are booked after the first sync of '
+      'the session, not when the database opens', (tester) async {
+    final engine = FakeEngine()..gate = Completer<void>();
+    final schedules = _RecordingSchedules();
+    SharedPreferences.setMockInitialValues({
+      'user_onboarded': true,
+      kAppLockEnabledKey: true,
+      'sync_provider': 'googleDrive',
+    });
+    final sharedPreferences = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          secureStoreProvider.overrideWithValue(
+            InMemorySecureStore({
+              DeviceKeyStore.storageKey: base64Encode(Uint8List(32)),
+            }),
+          ),
+          appLockAuthenticatorProvider.overrideWithValue(
+            FakeAppLockAuthenticator(result: AppLockResult.cancelled),
+          ),
+          legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
+          biometricKeyStoreProvider.overrideWithValue(
+            FakeBiometricKeyStore(available: false),
+          ),
+          notificationServiceProvider.overrideWithValue(
+            NotificationService(client: notifications),
+          ),
+          scheduledTransactionServiceProvider.overrideWithValue(schedules),
+          syncControllerProvider.overrideWith((ref) {
+            final controller = SyncController(
+              authService: FakeAuth(),
+              prefs: sharedPreferences,
+              connectivity: FakeConnectivity(),
+              dependencies: () => SyncDependencies(
+                engineFor: (_) => engine,
+                dao: ref.read(databaseProvider).syncDao,
+                resolver: SyncConflictResolver(ref.read(databaseProvider)),
+              ),
+              transportFor: (p) =>
+                  p == SyncProviderType.none ? null : DummyTransport(),
+            );
+            ref.listen<AppLockState>(
+              appLockStateProvider,
+              (_, next) => controller.onLockStateChanged(next),
+              fireImmediately: true,
+            );
+            return controller;
+          }),
+        ],
+        child: const MyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+
+    // The database is open and the first sync is running: nothing booked.
+    expect(engine.runs, 1);
+    expect(schedules.runs, 0);
+
+    engine.gate!.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(schedules.runs, 1);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('on resume the new-month fill waits until the due schedules '
+      'are booked', (tester) async {
+    final schedules = _RecordingSchedules();
+    SharedPreferences.setMockInitialValues({
+      'user_onboarded': true,
+      kAppLockEnabledKey: true,
+    });
+    final sharedPreferences = await SharedPreferences.getInstance();
+    late _RecordingFill fill;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          secureStoreProvider.overrideWithValue(
+            InMemorySecureStore({
+              DeviceKeyStore.storageKey: base64Encode(Uint8List(32)),
+            }),
+          ),
+          appLockAuthenticatorProvider.overrideWithValue(
+            FakeAppLockAuthenticator(result: AppLockResult.cancelled),
+          ),
+          legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
+          biometricKeyStoreProvider.overrideWithValue(
+            FakeBiometricKeyStore(available: false),
+          ),
+          notificationServiceProvider.overrideWithValue(
+            NotificationService(client: notifications),
+          ),
+          scheduledTransactionServiceProvider.overrideWithValue(schedules),
+          newMonthFillProvider.overrideWith(
+            (ref) => fill = _RecordingFill(sharedPreferences, schedules),
+          ),
+        ],
+        child: const MyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+    final runsAtStart = schedules.runs;
+    final fillsAtStart = fill.runs;
+
+    // A payday and a new month came while the app was in the background:
+    // the income has to be booked before the fill looks at the money.
+    schedules.gate = Completer<void>();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(schedules.runs, runsAtStart + 1);
+    expect(fill.runs, fillsAtStart);
+
+    schedules.gate!.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(fill.runs, fillsAtStart + 1);
+    expect(fill.bookedBefore.last, isTrue);
+
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(minutes: 1));
   });

@@ -239,11 +239,10 @@ class AppDatabase extends _$AppDatabase {
   ///
   /// They are created idempotently on every open (`IF NOT EXISTS`), for new
   /// and existing databases alike, so adding one needs no schema version
-  /// bump: the schema version is written into every sync change file and a
-  /// phone quarantines files of a newer schema until it is updated, which
-  /// would force both phones of a household to update in lock-step for a
-  /// change that does not touch the data. An index never changes what is
-  /// stored or synced.
+  /// bump and no migration: an index never changes what is stored or
+  /// synced. (Sync does not compare the database schema version: change
+  /// files carry `SyncSchema.syncVersion`, which only changes with the
+  /// synced tables.)
   ///
   /// * [splitParentIndex]: split children by parent. Used by the split
   ///   parent checks (`TransactionsDao.splitParentCondition`, correlated in
@@ -638,6 +637,22 @@ class AppDatabase extends _$AppDatabase {
       ''');
     }
   }
+
+  /// Brings `shared_balance` of this member's personal accounts back in
+  /// line with their transactions. The triggers above are off while a
+  /// change file is applied, so an account row replaced by sync (after a
+  /// restore, this phone's own newer row from the folder) carries the
+  /// balance of the moment it was written, not of the transactions that
+  /// are here now. A corrected row is a local edit (new `updated_at`,
+  /// captured), so the partner gets it. Returns the number of corrected
+  /// accounts.
+  Future<int> refreshPersonalBalances() => customUpdate(
+    'UPDATE accounts SET shared_balance = $_ownBalanceSql '
+    'WHERE owner_id = $localMemberSql '
+    'AND shared_balance IS NOT ($_ownBalanceSql)',
+    updates: {accounts},
+    updateKind: UpdateKind.update,
+  );
 
   /// Whether this connection runs on SQLCipher. True means the library can
   /// encrypt; whether the file actually is encrypted is checked by

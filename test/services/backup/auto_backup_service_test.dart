@@ -83,8 +83,8 @@ void main() {
     expect(await auto.listBackups(), isEmpty);
   });
 
-  test('enable stores the password, writes a backup that opens with it and '
-      'records the backup for the reminder', () async {
+  test('enable stores the password and writes a backup that opens with it; '
+      'the off-phone backup reminder keeps counting', () async {
     await t.addAccount(id: 'a1', name: 'Household Checking');
     final auto = service();
 
@@ -99,7 +99,9 @@ void main() {
     expect(p.dirname(file.path), p.join(dir.path, 'backups'));
     expect(auto.lastSuccess, now);
     expect(auto.lastError, isNull);
-    expect(prefs.getInt('last_backup_timestamp'), isNotNull);
+    // The file is on the phone: it is not "the last backup that left the
+    // phone", which the reminder and the personal-accounts nudge read.
+    expect(prefs.getInt('last_backup_timestamp'), isNull);
     // No plaintext snapshot is left behind.
     expect(
       Directory(

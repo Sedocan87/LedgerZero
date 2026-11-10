@@ -7863,6 +7863,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 item needs your attention} other{{count} items need your attention}}'**
   String cardNotificationsAttentionBadge(int count);
+
+  /// Home sync card: attention line part shown while change files of a newer app version are waiting
+  ///
+  /// In en, this message translates to:
+  /// **'Update the app: another device uses a newer version'**
+  String get syncIndicatorUpdateApp;
+
+  /// Notification title: another device runs a newer app version
+  ///
+  /// In en, this message translates to:
+  /// **'Update LedgerZero to keep syncing'**
+  String get notificationSyncUpdateTitle;
+
+  /// Notification body (no financial data)
+  ///
+  /// In en, this message translates to:
+  /// **'Another device uses a newer version of LedgerZero. Its changes arrive after you update the app.'**
+  String get notificationSyncUpdateBody;
+
+  /// Sync settings, Google Drive: shown with 'Set a sync passphrase' when the folder is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Is another phone already syncing? Then do not set a new passphrase here. This sync folder is empty because this phone is signed in to a different Google account. Both phones must use the same Google account: disconnect and connect with the account of the other phone.'**
+  String get syncEmptyFolderSameAccountHint;
+
+  /// Second paragraph of the restore confirmation while sync is set up
+  ///
+  /// In en, this message translates to:
+  /// **'Sync is set up on this phone: a restore does not undo changes that were already synced, including this phone’s own. They come back from the sync folder. A restore brings back data that was lost; it does not put the shared budget back to an earlier state.'**
+  String get restoreSyncNoRollbackNote;
+
+  /// Confirmation dialog title before Disconnect (Google Drive)
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect sync?'**
+  String get syncDisconnectConfirmTitle;
+
+  /// Confirmation dialog text before Disconnect (Google Drive)
+  ///
+  /// In en, this message translates to:
+  /// **'This phone stops syncing and forgets the sync passphrase. Your data stays on this phone and on your other devices. To sync again, connect and enter the passphrase; changes made in the meantime are sent then.'**
+  String get syncDisconnectConfirmMessage;
+
+  /// Confirmation dialog title before turning Wi-Fi sync off
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off Wi-Fi sync?'**
+  String get lanTurnOffConfirmTitle;
+
+  /// Confirmation dialog text before turning Wi-Fi sync off
+  ///
+  /// In en, this message translates to:
+  /// **'This phone stops syncing and forgets the pairing. Your data stays on both phones. To sync again, the phones have to be paired again with a new code.'**
+  String get lanTurnOffConfirmMessage;
+
+  /// Confirmation dialog title before the sync provider is set to None
+  ///
+  /// In en, this message translates to:
+  /// **'Stop syncing?'**
+  String get syncProviderNoneConfirmTitle;
+
+  /// Confirmation dialog text before the sync provider is set to None
+  ///
+  /// In en, this message translates to:
+  /// **'This phone stops exchanging changes with your other devices until you choose the sync provider again. Changes made in the meantime are sent then.'**
+  String get syncProviderNoneConfirmMessage;
+
+  /// Confirmation dialog button: set the sync provider to None
+  ///
+  /// In en, this message translates to:
+  /// **'Stop syncing'**
+  String get syncStopAction;
 }
 
 class _AppLocalizationsDelegate

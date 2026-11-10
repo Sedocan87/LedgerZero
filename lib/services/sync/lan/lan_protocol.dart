@@ -21,6 +21,7 @@ class LanFolderState {
     required this.deleted,
     required this.manifestHash,
     this.time,
+    this.authVersion = 1,
   });
 
   final String deviceId;
@@ -36,8 +37,14 @@ class LanFolderState {
   /// Every sync file in its folder.
   final Set<String> files;
 
-  /// Its own files it deleted (compaction); the other side deletes them too.
+  /// Files it deleted on purpose and may delete on the other side too: its
+  /// own change files and snapshots (compaction) and snapshot requests it
+  /// is a party to (answered or no longer needed).
   final Set<String> deleted;
+
+  /// The newest request scheme it understands (`LanAuth.version`); 1 for a
+  /// phone on an app version that does not say.
+  final int authVersion;
 
   /// SHA-256 of its manifest, null without one.
   final String? manifestHash;
@@ -50,6 +57,7 @@ class LanFolderState {
     'x': deleted.toList(),
     'm': manifestHash,
     't': time?.toUtc().toIso8601String(),
+    'v': authVersion,
   };
 
   factory LanFolderState.fromJson(Map<String, Object?> json) => LanFolderState(
@@ -66,6 +74,7 @@ class LanFolderState {
     },
     manifestHash: json['m'] as String?,
     time: DateTime.tryParse(json['t'] as String? ?? '')?.toUtc(),
+    authVersion: json['v'] as int? ?? 1,
   );
 
   static Future<LanFolderState> of(
@@ -85,12 +94,13 @@ class LanFolderState {
       files: files,
       deleted: {
         for (final name in await folder.deleted())
-          if (_ownedBy(name, deviceId)) name,
+          if (_mayDelete(name, deviceId)) name,
       },
       manifestHash: manifest == null
           ? null
           : sha256.convert(manifest).toString(),
       time: DateTime.now().toUtc(),
+      authVersion: LanAuth.version,
     );
   }
 }
@@ -107,19 +117,37 @@ class LanClockSkewException implements Exception {
   String toString() => 'LanClockSkewException: ${skew.inMinutes} min';
 }
 
-bool _ownedBy(String name, String deviceId) =>
-    SyncFileName.tryParse(name)?.deviceId == deviceId;
+/// Whether [deviceId] may delete [name] in a paired phone's folder: its
+/// own change files and snapshots, and a snapshot request addressed to it
+/// (it answered) or written by it (it no longer needs the snapshot).
+bool _mayDelete(String name, String deviceId) {
+  if (SyncFileName.tryParse(name)?.deviceId == deviceId) {
+    return true;
+  }
+  final request = SyncFileName.tryParseRequest(name);
+  return request != null &&
+      (request.target == deviceId || request.requester == deviceId);
+}
 
-/// Applies the other phone's deletions of its own files to [folder].
+/// Applies the other phone's deletions to [folder], and forgets recorded
+/// deletions of snapshot requests the other phone no longer has. (A
+/// request has the same name every time, so a deletion remembered for
+/// good would also swallow the next request.)
 Future<void> _applyDeletions(
   LocalSyncFolder folder,
   LanFolderState other,
 ) async {
   for (final name in other.deleted) {
-    if (_ownedBy(name, other.deviceId)) {
+    if (_mayDelete(name, other.deviceId)) {
       await folder.delete(name);
     }
   }
+  await folder.forgetDeleted([
+    for (final name in await folder.deleted())
+      if (SyncFileName.tryParseRequest(name) != null &&
+          !other.files.contains(name))
+        name,
+  ]);
 }
 
 /// The phones were paired with different sync folders (different
@@ -141,6 +169,16 @@ class LanManifestMismatchException implements Exception {
 /// Every request must carry a valid [LanAuth] signature; anything else gets
 /// 401 without a body. Bodies are limited to [maxBody] bytes. Only sync
 /// file names are served or accepted.
+///
+/// The signature covers the body, so the body has to be read before it can
+/// be checked. To keep anyone on the network from filling the memory with
+/// unsigned bodies, a request is refused **before** its body is read when
+/// its auth header is not well-formed, when it declares more than
+/// [maxBody] bytes, or when it has a body above [smallBody] and a
+/// timestamp outside the window; at most [maxConnections] requests are
+/// handled at a time, at most [maxLargeBodies] of them with a body above
+/// [smallBody] (others get 503 and are retried by the next exchange), and
+/// a body must arrive within [bodyTimeout].
 class LanServer {
   LanServer({
     required this.folder,
@@ -168,6 +206,20 @@ class LanServer {
 
   static const int defaultPort = 47321;
   static const int maxBody = 64 * 1024 * 1024;
+
+  /// Requests handled at the same time.
+  static const int maxConnections = 8;
+
+  /// Bodies up to this size count as small (an exchange is a list of file
+  /// names).
+  static const int smallBody = 1024 * 1024;
+
+  /// Requests with a larger (or undeclared) body handled at the same time.
+  static const int maxLargeBodies = 2;
+  static const Duration bodyTimeout = Duration(seconds: 60);
+
+  int _active = 0;
+  int _largeBodies = 0;
 
   /// On a 401 for clock skew: the server's time, seconds since the epoch.
   static const String timeHeader = 'x-lz-time';
@@ -201,8 +253,40 @@ class LanServer {
 
   Future<void> _handle(HttpRequest request) async {
     final response = request.response;
+    if (_active >= maxConnections) {
+      await _refuse(response, HttpStatus.serviceUnavailable);
+      return;
+    }
+    _active++;
+    var large = false;
     try {
-      final body = await _readBody(request);
+      // Everything up to here costs no memory: nothing of the body has
+      // been read yet.
+      final header = LanAuth.parse(request.headers.value(LanAuth.header));
+      if (header == null || header.deviceId == deviceId) {
+        await _refuse(response, HttpStatus.unauthorized);
+        return;
+      }
+      final length = request.contentLength;
+      if (length > maxBody) {
+        await _refuse(response, HttpStatus.requestEntityTooLarge);
+        return;
+      }
+      if (length < 0 || length > smallBody) {
+        // A paired phone whose clock is off learns so from its exchange
+        // (a small body), which always comes first.
+        if (!auth.inWindow(header.timestamp)) {
+          await _refuse(response, HttpStatus.unauthorized);
+          return;
+        }
+        if (_largeBodies >= maxLargeBodies) {
+          await _refuse(response, HttpStatus.serviceUnavailable);
+          return;
+        }
+        _largeBodies++;
+        large = true;
+      }
+      final body = await _readBody(request).timeout(bodyTimeout);
       if (body == null) {
         response.statusCode = HttpStatus.requestEntityTooLarge;
         await response.close();
@@ -214,6 +298,7 @@ class LanServer {
         method: request.method,
         path: path,
         body: body,
+        self: deviceId,
       );
       if (check is LanAuthSkewed && check.deviceId != deviceId) {
         // A paired phone with a wrong clock: tell it the time here, signed,
@@ -254,6 +339,27 @@ class LanServer {
       } catch (_) {
         // Connection already gone.
       }
+    } finally {
+      _active--;
+      if (large) {
+        _largeBodies--;
+      }
+    }
+  }
+
+  /// Answers [status] without reading the request body and drops the
+  /// connection (the server would otherwise keep it open to receive a body
+  /// nobody wants).
+  static Future<void> _refuse(HttpResponse response, int status) async {
+    try {
+      response.statusCode = status;
+      response.contentLength = 0;
+      final socket = await response.detachSocket();
+      await socket.flush();
+      await socket.close();
+      socket.destroy();
+    } catch (_) {
+      // Connection already gone.
     }
   }
 
@@ -282,6 +388,7 @@ class LanServer {
           port: other.port,
           lastSeen: now,
           lastSync: now,
+          authVersion: other.authVersion,
         ),
       );
       final mine = await LanFolderState.of(
@@ -337,12 +444,20 @@ class LanClient {
   static const Duration connectTimeout = Duration(seconds: 3);
   static const Duration requestTimeout = Duration(seconds: 60);
 
-  Future<LanFolderState> exchange(LanEndpoint to, LanFolderState mine) async {
+  /// [recipient] in all requests: the device id of the phone at the
+  /// endpoint when it understands requests that name their recipient
+  /// (`LanPeer.authVersion` 2), else null (see [LanAuth]).
+  Future<LanFolderState> exchange(
+    LanEndpoint to,
+    LanFolderState mine, {
+    String? recipient,
+  }) async {
     final (status, body) = await _send(
       to,
       'POST',
       '/v1/exchange',
       utf8.encode(jsonEncode(mine.toJson())),
+      recipient: recipient,
     );
     if (status != HttpStatus.ok) {
       throw HttpException('exchange: $status');
@@ -352,12 +467,17 @@ class LanClient {
     );
   }
 
-  Future<Uint8List?> download(LanEndpoint from, String name) async {
+  Future<Uint8List?> download(
+    LanEndpoint from,
+    String name, {
+    String? recipient,
+  }) async {
     final (status, body) = await _send(
       from,
       'GET',
       '/v1/files/${Uri.encodeComponent(name)}',
       const [],
+      recipient: recipient,
     );
     if (status == HttpStatus.notFound) {
       return null;
@@ -368,12 +488,18 @@ class LanClient {
     return body;
   }
 
-  Future<void> upload(LanEndpoint to, String name, Uint8List bytes) async {
+  Future<void> upload(
+    LanEndpoint to,
+    String name,
+    Uint8List bytes, {
+    String? recipient,
+  }) async {
     final (status, _) = await _send(
       to,
       'PUT',
       '/v1/files/${Uri.encodeComponent(name)}',
       bytes,
+      recipient: recipient,
     );
     if (status != HttpStatus.noContent) {
       throw HttpException('upload: $status');
@@ -384,8 +510,9 @@ class LanClient {
     LanEndpoint to,
     String method,
     String path,
-    List<int> body,
-  ) async {
+    List<int> body, {
+    String? recipient,
+  }) async {
     final client = HttpClient()..connectionTimeout = connectTimeout;
     try {
       final signed = auth.sign(
@@ -393,6 +520,7 @@ class LanClient {
         path: path,
         deviceId: deviceId,
         body: body,
+        recipient: recipient,
       );
       final request = await client
           .openUrl(
@@ -470,9 +598,14 @@ class LanReplicator {
   /// phone downloads what it lacks and uploads what the peer lacks.
   Future<bool> syncWith(LanPeer peer) async {
     final endpoint = LanEndpoint(peer.host!, peer.port!);
+    final recipient = _recipient(peer);
     try {
       final mine = await _state();
-      final theirs = await client.exchange(endpoint, mine);
+      final theirs = await client.exchange(
+        endpoint,
+        mine,
+        recipient: recipient,
+      );
       final theirTime = theirs.time;
       if (theirTime != null) {
         final skew = theirTime.difference(DateTime.now().toUtc());
@@ -494,7 +627,11 @@ class LanReplicator {
         if (mine.deleted.contains(name) || theirs.deleted.contains(name)) {
           continue;
         }
-        final bytes = await client.download(endpoint, name);
+        final bytes = await client.download(
+          endpoint,
+          name,
+          recipient: recipient,
+        );
         if (bytes != null) {
           await folder.write(name, bytes);
         }
@@ -505,7 +642,7 @@ class LanReplicator {
         }
         final bytes = await folder.read(name);
         if (bytes != null) {
-          await client.upload(endpoint, name, bytes);
+          await client.upload(endpoint, name, bytes, recipient: recipient);
         }
       }
       await peers.upsert(
@@ -514,6 +651,7 @@ class LanReplicator {
           port: theirs.port,
           lastSeen: DateTime.now(),
           lastSync: DateTime.now(),
+          authVersion: theirs.authVersion,
         ),
       );
       return true;
@@ -538,12 +676,21 @@ class LanReplicator {
         continue;
       }
       try {
-        await client.upload(LanEndpoint(peer.host!, peer.port!), name, bytes);
+        await client.upload(
+          LanEndpoint(peer.host!, peer.port!),
+          name,
+          bytes,
+          recipient: _recipient(peer),
+        );
       } catch (e) {
         Logger.info('Wi-Fi sync: push to ${peer.name} failed ($e)');
       }
     }
   }
+
+  /// Named in requests to [peer] once it said it checks the recipient.
+  static String? _recipient(LanPeer peer) =>
+      (peer.authVersion ?? 1) >= 2 ? peer.deviceId : null;
 
   Future<LanFolderState> _state() => LanFolderState.of(
     folder,

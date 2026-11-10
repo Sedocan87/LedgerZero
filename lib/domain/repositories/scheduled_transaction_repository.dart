@@ -17,6 +17,16 @@ abstract class ScheduledTransactionRepository {
   /// Updates an existing scheduled transaction.
   Future<void> updateScheduledTransaction(ScheduledTransaction transaction);
 
+  /// Stores [transaction] as the catch-up advanced it over [occurrences]
+  /// due occurrences. Unlike [updateScheduledTransaction], the row's sync
+  /// timestamp does not become the current time but
+  /// `ScheduleStamps.catchUp` of the stored one, so the advance never looks
+  /// newer than an edit or a skip a person made on another phone.
+  Future<void> storeCatchUp(
+    ScheduledTransaction transaction, {
+    required int occurrences,
+  });
+
   /// Deletes a scheduled transaction by its unique identifier.
   Future<void> deleteScheduledTransaction(String id);
 

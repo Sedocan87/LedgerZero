@@ -55,6 +55,42 @@ void main() {
     expect(notifications.shown, 1);
   });
 
+  group('a "last backup" written by an automatic on-phone backup (older '
+      'app versions)', () {
+    test('is dropped, so the reminder counts from the first check', () async {
+      final automatic = daysAgo(1);
+      final s = await scheduler({
+        'auto_backup_last_success': automatic,
+        'last_backup_timestamp': automatic + 4000,
+        'backup_reminder_first_check_timestamp': daysAgo(30),
+      });
+      expect(s.lastBackup, isNull);
+      await s.checkBackupDue();
+      expect(notifications.shown, 1);
+    });
+
+    test('a backup that left the phone afterwards is kept', () async {
+      final s = await scheduler({
+        'auto_backup_last_success': daysAgo(3),
+        'last_backup_timestamp': daysAgo(2),
+      });
+      expect(s.lastBackup, isNotNull);
+      await s.checkBackupDue();
+      expect(notifications.shown, 0);
+    });
+
+    test('is checked once: a share right after an automatic backup '
+        'counts', () async {
+      final s = await scheduler({'auto_backup_last_success': daysAgo(0)});
+      await s.recordBackupSuccess();
+      final again = BackupScheduler(
+        await SharedPreferences.getInstance(),
+        notifications,
+      );
+      expect(again.lastBackup, isNotNull);
+    });
+  });
+
   test('never frequency stays silent', () async {
     final s = await scheduler({
       'backup_frequency': 'never',

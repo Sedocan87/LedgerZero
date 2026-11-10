@@ -27,6 +27,13 @@ abstract class TransactionRepository {
   /// whether it was inserted.
   Future<bool> insertTransactionOrIgnore(Transaction transaction);
 
+  /// Like [insertTransactionOrIgnore], but the row's sync timestamp is
+  /// `transaction.updatedAt` instead of the current time. For rows the app
+  /// generates on every phone (scheduled occurrences, see
+  /// `ScheduleStamps`), which must not look newer than a person's edit of
+  /// the same row on another phone.
+  Future<bool> insertGeneratedTransactionOrIgnore(Transaction transaction);
+
   /// Whether [id] is a split parent (has non-deleted children).
   Future<bool> isSplitParent(String id);
 

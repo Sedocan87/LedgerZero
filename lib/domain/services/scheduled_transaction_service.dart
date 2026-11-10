@@ -11,6 +11,7 @@ import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/scheduled_transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
+import 'package:ledger_zero/domain/services/schedule_stamps.dart';
 import 'package:ledger_zero/domain/services/transaction_service_types.dart';
 import 'package:ledger_zero/services/notifications/notification_service.dart';
 import 'package:ledger_zero/services/rules/rule_matching_service.dart';
@@ -24,6 +25,14 @@ import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 /// insert-or-ignore. A crash, a second run or a second device therefore
 /// never duplicates an occurrence (and an occurrence the user deleted is
 /// not resurrected).
+///
+/// With sync, the partner's phone runs the same catch-up, possibly before
+/// it has received what was done here. What the catch-up writes therefore
+/// carries the timestamps of [ScheduleStamps] instead of the current time
+/// (an occurrence edited or deleted here, a schedule edited here, stays as
+/// it is when the other phone books the same occurrence later), and
+/// skipping an occurrence leaves a deleted transaction with the
+/// occurrence's id, which the other phone's copy loses against.
 ///
 /// A schedule whose account is closed (or the partner's personal account)
 /// books nothing while that is the case; the schedules list marks it. A
@@ -148,7 +157,12 @@ class ScheduledTransactionService {
   /// catch-up) and moves its reminder to the new next occurrence, or
   /// cancels it when skipping finished the schedule.
   Future<void> skipOccurrence(String scheduledId) async {
-    await _scheduledTransactionRepository.skipScheduledTransaction(scheduledId);
+    await _unitOfWork.run(() async {
+      await _markSkipped(scheduledId);
+      await _scheduledTransactionRepository.skipScheduledTransaction(
+        scheduledId,
+      );
+    });
     final updated = await _scheduledTransactionRepository
         .getScheduledTransactionById(scheduledId);
     if (updated == null) {
@@ -156,6 +170,32 @@ class ScheduledTransactionService {
       return;
     }
     await _syncReminder(updated);
+  }
+
+  /// Records the skip of the next occurrence of [scheduledId] as a deleted
+  /// transaction with that occurrence's id. To this phone it is an
+  /// occurrence that was booked and deleted (never recreated). To a paired
+  /// phone that books the same occurrence before it learns of the skip, it
+  /// is the newer version of that row, so the booking disappears there too
+  /// instead of spreading to both phones.
+  Future<void> _markSkipped(String scheduledId) async {
+    final schedule = await _scheduledTransactionRepository
+        .getScheduledTransactionById(scheduledId);
+    if (schedule == null ||
+        schedule.nextDate == null ||
+        schedule.accountId == null) {
+      return;
+    }
+    final Transaction occurrence;
+    try {
+      occurrence = await _buildOccurrence(schedule, const [], null);
+    } on ValidationException {
+      return; // no amount: the catch-up books nothing for it either
+    }
+    final now = DateTime.now().toUtc();
+    await _transactionRepository.insertTransactionOrIgnore(
+      occurrence.copyWith(isDeleted: true, updatedAt: now),
+    );
   }
 
   /// Reminder bookkeeping never fails a save or skip.
@@ -273,8 +313,9 @@ class ScheduledTransactionService {
           scheduled.nextDate!,
         ).isAfter(CalendarDate.normalize(end))) {
       final finished = scheduled.copyWith(clearNextDate: true);
-      await _scheduledTransactionRepository.updateScheduledTransaction(
+      await _scheduledTransactionRepository.storeCatchUp(
         finished,
+        occurrences: 1,
       );
       return (schedule: finished, created: 0);
     }
@@ -305,7 +346,9 @@ class ScheduledTransactionService {
         break;
       }
       final occurrence = await _buildOccurrence(current, rules, fallbackMemo);
-      if (await _transactionRepository.insertTransactionOrIgnore(occurrence)) {
+      if (await _transactionRepository.insertGeneratedTransactionOrIgnore(
+        occurrence,
+      )) {
         created++;
       }
       booked++;
@@ -313,7 +356,10 @@ class ScheduledTransactionService {
     }
 
     if (current != scheduled) {
-      await _scheduledTransactionRepository.updateScheduledTransaction(current);
+      await _scheduledTransactionRepository.storeCatchUp(
+        current,
+        occurrences: booked,
+      );
     }
     return (schedule: current, created: created);
   }
@@ -340,7 +386,8 @@ class ScheduledTransactionService {
       cleared: TransactionClearStatus.uncleared,
       approved: schedule.autoApprove,
       createdAt: now,
-      updatedAt: now,
+      // Not the current time: see [ScheduleStamps].
+      updatedAt: ScheduleStamps.occurrence(date),
     );
     final ruleMatching = _ruleMatchingService;
     if (ruleMatching != null && rules.isNotEmpty) {

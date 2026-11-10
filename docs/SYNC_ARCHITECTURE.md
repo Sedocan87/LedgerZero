@@ -28,8 +28,14 @@ row's `updated_at`).
   trigger has `WHEN NOT EXISTS (SELECT 1 FROM sync_applying)`. Replayed rows
   therefore never come back as local changes (echo prevention), and a crash
   cannot leave the flag set (it is rolled back with the transaction).
-* While no sync provider is configured, captured changes are discarded:
-  connecting a folder uploads every row anyway (see 6).
+* A phone that never had a sync folder (no `sync_id` in `sync_kv`)
+  discards its captured changes at every start: setting sync up uploads
+  every row anyway. Once a folder knows the phone, captured changes are
+  never discarded, also not after *Disconnect* or with the provider set to
+  "None" (the sync id outlives both): they are exactly what the folder is
+  missing, deletes included, and they are sent when the phone syncs again.
+  While nothing syncs they are squashed to the newest entry per row at
+  every start, so the table is bounded by the number of rows.
 
 ## 2. Change files
 
@@ -134,6 +140,12 @@ sent yet competes the same way — it does not win automatically.
   does not know stays local — it may have been deleted elsewhere long
   enough ago for the tombstone to be gone. Joining a *new* folder shares
   everything. Restoring a backup older than 180 days warns the user.
+  Every full upload also sends a tombstone for each row the folder knows
+  (`sync_row_versions`, not deleted) that no longer exists on this device
+  and has no captured delete (app versions before the fourth audit
+  discarded captured changes while disconnected). The time of such a
+  delete is unknown, so the tombstone is stamped just after the version
+  the folder has: an edit made elsewhere since then still wins.
 * **Natural keys**: budgets (category, month) and report notes (date) are
   unique. If an incoming row has the same natural key as a local row with a
   different id, the same rule decides, and only one row is kept. (Budget ids
@@ -154,7 +166,16 @@ sent yet competes the same way — it does not win automatically.
   current categories to the first other group. So rows that reference it
   no longer make the delete fail on a foreign key. Not recorded: a budget
   amount written by the automatic new-month fill (its `updated_at` is the
-  first day of its month, 00:00 UTC; see BUDGET_INTERACTIONS.md).
+  first day of its month, 00:00 UTC; see BUDGET_INTERACTIONS.md), and a
+  scheduled occurrence the catch-up booked here that nobody touched (its
+  `updated_at` is 00:00 UTC of the day before its date).
+* **Rows every phone generates** (new-month fill, scheduled occurrences,
+  the catch-up's advance of a schedule) are stamped with a time that does
+  not depend on when or where they were generated and that is older than
+  any edit a person makes afterwards, so the phone that generates last
+  does not win over the partner's edit, delete or skip
+  (`BudgetingService.automaticFillStamp`, `ScheduleStamps`; see
+  SCHEDULED_TRANSACTIONS.md "Two phones").
 * Seeded default categories use deterministic ids and a fixed timestamp.
   Their names are in the app language, so in a bilingual household the two
   phones seed different names under the same ids. The phone that creates
@@ -171,13 +192,27 @@ scheduled_transactions, budget_templates, report_notes, import_profiles,
 rules; a test checks it against `PRAGMA foreign_key_list`) and FK checks are
 deferred to commit. Causal ordering (4) guarantees parents created elsewhere
 arrive first. A reference that is still missing at commit means the parent
-was deleted on another device while this row was created or edited. Policy
-(deterministic, so every device ends in the same state):
+was deleted on another device while this row was created or edited. Policy:
 
 * nullable reference (transaction category/payee/transfer account, payee
   defaults, category group, schedule references): set to NULL;
 * required reference (transaction account, budget category) and split
   children whose parent transaction is gone: the row is deleted.
+
+The policy alone does not make the devices agree: a device that applies a
+later version of the parent (an update newer than the delete brings it
+back) never sees the reference missing and would keep the row untouched.
+So a repair is a **local edit** of the repairing device: the row gets an
+`updated_at` one microsecond after the version it repairs and an entry in
+`pending_sync_changes`, a deleted row a captured delete, which the next
+run sends as an upsert or a tombstone. It then competes under the conflict
+rule of section 5 like any other edit: the devices that have the repaired
+version take the repair, and any later edit of the row wins everywhere
+(and is repaired again where its parent is still missing). The stamp is
+deliberately not the time of the apply: an edit of the row that the
+sender made before the repair but that travels in its next file would
+otherwise lose against it. Two devices repairing the same version write
+the same content, so no conflict entry is recorded.
 
 ## 7. Quarantine
 
@@ -208,13 +243,20 @@ rule) and then forgets the entry; if no snapshot covers it, this device
 writes a small request file `<device>_req_<me>.lzsreq` (no data,
 unauthenticated: a folder member could at most trigger extra snapshots).
 A device that finds a request for itself writes a snapshot on its next
-run and deletes the request. Skipped changes are therefore delayed, not
-lost — unless the sender never comes back.
+run and deletes the request; the requester deletes its own request once
+the gap is repaired, should it still be there. Skipped changes are
+therefore delayed, not lost — unless the sender never comes back.
 
-A file written by a newer app version (schema version above this app's) is
-not applied and not counted as a failure: Sync settings asks the user to
-update the app ("… Update the app to sync its changes.") and the file is
-retried on every run.
+A file written by a newer app version (its `schema` above this app's
+`SyncSchema.syncVersion`, the version of the synced tables; see
+DELTA_SCHEMA_MIGRATION.md) is not applied and not counted as a failure,
+and the file is retried on every run. The user is asked to update the app
+in three places, because everything else about sync looks healthy while
+the partner's changes do not arrive: a notice in Sync settings ("… Update
+the app to sync its changes."), a line on the Home sync card, and a
+notification (at most every three days, with sync notifications on). The
+state comes from the quarantine entries and from the run report
+(`newerSchemaPending`), which also covers a snapshot of a newer version.
 
 ## 8. Snapshots and compaction
 
@@ -230,7 +272,13 @@ files are never deleted.
   snapshot under the normal conflict rule and then the files after the
   snapshot's sequences.
 * A device whose next file was compacted away (offline for more than 30
-  days) bridges the gap with a snapshot that covers it.
+  days) bridges the gap with a snapshot that covers it. That includes a
+  sender that has only a snapshot left in the folder (every change file
+  compacted, nothing written since): a snapshot whose sequence is above
+  this device's progress for its writer counts as a waiting file.
+* A device never downloads its own snapshot at or below its own progress
+  (a phone that is alone in the folder would otherwise fetch them on
+  every run). After a restore the progress is cleared and it is used.
 
 ## 9. Restore
 
@@ -268,8 +316,25 @@ and follows `appLockStateProvider`:
 * State for the UI: status, last sync, pending changes, conflicts,
   quarantine (failed, old-folder files), newer-schema and old-folder
   notices, clock notices, setup state. The Home sync card shows the
-  counts of conflicts, failed files and old-folder files.
+  counts of conflicts, failed files and old-folder files and the "update
+  the app" notice. "Last sync" is
+  the last successful run; with Wi-Fi sync, where a run against the folder
+  on this phone succeeds with nobody reached, it is the last exchange
+  with a paired phone (`LanSyncService.lastPeerExchange`).
+* A run that is still going when the controller is disposed does not
+  touch its state.
+* `syncSettled()` completes when the first automatic run after the
+  database opened has ended (or does not run: offline, Wi-Fi only on
+  mobile data, manual, no provider), later when the run in progress has
+  ended. Booking due scheduled transactions and the new-month fill wait
+  for it, at most 10 seconds (`lib/app/app.dart`), so they see what the
+  partner's phone already did.
 * Pause/resume around a restore (section 9).
+* *Disconnect* (Wi-Fi: *Turn off Wi-Fi sync*) and choosing the provider
+  "None" ask for confirmation first. With Google Drive, an empty folder
+  ("Set a sync passphrase") also says that a second phone must be signed
+  in to the same Google account: with another account it sees its own
+  empty folder, and two phones would each sync alone.
 
 ## 11. Transports
 
@@ -305,17 +370,40 @@ between their folders.
   runs an HTTP server on TCP 47321 (another free port if taken) serving its
   folder: `POST /v1/exchange` (folder states both ways), `GET` and
   `PUT /v1/files/<name>`. Only sync file names are served or accepted;
-  bodies are limited to 64 MiB. When the engine lists the folder, the
+  bodies are limited to 64 MiB. The signature covers the body, so the
+  body must be read before it can be checked; to keep a stranger on the
+  same Wi-Fi from filling the memory, a request is refused before its
+  body is read when the auth header is not well-formed, when it declares
+  more than 64 MiB, or when it has a body above 1 MiB and a timestamp
+  outside the 2-minute window. At most 8 requests are handled at a time,
+  2 of them with a body above 1 MiB (others get 503; the next exchange
+  retries), and a body must arrive within 60 s. When the engine lists the folder, the
   transport exchanges with every paired phone that has an address: it
   downloads what it lacks and uploads what the other lacks. Each file the
   engine uploads is also pushed to phones reached in the last 10 minutes.
-  Deletions (compaction of a device's own files) are recorded and sent with
-  the next exchange, so the other phone deletes its copy instead of copying
-  the file back.
-* **Authentication.** Every request carries `X-LZ-Auth: v1 <device> <time>
-  <nonce> <HMAC-SHA256>` under the pair key (method, path, device, time,
-  nonce, body hash); the server rejects anything older than 2 minutes or
-  replayed, and signs its response (`X-LZ-Mac`). A request that is signed
+  Deletions are recorded and sent with the next exchange, so the other
+  phone deletes its copy instead of copying the file back: a device's own
+  change files and snapshots (compaction), and snapshot requests it is a
+  party to (the asked phone after answering, the asking phone once
+  repaired). A request has the same name every time, so its recorded
+  deletion is forgotten as soon as the other phone no longer lists the
+  file or a new request of that name is written; otherwise the next
+  request would be swallowed. (Before the fourth audit the deletion of a
+  request was not sent: the asking phone copied it back and the asked
+  phone wrote a full snapshot on every run with new changes.)
+* **Authentication.** Every request carries `X-LZ-Auth: <scheme> <device>
+  <time> <nonce> <HMAC-SHA256>` under the pair key; the server rejects
+  anything older than 2 minutes or replayed, and signs its response
+  (`X-LZ-Mac`). Scheme `v1` signs method, path, device, time, nonce and
+  body hash; `v2` also signs the **recipient's** device id, so a captured
+  request cannot be replayed to another paired phone (which would store
+  the replayer's address for the sender until the next beacon). Servers
+  accept both. A phone signs `v2` only for a peer that announced it in an
+  exchange (`"v": 2` in the folder state, kept per peer), so a phone still
+  on an app version that knows only `v1` keeps syncing, and the two
+  switch by themselves after both are updated. Not covered: a replay to
+  the same phone within 2 minutes of that phone's app restart (the seen
+  nonces are kept in memory). A request that is signed
   under the pair key but outside the 2-minute window gets a signed 401
   with the server's time (`X-LZ-Time`): the client reports the clock
   difference (`clockSkew`; the join says "the other phone's clock differs
@@ -356,12 +444,36 @@ household member; see BUDGETING_RULES.md for what users see.
   snapshots. Their captured changes are dropped like the others. Tombstones
   are not filtered (a deleted row's account is unknown; one the partner
   never had changes nothing there).
+* **Moved into a personal account.** A transaction or scheduled
+  transaction the folder already has (an entry in `sync_row_versions`)
+  whose account becomes one of **this member's** personal accounts is
+  sent as a tombstone, stamped with the edit that moved it (just after
+  the folder's version when the row itself was not edited, as when a
+  whole account was made personal while disconnected), so the partner's
+  copy disappears and the amount is not counted twice (once in the shared
+  account, once in the personal account's shared balance). The row itself
+  stays on the owner's phone. Moving it back into a shared account sends
+  it again as a newer version.
+* **A row in one of this member's personal accounts is never deleted by
+  sync.** The applier skips a tombstone for it: it is either this phone's
+  own announcement coming back (after a restore the phone applies its own
+  files again; a partner's snapshot carries the tombstone too) or a
+  delete the partner made on a copy that no longer exists. A stale copy
+  of a row in the *partner's* personal account (left by an app version
+  that did not send the tombstone) is never turned into a tombstone
+  here: it would reach the partner's own row.
 * **Balance.** Triggers on transactions and accounts keep
   `shared_balance` of this member's personal accounts equal to the computed
   balance. Changing it goes through the accounts sync trigger, so every
   balance change gives the row a new `updated_at` and reaches the partner.
   `AccountsDao.balanceExpression` uses `shared_balance` for the partner's
-  accounts and the computed balance for all others. The net worth report
+  accounts and the computed balance for all others. The triggers are off
+  while a change file is applied, so after every run that applied
+  something the engine recomputes the shared balance of this member's
+  personal accounts (`AppDatabase.refreshPersonalBalances`, a local edit
+  when it changes anything). This matters after a restore: the folder
+  gives this phone its own newer account row back, with the balance of
+  transactions the backup does not have. The net worth report
   has no history of the partner's accounts, only the shared legs of
   transfers to and from them: it leaves those legs out and counts each
   partner account at its shared balance minus what the legs moved into it

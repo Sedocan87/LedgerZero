@@ -88,13 +88,29 @@ final budgetAlertProducerProvider = Provider<BudgetAlertProducer>((ref) {
 /// Notifications > Sync status). One notification per failure streak: it
 /// is shown again only after a sync succeeded.
 class SyncFailureNotifications {
-  SyncFailureNotifications({required this.enabled, required this.show});
+  SyncFailureNotifications({
+    required this.enabled,
+    required this.show,
+    this.showUpdateRequired,
+    this.updateNoticeDue,
+  });
 
   final bool Function() enabled;
   final Future<void> Function() show;
+
+  /// Shows "another device uses a newer version, update the app".
+  final Future<void> Function()? showUpdateRequired;
+
+  /// Whether that notice may be shown now (it is repeated at most every
+  /// [updateNoticeEvery] while the other device stays ahead); calling it
+  /// with `true` as the result records the notice.
+  final bool Function()? updateNoticeDue;
+
+  static const Duration updateNoticeEvery = Duration(days: 3);
   bool _notified = false;
 
   void onSyncState(SyncState? previous, SyncState next) {
+    _onNewerSchema(previous, next);
     if (previous?.status != SyncStatus.syncing) {
       return;
     }
@@ -108,11 +124,27 @@ class SyncFailureNotifications {
     _notified = true;
     unawaited(show());
   }
+
+  /// A change file of a newer app version started waiting: the partner's
+  /// changes do not arrive until this phone is updated, and nothing else
+  /// looks wrong.
+  void _onNewerSchema(SyncState? previous, SyncState next) {
+    final showUpdate = showUpdateRequired;
+    if (showUpdate == null ||
+        !next.newerSchemaPending ||
+        (previous?.newerSchemaPending ?? false) ||
+        !enabled() ||
+        !(updateNoticeDue?.call() ?? true)) {
+      return;
+    }
+    unawaited(showUpdate());
+  }
 }
 
 final syncFailureNotificationsProvider = Provider<SyncFailureNotifications>((
   ref,
 ) {
+  const updateNoticeKey = 'sync_update_notice_timestamp';
   return SyncFailureNotifications(
     enabled: () => ref.read(settingsProvider).syncStatusNotifications,
     show: () {
@@ -123,6 +155,28 @@ final syncFailureNotificationsProvider = Provider<SyncFailureNotifications>((
             title: l10n.notificationSyncFailedTitle,
             body: l10n.notificationSyncFailedBody,
           );
+    },
+    // Same notification slot and tap target (Sync settings) as a failure.
+    showUpdateRequired: () {
+      final l10n = appLocalizationsFor(ref);
+      return ref
+          .read(notificationServiceProvider)
+          .showSyncFailureNotification(
+            title: l10n.notificationSyncUpdateTitle,
+            body: l10n.notificationSyncUpdateBody,
+          );
+    },
+    updateNoticeDue: () {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final last = prefs.getInt(updateNoticeKey);
+      if (last != null &&
+          now - last <
+              SyncFailureNotifications.updateNoticeEvery.inMilliseconds) {
+        return false;
+      }
+      unawaited(prefs.setInt(updateNoticeKey, now));
+      return true;
     },
   );
 });
