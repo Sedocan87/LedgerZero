@@ -4810,4 +4810,9 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String csvIssueAllInflows(int count) {
+    return 'All $count amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".';
+  }
 }

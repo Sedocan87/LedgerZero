@@ -4847,4 +4847,9 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String csvIssueAllInflows(int count) {
+    return 'Alle $count Beträge würden als Einnahmen importiert. Wenn dies eine Kartenabrechnung ist, die Ausgaben als positive Zahlen aufführt, schalten Sie „Negative Werte sind Ausgaben“ aus. Hat die Datei getrennte Spalten für Ausgänge und Eingänge, ordnen Sie beide unter „Weitere Spalten“ zu.';
+  }
 }

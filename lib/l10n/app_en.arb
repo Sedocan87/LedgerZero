@@ -3905,5 +3905,7 @@
   "cardNotificationsDuplicatesHeld": "{count, plural, =1{1 payment not added: it looks like a transaction you already have} other{{count} payments not added: they look like transactions you already have}}",
   "@cardNotificationsDuplicatesHeld": {"description": "Snackbar after booking captured notifications when some were held as possible duplicates; its action opens the capture log", "placeholders": {"count": {"type": "int"}}},
   "cardNotificationsDuplicatesBanner": "{count, plural, =1{1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.} other{{count} payments were not added because they look like transactions you already have. If one was a separate purchase, tap Add anyway on it.}}",
-  "@cardNotificationsDuplicatesBanner": {"description": "Banner at the top of the capture log when entries were held as possible duplicates", "placeholders": {"count": {"type": "int"}}}
+  "@cardNotificationsDuplicatesBanner": {"description": "Banner at the top of the capture log when entries were held as possible duplicates", "placeholders": {"count": {"type": "int"}}},
+  "csvIssueAllInflows": "All {count} amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".",
+  "@csvIssueAllInflows": {"description": "CSV import: warning on the mapping screen and before the review when every amount of the file would become an inflow", "placeholders": {"count": {"type": "int"}}}
 }

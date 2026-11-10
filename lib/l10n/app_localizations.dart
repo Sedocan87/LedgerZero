@@ -7785,6 +7785,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 payment was not added because it looks like a transaction you already have. If it was a separate purchase, tap Add anyway.} other{{count} payments were not added because they look like transactions you already have. If one was a separate purchase, tap Add anyway on it.}}'**
   String cardNotificationsDuplicatesBanner(int count);
+
+  /// CSV import: warning on the mapping screen and before the review when every amount of the file would become an inflow
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".'**
+  String csvIssueAllInflows(int count);
 }
 
 class _AppLocalizationsDelegate

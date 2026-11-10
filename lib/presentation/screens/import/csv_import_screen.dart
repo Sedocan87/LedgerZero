@@ -692,6 +692,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       issue.dateFormat ?? _dateFormat,
       issue.otherFormat ?? '',
     ),
+    CsvIssueKind.allInflows => l10n.csvIssueAllInflows(issue.count),
   };
 
   void _validateAndImport() {
@@ -703,6 +704,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       columnMapping: _columnMapping,
       dateFormat: _dateFormat,
       decimalSeparator: _decimalSeparator,
+      outflowIsNegative: _outflowIsNegative,
     );
 
     if (!result.isValid) {

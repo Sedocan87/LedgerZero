@@ -82,6 +82,11 @@ enum CsvIssueKind {
   /// Both [CsvIssue.dateFormat] and [CsvIssue.otherFormat] fit every date
   /// (no day above 12): day and month may be swapped.
   ambiguousDateFormat,
+
+  /// Every one of the [CsvIssue.count] readable amounts would be imported
+  /// as an inflow: a card statement listing charges as positive numbers
+  /// (the sign switch is wrong) or only one of two amount columns mapped.
+  allInflows,
 }
 
 class CsvIssue {
@@ -165,8 +170,28 @@ const Map<String, List<String>> _headerKeywords = {
     'value',
     'summe',
   ],
-  CsvField.debit: ['soll', 'debit', 'ausgang', 'belastung', 'outflow'],
-  CsvField.credit: ['haben', 'credit', 'eingang', 'gutschrift', 'inflow'],
+  CsvField.debit: [
+    'soll',
+    'debit',
+    'ausgang',
+    'belastung',
+    'outflow',
+    'paid out',
+    'money out',
+    'withdrawals',
+    'withdrawal',
+  ],
+  CsvField.credit: [
+    'haben',
+    'credit',
+    'eingang',
+    'gutschrift',
+    'inflow',
+    'paid in',
+    'money in',
+    'deposits',
+    'deposit',
+  ],
   CsvField.debitCreditFlag: ['soll/haben', 's/h', 'debit/credit', 'dr/cr'],
   CsvField.payee: [
     'payee',
@@ -227,8 +252,9 @@ const Map<String, List<String>> _headerPenalties = {
     'exchange',
     'kurs',
   ],
-  CsvField.debit: ['ursprungsbetrag', 'soll/haben'],
-  CsvField.credit: [],
+  // A column naming both sides is a debit/credit flag, not one side.
+  CsvField.debit: ['ursprungsbetrag', 'soll/haben', 'debit/credit', 'dr/cr'],
+  CsvField.credit: ['soll/haben', 'debit/credit', 'dr/cr'],
   CsvField.debitCreditFlag: [],
   CsvField.payee: ['iban', 'bic', 'kontonummer', 'account number', 'id'],
   CsvField.inflowPayee: ['iban', 'bic'],
@@ -446,10 +472,29 @@ class CsvImportService {
     final used = <String>{};
     final normalized = [for (final h in headers) normalizeHeader(h)];
 
+    // Separate outflow and inflow columns come as a pair ("Debit Amount" /
+    // "Credit Amount", "Paid out" / "Paid in", Soll / Haben). The pair is
+    // found first and its two headers are kept out of every other field:
+    // "Debit Amount" contains the word "amount", but read as the one
+    // signed amount column it would turn every purchase into income and
+    // drop the rows whose debit cell is empty.
+    final pairDebit = _bestHeader(CsvField.debit, headers, normalized, used);
+    final pairCredit = pairDebit == null
+        ? null
+        : _bestHeader(CsvField.credit, headers, normalized, {pairDebit});
+    final hasPair = pairDebit != null && pairCredit != null;
+    if (hasPair) {
+      used
+        ..add(pairDebit)
+        ..add(pairCredit);
+    }
+
     for (final field in CsvField.all) {
-      if ((field == CsvField.debit || field == CsvField.credit) &&
-          mapping[CsvField.amount] != null) {
+      if (field == CsvField.debit || field == CsvField.credit) {
         // Separate debit/credit columns only when there is no amount.
+        if (hasPair && mapping[CsvField.amount] == null) {
+          mapping[field] = field == CsvField.debit ? pairDebit : pairCredit;
+        }
         continue;
       }
       if (field == CsvField.debitCreditFlag &&
@@ -460,53 +505,60 @@ class CsvImportService {
       if (field == CsvField.inflowPayee && mapping[CsvField.payee] == null) {
         continue;
       }
-      String? best;
-      var bestScore = 0;
-      var bestKeyword = 1 << 20;
-      for (var i = 0; i < headers.length; i++) {
-        if (used.contains(headers[i])) {
-          continue;
-        }
-        final h = normalized[i];
-        if ((h == 'dt' && field == CsvField.date) ||
-            (h == 'amt' && field == CsvField.amount)) {
-          best = headers[i];
-          bestScore = 3;
-          break;
-        }
-        if (_headerPenalties[field]!.any((p) => _containsWord(h, p))) {
-          continue;
-        }
-        final keywords = _headerKeywords[field]!;
-        for (var k = 0; k < keywords.length; k++) {
-          final keyword = keywords[k];
-          var score = 0;
-          if (h == keyword) {
-            score = 3;
-          } else if (_containsWord(h, keyword)) {
-            score = 2;
-          } else if (!_wholeWordFields.contains(field) && h.contains(keyword)) {
-            score = 1;
-          }
-          if (score > 0 &&
-              (score > bestScore || (score == bestScore && k < bestKeyword))) {
-            best = headers[i];
-            bestScore = score;
-            bestKeyword = k;
-          }
-        }
-      }
+      final best = _bestHeader(field, headers, normalized, used);
       if (best != null) {
         mapping[field] = best;
         used.add(best);
       }
     }
-    // Debit without credit (or the reverse) is not an amount source.
-    if (mapping[CsvField.debit] == null || mapping[CsvField.credit] == null) {
-      mapping[CsvField.debit] = null;
-      mapping[CsvField.credit] = null;
-    }
     return mapping;
+  }
+
+  /// The header of [headers] (not in [used]) that fits [field] best by
+  /// [_headerKeywords], or `null`: a header equal to a keyword beats one
+  /// containing it as a whole word, which beats a mere substring; among
+  /// equals the keyword listed first wins.
+  static String? _bestHeader(
+    String field,
+    List<String> headers,
+    List<String> normalized,
+    Set<String> used,
+  ) {
+    String? best;
+    var bestScore = 0;
+    var bestKeyword = 1 << 20;
+    for (var i = 0; i < headers.length; i++) {
+      if (used.contains(headers[i])) {
+        continue;
+      }
+      final h = normalized[i];
+      if ((h == 'dt' && field == CsvField.date) ||
+          (h == 'amt' && field == CsvField.amount)) {
+        return headers[i];
+      }
+      if (_headerPenalties[field]!.any((p) => _containsWord(h, p))) {
+        continue;
+      }
+      final keywords = _headerKeywords[field]!;
+      for (var k = 0; k < keywords.length; k++) {
+        final keyword = keywords[k];
+        var score = 0;
+        if (h == keyword) {
+          score = 3;
+        } else if (_containsWord(h, keyword)) {
+          score = 2;
+        } else if (!_wholeWordFields.contains(field) && h.contains(keyword)) {
+          score = 1;
+        }
+        if (score > 0 &&
+            (score > bestScore || (score == bestScore && k < bestKeyword))) {
+          best = headers[i];
+          bestScore = score;
+          bestKeyword = k;
+        }
+      }
+    }
+    return best;
   }
 
   static final RegExp _wordChar = RegExp(r'[\p{L}\p{N}]', unicode: true);
@@ -575,6 +627,7 @@ class CsvImportService {
     required Map<String, String?> columnMapping,
     required String dateFormat,
     required String decimalSeparator,
+    bool outflowIsNegative = true,
   }) {
     final errors = <CsvIssue>[];
     final warnings = <CsvIssue>[];
@@ -629,6 +682,8 @@ class CsvImportService {
       decimalSeparator: decimalSeparator == ',' ? ',' : '.',
     );
     final validDates = <DateTime>[];
+    var inflows = 0;
+    var outflows = 0;
 
     for (final row in data.rows) {
       final date = columns.dateOf(row, dateFormat);
@@ -643,6 +698,12 @@ class CsvImportService {
       }
       if (date == null || amount == null) {
         skipped++;
+      } else if (amount != 0) {
+        if ((amount > 0) == outflowIsNegative) {
+          inflows++;
+        } else {
+          outflows++;
+        }
       }
     }
 
@@ -663,6 +724,12 @@ class CsvImportService {
       (blocks(invalidAmountCount) ? errors : warnings).add(
         CsvIssue(CsvIssueKind.invalidAmounts, count: invalidAmountCount),
       );
+    }
+
+    // Income only? One row can be a salary; several rows without a single
+    // outflow are a card statement read with the wrong sign.
+    if (inflows >= 2 && outflows == 0) {
+      warnings.add(CsvIssue(CsvIssueKind.allInflows, count: inflows));
     }
 
     // Day and month swapped? Only when both orders fit every date.
