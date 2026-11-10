@@ -7,6 +7,7 @@ import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/services/sync/format/sync_change.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
+import 'package:ledger_zero/services/sync/personal_rows.dart';
 import 'package:ledger_zero/services/sync/sync_schema.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/services/budgeting_service.dart';
@@ -102,8 +103,9 @@ class ChangeApplier {
         'INSERT OR REPLACE INTO sync_applying (id) VALUES (1)',
       );
       final resolvedAt = (now ?? DateTime.now()).toUtc();
+      final personal = await PersonalRows.load(_db);
       for (final change in ordered) {
-        await _applyOne(change, header, result, resolvedAt);
+        await _applyOne(change, header, result, resolvedAt, personal);
       }
       result.repaired = await _repairForeignKeys(resolvedAt);
       await _db.customStatement('DELETE FROM sync_applying');
@@ -131,6 +133,7 @@ class ChangeApplier {
     SyncFileHeader header,
     ApplyResult result,
     DateTime resolvedAt,
+    PersonalRows personal,
   ) async {
     final table = _schema[change.table];
     if (table == null) {
@@ -199,6 +202,17 @@ class ChangeApplier {
 
     final local = await _localVersion(table.name, change.id);
     if (local != null && !_wins(change, local)) {
+      result.skipped++;
+      return;
+    }
+    if (change.deleted &&
+        local?.row != null &&
+        personal.isOwn(table.name, local!.row!)) {
+      // The row is in one of this member's personal accounts: it lives on
+      // this phone only. A tombstone for it is the announcement that it
+      // left the shared budget (this phone's own, coming back after a
+      // restore or in a snapshot) or a delete the partner made on a copy
+      // that no longer exists. Neither may delete the row here.
       result.skipped++;
       return;
     }

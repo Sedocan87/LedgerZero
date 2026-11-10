@@ -444,12 +444,22 @@ household member; see BUDGETING_RULES.md for what users see.
   never had changes nothing there).
 * **Moved into a personal account.** A transaction or scheduled
   transaction the folder already has (an entry in `sync_row_versions`)
-  whose account becomes a personal one is sent as a tombstone, stamped
-  with the edit that moved it, so the partner's copy disappears and the
-  amount is not counted twice (once in the shared account, once in the
-  personal account's shared balance). The row itself stays on the owner's
-  phone. Moving it back into a shared account sends it again as a newer
-  version.
+  whose account becomes one of **this member's** personal accounts is
+  sent as a tombstone, stamped with the edit that moved it (just after
+  the folder's version when the row itself was not edited, as when a
+  whole account was made personal while disconnected), so the partner's
+  copy disappears and the amount is not counted twice (once in the shared
+  account, once in the personal account's shared balance). The row itself
+  stays on the owner's phone. Moving it back into a shared account sends
+  it again as a newer version.
+* **A row in one of this member's personal accounts is never deleted by
+  sync.** The applier skips a tombstone for it: it is either this phone's
+  own announcement coming back (after a restore the phone applies its own
+  files again; a partner's snapshot carries the tombstone too) or a
+  delete the partner made on a copy that no longer exists. A stale copy
+  of a row in the *partner's* personal account (left by an app version
+  that did not send the tombstone) is never turned into a tombstone
+  here: it would reach the partner's own row.
 * **Balance.** Triggers on transactions and accounts keep
   `shared_balance` of this member's personal accounts equal to the computed
   balance. Changing it goes through the accounts sync trigger, so every

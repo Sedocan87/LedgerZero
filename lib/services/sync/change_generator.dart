@@ -148,9 +148,13 @@ class ChangeGenerator {
         if (row != null) {
           if (personal.isPrivate(table, row)) {
             // Stays on this device (personal account). If the folder has
-            // it (it was in a shared account before), the other devices
-            // must drop their copy.
-            if (known != null && !known.deleted) {
+            // it (it was in a shared account before it moved into one of
+            // this member's accounts), the other devices must drop their
+            // copy. Never for a row in the partner's personal account: a
+            // stale copy here says nothing about the partner's own row.
+            if (known != null &&
+                !known.deleted &&
+                personal.isOwn(table, row)) {
               deletes.add(
                 _Entry(
                   SyncChange(

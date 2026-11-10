@@ -185,6 +185,63 @@ void main() {
       expect(await balance(b, 'mine'), 0);
     });
 
+    test('a whole account made personal while disconnected: its rows leave '
+        'the partner and survive this phone re-applying its own '
+        'files', () async {
+      await a.t!.addAccount(id: 'old', name: 'Old savings');
+      await a.t!.addTransaction(id: 'u1', accountId: 'old', amount: 4200);
+      await syncAll([a, b]);
+
+      // Allowed only while disconnected; the rows themselves are not edited.
+      await a.engine.forgetKey();
+      final old = (await a.t!.accounts.getAccountById('old'))!;
+      await a.t!.accounts.updateAccount(old.copyWith(owner: AccountOwner.me));
+      await a.engine.joinSyncFolder(passphrase);
+      await syncAll([a, b]);
+
+      expect(
+        await b.count("SELECT COUNT(*) FROM transactions WHERE id = 'u1'"),
+        0,
+      );
+      expect(await balance(b, 'old'), 4200);
+
+      // After a restore the phone applies its own files again, the
+      // tombstone for u1 among them. u1 exists on this phone only.
+      await a.prefs.setBool(SyncRebootstrap.prefsKey, true);
+      await syncAll([a, b]);
+
+      expect(
+        await a.count("SELECT COUNT(*) FROM transactions WHERE id = 'u1'"),
+        1,
+      );
+      expect(await balance(a, 'old'), 4200);
+      expect(await balance(b, 'old'), 4200);
+    });
+
+    test('a stale copy of a row in the partner\'s personal account never '
+        'becomes a tombstone for the partner\'s own row', () async {
+      await b.t!.addAccount(id: 'theirs', name: 'Partner savings');
+      await b.t!.addTransaction(id: 'x1', accountId: 'theirs', amount: 900);
+      await syncAll([a, b]);
+      // What a partner on the previous app version leaves behind when the
+      // account becomes personal: A gets the account row, no tombstones.
+      await a.exec('INSERT OR REPLACE INTO sync_applying (id) VALUES (1)');
+      await a.exec(
+        "UPDATE accounts SET owner_id = 'another-member' WHERE id = 'theirs'",
+      );
+      await a.exec('DELETE FROM sync_applying');
+
+      // A re-shares everything it has (reconnect).
+      await a.engine.forgetKey();
+      await a.engine.joinSyncFolder(passphrase);
+      await syncAll([a, b]);
+
+      expect(
+        await b.count("SELECT COUNT(*) FROM transactions WHERE id = 'x1'"),
+        1,
+      );
+    });
+
     test('a schedule moved into a personal account disappears from the '
         'partner', () async {
       await a.exec(
