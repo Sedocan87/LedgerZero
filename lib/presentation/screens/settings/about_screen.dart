@@ -7,6 +7,7 @@ import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/app_info_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/external_links.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
+import 'package:ledger_zero/presentation/screens/settings/widgets/settings_icon.dart';
 
 /// The "About" entry at the end of Settings: opens [AboutScreen].
 class AboutSettingsSection extends StatelessWidget {
@@ -20,7 +21,10 @@ class AboutSettingsSection extends StatelessWidget {
       children: [
         ListTile(
           key: const Key('settings.about'),
-          leading: const Icon(Icons.info_outline),
+          leading: const SettingsIcon(
+            Icons.info_outline,
+            color: Colors.blueGrey,
+          ),
           title: Text(l10n.aboutApp(AppConstants.appName)),
           subtitle: Text(l10n.aboutSubtitle),
           trailing: const Icon(Icons.chevron_right),
