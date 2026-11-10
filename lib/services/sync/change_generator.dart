@@ -121,10 +121,10 @@ class ChangeGenerator {
           if (_schema[v.syncTable] == null) {
             continue;
           }
-          aggregates.putIfAbsent(
-            (v.syncTable, v.rowId),
-            () => _Aggregate()..vanished = true,
-          );
+          aggregates.putIfAbsent((
+            v.syncTable,
+            v.rowId,
+          ), () => _Aggregate()..vanished = true);
         }
       }
 

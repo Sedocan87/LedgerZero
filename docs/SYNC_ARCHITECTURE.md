@@ -28,8 +28,14 @@ row's `updated_at`).
   trigger has `WHEN NOT EXISTS (SELECT 1 FROM sync_applying)`. Replayed rows
   therefore never come back as local changes (echo prevention), and a crash
   cannot leave the flag set (it is rolled back with the transaction).
-* While no sync provider is configured, captured changes are discarded:
-  connecting a folder uploads every row anyway (see 6).
+* A phone that never had a sync folder (no `sync_id` in `sync_kv`)
+  discards its captured changes at every start: setting sync up uploads
+  every row anyway. Once a folder knows the phone, captured changes are
+  never discarded, also not after *Disconnect* or with the provider set to
+  "None" (the sync id outlives both): they are exactly what the folder is
+  missing, deletes included, and they are sent when the phone syncs again.
+  While nothing syncs they are squashed to the newest entry per row at
+  every start, so the table is bounded by the number of rows.
 
 ## 2. Change files
 
@@ -274,7 +280,12 @@ and follows `appLockStateProvider`:
 * State for the UI: status, last sync, pending changes, conflicts,
   quarantine (failed, old-folder files), newer-schema and old-folder
   notices, clock notices, setup state. The Home sync card shows the
-  counts of conflicts, failed files and old-folder files.
+  counts of conflicts, failed files and old-folder files. "Last sync" is
+  the last successful run; with Wi-Fi sync, where a run against the folder
+  on this phone succeeds with nobody reached, it is the last exchange
+  with a paired phone (`LanSyncService.lastPeerExchange`).
+* A run that is still going when the controller is disposed does not
+  touch its state.
 * Pause/resume around a restore (section 9).
 
 ## 11. Transports

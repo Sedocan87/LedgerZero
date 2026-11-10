@@ -33,6 +33,9 @@ enum SyncSetupState {
 class SyncState extends Equatable {
   final SyncStatus status;
   final SyncProviderType selectedProvider;
+
+  /// The last successful run against the folder. With Wi-Fi sync (the
+  /// folder is on this phone): the last exchange with a paired phone.
   final DateTime? lastSyncTime;
 
   /// Technical detail of the last error (logs, diagnostics, tests); the UI
@@ -106,6 +109,7 @@ class SyncState extends Equatable {
     SyncStatus? status,
     SyncProviderType? selectedProvider,
     DateTime? lastSyncTime,
+    bool clearLastSync = false,
     String? errorMessage,
     SyncErrorKind? errorKind,
     bool clearError = false,
@@ -130,7 +134,7 @@ class SyncState extends Equatable {
     return SyncState(
       status: status ?? this.status,
       selectedProvider: selectedProvider ?? this.selectedProvider,
-      lastSyncTime: lastSyncTime ?? this.lastSyncTime,
+      lastSyncTime: lastSyncTime ?? (clearLastSync ? null : this.lastSyncTime),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       errorKind: clearError ? null : (errorKind ?? this.errorKind),
       accountEmail: clearAccount ? null : (accountEmail ?? this.accountEmail),
