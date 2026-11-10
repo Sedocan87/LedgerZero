@@ -5310,4 +5310,103 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountsGroupClosed => 'Closed';
+
+  @override
+  String get proTitle => 'LedgerZero Pro';
+
+  @override
+  String get proTagline => 'Pay once. No subscription.';
+
+  @override
+  String proFeatureIsPro(String feature) {
+    return '$feature is part of LedgerZero Pro.';
+  }
+
+  @override
+  String get proFeatureWifiSync => 'Wi-Fi sync';
+
+  @override
+  String get proFeatureWifiSyncDescription =>
+      'Share one budget between the phones in your household. Each phone that syncs needs Pro.';
+
+  @override
+  String get proFeatureCardCapture => 'Card notifications';
+
+  @override
+  String get proFeatureCardCaptureDescription =>
+      'Book card payments automatically from your bank\'s notifications.';
+
+  @override
+  String get proFeaturePdfReports => 'PDF reports';
+
+  @override
+  String get proFeaturePdfReportsDescription =>
+      'Export reports as PDF to print or share.';
+
+  @override
+  String get proFeatureBudgetTemplates => 'Budget templates';
+
+  @override
+  String get proFeatureBudgetTemplatesDescription =>
+      'Save a month as a template, apply it later, and fill new months automatically.';
+
+  @override
+  String get proFeatureRules => 'Rules';
+
+  @override
+  String get proFeatureRulesDescription =>
+      'Categorise and rename transactions automatically.';
+
+  @override
+  String get proAlwaysFree =>
+      'Always free: budgeting with unlimited accounts and transactions, credit cards, CSV and YNAB import, export, backups and the app lock.';
+
+  @override
+  String proBuy(String price) {
+    return 'Unlock Pro for $price';
+  }
+
+  @override
+  String get proBuyNoPrice => 'Unlock Pro';
+
+  @override
+  String get proRestore => 'Restore purchase';
+
+  @override
+  String get proUnlocked => 'Pro is unlocked. Thank you!';
+
+  @override
+  String get proContinue => 'Continue';
+
+  @override
+  String get proPending =>
+      'Payment pending. Pro unlocks as soon as Google Play confirms the payment.';
+
+  @override
+  String get proStoreUnavailable =>
+      'Google Play is not available. Make sure the Play Store is installed and signed in, then try again.';
+
+  @override
+  String get proRestored => 'Your purchase was restored. Pro is unlocked.';
+
+  @override
+  String get proNothingToRestore =>
+      'No purchase found for the Google account signed in to the Play Store.';
+
+  @override
+  String get proPurchaseFailed =>
+      'The purchase did not go through. Please try again.';
+
+  @override
+  String get proSettingsSubtitle =>
+      'Sync, card notifications and more. Pay once.';
+
+  @override
+  String get proBadge => 'PRO';
+
+  @override
+  String get proBadgeSemantics => 'Needs LedgerZero Pro';
+
+  @override
+  String get proDevelopmentUnlock => 'Pro unlocked (development build)';
 }

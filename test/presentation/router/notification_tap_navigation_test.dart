@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -25,10 +26,13 @@ import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.d
 import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
+import 'package:ledger_zero/presentation/screens/settings/pro_screen.dart';
+import 'package:ledger_zero/services/purchases/pro_store.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/app_directories.dart';
+import '../../helpers/fake_pro_store.dart';
 import '../../helpers/security_fakes.dart';
 import '../../helpers/test_database.dart';
 
@@ -46,8 +50,12 @@ void main() {
   });
   tearDown(() => t.close());
 
-  /// Pumps the real router, onboarded and unlocked, on Home.
-  Future<ProviderContainer> pumpApp(WidgetTester tester) async {
+  /// Pumps the real router, onboarded and unlocked, on Home. Pro is
+  /// unlocked unless a [proStore] is given (then it decides).
+  Future<ProviderContainer> pumpApp(
+    WidgetTester tester, {
+    FakeProStore? proStore,
+  }) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -64,6 +72,11 @@ void main() {
     final store = InMemorySecureStore();
     final container = ProviderContainer(
       overrides: [
+        // These tests use LedgerZero Pro features.
+        if (proStore == null)
+          proUnlockedProvider.overrideWithValue(true)
+        else
+          proStoreProvider.overrideWithValue(proStore),
         sharedPreferencesProvider.overrideWithValue(prefs),
         databaseProvider.overrideWithValue(t.db),
         secureStoreProvider.overrideWithValue(store),
@@ -153,6 +166,48 @@ void main() {
     expect(find.byType(SettingsScreen), findsOneWidget);
     await back(tester);
     expectHomeWithTabs();
+    await unmount(tester, c);
+  });
+
+  testWidgets('while Pro is locked, the screens of Pro features open the '
+      'Pro screen; after the purchase Continue opens the feature', (
+    tester,
+  ) async {
+    final store = FakeProStore();
+    final c = await pumpApp(tester, proStore: store);
+
+    for (final location in [
+      '/settings/rules',
+      '/settings/rules/add',
+      '/settings/card-notifications',
+    ]) {
+      unawaited(router(c).push(location));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProScreen), findsOneWidget, reason: location);
+      expect(find.byKey(const Key('pro.reason')), findsOneWidget);
+      await back(tester);
+    }
+
+    // A sync-failure tap (deep link) is gated the same way.
+    await tapNotification(tester, c, 'sync');
+    expect(find.byType(SyncSettingsScreen), findsNothing);
+    expect(find.byType(ProScreen), findsOneWidget);
+    expect(find.text('Wi-Fi sync is part of LedgerZero Pro.'), findsOneWidget);
+    expect(find.text('Unlock Pro for €14.99'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pro.buy')));
+    await tester.pump();
+    expect(store.buyCalls, 1);
+    store.push(ProPurchaseStatus.purchased);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pro.unlocked')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pro.continue')));
+    await tester.pumpAndSettle();
+    expect(find.byType(SyncSettingsScreen), findsOneWidget);
+    expect(find.byType(ProScreen), findsNothing);
+    await back(tester);
+    expect(find.byType(SettingsScreen), findsOneWidget);
     await unmount(tester, c);
   });
 

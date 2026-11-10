@@ -5343,4 +5343,104 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get accountsGroupClosed => 'Geschlossen';
+
+  @override
+  String get proTitle => 'LedgerZero Pro';
+
+  @override
+  String get proTagline => 'Einmal zahlen. Kein Abo.';
+
+  @override
+  String proFeatureIsPro(String feature) {
+    return '$feature gehört zu LedgerZero Pro.';
+  }
+
+  @override
+  String get proFeatureWifiSync => 'WLAN-Synchronisierung';
+
+  @override
+  String get proFeatureWifiSyncDescription =>
+      'Teilen Sie ein Budget zwischen den Handys Ihres Haushalts. Jedes Handy, das synchronisiert, braucht Pro.';
+
+  @override
+  String get proFeatureCardCapture => 'Kartenbenachrichtigungen';
+
+  @override
+  String get proFeatureCardCaptureDescription =>
+      'Kartenzahlungen automatisch aus den Benachrichtigungen Ihrer Bank buchen.';
+
+  @override
+  String get proFeaturePdfReports => 'PDF-Berichte';
+
+  @override
+  String get proFeaturePdfReportsDescription =>
+      'Berichte als PDF exportieren, zum Drucken oder Teilen.';
+
+  @override
+  String get proFeatureBudgetTemplates => 'Budgetvorlagen';
+
+  @override
+  String get proFeatureBudgetTemplatesDescription =>
+      'Einen Monat als Vorlage speichern, später anwenden und neue Monate automatisch füllen.';
+
+  @override
+  String get proFeatureRules => 'Regeln';
+
+  @override
+  String get proFeatureRulesDescription =>
+      'Buchungen automatisch kategorisieren und umbenennen.';
+
+  @override
+  String get proAlwaysFree =>
+      'Immer kostenlos: Budgetieren mit beliebig vielen Konten und Buchungen, Kreditkarten, CSV- und YNAB-Import, Export, Sicherungen und die App-Sperre.';
+
+  @override
+  String proBuy(String price) {
+    return 'Pro für $price freischalten';
+  }
+
+  @override
+  String get proBuyNoPrice => 'Pro freischalten';
+
+  @override
+  String get proRestore => 'Kauf wiederherstellen';
+
+  @override
+  String get proUnlocked => 'Pro ist freigeschaltet. Vielen Dank!';
+
+  @override
+  String get proContinue => 'Weiter';
+
+  @override
+  String get proPending =>
+      'Zahlung ausstehend. Pro wird freigeschaltet, sobald Google Play die Zahlung bestätigt.';
+
+  @override
+  String get proStoreUnavailable =>
+      'Google Play ist nicht verfügbar. Prüfen Sie, ob der Play Store installiert ist und Sie angemeldet sind, und versuchen Sie es erneut.';
+
+  @override
+  String get proRestored =>
+      'Ihr Kauf wurde wiederhergestellt. Pro ist freigeschaltet.';
+
+  @override
+  String get proNothingToRestore =>
+      'Für das im Play Store angemeldete Google-Konto wurde kein Kauf gefunden.';
+
+  @override
+  String get proPurchaseFailed =>
+      'Der Kauf ist nicht zustande gekommen. Bitte versuchen Sie es erneut.';
+
+  @override
+  String get proSettingsSubtitle =>
+      'Synchronisierung, Kartenbenachrichtigungen und mehr. Einmal zahlen.';
+
+  @override
+  String get proBadge => 'PRO';
+
+  @override
+  String get proBadgeSemantics => 'Benötigt LedgerZero Pro';
+
+  @override
+  String get proDevelopmentUnlock => 'Pro freigeschaltet (Entwicklungsversion)';
 }
