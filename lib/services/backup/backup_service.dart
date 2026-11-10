@@ -6,17 +6,7 @@ import 'package:ledger_zero/services/backup/backup_format.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
-import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:path/path.dart' as p;
-
-/// Where an encrypted backup can be uploaded.
-enum BackupCloudTarget { googleDrive }
-
-/// No cloud storage is set up for uploads.
-class BackupUploadNotConfiguredException extends BackupException {
-  const BackupUploadNotConfiguredException()
-    : super('No cloud storage is configured');
-}
 
 /// Creates encrypted backups (format v2, see [BackupFormat]).
 ///
@@ -24,14 +14,12 @@ class BackupUploadNotConfiguredException extends BackupException {
 /// plaintext backup. For a readable copy use the JSON/CSV export.
 class BackupService {
   final AppDatabase _db;
-  final GoogleDriveService? _googleDriveService;
   final BackupScheduler? _backupScheduler;
   final ExportFileService _files;
   final KdfParams Function() _kdf;
 
   BackupService(
     this._db, {
-    this._googleDriveService,
     this._backupScheduler,
     ExportFileService? files,
     KdfParams Function()? kdf,
@@ -79,9 +67,10 @@ class BackupService {
   }
 
   /// Records now as the last backup time (for the backup reminder). Call
-  /// it after the share sheet handed the file on or the upload succeeded,
-  /// not when the file was merely written: a cancelled share sheet must not
-  /// silence the reminder.
+  /// it after the share sheet handed the file on or the file was saved
+  /// through the system file picker ("Save to…"), not when the file was
+  /// merely written: a cancelled share sheet or picker must not silence the
+  /// reminder. The automatic backups on the phone never call it.
   Future<void> recordBackupCompleted() async {
     await _backupScheduler?.recordBackupSuccess();
   }
@@ -91,25 +80,6 @@ class BackupService {
   Future<void> writePlaintextSnapshot(File target) async {
     await _deleteDatabaseFiles(target);
     await _db.customStatement('VACUUM INTO ?', [target.path]);
-  }
-
-  /// Uploads [backupFile] to [target]. Errors are not swallowed: a failed
-  /// upload throws.
-  Future<void> uploadBackupToCloud(
-    File backupFile,
-    BackupCloudTarget? target,
-  ) async {
-    final filename = p.basename(backupFile.path);
-    switch (target) {
-      case BackupCloudTarget.googleDrive:
-        final drive = _googleDriveService;
-        if (drive == null) {
-          throw const BackupUploadNotConfiguredException();
-        }
-        await drive.uploadBackup(backupFile, filename);
-      case null:
-        throw const BackupUploadNotConfiguredException();
-    }
   }
 
   static Future<void> _deleteIfExists(File file) async {

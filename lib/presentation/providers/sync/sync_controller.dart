@@ -10,7 +10,6 @@ import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
 import 'package:ledger_zero/services/sync/format/sync_manifest.dart';
-import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
 import 'package:ledger_zero/services/sync/lan/lan_protocol.dart'
     show LanClockSkewException;
@@ -72,10 +71,9 @@ enum SyncPassphraseResult {
 ///   older than [resumeThreshold]), [debounce] after local changes, on the
 ///   periodic timer of the chosen frequency, and when connectivity returns
 ///   — none of these when the frequency is manual;
-/// * Wi-Fi only applies to automatic syncs;
+/// * Wi-Fi sync runs only while the phone is on Wi-Fi;
 /// * every entry point catches its errors (no unhandled futures).
 class SyncController extends StateNotifier<SyncState> {
-  final GoogleAuthService _authService;
   final SharedPreferences _prefs;
   final ConnectivityService _connectivity;
   final SyncDependencies Function() _dependencies;
@@ -89,7 +87,6 @@ class SyncController extends StateNotifier<SyncState> {
   final DateTime Function() _clock;
 
   static const String _syncProviderKey = 'sync_provider';
-  static const String _syncWifiOnlyKey = 'sync_on_wifi_only';
   static const String _syncFrequencyKey = 'sync_frequency';
 
   bool _unlocked = false;
@@ -114,7 +111,6 @@ class SyncController extends StateNotifier<SyncState> {
   StreamSubscription<int>? _pendingSub;
   StreamSubscription<List<SyncConflict>>? _conflictSub;
   StreamSubscription<List<SyncQuarantineData>>? _quarantineSub;
-  StreamSubscription<Object?>? _authSub;
   int _lastPending = 0;
   ConnectionStatus? _lastConnection;
 
@@ -131,9 +127,9 @@ class SyncController extends StateNotifier<SyncState> {
 
   /// Completes when the sync this phone is doing or about to do has ended:
   /// the first automatic run after the database opened (also when it
-  /// failed, was skipped because the phone is offline or on mobile data
-  /// with "Wi-Fi only", or will not happen: no provider, manual
-  /// frequency), afterwards the run in progress, if any. Never fails.
+  /// failed, was skipped because the phone is offline or not on Wi-Fi, or
+  /// will not happen: no provider, manual frequency), afterwards the run
+  /// in progress, if any. Never fails.
   ///
   /// Work that writes rows the partner's phone writes too (booking due
   /// scheduled transactions, the new-month fill) waits for this, with a
@@ -155,7 +151,6 @@ class SyncController extends StateNotifier<SyncState> {
   }
 
   SyncController({
-    required this._authService,
     required this._prefs,
     required this._connectivity,
     required this._dependencies,
@@ -169,24 +164,14 @@ class SyncController extends StateNotifier<SyncState> {
        _clock = clock ?? DateTime.now,
        super(const SyncState(paused: true)) {
     _loadSettings();
-    _authSub = _authService.onCurrentUserChanged.listen((account) {
-      if (state.selectedProvider != SyncProviderType.googleDrive) {
-        return;
-      }
-      state = account != null
-          ? state.copyWith(
-              status: SyncStatus.connected,
-              accountEmail: account.email,
-              clearError: true,
-            )
-          : state.copyWith(status: SyncStatus.disconnected, clearAccount: true);
-    }, onError: (Object e) => Logger.warning('Google account stream: $e'));
   }
 
   void _loadSettings() {
     final lastSync = DateTime.tryParse(
       _prefs.getString(SyncEngine.lastSyncKey) ?? '',
     );
+    // A provider this version no longer has (Google Drive, iCloud) is
+    // "None".
     final provider = SyncProviderType.values.firstWhere(
       (e) => e.name == _prefs.getString(_syncProviderKey),
       orElse: () => SyncProviderType.none,
@@ -200,7 +185,6 @@ class SyncController extends StateNotifier<SyncState> {
           ? _lan?.lastPeerExchange
           : lastSync,
       selectedProvider: provider,
-      wifiOnly: _prefs.getBool(_syncWifiOnlyKey) ?? false,
       syncFrequency: frequency,
     );
   }
@@ -469,10 +453,6 @@ class SyncController extends StateNotifier<SyncState> {
         _lastConnection = ConnectionStatus.offline;
         return;
       }
-      if (automatic && state.wifiOnly && !await _connectivity.isWifi) {
-        Logger.info('Sync deferred: Wi-Fi only.');
-        return;
-      }
       if (state.selectedProvider == SyncProviderType.localWifi &&
           (!(_lan?.isPaired ?? false) || !await _connectivity.isWifi)) {
         return;
@@ -608,7 +588,6 @@ class SyncController extends StateNotifier<SyncState> {
       status: SyncStatus.disconnected,
       setup: SyncSetupState.unknown,
       clearError: true,
-      clearAccount: true,
       // The other provider's last sync says nothing about this one.
       lastSyncTime: provider == SyncProviderType.localWifi
           ? _lan?.lastPeerExchange
@@ -625,11 +604,6 @@ class SyncController extends StateNotifier<SyncState> {
     }
   }
 
-  Future<void> setWifiOnly(bool enabled) async {
-    await _prefs.setBool(_syncWifiOnlyKey, enabled);
-    state = state.copyWith(wifiOnly: enabled);
-  }
-
   Future<void> setSyncFrequency(SyncFrequency frequency) async {
     await _prefs.setString(_syncFrequencyKey, frequency.name);
     state = state.copyWith(syncFrequency: frequency);
@@ -639,18 +613,6 @@ class SyncController extends StateNotifier<SyncState> {
   Future<void> _refreshConnectionState() async {
     try {
       switch (state.selectedProvider) {
-        case SyncProviderType.googleDrive:
-          if (!await _authService.isSignedIn()) {
-            await _authService.signInSilently();
-          }
-          if (await _authService.isSignedIn()) {
-            _update(
-              (s) => s.copyWith(
-                status: SyncStatus.connected,
-                accountEmail: _authService.currentUser?.email,
-              ),
-            );
-          }
         case SyncProviderType.localWifi:
           if (!await _prepareLan()) {
             return;
@@ -697,16 +659,6 @@ class SyncController extends StateNotifier<SyncState> {
     state = state.copyWith(status: SyncStatus.syncing, clearError: true);
     try {
       switch (state.selectedProvider) {
-        case SyncProviderType.googleDrive:
-          final account = await _authService.signIn();
-          if (account == null) {
-            state = state.copyWith(status: SyncStatus.disconnected);
-            return;
-          }
-          state = state.copyWith(
-            status: SyncStatus.connected,
-            accountEmail: account.email,
-          );
         case SyncProviderType.localWifi:
           if (!await _prepareLan()) {
             return;
@@ -735,9 +687,6 @@ class SyncController extends StateNotifier<SyncState> {
       if (engine != null) {
         await engine.forgetKey();
       }
-      if (state.selectedProvider == SyncProviderType.googleDrive) {
-        await _authService.signOut();
-      }
       if (state.selectedProvider == SyncProviderType.localWifi) {
         await _lan?.unpair();
       }
@@ -749,7 +698,6 @@ class SyncController extends StateNotifier<SyncState> {
         status: SyncStatus.disconnected,
         selectedProvider: SyncProviderType.none,
         setup: SyncSetupState.unknown,
-        clearAccount: true,
         clearError: true,
         clearLastSync: true,
       );
@@ -1046,7 +994,6 @@ class SyncController extends StateNotifier<SyncState> {
     _settleInitialSync();
     _cancellation?.cancel();
     _stopTimersAndSubscriptions();
-    _authSub?.cancel();
     super.dispose();
   }
 }

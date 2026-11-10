@@ -1484,23 +1484,11 @@ abstract class AppLocalizations {
   /// **'Sync Settings'**
   String get syncSettings;
 
-  /// No description provided for @connectToGoogleDrive.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect to Google Drive'**
-  String get connectToGoogleDrive;
-
   /// No description provided for @syncNow.
   ///
   /// In en, this message translates to:
   /// **'Sync Now'**
   String get syncNow;
-
-  /// No description provided for @googleDriveSync.
-  ///
-  /// In en, this message translates to:
-  /// **'Google Drive Sync'**
-  String get googleDriveSync;
 
   /// No description provided for @lastSynced.
   ///
@@ -1520,12 +1508,6 @@ abstract class AppLocalizations {
   /// **'None'**
   String get providerNone;
 
-  /// No description provided for @providerGoogleDrive.
-  ///
-  /// In en, this message translates to:
-  /// **'Google Drive'**
-  String get providerGoogleDrive;
-
   /// No description provided for @disconnect.
   ///
   /// In en, this message translates to:
@@ -1537,12 +1519,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Offline Mode'**
   String get offlineMode;
-
-  /// No description provided for @syncOnlyOnWifi.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync only on Wi-Fi'**
-  String get syncOnlyOnWifi;
 
   /// No description provided for @syncFrequency.
   ///
@@ -2588,41 +2564,11 @@ abstract class AppLocalizations {
   /// **'Backup password'**
   String get backupPasswordLabel;
 
-  /// No description provided for @backupUploadToCloud.
-  ///
-  /// In en, this message translates to:
-  /// **'Also upload to your sync storage'**
-  String get backupUploadToCloud;
-
-  /// No description provided for @backupUploadNotConfigured.
-  ///
-  /// In en, this message translates to:
-  /// **'Set up Google Drive sync first'**
-  String get backupUploadNotConfigured;
-
-  /// No description provided for @backupExport.
-  ///
-  /// In en, this message translates to:
-  /// **'Export backup'**
-  String get backupExport;
-
   /// No description provided for @backupCreating.
   ///
   /// In en, this message translates to:
   /// **'Creating backup…'**
   String get backupCreating;
-
-  /// No description provided for @backupUploaded.
-  ///
-  /// In en, this message translates to:
-  /// **'Backup uploaded'**
-  String get backupUploaded;
-
-  /// No description provided for @backupUploadFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload failed. The backup was still created and can be shared.'**
-  String get backupUploadFailed;
 
   /// No description provided for @backupFailed.
   ///
@@ -2725,72 +2671,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transactions merged.'**
   String get selectiveRestoreSuccess;
-
-  /// No description provided for @syncPassphraseSetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a sync passphrase'**
-  String get syncPassphraseSetTitle;
-
-  /// No description provided for @syncPassphraseSetExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'Your data is encrypted before it leaves this device. Choose a sync passphrase: you need to enter it on every device you want to sync. It cannot be recovered, not even by the developer, so keep it somewhere safe.'**
-  String get syncPassphraseSetExplanation;
-
-  /// No description provided for @syncPassphraseEnterTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your sync passphrase'**
-  String get syncPassphraseEnterTitle;
-
-  /// No description provided for @syncPassphraseEnterExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'This sync folder is already used by another device. Enter the sync passphrase you set there.'**
-  String get syncPassphraseEnterExplanation;
-
-  /// No description provided for @syncPassphraseLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync passphrase'**
-  String get syncPassphraseLabel;
-
-  /// No description provided for @syncPassphraseConfirmLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm sync passphrase'**
-  String get syncPassphraseConfirmLabel;
-
-  /// No description provided for @syncPassphraseSetButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Set passphrase'**
-  String get syncPassphraseSetButton;
-
-  /// No description provided for @syncPassphraseEnterButton.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter passphrase'**
-  String get syncPassphraseEnterButton;
-
-  /// No description provided for @syncPassphraseWrong.
-  ///
-  /// In en, this message translates to:
-  /// **'Wrong sync passphrase.'**
-  String get syncPassphraseWrong;
-
-  /// No description provided for @syncPassphraseFolderExists.
-  ///
-  /// In en, this message translates to:
-  /// **'Another device has just set up sync. Enter the passphrase set there.'**
-  String get syncPassphraseFolderExists;
-
-  /// No description provided for @syncPassphraseFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'The sync passphrase could not be saved. Please try again.'**
-  String get syncPassphraseFailed;
 
   /// No description provided for @syncPendingChanges.
   ///
@@ -2977,12 +2857,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rule'**
   String get syncTableRules;
-
-  /// No description provided for @syncStatusConnectedAs.
-  ///
-  /// In en, this message translates to:
-  /// **'Connected as {email}'**
-  String syncStatusConnectedAs(String email);
 
   /// No description provided for @syncStatusConnected.
   ///
@@ -3569,7 +3443,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'It has been a while since your last backup. Tap to back up your data.'**
+  /// **'No backup has left this phone for a while. Tap to save one somewhere else; Android backup, if it is on, also covers a lost phone.'**
   String get notificationBackupBody;
 
   /// No description provided for @notificationSyncFailedTitle.
@@ -4798,20 +4672,8 @@ abstract class AppLocalizations {
   /// Sync tutorial step text
   ///
   /// In en, this message translates to:
-  /// **'Sync through your own Google Drive. Your data is encrypted before it leaves this device.'**
+  /// **'Sync with a second phone over your Wi-Fi: pair the phones by scanning a QR code. Everything is encrypted before it leaves this phone.'**
   String get tutSyncProviderBody;
-
-  /// Sync tutorial step title
-  ///
-  /// In en, this message translates to:
-  /// **'Connect'**
-  String get tutSyncConnectTitle;
-
-  /// Sync tutorial step text
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in, then set a sync passphrase. You enter the same passphrase on each of your devices.'**
-  String get tutSyncConnectBody;
 
   /// Section heading in accessibility settings
   ///
@@ -4852,7 +4714,7 @@ abstract class AppLocalizations {
   /// FAQ answer
   ///
   /// In en, this message translates to:
-  /// **'Your data is stored only on your phone, in LedgerZero’s private app storage, which Android keeps away from other apps and protects with your screen lock. The app lock adds your fingerprint, face or phone PIN. Backups and synced data are encrypted with your password or passphrase before they leave the phone. There are no LedgerZero servers, no account, no tracking and no analytics.'**
+  /// **'Your budget is stored on your phone, in LedgerZero’s private app storage, which Android keeps away from other apps and protects with your screen lock. The app lock adds your fingerprint, face or phone PIN. Backup files and synced data are encrypted with your password or passphrase before they leave the phone. If Android backup is on, Android keeps an end-to-end encrypted copy in your Google account that only your phone’s screen lock opens. There are no LedgerZero servers, no account, no tracking and no analytics.'**
   String get faqSafeA;
 
   /// FAQ question
@@ -4864,7 +4726,7 @@ abstract class AppLocalizations {
   /// FAQ answer
   ///
   /// In en, this message translates to:
-  /// **'Open Settings > Sync Settings. At home, pair the phones over Wi-Fi by scanning a QR code. To sync while you are apart, both phones use the same Google Drive account and sync passphrase. The user guide chapter “Using LedgerZero with a partner” explains the details.'**
+  /// **'Open Settings > Sync Settings and pair the phones over Wi-Fi by scanning a QR code. The two phones sync whenever both are on the same Wi-Fi with LedgerZero open; in between, each works on its own. The user guide chapter “Using LedgerZero with a partner” explains the details.'**
   String get faqSyncA;
 
   /// FAQ question
@@ -4888,7 +4750,7 @@ abstract class AppLocalizations {
   /// FAQ answer; menu names must match the settings labels
   ///
   /// In en, this message translates to:
-  /// **'Settings > Backup & Export creates a backup file that is always encrypted with a backup password you choose. Without that password the backup cannot be restored. CSV and JSON exports are readable copies and are not encrypted.'**
+  /// **'Settings > Backup & Export creates a backup file that is always encrypted with a backup password you choose; “Save to…” puts it in another place (a computer, a USB stick, a cloud folder). Without that password the backup cannot be restored. Android backup, if it is on, also brings the budget back on a new phone. CSV and JSON exports are readable copies and are not encrypted.'**
   String get faqBackupA;
 
   /// FAQ question
@@ -5026,7 +4888,7 @@ abstract class AppLocalizations {
   /// Onboarding benefit
   ///
   /// In en, this message translates to:
-  /// **'Stored only on your device. No account, no cloud.'**
+  /// **'Stored on your phone. No account, no LedgerZero servers.'**
   String get onbBenefitDataBody;
 
   /// Onboarding benefit
@@ -5068,7 +4930,7 @@ abstract class AppLocalizations {
   /// Onboarding privacy point
   ///
   /// In en, this message translates to:
-  /// **'We never see your financial data. Sync runs over your own Wi-Fi or through your own Google Drive, end-to-end encrypted.'**
+  /// **'We never see your financial data. Sync runs directly between your phones over your Wi-Fi, end-to-end encrypted. Android backup, if it is on, keeps an end-to-end encrypted copy that only your screen lock opens.'**
   String get onbPrivacyOwnCloud;
 
   /// App bar title of the onboarding budgeting explanation
@@ -5298,30 +5160,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{value}'**
   String integerValue(int value);
-
-  /// Sync error: network or timeout
-  ///
-  /// In en, this message translates to:
-  /// **'No connection to the cloud storage. Sync will try again when you are online.'**
-  String get syncErrorNetwork;
-
-  /// Sync error
-  ///
-  /// In en, this message translates to:
-  /// **'You are not signed in. Please connect again.'**
-  String get syncErrorNotSignedIn;
-
-  /// Sync error
-  ///
-  /// In en, this message translates to:
-  /// **'The sign-in has expired. Please disconnect and connect again.'**
-  String get syncErrorAuthFailed;
-
-  /// Sync error
-  ///
-  /// In en, this message translates to:
-  /// **'Your cloud storage is full. Free up space to keep syncing.'**
-  String get syncErrorStorageFull;
 
   /// Share sheet text of a transaction CSV export
   ///
@@ -6106,7 +5944,7 @@ abstract class AppLocalizations {
   /// No description provided for @setupDeviceExplanation.
   ///
   /// In en, this message translates to:
-  /// **'Your budget is stored only on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. There is no account, no cloud and no tracking. The app lock can also ask for your fingerprint, face or phone PIN.'**
+  /// **'Your budget is stored on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. There is no account, no LedgerZero server and no tracking. If Android backup is on, Android keeps an end-to-end encrypted copy that only this phone’s screen lock opens. The app lock can also ask for your fingerprint, face or phone PIN.'**
   String get setupDeviceExplanation;
 
   /// No description provided for @providerLocalWifi.
@@ -6124,7 +5962,7 @@ abstract class AppLocalizations {
   /// No description provided for @lanSetupExplanation.
   ///
   /// In en, this message translates to:
-  /// **'Share one budget with a second phone, for example your partner\'s, without any cloud. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.'**
+  /// **'Share one budget with a second phone, for example your partner\'s, directly over your Wi-Fi: no account and no server in between. The phones sync whenever both are on the same Wi-Fi with LedgerZero open.'**
   String get lanSetupExplanation;
 
   /// No description provided for @lanStart.
@@ -6754,7 +6592,7 @@ abstract class AppLocalizations {
   /// Help topic text
   ///
   /// In en, this message translates to:
-  /// **'Two phones can share one budget: over your home Wi-Fi without any cloud, or through a Google Drive account you both use when you are apart. Everything is encrypted before it leaves the phone.'**
+  /// **'Two phones can share one budget over your Wi-Fi: they sync directly from phone to phone whenever both are on the same Wi-Fi with LedgerZero open. Everything is encrypted before it leaves the phone.'**
   String get helpSyncBody;
 
   /// Numbered steps of a help topic, one per line
@@ -6844,7 +6682,7 @@ abstract class AppLocalizations {
   /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Two phones can share one budget. Pair them in Sync Settings: over your home Wi-Fi (scan the QR code on the other phone; both need LedgerZero open on the same Wi-Fi) or through a Google Drive account you both use. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.'**
+  /// **'Two phones can share one budget. Pair them over Wi-Fi in Sync Settings (scan the QR code on the other phone); they sync whenever both are on the same Wi-Fi with LedgerZero open. Every change syncs on its own; if you both change the same thing, the later change wins and Sync Settings lists the other one. Accounts you mark as personal stay yours: your partner sees their name and balance in net worth, but not their transactions. Mark an account as personal before the first sync; you can still share it later.'**
   String get guidePartnerBody;
 
   /// User guide chapter title
@@ -6856,7 +6694,7 @@ abstract class AppLocalizations {
   /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Your data is stored only on your phone, in LedgerZero’s private app storage, protected by Android and your screen lock. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. If the phone is lost or reset, the data is gone with it: create encrypted backups regularly in Settings > Backup & Export, copy them off the phone, and keep the backup password safe: without it a backup cannot be restored.'**
+  /// **'Your data is stored on your phone, in LedgerZero’s private app storage, protected by Android and your screen lock. The app lock asks for your fingerprint, face or phone PIN after the app was in the background. If the phone is lost or reset, the data is gone with it, unless Android backup is on (it keeps an end-to-end encrypted copy, up to about a day old, that your screen lock opens) or a second phone syncs. So also create encrypted backups regularly in Settings > Backup & Export, save them somewhere else, and keep the backup password safe: without it a backup cannot be restored.'**
   String get guideSecurityBody;
 
   /// User guide chapter title
@@ -7420,7 +7258,7 @@ abstract class AppLocalizations {
   /// Backup screen nudge text
   ///
   /// In en, this message translates to:
-  /// **'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions exist only on this phone.'**
+  /// **'You have personal accounts and the last backup is older than 7 days (or there is none). Their transactions never sync to the other phone: only this phone’s backups have them.'**
   String get backupNudgeMessage;
 
   /// Backup screen section title
@@ -7720,29 +7558,11 @@ abstract class AppLocalizations {
   /// **'Another device uses a newer version of LedgerZero. Its changes arrive after you update the app.'**
   String get notificationSyncUpdateBody;
 
-  /// Sync settings, Google Drive: shown with 'Set a sync passphrase' when the folder is empty
-  ///
-  /// In en, this message translates to:
-  /// **'Is another phone already syncing? Then do not set a new passphrase here. This sync folder is empty because this phone is signed in to a different Google account. Both phones must use the same Google account: disconnect and connect with the account of the other phone.'**
-  String get syncEmptyFolderSameAccountHint;
-
   /// Second paragraph of the restore confirmation while sync is set up
   ///
   /// In en, this message translates to:
   /// **'Sync is set up on this phone: a restore does not undo changes that were already synced, including this phone’s own. They come back from the sync folder. A restore brings back data that was lost; it does not put the shared budget back to an earlier state.'**
   String get restoreSyncNoRollbackNote;
-
-  /// Confirmation dialog title before Disconnect (Google Drive)
-  ///
-  /// In en, this message translates to:
-  /// **'Disconnect sync?'**
-  String get syncDisconnectConfirmTitle;
-
-  /// Confirmation dialog text before Disconnect (Google Drive)
-  ///
-  /// In en, this message translates to:
-  /// **'This phone stops syncing and forgets the sync passphrase. Your data stays on this phone and on your other devices. To sync again, connect and enter the passphrase; changes made in the meantime are sent then.'**
-  String get syncDisconnectConfirmMessage;
 
   /// Confirmation dialog title before turning Wi-Fi sync off
   ///
@@ -8275,7 +8095,7 @@ abstract class AppLocalizations {
   /// Settings > Security: how the data on the phone is protected (the database itself is not encrypted by the app)
   ///
   /// In en, this message translates to:
-  /// **'Only on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. Backups and sync files are encrypted with your password or passphrase.'**
+  /// **'On this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. If Android backup is on, also as an end-to-end encrypted copy in your Google account that only this phone’s screen lock opens. Backup files and sync files are encrypted with your password or passphrase.'**
   String get securityDataLocationBody;
 
   /// Backup screen: automatic backups are on but the stored password is gone (Android key store lost it, or the app moved to a new phone)
@@ -8284,11 +8104,53 @@ abstract class AppLocalizations {
   /// **'The backup password is no longer stored on this phone (for example after moving to a new phone). Turn automatic backups off and on again to enter it.'**
   String get autoBackupPasswordMissing;
 
-  /// Onboarding (security step) and Backup screen: the data exists only on the phone
+  /// Onboarding (security step) and Backup screen: what a lost phone loses, and what keeps the budget (Android backup, a backup file elsewhere, a second phone)
   ///
   /// In en, this message translates to:
-  /// **'If this phone is lost or reset, your budget is gone, unless a backup file is kept somewhere else or a second phone syncs with this one.'**
+  /// **'If this phone is lost or reset, your budget is gone, unless Android backup is on, a backup file is kept somewhere else, or a second phone syncs with this one.'**
   String get dataLossWarning;
+
+  /// Backup screen: button that creates the backup and opens the system file picker to save it (a folder, a USB stick, a cloud app)
+  ///
+  /// In en, this message translates to:
+  /// **'Save to…'**
+  String get backupSaveTo;
+
+  /// Backup screen: button that creates the backup and opens the share sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Share…'**
+  String get backupShare;
+
+  /// Snackbar after the backup file was saved through the system file picker
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved'**
+  String get backupSaved;
+
+  /// Backup screen, Create backup: what Save to… does
+  ///
+  /// In en, this message translates to:
+  /// **'“Save to…” lets you pick where the file goes: a folder on the phone, a USB stick or a cloud app such as Google Drive or Dropbox. LedgerZero signs in to nothing; the app you pick does the upload.'**
+  String get backupSaveToExplanation;
+
+  /// Backup screen: section about Android's own (Google) backup
+  ///
+  /// In en, this message translates to:
+  /// **'Android backup'**
+  String get androidBackupTitle;
+
+  /// Backup screen: Android backup in one or two sentences (the app cannot read the setting)
+  ///
+  /// In en, this message translates to:
+  /// **'If Android backup is on (Settings > System > Backup on most phones), Android copies the budget to your Google account about once a day, end-to-end encrypted with this phone’s screen lock, and puts it back on a new phone. LedgerZero cannot check whether it is on, and without a screen lock Android backs up none of it.'**
+  String get androidBackupExplanation;
+
+  /// Backup screen: shown when the database is above 20 MB
+  ///
+  /// In en, this message translates to:
+  /// **'The budget takes {size} MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.'**
+  String androidBackupTooLarge(String size);
 }
 
 class _AppLocalizationsDelegate

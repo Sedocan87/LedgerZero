@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_view_models.dart';
@@ -17,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/test_database.dart';
 import '../../providers/sync_controller_lifecycle_test.dart'
-    show DummyTransport, FakeAuth, FakeConnectivity;
+    show DummyTransport, FakeConnectivity;
 
 class _SetupEngine implements SyncEngine {
   String? created;
@@ -46,7 +45,6 @@ class _TestController extends SyncController {
     required super.dependencies,
     required super.connectivity,
   }) : super(
-         authService: FakeAuth(),
          transportFor: (p) =>
              p == SyncProviderType.none ? null : DummyTransport(),
        );
@@ -100,7 +98,14 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           syncControllerProvider.overrideWith((ref) => controller),
-          ...overrides,
+          // The paired phones (Wi-Fi sync set up) unless a test lists some.
+          ...(overrides.isEmpty
+              ? [
+                  lanPeersProvider.overrideWith(
+                    (ref) => Stream.value(const <LanPeer>[]),
+                  ),
+                ]
+              : overrides),
         ],
         child: const MaterialApp(
           localizationsDelegates: [
@@ -124,10 +129,22 @@ void main() {
     expect(find.text('None'), findsOneWidget);
   });
 
-  testWidgets('shows the Google Drive section when selected', (tester) async {
+  testWidgets('offers only "None" and Wi-Fi sync', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('None').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Home Wi-Fi (phone to phone)'), findsWidgets);
+    expect(find.textContaining('Google'), findsNothing);
+    expect(find.textContaining('Drive'), findsNothing);
+  });
+
+  testWidgets('a Google Drive provider from an older build shows "None"', (
+    tester,
+  ) async {
     await pump(tester, provider: 'googleDrive');
-    expect(find.text('Google Drive Sync'), findsOneWidget);
-    expect(find.text('Connect to Google Drive'), findsOneWidget);
+    expect(find.text('None'), findsOneWidget);
+    expect(find.text('Wi-Fi sync'), findsNothing);
+    expect(find.textContaining('Google'), findsNothing);
   });
 
   testWidgets('Wi-Fi sync before pairing offers start and join', (
@@ -144,9 +161,9 @@ void main() {
     expect(find.text('Wi-Fi sync'), findsOneWidget);
     expect(find.byKey(const Key('lan_start')), findsOneWidget);
     expect(find.byKey(const Key('lan_join')), findsOneWidget);
-    // No passphrase to type and no Google sign-in.
+    // No passphrase to type and no sign-in.
     expect(find.text('Set a sync passphrase'), findsNothing);
-    expect(find.text('Connect to Google Drive'), findsNothing);
+    expect(find.byIcon(Icons.login), findsNothing);
   });
 
   testWidgets('Wi-Fi sync after pairing lists the paired phones', (
@@ -189,82 +206,11 @@ void main() {
   ) async {
     await pump(tester, provider: 'iCloud');
     expect(find.text('None'), findsOneWidget);
-    expect(find.text('Google Drive Sync'), findsNothing);
+    expect(find.text('Wi-Fi sync'), findsNothing);
   });
 
-  testWidgets('first device sets a passphrase that meets the rules', (
-    tester,
-  ) async {
-    final controller = await pump(tester, provider: 'googleDrive');
-    await tester.runAsync(
-      () => controller.onLockStateChanged(AppLockState.unlocked),
-    );
-    controller.emit(
-      controller.state.copyWith(
-        status: SyncStatus.connected,
-        setup: SyncSetupState.needsNewPassphrase,
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Set a sync passphrase'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('syncPassphraseButton')));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const ValueKey('syncPassphraseField')),
-      'short',
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Set passphrase').last);
-    await tester.pumpAndSettle();
-    expect(find.text('Use at least 10 characters'), findsWidgets);
-    expect(engine.created, isNull);
-
-    const good = 'purple elephant dances quietly';
-    await tester.enterText(
-      find.byKey(const ValueKey('syncPassphraseField')),
-      good,
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('syncPassphraseConfirmField')),
-      good,
-    );
-    await tester.runAsync(() async {
-      await tester.tap(
-        find.widgetWithText(FilledButton, 'Set passphrase').last,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    });
-    await tester.pumpAndSettle();
-    expect(engine.created, good);
-    expect(find.byType(AlertDialog), findsNothing);
-    await tester.runAsync(
-      () => controller.onLockStateChanged(AppLockState.locked),
-    );
-  });
-
-  testWidgets('an empty Drive folder says that both phones need the same '
-      'Google account', (tester) async {
-    final controller = await pump(tester, provider: 'googleDrive');
-    controller.emit(
-      controller.state.copyWith(
-        status: SyncStatus.connected,
-        setup: SyncSetupState.needsNewPassphrase,
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('syncSameAccountHint')), findsOneWidget);
-    expect(find.textContaining('same Google account'), findsOneWidget);
-
-    // Not when the folder exists (the passphrase is asked for).
-    controller.emit(
-      controller.state.copyWith(setup: SyncSetupState.needsPassphrase),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('syncSameAccountHint')), findsNothing);
-  });
-
-  testWidgets('Disconnect asks first', (tester) async {
-    final controller = await pump(tester, provider: 'googleDrive');
+  testWidgets('Turn off Wi-Fi sync asks first', (tester) async {
+    final controller = await pump(tester, provider: 'localWifi');
     controller.emit(
       controller.state.copyWith(
         status: SyncStatus.connected,
@@ -273,14 +219,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Disconnect'));
+    await tester.tap(find.text('Turn off Wi-Fi sync'));
     await tester.pumpAndSettle();
-    expect(find.text('Disconnect sync?'), findsOneWidget);
+    expect(find.text('Turn off Wi-Fi sync?'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(controller.disconnects, 0);
 
-    await tester.tap(find.text('Disconnect'));
+    await tester.tap(find.text('Turn off Wi-Fi sync'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sync_stop_confirm')));
     await tester.pumpAndSettle();
@@ -288,10 +234,10 @@ void main() {
   });
 
   testWidgets('choosing the provider "None" asks first', (tester) async {
-    final controller = await pump(tester, provider: 'googleDrive');
+    final controller = await pump(tester, provider: 'localWifi');
 
     Future<void> chooseNone() async {
-      await tester.tap(find.text('Google Drive').first);
+      await tester.tap(find.text('Home Wi-Fi (phone to phone)').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('None').last);
       await tester.pumpAndSettle();
@@ -301,9 +247,9 @@ void main() {
     expect(find.text('Stop syncing?'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(controller.state.selectedProvider, SyncProviderType.googleDrive);
+    expect(controller.state.selectedProvider, SyncProviderType.localWifi);
     // The dropdown shows the provider in use again.
-    expect(find.text('Google Drive Sync'), findsOneWidget);
+    expect(find.text('Wi-Fi sync'), findsOneWidget);
     expect(find.text('None'), findsNothing);
 
     await chooseNone();
@@ -319,7 +265,7 @@ void main() {
   testWidgets('shows conflicts, failed files and update notices', (
     tester,
   ) async {
-    final controller = await pump(tester, provider: 'googleDrive');
+    final controller = await pump(tester, provider: 'localWifi');
     final now = DateTime.utc(2030);
     controller.emit(
       controller.state.copyWith(

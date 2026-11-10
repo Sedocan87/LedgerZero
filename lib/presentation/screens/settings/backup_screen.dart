@@ -50,7 +50,6 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   final _confirmPasswordController = TextEditingController();
   final _passwordFocus = FocusNode();
   bool _isLoading = false;
-  bool _uploadToCloud = false;
 
   @override
   void dispose() {
@@ -60,13 +59,15 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     super.dispose();
   }
 
-  Future<void> _createBackup() async {
+  /// Creates an encrypted backup and hands it on: "Save to…" (the system
+  /// file picker: a folder, a USB stick, a cloud app's folder) when [save],
+  /// else the share sheet. The temporary file is deleted afterwards.
+  Future<void> _createBackup({required bool save}) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final target = ref.read(backupCloudTargetProvider);
     setState(() => _isLoading = true);
     try {
       final backupService = ref.read(backupServiceProvider);
@@ -77,27 +78,21 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       _passwordController.clear();
       _confirmPasswordController.clear();
 
-      var completed = false;
-      if (_uploadToCloud && target != null) {
-        try {
-          await ExternalUiGuard.run(
-            () => backupService.uploadBackupToCloud(file, target),
-          );
-          completed = true;
-          messenger.showSnackBar(SnackBar(content: Text(l10n.backupUploaded)));
-        } catch (_) {
-          messenger.showSnackBar(
-            SnackBar(content: Text(l10n.backupUploadFailed)),
-          );
+      final bool done;
+      if (save) {
+        done = await files.saveAndDelete(file);
+        if (done) {
+          messenger.showSnackBar(SnackBar(content: Text(l10n.backupSaved)));
         }
+      } else {
+        done = await files.shareAndDelete(
+          file,
+          subject: l10n.backupShareSubject,
+        );
       }
-      // Hand the encrypted file to the share sheet; it is deleted after.
-      final shared = await files.shareAndDelete(
-        file,
-        subject: l10n.backupShareSubject,
-      );
-      // "Last backup" counts only when the file actually left the phone.
-      if (shared || completed) {
+      // "Last backup" counts only when the file actually left the phone
+      // (or at least this app: saved or shared, not cancelled).
+      if (done) {
         await backupService.recordBackupCompleted();
       }
     } catch (_) {
@@ -498,6 +493,37 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     );
   }
 
+  /// Android's own backup to the user's Google account (Auto Backup,
+  /// android/app/src/main/res/xml/data_extraction_rules.xml): the app
+  /// cannot read whether it is on (that needs a system permission) and no
+  /// public Settings action opens its screen, so this only explains it.
+  /// Above [androidBackupSizeNote] the database comes near the 25 MB that
+  /// Android backs up per app.
+  Widget _buildAndroidBackupSection(AppLocalizations l10n) {
+    final size = ref.watch(databaseFileSizeProvider).value ?? 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.androidBackupTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        Text(l10n.androidBackupExplanation),
+        if (size > androidBackupSizeNote) ...[
+          const SizedBox(height: 8),
+          Text(
+            l10n.androidBackupTooLarge(
+              (size / (1024 * 1024)).toStringAsFixed(0),
+            ),
+            key: const ValueKey('androidBackupTooLarge'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
+      ],
+    );
+  }
+
   /// Warnings a backup needs before it replaces the data: another
   /// member's backup swaps who owns the personal accounts; a backup older
   /// than the sync retention can bring back rows deleted elsewhere.
@@ -742,7 +768,6 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final cloudTarget = ref.watch(backupCloudTargetProvider);
     final personal = ref.watch(ownPersonalAccountsProvider).value ?? false;
     final nudge = ref.watch(backupNudgeProvider).value ?? false;
     return Scaffold(
@@ -768,7 +793,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
               const SizedBox(height: 16),
             ],
-            // The data exists only on this phone (docs/SECURITY.md).
+            // The data is on this phone and, with Android backup on, in
+            // its end-to-end encrypted cloud copy (docs/SECURITY.md).
             Card(
               key: const ValueKey('backupDataLossWarning'),
               child: ListTile(
@@ -777,6 +803,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            _buildAndroidBackupSection(l10n),
+            const SizedBox(height: 32),
             _buildAutoBackupSection(l10n),
             const SizedBox(height: 32),
             Text(
@@ -785,6 +813,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             ),
             const SizedBox(height: 8),
             Text(l10n.backupCreateExplanation),
+            const SizedBox(height: 8),
+            Text(l10n.backupSaveToExplanation),
             const SizedBox(height: 8),
             Text(l10n.restoreSyncKeyNote),
             if (personal) ...[
@@ -811,24 +841,23 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                           label: l10n.backupPasswordLabel,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.backupUploadToCloud),
-                        subtitle: cloudTarget == null
-                            ? Text(l10n.backupUploadNotConfigured)
-                            : null,
-                        value: _uploadToCloud && cloudTarget != null,
-                        onChanged: cloudTarget == null
-                            ? null
-                            : (value) => setState(() => _uploadToCloud = value),
-                      ),
                       const SizedBox(height: 16),
                       AppButton.primary(
+                        key: const Key('backup.saveTo'),
                         label: _isLoading
                             ? l10n.backupCreating
-                            : l10n.backupExport,
-                        onPressed: _isLoading ? null : _createBackup,
+                            : l10n.backupSaveTo,
+                        onPressed: _isLoading
+                            ? null
+                            : () => _createBackup(save: true),
+                      ),
+                      const SizedBox(height: 8),
+                      AppButton.secondary(
+                        key: const Key('backup.share'),
+                        label: l10n.backupShare,
+                        onPressed: _isLoading
+                            ? null
+                            : () => _createBackup(save: false),
                       ),
                     ],
                   ),

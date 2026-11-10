@@ -11,7 +11,6 @@ import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync/sync_conflicts_screen.dart';
-import 'package:ledger_zero/presentation/screens/settings/sync/sync_passphrase_dialog.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:ledger_zero/presentation/widgets/sync/sync_status_indicator.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_tutorial_manager.dart';
@@ -53,15 +52,10 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
         child: Text(l10n.providerNone),
       ),
       DropdownMenuItem(
-        value: SyncProviderType.googleDrive,
-        child: Text(l10n.providerGoogleDrive),
-      ),
-      DropdownMenuItem(
         value: SyncProviderType.localWifi,
         child: Text(l10n.providerLocalWifi, overflow: TextOverflow.ellipsis),
       ),
     ];
-    final isLan = state.selectedProvider == SyncProviderType.localWifi;
 
     // Sync Frequencies
     final frequencies = [
@@ -113,13 +107,6 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          SwitchListTile(
-            title: Text(l10n.syncOnlyOnWifi),
-            value: state.wifiOnly,
-            onChanged: (value) => controller.setWifiOnly(value),
-          ),
-          const SizedBox(height: 16),
-
           DropdownButtonFormField<SyncFrequency>(
             key: ValueKey(state.syncFrequency),
             decoration: InputDecoration(
@@ -136,10 +123,10 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Provider Specific UI
-          if (state.selectedProvider != SyncProviderType.none) ...[
+          // Wi-Fi sync (the only provider besides "None").
+          if (state.selectedProvider == SyncProviderType.localWifi) ...[
             Text(
-              isLan ? l10n.lanSyncTitle : l10n.googleDriveSync,
+              l10n.lanSyncTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -147,43 +134,29 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
             const SyncStatusIndicator(),
             const SizedBox(height: 24),
 
-            // Connect Button (for cloud providers)
-            if (!isLan &&
-                (state.status == SyncStatus.disconnected ||
-                    state.status == SyncStatus.error))
-              FilledButton.icon(
-                key: _tutorialKeys.connect,
-                onPressed: () => controller.connect(),
-                icon: const Icon(Icons.login),
-                label: Text(l10n.connectToGoogleDrive),
-              ),
-
-            if (isLan && state.setup != SyncSetupState.ready)
+            if (state.setup != SyncSetupState.ready)
               ..._lanSetupSection(context),
-            if (isLan && state.setup == SyncSetupState.ready)
+            if (state.setup == SyncSetupState.ready)
               ..._lanPeersSection(context),
             if ((state.status == SyncStatus.connected ||
                     state.status == SyncStatus.syncing) &&
-                (!isLan || state.setup == SyncSetupState.ready)) ...[
-              if (!isLan) ..._setupSection(context, state, controller),
-              if (state.setup == SyncSetupState.ready) ...[
-                Text(l10n.syncPendingChanges(state.pendingChanges)),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: state.status == SyncStatus.syncing
-                      ? null
-                      : () => controller.syncNow(),
-                  icon: const Icon(Icons.sync),
-                  label: Text(l10n.syncNow),
-                ),
-                const SizedBox(height: 16),
-              ],
+                state.setup == SyncSetupState.ready) ...[
+              Text(l10n.syncPendingChanges(state.pendingChanges)),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: state.status == SyncStatus.syncing
+                    ? null
+                    : () => controller.syncNow(),
+                icon: const Icon(Icons.sync),
+                label: Text(l10n.syncNow),
+              ),
+              const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: state.status == SyncStatus.syncing
                     ? null
-                    : () => _disconnect(isLan: isLan),
+                    : _turnOffLan,
                 icon: const Icon(Icons.logout),
-                label: Text(isLan ? l10n.lanTurnOff : l10n.disconnect),
+                label: Text(l10n.lanTurnOff),
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
               ),
             ],
@@ -195,10 +168,6 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Text(
                   switch (state.errorKind) {
-                    SyncErrorKind.network => l10n.syncErrorNetwork,
-                    SyncErrorKind.notSignedIn => l10n.syncErrorNotSignedIn,
-                    SyncErrorKind.authFailed => l10n.syncErrorAuthFailed,
-                    SyncErrorKind.storageFull => l10n.syncErrorStorageFull,
                     SyncErrorKind.pairingMismatch =>
                       l10n.syncErrorPairingMismatch,
                     SyncErrorKind.clockSkew => l10n.syncErrorClockSkew(
@@ -268,16 +237,12 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
     await controller.setProvider(value);
   }
 
-  Future<void> _disconnect({required bool isLan}) async {
+  Future<void> _turnOffLan() async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await _confirmStop(
-      title: isLan
-          ? l10n.lanTurnOffConfirmTitle
-          : l10n.syncDisconnectConfirmTitle,
-      message: isLan
-          ? l10n.lanTurnOffConfirmMessage
-          : l10n.syncDisconnectConfirmMessage,
-      action: isLan ? l10n.lanTurnOff : l10n.disconnect,
+      title: l10n.lanTurnOffConfirmTitle,
+      message: l10n.lanTurnOffConfirmMessage,
+      action: l10n.lanTurnOff,
     );
     if (confirmed) {
       await ref.read(syncControllerProvider.notifier).disconnect();
@@ -470,78 +435,6 @@ class _SyncSettingsScreenState extends ConsumerState<SyncSettingsScreen> {
           }),
         ),
       );
-  }
-
-  List<Widget> _setupSection(
-    BuildContext context,
-    SyncState state,
-    SyncController controller,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
-    final create = state.setup == SyncSetupState.needsNewPassphrase;
-    if (!create && state.setup != SyncSetupState.needsPassphrase) {
-      return const [];
-    }
-    return [
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                create
-                    ? l10n.syncPassphraseSetTitle
-                    : l10n.syncPassphraseEnterTitle,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                create
-                    ? l10n.syncPassphraseSetExplanation
-                    : l10n.syncPassphraseEnterExplanation,
-              ),
-              // A second phone signed in to another Google account sees
-              // its own, empty folder: setting a passphrase there gives
-              // two phones that both "sync" and never meet.
-              if (create) ...[
-                const SizedBox(height: 8),
-                Text(
-                  l10n.syncEmptyFolderSameAccountHint,
-                  key: const ValueKey('syncSameAccountHint'),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-              const SizedBox(height: 12),
-              FilledButton(
-                key: const ValueKey('syncPassphraseButton'),
-                onPressed: () async {
-                  if (!create && !await _confirmMergeExistingData()) {
-                    return;
-                  }
-                  if (!context.mounted) {
-                    return;
-                  }
-                  await SyncPassphraseDialog.show(
-                    context,
-                    create: create,
-                    submit: create
-                        ? controller.createPassphrase
-                        : controller.enterPassphrase,
-                  );
-                },
-                child: Text(
-                  create
-                      ? l10n.syncPassphraseSetButton
-                      : l10n.syncPassphraseEnterButton,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      const SizedBox(height: 16),
-    ];
   }
 
   List<Widget> _noticeSection(

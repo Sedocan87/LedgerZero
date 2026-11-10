@@ -23,10 +23,6 @@ dependencies:
   # The automatic-backup password and the Wi-Fi pairing secret (KeyStore).
   flutter_secure_storage: ^11.2.0
 
-  # Cloud Sync
-  googleapis: ^17.0.0
-  googleapis_auth: ^2.3.4
-
   # Natural Language Processing
   chrono_dart: ^2.0.1
 
@@ -60,11 +56,6 @@ dependencies:
   timezone: ^0.11.2
   pointycastle: ^4.0.0
   crypto: ^3.0.7
-  # google_sign_in 7 is a new API (authentication and authorization split,
-  # Credential Manager on Android with a mandatory server client ID). Stay on
-  # 6 until Drive sign-in can be migrated and verified on real devices.
-  google_sign_in: ^6.2.1
-  extension_google_sign_in_as_googleapis_auth: ^2.0.12
   synchronized: ^3.4.0
   connectivity_plus: ^7.0.0
   fuzzy: ^0.5.1
@@ -76,7 +67,6 @@ dependencies:
   # backend). The database is a plain SQLite file in the app's private
   # storage; backups and sync files are encrypted by the app.
   sqlite3: ^3.7.1
-  http: ^1.6.0 # Drive media download client
   qr_flutter: ^4.1.0
   # QR scanner for Wi-Fi sync pairing: ZXing C++ through FFI on top of the
   # camera plugin. No Google ML Kit and no Play services, so nothing in the

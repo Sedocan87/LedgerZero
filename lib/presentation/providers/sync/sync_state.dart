@@ -4,7 +4,10 @@ import 'package:ledger_zero/presentation/providers/sync/sync_view_models.dart';
 
 enum SyncStatus { idle, disconnected, connected, syncing, error }
 
-enum SyncProviderType { none, googleDrive, localWifi }
+/// Where this phone syncs. Stored by name under `sync_provider`; a name
+/// this version does not know (Google Drive and iCloud of earlier builds)
+/// reads as [none].
+enum SyncProviderType { none, localWifi }
 
 enum SyncFrequency {
   manual,
@@ -44,10 +47,8 @@ class SyncState extends Equatable {
 
   /// Kind of the last error, null when there is none or it is unknown.
   final SyncErrorKind? errorKind;
-  final String? accountEmail;
   final String? message;
   final double? progress;
-  final bool wifiOnly;
   final SyncFrequency syncFrequency;
   final SyncSetupState setup;
 
@@ -79,10 +80,8 @@ class SyncState extends Equatable {
     this.lastSyncTime,
     this.errorMessage,
     this.errorKind,
-    this.accountEmail,
     this.message,
     this.progress,
-    this.wifiOnly = false,
     this.syncFrequency = SyncFrequency.realtime,
     this.setup = SyncSetupState.unknown,
     this.pendingChanges = 0,
@@ -113,12 +112,9 @@ class SyncState extends Equatable {
     String? errorMessage,
     SyncErrorKind? errorKind,
     bool clearError = false,
-    String? accountEmail,
-    bool clearAccount = false,
     String? message,
     bool clearMessage = false,
     double? progress,
-    bool? wifiOnly,
     SyncFrequency? syncFrequency,
     SyncSetupState? setup,
     int? pendingChanges,
@@ -137,10 +133,8 @@ class SyncState extends Equatable {
       lastSyncTime: lastSyncTime ?? (clearLastSync ? null : this.lastSyncTime),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       errorKind: clearError ? null : (errorKind ?? this.errorKind),
-      accountEmail: clearAccount ? null : (accountEmail ?? this.accountEmail),
       message: clearMessage ? null : (message ?? this.message),
       progress: progress ?? this.progress,
-      wifiOnly: wifiOnly ?? this.wifiOnly,
       syncFrequency: syncFrequency ?? this.syncFrequency,
       setup: setup ?? this.setup,
       pendingChanges: pendingChanges ?? this.pendingChanges,
@@ -163,10 +157,8 @@ class SyncState extends Equatable {
     lastSyncTime,
     errorMessage,
     errorKind,
-    accountEmail,
     message,
     progress,
-    wifiOnly,
     syncFrequency,
     setup,
     pendingChanges,

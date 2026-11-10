@@ -10,17 +10,16 @@ import 'package:drift/drift.dart' show Value;
 import 'package:ledger_zero/data/database/database.dart';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
-import 'package:ledger_zero/services/sync/google_auth_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/transport/sync_transport.dart';
 
+import '../../helpers/lan_test_service.dart';
 import '../../helpers/sync_simulation.dart';
 import '../../helpers/security_fakes.dart' show InMemorySecureStore;
 import '../../helpers/test_database.dart';
@@ -73,17 +72,6 @@ class FakeConnectivity implements ConnectivityService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class FakeAuth implements GoogleAuthService {
-  @override
-  Stream<GoogleSignInAccount?> get onCurrentUserChanged => const Stream.empty();
-  @override
-  Future<bool> isSignedIn() async => false;
-  @override
-  Future<void> signInSilently() async {}
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 class DummyTransport implements SyncTransport {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -96,17 +84,20 @@ void main() {
   late InMemoryPrefs prefs;
   final transport = DummyTransport();
 
-  SyncController controller({
+  /// The Wi-Fi sync service of the last [controller].
+  late LanSyncService wifi;
+
+  /// A controller with Wi-Fi sync set up (paired); the engine is fake, so
+  /// the runs do not reach the Wi-Fi sync service.
+  Future<SyncController> controller({
     SyncFrequency frequency = SyncFrequency.realtime,
     Duration? interval,
-    bool wifiOnly = false,
-    String provider = 'googleDrive',
-  }) {
+    String provider = 'localWifi',
+  }) async {
     prefs.values['sync_provider'] = provider;
     prefs.values['sync_frequency'] = frequency.name;
-    prefs.values['sync_on_wifi_only'] = wifiOnly;
+    final lan = wifi = await testLanSync(prefs);
     final c = SyncController(
-      authService: FakeAuth(),
       prefs: prefs,
       connectivity: connectivity,
       dependencies: () => SyncDependencies(
@@ -115,6 +106,7 @@ void main() {
         resolver: SyncConflictResolver(t.db),
       ),
       transportFor: (p) => p == SyncProviderType.none ? null : transport,
+      lan: lan,
       debounce: const Duration(milliseconds: 60),
       resumeThreshold: const Duration(milliseconds: 100),
       intervalFor: (f) => f == SyncFrequency.realtime && interval != null
@@ -145,7 +137,7 @@ void main() {
   });
 
   test('paused while locked; syncs on unlock; lock cancels the run', () async {
-    final c = controller();
+    final c = await controller();
     expect(c.state.paused, isTrue);
     await settle();
     expect(engine.runs, 0);
@@ -174,7 +166,7 @@ void main() {
   });
 
   test('local changes trigger one debounced sync', () async {
-    final c = controller();
+    final c = await controller();
     await c.onLockStateChanged(AppLockState.unlocked);
     await settle();
     final afterUnlock = engine.runs;
@@ -189,7 +181,7 @@ void main() {
   });
 
   test('no automatic sync when the frequency is manual', () async {
-    final c = controller(
+    final c = await controller(
       frequency: SyncFrequency.manual,
       interval: const Duration(milliseconds: 20),
     );
@@ -206,7 +198,7 @@ void main() {
   });
 
   test('periodic timer, reconnect and resume trigger syncs', () async {
-    final c = controller(interval: const Duration(milliseconds: 50));
+    final c = await controller(interval: const Duration(milliseconds: 50));
     await c.onLockStateChanged(AppLockState.unlocked);
     await settle(180);
     expect(engine.runs, greaterThanOrEqualTo(3));
@@ -218,6 +210,9 @@ void main() {
     expect(engine.runs, before);
 
     await c.setSyncFrequency(SyncFrequency.everyHour);
+    // "Last sync" with Wi-Fi sync is the last exchange with the other
+    // phone: this run reached it.
+    await recordPeerExchange(wifi, DateTime.now());
     connectivity.controller.add(ConnectionStatus.offline);
     connectivity.controller.add(ConnectionStatus.online);
     await settle();
@@ -232,13 +227,17 @@ void main() {
     expect(engine.runs, before + 2);
   });
 
-  test('Wi-Fi only gates automatic syncs, not manual ones', () async {
+  test('Wi-Fi sync runs only on Wi-Fi, automatic and manual', () async {
     connectivity.wifi = false;
-    final c = controller(wifiOnly: true);
+    final c = await controller();
     await c.onLockStateChanged(AppLockState.unlocked);
     await localChange('p1');
     await settle(200);
     expect(engine.runs, 0);
+    await c.syncNow();
+    expect(engine.runs, 0, reason: 'mobile data: the other phone is not there');
+
+    connectivity.wifi = true;
     await c.syncNow();
     expect(engine.runs, 1);
 
@@ -247,11 +246,24 @@ void main() {
     expect(engine.runs, 1, reason: 'offline: nothing to do');
   });
 
+  test('a Google Drive provider saved by an older build means no sync, '
+      'without an error', () async {
+    final c = await controller(provider: 'googleDrive');
+    expect(c.state.selectedProvider, SyncProviderType.none);
+    await c.onLockStateChanged(AppLockState.unlocked);
+    await localChange('p1');
+    await c.syncNow();
+    await settle(100);
+    expect(engine.runs, 0);
+    expect(c.state.status, isNot(SyncStatus.error));
+    expect(await c.syncSettled().then((_) => true), isTrue);
+  });
+
   test('errors never escape as unhandled', () async {
     final unhandled = <Object>[];
     await runZonedGuarded(() async {
       engine.error = const SyncException('boom', retryable: true);
-      final c = controller(interval: const Duration(milliseconds: 40));
+      final c = await controller(interval: const Duration(milliseconds: 40));
       await c.onLockStateChanged(AppLockState.unlocked);
       await localChange('p1');
       connectivity.controller.add(ConnectionStatus.offline);
@@ -273,7 +285,7 @@ void main() {
   });
 
   test('pending changes, conflicts and quarantine are exposed', () async {
-    final c = controller(frequency: SyncFrequency.manual);
+    final c = await controller(frequency: SyncFrequency.manual);
     await c.onLockStateChanged(AppLockState.unlocked);
     await localChange('p1');
     await settle(100);
@@ -311,7 +323,7 @@ void main() {
   test(
     'pause waits for the running sync and blocks new runs until resume',
     () async {
-      final c = controller(frequency: SyncFrequency.manual);
+      final c = await controller(frequency: SyncFrequency.manual);
       await c.onLockStateChanged(AppLockState.unlocked);
       engine.gate = Completer<void>();
       final first = c.syncNow();
@@ -339,7 +351,7 @@ void main() {
   );
 
   test('a run that outlives the controller does not touch its state', () async {
-    final c = controller(frequency: SyncFrequency.manual);
+    final c = await controller(frequency: SyncFrequency.manual);
     await c.onLockStateChanged(AppLockState.unlocked);
     engine.gate = Completer<void>();
     final run = c.syncNow();
@@ -361,7 +373,7 @@ void main() {
     }
 
     test('waits for the first sync after the database opened', () async {
-      final c = controller();
+      final c = await controller();
       expect(await settled(c), isFalse); // the session has not started
       engine.gate = Completer<void>();
       await c.onLockStateChanged(AppLockState.unlocked);
@@ -373,7 +385,7 @@ void main() {
     });
 
     test('a failed first sync settles too', () async {
-      final c = controller();
+      final c = await controller();
       engine.error = StateError('boom');
       await c.onLockStateChanged(AppLockState.unlocked);
       expect(await settled(c), isTrue);
@@ -382,22 +394,22 @@ void main() {
     test('offline, manual frequency or no provider: nothing to wait '
         'for', () async {
       connectivity.connected = false;
-      final offline = controller();
+      final offline = await controller();
       await offline.onLockStateChanged(AppLockState.unlocked);
       expect(await settled(offline), isTrue);
       expect(engine.runs, 0);
 
-      final manual = controller(frequency: SyncFrequency.manual);
+      final manual = await controller(frequency: SyncFrequency.manual);
       await manual.onLockStateChanged(AppLockState.unlocked);
       expect(await settled(manual), isTrue);
 
-      final none = controller(provider: 'none');
+      final none = await controller(provider: 'none');
       await none.onLockStateChanged(AppLockState.unlocked);
       expect(await settled(none), isTrue);
     });
 
     test('afterwards it follows the run in progress (resume)', () async {
-      final c = controller();
+      final c = await controller();
       await c.onLockStateChanged(AppLockState.unlocked);
       expect(await settled(c), isTrue);
 
@@ -411,7 +423,7 @@ void main() {
 
     test('closing the database releases whoever waits; the next session '
         'waits again', () async {
-      final c = controller();
+      final c = await controller();
       engine.gate = Completer<void>();
       await c.onLockStateChanged(AppLockState.unlocked);
       var released = false;
@@ -426,7 +438,7 @@ void main() {
   });
 
   test('a newer-schema file or snapshot met by the run is reported', () async {
-    final c = controller(frequency: SyncFrequency.manual);
+    final c = await controller(frequency: SyncFrequency.manual);
     await c.onLockStateChanged(AppLockState.unlocked);
     await c.syncNow();
     expect(c.state.newerSchemaPending, isFalse);
@@ -445,7 +457,7 @@ void main() {
   });
 
   test('a provider saved by an older version (iCloud) means no sync', () async {
-    final c = controller(provider: 'iCloud');
+    final c = await controller(provider: 'iCloud');
     expect(c.state.selectedProvider, SyncProviderType.none);
     await c.onLockStateChanged(AppLockState.unlocked);
     await localChange('p1');
@@ -482,7 +494,6 @@ void main() {
     SyncController lanController() {
       prefs.values['sync_provider'] = 'localWifi';
       final c = SyncController(
-        authService: FakeAuth(),
         prefs: prefs,
         connectivity: connectivity,
         dependencies: () => SyncDependencies(

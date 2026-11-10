@@ -97,6 +97,9 @@ void main() {
       expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
       expect(find.text('Off'), findsOneWidget);
 
+      // Below the Android backup section.
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(find.text('Password for automatic backups'), findsOneWidget);
@@ -220,7 +223,7 @@ void main() {
   testWidgets('with sync set up the restore confirmation says that synced '
       'changes are not rolled back', (tester) async {
     await tester.runAsync(() async {
-      await prefs.setString('sync_provider', 'googleDrive');
+      await prefs.setString('sync_provider', 'localWifi');
       await openRestoreConfirmation(tester);
       expect(
         find.byKey(const ValueKey('restoreSyncNoRollbackNote')),

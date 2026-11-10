@@ -20,18 +20,6 @@ class DatabaseException implements Exception {
 
 /// What went wrong in a sync, for a localised message in the UI.
 enum SyncErrorKind {
-  /// No connection or a timeout.
-  network,
-
-  /// Not signed in to the cloud provider.
-  notSignedIn,
-
-  /// The provider rejected the sign-in; the user has to reconnect.
-  authFailed,
-
-  /// The cloud storage is full.
-  storageFull,
-
   /// Wi-Fi sync: the paired phones use different sync folders (paired
   /// with different codes); pair them again.
   pairingMismatch,

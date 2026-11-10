@@ -29,24 +29,34 @@ final backupSchedulerProvider = Provider<BackupScheduler>((ref) {
   return BackupScheduler(prefs, notificationService);
 });
 
-/// The cloud storage chosen in Sync settings, or null when none is set up.
-final backupCloudTargetProvider = Provider<BackupCloudTarget?>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
-  final name = prefs.getString('sync_provider');
-  if (name == SyncProviderType.googleDrive.name) {
-    return BackupCloudTarget.googleDrive;
-  }
-  return null;
-});
-
-/// Whether a sync provider is chosen in Sync settings (Google Drive or
-/// Wi-Fi sync). Read from the stored setting, like
-/// [backupCloudTargetProvider].
+/// Whether Wi-Fi sync is chosen in Sync settings. Read from the stored
+/// setting; a provider of an older build (Google Drive) is no sync.
 final syncConfiguredProvider = Provider<bool>((ref) {
   final name = ref.watch(sharedPreferencesProvider).getString('sync_provider');
-  return name == SyncProviderType.googleDrive.name ||
-      name == SyncProviderType.localWifi.name;
+  return name == SyncProviderType.localWifi.name;
 });
+
+/// The size of the database as Android's backup copies it
+/// (`db.sqlite` plus its `-wal`), in bytes; 0 when it cannot be read.
+final databaseFileSizeProvider = FutureProvider.autoDispose<int>((ref) async {
+  ref.watch(databaseGenerationProvider);
+  try {
+    final db = await databaseFile();
+    var size = 0;
+    for (final file in [db, File('${db.path}-wal')]) {
+      if (await file.exists()) {
+        size += await file.length();
+      }
+    }
+    return size;
+  } catch (_) {
+    return 0;
+  }
+});
+
+/// Android backs up at most 25 MB per app and silently stops above that;
+/// above this size the Backup screen says so.
+const int androidBackupSizeNote = 20 * 1024 * 1024;
 
 /// Whether this phone has personal accounts of its own member. Their
 /// transactions never sync, so only this phone's backups hold them.
@@ -73,7 +83,6 @@ final backupServiceProvider = Provider<BackupService>((ref) {
   return BackupService(
     // watch: a re-login or restore opens a new connection.
     ref.watch(databaseProvider),
-    googleDriveService: ref.watch(googleDriveServiceProvider),
     backupScheduler: ref.watch(backupSchedulerProvider),
     files: ref.watch(exportFileServiceProvider),
   );
