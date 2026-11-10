@@ -113,6 +113,33 @@ Other shared widgets: pickers in `lib/presentation/widgets/pickers/`
 Screens use a plain Material `AppBar`; there is no app-specific app bar
 widget.
 
+## Lists
+
+Lists are plain rows, not cards: inset hairlines between rows, no
+outlines, a tonal highlight (`secondaryContainer`) for selected rows.
+
+* **Transactions** (Transactions tab, account screen, payee screen,
+  Home's recent ones) all use `TransactionListItem`
+  (`lib/presentation/screens/transactions/widgets/`): a 40 dp category
+  badge (`CategoryIconResolver`; a swap icon for transfers, call-split for
+  splits, the tag icon when uncategorised, those three on a neutral
+  badge), the payee in w600, "Category · Account" below, the amount right
+  aligned in tabular figures (inflows green with a "+", outflows in the
+  text colour with a "-") and the cleared toggle (48 dp target, "Uncleared.
+  Tap to change"). Labels come from `transactionLookupsProvider`.
+* **Day headings** (`TransactionDateHeader`) show the weekday and date and
+  the day's total. A list sorted by anything but date has no headings and
+  each row shows its date. Only complete days get a total
+  (`completeDayTotals`): on a paged list the last loaded day may continue
+  on the next page and shows its total once that page is in; a day with
+  rows in several currencies shows none.
+* **Accounts** (`AccountCard`): the account badge, name, type (and
+  "Personal" / "Partner's") on the second line, the balance right aligned
+  (red only for an overdrawn account that is not a credit card), under the
+  headings On budget, Off budget, Closed and the partner's accounts. A
+  heading shows its group's total when the group has more than one
+  account, all in one currency.
+
 ## Text and numbers
 
 * All user-visible text comes from `AppLocalizations` (EN/DE); see

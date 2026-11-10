@@ -4115,5 +4115,11 @@
   "tbbStatusAllAssigned": "All assigned",
   "@tbbStatusAllAssigned": {"description": "Status chip next to a To Be Budgeted of exactly zero"},
   "budgetViewProgress": "Show progress bars",
-  "@budgetViewProgress": {"description": "Budget menu: switch the category rows to the spent-of-budgeted progress view (checked while it is on)"}
+  "@budgetViewProgress": {"description": "Budget menu: switch the category rows to the spent-of-budgeted progress view (checked while it is on)"},
+  "accountsGroupOnBudget": "On budget",
+  "@accountsGroupOnBudget": {"description": "Accounts list: heading above the open accounts that are in the budget"},
+  "accountsGroupOffBudget": "Off budget",
+  "@accountsGroupOffBudget": {"description": "Accounts list: heading above the open accounts outside the budget (they count towards net worth only)"},
+  "accountsGroupClosed": "Closed",
+  "@accountsGroupClosed": {"description": "Accounts list: heading above the closed accounts (shown with the filter \"Show closed accounts\")"}
 }

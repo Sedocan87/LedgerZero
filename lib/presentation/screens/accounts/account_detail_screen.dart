@@ -9,7 +9,6 @@ import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
-import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
@@ -25,6 +24,9 @@ import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/domain/entities/transaction.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 
 final accountDetailProvider = StreamProvider.family
     .autoDispose<Account?, String>((ref, id) {
@@ -523,19 +525,12 @@ class TransactionList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transactionsAsync = ref
-        .watch(accountTransactionsProvider(accountId))
-        .transactions;
+    final state = ref.watch(accountTransactionsProvider(accountId));
     final notifier = ref.read(accountTransactionsProvider(accountId).notifier);
-    final payeeNames = ref.watch(payeeMapProvider).valueOrNull ?? const {};
-    final accountNames = ref.watch(accountMapProvider).valueOrNull ?? const {};
+    final lookups = ref.watch(transactionLookupsProvider);
     final l10n = AppLocalizations.of(context)!;
-    final fmt = ref.watch(appFormatterProvider);
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
-    return transactionsAsync.when(
+    return state.transactions.when(
       data: (transactions) {
         if (transactions.isEmpty) {
           return EmptyState(
@@ -549,98 +544,55 @@ class TransactionList extends ConsumerWidget {
         }
 
         final hasMore = notifier.hasMore;
+        // Newest first, under a heading per day with the day's total.
+        final items = flattenByDay(transactions, sort: state.sort);
+        final dayTotals = completeDayTotals(
+          transactions,
+          hasMore: hasMore,
+          currencyOf: (_) => currency,
+        );
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.only(bottom: 8),
           // A progress row at the end while more rows may exist.
-          itemCount: transactions.length + (hasMore ? 1 : 0),
+          itemCount: items.length + (hasMore ? 1 : 0),
           itemBuilder: (context, index) {
             // Close to the end of the loaded rows: ask for the next page
             // (ignored while one is on its way).
-            if (hasMore && index >= transactions.length - 10) {
+            if (hasMore && index >= items.length - 10) {
               WidgetsBinding.instance.addPostFrameCallback(
                 (_) => notifier.loadMore(),
               );
             }
-            if (index == transactions.length) {
+            if (index == items.length) {
               return const Padding(
                 key: Key('account.transactions.more'),
                 padding: EdgeInsets.all(16),
                 child: Center(child: CircularProgressIndicator()),
               );
             }
-            final t = transactions[index];
-            final String title;
-            String subtitle = fmt.formatDate(t.date);
-            final isTransfer = t.transferAccountId != null;
-            if (isTransfer) {
-              final other = accountNames[t.transferAccountId];
-              title = other == null
-                  ? l10n.transfer
-                  : t.amount < 0
-                  ? l10n.transferToAccount(other)
-                  : l10n.transferFromAccount(other);
-              if (t.memo != null && t.memo!.isNotEmpty) {
-                subtitle = '$subtitle · ${t.memo}';
-              }
-            } else {
-              title = payeeNames[t.payeeId] ?? t.memo ?? l10n.unknownPayee;
+            final item = items[index];
+            if (item is DateTime) {
+              return TransactionDateHeader(
+                date: item,
+                total: dayTotals[item]?.total,
+                currencyCode: currency,
+              );
             }
-
-            final isIncome = t.amount >= 0;
-            final amountColor = isIncome
-                ? (isDark ? Colors.green.shade300 : AppColors.income)
-                : (isDark ? Colors.red.shade300 : AppColors.expense);
-            final iconData = isTransfer
-                ? Icons.swap_horiz_rounded
-                : (isIncome
-                      ? Icons.arrow_downward_rounded
-                      : Icons.arrow_upward_rounded);
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Card(
-                clipBehavior: Clip.antiAlias,
-                child: ListTile(
-                  onTap: () => context.push('/edit-transaction/${t.id}'),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 2,
-                  ),
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: amountColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(iconData, color: amountColor, size: 20),
-                  ),
-                  title: Text(
-                    title,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: Text(
-                    fmt.formatMoney(t.amount, currencyCode: currency),
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: amountColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+            final t = item as Transaction;
+            final memo = t.memo?.trim();
+            return TransactionListItem(
+              transaction: t,
+              // Without a payee, the memo says what the row is.
+              payeeName:
+                  lookups.payeeLabel(t, l10n) ??
+                  (memo == null || memo.isEmpty ? null : memo),
+              categoryName: lookups.categoryLabel(t, l10n),
+              category: lookups.categoryOf(t),
+              isSplit: lookups.isSplit(t),
+              currencyCode: currency,
+              showDate: state.sort.field != TransactionSortField.date,
+              showDivider: index > 0 && items[index - 1] is! DateTime,
+              onTap: () => context.push('/edit-transaction/${t.id}'),
             );
           },
         );

@@ -8341,6 +8341,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show progress bars'**
   String get budgetViewProgress;
+
+  /// Accounts list: heading above the open accounts that are in the budget
+  ///
+  /// In en, this message translates to:
+  /// **'On budget'**
+  String get accountsGroupOnBudget;
+
+  /// Accounts list: heading above the open accounts outside the budget (they count towards net worth only)
+  ///
+  /// In en, this message translates to:
+  /// **'Off budget'**
+  String get accountsGroupOffBudget;
+
+  /// Accounts list: heading above the closed accounts (shown with the filter "Show closed accounts")
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get accountsGroupClosed;
 }
 
 class _AppLocalizationsDelegate

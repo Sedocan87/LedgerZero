@@ -4,11 +4,9 @@ import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
-import 'package:ledger_zero/presentation/providers/data_providers.dart';
-import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/core/constants/dimensions.dart';
-import 'package:ledger_zero/app/theme.dart';
-import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_item.dart';
+import 'package:ledger_zero/presentation/screens/transactions/widgets/transaction_list_parts.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 final recentTransactionsProvider =
@@ -31,14 +29,9 @@ class RecentTransactionsWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactionsAsync = ref.watch(recentTransactionsProvider);
-    final fmt = ref.watch(appFormatterProvider);
     // Each amount is shown in its account's currency (Settings currency
     // while accounts are loading).
-    final accountCurrencies = <String, String>{
-      for (final account in ref.watch(accountsProvider).valueOrNull ?? [])
-        account.id: account.currency,
-    };
-    final payeeNames = ref.watch(payeeMapProvider).valueOrNull ?? const {};
+    final lookups = ref.watch(transactionLookupsProvider);
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
@@ -121,74 +114,25 @@ class RecentTransactionsWidget extends ConsumerWidget {
                   ),
                 );
               }
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: transactions.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  indent: AppSpacing.xxl + AppSpacing.md,
-                  endIndent: AppSpacing.md,
-                  color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.4,
-                  ),
-                ),
-                itemBuilder: (context, index) {
-                  final transaction = transactions[index];
-                  final isIncome = transaction.amount >= 0;
-                  final isDark = theme.brightness == Brightness.dark;
-                  final color = isIncome
-                      ? (isDark ? Colors.green.shade300 : AppColors.income)
-                      : (isDark ? Colors.red.shade300 : AppColors.expense);
-
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.xs,
+              return Column(
+                children: [
+                  for (final (index, transaction) in transactions.indexed)
+                    TransactionListItem(
+                      transaction: transaction,
+                      payeeName:
+                          lookups.payeeLabel(transaction, l10n) ??
+                          _memoOrNull(transaction),
+                      categoryName: lookups.categoryLabel(transaction, l10n),
+                      category: lookups.categoryOf(transaction),
+                      isSplit: lookups.isSplit(transaction),
+                      accountName:
+                          lookups.accounts[transaction.accountId]?.name,
+                      currencyCode: lookups.currencyOf(transaction),
+                      // A glance at the latest rows: no cleared toggle.
+                      showClearedStatus: false,
+                      showDivider: index > 0,
                     ),
-                    leading: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        isIncome
-                            ? Icons.arrow_downward_rounded
-                            : Icons.arrow_upward_rounded,
-                        color: color,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      payeeNames[transaction.payeeId] ??
-                          transaction.memo ??
-                          l10n.unknownPayee,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      fmt.formatDate(transaction.date),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    trailing: AmountText(
-                      transaction.amount,
-                      currencyCode: accountCurrencies[transaction.accountId],
-                      amountContext: AmountContext.transaction,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  );
-                },
+                ],
               );
             },
             loading: () => const Center(
@@ -204,4 +148,10 @@ class RecentTransactionsWidget extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Without a payee, the memo says what the row is.
+String? _memoOrNull(Transaction tx) {
+  final memo = tx.memo?.trim();
+  return memo == null || memo.isEmpty ? null : memo;
 }

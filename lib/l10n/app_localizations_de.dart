@@ -5334,4 +5334,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get budgetViewProgress => 'Fortschrittsbalken anzeigen';
+
+  @override
+  String get accountsGroupOnBudget => 'Im Budget';
+
+  @override
+  String get accountsGroupOffBudget => 'Außerhalb des Budgets';
+
+  @override
+  String get accountsGroupClosed => 'Geschlossen';
 }

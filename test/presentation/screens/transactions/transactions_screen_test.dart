@@ -76,8 +76,9 @@ void main() {
     WidgetTester tester, {
     FilteredTransactionsArgs? args,
     List<Override> extraOverrides = const [],
+    Size size = const Size(1080, 3000),
   }) async {
-    tester.view.physicalSize = const Size(1080, 3000);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
@@ -321,7 +322,8 @@ void main() {
           );
         }
       });
-      await pump(tester);
+      // Short enough that the progress row after the page is not built.
+      await pump(tester, size: const Size(1080, 1600));
       await tester.longPress(find.text('Transfer to Savings'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Select all loaded'));
@@ -345,6 +347,100 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('3 selected'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
+    });
+  });
+
+  group('rows and day headings (UI refresh)', () {
+    Finder header(DateTime date) => find.byWidgetPredicate(
+      (w) => w is TransactionDateHeader && w.date == date,
+    );
+    Finder dayTotal(DateTime date) => find.descendant(
+      of: header(date),
+      matching: find.byKey(const Key('transactions.dayTotal')),
+    );
+    String textOf(WidgetTester tester, Finder finder) => tester
+        .widget<Text>(find.descendant(of: finder, matching: find.byType(Text)))
+        .data!;
+
+    dbTestWidgets('each day heading shows the sum of its rows', (tester) async {
+      await pump(tester);
+      // Both legs of the transfer are listed: the day nets to zero.
+      expect(textOf(tester, dayTotal(day)), r'$0.00');
+      expect(textOf(tester, dayTotal(DateTime.utc(2024, 3, 14))), r'-$12.34');
+    });
+
+    dbTestWidgets('on a paged list the last loaded day has no total until '
+        'it is complete', (tester) async {
+      await tester.runAsync(() async {
+        for (var i = 0; i < TransactionsNotifier.pageSize; i++) {
+          await t.addTransaction(
+            accountId: 'checking',
+            amount: -100,
+            date: DateTime.utc(2024, 1, 1),
+          );
+        }
+      });
+      await pump(tester, size: const Size(1080, 1600));
+      expect(header(DateTime.utc(2024, 1, 1)), findsOneWidget);
+      expect(dayTotal(DateTime.utc(2024, 1, 1)), findsNothing);
+      expect(dayTotal(DateTime.utc(2024, 3, 14)), findsOneWidget);
+    });
+
+    dbTestWidgets('the badge shows the category icon; a transfer a swap icon', (
+      tester,
+    ) async {
+      await pump(tester);
+      Finder badgeIcon(String row, IconData icon) => find.descendant(
+        of: find.ancestor(
+          of: find.text(row),
+          matching: find.byType(TransactionListItem),
+        ),
+        matching: find.descendant(
+          of: find.byKey(const Key('transaction.badge')),
+          matching: find.byIcon(icon),
+        ),
+      );
+      expect(
+        badgeIcon('Corner Shop', Icons.local_grocery_store),
+        findsOneWidget,
+      );
+      expect(
+        badgeIcon('Transfer to Savings', Icons.swap_horiz_rounded),
+        findsOneWidget,
+      );
+      // Second line: category and account.
+      expect(find.text('Groceries · Checking'), findsOneWidget);
+      expect(find.text('Transfer · Checking'), findsOneWidget);
+    });
+  });
+
+  group('completeDayTotals', () {
+    Transaction row(int day, int amount, {String account = 'a'}) => Transaction(
+      id: '$day$amount$account',
+      accountId: account,
+      date: DateTime.utc(2024, 3, day),
+      amount: amount,
+    );
+    String? currency(Transaction tx) => tx.accountId == 'usd' ? 'USD' : 'EUR';
+
+    test('sums each day; the last day only once nothing more is to load', () {
+      final rows = [row(3, -100), row(3, 250), row(2, -5), row(2, -7)];
+      expect(completeDayTotals(rows, hasMore: false, currencyOf: currency), {
+        DateTime.utc(2024, 3, 3): (total: 150, currency: 'EUR'),
+        DateTime.utc(2024, 3, 2): (total: -12, currency: 'EUR'),
+      });
+      expect(
+        completeDayTotals(rows, hasMore: true, currencyOf: currency).keys,
+        [DateTime.utc(2024, 3, 3)],
+      );
+    });
+
+    test('a day in several currencies has no total', () {
+      final rows = [row(3, -100), row(3, -100, account: 'usd'), row(2, -5)];
+      expect(
+        completeDayTotals(rows, hasMore: false, currencyOf: currency).keys,
+        [DateTime.utc(2024, 3, 2)],
+      );
     });
   });
 
@@ -404,8 +500,8 @@ void main() {
     await pump(
       tester,
       extraOverrides: [
-        categoryMapProvider.overrideWithValue(
-          const AsyncValue.error(DatabaseLockedException(), StackTrace.empty),
+        categoriesProvider.overrideWith(
+          (ref) => Stream.error(const DatabaseLockedException()),
         ),
       ],
     );

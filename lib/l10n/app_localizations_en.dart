@@ -5301,4 +5301,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get budgetViewProgress => 'Show progress bars';
+
+  @override
+  String get accountsGroupOnBudget => 'On budget';
+
+  @override
+  String get accountsGroupOffBudget => 'Off budget';
+
+  @override
+  String get accountsGroupClosed => 'Closed';
 }

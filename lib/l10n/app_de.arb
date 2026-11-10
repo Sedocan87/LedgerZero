@@ -1379,5 +1379,8 @@
   "tbbStatusReady": "Bereit zum Zuweisen",
   "tbbStatusOverassigned": "Zu viel zugewiesen",
   "tbbStatusAllAssigned": "Alles zugewiesen",
-  "budgetViewProgress": "Fortschrittsbalken anzeigen"
+  "budgetViewProgress": "Fortschrittsbalken anzeigen",
+  "accountsGroupOnBudget": "Im Budget",
+  "accountsGroupOffBudget": "Außerhalb des Budgets",
+  "accountsGroupClosed": "Geschlossen"
 }
