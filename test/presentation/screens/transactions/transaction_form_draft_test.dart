@@ -252,6 +252,24 @@ void main() {
       ),
     ))!.id;
 
+    dbTestWidgets('the "saved" message after an edit offers Undo (ledger '
+        'improvement 3)', (tester) async {
+      final id = await row(tester);
+      await h.pump(tester, AddEditTransactionScreen(transactionId: id));
+      await tester.enterText(
+        find.widgetWithText(AppTextField, 'Memo'),
+        'after',
+      );
+      await h.save(tester);
+      expect(find.byKey(const Key('list')), findsOneWidget);
+      expect((await h.liveRows(tester)).single.memo, 'after');
+      expect(find.text('Transaction saved'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await h.settle(tester);
+      expect((await h.liveRows(tester)).single.memo, 'before');
+    });
+
     dbTestWidgets('back with an unsaved edit asks; Cancel stays, Discard '
         'leaves the row as it was', (tester) async {
       final id = await row(tester);

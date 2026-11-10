@@ -8271,6 +8271,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Finished: nothing more is booked. Pick a next date to restart it.'**
   String get scheduledFinishedPickNextDate;
+
+  /// Transaction list: snackbar (with Undo) after approving by swipe or for the selection
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Transaction approved} other{{count} transactions approved}}'**
+  String txApprovedCount(int count);
+
+  /// Transaction list: snackbar (with Undo) after setting the category of the selection
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Category set} other{Category set for {count} transactions}}'**
+  String txCategorizedCount(int count);
 }
 
 class _AppLocalizationsDelegate

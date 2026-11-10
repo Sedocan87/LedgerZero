@@ -213,6 +213,16 @@ Hard deletes happen only when a whole account is deleted (see
 * Budget edits on the budget screen record a `BudgetChangeAction`.
 * Snackbars pass the action they announced to `undo`, so a later action is
   never undone by mistake.
+* There is no general Undo or Redo button, and redo is not offered
+  anywhere. Undo is offered in the snackbar after: saving in the
+  transaction form (new or edited) and in quick add, deleting (swipe or
+  selection), approving (swipe or selection), setting the category of a
+  selection, a reconciliation (restores the cleared status and removes
+  the adjustment), and on the budget screen after budget edits, moving
+  money and the month actions. The cleared toggle on a list row is
+  recorded but not announced (tapping it again reverts it). Writes the
+  user did not make in the UI (card capture, sync, scheduled occurrences,
+  imports, which have their own "Undo last import") are not recorded.
 * Deleting a category, payee or account clears both stacks
   (`UndoService.clear()`, called by `CategoryService`, `PayeeService` and
   `AccountService`): a recorded snapshot may reference the deleted entity

@@ -13,6 +13,7 @@ import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/services/transaction_service.dart';
+import 'package:ledger_zero/domain/undo/transaction_undo_actions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -444,10 +445,10 @@ class _AddEditTransactionScreenState
 
   // --- Saving -------------------------------------------------------------
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {SnackBarAction? action}) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(content: Text(message), action: action));
   }
 
   Future<void> _submit({bool popAfterSave = true}) async {
@@ -482,9 +483,15 @@ class _AddEditTransactionScreenState
 
     setState(() => _saving = true);
     try {
-      final saved = _form.isRecurring && !_isEditing
-          ? await _saveRecurring(input)
-          : await _save(input);
+      final recurring = _form.isRecurring && !_isEditing;
+      TransactionChangeSetAction? change;
+      final bool saved;
+      if (recurring) {
+        saved = await _saveRecurring(input);
+      } else {
+        change = await _save(input);
+        saved = change != null;
+      }
       if (!saved || !mounted) {
         return;
       }
@@ -494,8 +501,22 @@ class _AddEditTransactionScreenState
       if (!mounted) {
         return;
       }
+      // The snackbar outlives the form (it is shown by the app's
+      // messenger), so Undo uses the service read now.
+      final undo = ref.read(undoServiceProvider);
       _showMessage(
-        _form.isRecurring ? l10n.txScheduledCreated : l10n.transactionSaved,
+        recurring ? l10n.txScheduledCreated : l10n.transactionSaved,
+        action: change == null
+            ? null
+            : SnackBarAction(
+                label: l10n.undo,
+                onPressed: () => undo.undo(change!).catchError((
+                  Object e,
+                  StackTrace stackTrace,
+                ) {
+                  Logger.error('Undoing a save failed', e, stackTrace);
+                }),
+              ),
       );
       if (popAfterSave) {
         // `true` tells a caller awaiting the route that it was saved.
@@ -522,17 +543,17 @@ class _AddEditTransactionScreenState
   }
 
   /// Saves through the service; asks first if a reconciled row changes.
-  Future<bool> _save(TransactionInput input) async {
+  /// Returns the recorded change (for Undo), or `null` when the user did
+  /// not confirm.
+  Future<TransactionChangeSetAction?> _save(TransactionInput input) async {
     final service = ref.read(transactionServiceProvider);
     try {
-      await service.save(input);
-      return true;
+      return (await service.save(input)).action;
     } on ReconciledTransactionException {
       if (!mounted || !await confirmReconciledChange(context)) {
-        return false;
+        return null;
       }
-      await service.save(input, allowReconciledChange: true);
-      return true;
+      return (await service.save(input, allowReconciledChange: true)).action;
     }
   }
 

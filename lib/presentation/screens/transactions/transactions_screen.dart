@@ -143,6 +143,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
   }
 
+  /// Announces a recorded change with [message] and offers to undo it.
+  void _offerUndo(TransactionChangeSetAction? action, String message) {
+    if (action == null || !mounted) {
+      return;
+    }
+    _showMessage(
+      message,
+      action: SnackBarAction(
+        label: AppLocalizations.of(context)!.undo,
+        onPressed: () => _undo(action),
+      ),
+    );
+  }
+
   Future<void> _undo(TransactionChangeSetAction action) async {
     try {
       await ref.read(undoServiceProvider).undo(action);
@@ -355,7 +369,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         if (direction == DismissDirection.startToEnd) {
           await _delete([tx.id]);
         } else {
-          await _guarded((_) => _service.approveTransaction(tx.id));
+          final action = await _guarded((_) => _service.bulkApprove([tx.id]));
+          _offerUndo(action, l10n.txApprovedCount(1));
         }
         return false;
       },
@@ -453,10 +468,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           onPressed: ids.isEmpty
               ? null
               : () async {
-                  await _guarded((_) => _service.bulkApprove(ids));
+                  final action = await _guarded(
+                    (_) => _service.bulkApprove(ids),
+                  );
                   if (mounted) {
                     notifier.toggleMultiSelectMode();
                   }
+                  _offerUndo(action, l10n.txApprovedCount(ids.length));
                 },
         ),
         IconButton(
@@ -525,9 +543,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           final l10n = AppLocalizations.of(context)!;
           // The active order carries an arrow; choosing it again turns it
           // around.
-          PopupMenuItem<TransactionSortField> item(
-            TransactionSortField field,
-          ) {
+          PopupMenuItem<TransactionSortField> item(TransactionSortField field) {
             final active = state.sort.field == field;
             return PopupMenuItem(
               value: field,
@@ -578,10 +594,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     if (category == null || !mounted) {
       return;
     }
-    await _guarded((_) => _service.bulkCategorize(ids, category.id));
-    if (mounted) {
-      ref.read(_provider.notifier).toggleMultiSelectMode();
+    final action = await _guarded(
+      (_) => _service.bulkCategorize(ids, category.id),
+    );
+    if (!mounted) {
+      return;
     }
+    ref.read(_provider.notifier).toggleMultiSelectMode();
+    _offerUndo(
+      action,
+      AppLocalizations.of(context)!.txCategorizedCount(ids.length),
+    );
   }
 }
 

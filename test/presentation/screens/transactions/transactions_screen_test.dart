@@ -205,6 +205,37 @@ void main() {
       expect(await tester.binding.handlePopRoute(), isFalse);
     });
 
+    dbTestWidgets('approving by swipe offers Undo (ledger improvement 3)', (
+      tester,
+    ) async {
+      await tester.runAsync(
+        () => service.save(
+          TransactionInput(
+            accountId: 'checking',
+            date: day,
+            amount: -700,
+            newPayeeName: 'Bakery',
+            approved: false,
+          ),
+        ),
+      );
+      await pump(tester);
+      Future<bool> approved() async => (await liveRows(
+        tester,
+      )).singleWhere((r) => r.amount == -700).approved;
+
+      await tester.drag(find.text('Bakery'), const Offset(-600, 0));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(await approved(), isTrue);
+      expect(find.text('Transaction approved'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(await approved(), isFalse);
+    });
+
     dbTestWidgets('the swipe actions are labelled', (tester) async {
       await pump(tester);
       final gesture = await tester.startGesture(

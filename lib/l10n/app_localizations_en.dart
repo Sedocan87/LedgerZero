@@ -5210,4 +5210,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get scheduledFinishedPickNextDate =>
       'Finished: nothing more is booked. Pick a next date to restart it.';
+
+  @override
+  String txApprovedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions approved',
+      one: 'Transaction approved',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txCategorizedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Category set for $count transactions',
+      one: 'Category set',
+    );
+    return '$_temp0';
+  }
 }

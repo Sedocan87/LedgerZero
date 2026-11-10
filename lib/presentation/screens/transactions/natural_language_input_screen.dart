@@ -200,8 +200,23 @@ class _NaturalLanguageInputScreenState
     }
 
     if (mounted) {
+      final l10n = AppLocalizations.of(context)!;
+      // The snackbar outlives this screen, so Undo uses the service read
+      // now.
+      final undo = ref.read(undoServiceProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.transactionSaved)),
+        SnackBar(
+          content: Text(l10n.transactionSaved),
+          action: SnackBarAction(
+            label: l10n.undo,
+            onPressed: () => undo.undo(result.action).catchError((
+              Object e,
+              StackTrace stackTrace,
+            ) {
+              Logger.error('Undoing a quick add failed', e, stackTrace);
+            }),
+          ),
+        ),
       );
       context.pop();
     }

@@ -4067,5 +4067,9 @@
   "payeeNameTakenMessage": "A payee named \"{name}\" already exists. Merge this payee into it? Its transactions, schedules and rules then use \"{name}\".",
   "@payeeNameTakenMessage": {"description": "Payee detail: rename refused because another payee has the name; offers to merge", "placeholders": {"name": {"type": "String"}}},
   "scheduledFinishedPickNextDate": "Finished: nothing more is booked. Pick a next date to restart it.",
-  "@scheduledFinishedPickNextDate": {"description": "Scheduled transaction form: Next date of a finished schedule (it has no next date)"}
+  "@scheduledFinishedPickNextDate": {"description": "Scheduled transaction form: Next date of a finished schedule (it has no next date)"},
+  "txApprovedCount": "{count, plural, =1{Transaction approved} other{{count} transactions approved}}",
+  "@txApprovedCount": {"description": "Transaction list: snackbar (with Undo) after approving by swipe or for the selection", "placeholders": {"count": {"type": "int"}}},
+  "txCategorizedCount": "{count, plural, =1{Category set} other{Category set for {count} transactions}}",
+  "@txCategorizedCount": {"description": "Transaction list: snackbar (with Undo) after setting the category of the selection", "placeholders": {"count": {"type": "int"}}}
 }
