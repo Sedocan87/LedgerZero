@@ -21,8 +21,9 @@ This guide helps you resolve common issues with LedgerZero.
 **Cause:** The authentication token has expired or is invalid.
 **Solution:**
 1. Go to Settings > Sync Settings.
-2. Tap **Disconnect**, then connect again (your sync passphrase may be asked
-   for again).
+2. Tap **Disconnect** and confirm, then connect again and enter your sync
+   passphrase. Changes made in between are kept and sent after you
+   reconnect.
 
 ### "No connection to the cloud storage"
 **Cause:** The device cannot reach the internet. Sync tries again when you are online.

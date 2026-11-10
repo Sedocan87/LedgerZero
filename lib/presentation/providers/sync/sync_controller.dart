@@ -619,6 +619,9 @@ class SyncController extends StateNotifier<SyncState> {
       await _trimCapturedChanges();
     } else {
       await _refreshConnectionState();
+      // What was captured while no provider was set goes out now, not at
+      // the next timer tick.
+      _requestAutoSync('provider');
     }
   }
 

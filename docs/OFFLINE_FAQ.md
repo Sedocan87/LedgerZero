@@ -16,7 +16,7 @@
 **A:** While there isn't a global "Offline Mode" switch in the app, you can:
 1.  Go to **Settings > Sync Settings**.
 2.  Enable **"Sync only on Wi-Fi"** (if you are on cellular).
-3.  Or simply tap **Disconnect** to stop syncing entirely. You can reconnect later.
+3.  Or tap **Disconnect** (the app asks you to confirm) to stop syncing entirely. You can reconnect later with the sync passphrase; everything you changed or deleted in the meantime is sent then. Choosing the provider **None** does the same and keeps the passphrase.
 
 ### Q: What if I edit the same transaction on two devices while both are offline?
 **A:** LedgerZero uses a "Last-Writer-Wins" policy per row. When both devices sync, the edit made *latest* is kept on both. The device whose edit lost lists it under **Sync settings → Sync conflicts**; tap **Keep mine** to apply your version again on all devices, or **Dismiss**.
