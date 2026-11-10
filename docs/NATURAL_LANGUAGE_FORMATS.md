@@ -10,6 +10,11 @@ The screen shows a preview (amount, payee, category, date) and an account
 picker. **Create** saves directly; **Edit details** opens the full
 transaction form pre-filled with the parsed values.
 
+The account picker offers the accounts that take new bookings: open ones
+that are not the partner's personal accounts. Preselected is the Settings
+default account, else the first checking account, else the first account
+of that list; a closed account is never offered or preselected.
+
 The text is parsed 300 ms after the last keystroke, not on every key; a
 slower, older parse that finishes late never replaces the preview of newer
 text. **Create** and **Edit details** first parse text typed since the last
@@ -57,8 +62,11 @@ amount field (`MoneyParser` in `lib/core/money/`):
 
 ### Currency symbol
 
-`$`, `€` or `£` is only used to show the preview amount in that currency.
-The transaction is saved in the selected account; no conversion happens.
+`$`, `€` or `£` marks which number is the amount. The transaction is saved
+in the selected account and nothing is converted, so the preview shows the
+amount in the account's currency; when the typed symbol is another
+currency (`$12` on a EUR account), a line under the amount says that the
+amount is booked in the account's currency.
 
 ### Income or expense
 

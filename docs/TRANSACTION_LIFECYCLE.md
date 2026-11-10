@@ -25,7 +25,17 @@ transfer or split transaction. Validation (`ValidationException` with a
 
 * the amount is not zero;
 * a transfer has a different target account and is not split;
-* split lines are non-zero and add up exactly to the parent amount.
+* split lines are non-zero and add up exactly to the parent amount;
+* a closed account takes no new rows
+  (`TransactionValidationError.closedAccount`): a new transaction, a new
+  transfer leg and a row moved in from another account are rejected.
+  Rows already in a closed account can still be edited, deleted and
+  restored by undo. The pickers and preselections (form, quick add, a
+  payee's default account, the Settings default account) only offer open
+  accounts, so the rule is a backstop. It covers what is entered through
+  `save`; imports (a YNAB import creates closed accounts with their
+  history), sync, restore, reconciliation and scheduled occurrences (a
+  schedule waits while its account is closed) do not go through `save`.
 
 Defaults for a new row: `uncleared`, `approved: true`, not deleted. A new
 payee name is resolved case-insensitively to an existing payee or created.

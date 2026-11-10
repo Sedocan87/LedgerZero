@@ -1360,5 +1360,7 @@
   "sortAscending": "aufsteigend",
   "sortDescending": "absteigend",
   "txSelectAllLoaded": "Alle geladenen auswählen",
-  "txSelectedLoadedOnly": "{count, plural, =1{1 geladene Transaktion ausgewählt. Scrollen Sie nach unten, um weitere zu laden.} other{Die {count} geladenen Transaktionen sind ausgewählt. Scrollen Sie nach unten, um weitere zu laden.}}"
+  "txSelectedLoadedOnly": "{count, plural, =1{1 geladene Transaktion ausgewählt. Scrollen Sie nach unten, um weitere zu laden.} other{Die {count} geladenen Transaktionen sind ausgewählt. Scrollen Sie nach unten, um weitere zu laden.}}",
+  "txAccountClosed": "Dieses Konto ist geschlossen und nimmt keine neuen Transaktionen an. Wählen Sie ein anderes Konto oder öffnen Sie es wieder.",
+  "quickAddCurrencyNotConverted": "Dieses Konto wird in {currency} geführt: Der Betrag wird in {currency} gebucht, nicht umgerechnet."
 }

@@ -8223,6 +8223,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 loaded transaction selected. Scroll down to load more.} other{The {count} loaded transactions are selected. Scroll down to load more.}}'**
   String txSelectedLoadedOnly(int count);
+
+  /// Snackbar when saving a new transaction (or a transfer leg) into a closed account is rejected
+  ///
+  /// In en, this message translates to:
+  /// **'This account is closed and takes no new transactions. Choose another account or reopen it.'**
+  String get txAccountClosed;
+
+  /// Quick add preview: note under the amount when the typed currency symbol is not the account's currency
+  ///
+  /// In en, this message translates to:
+  /// **'This account is in {currency}: the amount is booked in {currency}, not converted.'**
+  String quickAddCurrencyNotConverted(String currency);
 }
 
 class _AppLocalizationsDelegate

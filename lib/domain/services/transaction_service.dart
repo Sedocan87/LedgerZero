@@ -47,6 +47,13 @@ typedef TransactionSavedHook =
 ///   one), except for the cross-budget transfer rule above.
 /// * A transfer between accounts of different currencies is rejected
 ///   ([TransactionValidationError.currencyMismatch]).
+/// * A closed account takes no new rows
+///   ([TransactionValidationError.closedAccount]): neither a new
+///   transaction, nor a new transfer leg, nor a row moved in from another
+///   account. Rows that are already there can still be edited and deleted.
+///   This holds for what is entered through [save] (the form, quick add,
+///   card capture); imports, sync, restore, undo and scheduled occurrences
+///   write through the repositories and follow their own rules.
 /// * Only rows whose content actually changed are written (and recorded
 ///   for undo): editing the memo of a split leaves its children's
 ///   `updatedAt` alone, so a concurrent edit on the partner's phone is not
@@ -201,6 +208,7 @@ class TransactionService {
     if (input.isTransfer) {
       await _ensureSameCurrency(account, input.transferAccountId!);
     }
+    await _ensureOpenForNewRows(input, account, existing, counterpart);
     final before = <String, Transaction?>{
       ?existing?.id: existing,
       ?counterpart?.id: counterpart,
@@ -355,6 +363,33 @@ class TransactionService {
         'Transfer between ${from.currency} and ${to.currency} accounts',
         TransactionValidationError.currencyMismatch,
       );
+    }
+  }
+
+  /// A closed account takes no new rows: the row of [input] must already
+  /// be in its account, and so must the transfer's other leg in its own,
+  /// if that account is closed.
+  Future<void> _ensureOpenForNewRows(
+    TransactionInput input,
+    Account? account,
+    Transaction? existing,
+    Transaction? counterpart,
+  ) async {
+    Never reject(String accountId) => throw ValidationException(
+      'Account $accountId is closed',
+      TransactionValidationError.closedAccount,
+    );
+    if ((account?.isClosed ?? false) &&
+        existing?.accountId != input.accountId) {
+      reject(input.accountId);
+    }
+    final transferAccountId = input.transferAccountId;
+    if (transferAccountId != null &&
+        counterpart?.accountId != transferAccountId) {
+      final to = await _accountRepository.getAccountById(transferAccountId);
+      if (to?.isClosed ?? false) {
+        reject(transferAccountId);
+      }
     }
   }
 

@@ -27,7 +27,7 @@ creates it. CSV and YNAB imports create payees the same way.
   picked for it). It is also learned: saving a new transaction with this
   payee and a category sets the payee's auto category to that category.
 * **Default account**: pre-filled when the payee is picked in a new
-  transaction and no account is chosen yet.
+  transaction and no account is chosen yet, unless it was closed since.
 * Usage statistics (times used, total spent, last used) and the payee's
   transactions.
 

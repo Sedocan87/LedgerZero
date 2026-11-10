@@ -112,8 +112,7 @@ class _AddEditTransactionScreenState
   /// Whether leaving now would lose something: an edit of the loaded row,
   /// or anything typed into a new transaction.
   bool get _isDirty => _isEditing
-      ? _loadedFingerprint != null &&
-            _form.fingerprint() != _loadedFingerprint
+      ? _loadedFingerprint != null && _form.fingerprint() != _loadedFingerprint
       : _form.hasContent;
 
   @override
@@ -241,22 +240,45 @@ class _AddEditTransactionScreenState
 
   // --- Settings defaults (new transactions) ------------------------------
 
+  /// Whether a new transaction can be booked into account [id]: it
+  /// exists, is open and is not the partner's.
+  Future<bool> _isBookable(String id) async {
+    final account = await ref
+        .read(accountRepositoryProvider)
+        .getAccountById(id);
+    return account != null && !account.isClosed && !account.isPartners;
+  }
+
   /// Fills an empty account from the Settings default account (if it is
   /// open and not the partner's) and an outflow's empty category from the
-  /// Settings default category.
+  /// Settings default category. An account the form was opened with (the
+  /// caller's, a draft's) that takes no new bookings is dropped first, so
+  /// the user picks one instead of meeting an error on Save.
   Future<void> _applySettingsDefaults() async {
+    final preset = _form.accountId;
+    if (preset != null &&
+        !await _isBookable(preset) &&
+        mounted &&
+        _form.accountId == preset) {
+      _form.accountId = null;
+      _form.changed();
+    }
+    final presetTarget = _form.transferAccountId;
+    if (presetTarget != null &&
+        !await _isBookable(presetTarget) &&
+        mounted &&
+        _form.transferAccountId == presetTarget) {
+      _form.transferAccountId = null;
+      _form.changed();
+    }
+    if (!mounted) {
+      return;
+    }
     final settings = ref.read(settingsProvider);
     final accountId = settings.defaultAccountId;
     if (accountId != null && _form.accountId == null) {
-      final account = await ref
-          .read(accountRepositoryProvider)
-          .getAccountById(accountId);
-      if (account != null &&
-          !account.isClosed &&
-          !account.isPartners &&
-          mounted &&
-          _form.accountId == null) {
-        _form.accountId = account.id;
+      if (await _isBookable(accountId) && mounted && _form.accountId == null) {
+        _form.accountId = accountId;
         _form.changed();
       }
     }
@@ -350,11 +372,18 @@ class _AddEditTransactionScreenState
 
   Future<void> _onPayeeSelected(Payee payee) async {
     _form.selectPayee(payee);
-    if (!_isEditing &&
-        _form.accountId == null &&
-        payee.defaultAccountId != null) {
-      _form.accountId = payee.defaultAccountId;
-      _form.changed();
+    final defaultAccountId = payee.defaultAccountId;
+    if (!_isEditing && _form.accountId == null && defaultAccountId != null) {
+      // Not when it was closed since (or is the partner's).
+      if (await _isBookable(defaultAccountId) &&
+          mounted &&
+          _form.accountId == null) {
+        _form.accountId = defaultAccountId;
+        _form.changed();
+      }
+    }
+    if (!mounted) {
+      return;
     }
     if (_categoryEmpty && !_form.isSplit) {
       // The payee's remembered category is for spending there: an inflow

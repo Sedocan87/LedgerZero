@@ -161,6 +161,85 @@ void main() {
     });
   });
 
+  group('closed accounts (ledger F3)', () {
+    Future<void> close(WidgetTester tester, String id) =>
+        tester.runAsync(() async {
+          final account = (await h.t.accounts.getAccountById(id))!;
+          await h.t.accounts.updateAccount(account.copyWith(isClosed: true));
+        });
+
+    dbTestWidgets('a payee\'s default account that was closed is not '
+        'filled in', (tester) async {
+      await tester.runAsync(() async {
+        final shop = (await h.t.payees.getPayeeById('shop'))!;
+        await h.t.payees.updatePayee(
+          shop.copyWith(defaultAccountId: 'savings'),
+        );
+      });
+      await close(tester, 'savings');
+      await h.pump(tester, const AddEditTransactionScreen());
+      await tester.enterText(find.byKey(const Key('payee_field')), 'Corner');
+      await h.settle(tester);
+      await tester.tap(find.widgetWithText(ListTile, 'Corner Shop'));
+      await h.settle(tester);
+      expect(h.fieldText(tester, 'Payee'), 'Corner Shop');
+      expect(h.fieldText(tester, 'Account'), '');
+    });
+
+    dbTestWidgets('an open default account of the payee is filled in', (
+      tester,
+    ) async {
+      await tester.runAsync(() async {
+        final shop = (await h.t.payees.getPayeeById('shop'))!;
+        await h.t.payees.updatePayee(
+          shop.copyWith(defaultAccountId: 'savings'),
+        );
+      });
+      await h.pump(tester, const AddEditTransactionScreen());
+      await tester.enterText(find.byKey(const Key('payee_field')), 'Corner');
+      await h.settle(tester);
+      await tester.tap(find.widgetWithText(ListTile, 'Corner Shop'));
+      await h.settle(tester);
+      expect(h.fieldText(tester, 'Account'), 'Savings');
+    });
+
+    dbTestWidgets('a form opened for a closed account, or restored with '
+        'one, starts without an account', (tester) async {
+      await close(tester, 'savings');
+      await h.pump(
+        tester,
+        const AddEditTransactionScreen(initialAccountId: 'savings'),
+      );
+      expect(h.fieldText(tester, 'Account'), '');
+
+      await storeDraft({'amount': '50', 'accountId': 'savings'});
+      await h.pump(tester, const AddEditTransactionScreen());
+      expect(banner(), findsOneWidget);
+      expect(h.fieldText(tester, 'Account'), '');
+    });
+
+    dbTestWidgets('an existing transaction of a closed account can still '
+        'be edited in the form', (tester) async {
+      final id = (await tester.runAsync(
+        () => h.service.save(
+          TransactionInput(
+            accountId: 'savings',
+            date: DateTime.utc(2024, 3, 1),
+            amount: -500,
+          ),
+        ),
+      ))!.id;
+      await close(tester, 'savings');
+      await h.pump(tester, AddEditTransactionScreen(transactionId: id));
+      expect(h.fieldText(tester, 'Account'), 'Savings');
+      await tester.enterText(amountField(), '7');
+      await h.save(tester);
+      final saved = (await h.liveRows(tester)).single;
+      expect(saved.amount, -700);
+      expect(saved.accountId, 'savings');
+    });
+  });
+
   group('editing', () {
     Future<String> row(WidgetTester tester) async => (await tester.runAsync(
       () => h.service.save(

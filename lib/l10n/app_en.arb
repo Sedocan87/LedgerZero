@@ -4051,5 +4051,9 @@
   "txSelectAllLoaded": "Select all loaded",
   "@txSelectAllLoaded": {"description": "Transaction list, selection mode: tooltip of 'select all' while the paged list has more rows than are loaded"},
   "txSelectedLoadedOnly": "{count, plural, =1{1 loaded transaction selected. Scroll down to load more.} other{The {count} loaded transactions are selected. Scroll down to load more.}}",
-  "@txSelectedLoadedOnly": {"description": "Snackbar after 'select all' on a paged transaction list that has more rows than are loaded", "placeholders": {"count": {"type": "int"}}}
+  "@txSelectedLoadedOnly": {"description": "Snackbar after 'select all' on a paged transaction list that has more rows than are loaded", "placeholders": {"count": {"type": "int"}}},
+  "txAccountClosed": "This account is closed and takes no new transactions. Choose another account or reopen it.",
+  "@txAccountClosed": {"description": "Snackbar when saving a new transaction (or a transfer leg) into a closed account is rejected"},
+  "quickAddCurrencyNotConverted": "This account is in {currency}: the amount is booked in {currency}, not converted.",
+  "@quickAddCurrencyNotConverted": {"description": "Quick add preview: note under the amount when the typed currency symbol is not the account's currency", "placeholders": {"currency": {"type": "String"}}}
 }

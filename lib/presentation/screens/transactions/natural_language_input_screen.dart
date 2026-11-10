@@ -241,7 +241,7 @@ class _NaturalLanguageInputScreenState
       : CalendarDate.fromLocalPick(parsed);
 
   /// ISO code for a currency symbol typed in the input, if unambiguous
-  /// enough to display; otherwise `null` (falls back to the account).
+  /// enough to compare with the account's currency; otherwise `null`.
   static String? _currencyCodeForSymbol(String? symbol) {
     return switch (symbol) {
       '€' => 'EUR',
@@ -262,8 +262,14 @@ class _NaturalLanguageInputScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    // Initialize account selection
+    // Initialize account selection: only accounts that take new bookings
+    // (open, not the partner's) are offered or preselected.
     final accountsAsync = ref.watch(writableAccountsProvider);
+    // An account closed (here or by the partner) while the screen is open
+    // is no longer selected.
+    final selectedAccount = accountsAsync.valueOrNull
+        ?.where((a) => a.id == _selectedAccount?.id)
+        .firstOrNull;
 
     accountsAsync.whenData((accounts) {
       if (!_accountInitialized && accounts.isNotEmpty) {
@@ -271,7 +277,7 @@ class _NaturalLanguageInputScreenState
         // else the first account.
         final defaultId = ref.read(settingsProvider).defaultAccountId;
         final defaultAccount = accounts.firstWhere(
-          (a) => a.id == defaultId && !a.isClosed,
+          (a) => a.id == defaultId,
           orElse: () => accounts.firstWhere(
             (a) => a.type == AccountType.checking,
             orElse: () => accounts.first,
@@ -342,7 +348,7 @@ class _NaturalLanguageInputScreenState
               // with the new balance right after saving), which must still
               // match the selection.
               data: (accounts) => DropdownButtonFormField<String>(
-                initialValue: _selectedAccount?.id,
+                initialValue: selectedAccount?.id,
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: l10n.account,
@@ -381,7 +387,7 @@ class _NaturalLanguageInputScreenState
             const SizedBox(height: AppSpacing.md),
 
             if (_parsedTransaction != null) ...[
-              _buildPreviewCard(_parsedTransaction!),
+              _buildPreviewCard(_parsedTransaction!, selectedAccount),
               const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
@@ -400,7 +406,7 @@ class _NaturalLanguageInputScreenState
                       isLoading: _isSaving,
                       onPressed:
                           (_parsedTransaction!.amount != null &&
-                              _selectedAccount != null &&
+                              selectedAccount != null &&
                               !_isSaving)
                           ? _createTransaction
                           : null,
@@ -416,13 +422,20 @@ class _NaturalLanguageInputScreenState
     );
   }
 
-  Widget _buildPreviewCard(ParsedTransaction transaction) {
+  Widget _buildPreviewCard(ParsedTransaction transaction, Account? account) {
     final l10n = AppLocalizations.of(context)!;
     final fmt = ref.watch(appFormatterProvider);
     final hasAmount = transaction.amount != null;
-    final currencyCode =
-        _currencyCodeForSymbol(transaction.currency) ??
-        _selectedAccount?.currency;
+    // The preview shows what will be booked: the number in the account's
+    // currency. A typed symbol of another currency converts nothing, and
+    // the preview says so.
+    final currencyCode = account?.currency;
+    final typedCurrency = _currencyCodeForSymbol(transaction.currency);
+    final otherCurrency =
+        hasAmount &&
+        typedCurrency != null &&
+        currencyCode != null &&
+        typedCurrency != currencyCode;
     final hasPayee = transaction.payeeName != null;
     final hasCategory = transaction.categoryName != null;
 
@@ -505,6 +518,16 @@ class _NaturalLanguageInputScreenState
                   ),
               ],
             ),
+            if (otherCurrency) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                l10n.quickAddCurrencyNotConverted(currencyCode),
+                key: const Key('quick_add_currency_note'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
 
             // Payee

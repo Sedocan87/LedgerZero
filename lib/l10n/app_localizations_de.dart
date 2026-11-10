@@ -5217,4 +5217,13 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get txAccountClosed =>
+      'Dieses Konto ist geschlossen und nimmt keine neuen Transaktionen an. Wählen Sie ein anderes Konto oder öffnen Sie es wieder.';
+
+  @override
+  String quickAddCurrencyNotConverted(String currency) {
+    return 'Dieses Konto wird in $currency geführt: Der Betrag wird in $currency gebucht, nicht umgerechnet.';
+  }
 }
