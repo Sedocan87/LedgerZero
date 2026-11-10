@@ -193,11 +193,11 @@ class TransactionImportService {
     return partnerOf;
   }
 
-  /// Flags the rows of [rows] that already exist in their account (same
-  /// day, amount and payee name, the file's or the one a rule would set;
-  /// see `CsvImportService.checkForDuplicates`) as duplicates and deselects
-  /// them; rows matching an existing transaction without payee by day and
-  /// amount are marked as possible duplicates.
+  /// Flags the rows of [rows] that already exist in their account and
+  /// deselects them: duplicates (same day, amount and payee name, the
+  /// file's or the one a rule would set) and possible duplicates (same
+  /// amount within a few days, whatever the payee); see
+  /// `CsvImportService.checkForDuplicates`.
   ///
   /// Call it again whenever the target account changes: only the chosen
   /// account's transactions count (a row's own
@@ -216,6 +216,8 @@ class TransactionImportService {
     for (final r in rows) {
       r.isDuplicate = false;
       r.isPossibleDuplicate = false;
+      r.possibleDuplicateDate = null;
+      r.possibleDuplicatePayee = null;
     }
 
     final rules = await _ruleMatchingService.loadActiveRules();
@@ -243,11 +245,15 @@ class TransactionImportService {
           last = r.date;
         }
       }
+      // The possible-duplicate rule looks a few days around each row.
+      const margin = Duration(
+        days: CsvImportService.possibleDuplicateWindowDays + 1,
+      );
       final existing = await _transactionRepository.getTransactions(
         filter: TransactionFilter(
           accountIds: [entry.key],
-          startDate: first.subtract(const Duration(days: 1)),
-          endDate: last.add(const Duration(days: 1)),
+          startDate: first.subtract(margin),
+          endDate: last.add(margin),
           excludeSplitChildren: true,
         ),
       );

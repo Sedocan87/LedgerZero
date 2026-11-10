@@ -41,10 +41,19 @@ class ImportTransaction {
   bool isSelected;
   bool isDuplicate;
 
-  /// An existing transaction without payee (a hand-entered transfer, for
-  /// instance) has the same day and amount: shown unselected, the user
-  /// decides.
+  /// An existing transaction of the account has the same amount on a
+  /// nearby day (whatever its payee: the same purchase entered by hand, by
+  /// quick-add or under a renamed payee): shown unselected, the user
+  /// decides. [possibleDuplicateDate] and [possibleDuplicatePayee] name
+  /// that transaction.
   bool isPossibleDuplicate;
+
+  /// Day of the existing transaction this row may duplicate.
+  DateTime? possibleDuplicateDate;
+
+  /// Payee name of the existing transaction this row may duplicate
+  /// (`null` when it has none, e.g. a transfer).
+  String? possibleDuplicatePayee;
 
   ImportTransaction({
     required this.date,
@@ -62,6 +71,8 @@ class ImportTransaction {
     this.isSelected = true,
     this.isDuplicate = false,
     this.isPossibleDuplicate = false,
+    this.possibleDuplicateDate,
+    this.possibleDuplicatePayee,
   });
 
   /// A copy with the same values and UI state.
@@ -81,6 +92,8 @@ class ImportTransaction {
     isSelected: isSelected,
     isDuplicate: isDuplicate,
     isPossibleDuplicate: isPossibleDuplicate,
+    possibleDuplicateDate: possibleDuplicateDate,
+    possibleDuplicatePayee: possibleDuplicatePayee,
   );
 
   /// The file named a category that does not exist: the row is imported

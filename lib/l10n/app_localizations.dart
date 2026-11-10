@@ -7803,6 +7803,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fee'**
   String get csvFieldFee;
+
+  /// Import review: shown under an unchecked row when an existing transaction of the account has the same amount within a few days
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate: {payee} on {date} has the same amount. Check the box if this is a separate transaction.'**
+  String importPossibleDuplicateOf(String payee, String date);
+
+  /// Import review: like importPossibleDuplicateOf when the existing transaction has no payee
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate: a transaction without payee on {date} (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.'**
+  String importPossibleDuplicateOfNoPayee(String date);
+
+  /// Import review banner: number of possible duplicates (same amount within a few days, whatever the payee)
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row has the same amount as an existing transaction of the account within {days} days and is unchecked. Check it if it is a separate transaction.} other{{count} rows have the same amount as an existing transaction of the account within {days} days and are unchecked. Check the ones that are separate transactions.}}'**
+  String importPossibleDuplicatesNearby(int count, int days);
 }
 
 class _AppLocalizationsDelegate

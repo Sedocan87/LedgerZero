@@ -3911,5 +3911,11 @@
   "csvIssueVoidRows": "{count, plural, =1{1 row is marked as reverted, failed or declined in the file and is left out.} other{{count} rows are marked as reverted, failed or declined in the file and are left out.}}",
   "@csvIssueVoidRows": {"description": "CSV import: notice before the review that rows with a reverted/failed/declined status are not imported", "placeholders": {"count": {"type": "int"}}},
   "csvFieldFee": "Fee",
-  "@csvFieldFee": {"description": "CSV import column mapping: a fee column whose value is charged on top of the amount"}
+  "@csvFieldFee": {"description": "CSV import column mapping: a fee column whose value is charged on top of the amount"},
+  "importPossibleDuplicateOf": "Possible duplicate: {payee} on {date} has the same amount. Check the box if this is a separate transaction.",
+  "@importPossibleDuplicateOf": {"description": "Import review: shown under an unchecked row when an existing transaction of the account has the same amount within a few days", "placeholders": {"payee": {"type": "String"}, "date": {"type": "String"}}},
+  "importPossibleDuplicateOfNoPayee": "Possible duplicate: a transaction without payee on {date} (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.",
+  "@importPossibleDuplicateOfNoPayee": {"description": "Import review: like importPossibleDuplicateOf when the existing transaction has no payee", "placeholders": {"date": {"type": "String"}}},
+  "importPossibleDuplicatesNearby": "{count, plural, =1{1 row has the same amount as an existing transaction of the account within {days} days and is unchecked. Check it if it is a separate transaction.} other{{count} rows have the same amount as an existing transaction of the account within {days} days and are unchecked. Check the ones that are separate transactions.}}",
+  "@importPossibleDuplicatesNearby": {"description": "Import review banner: number of possible duplicates (same amount within a few days, whatever the payee)", "placeholders": {"count": {"type": "int"}, "days": {"type": "int"}}}
 }

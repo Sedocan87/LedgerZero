@@ -1023,77 +1023,104 @@ class CsvImportService {
   /// Payee names compared trimmed, lower-cased, inner whitespace collapsed.
   static String normalizePayee(String? name) => _categoryKey(name ?? '');
 
-  /// Flags rows of [imported] that already exist in [existing].
+  /// How many days an existing transaction with the same amount may lie
+  /// from an imported row to make it a possible duplicate: a card payment
+  /// entered on the day of the purchase is often booked by the bank a few
+  /// days later (Friday evening to Tuesday).
+  static const int possibleDuplicateWindowDays = 4;
+
+  /// Flags rows of [imported] that already exist in [existing] (the
+  /// transactions of the account the rows go into).
   ///
-  /// A row is a duplicate of an existing transaction on the same calendar
-  /// day with the same amount whose payee name (normalised) equals the
-  /// row's file payee or its [ImportTransaction.rulePayeeName] (the name a
-  /// rule rewrote it to). Each existing transaction matches at most one row
-  /// (two identical coffees in the file against one existing row flag
-  /// one). Rows left over that match an existing transaction *without*
-  /// payee (a hand-entered transfer, for instance) by day and amount are
-  /// [ImportTransaction.isPossibleDuplicate]. Both kinds are deselected.
+  /// **Duplicate**: an existing transaction on the same calendar day with
+  /// the same amount whose payee name (normalised) equals the row's file
+  /// payee or its [ImportTransaction.rulePayeeName] (the name a rule
+  /// rewrote it to); a row without payee matches an existing transaction
+  /// without payee. This is a re-import of the same bank row.
+  ///
+  /// **Possible duplicate**: of the existing transactions left over, one
+  /// with the same amount at most [possibleDuplicateWindowDays] days away,
+  /// whatever its payee: the purchase entered by hand or by quick-add
+  /// under another name, a renamed payee, a booking date that differs from
+  /// the purchase date. The nearest day wins.
+  ///
+  /// Each existing transaction matches at most one row (two identical
+  /// coffees in the file against one existing row flag one). Both kinds
+  /// are deselected; the user decides.
   void checkForDuplicates({
     required List<ImportTransaction> imported,
     required List<Transaction> existing,
     required Map<String, String> payeeMap,
   }) {
-    final byPayee = <String, int>{};
-    final withoutPayee = <String, int>{};
-    String day(DateTime d) => CalendarDate.normalize(d).toIso8601String();
-
-    for (final tx in existing) {
-      final key = '${day(tx.date)}|${tx.amount}';
-      final payeeName = tx.payeeId != null ? payeeMap[tx.payeeId] : null;
-      if (payeeName == null || payeeName.trim().isEmpty) {
-        withoutPayee[key] = (withoutPayee[key] ?? 0) + 1;
-      } else {
-        final full = '$key|${normalizePayee(payeeName)}';
-        byPayee[full] = (byPayee[full] ?? 0) + 1;
-      }
+    DateTime dayOf(DateTime d) => CalendarDate.normalize(d);
+    String exactKey(DateTime d, int amount, String payee) =>
+        '${dayOf(d).toIso8601String()}|$amount|$payee';
+    String? payeeOf(Transaction tx) {
+      final name = tx.payeeId != null ? payeeMap[tx.payeeId] : null;
+      return name == null || name.trim().isEmpty ? null : name;
     }
 
-    bool take(Map<String, int> counts, String key) {
-      final count = counts[key] ?? 0;
-      if (count <= 0) {
-        return false;
-      }
-      counts[key] = count - 1;
-      return true;
+    // Existing rows not matched yet: by day, amount and payee for the
+    // exact rule, by amount for the possible-duplicate rule.
+    final exact = <String, List<Transaction>>{};
+    final byAmount = <int, List<Transaction>>{};
+    for (final tx in existing) {
+      exact
+          .putIfAbsent(
+            exactKey(tx.date, tx.amount, normalizePayee(payeeOf(tx))),
+            () => [],
+          )
+          .add(tx);
+      byAmount.putIfAbsent(tx.amount, () => []).add(tx);
     }
 
     for (final tx in imported) {
       tx.isDuplicate = false;
       tx.isPossibleDuplicate = false;
-      final key = '${day(tx.date)}|${tx.amount}';
+      tx.possibleDuplicateDate = null;
+      tx.possibleDuplicatePayee = null;
       final names = {
         normalizePayee(tx.payeeName),
         normalizePayee(tx.rulePayeeName),
       }..remove('');
-      var found = false;
-      for (final name in names) {
-        if (take(byPayee, '$key|$name')) {
-          found = true;
+      // A row without payee against an existing row without payee.
+      for (final name in names.isEmpty ? const [''] : names) {
+        final matches = exact[exactKey(tx.date, tx.amount, name)];
+        if (matches != null && matches.isNotEmpty) {
+          byAmount[tx.amount]!.remove(matches.removeLast());
+          tx.isDuplicate = true;
+          tx.isSelected = false;
           break;
         }
       }
-      if (!found && names.isEmpty) {
-        // A row without payee against an existing row without payee.
-        found = take(withoutPayee, key);
-      }
-      if (found) {
-        tx.isDuplicate = true;
-        tx.isSelected = false;
-      }
     }
 
-    for (final tx in imported) {
-      if (tx.isDuplicate) {
-        continue;
-      }
-      final key = '${day(tx.date)}|${tx.amount}';
-      if (take(withoutPayee, key)) {
+    // Nearest day first, so a row never takes the existing transaction of
+    // a closer row.
+    for (
+      var distance = 0;
+      distance <= possibleDuplicateWindowDays;
+      distance++
+    ) {
+      for (final tx in imported) {
+        if (tx.isDuplicate || tx.isPossibleDuplicate) {
+          continue;
+        }
+        final candidates = byAmount[tx.amount];
+        if (candidates == null || candidates.isEmpty) {
+          continue;
+        }
+        final day = dayOf(tx.date);
+        final at = candidates.indexWhere(
+          (c) => dayOf(c.date).difference(day).inDays.abs() == distance,
+        );
+        if (at == -1) {
+          continue;
+        }
+        final match = candidates.removeAt(at);
         tx.isPossibleDuplicate = true;
+        tx.possibleDuplicateDate = dayOf(match.date);
+        tx.possibleDuplicatePayee = payeeOf(match);
         tx.isSelected = false;
       }
     }

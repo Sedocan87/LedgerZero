@@ -4868,4 +4868,27 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get csvFieldFee => 'Gebühr';
+
+  @override
+  String importPossibleDuplicateOf(String payee, String date) {
+    return 'Mögliches Duplikat: $payee am $date hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.';
+  }
+
+  @override
+  String importPossibleDuplicateOfNoPayee(String date) {
+    return 'Mögliches Duplikat: Eine Buchung ohne Empfänger am $date (z. B. eine Umbuchung) hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.';
+  }
+
+  @override
+  String importPossibleDuplicatesNearby(int count, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen haben denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von $days Tagen und sind abgewählt. Setzen Sie den Haken bei denen, die eigene Buchungen sind.',
+      one:
+          '1 Zeile hat denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von $days Tagen und ist abgewählt. Setzen Sie den Haken, wenn es eine eigene Buchung ist.',
+    );
+    return '$_temp0';
+  }
 }

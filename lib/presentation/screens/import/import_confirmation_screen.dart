@@ -216,7 +216,10 @@ class _ImportConfirmationScreenState
                       _Banner(text: l10n.deduplicationComplete(duplicateCount)),
                     if (possibleCount > 0)
                       _Banner(
-                        text: l10n.importPossibleDuplicates(possibleCount),
+                        text: l10n.importPossibleDuplicatesNearby(
+                          possibleCount,
+                          CsvImportService.possibleDuplicateWindowDays,
+                        ),
                       ),
                     if (unmatchedCount > 0)
                       _Banner(
@@ -306,7 +309,18 @@ class _ImportConfirmationScreenState
                             ),
                           if (tx.isPossibleDuplicate)
                             Text(
-                              l10n.possibleDuplicateWarning,
+                              tx.possibleDuplicatePayee == null
+                                  ? l10n.importPossibleDuplicateOfNoPayee(
+                                      fmt.formatDate(
+                                        tx.possibleDuplicateDate ?? tx.date,
+                                      ),
+                                    )
+                                  : l10n.importPossibleDuplicateOf(
+                                      tx.possibleDuplicatePayee!,
+                                      fmt.formatDate(
+                                        tx.possibleDuplicateDate ?? tx.date,
+                                      ),
+                                    ),
                               style: TextStyle(
                                 color: theme.colorScheme.error,
                                 fontSize: 12,

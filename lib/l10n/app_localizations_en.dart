@@ -4831,4 +4831,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get csvFieldFee => 'Fee';
+
+  @override
+  String importPossibleDuplicateOf(String payee, String date) {
+    return 'Possible duplicate: $payee on $date has the same amount. Check the box if this is a separate transaction.';
+  }
+
+  @override
+  String importPossibleDuplicateOfNoPayee(String date) {
+    return 'Possible duplicate: a transaction without payee on $date (e.g. a transfer) has the same amount. Check the box if this is a separate transaction.';
+  }
+
+  @override
+  String importPossibleDuplicatesNearby(int count, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows have the same amount as an existing transaction of the account within $days days and are unchecked. Check the ones that are separate transactions.',
+      one:
+          '1 row has the same amount as an existing transaction of the account within $days days and is unchecked. Check it if it is a separate transaction.',
+    );
+    return '$_temp0';
+  }
 }

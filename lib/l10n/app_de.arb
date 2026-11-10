@@ -1290,5 +1290,8 @@
   "cardNotificationsDuplicatesBanner": "{count, plural, =1{1 Zahlung wurde nicht hinzugefügt, weil sie wie eine vorhandene Transaktion aussieht. War es ein eigener Kauf, tippen Sie auf „Trotzdem hinzufügen“.} other{{count} Zahlungen wurden nicht hinzugefügt, weil sie wie vorhandene Transaktionen aussehen. War eine davon ein eigener Kauf, tippen Sie dort auf „Trotzdem hinzufügen“.}}",
   "csvIssueAllInflows": "Alle {count} Beträge würden als Einnahmen importiert. Wenn dies eine Kartenabrechnung ist, die Ausgaben als positive Zahlen aufführt, schalten Sie „Negative Werte sind Ausgaben“ aus. Hat die Datei getrennte Spalten für Ausgänge und Eingänge, ordnen Sie beide unter „Weitere Spalten“ zu.",
   "csvIssueVoidRows": "{count, plural, =1{1 Zeile ist in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und wird ausgelassen.} other{{count} Zeilen sind in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und werden ausgelassen.}}",
-  "csvFieldFee": "Gebühr"
+  "csvFieldFee": "Gebühr",
+  "importPossibleDuplicateOf": "Mögliches Duplikat: {payee} am {date} hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.",
+  "importPossibleDuplicateOfNoPayee": "Mögliches Duplikat: Eine Buchung ohne Empfänger am {date} (z. B. eine Umbuchung) hat denselben Betrag. Setzen Sie den Haken, wenn dies eine eigene Buchung ist.",
+  "importPossibleDuplicatesNearby": "{count, plural, =1{1 Zeile hat denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von {days} Tagen und ist abgewählt. Setzen Sie den Haken, wenn es eine eigene Buchung ist.} other{{count} Zeilen haben denselben Betrag wie eine vorhandene Buchung des Kontos innerhalb von {days} Tagen und sind abgewählt. Setzen Sie den Haken bei denen, die eigene Buchungen sind.}}"
 }
