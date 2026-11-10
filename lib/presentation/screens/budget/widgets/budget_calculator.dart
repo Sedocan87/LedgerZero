@@ -35,7 +35,11 @@ int? parseBudgetInput(String text, AppFormatter fmt) {
 class BudgetCalculator extends ConsumerStatefulWidget {
   final String initialValue;
   final ValueChanged<String> onValueChanged;
-  final VoidCallback onSubmitted;
+
+  /// Called for OK. Returns null when the value was accepted (the caller
+  /// closes the sheet), or the message to show under the value when it was
+  /// not (the calculator stays open so the input can be corrected).
+  final String? Function() onSubmitted;
 
   const BudgetCalculator({
     super.key,
@@ -55,6 +59,9 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
   /// or decimal key, like a selected text field.
   bool _replaceOnInput = true;
 
+  /// Why OK was refused; cleared by the next key.
+  String? _error;
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +70,13 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
       setState(() {});
       widget.onValueChanged(_controller.text);
     });
+  }
+
+  void _submit() {
+    final error = widget.onSubmitted();
+    if (mounted && error != _error) {
+      setState(() => _error = error);
+    }
   }
 
   @override
@@ -76,6 +90,9 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
     final separator = fmt.decimalSeparator;
     final replace = _replaceOnInput;
     _replaceOnInput = false;
+    if (_error != null) {
+      setState(() => _error = null);
+    }
 
     if (key == 'C') {
       _controller.clear();
@@ -145,7 +162,7 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
         child: InkWell(
           onTap: () {
             if (label == 'OK') {
-              widget.onSubmitted();
+              _submit();
             } else {
               _onKeyPress(label);
             }
@@ -191,7 +208,10 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
         children: [
           // Value Display
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            padding: EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: _error == null ? 24 : 8,
+            ),
             alignment: Alignment.centerRight,
             child: Text(
               _controller.text.isEmpty ? '0' : _controller.text,
@@ -203,6 +223,24 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _error!,
+                    key: const Key('budget.calculatorError'),
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           const Divider(),
           Expanded(
             child: Row(
@@ -361,7 +399,7 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
             width: double.infinity,
             child: AppButton.primary(
               label: AppLocalizations.of(context)!.ok,
-              onPressed: widget.onSubmitted,
+              onPressed: _submit,
             ),
           ),
         ],
