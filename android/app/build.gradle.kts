@@ -97,6 +97,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Store screenshots (lib/demo/demo_mode.dart): `-Pdemo=true`
+            // gives the debug app its own id, so the demo installs next to
+            // the normal app and never touches its data.
+            if (project.findProperty("demo") == "true") {
+                applicationIdSuffix = ".demo"
+            }
+        }
         release {
             // Without android/key.properties the release build type is
             // configured with the debug key. The development and staging

@@ -1,5 +1,6 @@
 package com.ledgerzero.app
 
+import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -18,12 +19,18 @@ class MainActivity : FlutterFragmentActivity() {
         super.onCreate(savedInstanceState)
         // Financial data: no screenshots, no screen recording, and a blank
         // thumbnail in the recent-apps overview.
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE,
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            setRecentsScreenshotEnabled(false)
+        // The demo build for store screenshots (debuggable, id ending in
+        // ".demo", sample data only) is the one exception.
+        val demo = packageName.endsWith(".demo") &&
+            (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (!demo) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE,
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setRecentsScreenshotEnabled(false)
+            }
         }
     }
 

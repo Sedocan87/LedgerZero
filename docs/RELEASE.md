@@ -78,3 +78,23 @@ Play Store page directly.
 2. `bash tool/release.sh --bump patch` (or minor) on `main`.
 3. Upload `build/legal/` and the `.aab`; Pro product set up (docs/PRO.md).
 4. After the rollout: `git tag v<version> && git push --tags`.
+
+## Store screenshots (demo mode)
+
+The Play screenshots and feature graphic are made with StoreScreenshotKit
+(`../StoreScreenshotKit/examples/ledgerzero/`) from a demo build of the app:
+
+```bash
+flutter build apk --debug --flavor development -t lib/main_development.dart \
+  -Pdemo=true --dart-define=LEDGERZERO_DEMO=true   # LEDGERZERO_DEMO_THEME=light for light
+```
+
+`-Pdemo=true` gives the app its own id (`com.ledgerzero.app.dev.demo`), so it
+installs next to the normal app and never touches its data. Demo mode
+(`lib/demo/`) only exists with the flag in a debug or profile build and only
+under a `.demo` id: every launch starts with an in-memory database seeded with
+six months of a fictional household in dollars (`demo_data.dart`, exactly
+$240.00 to assign; `test/demo/demo_data_test.dart` checks it), preferences
+under their own prefix, Pro unlocked without a store, no notifications and no
+rating prompt. Screenshot blocking (FLAG_SECURE) is off only for that
+debuggable demo build. Never ship a build made with the flag.

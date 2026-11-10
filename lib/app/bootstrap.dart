@@ -11,6 +11,8 @@ import 'package:ledger_zero/core/performance/performance_monitor.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/core/utils/error_tracker.dart';
 import 'package:ledger_zero/data/database/connection.dart';
+import 'package:ledger_zero/demo/demo_data.dart';
+import 'package:ledger_zero/demo/demo_mode.dart';
 import 'package:ledger_zero/services/backup/transferred_install.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,7 +41,14 @@ Future<void> bootstrap(
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
-    final sharedPreferences = await loadPreferences();
+    // Store screenshots: fresh sample data, nothing of the user's
+    // (lib/demo/demo_mode.dart; inert unless built with LEDGERZERO_DEMO).
+    if (kDemoMode) {
+      await ensureDemoInstall();
+    }
+    final sharedPreferences = kDemoMode
+        ? await prepareDemoPreferences()
+        : await loadPreferences();
 
     AppConfig(
       environment: environment,
@@ -58,6 +67,17 @@ Future<void> bootstrap(
 
     if (kDebugMode || kProfileMode) {
       PerformanceMonitor.instance.startMonitoring();
+    }
+
+    if (kDemoMode) {
+      final container = ProviderContainer(
+        overrides: demoOverrides(sharedPreferences, demoDatabase()),
+      );
+      await seedDemoData(container);
+      run(
+        UncontrolledProviderScope(container: container, child: const MyApp()),
+      );
+      return;
     }
 
     // Before anything reads the sync device id: an install that Android
