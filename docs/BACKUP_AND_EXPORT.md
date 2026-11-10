@@ -10,14 +10,14 @@ report notes and the local sync state). App settings live in the phone's
 preferences and are not part of it. It is the recommended way to protect
 your data against loss.
 
-**Your budget exists only on this phone.** If the phone is lost or reset,
-the budget is gone, unless a backup file is kept somewhere else (a
-computer, a cloud folder) or a second phone syncs with this one. The
-database on the phone is not encrypted by the app (it is protected by
-Android's app sandbox and your screen lock); backups and sync files are
-encrypted. The Backup screen and onboarding say so. Android's own cloud
-backup never copies the budget; its device-to-device transfer to a new
-phone does (section 7).
+**Your budget lives on this phone.** If the phone is lost or reset, the
+budget is gone, unless Android backup is on (section 7), a backup file is
+kept somewhere else (a computer, a USB stick, a cloud folder) or a second
+phone syncs with this one. The database on the phone is not encrypted by
+the app (it is protected by Android's app sandbox and your screen lock);
+backup files and sync files are encrypted with your password or
+passphrase, and Android backup is end-to-end encrypted by Android with the
+screen lock. The Backup screen and onboarding say so.
 
 **Personal accounts:** the transactions of your personal accounts never
 sync to the other phone, so they exist only on this phone and in this
@@ -32,13 +32,14 @@ backup file *and* its password can read the household's sync folder.
 1. Navigate to **Settings > Backup & Export**.
 2. Under **Create backup**, choose a **backup password** (at least 10
    characters) and confirm it.
-3. Optionally turn on **Also upload to your sync storage** (only available
-   when Google Drive sync is set up). A failed upload is reported;
-   the backup is still created.
-4. Tap **Export backup** and use the share sheet to save the `.lzbk` file
-   (e.g. to Files, a computer or a USB drive). The temporary copy inside the
-   app is deleted afterwards. "Last backup" (for the reminder) is recorded
-   only when the share sheet was not dismissed or the upload succeeded.
+3. Tap **Save to…** and pick where the `.lzbk` file goes in Android's
+   file picker: a folder on the phone, a USB stick, or a cloud app such as
+   Google Drive or Dropbox (installed cloud apps appear there; the app you
+   pick does the upload, LedgerZero signs in to nothing). Or tap
+   **Share…** to hand it to another app (mail, messenger, Files).
+4. The temporary copy inside the app is deleted afterwards. "Last backup"
+   (for the reminder) is recorded only when the file was saved (the picker
+   was not cancelled) or the share sheet was not dismissed.
 
 ### Encryption
 Backups are **always** encrypted: AES-256-GCM with a key derived from the
@@ -198,10 +199,12 @@ You can export charts and reports as images or PDF documents.
 
 ## 6. Backup Reminder
 
-LedgerZero cannot put a backup somewhere safe by itself (Android does not
-let an app write to your file storage without interaction; the automatic
-backups of section 1b stay on the phone). It can remind you to make one
-that leaves the phone.
+LedgerZero cannot put a backup file somewhere safe by itself (Android does
+not let an app write to your file storage without interaction; the
+automatic backups of section 1b stay on the phone). It can remind you to
+make one that leaves the phone. Android backup (section 7), when it is on,
+also covers a lost phone; the app cannot see whether it is on, so the
+reminder says so instead of staying quiet.
 
 ### Configure the reminder
 1. Navigate to **Settings > Backup & Export**.
@@ -210,29 +213,46 @@ that leaves the phone.
    (default: Weekly).
 
 The reminder notification prompts you to open the app and create a backup.
-It counts from the last backup that actually left the phone (shared or
-uploaded), whether automatic backups are on or not.
+It counts from the last backup that actually left the phone (saved with
+"Save to…" or shared), whether automatic backups are on or not.
 
 ## 7. Moving to a new phone
 
+* **Android backup** (Android 9 and later; only if backup is on in
+  Android's settings, usually Settings > System > Backup, and the phone
+  has a screen lock): about once a day, when the phone is idle and on
+  Wi-Fi, Android copies the database and the app's settings to your Google
+  account, end-to-end encrypted with the phone's screen lock. Without a
+  screen lock nothing of LedgerZero is uploaded. Android puts the copy back
+  when you set up a new phone from that backup (and when you reinstall the
+  app on the same phone). The app cannot check whether it is on; the Backup
+  screen explains it. Limits:
+  * The copy is as old as the last backup, up to about a day. If you sync
+    with a second phone, Wi-Fi sync brings back what that phone has after
+    the restore. If you use LedgerZero on one phone only, the changes since
+    the last backup are lost.
+  * Android backs up at most 25 MB per app and stops without a message
+    above that. The Backup screen notes a database above 20 MB; a
+    four-year two-person household with about 25,000 transactions
+    measured 19.5 MB. Keep saving backup files then.
+  * On Android 7 and 8 nothing is backed up (those versions cannot make
+    the backup depend on encryption).
 * **Android's transfer** (when the new phone is set up from the old one, by
   cable or over Wi-Fi; Android 9 and later): the database and the app's
-  settings move along. Google's cloud backup is never used: it stays empty
-  on every Android version. On Android 7 and 8 nothing moves (those
-  versions cannot tell the transfer from a cloud backup); use a backup file
-  or sync there.
-* The moved app is a new sync device: at its first start it notices that
-  its settings came from another phone (an install marker in Android's
-  no-backup folder, which never moves), drops the old phone's sync device
-  id, empties the change queue and rebuilds its sync state at the next sync
-  like after a restore, so both phones can stay in use
-  (`lib/services/backup/transferred_install.dart`).
+  settings move along, with or without a screen lock. On Android 7 and 8
+  nothing moves; use a backup file or sync there.
+* The restored or moved app is a new sync device: at its first start it
+  notices that its settings came from a backup or another phone (an install
+  marker in Android's no-backup folder, which is never backed up or moved),
+  drops the old sync device id, empties the change queue and rebuilds its
+  sync state at the next sync like after a restore, so both phones can
+  stay in use (`lib/services/backup/transferred_install.dart`).
 * What does not move and is set up again on the new phone: the Wi-Fi sync
-  pairing (pair again), the Google Drive sign-in (sign in again), the
-  automatic-backup password (turn automatic backups off and on again),
-  card notification access and its log (turn it on again), the automatic
-  backup files (they are in the old phone's `Android/data` folder; copy
-  them over if you want them).
-* **Without the transfer**: make a backup on the old phone, copy the
-  `.lzbk` file to the new phone and restore it there, or set up sync on
+  pairing (pair again), the automatic-backup password (turn automatic
+  backups off and on again), card notification access and its log (turn
+  it on again), the automatic backup files (they are in the old phone's
+  `Android/data` folder; copy them over if you want them).
+* **Without Android backup or the transfer**: make a backup on the old
+  phone, save it somewhere the new phone can reach ("Save to…", e.g. a
+  cloud app or a USB stick) and restore it there, or set up Wi-Fi sync on
   both phones.

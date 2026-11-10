@@ -12,15 +12,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:uuid/uuid.dart';
 
-/// Recognises an install whose data Android moved here from another phone
-/// (device-to-device transfer when setting up a new phone, see
-/// android/app/src/main/res/xml/data_extraction_rules.xml) and makes it a
-/// device of its own.
+/// Recognises an install whose data Android brought here from another
+/// install (device-to-device transfer when setting up a new phone, or a
+/// restore from Android's cloud backup after a reinstall or on a new phone;
+/// see android/app/src/main/res/xml/data_extraction_rules.xml) and makes it
+/// a device of its own. Both cases look the same here and are handled the
+/// same way.
 ///
 /// Every install writes a random install id twice: into the preferences
-/// (which move with the transfer) and into a marker file in Android's
-/// no-backup directory (`Context.getNoBackupFilesDir()`, which is never
-/// backed up or moved). The preferences carrying an id that the marker does
+/// (which move with the transfer and the cloud backup) and into a marker
+/// file in Android's no-backup directory (`Context.getNoBackupFilesDir()`,
+/// which is never backed up, moved or restored, and which an uninstall
+/// deletes). The preferences carrying an id that the marker does
 /// not have means they were made on another phone.
 ///
 /// A moved install would otherwise keep the old phone's sync device id, and
@@ -36,8 +39,7 @@ import 'package:uuid/uuid.dart';
 /// What else moved and is fine: the app lock setting (the lock screen turns
 /// it off when the new phone has no screen lock), the automatic-backup
 /// switch (its password stayed behind; the Backup screen asks to enter it
-/// again), the Google Drive choice (the account is signed in again on the
-/// new phone). The card capture store did not move and starts empty; the
+/// again). The card capture store did not move and starts empty; the
 /// notification access is granted again in the system settings.
 class TransferredInstall {
   TransferredInstall._();

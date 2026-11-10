@@ -12,6 +12,7 @@ import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/router/app_router.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/backup_providers.dart';
+import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
 import 'package:ledger_zero/presentation/providers/new_month_fill_provider.dart';
 import 'package:ledger_zero/presentation/providers/notification_capture_providers.dart';
@@ -94,6 +95,21 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     }
     if (state == AppLifecycleState.paused) {
       ref.read(syncControllerProvider.notifier).onAppPaused();
+      unawaited(_checkpointDatabase());
+    }
+  }
+
+  /// Leaves the committed data in `db.sqlite` itself before Android may
+  /// stop the process or copy the files for its backup or a transfer to a
+  /// new phone ([AppDatabase.checkpointWal]). Never fails.
+  Future<void> _checkpointDatabase() async {
+    if (!ref.read(sessionProvider).isOpen) {
+      return;
+    }
+    try {
+      await ref.read(databaseProvider).checkpointWal();
+    } catch (e) {
+      Logger.warning('WAL checkpoint failed: $e');
     }
   }
 

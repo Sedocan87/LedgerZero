@@ -8,7 +8,6 @@ import 'package:ledger_zero/presentation/widgets/tutorial/tutorial_data.dart';
 /// screen's state (one set per screen instance).
 class SyncTutorialKeys {
   final provider = GlobalKey();
-  final connect = GlobalKey();
 }
 
 class SyncTutorialManager {
@@ -27,12 +26,6 @@ class SyncTutorialManager {
           description: l10n.tutSyncProviderBody,
           targetKey: keys.provider,
           position: TutorialPosition.bottom,
-        ),
-        TutorialStep(
-          title: l10n.tutSyncConnectTitle,
-          description: l10n.tutSyncConnectBody,
-          targetKey: keys.connect,
-          position: TutorialPosition.top,
         ),
       ],
     );

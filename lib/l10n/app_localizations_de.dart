@@ -764,13 +764,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get syncSettings => 'Synchronisierung';
 
   @override
-  String get connectToGoogleDrive => 'Mit Google Drive verbinden';
-
-  @override
   String get syncNow => 'Jetzt synchronisieren';
-
-  @override
-  String get googleDriveSync => 'Google-Drive-Synchronisierung';
 
   @override
   String lastSynced(String time) {
@@ -784,16 +778,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get providerNone => 'Keiner';
 
   @override
-  String get providerGoogleDrive => 'Google Drive';
-
-  @override
   String get disconnect => 'Trennen';
 
   @override
   String get offlineMode => 'Offline-Modus';
-
-  @override
-  String get syncOnlyOnWifi => 'Nur über WLAN synchronisieren';
 
   @override
   String get syncFrequency => 'Sync-Intervall';
@@ -1453,25 +1441,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get backupPasswordLabel => 'Sicherungspasswort';
 
   @override
-  String get backupUploadToCloud =>
-      'Zusätzlich in Ihren Sync-Speicher hochladen';
-
-  @override
-  String get backupUploadNotConfigured =>
-      'Richten Sie zuerst die Synchronisierung mit Google Drive ein';
-
-  @override
-  String get backupExport => 'Sicherung exportieren';
-
-  @override
   String get backupCreating => 'Sicherung wird erstellt …';
-
-  @override
-  String get backupUploaded => 'Sicherung hochgeladen';
-
-  @override
-  String get backupUploadFailed =>
-      'Das Hochladen ist fehlgeschlagen. Die Sicherung wurde trotzdem erstellt und kann geteilt werden.';
 
   @override
   String get backupFailed =>
@@ -1532,43 +1502,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get selectiveRestoreSuccess => 'Transaktionen übernommen.';
-
-  @override
-  String get syncPassphraseSetTitle => 'Sync-Passphrase festlegen';
-
-  @override
-  String get syncPassphraseSetExplanation =>
-      'Ihre Daten werden verschlüsselt, bevor sie dieses Gerät verlassen. Wählen Sie eine Sync-Passphrase: Sie müssen sie auf jedem Gerät eingeben, das synchronisiert werden soll. Sie kann nicht wiederhergestellt werden, auch nicht vom Entwickler. Bewahren Sie sie daher sicher auf.';
-
-  @override
-  String get syncPassphraseEnterTitle => 'Sync-Passphrase eingeben';
-
-  @override
-  String get syncPassphraseEnterExplanation =>
-      'Dieser Sync-Ordner wird bereits von einem anderen Gerät verwendet. Geben Sie die dort festgelegte Sync-Passphrase ein.';
-
-  @override
-  String get syncPassphraseLabel => 'Sync-Passphrase';
-
-  @override
-  String get syncPassphraseConfirmLabel => 'Sync-Passphrase bestätigen';
-
-  @override
-  String get syncPassphraseSetButton => 'Passphrase festlegen';
-
-  @override
-  String get syncPassphraseEnterButton => 'Passphrase eingeben';
-
-  @override
-  String get syncPassphraseWrong => 'Falsche Sync-Passphrase.';
-
-  @override
-  String get syncPassphraseFolderExists =>
-      'Ein anderes Gerät hat die Synchronisierung gerade eingerichtet. Geben Sie die dort festgelegte Passphrase ein.';
-
-  @override
-  String get syncPassphraseFailed =>
-      'Die Sync-Passphrase konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.';
 
   @override
   String syncPendingChanges(int count) {
@@ -1696,11 +1629,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get syncTableRules => 'Regel';
-
-  @override
-  String syncStatusConnectedAs(String email) {
-    return 'Verbunden als $email';
-  }
 
   @override
   String get syncStatusConnected => 'Verbunden';
@@ -2059,7 +1987,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationBackupBody =>
-      'Ihre letzte Sicherung liegt schon eine Weile zurück. Tippen Sie hier, um Ihre Daten zu sichern.';
+      'Seit einer Weile hat keine Sicherung dieses Telefon verlassen. Tippen Sie hier, um eine an einem anderen Ort zu speichern; die Android-Sicherung deckt, wenn sie eingeschaltet ist, auch ein verlorenes Telefon ab.';
 
   @override
   String get notificationSyncFailedTitle => 'Synchronisierung fehlgeschlagen';
@@ -2808,14 +2736,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get tutSyncProviderBody =>
-      'Synchronisieren Sie über Ihr eigenes Google Drive. Ihre Daten werden verschlüsselt, bevor sie dieses Gerät verlassen.';
-
-  @override
-  String get tutSyncConnectTitle => 'Verbinden';
-
-  @override
-  String get tutSyncConnectBody =>
-      'Melden Sie sich an und legen Sie eine Sync-Passphrase fest. Dieselbe Passphrase geben Sie auf jedem Ihrer Geräte ein.';
+      'Synchronisieren Sie mit einem zweiten Telefon über Ihr WLAN: Koppeln Sie die Telefone, indem Sie einen QR-Code scannen. Alles wird verschlüsselt, bevor es dieses Telefon verlässt.';
 
   @override
   String get accessibilityVisualSection => 'Darstellung';
@@ -2838,14 +2759,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get faqSafeA =>
-      'Ihre Daten liegen nur auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, den Android vor anderen Apps abschirmt und mit Ihrer Displaysperre schützt. Die App-Sperre schützt zusätzlich mit Fingerabdruck, Gesicht oder Geräte-PIN. Sicherungen und synchronisierte Daten werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt, bevor sie das Telefon verlassen. Es gibt keine LedgerZero-Server, kein Konto, kein Tracking und keine Analyse.';
+      'Ihr Budget liegt auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, den Android vor anderen Apps abschirmt und mit Ihrer Displaysperre schützt. Die App-Sperre schützt zusätzlich mit Fingerabdruck, Gesicht oder Geräte-PIN. Sicherungsdateien und synchronisierte Daten werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt, bevor sie das Telefon verlassen. Ist die Android-Sicherung eingeschaltet, bewahrt Android in Ihrem Google-Konto eine Ende-zu-Ende-verschlüsselte Kopie auf, die nur die Displaysperre Ihres Telefons öffnet. Es gibt keine LedgerZero-Server, kein Konto, kein Tracking und keine Analyse.';
 
   @override
   String get faqSyncQ => 'Wie teilen mein Partner und ich ein Budget?';
 
   @override
   String get faqSyncA =>
-      'Öffnen Sie Einstellungen > Synchronisierung. Zu Hause koppeln Sie die Telefone über WLAN, indem Sie einen QR-Code scannen. Um auch unterwegs zu synchronisieren, verwenden beide Telefone dasselbe Google-Drive-Konto und dieselbe Sync-Passphrase. Das Kapitel „LedgerZero zu zweit nutzen“ im Benutzerhandbuch erklärt die Einzelheiten.';
+      'Öffnen Sie Einstellungen > Synchronisierung und koppeln Sie die Telefone über WLAN, indem Sie einen QR-Code scannen. Die beiden Telefone synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist; dazwischen arbeitet jedes für sich. Das Kapitel „LedgerZero zu zweit nutzen“ im Benutzerhandbuch erklärt die Einzelheiten.';
 
   @override
   String get faqOfflineQ => 'Funktioniert die App offline?';
@@ -2859,7 +2780,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get faqBackupA =>
-      'Unter Einstellungen > Sicherung & Export erstellen Sie eine Sicherungsdatei, die immer mit einem Sicherungspasswort Ihrer Wahl verschlüsselt ist. Ohne dieses Passwort lässt sich die Sicherung nicht wiederherstellen. CSV- und JSON-Exporte sind lesbare Kopien und nicht verschlüsselt.';
+      'Unter Einstellungen > Sicherung & Export erstellen Sie eine Sicherungsdatei, die immer mit einem Sicherungspasswort Ihrer Wahl verschlüsselt ist; mit „Speichern unter…“ legen Sie sie an einem anderen Ort ab (Computer, USB-Stick, Cloud-Ordner). Ohne dieses Passwort lässt sich die Sicherung nicht wiederherstellen. Ist die Android-Sicherung eingeschaltet, kommt das Budget auch damit auf ein neues Telefon. CSV- und JSON-Exporte sind lesbare Kopien und nicht verschlüsselt.';
 
   @override
   String get faqImportQ =>
@@ -2939,7 +2860,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbBenefitDataBody =>
-      'Nur auf Ihrem Gerät gespeichert. Kein Konto, keine Cloud.';
+      'Auf Ihrem Telefon gespeichert. Kein Konto, keine LedgerZero-Server.';
 
   @override
   String get onbBenefitOfflineTitle => 'Funktioniert offline';
@@ -2964,7 +2885,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onbPrivacyOwnCloud =>
-      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt über Ihr eigenes WLAN oder Ihr eigenes Google Drive.';
+      'Wir sehen Ihre Finanzdaten nie. Die Synchronisierung läuft Ende-zu-Ende-verschlüsselt direkt zwischen Ihren Telefonen über Ihr WLAN. Ist die Android-Sicherung eingeschaltet, bewahrt sie eine Ende-zu-Ende-verschlüsselte Kopie auf, die nur Ihre Displaysperre öffnet.';
 
   @override
   String get budgetBasicsTitle => 'Budget-Grundlagen';
@@ -3149,22 +3070,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
     return '$valueString';
   }
-
-  @override
-  String get syncErrorNetwork =>
-      'Keine Verbindung zum Cloud-Speicher. Die Synchronisierung wird erneut versucht, sobald Sie online sind.';
-
-  @override
-  String get syncErrorNotSignedIn =>
-      'Sie sind nicht angemeldet. Bitte verbinden Sie sich erneut.';
-
-  @override
-  String get syncErrorAuthFailed =>
-      'Die Anmeldung ist abgelaufen. Bitte trennen Sie die Verbindung und verbinden Sie sich erneut.';
-
-  @override
-  String get syncErrorStorageFull =>
-      'Ihr Cloud-Speicher ist voll. Geben Sie Speicherplatz frei, um weiter zu synchronisieren.';
 
   @override
   String get transactionsShareText => 'LedgerZero-Transaktionen (CSV)';
@@ -3648,7 +3553,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setupDeviceExplanation =>
-      'Ihr Budget wird nur auf diesem Telefon gespeichert, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Es gibt kein Konto, keine Cloud und kein Tracking. Die App-Sperre kann zusätzlich nach Fingerabdruck, Gesicht oder Geräte-PIN fragen.';
+      'Ihr Budget wird auf diesem Telefon gespeichert, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Es gibt kein Konto, keinen LedgerZero-Server und kein Tracking. Ist die Android-Sicherung eingeschaltet, bewahrt Android eine Ende-zu-Ende-verschlüsselte Kopie auf, die nur die Displaysperre dieses Telefons öffnet. Die App-Sperre kann zusätzlich nach Fingerabdruck, Gesicht oder Geräte-PIN fragen.';
 
   @override
   String get providerLocalWifi => 'Heim-WLAN (Telefon zu Telefon)';
@@ -3658,7 +3563,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get lanSetupExplanation =>
-      'Teilen Sie ein Budget mit einem zweiten Telefon, zum Beispiel dem Ihres Partners, ganz ohne Cloud. Die Telefone synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist.';
+      'Teilen Sie ein Budget mit einem zweiten Telefon, zum Beispiel dem Ihres Partners, direkt über Ihr WLAN: ohne Konto und ohne Server dazwischen. Die Telefone synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist.';
 
   @override
   String get lanStart => 'Auf diesem Telefon starten';
@@ -4050,7 +3955,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get helpSyncBody =>
-      'Zwei Telefone können ein Budget teilen: über Ihr WLAN zu Hause ganz ohne Cloud, oder über ein gemeinsames Google-Drive-Konto, wenn Sie unterwegs sind. Alles wird verschlüsselt, bevor es das Telefon verlässt.';
+      'Zwei Telefone können über Ihr WLAN ein Budget teilen: Sie synchronisieren direkt von Telefon zu Telefon, sobald beide im selben WLAN sind und LedgerZero geöffnet ist. Alles wird verschlüsselt, bevor es das Telefon verlässt.';
 
   @override
   String get helpSyncSteps =>
@@ -4105,14 +4010,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get guidePartnerBody =>
-      'Zwei Telefone können ein Budget teilen. Koppeln Sie sie unter Synchronisierung: über Ihr WLAN zu Hause (den QR-Code auf dem anderen Telefon scannen; auf beiden muss LedgerZero im selben WLAN geöffnet sein) oder über ein gemeinsames Google-Drive-Konto. Jede Änderung wird einzeln synchronisiert; ändern Sie beide dasselbe, gilt die spätere Änderung, und die Synchronisierung listet die andere auf. Konten, die Sie als persönlich markieren, bleiben Ihre: Ihr Partner sieht Name und Saldo im Nettovermögen, aber nicht die Buchungen. Markieren Sie ein Konto vor der ersten Synchronisierung als persönlich; teilen können Sie es auch später noch.';
+      'Zwei Telefone können ein Budget teilen. Koppeln Sie sie unter Synchronisierung über WLAN (den QR-Code auf dem anderen Telefon scannen); sie synchronisieren, sobald beide im selben WLAN sind und LedgerZero geöffnet ist. Jede Änderung wird einzeln synchronisiert; ändern Sie beide dasselbe, gilt die spätere Änderung, und die Synchronisierung listet die andere auf. Konten, die Sie als persönlich markieren, bleiben Ihre: Ihr Partner sieht Name und Saldo im Nettovermögen, aber nicht die Buchungen. Markieren Sie ein Konto vor der ersten Synchronisierung als persönlich; teilen können Sie es auch später noch.';
 
   @override
   String get guideSecurityTitle => 'Sicherheit und Sicherungen';
 
   @override
   String get guideSecurityBody =>
-      'Ihre Daten liegen nur auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Die App-Sperre fragt nach Fingerabdruck, Gesicht oder Geräte-PIN, wenn die App im Hintergrund war. Geht das Telefon verloren oder wird es zurückgesetzt, sind die Daten mit ihm weg: Erstellen Sie regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export, kopieren Sie sie vom Telefon weg und bewahren Sie das Sicherungspasswort gut auf: Ohne es lässt sich eine Sicherung nicht wiederherstellen.';
+      'Ihre Daten liegen auf Ihrem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Die App-Sperre fragt nach Fingerabdruck, Gesicht oder Geräte-PIN, wenn die App im Hintergrund war. Geht das Telefon verloren oder wird es zurückgesetzt, sind die Daten mit ihm weg, außer die Android-Sicherung ist eingeschaltet (sie bewahrt eine Ende-zu-Ende-verschlüsselte Kopie auf, bis zu etwa einen Tag alt, die Ihre Displaysperre öffnet) oder ein zweites Telefon synchronisiert. Erstellen Sie deshalb auch regelmäßig verschlüsselte Sicherungen unter Einstellungen > Sicherung & Export, speichern Sie sie an einem anderen Ort und bewahren Sie das Sicherungspasswort gut auf: Ohne es lässt sich eine Sicherung nicht wiederherstellen.';
 
   @override
   String get guideImportTitle => 'Importieren';
@@ -4590,7 +4495,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupNudgeMessage =>
-      'Sie haben persönliche Konten, und die letzte Sicherung ist älter als 7 Tage (oder es gibt keine). Deren Buchungen gibt es nur auf diesem Telefon.';
+      'Sie haben persönliche Konten, und die letzte Sicherung ist älter als 7 Tage (oder es gibt keine). Deren Buchungen werden nie mit dem anderen Telefon synchronisiert: Nur die Sicherungen dieses Telefons enthalten sie.';
 
   @override
   String get autoBackupTitle => 'Automatische Sicherungen';
@@ -4839,19 +4744,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein anderes Gerät verwendet eine neuere Version von LedgerZero. Dessen Änderungen kommen an, sobald Sie die App aktualisieren.';
 
   @override
-  String get syncEmptyFolderSameAccountHint =>
-      'Synchronisiert bereits ein anderes Telefon? Dann legen Sie hier keine neue Passphrase fest. Dieser Sync-Ordner ist leer, weil dieses Telefon mit einem anderen Google-Konto angemeldet ist. Beide Telefone müssen dasselbe Google-Konto verwenden: Trennen Sie die Verbindung und verbinden Sie sich mit dem Konto des anderen Telefons.';
-
-  @override
   String get restoreSyncNoRollbackNote =>
       'Auf diesem Telefon ist die Synchronisierung eingerichtet: Eine Wiederherstellung macht bereits synchronisierte Änderungen nicht rückgängig, auch nicht die dieses Telefons. Sie kommen aus dem Sync-Ordner zurück. Eine Wiederherstellung bringt verlorene Daten zurück; sie setzt das gemeinsame Budget nicht auf einen früheren Stand zurück.';
-
-  @override
-  String get syncDisconnectConfirmTitle => 'Synchronisierung trennen?';
-
-  @override
-  String get syncDisconnectConfirmMessage =>
-      'Dieses Telefon synchronisiert nicht mehr und vergisst die Sync-Passphrase. Ihre Daten bleiben auf diesem Telefon und auf Ihren anderen Geräten. Um wieder zu synchronisieren, verbinden Sie sich und geben die Passphrase ein; Änderungen aus der Zwischenzeit werden dann gesendet.';
 
   @override
   String get lanTurnOffConfirmTitle => 'WLAN-Synchronisierung ausschalten?';
@@ -5279,7 +5173,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get securityDataLocationBody =>
-      'Nur auf diesem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Sicherungen und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.';
+      'Auf diesem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Ist die Android-Sicherung eingeschaltet, zusätzlich als Ende-zu-Ende-verschlüsselte Kopie in Ihrem Google-Konto, die nur die Displaysperre dieses Telefons öffnet. Sicherungs- und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.';
 
   @override
   String get autoBackupPasswordMissing =>
@@ -5287,5 +5181,30 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dataLossWarning =>
-      'Geht dieses Telefon verloren oder wird es zurückgesetzt, ist Ihr Budget weg, außer eine Sicherungsdatei liegt an einem anderen Ort oder ein zweites Telefon synchronisiert mit diesem.';
+      'Geht dieses Telefon verloren oder wird es zurückgesetzt, ist Ihr Budget weg, außer die Android-Sicherung ist eingeschaltet, eine Sicherungsdatei liegt an einem anderen Ort oder ein zweites Telefon synchronisiert mit diesem.';
+
+  @override
+  String get backupSaveTo => 'Speichern unter…';
+
+  @override
+  String get backupShare => 'Teilen…';
+
+  @override
+  String get backupSaved => 'Sicherung gespeichert';
+
+  @override
+  String get backupSaveToExplanation =>
+      'Mit „Speichern unter…“ wählen Sie, wohin die Datei kommt: in einen Ordner auf dem Telefon, auf einen USB-Stick oder in eine Cloud-App wie Google Drive oder Dropbox. LedgerZero meldet sich nirgends an; das Hochladen übernimmt die gewählte App.';
+
+  @override
+  String get androidBackupTitle => 'Android-Sicherung';
+
+  @override
+  String get androidBackupExplanation =>
+      'Ist die Android-Sicherung eingeschaltet (bei den meisten Telefonen unter Einstellungen > System > Sicherung), kopiert Android das Budget etwa einmal am Tag in Ihr Google-Konto, Ende-zu-Ende-verschlüsselt mit der Displaysperre dieses Telefons, und stellt es auf einem neuen Telefon wieder her. LedgerZero kann nicht prüfen, ob sie eingeschaltet ist, und ohne Displaysperre sichert Android nichts davon.';
+
+  @override
+  String androidBackupTooLarge(String size) {
+    return 'Das Budget belegt $size MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort.';
+  }
 }

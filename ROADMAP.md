@@ -2,7 +2,7 @@
 
 **Goal:** a privacy-first, one-time-purchase envelope budgeting app for Android. It should be good enough that someone tired of YNAB's subscription would pay €29–49 for it.
 
-**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, local database on the phone (no account, no cloud, no tracking), app lock, encrypted backup and restore, sync via Google Drive or phone to phone on the home Wi-Fi. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
+**v1 scope:** Android only. English and German. Accounts, envelope budget, transactions (manual and quick-add), scheduled transactions, rules, reports, CSV and YNAB import, local database on the phone (no account, no LedgerZero servers, no tracking), app lock, encrypted backup and restore ("Save to…" anywhere, Android backup end-to-end encrypted), sync phone to phone on the same Wi-Fi. The `ios/` project stays in the repository but iOS is not shipped or tested in v1 (see "Later").
 
 **Out of scope for v1:** PDF/OCR import, ML categorisation, Mint import, desktop and web, home-screen widgets. All of these were removed on the `slim-down` branch and remain in `main`'s history if needed later.
 
@@ -121,7 +121,6 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [ ] **Monetisation:** a free tier (e.g. 1 budget, 3 accounts or 100 transactions) plus a one-time "LedgerZero Pro" unlock via in-app purchase (`in_app_purchase` or RevenueCat). Add Restore Purchases and Family Sharing.
 - [ ] Store setup: application IDs, release keystore and `android/key.properties`, Play Console listing in EN and DE, screenshots, and a short video.
 - [ ] Privacy: Play data-safety form, a privacy-policy page, and a working support email/domain (`support@ledgerzero.app` is referenced; confirm you own it).
-- [ ] Google OAuth consent screen verification for the Drive `drive.file` scope; Android OAuth clients for every app ID/signing key.
 - [ ] Opt-in crash reporting or a "send diagnostic log" button (the local, opt-in error reporter exists).
 - [ ] Closed beta with 10–20 testers (Play internal testing), recruited from r/ynab, r/Finanzen and r/personalfinance. Iterate for 1–2 weeks.
 - [ ] Launch.
@@ -132,23 +131,28 @@ The app still looks like default Material 3 with a teal seed colour. The design 
 - [x] Wi-Fi sync between paired phones (a household sharing one budget): QR pairing, signed local HTTP exchange of the encrypted change files, UDP discovery (docs/SYNC_ARCHITECTURE.md, "Local Wi-Fi").
 - [x] No master password: the database key is kept by the Android KeyStore (flutter_secure_storage) and the database opens at every start, also behind the app lock. App lock = fingerprint/face/device PIN (BiometricPrompt), a UI gate; auto-lock locks only the UI. Older installs unlock once with the password, recovery key or biometrics and move the key (docs/ENCRYPTION.md). Sync and backups stay end-to-end encrypted. (Superseded 2026-11: no database key and no encrypted database any more; see docs/SECURITY.md.)
 
+## Wi-Fi-only sync and Android backup (2026-11)
+
+- [x] Google sign-in and Drive sync removed: sync is Wi-Fi only (the two phones sync when both are on the same Wi-Fi with the app open); a stored Drive provider reads as "None". The engine, transport interface and change-file format are unchanged. `google_sign_in`, `extension_google_sign_in_as_googleapis_auth`, `googleapis`, `googleapis_auth` and the direct `http` dependency are gone; the merged manifest has no Google sign-in or Play services component left.
+- [x] Backup files leave the phone through "Save to…" (the system create-document picker: a folder, a USB stick, a cloud app) or the share sheet; either counts for the backup reminder.
+- [x] Android cloud backup on, end-to-end encrypted only (`disableIfNoEncryptionCapabilities` on 12+, `requireFlags="clientSideEncryption"` on 9–11, nothing on 7–8.1): the database with its WAL and the preferences. The WAL is checkpointed when the app goes to the background; a restore is handled like a transfer (new sync device id, sync rebuild). The Backup screen explains Android backup and notes a database above 20 MB (25 MB quota; a four-year household measured 19.5 MB).
+
 ## Follow-ups
 
 **Real-device verification** (cannot be done on simulators/emulators)
 - [ ] App lock on real phones: fingerprint, face and PIN/pattern prompts (Pixel 8, Xiaomi), auto-lock, and removing the screen lock turning the app lock off.
 - [ ] FLAG_SECURE on Android.
 - [ ] `flutter_secure_storage` 11 on a real phone: automatic-backup password and Wi-Fi pairing kept across restarts; after a KeyStore reset they are forgotten and asked for again, the app starts normally.
-- [ ] Moving to a new phone with Android's device-to-device transfer (two real phones, Android 12+ and one on 9–11 if available): budget and settings arrive, Google's cloud backup holds nothing (`adb shell bmgr` / Settings > Backup), the new phone gets its own sync device id and both phones keep syncing; Wi-Fi pairing, Drive sign-in, card notifications and the automatic-backup password are set up again.
+- [ ] Moving to a new phone with Android's device-to-device transfer (two real phones, Android 12+ and one on 9–11 if available): budget and settings arrive, the new phone gets its own sync device id and both phones keep syncing; Wi-Fi pairing, card notifications and the automatic-backup password are set up again.
+- [ ] Android cloud backup on a real phone with a screen lock (Android 12+ and 9–11 if available): `adb shell bmgr backupnow com.ledgerzero.app` succeeds, uninstall and reinstall restores the budget and settings, the restored install gets a new sync device id and rebuilds its sync state with the partner's phone; without a screen lock nothing of the app is uploaded; a new phone set up from the cloud backup gets the budget; the 25 MB quota is not hit by a realistic database (logcat "Transport quota exceeded"); "Save to…" into Drive/Dropbox/USB works.
 - [ ] Restore of a backup on a real phone (plain database file swapped in, app reopens it without a restart).
 - [ ] Argon2id time (46 MiB, 2 passes) for the sync passphrase and backup password on a mid-range Android phone stays under ~1.5 s.
-- [ ] Two-device sync matrix with real accounts: Android↔Android (Drive); offline edits, deletes, double edits, new-device bootstrap, wrong passphrase.
 - [ ] Wi-Fi sync on two real phones on a real home router: QR scan, discovery (routers that block broadcasts or client-to-client traffic), Xiaomi battery saver, merging the second phone's existing data.
 - [ ] Notification delivery: scheduled-transaction reminders and sync-failure notifications on Android (permissions, exact vs. inexact alarms, tap routing).
 - [ ] Card notification capture with real bank apps (Sparkasse, ING, DKB, N26, Revolut, Google Wallet, ...): collect anonymised notification texts, add them as parser test cases, and check that the listener survives reboots and vendor battery savers (Xiaomi/MIUI).
 
 **Engineering**
 - [ ] Riverpod 3 migration (app-wide; `flutter_riverpod` stays on 2.6).
-- [ ] `google_sign_in` 7 (new authentication/authorization API, Android Credential Manager with a server client ID); needs real-device verification of Drive sign-in.
 - [ ] `go_router` 18 together with the move to the unbundled `material_ui`/`cupertino_ui` packages.
 - [ ] `csv` 7+ (rewritten parser); re-run all import fixtures.
 - [ ] Third-party Android plugins still use deprecated Groovy DSL syntax (Gradle 10 will remove it) and `android.newDsl=false`; update when the plugins do.

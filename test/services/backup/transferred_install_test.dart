@@ -173,6 +173,67 @@ void main() {
       expect(moved.getBool(SyncRebootstrap.prefsKey), isNull);
     });
 
+    test('a restore from Android\'s cloud backup (reinstall, or a new phone '
+        'set up from the backup) is handled like a transfer', () async {
+      // What the backup holds: the preferences with the old install id
+      // and db.sqlite with its -wal, including changes that were never
+      // checkpointed. The no-backup directory starts empty after a
+      // reinstall or on a new phone.
+      final source = AppDatabase(NativeDatabase(dbFile));
+      await source.customStatement(
+        "INSERT INTO payees (id, name) VALUES ('p2', 'Kiosk')",
+      );
+      final restoredDir = Directory(p.join(tmp.path, 'restored'))
+        ..createSync();
+      final restored = File(p.join(restoredDir.path, 'db.sqlite'));
+      dbFile.copySync(restored.path);
+      final wal = File('${dbFile.path}-wal');
+      expect(wal.lengthSync(), greaterThan(0));
+      wal.copySync('${restored.path}-wal');
+      await source.close();
+
+      const oldId = '11111111-2222-4333-8444-555555555555';
+      final prefs0 = await prefs({
+        TransferredInstall.prefsKey: 'backed-up-install',
+        SyncDeviceId.prefsKey: oldId,
+        LanPeers.prefsKey: '[]',
+        'user_onboarded': true,
+      });
+      expect(noBackup.existsSync(), isFalse);
+
+      await TransferredInstall.checkAtStartup(
+        prefs0,
+        noBackupDirectory: () async => noBackup,
+        databaseFile: () async => restored,
+      );
+
+      expect(prefs0.getBool(SyncRebootstrap.prefsKey), isTrue);
+      expect(prefs0.getString(SyncDeviceId.prefsKey), isNull);
+      expect(prefs0.getString(LanPeers.prefsKey), isNull);
+      expect(
+        prefs0.getString(TransferredInstall.prefsKey),
+        allOf(isNotNull, isNot('backed-up-install')),
+      );
+      expect(
+        marker().readAsStringSync(),
+        prefs0.getString(TransferredInstall.prefsKey),
+      );
+      final after = sqlite.sqlite3.open(restored.path);
+      try {
+        // Every row, also the one that was only in the WAL.
+        expect(count(after, 'SELECT COUNT(*) FROM payees'), 2);
+        expect(count(after, 'SELECT COUNT(*) FROM pending_sync_changes'), 0);
+        expect(
+          after.select('SELECT value FROM sync_kv WHERE key = ?', [
+            SyncLocalState.deviceIdKey,
+          ]),
+          isEmpty,
+        );
+      } finally {
+        after.close();
+      }
+    });
+
     test(
       'without a no-backup directory (not Android) nothing happens',
       () async {

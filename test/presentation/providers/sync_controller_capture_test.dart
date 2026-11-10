@@ -1,33 +1,22 @@
 // What happens to captured changes while nothing syncs (provider "None",
-// Disconnect): two real databases and engines over a fake folder, with the
-// real controller driving phone A.
+// Turn off Wi-Fi sync): two real databases and engines over a fake folder,
+// with the real controller driving phone A (Wi-Fi sync set up; the engine
+// runs against the fake folder).
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/services/sync/connectivity_service.dart';
-import 'package:ledger_zero/services/sync/google_auth_service.dart';
+import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
+import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
 import 'package:ledger_zero/services/sync/sync_conflict_resolver.dart';
 
+import '../../helpers/lan_test_service.dart';
 import '../../helpers/sync_simulation.dart';
 
 const passphrase = 'correct horse battery staple';
-
-class _Auth implements GoogleAuthService {
-  @override
-  Stream<GoogleSignInAccount?> get onCurrentUserChanged => const Stream.empty();
-  @override
-  Future<bool> isSignedIn() async => false;
-  @override
-  Future<void> signInSilently() async {}
-  @override
-  Future<GoogleSignInAccount?> signOut() async => null;
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
 
 class _Online implements ConnectivityService {
   @override
@@ -44,6 +33,7 @@ void main() {
   late FakeSyncFolder folder;
   late SimDevice a;
   late SimDevice b;
+  late LanSyncService lan;
 
   /// The controller of phone [a] (manual frequency: only `syncNow` runs).
   SyncController controllerOf(SimDevice device, {String? provider}) {
@@ -52,7 +42,6 @@ void main() {
     }
     device.prefs.values['sync_frequency'] = SyncFrequency.manual.name;
     final c = SyncController(
-      authService: _Auth(),
       prefs: device.prefs,
       connectivity: _Online(),
       dependencies: () => SyncDependencies(
@@ -61,7 +50,8 @@ void main() {
         resolver: SyncConflictResolver(device.db),
       ),
       transportFor: (p) =>
-          p == SyncProviderType.googleDrive ? device.transport : null,
+          p == SyncProviderType.localWifi ? device.transport : null,
+      lan: lan,
     );
     addTearDown(c.dispose);
     return c;
@@ -80,6 +70,7 @@ void main() {
     folder = FakeSyncFolder();
     a = await SimDevice.create(folder);
     b = await SimDevice.create(folder);
+    lan = await testLanSync(a.prefs);
   });
 
   tearDown(() async {
@@ -96,7 +87,7 @@ void main() {
       await a.t!.addAccount(id: 'chk', name: 'Checking');
       await a.exec("INSERT INTO payees (id, name) VALUES ('p', 'Bakery')");
       await syncAll([a, b]);
-      c = controllerOf(a, provider: 'googleDrive');
+      c = controllerOf(a, provider: 'localWifi');
       await c.onLockStateChanged(AppLockState.unlocked);
     });
 
@@ -106,7 +97,7 @@ void main() {
       await a.t!.addTransaction(id: 't1', accountId: 'chk', amount: -500);
       await restart(c);
 
-      await c.setProvider(SyncProviderType.googleDrive);
+      await c.setProvider(SyncProviderType.localWifi);
       await c.syncNow();
       await b.sync();
 
@@ -114,15 +105,19 @@ void main() {
       expect(await b.count('SELECT COUNT(*) FROM transactions'), 1);
     });
 
-    test('Disconnect and reconnect: deletes made in between reach the '
-        'partner', () async {
+    test('Turn off Wi-Fi sync and pair again: deletes made in between '
+        'reach the partner', () async {
       await c.disconnect();
       expect(c.state.selectedProvider, SyncProviderType.none);
+      expect(lan.isPaired, isFalse);
       await restart(c);
       await a.exec("DELETE FROM payees WHERE id = 'p'");
       await restart(c);
 
-      await c.setProvider(SyncProviderType.googleDrive);
+      // Pairing again (the QR code) stores a new pairing; the folder asks
+      // for the passphrase like any device that joins.
+      await lan.pair(LanPairing.generate());
+      await c.setProvider(SyncProviderType.localWifi);
       await c.syncNow();
       expect(c.state.setup, SyncSetupState.needsPassphrase);
       expect(await c.enterPassphrase(passphrase), SyncPassphraseResult.ok);

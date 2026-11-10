@@ -26,7 +26,6 @@ class FactoryResetService {
     required this.clearCapturedNotifications,
     required this.deleteErrorReports,
     required this.unpairWifiSync,
-    required this.signOutGoogle,
     required this.deleteSyncFiles,
     required this.clearPreferences,
     required this.markNotOnboarded,
@@ -51,11 +50,6 @@ class FactoryResetService {
   /// Forgets the Wi-Fi pairing secret and the paired phones, so a
   /// re-onboarded phone cannot serve the old folder to the old peer.
   final Future<void> Function() unpairWifiSync;
-
-  /// Forgets the Google Drive account (revoked when online, else signed
-  /// out on this phone). Best effort: offline it must not fail the reset,
-  /// so its error is only logged.
-  final Future<void> Function() signOutGoogle;
 
   /// `<documents>/sync` (outbox and Wi-Fi sync folder).
   final Future<void> Function() deleteSyncFiles;
@@ -86,12 +80,6 @@ class FactoryResetService {
         firstStack ??= stack;
       }
     }
-    try {
-      await signOutGoogle();
-    } catch (e, stack) {
-      // Offline (or never signed in): the reset itself succeeded.
-      Logger.warning('Factory reset: sign out of Google failed', e, stack);
-    }
     // Also replaces the settings-backed providers, sync included
     // (settingsGenerationProvider).
     markNotOnboarded();
@@ -112,7 +100,6 @@ final factoryResetServiceProvider = Provider<FactoryResetService>((ref) {
         ref.read(notificationCaptureChannelProvider).clear(),
     deleteErrorReports: () => LocalErrorReportingService().deleteAll(),
     unpairWifiSync: () => ref.read(lanSyncServiceProvider).unpair(),
-    signOutGoogle: () => ref.read(googleAuthServiceProvider).forgetAccount(),
     deleteSyncFiles: SyncOutbox.deleteAllSyncFiles,
     clearPreferences: () => ref.read(sharedPreferencesProvider).clear(),
     markNotOnboarded: () {

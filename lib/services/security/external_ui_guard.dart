@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 /// Marks periods where the app deliberately hands the screen to the OS (file
-/// picker, share sheet, biometric prompt, Google sign-in). The auto-lock
+/// picker, share sheet, biometric prompt). The auto-lock
 /// does not lock for the lifecycle changes those cause; once the last one
 /// finishes it applies its policy to the state the app is then in.
 ///

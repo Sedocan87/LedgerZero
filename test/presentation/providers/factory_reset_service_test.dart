@@ -32,7 +32,6 @@ void main() {
       clearCapturedNotifications: step('capture'),
       deleteErrorReports: step('reports'),
       unpairWifiSync: step('unpair'),
-      signOutGoogle: step('google'),
       deleteSyncFiles: deleteSyncFiles ?? step('sync files'),
       clearPreferences: step('prefs'),
       markNotOnboarded: () => log.add('onboarding'),
@@ -50,10 +49,7 @@ void main() {
       deleteSyncFiles: () => SyncOutbox.deleteAllSyncFiles(docs),
     ).reset();
     expect(Directory('${docs.path}/sync').existsSync(), isFalse);
-    expect(
-      log,
-      containsAllInOrder(['session', 'database', 'unpair', 'google']),
-    );
+    expect(log, containsAllInOrder(['session', 'database', 'unpair']));
     expect(log.last, 'onboarding');
   });
 

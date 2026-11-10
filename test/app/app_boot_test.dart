@@ -33,9 +33,10 @@ import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../helpers/lan_test_service.dart';
 import '../helpers/security_fakes.dart';
 import '../presentation/providers/sync_controller_lifecycle_test.dart'
-    show DummyTransport, FakeAuth, FakeConnectivity, FakeEngine;
+    show DummyTransport, FakeConnectivity, FakeEngine;
 
 /// Counts catch-up runs; books nothing.
 class _RecordingSchedules extends Fake implements ScheduledTransactionService {
@@ -257,9 +258,10 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'user_onboarded': true,
       kAppLockEnabledKey: true,
-      'sync_provider': 'googleDrive',
+      'sync_provider': 'localWifi',
     });
     final sharedPreferences = await SharedPreferences.getInstance();
+    final lan = await testLanSync(sharedPreferences);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -274,7 +276,6 @@ void main() {
           scheduledTransactionServiceProvider.overrideWithValue(schedules),
           syncControllerProvider.overrideWith((ref) {
             final controller = SyncController(
-              authService: FakeAuth(),
               prefs: sharedPreferences,
               connectivity: FakeConnectivity(),
               dependencies: () => SyncDependencies(
@@ -284,6 +285,7 @@ void main() {
               ),
               transportFor: (p) =>
                   p == SyncProviderType.none ? null : DummyTransport(),
+              lan: lan,
             );
             ref.listen<AppLockState>(
               appLockStateProvider,

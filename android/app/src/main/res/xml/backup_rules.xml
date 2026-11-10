@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 7.0 to 8.1 (android:fullBackupContent; res/xml-v28 has the
      rules for Android 9 to 11, data_extraction_rules.xml those for 12 and
-     later). These versions cannot tell a device-to-device transfer from a
-     cloud backup (requireFlags needs Android 9), so nothing is backed up or
+     later). These versions cannot make a backup depend on end-to-end
+     encryption (requireFlags needs Android 9), so nothing is backed up or
      transferred: with an include only the included files are backed up,
      and this one names a file that never exists. Moving to a new phone
-     works there through an encrypted backup or sync. -->
+     works there through a backup file or sync. -->
 <full-backup-content>
     <include domain="file" path="no_cloud_backup" />
 </full-backup-content>

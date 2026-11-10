@@ -35,9 +35,6 @@ class MockSyncController extends StateNotifier<SyncState>
   Future<void> syncNow() async {}
 
   @override
-  Future<void> connect() async {}
-
-  @override
   Future<void> disconnect() async {}
 
   @override
@@ -45,9 +42,6 @@ class MockSyncController extends StateNotifier<SyncState>
 
   @override
   Future<void> setSyncFrequency(SyncFrequency frequency) async {}
-
-  @override
-  Future<void> setWifiOnly(bool enabled) async {}
 
   // Members the layout tests never call.
   @override

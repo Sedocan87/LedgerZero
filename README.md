@@ -1,11 +1,14 @@
 # LedgerZero
 
 LedgerZero is a local-first envelope budgeting app (zero-based, YNAB-style)
-for Android, in English and German. Offline. No account, no cloud, no
-tracking. App lock with fingerprint. Backups and sync are encrypted. All
-data lives on the phone, in the app's private storage; phones sync over the
-home Wi-Fi or through the user's own Google Drive, and backups go to a file
-or to Drive, end-to-end encrypted with the user's password or passphrase. It is planned as a one-time
+for Android, in English and German. Offline. No account, no LedgerZero
+servers, no tracking. App lock with fingerprint. The budget lives on the
+phone, in the app's private storage; two phones sync directly over the
+same Wi-Fi, and backup files go wherever the user saves them ("Save to…":
+a folder, a USB stick, a cloud app), end-to-end encrypted with the user's
+password or passphrase. If Android backup is on, Android keeps an
+end-to-end encrypted copy in the user's Google account that only the
+phone's screen lock opens. It is planned as a one-time
 purchase (see [ROADMAP.md](ROADMAP.md)). Version 0.1.0, not released yet.
 
 v1 is Android only. The Flutter code and the `ios/` project stay in the
@@ -27,9 +30,10 @@ repository, but iOS is not built, tested or supported in v1.
   auto-lock, app-switcher privacy cover.
 - Card capture: optionally turns payment notifications of chosen bank and
   wallet apps into transactions to review.
-- Encrypted backup/restore and encrypted multi-device sync over the home
-  Wi-Fi (no cloud) or via Google Drive; personal accounts for a household
-  sharing one budget.
+- Encrypted backup/restore ("Save to…" any folder or cloud app, or share),
+  Android backup (end-to-end encrypted, Android 9+), and encrypted sync
+  between two phones over the same Wi-Fi; personal accounts for a
+  household sharing one budget.
 
 ## Architecture
 
@@ -57,26 +61,29 @@ core          money, calendar dates, formatting helpers, constants, errors
   calendar day the user picked (`lib/core/time/`).
 - **Security:** the database is protected by Android's app sandbox and the
   phone's screen lock, not encrypted by the app; the optional app lock
-  gates the UI. Android's cloud backup is off; its device-to-device
-  transfer moves the budget to a new phone, which then becomes a sync
+  gates the UI. Android's cloud backup takes the database and the
+  settings only when it is end-to-end encrypted with the screen lock
+  (Android 9+; nothing on 7 and 8), and its device-to-device transfer
+  moves them to a new phone; a restored or moved install becomes a sync
   device of its own. See [docs/SECURITY.md](docs/SECURITY.md) and
   [docs/ENCRYPTION.md](docs/ENCRYPTION.md).
-- **Sync v2:** each sync run uploads one AES-256-GCM encrypted change file
-  to the user's Google Drive (`drive.file` scope); the key
-  comes from a separate sync passphrase. Rows merge last-writer-wins by
-  their UTC `updated_at`; new devices bootstrap from an encrypted snapshot.
-  See [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md) and
+- **Sync v2:** each sync run writes one AES-256-GCM encrypted change file;
+  the key comes from a sync passphrase that travels in the Wi-Fi pairing
+  code. Rows merge last-writer-wins by their UTC `updated_at`; new devices
+  bootstrap from an encrypted snapshot. See
+  [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md) and
   [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md).
-- **Wi-Fi sync:** the same change files, exchanged directly between phones
-  on the same network instead of through Drive (Settings > Sync > Home
-  Wi-Fi). One phone shows a pairing QR code (or a code to type), the other
-  scans it; the code carries the shared pair key and sync passphrase.
-  While the app is open each phone serves its sync folder over HTTP on TCP
-  47321 (every request signed with the pair key) and finds the other by UDP
-  broadcast on port 47322. Android stops background apps, so both phones
-  sync when the app is open on both. See the "Local Wi-Fi" section of
+- **Wi-Fi sync** (the only sync; Settings > Sync > Home Wi-Fi): the change
+  files are exchanged directly between the two phones on the same Wi-Fi,
+  with no account and no server in between. One phone shows a pairing QR
+  code (or a code to type), the other scans it; the code carries the
+  shared pair key and sync passphrase. While the app is open each phone
+  serves its sync folder over HTTP on TCP 47321 (every request signed with
+  the pair key) and finds the other by UDP broadcast on port 47322.
+  Android stops background apps, so the two phones sync when both are on
+  the same Wi-Fi with the app open. See the "Local Wi-Fi" section of
   [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md).
-- **Backups (format v2)** are always encrypted, locally or to the cloud.
+- **Backups (format v2)** are always encrypted, wherever they are saved.
   See [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md) and
   [docs/BACKUP_AND_EXPORT.md](docs/BACKUP_AND_EXPORT.md).
 - **Localisation:** ARB files in `lib/l10n/` (`app_en.arb`, `app_de.arb`),
@@ -170,19 +177,6 @@ never commit them, and keep the keystore outside the repository.
    signing key and this key only authorises uploads; a lost upload key can
    be replaced through Play support, but that takes days.
 
-The SHA-1 of the upload key (and later of the Play app signing key, from
-the Play Console) is what the Google Drive OAuth clients need:
-
-```bash
-keytool -list -v -keystore ~/keys/ledgerzero-upload.jks -alias upload
-```
-
-### Google Drive sign-in
-
-Register an Android OAuth client for each application ID and signing
-certificate (SHA-1) you use. Details:
-[docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md).
-
 ### Tests
 
 - `bash tool/check.sh`: generated localisations up to date and complete,
@@ -219,7 +213,7 @@ docs/             design and user documentation
 | Transactions, scheduled transactions, payees, rules | [docs/TRANSACTION_LIFECYCLE.md](docs/TRANSACTION_LIFECYCLE.md), [docs/SCHEDULED_TRANSACTIONS.md](docs/SCHEDULED_TRANSACTIONS.md), [docs/PAYEE_MANAGEMENT.md](docs/PAYEE_MANAGEMENT.md), [docs/RULES.md](docs/RULES.md) |
 | Quick add parser | [docs/NATURAL_LANGUAGE_FORMATS.md](docs/NATURAL_LANGUAGE_FORMATS.md) |
 | Encryption and security | [docs/SECURITY.md](docs/SECURITY.md), [docs/ENCRYPTION.md](docs/ENCRYPTION.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
-| Sync | [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md), [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md), [docs/DELTA_SCHEMA_MIGRATION.md](docs/DELTA_SCHEMA_MIGRATION.md), [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md), [docs/OFFLINE_CAPABILITIES.md](docs/OFFLINE_CAPABILITIES.md) |
+| Sync | [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md), [docs/DELTA_FORMAT.md](docs/DELTA_FORMAT.md), [docs/DELTA_SCHEMA_MIGRATION.md](docs/DELTA_SCHEMA_MIGRATION.md), [docs/CLOUD_COMPARISON.md](docs/CLOUD_COMPARISON.md), [docs/OFFLINE_CAPABILITIES.md](docs/OFFLINE_CAPABILITIES.md) |
 | Backup, import, export | [docs/BACKUP_AND_EXPORT.md](docs/BACKUP_AND_EXPORT.md), [docs/BACKUP_FORMAT.md](docs/BACKUP_FORMAT.md), [docs/CSV_FORMAT.md](docs/CSV_FORMAT.md), [docs/YNAB_MIGRATION.md](docs/YNAB_MIGRATION.md) |
 | Platform notes, errors | [docs/PLATFORM_SPECIFICS.md](docs/PLATFORM_SPECIFICS.md), [docs/ERROR_RECOVERY.md](docs/ERROR_RECOVERY.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 | Code and tests | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md), [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md), [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md), [docs/TESTING.md](docs/TESTING.md), [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |

@@ -6,12 +6,9 @@
 
 import 'dart:async' as _i3;
 
-import 'package:google_sign_in/google_sign_in.dart' as _i7;
-import 'package:googleapis_auth/googleapis_auth.dart' as _i8;
 import 'package:ledger_zero/domain/entities/budget_template.dart' as _i5;
 import 'package:ledger_zero/domain/entities/category.dart' as _i4;
 import 'package:ledger_zero/domain/services/budgeting_service.dart' as _i2;
-import 'package:ledger_zero/services/sync/google_auth_service.dart' as _i6;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -496,75 +493,4 @@ class MockBudgetingService extends _i1.Mock implements _i2.BudgetingService {
             ),
           )
           as _i3.Future<Map<String, int>>);
-}
-
-/// A class which mocks [GoogleAuthService].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockGoogleAuthService extends _i1.Mock implements _i6.GoogleAuthService {
-  @override
-  _i3.Stream<_i7.GoogleSignInAccount?> get onCurrentUserChanged =>
-      (super.noSuchMethod(
-            Invocation.getter(#onCurrentUserChanged),
-            returnValue: _i3.Stream<_i7.GoogleSignInAccount?>.empty(),
-            returnValueForMissingStub:
-                _i3.Stream<_i7.GoogleSignInAccount?>.empty(),
-          )
-          as _i3.Stream<_i7.GoogleSignInAccount?>);
-
-  @override
-  _i3.Future<bool> isConfigured() =>
-      (super.noSuchMethod(
-            Invocation.method(#isConfigured, []),
-            returnValue: _i3.Future<bool>.value(false),
-            returnValueForMissingStub: _i3.Future<bool>.value(false),
-          )
-          as _i3.Future<bool>);
-
-  @override
-  _i3.Future<_i7.GoogleSignInAccount?> signIn() =>
-      (super.noSuchMethod(
-            Invocation.method(#signIn, []),
-            returnValue: _i3.Future<_i7.GoogleSignInAccount?>.value(),
-            returnValueForMissingStub:
-                _i3.Future<_i7.GoogleSignInAccount?>.value(),
-          )
-          as _i3.Future<_i7.GoogleSignInAccount?>);
-
-  @override
-  _i3.Future<_i7.GoogleSignInAccount?> signOut() =>
-      (super.noSuchMethod(
-            Invocation.method(#signOut, []),
-            returnValue: _i3.Future<_i7.GoogleSignInAccount?>.value(),
-            returnValueForMissingStub:
-                _i3.Future<_i7.GoogleSignInAccount?>.value(),
-          )
-          as _i3.Future<_i7.GoogleSignInAccount?>);
-
-  @override
-  _i3.Future<_i8.AuthClient?> getAuthenticatedClient() =>
-      (super.noSuchMethod(
-            Invocation.method(#getAuthenticatedClient, []),
-            returnValue: _i3.Future<_i8.AuthClient?>.value(),
-            returnValueForMissingStub: _i3.Future<_i8.AuthClient?>.value(),
-          )
-          as _i3.Future<_i8.AuthClient?>);
-
-  @override
-  _i3.Future<bool> isSignedIn() =>
-      (super.noSuchMethod(
-            Invocation.method(#isSignedIn, []),
-            returnValue: _i3.Future<bool>.value(false),
-            returnValueForMissingStub: _i3.Future<bool>.value(false),
-          )
-          as _i3.Future<bool>);
-
-  @override
-  _i3.Future<void> signInSilently() =>
-      (super.noSuchMethod(
-            Invocation.method(#signInSilently, []),
-            returnValue: _i3.Future<void>.value(),
-            returnValueForMissingStub: _i3.Future<void>.value(),
-          )
-          as _i3.Future<void>);
 }

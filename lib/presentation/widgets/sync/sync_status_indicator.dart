@@ -25,8 +25,6 @@ class SyncStatusIndicator extends ConsumerWidget {
         color = Colors.green;
         statusText = state.paused
             ? l10n.syncStatusPaused
-            : state.accountEmail != null
-            ? l10n.syncStatusConnectedAs(state.accountEmail!)
             : l10n.syncStatusConnected;
         break;
       case SyncStatus.disconnected:

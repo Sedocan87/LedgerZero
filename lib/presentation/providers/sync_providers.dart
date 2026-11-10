@@ -11,8 +11,6 @@ import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_controller.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
-import 'package:ledger_zero/services/sync/google_auth_service.dart';
-import 'package:ledger_zero/services/sync/google_drive_sync.dart';
 import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
 import 'package:ledger_zero/services/sync/lan/lan_peers.dart';
 import 'package:ledger_zero/services/sync/lan/lan_sync_service.dart';
@@ -22,31 +20,6 @@ import 'package:ledger_zero/services/sync/sync_device_id.dart';
 import 'package:ledger_zero/services/sync/sync_engine.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
 import 'package:path_provider/path_provider.dart';
-
-final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
-  return GoogleAuthService();
-});
-
-/// One Drive transport per app session; its cached client is dropped when
-/// the Google account changes (sign-out) and closed on dispose. A factory
-/// reset replaces it (cached folder ids).
-final googleDriveServiceProvider = Provider<GoogleDriveService>((ref) {
-  ref.watch(settingsGenerationProvider);
-  final authService = ref.watch(googleAuthServiceProvider);
-  final service = GoogleDriveService(
-    authService,
-    ref.watch(sharedPreferencesProvider),
-  );
-  final subscription = authService.onCurrentUserChanged.listen(
-    (_) => service.resetClient(),
-    onError: (Object _) {},
-  );
-  ref.onDispose(() {
-    subscription.cancel();
-    service.dispose();
-  });
-  return service;
-});
 
 /// Wi-Fi sync between paired phones (app lifetime). A factory reset
 /// replaces it: the old one is stopped, and the new one has the new device
@@ -121,20 +94,17 @@ final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
 /// The app-wide sync controller. Created at app start (MyApp); follows
 /// [appLockStateProvider] (the database session, not the app lock): paused
 /// while the database is closed, running while it is open. A factory reset
-/// replaces it, so the provider, account and last sync time it showed
-/// (read from the cleared preferences) are gone.
+/// replaces it, so the provider and last sync time it showed (read from
+/// the cleared preferences) are gone.
 final syncControllerProvider = StateNotifierProvider<SyncController, SyncState>(
   (ref) {
     ref.watch(settingsGenerationProvider);
-    final drive = ref.watch(googleDriveServiceProvider);
     final lan = ref.watch(lanSyncServiceProvider);
     final controller = SyncController(
-      authService: ref.watch(googleAuthServiceProvider),
       prefs: ref.watch(sharedPreferencesProvider),
       connectivity: ref.watch(connectivityServiceProvider),
       dependencies: () => ref.read(syncDependenciesProvider),
       transportFor: (provider) => switch (provider) {
-        SyncProviderType.googleDrive => drive,
         SyncProviderType.localWifi => lan.transport,
         SyncProviderType.none => null,
       },

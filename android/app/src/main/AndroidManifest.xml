@@ -1,10 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- Backup: no cloud backup at all; a device-to-device transfer to a
-         new phone takes the database and the preferences along (rules in
-         res/xml/data_extraction_rules.xml and res/xml*/backup_rules.xml).
-         allowBackup must be true for the transfer; the rules keep the cloud
-         backup empty. -->
+    <!-- Backup: Android's cloud backup (only when end-to-end encrypted with
+         the screen lock) and the device-to-device transfer to a new phone
+         take the database and the preferences, nothing else (rules in
+         res/xml/data_extraction_rules.xml for Android 12+ and
+         res/xml-v28/backup_rules.xml for 9 to 11; nothing on 7.0 to 8.1,
+         res/xml/backup_rules.xml). -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
@@ -147,6 +148,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Backup "Save to…": the system's create-document picker (the
+             file picker plugin checks that something handles it). -->
+        <intent>
+            <action android:name="android.intent.action.CREATE_DOCUMENT"/>
+            <data android:mimeType="*/*"/>
         </intent>
         <!-- "Contact support" (Help, About) opens a mailto: link; lets the
              app see whether a mail app can take it. -->

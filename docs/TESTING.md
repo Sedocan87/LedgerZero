@@ -38,7 +38,7 @@ Principles:
   `TestDatabase`), which seeds the default categories and exposes the real
   repositories and services. Mocks (`test/mocks/`, generated with
   `@GenerateNiceMocks`) are kept for widget tests that only need a few canned
-  answers and for platform boundaries (connectivity, Google sign-in).
+  answers and for platform boundaries (connectivity).
 - **The budget invariant.** `expectLedgerInvariant` in
   `test/domain/services/ledger_test_helpers.dart` asserts
   `SUM(category available) + To Be Budgeted == SUM(account balances)` for a

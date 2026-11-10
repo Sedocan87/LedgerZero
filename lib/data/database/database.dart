@@ -156,6 +156,24 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Copies every change from the write-ahead log into the database file
+  /// and empties the log (`PRAGMA wal_checkpoint(TRUNCATE)`).
+  ///
+  /// Called when the app goes to the background (`lib/app/app.dart`), the
+  /// last moment before Android may stop the process or back the app up
+  /// (Auto Backup, device-to-device transfer). The backup copies
+  /// `db.sqlite` and `db.sqlite-wal` together while no transaction is
+  /// running, which is consistent on its own; after the checkpoint the WAL
+  /// is empty, so even a backup taken while the app is in the background
+  /// and writing (a sync run) finds the committed data in `db.sqlite`.
+  /// Returns false when SQLite could not finish it (a reader or writer was
+  /// busy); the next background tries again.
+  Future<bool> checkpointWal() async {
+    final rows = await customSelect('PRAGMA wal_checkpoint(TRUNCATE)').get();
+    // (busy, log frames, checkpointed frames); busy = 1 means not done.
+    return rows.isEmpty || rows.first.data.values.first == 0;
+  }
+
   /// Name of the index on `transactions (parent_transaction_id,
   /// is_deleted)`, see [createUnversionedIndexes].
   static const String splitParentIndex = 'idx_transactions_parent';

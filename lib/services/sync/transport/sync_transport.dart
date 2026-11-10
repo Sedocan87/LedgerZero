@@ -6,7 +6,7 @@ class RemoteFile {
   /// `SyncFileName.tryParse` before using it for anything.
   final String name;
 
-  /// Provider id (the Drive file id).
+  /// Provider id (with Wi-Fi sync: the file name).
   final String id;
   final int? size;
   final DateTime? modifiedTime;
@@ -17,11 +17,12 @@ class RemoteFile {
   String toString() => 'RemoteFile($name)';
 }
 
-/// Storage for the sync folder (Google Drive, a fake in tests).
+/// Storage for the sync folder (Wi-Fi sync's folder on this phone, a fake
+/// in tests).
 /// Implementations retry transient errors themselves and throw a
 /// `SyncException` otherwise.
 abstract class SyncTransport {
-  /// Stable identifier (e.g. 'google_drive').
+  /// Stable identifier (e.g. 'local_wifi').
   String get name;
 
   /// Every file in the sync folder (all pages).
