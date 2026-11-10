@@ -663,6 +663,27 @@ void main() {
   group('smaller gaps', () {
     const euroAccount = 'EUR';
 
+    test('the creditor of a direct debit is named without "von"/"from"', () {
+      final german = germanParser.parse(
+        text: 'Lastschrift 49,99 € von Vodafone GmbH',
+      );
+      expect(german.kind, CaptureKind.outflow);
+      expect(german.amount, 4999);
+      expect(german.merchant, 'Vodafone GmbH');
+
+      final english = parser.parse(
+        text: 'Direct debit €49.99 from Vodafone Ltd',
+      );
+      expect(english.kind, CaptureKind.outflow);
+      expect(english.merchant, 'Vodafone Ltd');
+
+      // "von deinem Konto" is not a merchant.
+      final own = germanParser.parse(
+        text: 'Abbuchung 49,99 € von deinem Konto',
+      );
+      expect(own.merchant, isNull);
+    });
+
     test('the amount in the account currency wins over the foreign one', () {
       final german = germanParser.parse(
         text: 'Kartenzahlung 25,00 USD (23,10 €) bei Amazon.com',

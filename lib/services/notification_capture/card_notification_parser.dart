@@ -1227,11 +1227,17 @@ class CardNotificationParser {
     return merchant;
   }
 
-  /// "Umsatz -12,50 € REWE SAGT DANKE" -> "REWE SAGT DANKE".
+  /// "Umsatz -12,50 € REWE SAGT DANKE" -> "REWE SAGT DANKE"; the creditor
+  /// of a direct debit follows "von"/"from" ("Lastschrift 49,99 € von
+  /// Vodafone GmbH" -> "Vodafone GmbH").
   String? _merchantAfterAmount(String text, _Amount amount) {
     final rest = text
         .substring(amount.end)
-        .replaceFirst(RegExp(r'^[\s:–—-]+'), '');
+        .replaceFirst(RegExp(r'^[\s:–—-]+'), '')
+        .replaceFirst(
+          RegExp(r'^(?:von|from)\s+(?=\S)', caseSensitive: false),
+          '',
+        );
     final m = RegExp(
       '^([^\\n]+?)$_merchantEnd',
       unicode: true,
