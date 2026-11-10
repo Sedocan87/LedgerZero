@@ -4852,4 +4852,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String csvIssueAllInflows(int count) {
     return 'Alle $count Beträge würden als Einnahmen importiert. Wenn dies eine Kartenabrechnung ist, die Ausgaben als positive Zahlen aufführt, schalten Sie „Negative Werte sind Ausgaben“ aus. Hat die Datei getrennte Spalten für Ausgänge und Eingänge, ordnen Sie beide unter „Weitere Spalten“ zu.';
   }
+
+  @override
+  String csvIssueVoidRows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen sind in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und werden ausgelassen.',
+      one:
+          '1 Zeile ist in der Datei als zurückgenommen, fehlgeschlagen oder abgelehnt markiert und wird ausgelassen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csvFieldFee => 'Gebühr';
 }

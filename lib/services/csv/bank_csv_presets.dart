@@ -32,6 +32,7 @@ class BankCsvPreset {
     this.payeePattern,
     this.memoColumn,
     this.clearedColumn,
+    this.feeColumn,
     this.outflowIsNegative = true,
     this.hasPreamble = false,
   });
@@ -81,6 +82,9 @@ class BankCsvPreset {
   final String? memoColumn;
   final String? clearedColumn;
 
+  /// A fee charged on top of the amount (Revolut); see `CsvField.fee`.
+  final String? feeColumn;
+
   /// Whether negative amounts are outflows (false for files listing
   /// charges as positive numbers).
   final bool outflowIsNegative;
@@ -126,6 +130,7 @@ class BankCsvPreset {
       CsvField.account: null,
       CsvField.transfer: null,
       CsvField.cleared: find(clearedColumn),
+      CsvField.fee: find(feeColumn),
     };
   }
 
@@ -349,5 +354,6 @@ const List<BankCsvPreset> bankCsvPresets = [
     amountColumn: 'Amount',
     payeeColumn: 'Description',
     clearedColumn: 'State',
+    feeColumn: 'Fee',
   ),
 ];

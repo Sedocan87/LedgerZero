@@ -540,6 +540,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
     CsvField.account => l10n.account,
     CsvField.transfer => l10n.csvFieldTransfer,
     CsvField.cleared => l10n.cleared,
+    CsvField.fee => l10n.csvFieldFee,
     _ => field,
   };
 
@@ -693,6 +694,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
       issue.otherFormat ?? '',
     ),
     CsvIssueKind.allInflows => l10n.csvIssueAllInflows(issue.count),
+    CsvIssueKind.voidRows => l10n.csvIssueVoidRows(issue.count),
   };
 
   void _validateAndImport() {

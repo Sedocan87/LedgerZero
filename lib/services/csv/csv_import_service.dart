@@ -87,6 +87,11 @@ enum CsvIssueKind {
   /// as an inflow: a card statement listing charges as positive numbers
   /// (the sign switch is wrong) or only one of two amount columns mapped.
   allInflows,
+
+  /// [CsvIssue.count] rows are marked reverted, failed or declined in the
+  /// mapped Cleared/Status column and are left out (they never changed
+  /// the balance).
+  voidRows,
 }
 
 class CsvIssue {
@@ -116,11 +121,16 @@ class CsvValidationResult {
   /// Rows that will be skipped (unreadable date or amount).
   final int skippedRows;
 
+  /// Rows left out because the file marks them as reverted, failed or
+  /// declined (see [CsvImportService.isVoidStatusCell]).
+  final int voidRows;
+
   CsvValidationResult({
     required this.isValid,
     required this.errors,
     required this.warnings,
     this.skippedRows = 0,
+    this.voidRows = 0,
   });
 }
 
@@ -226,6 +236,7 @@ const Map<String, List<String>> _headerKeywords = {
   CsvField.account: ['account', 'konto', 'account name', 'kontoname'],
   CsvField.transfer: ['transfer', 'umbuchung'],
   CsvField.cleared: ['cleared', 'status'],
+  CsvField.fee: [],
 };
 
 /// Words that disqualify a header for a field (the Sparkasse export has
@@ -261,6 +272,7 @@ const Map<String, List<String>> _headerPenalties = {
   CsvField.account: ['iban', 'number', 'nummer', 'nr', '#'],
   CsvField.transfer: [],
   CsvField.cleared: [],
+  CsvField.fee: [],
 };
 
 /// Keywords that only count when no header matches a keyword of
@@ -731,8 +743,13 @@ class CsvImportService {
     final validDates = <DateTime>[];
     var inflows = 0;
     var outflows = 0;
+    var voidRows = 0;
 
     for (final row in data.rows) {
+      if (columns.isVoid(row)) {
+        voidRows++;
+        continue;
+      }
       final date = columns.dateOf(row, dateFormat);
       if (date == null) {
         invalidDateCount++;
@@ -754,8 +771,13 @@ class CsvImportService {
       }
     }
 
-    final limit = skipLimit(data.rows.length);
-    bool blocks(int count) => count > limit || count == data.rows.length;
+    final rowCount = data.rows.length - voidRows;
+    final limit = skipLimit(rowCount);
+    bool blocks(int count) => count > limit || count == rowCount;
+
+    if (voidRows > 0) {
+      warnings.add(CsvIssue(CsvIssueKind.voidRows, count: voidRows));
+    }
 
     if (invalidDateCount > 0) {
       (blocks(invalidDateCount) ? errors : warnings).add(
@@ -821,6 +843,7 @@ class CsvImportService {
       errors: errors,
       warnings: warnings,
       skippedRows: skipped,
+      voidRows: voidRows,
     );
   }
 
@@ -839,6 +862,9 @@ class CsvImportService {
     final payeePattern = data.preset?.payeeRegExp;
 
     for (final row in data.rows) {
+      if (columns.isVoid(row)) {
+        continue; // Reverted, failed or declined (validation counted it).
+      }
       final parsedDate = columns.dateOf(row, dateFormat);
       if (parsedDate == null) {
         continue; // Skipped (validation warned about it).
@@ -853,7 +879,10 @@ class CsvImportService {
       // Off: the file shows outflows as positive numbers (credit card
       // statements), so every sign is flipped: charges become negative
       // and refunds/payments (negative in the file) become inflows.
-      final amount = outflowIsNegative ? parsedAmount : -parsedAmount;
+      // A fee comes on top: it leaves the account like the amount does.
+      final amount =
+          (outflowIsNegative ? parsedAmount : -parsedAmount) -
+          columns.feeOf(row, amountParser);
 
       var payeeName = columns.text(row, columns.payee);
       if (amount > 0 && columns.inflowPayee != -1) {
@@ -934,6 +963,15 @@ class CsvImportService {
     }
     return null;
   }
+
+  /// Whether a `Cleared`/`Status` cell says the row never happened:
+  /// Revolut's `REVERTED` (a released hold), `FAILED` and `DECLINED`. Such
+  /// rows are left out of the import, with a counted notice.
+  static bool isVoidStatusCell(String? cell) => const {
+    'reverted',
+    'failed',
+    'declined',
+  }.contains(cell?.trim().toLowerCase());
 
   /// Sets [ImportTransaction.categoryId] of every row whose file category
   /// ([ImportTransaction.categoryName]) names an existing category.
@@ -1083,7 +1121,8 @@ class _Columns {
       category = _indexOf(headers, mapping[CsvField.category]),
       account = _indexOf(headers, mapping[CsvField.account]),
       transfer = _indexOf(headers, mapping[CsvField.transfer]),
-      cleared = _indexOf(headers, mapping[CsvField.cleared]);
+      cleared = _indexOf(headers, mapping[CsvField.cleared]),
+      fee = _indexOf(headers, mapping[CsvField.fee]);
 
   final int date;
   final int amount;
@@ -1097,6 +1136,7 @@ class _Columns {
   final int account;
   final int transfer;
   final int cleared;
+  final int fee;
 
   static int _indexOf(List<String> headers, String? header) =>
       header == null ? -1 : headers.indexOf(header);
@@ -1109,6 +1149,22 @@ class _Columns {
       return null;
     }
     return CsvSanitizer.unquote(row[index].toString());
+  }
+
+  /// Whether the row's status cell marks it as reverted, failed or
+  /// declined (see [CsvImportService.isVoidStatusCell]).
+  bool isVoid(List<dynamic> row) =>
+      cleared != -1 &&
+      row.length > cleared &&
+      CsvImportService.isVoidStatusCell(row[cleared].toString());
+
+  /// The fee of [row] as a positive number of minor units; 0 when no fee
+  /// column is mapped or the cell is empty or unreadable.
+  int feeOf(List<dynamic> row, MoneyParser parser) {
+    if (fee == -1 || row.length <= fee) {
+      return 0;
+    }
+    return (parser.tryParse(row[fee].toString()) ?? 0).abs();
   }
 
   DateTime? dateOf(List<dynamic> row, String format) {

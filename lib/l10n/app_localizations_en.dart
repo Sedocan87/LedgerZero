@@ -4815,4 +4815,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String csvIssueAllInflows(int count) {
     return 'All $count amounts would be imported as income. If this is a card statement that lists spending as positive numbers, turn off \"Negative values are outflows\". If the file has separate columns for money out and money in, map both under \"More columns\".';
   }
+
+  @override
+  String csvIssueVoidRows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows are marked as reverted, failed or declined in the file and are left out.',
+      one:
+          '1 row is marked as reverted, failed or declined in the file and is left out.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get csvFieldFee => 'Fee';
 }
