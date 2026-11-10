@@ -169,6 +169,30 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       splitParents: ref.watch(splitParentIdsProvider).valueOrNull ?? const {},
     );
 
+    // Back leaves selection or search mode before it leaves the screen
+    // (on the Transactions tab it would otherwise leave the app).
+    return PopScope<Object?>(
+      canPop: !state.isMultiSelectMode && !_isSearchMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        if (state.isMultiSelectMode) {
+          ref.read(_provider.notifier).toggleMultiSelectMode();
+        } else {
+          _leaveSearch();
+        }
+      },
+      child: _buildScaffold(context, l10n, state, lookups),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    AppLocalizations l10n,
+    TransactionsState state,
+    TransactionLookups lookups,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: _buildAppBarTitle(state, l10n),
@@ -193,11 +217,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   onClearFilters: _clearSearchAndFilter,
                 );
               }
-              final flattened = flattenByDay(transactions);
+              final flattened = flattenByDay(transactions, sort: state.sort);
+              // Any other order than "newest first" is announced above the
+              // list.
+              final sortNote = _isDefaultSort(state.sort)
+                  ? const <Widget>[]
+                  : [_SortNote(sort: state.sort)];
               return ListView.builder(
                 controller: _scrollController,
-                itemCount: flattened.length + 1,
-                itemBuilder: (context, index) {
+                itemCount: sortNote.length + flattened.length + 1,
+                itemBuilder: (context, rawIndex) {
+                  if (rawIndex < sortNote.length) {
+                    return sortNote[rawIndex];
+                  }
+                  final index = rawIndex - sortNote.length;
                   if (index == flattened.length) {
                     return ref.read(_provider.notifier).hasMore
                         ? const Padding(
@@ -297,7 +330,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         ),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20.0),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
+        child: _SwipeActionLabel(
+          icon: Icons.delete_outline,
+          label: l10n.delete,
+        ),
       ),
       secondaryBackground: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -307,7 +343,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20.0),
-        child: const Icon(Icons.check_rounded, color: Colors.white),
+        child: _SwipeActionLabel(
+          icon: Icons.check_rounded,
+          label: l10n.txSwipeApprove,
+          iconLast: true,
+        ),
       ),
       // The row is never removed by the Dismissible itself: the list
       // updates from the database once the service has written.
@@ -355,16 +395,35 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       return IconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: l10n.back,
-        onPressed: () {
-          setState(() {
-            _isSearchMode = false;
-            _searchController.clear();
-          });
-          ref.read(_provider.notifier).updateSearchQuery('');
-        },
+        onPressed: _leaveSearch,
       );
     }
     return null;
+  }
+
+  /// Closes the search field and shows the unfiltered list again.
+  void _leaveSearch() {
+    setState(() {
+      _isSearchMode = false;
+      _searchController.clear();
+    });
+    ref.read(_provider.notifier).updateSearchQuery('');
+  }
+
+  static bool _isDefaultSort(TransactionSort sort) =>
+      sort.field == TransactionSortField.date && !sort.ascending;
+
+  /// Selects every loaded row. The list is paged: while more rows exist
+  /// than are loaded, the user is told that only the loaded ones are
+  /// selected.
+  void _selectAllLoaded(List<Transaction> loaded) {
+    final notifier = ref.read(_provider.notifier);
+    notifier.selectAll(loaded.map((t) => t.id).toList());
+    if (notifier.hasMore) {
+      _showMessage(
+        AppLocalizations.of(context)!.txSelectedLoadedOnly(loaded.length),
+      );
+    }
   }
 
   List<Widget> _buildAppBarActions(
@@ -407,12 +466,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.select_all),
-          tooltip: l10n.selectAll,
+          tooltip: notifier.hasMore ? l10n.txSelectAllLoaded : l10n.selectAll,
           onPressed: allTransactions == null
               ? null
-              : () => notifier.selectAll(
-                  allTransactions.map((t) => t.id).toList(),
-                ),
+              : () => _selectAllLoaded(allTransactions),
         ),
       ];
     }
@@ -466,19 +523,37 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         },
         itemBuilder: (context) {
           final l10n = AppLocalizations.of(context)!;
+          // The active order carries an arrow; choosing it again turns it
+          // around.
+          PopupMenuItem<TransactionSortField> item(
+            TransactionSortField field,
+          ) {
+            final active = state.sort.field == field;
+            return PopupMenuItem(
+              value: field,
+              child: Row(
+                children: [
+                  Expanded(child: Text(sortFieldLabel(l10n, field))),
+                  if (active)
+                    Icon(
+                      state.sort.ascending
+                          ? Icons.arrow_upward
+                          : Icons.arrow_downward,
+                      key: const Key('transactions.sortDirection'),
+                      size: 18,
+                      semanticLabel: state.sort.ascending
+                          ? l10n.sortAscending
+                          : l10n.sortDescending,
+                    ),
+                ],
+              ),
+            );
+          }
+
           return [
-            PopupMenuItem(
-              value: TransactionSortField.date,
-              child: Text(l10n.date),
-            ),
-            PopupMenuItem(
-              value: TransactionSortField.amount,
-              child: Text(l10n.amount),
-            ),
-            PopupMenuItem(
-              value: TransactionSortField.payeeName,
-              child: Text(l10n.payee),
-            ),
+            item(TransactionSortField.date),
+            item(TransactionSortField.amount),
+            item(TransactionSortField.payeeName),
           ];
         },
       ),
@@ -507,5 +582,86 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     if (mounted) {
       ref.read(_provider.notifier).toggleMultiSelectMode();
     }
+  }
+}
+
+/// Name of a sort order's field.
+String sortFieldLabel(AppLocalizations l10n, TransactionSortField field) =>
+    switch (field) {
+      TransactionSortField.date => l10n.date,
+      TransactionSortField.amount => l10n.amount,
+      TransactionSortField.payeeName => l10n.payee,
+      TransactionSortField.categoryName => l10n.category,
+    };
+
+/// "Sorted by Amount, ascending" above a list that is not in the default
+/// order.
+class _SortNote extends StatelessWidget {
+  const _SortNote({required this.sort});
+
+  final TransactionSort sort;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      key: const Key('transactions.sortNote'),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Row(
+        children: [
+          Icon(
+            sort.ascending ? Icons.arrow_upward : Icons.arrow_downward,
+            size: 16,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              l10n.txSortedBy(
+                sortFieldLabel(l10n, sort.field),
+                sort.ascending ? l10n.sortAscending : l10n.sortDescending,
+              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Icon and name of a swipe action, on the coloured strip behind the row.
+class _SwipeActionLabel extends StatelessWidget {
+  const _SwipeActionLabel({
+    required this.icon,
+    required this.label,
+    this.iconLast = false,
+  });
+
+  final IconData icon;
+  final String label;
+
+  /// The icon sits at the screen edge: last for the right-hand action.
+  final bool iconLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = Icon(icon, color: Colors.white);
+    final text = Text(
+      label,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: iconLast
+          ? [text, const SizedBox(width: 8), iconWidget]
+          : [iconWidget, const SizedBox(width: 8), text],
+    );
   }
 }

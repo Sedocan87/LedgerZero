@@ -8187,6 +8187,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.'**
   String get transactionNotFound;
+
+  /// Transaction list: label of the swipe-left action that approves the transaction
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get txSwipeApprove;
+
+  /// Transaction list: line above a list that is not in the default order (newest first). field is Date, Amount or Payee; direction is sortAscending or sortDescending
+  ///
+  /// In en, this message translates to:
+  /// **'Sorted by {field}, {direction}'**
+  String txSortedBy(String field, String direction);
+
+  /// Sort direction, used inside txSortedBy and as the label of the up arrow in the sort menu
+  ///
+  /// In en, this message translates to:
+  /// **'ascending'**
+  String get sortAscending;
+
+  /// Sort direction, used inside txSortedBy and as the label of the down arrow in the sort menu
+  ///
+  /// In en, this message translates to:
+  /// **'descending'**
+  String get sortDescending;
+
+  /// Transaction list, selection mode: tooltip of 'select all' while the paged list has more rows than are loaded
+  ///
+  /// In en, this message translates to:
+  /// **'Select all loaded'**
+  String get txSelectAllLoaded;
+
+  /// Snackbar after 'select all' on a paged transaction list that has more rows than are loaded
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 loaded transaction selected. Scroll down to load more.} other{The {count} loaded transactions are selected. Scroll down to load more.}}'**
+  String txSelectedLoadedOnly(int count);
 }
 
 class _AppLocalizationsDelegate

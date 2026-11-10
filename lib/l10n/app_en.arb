@@ -4039,5 +4039,17 @@
   "txInflowToBeBudgetedSubtitle": "Income you assign to categories in the budget",
   "@txInflowToBeBudgetedSubtitle": {"description": "Category picker of an inflow: subtitle of the first entry 'To Be Budgeted' (no category)"},
   "transactionNotFound": "This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.",
-  "@transactionNotFound": {"description": "Edit transaction screen: shown instead of the form when the transaction does not exist (any more)"}
+  "@transactionNotFound": {"description": "Edit transaction screen: shown instead of the form when the transaction does not exist (any more)"},
+  "txSwipeApprove": "Approve",
+  "@txSwipeApprove": {"description": "Transaction list: label of the swipe-left action that approves the transaction"},
+  "txSortedBy": "Sorted by {field}, {direction}",
+  "@txSortedBy": {"description": "Transaction list: line above a list that is not in the default order (newest first). field is Date, Amount or Payee; direction is sortAscending or sortDescending", "placeholders": {"field": {"type": "String"}, "direction": {"type": "String"}}},
+  "sortAscending": "ascending",
+  "@sortAscending": {"description": "Sort direction, used inside txSortedBy and as the label of the up arrow in the sort menu"},
+  "sortDescending": "descending",
+  "@sortDescending": {"description": "Sort direction, used inside txSortedBy and as the label of the down arrow in the sort menu"},
+  "txSelectAllLoaded": "Select all loaded",
+  "@txSelectAllLoaded": {"description": "Transaction list, selection mode: tooltip of 'select all' while the paged list has more rows than are loaded"},
+  "txSelectedLoadedOnly": "{count, plural, =1{1 loaded transaction selected. Scroll down to load more.} other{The {count} loaded transactions are selected. Scroll down to load more.}}",
+  "@txSelectedLoadedOnly": {"description": "Snackbar after 'select all' on a paged transaction list that has more rows than are loaded", "placeholders": {"count": {"type": "int"}}}
 }

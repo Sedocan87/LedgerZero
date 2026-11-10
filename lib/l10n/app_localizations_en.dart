@@ -5148,4 +5148,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transactionNotFound =>
       'This transaction no longer exists. It may have been deleted on this or your partner’s phone, or it is not part of the backup you restored.';
+
+  @override
+  String get txSwipeApprove => 'Approve';
+
+  @override
+  String txSortedBy(String field, String direction) {
+    return 'Sorted by $field, $direction';
+  }
+
+  @override
+  String get sortAscending => 'ascending';
+
+  @override
+  String get sortDescending => 'descending';
+
+  @override
+  String get txSelectAllLoaded => 'Select all loaded';
+
+  @override
+  String txSelectedLoadedOnly(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The $count loaded transactions are selected. Scroll down to load more.',
+      one: '1 loaded transaction selected. Scroll down to load more.',
+    );
+    return '$_temp0';
+  }
 }

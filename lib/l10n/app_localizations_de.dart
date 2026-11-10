@@ -5187,4 +5187,34 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get transactionNotFound =>
       'Diese Transaktion gibt es nicht mehr. Sie wurde vielleicht auf diesem oder dem Telefon Ihres Partners gelöscht, oder sie ist in der wiederhergestellten Sicherung nicht enthalten.';
+
+  @override
+  String get txSwipeApprove => 'Bestätigen';
+
+  @override
+  String txSortedBy(String field, String direction) {
+    return 'Sortiert nach $field, $direction';
+  }
+
+  @override
+  String get sortAscending => 'aufsteigend';
+
+  @override
+  String get sortDescending => 'absteigend';
+
+  @override
+  String get txSelectAllLoaded => 'Alle geladenen auswählen';
+
+  @override
+  String txSelectedLoadedOnly(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count geladenen Transaktionen sind ausgewählt. Scrollen Sie nach unten, um weitere zu laden.',
+      one:
+          '1 geladene Transaktion ausgewählt. Scrollen Sie nach unten, um weitere zu laden.',
+    );
+    return '$_temp0';
+  }
 }
