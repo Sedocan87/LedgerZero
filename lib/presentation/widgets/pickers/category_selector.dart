@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/core/constants/category_icon_resolver.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
@@ -44,7 +45,13 @@ class CategorySelector extends ConsumerWidget {
                 ...categories.map(
                   (category) => ListTile(
                     title: Text(category.name),
-                    leading: const Icon(Icons.label_outline),
+                    leading: Icon(
+                      CategoryIconResolver.iconFor(
+                        icon: category.icon,
+                        id: category.id,
+                        name: category.name,
+                      ),
+                    ),
                     onTap: () {
                       onSelected(category);
                       Navigator.pop(context);
