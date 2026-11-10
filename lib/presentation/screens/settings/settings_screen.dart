@@ -108,7 +108,14 @@ class SettingsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settings)),
+      appBar: AppBar(
+        title: Text(l10n.settings),
+        // Settings as the only page (a restored or redirected location):
+        // a way back to the tabs instead of leaving the app.
+        leading: (ModalRoute.of(context)?.isFirst ?? false)
+            ? const _BackHomeButton()
+            : null,
+      ),
       body: ListView(
         children: [
           // General Settings
@@ -627,6 +634,28 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+}
+
+/// The back arrow of Settings when it is the only page: it and the system
+/// back button lead Home, with the tab bar.
+class _BackHomeButton extends StatelessWidget {
+  const _BackHomeButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          context.go('/');
+        }
+      },
+      child: BackButton(
+        key: const Key('settings.backHome'),
+        onPressed: () => context.go('/'),
       ),
     );
   }

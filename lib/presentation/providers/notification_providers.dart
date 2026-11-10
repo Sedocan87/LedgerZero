@@ -49,7 +49,8 @@ final notificationTapRouterProvider = Provider<NotificationTapRouter>((ref) {
       // for Home); go once that frame is done.
       final binding = WidgetsBinding.instance;
       binding.addPostFrameCallback(
-        (_) => ref.read(routerProvider).go(location),
+        // Home with the tab bar underneath, so back leads into the app.
+        (_) => openOnTopOfHome(ref.read(routerProvider), location),
       );
       binding.scheduleFrame();
     },

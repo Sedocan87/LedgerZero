@@ -18,7 +18,7 @@ class NotificationTapRouter {
     required this.scheduledExists,
   });
 
-  /// Navigates to a location (go_router `go`).
+  /// Opens a location (on top of Home, see `openOnTopOfHome`).
   final void Function(String location) navigate;
 
   /// Whether the app is unlocked (onboarded and authenticated).
