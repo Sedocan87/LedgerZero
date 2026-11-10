@@ -24,12 +24,17 @@ enum YnabImportFailure {
   /// No supported date format fits every Register.csv date;
   /// [YnabImportException.detail] is the first value that does not parse.
   invalidDates,
+
+  /// An amount cell of the register or budget file is not a number;
+  /// [YnabImportException.detail] is that cell.
+  invalidAmount,
 }
 
 /// A YNAB export that is not in the expected format. [detail] is technical
 /// text for the log (for [YnabImportFailure.missingRegisterColumns]: the
 /// comma-separated column names; for [YnabImportFailure.invalidDates]: the
-/// first date that does not parse).
+/// first date that does not parse; for [YnabImportFailure.invalidAmount]:
+/// the amount cell).
 class YnabImportException implements Exception {
   const YnabImportException(this.failure, this.detail);
 
@@ -53,13 +58,17 @@ class YnabImportException implements Exception {
 /// [YnabSplitItem.transferAccountId] for split lines that are transfers.
 class YnabImportService {
   /// Date formats of the Register.csv, in order of preference (YNAB's
-  /// default US format first). Day and month are ambiguous when no day is
-  /// above 12; the first format that fits every row wins.
+  /// default US format first, then the other formats of YNAB's date
+  /// setting). Day and month are ambiguous when no day is above 12; the
+  /// first format that fits every row wins.
   static const registerDateFormats = [
     'MM/dd/yyyy',
     'dd/MM/yyyy',
     'yyyy-MM-dd',
     'dd.MM.yyyy',
+    'yyyy/MM/dd',
+    'dd-MM-yyyy',
+    'yyyy.MM.dd',
   ];
 
   /// YNAB writes English month names ("Jan 2025") whatever the app
@@ -1158,12 +1167,44 @@ class YnabImportService {
     ),
   ];
 
+  static final RegExp _digit = RegExp(r'\d');
+  static final RegExp _minus = RegExp('[-−–]');
+
   /// Parses a YNAB CSV amount cell ("$1,234.56", "1.234,56 €", "") into
-  /// minor units with the export's [parser]. Unparsable or empty cells
-  /// count as 0.
+  /// minor units with the export's [parser]. An empty cell is 0.
+  ///
+  /// YNAB writes the budget's currency symbol into every cell, and budgets
+  /// exist in currencies [MoneyParser] has no symbol for ("R1 234.56",
+  /// "1 234,56 Kč", "Rp 1.234"). Whatever stands before the first and
+  /// after the last digit is therefore dropped (a minus sign or an opening
+  /// parenthesis there still makes the amount negative). A cell that is
+  /// not a number even then stops the import
+  /// ([YnabImportFailure.invalidAmount]): reading it as 0 would import a
+  /// budget full of zero amounts without a word.
   static int _parseCsvAmount(dynamic value, MoneyParser parser) {
-    final text = value?.toString() ?? '';
-    return parser.tryParse(text) ?? 0;
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty) {
+      return 0;
+    }
+    final direct = parser.tryParse(text);
+    if (direct != null) {
+      return direct;
+    }
+    final first = text.indexOf(_digit);
+    final last = text.lastIndexOf(_digit);
+    if (first != -1) {
+      final prefix = text.substring(0, first);
+      final suffix = text.substring(last + 1);
+      final number = parser.tryParse(text.substring(first, last + 1));
+      if (number != null) {
+        final negative =
+            prefix.contains(_minus) ||
+            prefix.contains('(') ||
+            suffix.contains(_minus);
+        return negative ? -number : number;
+      }
+    }
+    throw YnabImportException(YnabImportFailure.invalidAmount, text);
   }
 
   /// YNAB4 JSON amounts are major-unit numbers.

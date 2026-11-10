@@ -92,6 +92,8 @@ class YnabImportScreen extends ConsumerWidget {
         return l10n.ynabImportErrorInvalidYnab4;
       case YnabImportError.invalidDates:
         return l10n.ynabImportErrorInvalidDates(state.errorDetail ?? '');
+      case YnabImportError.invalidAmount:
+        return l10n.ynabImportErrorInvalidAmount(state.errorDetail ?? '');
       case YnabImportError.unreadableFiles:
         return l10n.ynabImportErrorUnreadable;
       case YnabImportError.importFailed:

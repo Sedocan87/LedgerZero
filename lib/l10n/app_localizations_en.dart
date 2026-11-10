@@ -4922,4 +4922,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get csvCustomDateFormatInvalid =>
       'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.';
+
+  @override
+  String ynabImportErrorInvalidAmount(String value) {
+    return 'The amount “$value” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.';
+  }
 }

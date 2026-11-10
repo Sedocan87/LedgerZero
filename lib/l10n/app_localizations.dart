@@ -7917,6 +7917,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.'**
   String get csvCustomDateFormatInvalid;
+
+  /// YNAB import error: an amount cell of the register or budget file is not a number
+  ///
+  /// In en, this message translates to:
+  /// **'The amount “{value}” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.'**
+  String ynabImportErrorInvalidAmount(String value);
 }
 
 class _AppLocalizationsDelegate

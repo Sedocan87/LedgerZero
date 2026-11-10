@@ -19,6 +19,9 @@ enum YnabImportError {
   /// No date format fits every Register.csv date;
   /// [YnabImportState.errorDetail] is the first value that does not parse.
   invalidDates,
+
+  /// An amount cell is not a number; [YnabImportState.errorDetail] is it.
+  invalidAmount,
   unreadableFiles,
   importFailed,
 }

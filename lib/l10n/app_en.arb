@@ -3949,5 +3949,7 @@
   "csvCustomDateFormatHelp": "d day, M month, y year, H hour, m minute, s second. Examples: d.M.yyyy or MMM d, yyyy",
   "@csvCustomDateFormatHelp": {"description": "Helper text of the custom date format field (the pattern letters are not translated)"},
   "csvCustomDateFormatInvalid": "This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.",
-  "@csvCustomDateFormatInvalid": {"description": "Error under the custom date format field"}
+  "@csvCustomDateFormatInvalid": {"description": "Error under the custom date format field"},
+  "ynabImportErrorInvalidAmount": "The amount “{value}” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.",
+  "@ynabImportErrorInvalidAmount": {"description": "YNAB import error: an amount cell of the register or budget file is not a number", "placeholders": {"value": {"type": "String"}}}
 }

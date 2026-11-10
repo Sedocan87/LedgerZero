@@ -4960,4 +4960,9 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get csvCustomDateFormatInvalid =>
       'Dieses Muster kann nicht verwendet werden. Es braucht Tag (d), Monat (M) und Jahr (y), getrennt durch Satzzeichen oder Leerzeichen.';
+
+  @override
+  String ynabImportErrorInvalidAmount(String value) {
+    return 'Der Betrag „$value“ im Export konnte nicht gelesen werden. Es wurde nichts importiert. Bitte exportieren Sie erneut aus YNAB, ohne die Dateien zu bearbeiten.';
+  }
 }

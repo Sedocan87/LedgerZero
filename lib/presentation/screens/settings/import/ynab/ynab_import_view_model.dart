@@ -265,6 +265,11 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
           error: YnabImportError.invalidDates,
           errorDetail: e.detail,
         ),
+        YnabImportFailure.invalidAmount => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.invalidAmount,
+          errorDetail: e.detail,
+        ),
       };
     } catch (e, stackTrace) {
       Logger.error('YNAB import: reading the export failed', e, stackTrace);

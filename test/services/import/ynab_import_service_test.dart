@@ -745,6 +745,80 @@ void main() {
       },
     );
 
+    test('currency symbols MoneyParser does not know are dropped: a rand '
+        'budget is not imported as zeros (F9)', () async {
+      for (final (outflow, inflow, amount) in [
+        ('R1 234.56', 'R0.00', -123456),
+        ('R0.00', 'R25 000.00', 2500000),
+        ('1 234,56 Kč', '0,00 Kč', -123456),
+        ('Rp 1.234.567', 'Rp 0', -123456700),
+        ('12.50 lei', '', -1250),
+        ('RM12.50', 'RM0.00', -1250),
+        ('฿1,234.00', '฿0.00', -123400),
+        ('-R12.50', '', 1250),
+      ]) {
+        final data = await service.parseCsvExport(
+          registerCsvContent: [
+            _header,
+            _row('Cheque', '01/05/2025', 'Shop', '', '', '', outflow, inflow),
+            // A second row with decimals settles the decimal separator.
+            _row('Cheque', '01/06/2025', 'Shop', '', '', '', '', inflow),
+          ].join('\n'),
+          budgetCsvContent: '',
+        );
+        expect(data.transactions.first.amount, amount, reason: outflow);
+      }
+    });
+
+    test('an amount that is not a number stops the import instead of '
+        'counting as 0 (F9)', () async {
+      for (final bad in ['n/a', 'R', '12.3.4.5']) {
+        await expectLater(
+          service.parseCsvExport(
+            registerCsvContent: [
+              _header,
+              _row('Checking', '01/05/2025', 'Shop', '', '', '', bad, ''),
+            ].join('\n'),
+            budgetCsvContent: '',
+          ),
+          throwsA(
+            isA<YnabImportException>()
+                .having(
+                  (e) => e.failure,
+                  'failure',
+                  YnabImportFailure.invalidAmount,
+                )
+                .having((e) => e.detail, 'detail', bad),
+          ),
+          reason: bad,
+        );
+      }
+    });
+
+    test("YNAB's other date settings are read: yyyy/MM/dd, dd-MM-yyyy, "
+        'yyyy.MM.dd (F9)', () async {
+      for (final (first, second, format) in [
+        ('2024/02/13', '2024/03/01', 'yyyy/MM/dd'),
+        ('13-02-2024', '01-03-2024', 'dd-MM-yyyy'),
+        ('2024.02.13', '2024.03.01', 'yyyy.MM.dd'),
+      ]) {
+        final data = await service.parseCsvExport(
+          registerCsvContent: [
+            _header,
+            _row('Checking', first, 'Shop', '', '', '', '1.00', ''),
+            _row('Checking', second, 'Shop', '', '', '', '2.00', ''),
+          ].join('\n'),
+          budgetCsvContent: '',
+        );
+        expect(data.registerDateFormat, format);
+        expect(data.dateFormatCandidates, [format]);
+        expect(data.transactions.map((t) => t.date), [
+          DateTime.utc(2024, 2, 13),
+          DateTime.utc(2024, 3, 1),
+        ]);
+      }
+    });
+
     test('an ambiguous register reports its candidates and can be read '
         'with the other order', () async {
       final register = [
