@@ -5207,4 +5207,66 @@ class AppLocalizationsDe extends AppLocalizations {
   String androidBackupTooLarge(String size) {
     return 'Das Budget belegt $size MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort.';
   }
+
+  @override
+  String budgetCurrencyFixedSubtitle(String currency) {
+    return '$currency, die Währung der Konten in Ihrem Budget';
+  }
+
+  @override
+  String budgetCurrencyFixedBody(String currency) {
+    return 'Ihr Budget ist in $currency: Jedes Konto darin verwendet diese Währung, und „Zu budgetieren“ zählt sie zusammen. Konten außerhalb des Budgets können jede Währung haben.';
+  }
+
+  @override
+  String get budgetCurrencyChangeAction => 'Budgetwährung ändern';
+
+  @override
+  String budgetCurrencyChangeConfirmTitle(String currency) {
+    return 'Budgetwährung auf $currency ändern?';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmBody(String from, String to) {
+    return 'Die Konten in Ihrem Budget werden von $from auf $to umgestellt. Beträge werden NICHT umgerechnet: Aus 100 $from werden 100 $to.\n\nDas ist für eine Währung gedacht, die bei der Einrichtung versehentlich gewählt wurde. Um wirklich in eine andere Währung zu wechseln, schließen Sie diese Konten und eröffnen Sie neue in $to.\n\nKonten außerhalb des Budgets behalten ihre Währung. Die Änderung erreicht das andere Telefon mit der nächsten Synchronisierung.';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmAction(String currency) {
+    return 'Auf $currency ändern';
+  }
+
+  @override
+  String budgetCurrencyChanged(String currency) {
+    return 'Die Budgetwährung ist jetzt $currency';
+  }
+
+  @override
+  String budgetCurrencyMixedWarning(
+    String currencies,
+    String currency,
+    String accounts,
+  ) {
+    return 'Die Konten in Ihrem Budget verwenden verschiedene Währungen ($currencies). Beträge werden nie umgerechnet, daher zählt „Zu budgetieren“ verschiedene Währungen zusammen. Die Budgetwährung ist $currency; in einer anderen Währung: $accounts.';
+  }
+
+  @override
+  String get budgetCurrencyMixedLeave => 'Aus dem Budget nehmen';
+
+  @override
+  String get budgetCurrencyMixedPickAccount =>
+      'Welches Konto verlässt das Budget?';
+
+  @override
+  String get accountCurrencyJoinTitle => 'Nicht in der Budgetwährung';
+
+  @override
+  String accountCurrencyJoinBody(String account, String budget) {
+    return 'Dieses Konto ist in $account, Ihr Budget in $budget. Beträge werden nie umgerechnet, daher kann ein Konto in einer anderen Währung nicht im Budget sein.\n\nWurde $account versehentlich gewählt, stellen Sie das Konto auf $budget um (Beträge werden NICHT umgerechnet: Aus 100 $account werden 100 $budget). Andernfalls lassen Sie es außerhalb des Budgets.';
+  }
+
+  @override
+  String ynabImportCurrencyFixed(String currency) {
+    return 'Konten in Ihrem Budget verwenden die Budgetwährung ($currency), daher auch die importierten Konten.';
+  }
 }

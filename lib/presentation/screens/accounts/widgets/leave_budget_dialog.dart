@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/constants/default_categories.dart';
 import 'package:ledger_zero/core/constants/deterministic_id.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -122,4 +123,27 @@ Future<Map<String, int>?> showLeaveBudgetDialog(
       );
     },
   );
+}
+
+/// Saves [account] (e.g. taken out of the budget) and releases [release]
+/// (from [showLeaveBudgetDialog]) in the current month, in one unit of
+/// work: an account that left the budget without the release (a failure
+/// or the app killed in between) would leave To Be Budgeted short by its
+/// balance, with nothing to retry. Returns the amount released.
+Future<int> saveAccountWithRelease(
+  WidgetRef ref,
+  Account account,
+  Map<String, int> release,
+) {
+  final repository = ref.read(accountRepositoryProvider);
+  final month = CalendarDate.startOfMonthUtc(CalendarDate.today());
+  final budgeting = release.isEmpty ? null : ref.read(budgetingServiceProvider);
+  return ref.read(unitOfWorkProvider).run(() async {
+    await repository.updateAccount(account);
+    var total = 0;
+    for (final MapEntry(key: categoryId, value: amount) in release.entries) {
+      total += await budgeting!.releaseFromCategory(categoryId, amount, month);
+    }
+    return total;
+  });
 }

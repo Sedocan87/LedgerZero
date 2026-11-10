@@ -1348,5 +1348,18 @@
   "backupSaveToExplanation": "Mit „Speichern unter…“ wählen Sie, wohin die Datei kommt: in einen Ordner auf dem Telefon, auf einen USB-Stick oder in eine Cloud-App wie Google Drive oder Dropbox. LedgerZero meldet sich nirgends an; das Hochladen übernimmt die gewählte App.",
   "androidBackupTitle": "Android-Sicherung",
   "androidBackupExplanation": "Ist die Android-Sicherung eingeschaltet (bei den meisten Telefonen unter Einstellungen > System > Sicherung), kopiert Android das Budget etwa einmal am Tag in Ihr Google-Konto, Ende-zu-Ende-verschlüsselt mit der Displaysperre dieses Telefons, und stellt es auf einem neuen Telefon wieder her. LedgerZero kann nicht prüfen, ob sie eingeschaltet ist, und ohne Displaysperre sichert Android nichts davon.",
-  "androidBackupTooLarge": "Das Budget belegt {size} MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort."
+  "androidBackupTooLarge": "Das Budget belegt {size} MB. Android sichert höchstens 25 MB pro App und hört darüber ohne Meldung auf: Speichern Sie weiterhin Sicherungsdateien an einem anderen Ort.",
+  "budgetCurrencyFixedSubtitle": "{currency}, die Währung der Konten in Ihrem Budget",
+  "budgetCurrencyFixedBody": "Ihr Budget ist in {currency}: Jedes Konto darin verwendet diese Währung, und „Zu budgetieren“ zählt sie zusammen. Konten außerhalb des Budgets können jede Währung haben.",
+  "budgetCurrencyChangeAction": "Budgetwährung ändern",
+  "budgetCurrencyChangeConfirmTitle": "Budgetwährung auf {currency} ändern?",
+  "budgetCurrencyChangeConfirmBody": "Die Konten in Ihrem Budget werden von {from} auf {to} umgestellt. Beträge werden NICHT umgerechnet: Aus 100 {from} werden 100 {to}.\n\nDas ist für eine Währung gedacht, die bei der Einrichtung versehentlich gewählt wurde. Um wirklich in eine andere Währung zu wechseln, schließen Sie diese Konten und eröffnen Sie neue in {to}.\n\nKonten außerhalb des Budgets behalten ihre Währung. Die Änderung erreicht das andere Telefon mit der nächsten Synchronisierung.",
+  "budgetCurrencyChangeConfirmAction": "Auf {currency} ändern",
+  "budgetCurrencyChanged": "Die Budgetwährung ist jetzt {currency}",
+  "budgetCurrencyMixedWarning": "Die Konten in Ihrem Budget verwenden verschiedene Währungen ({currencies}). Beträge werden nie umgerechnet, daher zählt „Zu budgetieren“ verschiedene Währungen zusammen. Die Budgetwährung ist {currency}; in einer anderen Währung: {accounts}.",
+  "budgetCurrencyMixedLeave": "Aus dem Budget nehmen",
+  "budgetCurrencyMixedPickAccount": "Welches Konto verlässt das Budget?",
+  "accountCurrencyJoinTitle": "Nicht in der Budgetwährung",
+  "accountCurrencyJoinBody": "Dieses Konto ist in {account}, Ihr Budget in {budget}. Beträge werden nie umgerechnet, daher kann ein Konto in einer anderen Währung nicht im Budget sein.\n\nWurde {account} versehentlich gewählt, stellen Sie das Konto auf {budget} um (Beträge werden NICHT umgerechnet: Aus 100 {account} werden 100 {budget}). Andernfalls lassen Sie es außerhalb des Budgets.",
+  "ynabImportCurrencyFixed": "Konten in Ihrem Budget verwenden die Budgetwährung ({currency}), daher auch die importierten Konten."
 }

@@ -8151,6 +8151,88 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The budget takes {size} MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.'**
   String androidBackupTooLarge(String size);
+
+  /// Settings > Currency: subtitle once accounts are in the budget (the budget currency is theirs)
+  ///
+  /// In en, this message translates to:
+  /// **'{currency}, the currency of the accounts in your budget'**
+  String budgetCurrencyFixedSubtitle(String currency);
+
+  /// Settings > Currency: dialog once accounts are in the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Your budget is in {currency}: every account in it uses this currency, and To Be Budgeted adds them up. Accounts outside the budget can use any currency.'**
+  String budgetCurrencyFixedBody(String currency);
+
+  /// Settings > Currency dialog: the one action once accounts are in the budget (relabels them, after a confirmation)
+  ///
+  /// In en, this message translates to:
+  /// **'Change the budget currency'**
+  String get budgetCurrencyChangeAction;
+
+  /// Confirmation before the accounts in the budget are relabelled to another currency
+  ///
+  /// In en, this message translates to:
+  /// **'Change the budget currency to {currency}?'**
+  String budgetCurrencyChangeConfirmTitle(String currency);
+
+  /// Confirmation before the accounts in the budget are relabelled: amounts are not converted
+  ///
+  /// In en, this message translates to:
+  /// **'The accounts in your budget are relabelled from {from} to {to}. Amounts are NOT converted: 100 {from} becomes 100 {to}.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in {to}.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.'**
+  String budgetCurrencyChangeConfirmBody(String from, String to);
+
+  /// Button that relabels accounts to another currency (amounts are not converted)
+  ///
+  /// In en, this message translates to:
+  /// **'Change to {currency}'**
+  String budgetCurrencyChangeConfirmAction(String currency);
+
+  /// Snackbar after the accounts in the budget were relabelled
+  ///
+  /// In en, this message translates to:
+  /// **'The budget currency is now {currency}'**
+  String budgetCurrencyChanged(String currency);
+
+  /// Budget screen: warning when accounts in the budget disagree on the currency
+  ///
+  /// In en, this message translates to:
+  /// **'The accounts in your budget use different currencies ({currencies}). Amounts are never converted, so To Be Budgeted adds up different currencies. The budget currency is {currency}; in another currency: {accounts}.'**
+  String budgetCurrencyMixedWarning(
+    String currencies,
+    String currency,
+    String accounts,
+  );
+
+  /// Budget screen, mixed-currency warning: takes an account in another currency out of the budget (the leave-budget dialog follows)
+  ///
+  /// In en, this message translates to:
+  /// **'Take off budget'**
+  String get budgetCurrencyMixedLeave;
+
+  /// Budget screen, mixed-currency warning: picks one of several accounts in another currency to take out of the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Which account leaves the budget?'**
+  String get budgetCurrencyMixedPickAccount;
+
+  /// Account form and reopening: an account in another currency cannot be in the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Not in the budget currency'**
+  String get accountCurrencyJoinTitle;
+
+  /// Account form and reopening: why an account in another currency cannot be in the budget, and the relabel offer
+  ///
+  /// In en, this message translates to:
+  /// **'This account is in {account}, your budget in {budget}. Amounts are never converted, so an account in another currency cannot be in the budget.\n\nIf {account} was picked by mistake, change the account to {budget} (amounts are NOT converted: 100 {account} becomes 100 {budget}). Otherwise keep it outside the budget.'**
+  String accountCurrencyJoinBody(String account, String budget);
+
+  /// YNAB import preview: helper under the currency once accounts are in the budget
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts in your budget use the budget currency ({currency}), so the imported accounts do too.'**
+  String ynabImportCurrencyFixed(String currency);
 }
 
 class _AppLocalizationsDelegate

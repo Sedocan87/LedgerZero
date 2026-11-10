@@ -3,6 +3,7 @@ import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/reference_maintenance_repository.dart';
 import 'package:ledger_zero/domain/repositories/rule_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
+import 'package:ledger_zero/domain/services/budget_currency.dart';
 import 'package:ledger_zero/domain/services/rule_reference_cleanup.dart';
 import 'package:ledger_zero/domain/services/undo_service.dart';
 
@@ -28,14 +29,43 @@ class AccountService {
   final UndoService? _undoService;
 
   /// Closes (or reopens) an account. Closing keeps all history; it is the
-  /// recommended alternative to deleting.
-  Future<void> setClosed(String id, bool closed) async {
+  /// recommended alternative to deleting. [currency] relabels the account
+  /// in the same write (reopening a budget account into a budget that has
+  /// another currency now; amounts are not converted).
+  Future<void> setClosed(String id, bool closed, {String? currency}) async {
     final account = await _accountRepository.getAccountById(id);
     if (account != null && account.isClosed != closed) {
       await _accountRepository.updateAccount(
-        account.copyWith(isClosed: closed),
+        account.copyWith(isClosed: closed, currency: currency),
       );
     }
+  }
+
+  /// Relabels every open account in the budget that is not in [currency]
+  /// to [currency], in one unit of work: all of them or none. Amounts are
+  /// NOT converted (100 EUR becomes 100 CHF); this corrects a currency
+  /// picked by mistake. Accounts outside the budget (personal ones too) and
+  /// closed accounts keep theirs. Each account is an ordinary account
+  /// edit, so it syncs to the partner's phone. Not undoable: account edits
+  /// are not on the undo stack, and the same action relabels back.
+  ///
+  /// Returns the number of accounts relabelled.
+  Future<int> relabelBudgetCurrency(String currency) {
+    return _unitOfWork.run(() async {
+      var count = 0;
+      for (final account in await _accountRepository.getAllAccounts()) {
+        if (!decidesBudgetCurrency(account) ||
+            account.isPartners ||
+            account.currency == currency) {
+          continue;
+        }
+        await _accountRepository.updateAccount(
+          account.copyWith(currency: currency),
+        );
+        count++;
+      }
+      return count;
+    });
   }
 
   /// Permanently deletes account [id] in one unit of work:

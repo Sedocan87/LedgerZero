@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/money/currency.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_state.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_view_model.dart';
@@ -479,19 +480,38 @@ class YnabImportScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          key: const Key('ynab_import_currency'),
-          initialValue: state.currency,
-          isExpanded: true,
-          decoration: InputDecoration(labelText: l10n.ynabImportCurrency),
-          items: [
-            for (final code in {...supportedCurrencyCodes, state.currency})
-              DropdownMenuItem(value: code, child: Text(code)),
-          ],
-          onChanged: (code) {
-            if (code != null) {
-              viewModel.setCurrency(code);
-            }
+        // Once accounts are in the budget, the imported ones use its
+        // currency (the view model enforces it at import).
+        Consumer(
+          builder: (context, ref, _) {
+            final budget = ref.watch(budgetCurrencyProvider);
+            final currency = budget.isFixed ? budget.currency : state.currency;
+            return DropdownButtonFormField<String>(
+              key: ValueKey('ynab_import_currency-${budget.isFixed}'),
+              initialValue: currency,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.ynabImportCurrency,
+                helperText: budget.isFixed
+                    ? l10n.ynabImportCurrencyFixed(budget.currency)
+                    : null,
+                helperMaxLines: 3,
+              ),
+              items: [
+                for (final code
+                    in budget.isFixed
+                        ? {currency}
+                        : {...supportedCurrencyCodes, currency})
+                  DropdownMenuItem(value: code, child: Text(code)),
+              ],
+              onChanged: budget.isFixed
+                  ? null
+                  : (code) {
+                      if (code != null) {
+                        viewModel.setCurrency(code);
+                      }
+                    },
+            );
           },
         ),
         const SizedBox(height: 16),

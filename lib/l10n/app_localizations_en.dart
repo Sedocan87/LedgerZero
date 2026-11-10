@@ -5174,4 +5174,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String androidBackupTooLarge(String size) {
     return 'The budget takes $size MB. Android backs up at most 25 MB per app and stops without a message above that: keep saving backup files somewhere else.';
   }
+
+  @override
+  String budgetCurrencyFixedSubtitle(String currency) {
+    return '$currency, the currency of the accounts in your budget';
+  }
+
+  @override
+  String budgetCurrencyFixedBody(String currency) {
+    return 'Your budget is in $currency: every account in it uses this currency, and To Be Budgeted adds them up. Accounts outside the budget can use any currency.';
+  }
+
+  @override
+  String get budgetCurrencyChangeAction => 'Change the budget currency';
+
+  @override
+  String budgetCurrencyChangeConfirmTitle(String currency) {
+    return 'Change the budget currency to $currency?';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmBody(String from, String to) {
+    return 'The accounts in your budget are relabelled from $from to $to. Amounts are NOT converted: 100 $from becomes 100 $to.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in $to.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.';
+  }
+
+  @override
+  String budgetCurrencyChangeConfirmAction(String currency) {
+    return 'Change to $currency';
+  }
+
+  @override
+  String budgetCurrencyChanged(String currency) {
+    return 'The budget currency is now $currency';
+  }
+
+  @override
+  String budgetCurrencyMixedWarning(
+    String currencies,
+    String currency,
+    String accounts,
+  ) {
+    return 'The accounts in your budget use different currencies ($currencies). Amounts are never converted, so To Be Budgeted adds up different currencies. The budget currency is $currency; in another currency: $accounts.';
+  }
+
+  @override
+  String get budgetCurrencyMixedLeave => 'Take off budget';
+
+  @override
+  String get budgetCurrencyMixedPickAccount =>
+      'Which account leaves the budget?';
+
+  @override
+  String get accountCurrencyJoinTitle => 'Not in the budget currency';
+
+  @override
+  String accountCurrencyJoinBody(String account, String budget) {
+    return 'This account is in $account, your budget in $budget. Amounts are never converted, so an account in another currency cannot be in the budget.\n\nIf $account was picked by mistake, change the account to $budget (amounts are NOT converted: 100 $account becomes 100 $budget). Otherwise keep it outside the budget.';
+  }
+
+  @override
+  String ynabImportCurrencyFixed(String currency) {
+    return 'Accounts in your budget use the budget currency ($currency), so the imported accounts do too.';
+  }
 }

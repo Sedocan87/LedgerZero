@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/core/constants/app_icons.dart';
 import 'package:ledger_zero/core/money/currency.dart';
+import 'package:ledger_zero/domain/services/budget_currency.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/l10n/enum_labels.dart';
+import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/theme_provider.dart';
 import 'package:ledger_zero/presentation/providers/data_providers.dart';
@@ -17,6 +19,7 @@ import 'package:ledger_zero/presentation/screens/settings/app_cache.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_icon.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart'; // Import
+import 'package:ledger_zero/presentation/widgets/budget_currency_dialogs.dart';
 import 'package:ledger_zero/presentation/widgets/security/reset_app_dialog.dart';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
@@ -162,31 +165,9 @@ class SettingsScreen extends ConsumerWidget {
           SettingsSection(
             title: l10n.generalSettings,
             children: [
-              // Currency
-              ListTile(
-                leading: const SettingsIcon(
-                  Icons.attach_money,
-                  color: Colors.green,
-                ),
-                title: Text(l10n.currency),
-                subtitle: Text(settings.currency),
-                onTap: () async {
-                  final selected = await showDialog<String>(
-                    context: context,
-                    builder: (context) => SimpleDialog(
-                      title: Text(l10n.currency),
-                      children: supportedCurrencyCodes
-                          .map((c) => buildOption(context, c, c))
-                          .toList(),
-                    ),
-                  );
-                  if (selected != null) {
-                    unawaited(
-                      ref.read(settingsProvider.notifier).setCurrency(selected),
-                    );
-                  }
-                },
-              ),
+              // Currency: free while no account is in the budget, then
+              // the currency of the accounts in it.
+              const _BudgetCurrencyTile(),
               // Date Format
               ListTile(
                 leading: const SettingsIcon(
@@ -736,6 +717,125 @@ class _BackHomeButton extends StatelessWidget {
         key: const Key('settings.backHome'),
         onPressed: () => context.go('/'),
       ),
+    );
+  }
+}
+
+/// Settings > Currency. While no open account is in the budget it picks
+/// the stored currency (the first account in the budget then proposes it).
+/// Once accounts are in the budget it shows their currency and offers one
+/// action, "Change the budget currency": after a confirmation that amounts
+/// are not converted, it relabels the accounts in the budget.
+class _BudgetCurrencyTile extends ConsumerWidget {
+  const _BudgetCurrencyTile();
+
+  Future<String?> _pickCurrency(
+    BuildContext context,
+    String title, {
+    String? except,
+  }) {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        key: const Key('settings.currency.picker'),
+        title: Text(title),
+        children: [
+          for (final c in supportedCurrencyCodes)
+            if (c != except)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, c),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(c, style: const TextStyle(fontSize: 16)),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _change(
+    BuildContext context,
+    WidgetRef ref,
+    BudgetCurrency budget,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final change = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('settings.currency.fixed'),
+        title: Text(l10n.budgetCurrencyLabel),
+        content: Text(l10n.budgetCurrencyFixedBody(budget.currency)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.close),
+          ),
+          FilledButton(
+            key: const Key('settings.currency.change'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.budgetCurrencyChangeAction),
+          ),
+        ],
+      ),
+    );
+    if (change != true || !context.mounted) {
+      return;
+    }
+    // In a mixed budget every currency is offered (relabelling to the
+    // budget currency fixes it too).
+    final selected = await _pickCurrency(
+      context,
+      l10n.budgetCurrencyChangeAction,
+      except: budget.isMixed ? null : budget.currency,
+    );
+    if (selected == null || !context.mounted) {
+      return;
+    }
+    final from = budget.onBudgetCurrencies.where((c) => c != selected);
+    if (!await confirmBudgetCurrencyChange(
+          context,
+          from: from.join(', '),
+          to: selected,
+        ) ||
+        !context.mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await changeBudgetCurrency(ref, selected);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.budgetCurrencyChanged(selected))),
+      );
+    } catch (e, st) {
+      Logger.error('Changing the budget currency failed', e, st);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final budget = ref.watch(budgetCurrencyProvider);
+    return ListTile(
+      key: const Key('settings.currency'),
+      leading: const SettingsIcon(Icons.attach_money, color: Colors.green),
+      title: Text(l10n.currency),
+      subtitle: Text(
+        budget.isFixed
+            ? l10n.budgetCurrencyFixedSubtitle(budget.currency)
+            : budget.currency,
+      ),
+      onTap: () async {
+        if (budget.isFixed) {
+          await _change(context, ref, budget);
+          return;
+        }
+        final selected = await _pickCurrency(context, l10n.currency);
+        if (selected != null) {
+          unawaited(ref.read(settingsProvider.notifier).setCurrency(selected));
+        }
+      },
     );
   }
 }
