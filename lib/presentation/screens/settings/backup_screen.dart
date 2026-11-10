@@ -147,6 +147,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     return switch (error) {
       BackupAuthenticationException() => l10n.restoreWrongPassword,
       BackupTooNewException() => l10n.restoreNewerVersion,
+      BackupTooOldException() => l10n.restoreOlderVersion,
       BackupFormatException() => l10n.restoreInvalidFile,
       _ => l10n.restoreFailed,
     };

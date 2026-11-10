@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,7 +28,6 @@ import 'package:ledger_zero/presentation/screens/rules/rules_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/add_edit_scheduled_transaction_screen.dart';
 import 'package:ledger_zero/presentation/screens/scheduled_transactions/scheduled_transactions_screen.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
-import 'package:ledger_zero/presentation/screens/legacy_unlock_view.dart';
 import 'package:ledger_zero/presentation/screens/lock_screen.dart';
 import 'package:ledger_zero/presentation/screens/onboarding/security_setup_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/accessibility_settings_screen.dart';
@@ -34,7 +35,6 @@ import 'package:ledger_zero/presentation/screens/settings/backup_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/faq_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/security_settings_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/sync_settings_screen.dart';
-import 'package:ledger_zero/services/security/key_vault.dart';
 import 'package:ledger_zero/presentation/screens/settings/help_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_screen.dart';
 import 'package:ledger_zero/presentation/screens/settings/income/income_settings_screen.dart';
@@ -44,8 +44,10 @@ import 'package:ledger_zero/presentation/screens/transactions/add_edit_transacti
 import 'package:ledger_zero/presentation/screens/transactions/natural_language_input_screen.dart';
 import 'package:ledger_zero/presentation/screens/transactions/transactions_screen.dart';
 import 'package:ledger_zero/presentation/widgets/scaffold_with_navbar.dart';
+import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/app_directories.dart';
 import '../helpers/security_fakes.dart';
 import '../helpers/test_database.dart';
 
@@ -58,10 +60,15 @@ void main() {
   late InMemorySecureStore store;
   final german = lookupAppLocalizations(const Locale('de'));
 
+  late Directory appDirectory;
+
   setUp(() async {
+    appDirectory = mockAppDirectories();
     SharedPreferences.setMockInitialValues({
       'settings_language': 'de',
       'settings_currency': 'EUR',
+      // The lock screen shows its locked state (the prompt is dismissed).
+      kAppLockEnabledKey: true,
       // First-run tutorials cover the screen; they are tested separately.
       'tutorial_completed_budget_screen_intro': true,
       'tutorial_completed_transaction_entry_intro': true,
@@ -98,10 +105,8 @@ void main() {
     databaseProvider.overrideWithValue(t.db),
     sharedPreferencesProvider.overrideWithValue(prefs),
     secureStoreProvider.overrideWithValue(store),
-    legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
-    keyVaultProvider.overrideWithValue(KeyVault(store, newKdfParams: fastKdf)),
-    biometricKeyStoreProvider.overrideWithValue(
-      FakeBiometricKeyStore(available: false),
+    appLockAuthenticatorProvider.overrideWithValue(
+      FakeAppLockAuthenticator(result: AppLockResult.cancelled),
     ),
   ];
 
@@ -161,11 +166,6 @@ void main() {
     'Sync settings': () => const SyncSettingsScreen(),
     'Security setup': () => const SecuritySetupScreen(),
     'Lock screen': () => const LockScreen(),
-    'Legacy unlock': () => Scaffold(
-      body: SingleChildScrollView(
-        child: LegacyUnlockView(onUnlocked: (_) async {}, onReset: () {}),
-      ),
-    ),
     'Help': () => const HelpScreen(),
     'FAQ': () => const FaqScreen(),
     'User guide': () => const UserGuideScreen(),
@@ -182,6 +182,15 @@ void main() {
       await unmount(tester);
     });
   }
+
+  testWidgets('the lock screen with a damaged database fits 360 dp in '
+      'German', (tester) async {
+    File('${appDirectory.path}/db.sqlite').writeAsStringSync('not a database');
+    await pumpScreen(tester, const LockScreen());
+    expect(find.text(german.lockScreenDatabaseDamaged), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
 
   testWidgets('the savings transfer hint fits 360 dp in German', (
     tester,

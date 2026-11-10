@@ -27,10 +27,10 @@ import 'package:ledger_zero/presentation/screens/onboarding_screen.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/presentation/widgets/security/lock_overlay.dart';
 import 'package:ledger_zero/services/backup/backup_scheduler.dart';
-import 'package:ledger_zero/services/security/key_vault.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/app_directories.dart';
 import '../../helpers/security_fakes.dart';
 import '../../helpers/test_database.dart';
 
@@ -42,7 +42,10 @@ class _NoBackupReminder extends Mock implements BackupScheduler {
 void main() {
   late TestDatabase t;
 
-  setUp(() => t = TestDatabase());
+  setUp(() {
+    mockAppDirectories();
+    t = TestDatabase();
+  });
   tearDown(() => t.close());
 
   /// Pumps the real router. [onboarded] is what the app persisted; the app
@@ -51,7 +54,12 @@ void main() {
     WidgetTester tester, {
     required bool onboarded,
   }) async {
-    SharedPreferences.setMockInitialValues({'user_onboarded': onboarded});
+    SharedPreferences.setMockInitialValues({
+      'user_onboarded': onboarded,
+      // The app lock is on and its prompt is dismissed: the app stays at
+      // the lock screen until a test unlocks it.
+      kAppLockEnabledKey: true,
+    });
     final prefs = await SharedPreferences.getInstance();
     final store = InMemorySecureStore();
     final container = ProviderContainer(
@@ -59,16 +67,9 @@ void main() {
         sharedPreferencesProvider.overrideWithValue(prefs),
         databaseProvider.overrideWithValue(t.db),
         secureStoreProvider.overrideWithValue(store),
-        legacySecureStoreProvider.overrideWithValue(InMemorySecureStore()),
-        keyVaultProvider.overrideWithValue(
-          KeyVault(store, newKdfParams: fastKdf),
-        ),
-        biometricKeyStoreProvider.overrideWithValue(
-          FakeBiometricKeyStore(available: false),
-        ),
         backupSchedulerProvider.overrideWithValue(_NoBackupReminder()),
         appLockAuthenticatorProvider.overrideWithValue(
-          FakeAppLockAuthenticator(),
+          FakeAppLockAuthenticator(result: AppLockResult.cancelled),
         ),
       ],
     );
@@ -366,10 +367,10 @@ void main() {
     await tester.pumpAndSettle();
     await continueToAccountStep();
     expect(location(c), '/onboarding/first-account');
-    // The session (and so the database and its key) this onboarding
-    // opened: going back must not replace it.
-    final session = c.read(sessionProvider).key;
-    expect(session, isNotNull);
+    // The session (and so the database) this onboarding opened: going back
+    // must not replace it.
+    expect(c.read(sessionProvider).isOpen, isTrue);
+    final session = c.read(databaseProvider);
 
     // System back, then the app bar's back arrow.
     for (final viaAppBar in [false, true]) {
@@ -387,7 +388,7 @@ void main() {
       expect(find.byType(AddEditAccountScreen), findsOneWidget);
       expect(location(c), '/onboarding/first-account');
       expect(c.read(authProvider).isOnboarded, isFalse);
-      expect(c.read(sessionProvider).key, same(session));
+      expect(c.read(databaseProvider), same(session));
       expect(
         find.text('Your existing data on this phone was found and kept.'),
         findsNothing,

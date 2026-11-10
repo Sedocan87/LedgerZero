@@ -84,7 +84,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       _processCapturedNotifications();
       // A payday or a new month may have come while the app was in the
       // background.
-      if (ref.read(sessionProvider).isUnlocked) {
+      if (ref.read(sessionProvider).isOpen) {
         unawaited(_bookDueThenFill());
         unawaited(ref.read(autoBackupServiceProvider).runIfDue());
       }

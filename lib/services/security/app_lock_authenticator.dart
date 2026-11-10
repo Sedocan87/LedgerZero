@@ -26,7 +26,7 @@ enum AppLockResult {
 /// password (Android `BiometricPrompt`, native code in
 /// android/app/src/main/kotlin/com/ledgerzero/app/AppLockChannel.kt).
 ///
-/// The app lock gates the UI; it is not tied to the database key.
+/// The app lock gates the UI only; the database does not depend on it.
 abstract class AppLockAuthenticator {
   /// Whether the device can show the prompt (it has a screen lock).
   Future<bool> canAuthenticate();

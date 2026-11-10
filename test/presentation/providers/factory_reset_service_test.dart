@@ -27,8 +27,6 @@ void main() {
     return FactoryResetService(
       closeSession: step('session'),
       deleteDatabase: step('database'),
-      deleteDeviceKey: step('key'),
-      deleteLegacyKeys: step('legacy'),
       forgetAutoBackupPassword: step('auto backup password'),
       deleteExports: step('exports'),
       clearCapturedNotifications: step('capture'),
@@ -64,7 +62,7 @@ void main() {
     () async {
       final log = <String>[];
       await expectLater(
-        service(log: log, failing: 'key').reset(),
+        service(log: log, failing: 'database').reset(),
         throwsA(isA<StateError>()),
       );
       expect(log, contains('prefs'));

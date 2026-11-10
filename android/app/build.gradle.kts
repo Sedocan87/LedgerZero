@@ -125,8 +125,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    // BiometricPrompt + CryptoObject for the biometric key store
-    // (BiometricKeyChannel.kt).
+    // BiometricPrompt for the app lock (AppLockChannel.kt).
     implementation("androidx.biometric:biometric:1.1.0")
 }
 

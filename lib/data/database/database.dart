@@ -40,6 +40,19 @@ import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 
 part 'database.g.dart';
 
+/// The database file has a schema older than
+/// [AppDatabase.minimumSchemaVersion], which this version does not upgrade.
+class UnsupportedSchemaException implements Exception {
+  const UnsupportedSchemaException(this.version);
+
+  final int version;
+
+  @override
+  String toString() =>
+      'UnsupportedSchemaException: schema v$version is older than '
+      'v${AppDatabase.minimumSchemaVersion}';
+}
+
 @DriftDatabase(
   tables: [
     Accounts,
@@ -95,6 +108,10 @@ class AppDatabase extends _$AppDatabase {
 
   /// The current schema version (also used to validate restored backups).
   static const int currentSchemaVersion = 20;
+
+  /// The oldest schema this version opens or restores (see the
+  /// `onUpgrade` step in [migration]).
+  static const int minimumSchemaVersion = 20;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -653,21 +670,6 @@ class AppDatabase extends _$AppDatabase {
     updates: {accounts},
     updateKind: UpdateKind.update,
   );
-
-  /// Whether this connection runs on SQLCipher. True means the library can
-  /// encrypt; whether the file actually is encrypted is checked by
-  /// `databaseEncryptionStatusProvider` (file header + key).
-  Future<bool> get hasCipherSupport async {
-    try {
-      final result = await customSelect(
-        'PRAGMA cipher_version',
-        readsFrom: {},
-      ).get();
-      return result.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
-  }
 
   /// Creation and update time of the seeded defaults. Fixed, so the seeded
   /// rows are identical on every device and converge without conflicts.

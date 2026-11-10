@@ -726,12 +726,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get occurrences => 'Wiederholungen';
 
   @override
-  String get recoveryKey => 'Wiederherstellungsschlüssel';
-
-  @override
-  String get revealRecoveryKey => 'Wiederherstellungsschlüssel anzeigen';
-
-  @override
   String get autoLock => 'Automatische Sperre';
 
   @override
@@ -752,16 +746,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get autoLockNever => 'Nie';
 
   @override
-  String get incorrectPassword => 'Falsches Passwort';
-
-  @override
   String get passwordsDoNotMatch => 'Die Passwörter stimmen nicht überein';
-
-  @override
-  String get biometrics => 'Biometrische Entsperrung';
-
-  @override
-  String get encryptionStatus => 'Verschlüsselungsstatus';
 
   @override
   String get encrypted => 'Verschlüsselt';
@@ -1347,9 +1332,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get confirmAction => 'Bestätigen';
 
   @override
-  String get masterPasswordLabel => 'Master-Passwort';
-
-  @override
   String get confirmPasswordLabel => 'Passwort bestätigen';
 
   @override
@@ -1402,66 +1384,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Einrichtung der Sicherheit ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
 
   @override
-  String get biometricPromptTitle => 'LedgerZero entsperren';
-
-  @override
-  String get biometricPromptSubtitle =>
-      'Bestätigen Sie Ihre Identität, um Ihre Daten zu entsperren';
-
-  @override
   String get loginUnlock => 'Entsperren';
-
-  @override
-  String get loginUseBiometrics => 'Biometrie verwenden';
-
-  @override
-  String get loginUseRecoveryKey => 'Wiederherstellungsschlüssel verwenden';
-
-  @override
-  String get loginVaultMissing =>
-      'Die Schlüsseldaten dieser App fehlen, daher können Ihre Daten nicht entsperrt werden. Sie können die App zurücksetzen und eine Sicherung wiederherstellen.';
-
-  @override
-  String get loginDatabaseKeyMismatch =>
-      'Ihr Schlüssel ist korrekt, aber die Datenbankdatei konnte damit nicht geöffnet werden.';
-
-  @override
-  String get loginFailed =>
-      'Das Entsperren ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
-
-  @override
-  String get biometricsInvalidated =>
-      'Die biometrische Entsperrung wurde deaktiviert, da sich die biometrischen Daten auf diesem Gerät geändert haben. Entsperren Sie mit Ihrem Passwort und aktivieren Sie sie in den Einstellungen erneut.';
-
-  @override
-  String get biometricsUnlockFailed =>
-      'Die biometrische Entsperrung ist fehlgeschlagen. Bitte verwenden Sie Ihr Passwort.';
-
-  @override
-  String get recoveryKeyEnterTitle => 'Wiederherstellungsschlüssel eingeben';
-
-  @override
-  String get recoveryKeyEnterHint =>
-      '32 Zeichen; Leerzeichen und Bindestriche sind optional';
-
-  @override
-  String get recoveryKeyInvalid =>
-      'Dieser Wiederherstellungsschlüssel ist nicht korrekt.';
-
-  @override
-  String get recoveryKeyNeedsPassword =>
-      'Ein Update wird noch abgeschlossen. Bitte entsperren Sie einmal mit Ihrem Passwort.';
-
-  @override
-  String get encryptionStatusEncrypted =>
-      'Verschlüsselt mit SQLCipher (AES-256)';
-
-  @override
-  String get encryptionStatusPlaintext =>
-      'Die Datenbankdatei ist NICHT verschlüsselt';
-
-  @override
-  String get encryptionStatusUnknown => 'Noch nicht geprüft';
 
   @override
   String get lockNow => 'Jetzt sperren';
@@ -3389,7 +3312,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String loginResetAppBody(String word) {
-    return 'Ohne den Schlüsseltresor lassen sich Ihre Daten nicht entsperren. Das Zurücksetzen löscht die verschlüsselte Datenbank, alle Schlüssel, Einstellungen und exportierten Dateien auf diesem Gerät und startet die Einrichtung neu; anschließend können Sie eine Sicherung wiederherstellen. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
+    return 'LedgerZero kann die Daten auf diesem Telefon nicht öffnen. Das Zurücksetzen löscht sie zusammen mit den Einstellungen und exportierten Dateien auf diesem Gerät und startet die Einrichtung neu; anschließend können Sie eine Sicherung wiederherstellen. Automatische Sicherungen auf diesem Telefon bleiben erhalten. Dies kann nicht rückgängig gemacht werden. Geben Sie zur Bestätigung $word ein.';
   }
 
   @override
@@ -3720,26 +3643,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get lockScreenTitle => 'LedgerZero ist gesperrt';
 
   @override
-  String get lockScreenKeyError =>
-      'LedgerZero kann Ihre Daten nicht öffnen: Der auf diesem Telefon gespeicherte Schlüssel fehlt oder passt nicht zu den Daten. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
-
-  @override
-  String get legacyUnlockTitle => 'Ein letztes Mal entsperren';
-
-  @override
-  String get legacyUnlockExplanation =>
-      'LedgerZero verwendet kein Master-Passwort mehr. Entsperren Sie ein letztes Mal mit Ihrem Passwort oder Wiederherstellungsschlüssel. Danach bewahrt die App ihren Schlüssel im sicheren Schlüsselspeicher dieses Telefons auf, und die App-Sperre nutzt Fingerabdruck, Gesicht oder Displaysperre.';
-
-  @override
   String get setupDeviceHeading => 'Ihre Daten bleiben auf diesem Telefon';
 
   @override
   String get setupDeviceExplanation =>
       'Ihr Budget wird nur auf diesem Telefon gespeichert, verschlüsselt mit einem Schlüssel, den Android in seinem sicheren Schlüsselspeicher aufbewahrt. Es gibt kein Konto und kein Passwort, das Sie sich merken müssen. Damit Sie mit dem Telefon nichts verlieren, erstellen Sie Sicherungen oder synchronisieren Sie mit einem zweiten Telefon.';
-
-  @override
-  String get lockScreenReadError =>
-      'LedgerZero konnte seinen Schlüssel gerade nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen. Ihre Daten sind nicht betroffen. Versuchen Sie es erneut; wenn es weiterhin fehlschlägt, starten Sie das Telefon neu.';
 
   @override
   String get providerLocalWifi => 'Heim-WLAN (Telefon zu Telefon)';
@@ -4402,10 +4310,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get cardNotificationsListenerDisconnected =>
       'Der Zugriff ist erteilt, aber Android hat den Benachrichtigungsdienst von LedgerZero nicht verbunden, daher wird nichts erfasst. Schalten Sie den Benachrichtigungszugriff in den Systemeinstellungen aus und wieder ein oder starten Sie das Telefon neu.';
-
-  @override
-  String get lockScreenReadErrorPersistent =>
-      'LedgerZero kann seinen Schlüssel nicht aus dem sicheren Schlüsselspeicher dieses Telefons lesen: Der Schlüsselspeicher hat ihn nicht mehr (das kann auf manchen Telefonen nach einem Systemupdate oder einer Änderung der Displaysperre passieren). Ihre Daten auf diesem Telefon lassen sich ohne diesen Schlüssel nicht öffnen. Versuchen Sie es erneut oder starten Sie das Telefon neu; hilft das nicht, setzen Sie die App zurück und stellen Sie eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
 
   @override
   String get lockScreenOpenError =>
@@ -5356,4 +5260,23 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get restoreOlderVersion =>
+      'Diese Sicherung stammt aus einer frühen Testversion von LedgerZero und kann mit dieser Version nicht wiederhergestellt werden.';
+
+  @override
+  String get lockScreenDatabaseDamaged =>
+      'LedgerZero kann die Daten auf diesem Telefon nicht lesen: Die Datenbankdatei ist beschädigt. Setzen Sie die App zurück und stellen Sie dann eine Sicherung wieder her oder synchronisieren Sie erneut von Ihrem anderen Telefon. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
+
+  @override
+  String get lockScreenDatabaseTooOld =>
+      'Die Daten auf diesem Telefon wurden von einer frühen Testversion von LedgerZero gespeichert, die diese Version nicht mehr öffnet. Setzen Sie die App zurück und richten Sie sie neu ein. Automatische Sicherungen auf diesem Telefon bleiben beim Zurücksetzen erhalten.';
+
+  @override
+  String get securityDataLocationTitle => 'Wo Ihre Daten liegen';
+
+  @override
+  String get securityDataLocationBody =>
+      'Nur auf diesem Telefon, im privaten App-Speicher von LedgerZero, geschützt durch Android und Ihre Displaysperre. Sicherungen und Sync-Dateien werden mit Ihrem Passwort bzw. Ihrer Passphrase verschlüsselt.';
 }

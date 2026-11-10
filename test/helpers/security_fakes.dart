@@ -1,7 +1,4 @@
-import 'dart:typed_data';
-
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
-import 'package:ledger_zero/services/security/biometric_key_store.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:ledger_zero/services/security/secure_store.dart';
 
@@ -31,49 +28,6 @@ class InMemorySecureStore implements SecureStore {
     values.remove(key);
   }
 }
-
-/// [BiometricKeyStore] that keeps the secret in memory and can be told to
-/// fail like the platform would.
-class FakeBiometricKeyStore implements BiometricKeyStore {
-  Uint8List? secret;
-  bool available;
-  BiometricFailure? failNextReadWith;
-  int deleteCount = 0;
-
-  FakeBiometricKeyStore({this.available = true});
-
-  @override
-  Future<bool> isAvailable() async => available;
-
-  @override
-  Future<bool> hasKey() async => secret != null;
-
-  @override
-  Future<Uint8List> read(BiometricPromptTexts texts) async {
-    final failure = failNextReadWith;
-    if (failure != null) {
-      failNextReadWith = null;
-      throw BiometricException(failure);
-    }
-    final value = secret;
-    if (value == null) {
-      throw const BiometricException(BiometricFailure.notFound);
-    }
-    return Uint8List.fromList(value);
-  }
-
-  @override
-  Future<void> delete() async {
-    deleteCount++;
-    secret = null;
-  }
-}
-
-const testPromptTexts = BiometricPromptTexts(
-  title: 'Unlock',
-  subtitle: 'Confirm',
-  cancel: 'Cancel',
-);
 
 /// [AppLockAuthenticator] with a scripted outcome.
 class FakeAppLockAuthenticator implements AppLockAuthenticator {

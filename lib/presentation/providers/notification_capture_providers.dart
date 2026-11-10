@@ -123,7 +123,7 @@ class CaptureAttentionNotifier extends Notifier<CaptureAttentionState> {
   /// Books card notifications captured since the last run (needs the open
   /// database, not the unlocked UI), then looks at what needs the user.
   Future<void> process() async {
-    if (!ref.read(sessionProvider).isUnlocked) {
+    if (!ref.read(sessionProvider).isOpen) {
       return;
     }
     final capture = ref.read(notificationCaptureServiceProvider);

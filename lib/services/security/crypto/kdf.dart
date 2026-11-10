@@ -25,8 +25,9 @@ class KdfParamsException implements Exception {
 
 /// A password-based key derivation function with all of its parameters.
 ///
-/// Stored next to every password-protected blob (key vault, backups) so the
-/// cost can be raised later without breaking existing data.
+/// Stored next to every password-protected blob (backups, the sync
+/// manifest) so the cost can be raised later without breaking existing
+/// data.
 class KdfParams {
   final KdfAlgorithm algorithm;
   final Uint8List salt;

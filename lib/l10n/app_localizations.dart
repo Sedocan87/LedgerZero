@@ -1424,18 +1424,6 @@ abstract class AppLocalizations {
   /// **'Occurrences'**
   String get occurrences;
 
-  /// No description provided for @recoveryKey.
-  ///
-  /// In en, this message translates to:
-  /// **'Recovery Key'**
-  String get recoveryKey;
-
-  /// No description provided for @revealRecoveryKey.
-  ///
-  /// In en, this message translates to:
-  /// **'Reveal Recovery Key'**
-  String get revealRecoveryKey;
-
   /// No description provided for @autoLock.
   ///
   /// In en, this message translates to:
@@ -1460,29 +1448,11 @@ abstract class AppLocalizations {
   /// **'Never'**
   String get autoLockNever;
 
-  /// No description provided for @incorrectPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Incorrect Password'**
-  String get incorrectPassword;
-
   /// No description provided for @passwordsDoNotMatch.
   ///
   /// In en, this message translates to:
   /// **'Passwords do not match'**
   String get passwordsDoNotMatch;
-
-  /// No description provided for @biometrics.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric Authentication'**
-  String get biometrics;
-
-  /// No description provided for @encryptionStatus.
-  ///
-  /// In en, this message translates to:
-  /// **'Encryption Status'**
-  String get encryptionStatus;
 
   /// No description provided for @encrypted.
   ///
@@ -2408,12 +2378,6 @@ abstract class AppLocalizations {
   /// **'Confirm'**
   String get confirmAction;
 
-  /// No description provided for @masterPasswordLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Master password'**
-  String get masterPasswordLabel;
-
   /// No description provided for @confirmPasswordLabel.
   ///
   /// In en, this message translates to:
@@ -2504,107 +2468,11 @@ abstract class AppLocalizations {
   /// **'Security setup failed. Please try again.'**
   String get setupFailed;
 
-  /// No description provided for @biometricPromptTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock LedgerZero'**
-  String get biometricPromptTitle;
-
-  /// No description provided for @biometricPromptSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm it is you to unlock your data'**
-  String get biometricPromptSubtitle;
-
   /// No description provided for @loginUnlock.
   ///
   /// In en, this message translates to:
   /// **'Unlock'**
   String get loginUnlock;
-
-  /// No description provided for @loginUseBiometrics.
-  ///
-  /// In en, this message translates to:
-  /// **'Use biometrics'**
-  String get loginUseBiometrics;
-
-  /// No description provided for @loginUseRecoveryKey.
-  ///
-  /// In en, this message translates to:
-  /// **'Use recovery key'**
-  String get loginUseRecoveryKey;
-
-  /// No description provided for @loginVaultMissing.
-  ///
-  /// In en, this message translates to:
-  /// **'The key data of this app is missing, so your data cannot be unlocked. You can reset the app and restore a backup.'**
-  String get loginVaultMissing;
-
-  /// No description provided for @loginDatabaseKeyMismatch.
-  ///
-  /// In en, this message translates to:
-  /// **'Your key is correct, but the database file could not be opened with it.'**
-  String get loginDatabaseKeyMismatch;
-
-  /// No description provided for @loginFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlocking failed. Please try again.'**
-  String get loginFailed;
-
-  /// No description provided for @biometricsInvalidated.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric unlock was turned off because the biometrics on this device changed. Unlock with your password and turn it on again in Settings.'**
-  String get biometricsInvalidated;
-
-  /// No description provided for @biometricsUnlockFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Biometric unlock failed. Please use your password.'**
-  String get biometricsUnlockFailed;
-
-  /// No description provided for @recoveryKeyEnterTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your recovery key'**
-  String get recoveryKeyEnterTitle;
-
-  /// No description provided for @recoveryKeyEnterHint.
-  ///
-  /// In en, this message translates to:
-  /// **'32 characters; spaces and dashes are optional'**
-  String get recoveryKeyEnterHint;
-
-  /// No description provided for @recoveryKeyInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'This recovery key is not correct.'**
-  String get recoveryKeyInvalid;
-
-  /// No description provided for @recoveryKeyNeedsPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'An update is still being completed. Please unlock once with your password.'**
-  String get recoveryKeyNeedsPassword;
-
-  /// No description provided for @encryptionStatusEncrypted.
-  ///
-  /// In en, this message translates to:
-  /// **'Encrypted with SQLCipher (AES-256)'**
-  String get encryptionStatusEncrypted;
-
-  /// No description provided for @encryptionStatusPlaintext.
-  ///
-  /// In en, this message translates to:
-  /// **'The database file is NOT encrypted'**
-  String get encryptionStatusPlaintext;
-
-  /// No description provided for @encryptionStatusUnknown.
-  ///
-  /// In en, this message translates to:
-  /// **'Not checked yet'**
-  String get encryptionStatusUnknown;
 
   /// No description provided for @lockNow.
   ///
@@ -5683,7 +5551,7 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 tracking account was imported outside the budget. Transfers between it and your budget accounts are linked; a category on the budget side stays there.} other{{count} tracking accounts were imported outside the budget. Transfers between them and your budget accounts are linked; a category on the budget side stays there.}}'**
   String ynabImportTrackingSkipped(int count);
 
-  /// Login screen button shown when the key vault is missing; deletes all local data
+  /// Start-up screen button shown when the database cannot be opened; deletes all local data
   ///
   /// In en, this message translates to:
   /// **'Reset app'**
@@ -5698,7 +5566,7 @@ abstract class AppLocalizations {
   /// Explanation in the reset confirmation on the login screen
   ///
   /// In en, this message translates to:
-  /// **'Without the key vault your data cannot be unlocked. Resetting deletes the encrypted database, all keys, settings and exported files on this device and starts the setup again; afterwards you can restore a backup. This cannot be undone. Type {word} to confirm.'**
+  /// **'LedgerZero cannot open the data on this phone. Resetting deletes it together with the settings and exported files on this device and starts the setup again; afterwards you can restore a backup. Automatic backups kept on this phone are not deleted. This cannot be undone. Type {word} to confirm.'**
   String loginResetAppBody(String word);
 
   /// Word the user must type to confirm the reset from the login screen
@@ -6229,24 +6097,6 @@ abstract class AppLocalizations {
   /// **'LedgerZero is locked'**
   String get lockScreenTitle;
 
-  /// No description provided for @lockScreenKeyError.
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero cannot open your data: the key stored on this phone is missing or does not match the data. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
-  String get lockScreenKeyError;
-
-  /// No description provided for @legacyUnlockTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock one last time'**
-  String get legacyUnlockTitle;
-
-  /// No description provided for @legacyUnlockExplanation.
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero no longer uses a master password. Unlock one last time with your password or recovery key. After that, the app keeps its key in this phone\'s secure key store, and the app lock uses your fingerprint, face or screen lock.'**
-  String get legacyUnlockExplanation;
-
   /// No description provided for @setupDeviceHeading.
   ///
   /// In en, this message translates to:
@@ -6258,12 +6108,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your budget is stored only on this phone, encrypted with a key that Android keeps in its secure key store. There is no account and no password to remember. So you don\'t lose anything with your phone, create backups or sync with a second phone.'**
   String get setupDeviceExplanation;
-
-  /// No description provided for @lockScreenReadError.
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero could not read its key from this phone\'s secure key store just now. Your data is not affected. Try again; if it keeps failing, restart the phone.'**
-  String get lockScreenReadError;
 
   /// No description provided for @providerLocalWifi.
   ///
@@ -7278,12 +7122,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Access is granted, but Android has not connected LedgerZero\'s notification listener, so nothing is captured. Turn notification access off and on again in the system settings, or restart the phone.'**
   String get cardNotificationsListenerDisconnected;
-
-  /// Lock screen: the key store keeps failing
-  ///
-  /// In en, this message translates to:
-  /// **'LedgerZero cannot read its key from this phone\'s secure key store: the key store no longer holds it (this can happen after a system update or a change to the screen lock on some phones). Your data on this phone cannot be opened without that key. Try again or restart the phone; if that does not help, reset the app and restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
-  String get lockScreenReadErrorPersistent;
 
   /// Lock screen: transient database open error
   ///
@@ -8409,6 +8247,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Category set} other{Category set for {count} transactions}}'**
   String txCategorizedCount(int count);
+
+  /// Restore error: the backup's database schema is older than this version reads (development builds only)
+  ///
+  /// In en, this message translates to:
+  /// **'This backup was made by an early test version of LedgerZero and cannot be restored with this version.'**
+  String get restoreOlderVersion;
+
+  /// Start-up screen: the database file is not a readable database; offers Retry and Reset
+  ///
+  /// In en, this message translates to:
+  /// **'LedgerZero cannot read the data on this phone: the database file is damaged. Reset the app, then restore a backup or sync again from your other phone. Automatic backups kept on this phone are not deleted by the reset.'**
+  String get lockScreenDatabaseDamaged;
+
+  /// Start-up screen: the database has a schema from a development build that is not upgraded any more; offers Retry and Reset
+  ///
+  /// In en, this message translates to:
+  /// **'The data on this phone was saved by an early test version of LedgerZero that this version no longer opens. Reset the app and set it up again. Automatic backups kept on this phone are not deleted by the reset.'**
+  String get lockScreenDatabaseTooOld;
+
+  /// Settings > Security: title of the row that explains how the data on the phone is protected
+  ///
+  /// In en, this message translates to:
+  /// **'Where your data is'**
+  String get securityDataLocationTitle;
+
+  /// Settings > Security: how the data on the phone is protected (the database itself is not encrypted by the app)
+  ///
+  /// In en, this message translates to:
+  /// **'Only on this phone, in LedgerZero’s private app storage, protected by Android and your screen lock. Backups and sync files are encrypted with your password or passphrase.'**
+  String get securityDataLocationBody;
 }
 
 class _AppLocalizationsDelegate

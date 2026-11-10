@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:ledger_zero/presentation/widgets/help/info_button.dart';
 import 'package:ledger_zero/presentation/widgets/help/help_topics.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
-import 'package:ledger_zero/presentation/providers/database_provider.dart';
 import 'package:ledger_zero/presentation/providers/privacy_settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/widgets/settings_section.dart';
@@ -52,7 +51,6 @@ class SecuritySettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final currentDuration = ref.watch(autoLockDurationProvider);
     final appLockEnabled = ref.watch(appLockEnabledProvider);
-    final encryption = ref.watch(databaseEncryptionStatusProvider);
     final privacy = ref.watch(privacySettingsProvider);
 
     String getDurationLabel(int duration) {
@@ -75,25 +73,6 @@ class SecuritySettingsScreen extends ConsumerWidget {
       );
     }
 
-    final status = encryption.valueOrNull ?? DatabaseEncryptionStatus.unknown;
-    final (statusIcon, statusColor, statusText) = switch (status) {
-      DatabaseEncryptionStatus.encrypted => (
-        Icons.lock,
-        Colors.green,
-        l10n.encryptionStatusEncrypted,
-      ),
-      DatabaseEncryptionStatus.plaintext => (
-        Icons.lock_open,
-        Colors.red,
-        l10n.encryptionStatusPlaintext,
-      ),
-      DatabaseEncryptionStatus.unknown => (
-        Icons.help_outline,
-        Colors.grey,
-        l10n.encryptionStatusUnknown,
-      ),
-    };
-
     return Scaffold(
       appBar: AppBar(title: Text(l10n.securitySettings)),
       body: ListView(
@@ -102,9 +81,10 @@ class SecuritySettingsScreen extends ConsumerWidget {
             title: l10n.securitySettings,
             children: [
               ListTile(
-                leading: Icon(statusIcon, color: statusColor),
-                title: Text(l10n.encryptionStatus),
-                subtitle: Text(statusText),
+                key: const Key('security_data_location'),
+                leading: const Icon(Icons.phone_android),
+                title: Text(l10n.securityDataLocationTitle),
+                subtitle: Text(l10n.securityDataLocationBody),
               ),
               SwitchListTile(
                 key: const Key('security_app_lock'),
