@@ -202,6 +202,8 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: BudgetCalculator(
+          // Which category is being budgeted: the list behind is dimmed.
+          title: widget.viewModel.category.name,
           initialValue: currentValue,
           onValueChanged: (val) {
             currentValue = val;

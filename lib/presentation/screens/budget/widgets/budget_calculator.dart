@@ -41,11 +41,15 @@ class BudgetCalculator extends ConsumerStatefulWidget {
   /// not (the calculator stays open so the input can be corrected).
   final String? Function() onSubmitted;
 
+  /// What is being budgeted (the category name), shown next to the value.
+  final String? title;
+
   const BudgetCalculator({
     super.key,
     required this.initialValue,
     required this.onValueChanged,
     required this.onSubmitted,
+    this.title,
   });
 
   @override
@@ -213,14 +217,44 @@ class _BudgetCalculatorState extends ConsumerState<BudgetCalculator> {
               vertical: _error == null ? 24 : 8,
             ),
             alignment: Alignment.centerRight,
-            child: Text(
-              _controller.text.isEmpty ? '0' : _controller.text,
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+            // The value keeps up to three quarters of the width; the
+            // category name gets the rest and is shortened first.
+            child: LayoutBuilder(
+              builder: (context, constraints) => Row(
+                children: [
+                  if (widget.title case final title?) ...[
+                    Expanded(
+                      child: Text(
+                        title,
+                        key: const Key('budgetCalculator.title'),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ] else
+                    const Spacer(),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: widget.title == null
+                          ? constraints.maxWidth
+                          : constraints.maxWidth * 0.75,
+                    ),
+                    child: Text(
+                      _controller.text.isEmpty ? '0' : _controller.text,
+                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (_error != null)
