@@ -7,7 +7,10 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
 
 ## Layout
 
-* Month selector (previous/next month); the month is held in
+* Month selector: the app bar title is the month ("November 2026 ▾")
+  between previous/next chevrons; tapping the month opens the month picker
+  (the date picker on its year list; the month of the picked day is
+  used). The month is held in
   `selectedBudgetMonthProvider`. It defaults to the current month and
   follows the calendar: `todayProvider` re-reads the clock at midnight and
   when the budget or home screen sees the app resume, and a selection that
@@ -15,29 +18,49 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
   the user navigated to stays). The home screen's month
   (`selectedHomeMonthProvider`) and the home banner's To Be Budgeted work
   the same way.
-* To Be Budgeted banner (`ToBeBudgetedBanner`), from `tbbProvider(month)`.
+* To Be Budgeted (`ToBeBudgetedBanner`), from `tbbProvider(month)`: a
+  tonal block with the label, the amount (success colour when positive,
+  error when negative) and a status chip that says the state in words
+  ("Ready to assign", "Overassigned", "All assigned"; `TbbStatusChip`,
+  also used on Home), then the month's income line (tap: Income &
+  Salaries, or add a salary while none is set up).
 * Category groups and rows (`BudgetGroupRow`, `BudgetCategoryRow`) from
-  `budgetViewModelProvider`. Hidden categories are not listed; a hidden
+  `budgetViewModelProvider`. A group is a plain section, no card: a header
+  row (expand/collapse chevron, name, the ⓘ where the group has one, and
+  the group's total Available in the Available column) and its rows, with
+  a hairline between groups. Hidden categories are not listed; a hidden
   category that still has money budgeted or available (or activity) in the
   month appears in a last, collapsed **Hidden categories** section, because
   that money still counts in To Be Budgeted and must stay reachable (edit
   the amount or move the money out). The footer totals include that
   section.
-* App bar: search (filters categories by name), view mode toggle, manage
-  categories (`/budget/categories`), and a menu with save as template, apply
-  template, copy from previous month and reset budget. While the search is
-  open, the system back button closes it and clears the filter; the next
-  back leaves the screen.
-* **Row layout.** On a phone the name and three amounts do not fit side by
-  side (at 360 dp even "250,00 €" was cut off), so below 460 dp of row
-  content (`budgetRowIsCompact`) the category name has its own line and
-  Budgeted, Activity and Available sit under it in three equal columns; the
-  column header and the totals footer use the same columns. From 460 dp on
-  (tablets, landscape) the row is one line, 3:2:2:2. In both layouts an
-  amount is never ellipsised: it uses tabular figures and, if it is still
-  wider than its cell (six digits, a large font scale), it is scaled down
-  to fit. `test/presentation/screens/budget/widgets/budget_row_fit_test.dart`
-  checks this with real Roboto metrics at 360 and 412 dp.
+* App bar: search (filters categories by name), a menu (Show progress
+  bars, i.e. the view mode; Manage categories (`/budget/categories`); save
+  as template, apply template; copy from previous month, automatic fill,
+  reset budget) and Settings. While the search is open, the system back
+  button closes it and clears the filter; the next back leaves the screen.
+* **Row layout.** A category is one line, 56 dp (YNAB-like density: a
+  392 dp phone shows at least seven rows under To Be Budgeted):
+  `[icon] [name, a 2 dp progress bar under it] [Budgeted] [Available pill]`.
+  The columns are shared by the column header (BUDGETED / AVAILABLE), the
+  group headers, the rows and the totals footer (`BudgetColumns`): each
+  amount column is as wide as a five-digit amount in the user's currency
+  format at the current text size, so amounts line up (tabular figures);
+  a wider amount is scaled down to fit, never ellipsised. The name gets
+  the rest and ends in an ellipsis when it is longer (the full name is in
+  the row's sheet and read by screen readers). When less than 72 dp would
+  be left for the name (a narrow phone at a large text size), the name
+  gets its own line above the amounts. Activity is not a column on a
+  phone; from 560 dp of row content (tablets, landscape) it is shown
+  between Budgeted and Available. The footer shows the month's total
+  activity under "Total" on a phone.
+  `test/presentation/screens/budget/widgets/budget_row_fit_test.dart`
+  checks this with real Inter metrics at 360, 392 and 412 dp and at text
+  scale 1.3.
+* **Colours** carry state only: Budgeted is in the text colour (grey when
+  0); the Available pill is green on a faint green fill when positive,
+  neutral when 0, and coloured for overspending (below). The progress bar
+  under the name is green, or red/orange when overspent.
 * Rows are keyed by category id, and a sheet or dialog opened from a row
   keeps the category, the month and the services it needs from the moment
   it opened. A sync that adds, hides or deletes a category while the
@@ -47,7 +70,8 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
 * **Credit Card Payments** comes first: one row per budget credit card
   (its payment category, see BUDGETING_RULES.md, "Credit cards"). Under
   the name the row says what is still missing to pay the card in full
-  ("Still missing: 30,00 €", warning colour) or "Card balance covered";
+  ("Still missing: 30,00 €", warning colour; it may wrap to a second line
+  on a narrow phone) or "Card balance covered";
   the ⓘ in the group header explains the group (`HelpTopic.cardPayments`).
   Its Activity is the spending moved in minus refunds moved back and
   payments (`calculateBatchCategoryPerformance`).
@@ -59,14 +83,15 @@ computed see [ALGORITHMS.md](ALGORITHMS.md).
 
 View modes (`BudgetViewMode`):
 
-* **standard**: Budgeted, Activity and Available columns.
+* **standard**: Budgeted and Available columns (plus Activity on a
+  tablet).
 * **comparison**: a "spent of budgeted" progress bar per category. "Spent"
   is net spending, `max(0, -activity)`: a category whose refunds exceed its
   spending shows 0, not the refund as overspending.
 
 ## Assigning money to a category
 
-1. In standard mode, tap the Budgeted cell. A calculator bottom sheet
+1. In standard mode, tap the Budgeted amount. A calculator bottom sheet
    (`BudgetCalculator`) opens with the current value; it accepts an amount
    or an arithmetic expression.
 2. OK parses the input before the sheet closes. An unfinished or
@@ -81,7 +106,11 @@ View modes (`BudgetViewMode`):
    Undo. If the undo fails (the category was deleted meanwhile), the
    generic error snackbar is shown.
 
-## Quick actions (long-press a category row)
+## The row's sheet (tap or long-press a category row)
+
+The sheet starts with the category's full name and its activity this
+month (tap: the category's transactions, see "Viewing activity"), then the
+quick actions:
 
 * **Budget previous month**: auto-assign `lastMonthBudgeted`.
 * **Budget last month's spending**: auto-assign `lastMonthSpent` (what the
@@ -124,7 +153,8 @@ entered amount is added to the category's current budget (with undo).
 
 ## Viewing activity
 
-Tap the Activity cell. A filtered transaction list
+Tap a category row and then its activity at the top of the sheet (on a
+tablet, also the Activity cell). A filtered transaction list
 (`filtered-transactions` route) opens with the category and the selected
 month as a fixed filter; it does not change the Transactions tab's own
 filter.

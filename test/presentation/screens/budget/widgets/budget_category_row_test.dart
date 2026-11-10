@@ -57,8 +57,13 @@ void main() {
 
     await pumpRow(tester, viewModel);
 
+    final context = tester.element(find.byType(BudgetCategoryRow));
+    final colors = AppSemanticColors.of(context);
     final containerFinder = bubbleWithColor(
-      AppColors.success.withValues(alpha: 0.1),
+      AppSemanticColors.tonal(
+        colors.success,
+        Theme.of(context).colorScheme.surface,
+      ),
     );
     expect(containerFinder, findsOneWidget);
 
@@ -69,7 +74,12 @@ void main() {
     expect(availableTextFinder, findsOneWidget);
 
     final text = tester.widget<Text>(availableTextFinder);
-    expect(text.style?.color, Colors.green.shade800);
+    expect(text.style?.color, colors.success);
+    // The budgeted amount is plain text in the text colour, not a box.
+    expect(
+      tester.widget<Text>(find.text('\$100.00')).style?.color,
+      Theme.of(context).colorScheme.onSurface,
+    );
   });
 
   testWidgets('BudgetCategoryRow displays negative available amount in red', (
@@ -85,8 +95,13 @@ void main() {
 
     await pumpRow(tester, viewModel);
 
+    final context = tester.element(find.byType(BudgetCategoryRow));
+    final colors = AppSemanticColors.of(context);
     final containerFinder = bubbleWithColor(
-      AppColors.expense.withValues(alpha: 0.1),
+      AppSemanticColors.tonal(
+        colors.error,
+        Theme.of(context).colorScheme.surface,
+      ),
     );
     expect(containerFinder, findsOneWidget);
 
@@ -97,7 +112,7 @@ void main() {
     expect(availableTextFinder, findsOneWidget);
 
     final text = tester.widget<Text>(availableTextFinder);
-    expect(text.style?.color, Colors.red.shade800);
+    expect(text.style?.color, colors.error);
   });
 
   testWidgets('BudgetCategoryRow displays zero available amount in grey', (
@@ -117,9 +132,7 @@ void main() {
 
     final context = tester.element(find.byType(BudgetCategoryRow));
     final scheme = Theme.of(context).colorScheme;
-    final containerFinder = bubbleWithColor(
-      scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-    );
+    final containerFinder = bubbleWithColor(scheme.surfaceContainerHigh);
     expect(containerFinder, findsOneWidget);
 
     final availableTextFinder = find.descendant(

@@ -218,10 +218,7 @@ class _NewMonthCardState extends ConsumerState<NewMonthCard> {
           scheme.primary.withValues(alpha: 0.08),
           scheme.surfaceContainerLow,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.primary.withValues(alpha: 0.25)),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 4),
           child: Column(
@@ -329,10 +326,7 @@ extension on _NewMonthCardState {
           scheme.primary.withValues(alpha: 0.08),
           scheme.surfaceContainerLow,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.primary.withValues(alpha: 0.25)),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 4),
           child: Column(
@@ -432,10 +426,7 @@ class AutoFillNoteCard extends ConsumerWidget {
       child: Card(
         key: const Key('budget.autoFillNote'),
         color: scheme.surfaceContainerLow,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 4),
           child: Column(

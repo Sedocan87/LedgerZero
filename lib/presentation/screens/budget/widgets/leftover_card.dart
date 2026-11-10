@@ -145,10 +145,7 @@ class _LeftoverCardState extends ConsumerState<LeftoverCard> {
           scheme.primary.withValues(alpha: 0.08),
           scheme.surfaceContainerLow,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.primary.withValues(alpha: 0.25)),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
           child: Column(

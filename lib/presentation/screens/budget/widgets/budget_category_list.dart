@@ -7,8 +7,11 @@ import 'package:ledger_zero/core/constants/dimensions.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/budget_provider.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_category_row.dart';
+import 'package:ledger_zero/presentation/screens/budget/widgets/budget_columns.dart';
 import 'package:ledger_zero/presentation/screens/budget/widgets/budget_group_row.dart';
+import 'package:ledger_zero/presentation/widgets/common/amount_text.dart';
 import 'package:ledger_zero/presentation/widgets/common/empty_state.dart';
 import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
@@ -93,26 +96,21 @@ class BudgetCategoryList extends ConsumerWidget {
                     prefsKey: savingsTransferHintKey,
                     text: AppLocalizations.of(context)!.hintSavingsTransfer,
                     topic: HelpTopic.saving,
-                    margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                   ),
               ];
               for (var i = 0; i < groupVM.categories.length; i++) {
-                if (i == 0) {
+                if (i > 0) {
+                  // Inset under the name, like a list.
                   categoryWidgets.add(
                     Divider(
                       height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: scheme.outlineVariant.withValues(alpha: 0.4),
-                    ),
-                  );
-                } else {
-                  categoryWidgets.add(
-                    Divider(
-                      height: 1,
-                      indent: 52,
-                      endIndent: 16,
-                      color: scheme.outlineVariant.withValues(alpha: 0.3),
+                      indent:
+                          AppSpacing.md +
+                          BudgetColumns.iconSize +
+                          BudgetColumns.iconGap,
+                      endIndent: AppSpacing.md,
+                      color: scheme.outlineVariant.withValues(alpha: 0.35),
                     ),
                   );
                 }
@@ -126,45 +124,61 @@ class BudgetCategoryList extends ConsumerWidget {
                   ),
                 );
               }
+              final groupAvailable = groupVM.categories.fold<int>(
+                0,
+                (sum, c) => sum + c.available,
+              );
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 6.0,
-                ),
-                child: Card(
-                  clipBehavior: Clip.antiAlias,
-                  color: scheme.surfaceContainerLow,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    side: BorderSide(
-                      color: scheme.outlineVariant.withValues(alpha: 0.45),
+              // A plain section: a hairline above every group but the
+              // first, a header row and the rows; no card, no outline.
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (index > 1)
+                    Divider(
+                      height: 9,
+                      thickness: 1,
+                      indent: AppSpacing.md,
+                      endIndent: AppSpacing.md,
+                      color: scheme.outlineVariant.withValues(alpha: 0.6),
+                    ),
+                  FocusTraversalGroup(
+                    child: ListTileTheme.merge(
+                      minLeadingWidth: 24,
+                      horizontalTitleGap: 6,
+                      child: ExpansionTile(
+                        key: PageStorageKey('group_${groupVM.group.id}'),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: BudgetGroupRow(
+                          group: groupVM.group,
+                          available: groupAvailable,
+                          title: groupVM.isHiddenGroup
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.hiddenCategoriesGroup
+                              : null,
+                        ),
+                        // Hidden categories with money stay reachable,
+                        // folded.
+                        initiallyExpanded: !groupVM.isHiddenGroup,
+                        tilePadding: const EdgeInsets.only(
+                          left: AppSpacing.sm,
+                          right: AppSpacing.md,
+                        ),
+                        minTileHeight: 44,
+                        visualDensity: VisualDensity.compact,
+                        iconColor: scheme.onSurfaceVariant,
+                        collapsedIconColor: scheme.onSurfaceVariant,
+                        textColor: scheme.onSurface,
+                        collapsedTextColor: scheme.onSurface,
+                        childrenPadding: EdgeInsets.zero,
+                        shape: const Border(),
+                        collapsedShape: const Border(),
+                        children: categoryWidgets,
+                      ),
                     ),
                   ),
-                  child: FocusTraversalGroup(
-                    child: ExpansionTile(
-                      key: PageStorageKey('group_${groupVM.group.id}'),
-                      title: BudgetGroupRow(
-                        group: groupVM.group,
-                        title: groupVM.isHiddenGroup
-                            ? AppLocalizations.of(
-                                context,
-                              )!.hiddenCategoriesGroup
-                            : null,
-                      ),
-                      // Hidden categories with money stay reachable, folded.
-                      initiallyExpanded: !groupVM.isHiddenGroup,
-                      tilePadding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 2.0,
-                      ),
-                      childrenPadding: const EdgeInsets.only(bottom: 4.0),
-                      shape: const Border(),
-                      collapsedShape: const Border(),
-                      children: categoryWidgets,
-                    ),
-                  ),
-                ),
+                ],
               );
             },
             childCount: groups.length + 2, // Header + Groups + Footer
@@ -185,63 +199,87 @@ class BudgetCategoryList extends ConsumerWidget {
   }
 }
 
-class BudgetListHeader extends StatelessWidget {
+/// The column labels above the first group (Budgeted, Available; Activity
+/// too on a tablet), right-aligned over the rows' amounts.
+class BudgetListHeader extends ConsumerWidget {
   const BudgetListHeader({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fmt = ref.watch(appFormatterProvider);
     final scheme = Theme.of(context).colorScheme;
     final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
       color: scheme.onSurfaceVariant,
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
     );
 
-    Widget label(String text, String tooltip, {bool right = true}) => Tooltip(
-      message: tooltip,
-      child: Text(
-        text.toUpperCase(),
-        textAlign: right ? TextAlign.right : TextAlign.start,
-        style: labelStyle,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
+    Widget label(String text, String tooltip, double width, double inset) =>
+        Flexible(
+          child: SizedBox(
+            width: width,
+            child: Tooltip(
+              message: tooltip,
+              child: Padding(
+                padding: EdgeInsets.only(right: inset),
+                child: Text(
+                  text.toUpperCase(),
+                  textAlign: TextAlign.right,
+                  style: labelStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
+        );
     final l10n = AppLocalizations.of(context)!;
-    final category = label(l10n.category, l10n.categoryTooltip, right: false);
-    final budgeted = label(l10n.budgeted, l10n.budgetedTooltip);
-    final activity = label(l10n.activity, l10n.activityTooltip);
-    final available = label(l10n.available, l10n.availableTooltip);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32.0, 6.0, 32.0, 4.0),
-      // Same columns as BudgetCategoryRow: on a phone the three amounts in
-      // equal columns (the name has its own line there), else 3:2:2:2.
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        0,
+      ),
       child: LayoutBuilder(
-        builder: (context, constraints) =>
-            budgetRowIsCompact(constraints.maxWidth)
-            ? Row(
-                children: [
-                  Expanded(child: budgeted),
-                  const SizedBox(width: 4),
-                  Expanded(child: activity),
-                  Expanded(child: available),
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(flex: 3, child: category),
-                  Expanded(flex: 2, child: budgeted),
-                  Expanded(flex: 2, child: activity),
-                  Expanded(flex: 2, child: available),
-                ],
+        builder: (context, constraints) {
+          final columns = BudgetColumns.of(context, fmt, constraints.maxWidth);
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              label(
+                l10n.budgeted,
+                l10n.budgetedTooltip,
+                columns.budgeted,
+                BudgetColumns.cellPadding,
               ),
+              const SizedBox(width: BudgetColumns.gap),
+              if (columns.activity case final width?) ...[
+                label(
+                  l10n.activity,
+                  l10n.activityTooltip,
+                  width,
+                  BudgetColumns.cellPadding,
+                ),
+                const SizedBox(width: BudgetColumns.gap),
+              ],
+              label(
+                l10n.available,
+                l10n.availableTooltip,
+                columns.available,
+                BudgetColumns.pillPadding,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-/// Totals row of the budget list. Amounts are minor units.
+/// Totals row of the budget list, in the rows' columns. Amounts are minor
+/// units.
 class BudgetSummaryFooter extends ConsumerWidget {
   final int totalBudgeted;
   final int totalActivity;
@@ -257,99 +295,144 @@ class BudgetSummaryFooter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fmt = ref.watch(appFormatterProvider);
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final colors = AppSemanticColors.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    // [nameOnOwnLine]: the amounts are under the title and may shrink.
+    Widget amount(
+      BudgetColumns columns,
+      int value,
+      AmountContext amountContext,
+      double width,
+      double inset, {
+      Color? color,
+      TextStyle? style,
+    }) {
+      final cell = SizedBox(
+        width: width,
+        child: Padding(
+          padding: EdgeInsets.only(right: inset),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: AmountText(
+              value,
+              amountContext: amountContext,
+              maxLines: 1,
+              style: (style ?? BudgetColumns.amountStyle(theme)).copyWith(
+                fontWeight: FontWeight.w700,
+                color: color ?? scheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      );
+      return columns.nameOnOwnLine ? Flexible(child: cell) : cell;
+    }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-      child: Card(
-        color: scheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
-          child: LayoutBuilder(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.md,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Divider(
+            height: 9,
+            color: scheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+          LayoutBuilder(
             builder: (context, constraints) {
-              final title = Row(
+              final columns = BudgetColumns.of(
+                context,
+                fmt,
+                constraints.maxWidth,
+              );
+              final title = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.functions_rounded,
-                    size: 18,
-                    color: scheme.primary,
+                  Text(
+                    l10n.total,
+                    style: theme.textTheme.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context)!.total.toUpperCase(),
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3,
+                  // On a phone the month's activity is not a column.
+                  if (columns.activity == null)
+                    Text(
+                      l10n.labelValue(
+                        l10n.activity,
+                        fmt.formatMoney(totalActivity),
+                      ),
+                      style: theme.textTheme.bodySmall?.tabular.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                ],
+              );
+              final amounts = [
+                amount(
+                  columns,
+                  totalBudgeted,
+                  AmountContext.budgeted,
+                  columns.budgeted,
+                  BudgetColumns.cellPadding,
+                ),
+                const SizedBox(width: BudgetColumns.gap),
+                if (columns.activity case final width?) ...[
+                  amount(
+                    columns,
+                    totalActivity,
+                    AmountContext.activity,
+                    width,
+                    BudgetColumns.cellPadding,
+                    color: scheme.onSurfaceVariant,
                   ),
+                  const SizedBox(width: BudgetColumns.gap),
                 ],
-              );
-              Widget amount(int value, FontWeight weight, Color? color) =>
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      fmt.formatMoney(value),
-                      textAlign: TextAlign.right,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: weight,
-                        color: color,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                amount(
+                  columns,
+                  totalAvailable,
+                  AmountContext.available,
+                  columns.available,
+                  BudgetColumns.pillPadding,
+                  style: BudgetColumns.pillStyle(theme),
+                  color: totalAvailable < 0 ? colors.error : null,
+                ),
+              ];
+              return ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: columns.nameOnOwnLine
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          title,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: amounts,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(child: title),
+                          const SizedBox(width: BudgetColumns.gap),
+                          ...amounts,
+                        ],
                       ),
-                    ),
-                  );
-              final budgeted = amount(totalBudgeted, FontWeight.w700, null);
-              final activity = amount(
-                totalActivity,
-                FontWeight.w600,
-                scheme.onSurfaceVariant,
-              );
-              final available = amount(
-                totalAvailable,
-                FontWeight.w800,
-                totalAvailable < 0 ? scheme.error : scheme.primary,
-              );
-              // Same columns as BudgetCategoryRow.
-              if (budgetRowIsCompact(constraints.maxWidth)) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    title,
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(child: budgeted),
-                        const SizedBox(width: 4),
-                        Expanded(child: activity),
-                        const SizedBox(width: 4),
-                        Expanded(child: available),
-                      ],
-                    ),
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(flex: 3, child: title),
-                  Expanded(flex: 2, child: budgeted),
-                  const SizedBox(width: 4),
-                  Expanded(flex: 2, child: activity),
-                  const SizedBox(width: 4),
-                  Expanded(flex: 2, child: available),
-                ],
               );
             },
           ),
-        ),
+        ],
       ),
     );
   }

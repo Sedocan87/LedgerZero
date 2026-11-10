@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
@@ -43,7 +44,14 @@ void main() {
     expect(tbbTextFinder, findsOneWidget);
 
     final text = tester.widget<Text>(tbbTextFinder);
-    expect(text.style?.color, Colors.green.shade700);
+    final context = tester.element(find.byType(ToBeBudgetedBanner));
+    expect(text.style?.color, AppSemanticColors.of(context).success);
+    // The state is also said in words, not by colour alone.
+    expect(find.text('Ready to assign'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(RegExp(r'\$100\.00 to be budgeted')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -62,6 +70,11 @@ void main() {
       final expectedColor = Theme.of(context).colorScheme.error;
 
       expect(text.style?.color, expectedColor);
+      expect(find.text('Overassigned'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp(r'\$50\.00 overbudgeted')),
+        findsOneWidget,
+      );
     },
   );
 
@@ -73,6 +86,7 @@ void main() {
 
     expect(find.text('\$0.00'), findsOneWidget);
     expect(find.text('-\$0.00'), findsNothing);
+    expect(find.text('All assigned'), findsOneWidget);
   });
   group('income line', () {
     testWidgets('invites to add the salary while none is set up', (

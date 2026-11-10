@@ -123,7 +123,10 @@ void main() {
       findsOneWidget,
     );
     final amount = tester.widget<Text>(find.text('-\$30.00'));
-    expect(amount.style?.color, AppColors.warning);
+    final colors = AppSemanticColors.of(
+      tester.element(find.byType(BudgetCategoryRow).first),
+    );
+    expect(amount.style?.color, colors.warning);
   });
 
   testWidgets('cash overspending keeps the error colour', (tester) async {
@@ -148,7 +151,9 @@ void main() {
     expect(find.byKey(Key('budget.creditOverspent.$dining')), findsNothing);
     expect(
       tester.widget<Text>(find.text('-\$10.00').last).style?.color,
-      AppColors.expense,
+      AppSemanticColors.of(
+        tester.element(find.byType(BudgetCategoryRow)),
+      ).error,
     );
   });
 

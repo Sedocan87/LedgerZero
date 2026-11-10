@@ -5322,4 +5322,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String categoryPaymentLocked(String card) {
     return 'Dies ist die Zahlungskategorie der Karte $card. Sie trägt den Namen der Karte, bleibt in Kreditkartenzahlungen und kann nicht gelöscht werden, solange die Karte offen und im Budget ist.';
   }
+
+  @override
+  String get tbbStatusReady => 'Bereit zum Zuweisen';
+
+  @override
+  String get tbbStatusOverassigned => 'Zu viel zugewiesen';
+
+  @override
+  String get tbbStatusAllAssigned => 'Alles zugewiesen';
+
+  @override
+  String get budgetViewProgress => 'Fortschrittsbalken anzeigen';
 }
