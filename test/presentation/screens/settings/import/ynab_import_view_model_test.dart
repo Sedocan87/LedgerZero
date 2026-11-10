@@ -120,4 +120,50 @@ void main() {
     final accounts = await t.accounts.getAllAccounts();
     expect(accounts.singleWhere((a) => a.name == 'House').onBudget, isTrue);
   });
+  test('a budget file without its columns and an unreadable amount are '
+      'shown as errors; nothing is parsed (F3, F9)', () async {
+    final t = TestDatabase();
+    addTearDown(t.close);
+    final vm = _viewModel(t, InMemoryYnabImportHistory());
+
+    // The register picked twice.
+    vm.selectFiles(
+      budget: MemoryPlatformFile(
+        name: 'Register.csv',
+        bytes: _register.codeUnits,
+      ),
+    );
+    await vm.validateAndParse();
+    expect(vm.state.error, YnabImportError.missingBudgetColumns);
+    expect(vm.state.errorDetail, 'Month, Budgeted / Assigned');
+    expect(vm.state.currentStep, YnabImportStep.selectFiles);
+    expect(vm.state.parsedData, isNull);
+
+    vm.selectFiles(
+      budget: MemoryPlatformFile(
+        name: 'Plan.csv',
+        bytes:
+            '"Month","Category Group","Category","Assigned"\n'
+                    '"May 2025","Everyday","Food","abc"\n'
+                .codeUnits,
+      ),
+    );
+    await vm.validateAndParse();
+    expect(vm.state.error, YnabImportError.invalidAmount);
+    expect(vm.state.errorDetail, 'abc');
+    expect(vm.state.parsedData, isNull);
+
+    vm.selectFiles(
+      budget: MemoryPlatformFile(
+        name: 'Plan.csv',
+        bytes:
+            '"Month","Category Group","Category","Assigned"\n'
+                    '"May 2025","Everyday","Food","\$50.00"\n'
+                .codeUnits,
+      ),
+    );
+    await vm.validateAndParse();
+    expect(vm.state.error, isNull);
+    expect(vm.state.parsedData!.budgetEntries.single.budgeted, 5000);
+  });
 }

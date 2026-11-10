@@ -4965,4 +4965,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String ynabImportErrorInvalidAmount(String value) {
     return 'Der Betrag „$value“ im Export konnte nicht gelesen werden. Es wurde nichts importiert. Bitte exportieren Sie erneut aus YNAB, ohne die Dateien zu bearbeiten.';
   }
+
+  @override
+  String ynabImportErrorMissingBudgetColumns(String columns) {
+    return 'In der Budget-Datei fehlen erforderliche Spalten: $columns. Es wurde nichts importiert. Wählen Sie die Budget- (oder Plan-)Datei eines unveränderten YNAB-Exports.';
+  }
 }

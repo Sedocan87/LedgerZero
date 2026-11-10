@@ -265,6 +265,11 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
           error: YnabImportError.invalidDates,
           errorDetail: e.detail,
         ),
+        YnabImportFailure.missingBudgetColumns => state.copyWith(
+          isLoading: false,
+          error: YnabImportError.missingBudgetColumns,
+          errorDetail: e.detail,
+        ),
         YnabImportFailure.invalidAmount => state.copyWith(
           isLoading: false,
           error: YnabImportError.invalidAmount,

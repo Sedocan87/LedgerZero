@@ -3951,5 +3951,7 @@
   "csvCustomDateFormatInvalid": "This pattern cannot be used. It needs day (d), month (M) and year (y), separated by punctuation or spaces.",
   "@csvCustomDateFormatInvalid": {"description": "Error under the custom date format field"},
   "ynabImportErrorInvalidAmount": "The amount “{value}” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.",
-  "@ynabImportErrorInvalidAmount": {"description": "YNAB import error: an amount cell of the register or budget file is not a number", "placeholders": {"value": {"type": "String"}}}
+  "@ynabImportErrorInvalidAmount": {"description": "YNAB import error: an amount cell of the register or budget file is not a number", "placeholders": {"value": {"type": "String"}}},
+  "ynabImportErrorMissingBudgetColumns": "The budget file is missing required columns: {columns}. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.",
+  "@ynabImportErrorMissingBudgetColumns": {"description": "YNAB import error: the budget/plan CSV lacks columns (listed)", "placeholders": {"columns": {"type": "String"}}}
 }

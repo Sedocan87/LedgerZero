@@ -25,6 +25,10 @@ enum YnabImportFailure {
   /// [YnabImportException.detail] is the first value that does not parse.
   invalidDates,
 
+  /// The nYNAB budget file (Budget.csv, Plan.csv) lacks required columns
+  /// (listed in [YnabImportException.detail]).
+  missingBudgetColumns,
+
   /// An amount cell of the register or budget file is not a number;
   /// [YnabImportException.detail] is that cell.
   invalidAmount,
@@ -135,7 +139,15 @@ class YnabImportService {
   /// Parses nYNAB CSV export files.
   ///
   /// [registerCsvContent]: Content of the 'Register.csv' file.
-  /// [budgetCsvContent]: Content of the 'Budget.csv' file.
+  /// [budgetCsvContent]: Content of the budget file ('Budget.csv', in
+  /// newer exports 'Plan.csv'). Its amount column is `Budgeted` or
+  /// `Assigned`; a non-empty file without the required columns stops the
+  /// import ([YnabImportFailure.missingBudgetColumns]) instead of being
+  /// skipped, which would leave every category at 0 budgeted.
+  ///
+  /// Both files may be comma- or tab-separated (YNAB writes tabs for
+  /// budgets whose number format has a decimal comma); header names are
+  /// matched ignoring case and surrounding spaces.
   /// [dateFormat]: a format of [registerDateFormats] to read the register
   /// dates with instead of the detected one (the user's choice when the
   /// file is ambiguous); it must still fit every date.
@@ -164,41 +176,23 @@ class YnabImportService {
       ),
     );
 
-    String? detectEol(String content) {
-      if (content.contains('\r\n')) {
-        return '\r\n';
-      }
-      if (content.contains('\n')) {
-        return '\n';
-      }
-      if (content.contains('\r')) {
-        return '\r';
-      }
-      return null;
-    }
-
     // 1. Parse Register CSV
-    final regEol = detectEol(registerCsvContent);
-    final registerRows = const CsvToListConverter().convert(
-      registerCsvContent,
-      shouldParseNumbers: false,
-      eol: regEol,
-    );
+    final registerRows = _csvRows(registerCsvContent);
 
     if (registerRows.isNotEmpty) {
       final headers = registerRows.first.map((e) => e.toString()).toList();
       final rows = registerRows.skip(1).toList();
 
       // Index headers
-      final accIdx = headers.indexOf('Account');
-      final dateIdx = headers.indexOf('Date');
-      final payeeIdx = headers.indexOf('Payee');
-      final groupIdx = headers.indexOf('Category Group');
-      final catIdx = headers.indexOf('Category');
-      final memoIdx = headers.indexOf('Memo');
-      final outflowIdx = headers.indexOf('Outflow');
-      final inflowIdx = headers.indexOf('Inflow');
-      final clearedIdx = headers.indexOf('Cleared');
+      final accIdx = _column(headers, 'Account');
+      final dateIdx = _column(headers, 'Date');
+      final payeeIdx = _column(headers, 'Payee');
+      final groupIdx = _column(headers, 'Category Group');
+      final catIdx = _column(headers, 'Category');
+      final memoIdx = _column(headers, 'Memo');
+      final outflowIdx = _column(headers, 'Outflow');
+      final inflowIdx = _column(headers, 'Inflow');
+      final clearedIdx = _column(headers, 'Cleared');
 
       final missingColumns = <String>[];
       if (accIdx == -1) {
@@ -338,67 +332,84 @@ class YnabImportService {
 
     // 2. Parse Budget CSV
     var categoriesOnlyInBudget = 0;
-    final budgetEol = detectEol(budgetCsvContent);
-    final budgetRows = const CsvToListConverter().convert(
-      budgetCsvContent,
-      shouldParseNumbers: false,
-      eol: budgetEol,
-    );
+    final budgetRows = _csvRows(budgetCsvContent);
 
     if (budgetRows.isNotEmpty) {
       final headers = budgetRows.first.map((e) => e.toString()).toList();
       final rows = budgetRows.skip(1).toList();
 
-      final monthIdx = headers.indexOf('Month');
-      final groupIdx = headers.indexOf('Category Group');
-      final catIdx = headers.indexOf('Category');
-      final budgetedIdx = headers.indexOf('Budgeted');
+      final monthIdx = _column(headers, 'Month');
+      final groupIdx = _column(headers, 'Category Group');
+      final catIdx = _column(headers, 'Category');
+      // "Group: Category" in one cell, for a file without the two columns.
+      final combinedIdx = _column(headers, 'Category Group/Category');
+      // YNAB renamed "Budgeted" to "Assigned" in the app; either name.
+      final budgetedIdx = [
+        for (final name in budgetAmountColumns) _column(headers, name),
+      ].firstWhere((i) => i != -1, orElse: () => -1);
+      final hasCategory = (groupIdx != -1 && catIdx != -1) || combinedIdx != -1;
 
-      if (monthIdx != -1 &&
-          groupIdx != -1 &&
-          catIdx != -1 &&
-          budgetedIdx != -1) {
-        for (final row in rows) {
-          if (row.length < headers.length) {
-            continue;
+      final missing = [
+        if (monthIdx == -1) 'Month',
+        if (!hasCategory && groupIdx == -1) 'Category Group',
+        if (!hasCategory && catIdx == -1) 'Category',
+        if (budgetedIdx == -1) budgetAmountColumns.join(' / '),
+      ];
+      if (missing.isNotEmpty) {
+        throw YnabImportException(
+          YnabImportFailure.missingBudgetColumns,
+          missing.join(', '),
+        );
+      }
+
+      for (final row in rows) {
+        if (row.length < headers.length) {
+          continue;
+        }
+
+        final month = parseBudgetMonth(row[monthIdx].toString());
+        if (month == null) {
+          Logger.warning('YNAB Budget.csv: unreadable month, row skipped');
+          continue;
+        }
+
+        var group = groupIdx == -1 ? '' : row[groupIdx].toString();
+        var category = catIdx == -1 ? '' : row[catIdx].toString();
+        if (groupIdx == -1 || catIdx == -1) {
+          final combined = row[combinedIdx].toString();
+          final colon = combined.indexOf(':');
+          if (colon != -1) {
+            group = combined.substring(0, colon).trim();
+            category = combined.substring(colon + 1).trim();
           }
+        }
 
-          final month = parseBudgetMonth(row[monthIdx].toString());
-          if (month == null) {
-            Logger.warning('YNAB Budget.csv: unreadable month, row skipped');
-            continue;
-          }
+        final budgeted = _parseCsvAmount(row[budgetedIdx], amountParser);
 
-          final group = row[groupIdx].toString();
-          final category = row[catIdx].toString();
-
-          final budgeted = _parseCsvAmount(row[budgetedIdx], amountParser);
-
-          // A category budgeted but never used in the register (a sinking
-          // fund, a credit card payment category) still exists.
-          if (group.isNotEmpty && category.isNotEmpty) {
-            final key = '$group|$category';
-            if (!categories.any((c) => c.id == key)) {
-              if (!categoryGroups.any((g) => g.name == group)) {
-                categoryGroups.add(YnabCategoryGroup(id: group, name: group));
-              }
-              categories.add(
-                YnabCategory(id: key, groupId: group, name: category),
-              );
-              categoriesOnlyInBudget++;
+        // A category budgeted but never used in the register (a sinking
+        // fund, a credit card payment category) still exists.
+        if (group.isNotEmpty && category.isNotEmpty) {
+          final key = '$group|$category';
+          if (!categories.any((c) => c.id == key)) {
+            if (!categoryGroups.any((g) => g.name == group)) {
+              categoryGroups.add(YnabCategoryGroup(id: group, name: group));
             }
-          }
-
-          if (budgeted != 0) {
-            budgetEntries.add(
-              YnabBudgetEntry(
-                categoryName: category,
-                categoryGroupName: group,
-                month: month,
-                budgeted: budgeted,
-              ),
+            categories.add(
+              YnabCategory(id: key, groupId: group, name: category),
             );
+            categoriesOnlyInBudget++;
           }
+        }
+
+        if (budgeted != 0) {
+          budgetEntries.add(
+            YnabBudgetEntry(
+              categoryName: category,
+              categoryGroupName: group,
+              month: month,
+              budgeted: budgeted,
+            ),
+          );
         }
       }
     }
@@ -422,28 +433,64 @@ class YnabImportService {
   static String fingerprintOf(String content) =>
       sha256.convert(utf8.encode(content)).toString();
 
-  /// The amount cells of both files (Outflow, Inflow, Budgeted), for the
-  /// decimal separator inference.
+  /// The names the budget file's amount column goes by: `Budgeted` in
+  /// Budget.csv, `Assigned` since YNAB renamed it (Plan.csv).
+  static const budgetAmountColumns = ['Budgeted', 'Assigned'];
+
+  /// The rows of a YNAB CSV file (header first); empty for an empty file.
+  /// The delimiter is read from the header line: comma, or tab for the
+  /// exports of budgets with a decimal comma.
+  static List<List<dynamic>> _csvRows(String content) {
+    var text = content;
+    if (text.startsWith('\u{FEFF}')) {
+      text = text.substring(1);
+    }
+    if (text.trim().isEmpty) {
+      return const [];
+    }
+    final String? eol;
+    if (text.contains('\r\n')) {
+      eol = '\r\n';
+    } else if (text.contains('\n')) {
+      eol = '\n';
+    } else if (text.contains('\r')) {
+      eol = '\r';
+    } else {
+      eol = null;
+    }
+    final headerEnd = eol == null ? -1 : text.indexOf(eol);
+    final header = headerEnd == -1 ? text : text.substring(0, headerEnd);
+    final tabs = '\t'.allMatches(header).length;
+    return const CsvToListConverter().convert(
+      text,
+      fieldDelimiter: tabs > ','.allMatches(header).length ? '\t' : ',',
+      shouldParseNumbers: false,
+      eol: eol,
+    );
+  }
+
+  /// The index of the column called [name] (case and surrounding spaces
+  /// ignored), or -1.
+  static int _column(List<String> headers, String name) {
+    final wanted = name.toLowerCase();
+    return headers.indexWhere((h) => h.trim().toLowerCase() == wanted);
+  }
+
+  /// The amount cells of both files (Outflow, Inflow, Budgeted/Assigned),
+  /// for the decimal separator inference.
   static Iterable<String> _amountCells(String register, String budget) sync* {
     for (final (content, columns) in [
       (register, ['Outflow', 'Inflow']),
-      (budget, ['Budgeted']),
+      (budget, budgetAmountColumns),
     ]) {
-      if (content.trim().isEmpty) {
-        continue;
-      }
-      final rows = const CsvToListConverter().convert(
-        content,
-        shouldParseNumbers: false,
-        eol: content.contains('\r\n') ? '\r\n' : '\n',
-      );
+      final rows = _csvRows(content);
       if (rows.isEmpty) {
         continue;
       }
       final headers = rows.first.map((e) => e.toString()).toList();
       final indices = [
         for (final c in columns)
-          if (headers.contains(c)) headers.indexOf(c),
+          if (_column(headers, c) != -1) _column(headers, c),
       ];
       for (final row in rows.skip(1)) {
         for (final i in indices) {

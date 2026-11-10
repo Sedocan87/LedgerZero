@@ -547,6 +547,103 @@ void main() {
     ]);
   });
 
+  group('budget file (F3)', () {
+    const register = _header;
+    const columns =
+        '"Month","Category Group/Category","Category Group","Category",';
+
+    test('the amount column may be called Assigned (Plan.csv)', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent:
+            '$columns"Assigned","Activity","Available"\n'
+            '"May 2025","Bills: Rent","Bills","Rent","\$400.00","\$0.00","\$0.00"\n',
+      );
+      expect(data.budgetEntries.single.budgeted, 40000);
+      expect(data.budgetEntries.single.categoryName, 'Rent');
+      expect(data.categoriesOnlyInBudget, 1);
+    });
+
+    test('a tab-separated export with decimal commas is read', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          '"Account"\t"Flag"\t"Date"\t"Payee"\t"Category Group/Category"\t'
+              '"Category Group"\t"Category"\t"Memo"\t"Outflow"\t"Inflow"\t'
+              '"Cleared"',
+          '"Giro"\t""\t"13.05.2025"\t"Vermieter, Hans"\t"Fix: Miete"\t"Fix"\t'
+              '"Miete"\t""\t"1.234,56€"\t"0,00€"\t"Cleared"',
+        ].join('\n'),
+        budgetCsvContent:
+            '"Month"\t"Category Group/Category"\t"Category Group"\t'
+            '"Category"\t"Assigned"\t"Activity"\t"Available"\n'
+            '"May 2025"\t"Fix: Miete"\t"Fix"\t"Miete"\t"1.300,00€"\t'
+            '"-1.234,56€"\t"65,44€"\n',
+      );
+      expect(data.transactions.single.amount, -123456);
+      expect(data.transactions.single.payeeName, 'Vermieter, Hans');
+      expect(data.transactions.single.date, DateTime.utc(2025, 5, 13));
+      expect(data.budgetEntries.single.budgeted, 130000);
+    });
+
+    test('header names are matched ignoring case and spaces; the combined '
+        'category column is enough', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent:
+            '"month"," Category Group/Category ","ASSIGNED"\n'
+            '"May 2025","Bills: Rent","\$400.00"\n',
+      );
+      expect(data.budgetEntries.single.categoryGroupName, 'Bills');
+      expect(data.budgetEntries.single.categoryName, 'Rent');
+      expect(data.budgetEntries.single.budgeted, 40000);
+    });
+
+    test('a budget file without the amount column stops the import instead '
+        'of being ignored', () async {
+      for (final (content, missing) in [
+        (
+          '$columns"Activity","Available"\n'
+              '"May 2025","Bills: Rent","Bills","Rent","\$0.00","\$0.00"\n',
+          'Budgeted / Assigned',
+        ),
+        // The register picked as the budget file.
+        (
+          [
+            _header,
+            _row('Checking', '01/05/2025', 'Shop', '', '', '', '1.00', ''),
+          ].join('\n'),
+          'Month, Budgeted / Assigned',
+        ),
+        ('"Month","Assigned"\n"May 2025","1.00"\n', 'Category Group, Category'),
+      ]) {
+        await expectLater(
+          service.parseCsvExport(
+            registerCsvContent: register,
+            budgetCsvContent: content,
+          ),
+          throwsA(
+            isA<YnabImportException>()
+                .having(
+                  (e) => e.failure,
+                  'failure',
+                  YnabImportFailure.missingBudgetColumns,
+                )
+                .having((e) => e.detail, 'detail', missing),
+          ),
+          reason: missing,
+        );
+      }
+    });
+
+    test('an empty budget file is still no error', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: register,
+        budgetCsvContent: '\n',
+      );
+      expect(data.budgetEntries, isEmpty);
+    });
+  });
+
   test(
     'YNAB4: hidden master and sub categories are kept, flagged hidden',
     () async {

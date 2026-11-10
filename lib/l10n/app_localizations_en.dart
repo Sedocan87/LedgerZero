@@ -4927,4 +4927,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String ynabImportErrorInvalidAmount(String value) {
     return 'The amount “$value” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.';
   }
+
+  @override
+  String ynabImportErrorMissingBudgetColumns(String columns) {
+    return 'The budget file is missing required columns: $columns. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.';
+  }
 }

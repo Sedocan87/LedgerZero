@@ -20,6 +20,10 @@ enum YnabImportError {
   /// [YnabImportState.errorDetail] is the first value that does not parse.
   invalidDates,
 
+  /// The budget file lacks columns; [YnabImportState.errorDetail] lists
+  /// them.
+  missingBudgetColumns,
+
   /// An amount cell is not a number; [YnabImportState.errorDetail] is it.
   invalidAmount,
   unreadableFiles,

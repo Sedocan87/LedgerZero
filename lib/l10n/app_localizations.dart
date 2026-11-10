@@ -7923,6 +7923,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The amount “{value}” in the export could not be read. Nothing was imported. Please export again from YNAB without editing the files.'**
   String ynabImportErrorInvalidAmount(String value);
+
+  /// YNAB import error: the budget/plan CSV lacks columns (listed)
+  ///
+  /// In en, this message translates to:
+  /// **'The budget file is missing required columns: {columns}. Nothing was imported. Pick the Budget (or Plan) file of an unmodified YNAB export.'**
+  String ynabImportErrorMissingBudgetColumns(String columns);
 }
 
 class _AppLocalizationsDelegate
