@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ledger_zero/core/utils/log_level.dart';
 import 'package:ledger_zero/core/utils/stack_trace_formatter.dart';
+import 'package:ledger_zero/services/error/diagnostic_environment.dart';
 import 'package:ledger_zero/services/error/log_scrubber.dart';
 import 'package:ledger_zero/data/models/log_entry.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -231,11 +232,32 @@ class LocalErrorReportingService {
     }
   }
 
-  /// The text a "Share diagnostic log" action shares: saved crash reports
-  /// and recent log entries, already scrubbed when written. Empty when
-  /// nothing is stored.
+  /// Reads what the report header says about the app and the phone.
+  /// Replaced in tests, where the platform plugins do not answer.
+  @visibleForTesting
+  static Future<DiagnosticEnvironment> Function() loadEnvironment =
+      DiagnosticEnvironment.fromPlatform;
+
+  /// The line a report carries when there is nothing stored to show.
+  static const String nothingStoredLine =
+      'No crash reports or log entries are stored.';
+
+  /// The text a "Share diagnostic log" action shares.
+  ///
+  /// It always starts with the app version and build, the Android version,
+  /// the device model, the locale and the database schema version, whether
+  /// or not crash reports are switched on: without them a log cannot be
+  /// read. Saved crash reports and the recent log entries follow (already
+  /// scrubbed when written), or [nothingStoredLine].
   Future<String> buildDiagnosticReport({int maxLogEntries = 200}) async {
     final buffer = StringBuffer();
+    buffer.writeln('DIAGNOSTIC REPORT');
+    buffer.writeln('=================');
+    buffer.writeln('Created: ${DateTime.now().toUtc().toIso8601String()}');
+    buffer.writeln((await loadEnvironment()).describe());
+    buffer.writeln();
+
+    var entries = 0;
     final directory = await _directory;
     final crashDir = Directory(path.join(directory.path, _crashDirName));
     if (await crashDir.exists()) {
@@ -245,6 +267,7 @@ class LocalErrorReportingService {
       for (final report in reports) {
         buffer.writeln(await report.readAsString());
         buffer.writeln('---');
+        entries++;
       }
     }
     final logs = await getLogs();
@@ -256,6 +279,10 @@ class LocalErrorReportingService {
       if (log.error != null) {
         buffer.writeln('  ${LogScrubber.scrub(log.error)}');
       }
+      entries++;
+    }
+    if (entries == 0) {
+      buffer.writeln(nothingStoredLine);
     }
     return buffer.toString().trim();
   }

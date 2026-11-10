@@ -86,8 +86,12 @@ void main() {
         expect(report, isNot(contains('1250')));
         expect(report, isNot(contains('owner@example.com')));
 
+        // After deleting, only the header about the app and the phone is
+        // left (the report always carries it).
         await service.deleteAll();
-        expect(await service.buildDiagnosticReport(), isEmpty);
+        final emptied = await service.buildDiagnosticReport();
+        expect(emptied, isNot(contains('CRASH REPORT')));
+        expect(emptied, endsWith(LocalErrorReportingService.nothingStoredLine));
       },
     );
   });

@@ -52,5 +52,10 @@ Crash reports are **off by default**. To help with a bug:
    will be shared; tap **Share diagnostic log** to send it, or **Delete
    diagnostic data**.
 
+The diagnostic log always starts with the app version and build, the
+Android version, the device model, the system locale and the database
+schema version, also while crash reports are off and nothing has been
+recorded. It contains no device name and no account.
+
 The logs are kept in the app's cache directory (not included in device
 backups) and are never sent automatically.
