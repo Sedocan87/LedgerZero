@@ -75,6 +75,10 @@ dependencies:
   in_app_purchase: ^3.3.1
   in_app_purchase_android: ^0.5.5
   age_range_signals: ^0.10.1
+  # Stopgap for Play's getApplicableAgeFeatures() until age_range_signals has it
+  # (see ../AGE_SIGNALS_CALIFORNIA.md).
+  play_age_features:
+    path: ../play_age_features
 dev_dependencies:
   flutter_test:
     sdk: flutter

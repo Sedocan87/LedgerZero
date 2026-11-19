@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
 
@@ -13,6 +14,7 @@ import 'package:ledger_zero/core/utils/error_tracker.dart';
 import 'package:ledger_zero/data/database/connection.dart';
 import 'package:ledger_zero/demo/demo_data.dart';
 import 'package:ledger_zero/demo/demo_mode.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/services/backup/transferred_install.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,6 +79,7 @@ Future<void> bootstrap(
       run(
         UncontrolledProviderScope(container: container, child: const MyApp()),
       );
+      _checkAgeSignalsAtLaunch(container);
       return;
     }
 
@@ -88,14 +91,15 @@ Future<void> bootstrap(
       databaseFile: databaseFile,
     );
 
-    run(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-        ],
-        child: const MyApp(),
-      ),
+    // Our own container, so the launch check and the paywall share one
+    // AgeSignalsGate (the Buy tap reuses what the launch check read).
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+      ],
     );
+    run(UncontrolledProviderScope(container: container, child: const MyApp()));
+    _checkAgeSignalsAtLaunch(container);
   } catch (e, stack) {
     // Logging may not be set up yet: debug builds report to the developer
     // log; release builds stay silent.
@@ -110,4 +114,12 @@ Future<void> bootstrap(
     // Not a black screen: say what happened and offer to try again.
     run(StartupErrorApp(onRetry: () => retry()));
   }
+}
+
+/// California AB 1043: request the age signal at launch where a law makes
+/// Play share it. After the first frame, so Play has a foregrounded activity.
+void _checkAgeSignalsAtLaunch(ProviderContainer container) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(container.read(ageSignalsGateProvider).checkAtLaunch());
+  });
 }

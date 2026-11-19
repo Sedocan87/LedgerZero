@@ -82,8 +82,10 @@ Applied from `AGE_SIGNALS_FIX.md` (age_range_signals 0.8.0+):
   account) and does not block; Family Link asks the parent and the purchase
   arrives as pending. Restore is never checked. The Pro screen and the PRO
   badges are shown to everyone.
-* Asked on the first tap on Buy in a session, never at start (Play may show
-  its age-sharing sheet), with a 6 s timeout; a timeout or an error counts as
+* Asked on the first tap on Buy in a session (Play may show its
+  age-sharing sheet), and at start only where Play reports mandatory sharing
+  (California AB 1043: `checkAtLaunch`, via the local `play_age_features`
+  plugin; see `../AGE_SIGNALS_CALIFORNIA.md`), with a 6 s timeout; a timeout or an error counts as
   `unknown` (no block) and is asked again at the next tap. The answer stays
   in memory for the session and is never stored, logged or sent (Texas
   §121.055(b)). The Data safety answer stays "no data collected".
