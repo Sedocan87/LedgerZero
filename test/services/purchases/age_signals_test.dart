@@ -67,6 +67,19 @@ void main() {
     },
   );
 
+  test('a request that never answers does not hold up later taps', () async {
+    final signals = FakeAgeSignals(AgeSignalsStatus.verified)
+      ..gate = Completer<void>();
+    final gate = AgeSignalsGate(
+      signals,
+      timeout: const Duration(milliseconds: 20),
+    );
+    expect(await gate.status(), AgeSignalsStatus.unknown);
+    signals.gate = null;
+    expect(await gate.status(), AgeSignalsStatus.verified);
+    expect(signals.calls, 2, reason: 'the next tap asks again');
+  });
+
   /// California AB 1043: ask for the signal at launch, but only where Play
   /// says a law makes it share the user's age.
   group('the launch check', () {

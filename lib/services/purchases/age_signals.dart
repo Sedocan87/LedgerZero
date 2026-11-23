@@ -72,17 +72,32 @@ final class AgeSignalsGate {
     if (_known case final known?) {
       return known;
     }
+    Future<AgeSignalsStatus>? asking;
     try {
-      final asking = _asking ??= _signals
-          .status()
-          .then((status) => _known = status)
-          .whenComplete(() => _asking = null);
+      asking = _asking ??= _ask();
       return await asking.timeout(timeout);
     } on Object catch (e) {
+      // Let go of a request that didn't answer in time, so one that never
+      // answers can't make every later tap wait: the next tap asks again.
+      if (asking != null && identical(_asking, asking)) {
+        _asking = null;
+      }
       // Not the status itself: only that there was none.
       Logger.warning('Age signals unavailable: ${e.runtimeType}');
       return AgeSignalsStatus.unknown;
     }
+  }
+
+  Future<AgeSignalsStatus> _ask() {
+    late final Future<AgeSignalsStatus> request;
+    return request = _signals
+        .status()
+        .then((status) => _known = status)
+        .whenComplete(() {
+          if (identical(_asking, request)) {
+            _asking = null;
+          }
+        });
   }
 
   /// California's Digital Age Assurance Act (AB 1043, Civil Code
