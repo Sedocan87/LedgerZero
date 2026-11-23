@@ -17,24 +17,36 @@ class CsvLiteral {
 class CsvSanitizer {
   CsvSanitizer._();
 
-  static const Set<String> _triggers = {'=', '+', '-', '@', '\t', '\r'};
+  static const Set<String> _triggers = {'=', '+', '-', '@', '\t', '\r', '\n'};
 
   static Object? cell(Object? value) {
     if (value is CsvLiteral) {
       return value.value;
     }
-    if (value is String && value.isNotEmpty && _triggers.contains(value[0])) {
-      return "'$value";
+    if (value is String && value.isNotEmpty) {
+      if (_triggers.contains(value[0])) {
+        return "'$value";
+      }
+      final trimmed = value.trimLeft();
+      if (trimmed.isNotEmpty && _triggers.contains(trimmed[0])) {
+        return "'$value";
+      }
     }
     return value;
   }
 
   /// Undoes [cell] on import: a leading `'` is removed when the next
-  /// character is one of the triggers (so `'-Fees` comes back as `-Fees`
-  /// while a name that really starts with `'` is kept).
+  /// character (or first non-whitespace character) is one of the triggers (so
+  /// `'-Fees` comes back as `-Fees` while a name that really starts with `'`
+  /// is kept).
   static String unquote(String value) {
-    if (value.length >= 2 && value[0] == "'" && _triggers.contains(value[1])) {
-      return value.substring(1);
+    if (value.length >= 2 && value[0] == "'") {
+      final rest = value.substring(1);
+      final trimmed = rest.trimLeft();
+      if (_triggers.contains(rest[0]) ||
+          (trimmed.isNotEmpty && _triggers.contains(trimmed[0]))) {
+        return rest;
+      }
     }
     return value;
   }

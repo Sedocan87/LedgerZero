@@ -75,6 +75,8 @@ class CaptureStore private constructor(context: Context) {
         private const val MAX_ENTRIES = 500
         private const val MAX_SEEN = 100
         private const val MAX_BACKLOG = 100
+        private const val MAX_TITLE_CHARS = 256
+        private const val MAX_TEXT_CHARS = 2048
 
         /**
          * Apps that post far more than payments (Google Play services
@@ -140,7 +142,7 @@ class CaptureStore private constructor(context: Context) {
         watched = null
     }
 
-    fun watchedPackages(): Set<String> {
+    fun watchedPackages(): Set<String> = synchronized(lock) {
         watched?.let { return it }
         val array = sources()
         val packages = (0 until array.length())
@@ -148,7 +150,7 @@ class CaptureStore private constructor(context: Context) {
             .filter { it.isNotEmpty() }
             .toSet()
         watched = packages
-        return packages
+        packages
     }
 
     // ---------------------------------------------------------------------
@@ -169,13 +171,15 @@ class CaptureStore private constructor(context: Context) {
         postedAt: Long,
         status: String = STATUS_PENDING,
     ): Boolean = synchronized(lock) {
+        val safeTitle = title?.take(MAX_TITLE_CHARS)
+        val safeText = text.take(MAX_TEXT_CHARS)
         if (NOISY_PACKAGES.contains(packageName) &&
-            "${title ?: ""} $text".none { it.isDigit() }
+            "${safeTitle ?: ""} $safeText".none { it.isDigit() }
         ) {
             // Without a digit there is no amount: not a payment, not kept.
             return false
         }
-        val fingerprint = sha256("$key|$title|$text")
+        val fingerprint = sha256("$key|$safeTitle|$safeText")
         val now = System.currentTimeMillis()
         val seen = try {
             JSONArray(prefs.getString(PREF_SEEN, null) ?: "[]")
@@ -194,8 +198,8 @@ class CaptureStore private constructor(context: Context) {
             .put("id", UUID.randomUUID().toString())
             .put("packageName", packageName)
             .put("appLabel", appLabel)
-            .put("title", title ?: JSONObject.NULL)
-            .put("text", text)
+            .put("title", safeTitle ?: JSONObject.NULL)
+            .put("text", safeText)
             .put("postedAt", postedAt)
             .put("status", status)
             .put("f", fingerprint)

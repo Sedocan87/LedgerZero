@@ -23,8 +23,12 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
     <!-- Pairing also works by typing the code, so a device without a camera
-         can still install the app. -->
-    <uses-feature android:name="android.hardware.camera.any" android:required="false"/>
+         can still install the app. tools:replace overrides camera_android_camerax's
+         required="true" declaration, and the two explicit camera/autofocus lines
+         prevent Play from inferring them from the CAMERA permission. -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:replace="android:required"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"

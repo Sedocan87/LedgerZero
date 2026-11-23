@@ -29,6 +29,21 @@ class CardNotificationListener : NotificationListenerService() {
             private set
 
         private const val MAX_RECENT_APPS = 30
+        private const val MAX_TITLE_CHARS = 256
+        private const val MAX_TEXT_CHARS = 2048
+
+        /**
+         * Authentication/2FA/TAN codes should never be persisted in the
+         * capture log (even encrypted for 30 days).
+         */
+        private val AUTH_CODE_PATTERN = Regex(
+            "(?i)\\b(?:push\\s*tan|sms\\s*tan|photo\\s*tan|einmalpasswort|einmalcode|" +
+                "sicherheitscode|bestätigungscode|verifizierungscode|freigabecode|" +
+                "anmeldecode|verification\\s+code|security\\s+code|" +
+                "one[- ]time\\s+(?:password|code|passcode)|2fa|otp|" +
+                "tan[- ]?(?:code|nummer|freigabe)|ihre\\s+tan|" +
+                "(?:your|ihr)\\s+(?:code|pin)\\s*(?:is|ist|:))\\b",
+        )
 
         /**
          * Packages (never content) of apps that posted a notification
@@ -157,15 +172,19 @@ class CardNotificationListener : NotificationListenerService() {
             return false
         }
         val extras = notification.extras
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()?.take(MAX_TITLE_CHARS)
         val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
             ?.joinToString("\n") { it.toString() }
         val text = (
             extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
                 ?: lines
                 ?: extras.getCharSequence(Notification.EXTRA_TEXT)
-            )?.toString()?.trim()
+            )?.toString()?.trim()?.take(MAX_TEXT_CHARS)
         if (text.isNullOrEmpty() && title.isNullOrEmpty()) {
+            return false
+        }
+        val combined = "${title ?: ""} ${text ?: ""}"
+        if (AUTH_CODE_PATTERN.containsMatchIn(combined)) {
             return false
         }
         return CaptureStore.get(this).append(

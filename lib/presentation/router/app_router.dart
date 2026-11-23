@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/screens/settings/income/income_settings_screen.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -135,6 +136,38 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
     refreshListenable: refresh,
+    errorBuilder: (context, state) {
+      final l10n = AppLocalizations.of(context);
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n?.error ?? '')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n?.errorOccurred ?? '',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => context.go('/'),
+                  child: Text(l10n?.home ?? ''),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
     redirect: (context, state) {
       final auth = ref.read(authProvider);
       final isOnboarded = auth.isOnboarded;
@@ -292,7 +325,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 name: 'card-notification-log',
                 parentNavigatorKey: _rootNavigatorKey,
                 builder: (context, state) => CardNotificationLogScreen(
-                  packageName: state.extra as String?,
+                  packageName: state.extra is String
+                      ? state.extra as String
+                      : null,
                 ),
               ),
             ],

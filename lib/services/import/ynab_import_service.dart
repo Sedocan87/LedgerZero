@@ -102,6 +102,24 @@ class YnabImportService {
   /// The one format of [registerDateFormats] that parses every value of
   /// [dates] strictly (the first of [fittingRegisterDateFormats]). Throws
   /// [YnabImportFailure.invalidDates] naming the first value that the
+  static const int _minRegisterYear = 1900;
+  static const int _maxRegisterYear = 2100;
+  static const int _maxZipEntries = 1000;
+  static const int _maxZipTotalBytes = 100 * 1024 * 1024;
+  static final RegExp _fourDigitYear = RegExp(r'(?<!\d)\d{4}(?!\d)');
+
+  static DateTime _parseStrictRegisterDate(DateFormat parser, String value) {
+    final trimmed = value.trim();
+    if (!_fourDigitYear.hasMatch(trimmed)) {
+      throw FormatException('Register date must have a 4-digit year', value);
+    }
+    final parsed = parser.parseStrict(trimmed);
+    if (parsed.year < _minRegisterYear || parsed.year > _maxRegisterYear) {
+      throw FormatException('Register date year out of range', value);
+    }
+    return parsed;
+  }
+
   /// best-fitting format rejects.
   static String detectRegisterDateFormat(List<String> dates) {
     final fitting = fittingRegisterDateFormats(dates);
@@ -116,7 +134,7 @@ class YnabImportService {
       String? firstBad;
       for (final value in dates) {
         try {
-          parser.parseStrict(value);
+          _parseStrictRegisterDate(parser, value);
         } on FormatException {
           failures++;
           firstBad ??= value;
@@ -143,7 +161,7 @@ class YnabImportService {
       var ok = true;
       for (final value in dates) {
         try {
-          parser.parseStrict(value);
+          _parseStrictRegisterDate(parser, value);
         } on FormatException {
           ok = false;
           break;
@@ -285,7 +303,7 @@ class YnabImportService {
         }
 
         final date = CalendarDate.fromLocalPick(
-          dateParser.parseStrict(row[dateIdx].toString().trim()),
+          _parseStrictRegisterDate(dateParser, row[dateIdx].toString()),
         );
 
         final payee = row[payeeIdx].toString();
@@ -531,7 +549,7 @@ class YnabImportService {
       }
       final String content;
       try {
-        content = decodeText(bytes);
+        content = decodeText(bytes, windows1252Fallback: true);
       } on FormatException {
         continue;
       }
@@ -577,7 +595,11 @@ class YnabImportService {
     } catch (e) {
       throw YnabImportException(failure, 'Not a readable ZIP file: $e');
     }
+    if (archive.files.length > _maxZipEntries) {
+      throw YnabImportException(failure, 'The ZIP file contains too many entries');
+    }
     final files = <(String, List<int>)>[];
+    var totalBytes = 0;
     for (final file in archive.files) {
       final name = file.name.replaceAll('\\', '/');
       if (!file.isFile ||
@@ -585,8 +607,16 @@ class YnabImportService {
           path.posix.basename(name).startsWith('._')) {
         continue;
       }
+      if (file.size > _maxZipTotalBytes ||
+          totalBytes + file.size > _maxZipTotalBytes) {
+        throw YnabImportException(failure, 'The ZIP file is too large');
+      }
       final bytes = file.readBytes();
       if (bytes != null) {
+        totalBytes += bytes.length;
+        if (totalBytes > _maxZipTotalBytes) {
+          throw YnabImportException(failure, 'The ZIP file is too large');
+        }
         files.add((name, bytes));
       }
     }

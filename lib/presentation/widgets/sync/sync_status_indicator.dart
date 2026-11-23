@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
@@ -14,6 +15,8 @@ class SyncStatusIndicator extends ConsumerWidget {
     final fmt = ref.watch(appFormatterProvider);
     final l10n = AppLocalizations.of(context)!;
 
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = AppSemanticColors.of(context);
     IconData icon;
     Color color;
     String statusText;
@@ -22,24 +25,24 @@ class SyncStatusIndicator extends ConsumerWidget {
       case SyncStatus.connected:
       case SyncStatus.idle:
         icon = Icons.cloud_done;
-        color = Colors.green;
+        color = semantic.success;
         statusText = state.paused
             ? l10n.syncStatusPaused
             : l10n.syncStatusConnected;
         break;
       case SyncStatus.disconnected:
         icon = Icons.cloud_off;
-        color = Colors.grey;
+        color = scheme.onSurfaceVariant;
         statusText = l10n.syncStatusDisconnected;
         break;
       case SyncStatus.syncing:
         icon = Icons.sync;
-        color = Colors.blue;
+        color = scheme.primary;
         statusText = l10n.syncStatusSyncing;
         break;
       case SyncStatus.error:
         icon = Icons.error_outline;
-        color = Colors.red;
+        color = scheme.error;
         // The cause (localised by kind) is shown below the card; the
         // exception's own message is technical and English.
         statusText = l10n.syncError;

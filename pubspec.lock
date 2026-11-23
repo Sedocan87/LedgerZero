@@ -1060,6 +1060,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.2.0"
+  play_age_features:
+    dependency: "direct main"
+    description:
+      path: "packages/play_age_features"
+      relative: true
+    source: path
+    version: "0.1.0"
   plugin_platform_interface:
     dependency: "direct dev"
     description:

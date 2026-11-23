@@ -221,6 +221,20 @@ class LanAuth {
   String beaconTag(String deviceId, int port, int minute) =>
       _mac(['beacon', deviceId, '$port', '$minute']);
 
+  /// Extended discovery beacon tag that also authenticates [name] so an on-LAN
+  /// attacker cannot spoof the peer's displayed device name when replaying a
+  /// beacon.
+  String beaconTagWithName(
+    String deviceId,
+    String name,
+    int port,
+    int minute,
+  ) => _mac(['beacon2', deviceId, name, '$port', '$minute']);
+
+  /// Verifies a discovery beacon tag in constant time.
+  bool verifyBeaconTag(String expected, String actual) =>
+      constantTimeEquals(utf8.encode(expected), utf8.encode(actual));
+
   /// Seconds since the epoch of this phone's clock (for the skew header).
   int get nowSeconds => _clock().millisecondsSinceEpoch ~/ 1000;
 

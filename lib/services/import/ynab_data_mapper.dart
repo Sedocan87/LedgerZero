@@ -143,9 +143,10 @@ class YnabDataMapper {
       // card brings its payment category, which YNAB's Credit Card
       // Payments category of the same name maps onto.
       final accountIdMap = await _importAccounts(data, currency);
+      final storedAccounts = await _accountRepo.getAllAccounts();
       final onBudgetIds = {
-        for (final a in data.accounts)
-          if (a.onBudget && accountIdMap.containsKey(a.id)) accountIdMap[a.id]!,
+        for (final a in storedAccounts)
+          if (a.onBudget) a.id,
       };
 
       // 2. Categories & Groups: "Group:Category" -> LedgerZero id; the
@@ -377,7 +378,11 @@ class YnabDataMapper {
     final mapping = <String, String>{};
 
     final existingAccounts = await _accountRepo.getAllAccounts();
-    final accNameMap = {for (var a in existingAccounts) a.name: a.id};
+    // Never reuse a partner's personal account (read-only on this phone).
+    final accNameMap = {
+      for (final a in existingAccounts)
+        if (!a.isPartners) a.name: a.id,
+    };
     // An account with a category in YNAB's Credit Card Payments group is a
     // credit card, whatever its name suggests.
     final cards = cardPaymentNames(data);

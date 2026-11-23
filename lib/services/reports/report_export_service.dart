@@ -45,10 +45,37 @@ class ReportExportService {
     List<List<dynamic>> rows,
     String filename, {
     String? shareText,
+    String fieldDelimiter = ',',
+    bool withBom = false,
   }) async {
-    final csv = const ListToCsvConverter().convert(CsvSanitizer.rows(rows));
+    final body = ListToCsvConverter(
+      fieldDelimiter: fieldDelimiter,
+    ).convert(CsvSanitizer.rows(rows));
+    final csv = withBom ? '\uFEFF$body' : body;
     final file = await _files.writeString('$filename.csv', csv);
     await _files.shareAndDelete(file, text: shareText);
+  }
+
+  /// Replaces characters Roboto cannot render (emojis / supplementary-plane
+  /// code points and variation selectors) so PDF generation never throws or
+  /// drops glyphs on emoji category/payee names.
+  static String _pdfSafeText(String input) {
+    if (input.isEmpty) {
+      return input;
+    }
+    final out = StringBuffer();
+    for (final rune in input.runes) {
+      // Skip non-BMP (emojis), variation selectors (FE00-FE0F), ZWJ (200D),
+      // and control chars other than tab/newline.
+      if (rune > 0xFFFF ||
+          (rune >= 0xFE00 && rune <= 0xFE0F) ||
+          rune == 0x200D ||
+          (rune < 0x20 && rune != 0x0A && rune != 0x09)) {
+        continue;
+      }
+      out.writeCharCode(rune);
+    }
+    return out.toString().trim();
   }
 
   /// Generates a PDF report with a title, date, and a table of data.
@@ -72,10 +99,16 @@ class ReportExportService {
       bold: pw.Font.ttf(await rootBundle.load(_boldFont)),
     );
     final pdf = pw.Document(theme: theme);
+    final safeTitle = _pdfSafeText(title);
+    final safeHeaders = [for (final h in headers) _pdfSafeText(h)];
+    final safeData = [
+      for (final row in data) [for (final cell in row) _pdfSafeText(cell)],
+    ];
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: pdf_lib.PdfPageFormat.a4,
+        maxPages: 200,
         header: (context) {
           return pw.Header(
             level: 0,
@@ -84,14 +117,14 @@ class ReportExportService {
               children: [
                 pw.Expanded(
                   child: pw.Text(
-                    title,
+                    safeTitle,
                     style: pw.TextStyle(
                       fontSize: 24,
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
                 ),
-                pw.Text(labels.createdOn),
+                pw.Text(_pdfSafeText(labels.createdOn)),
               ],
             ),
           );
@@ -100,8 +133,10 @@ class ReportExportService {
           return pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text(labels.footer),
-              pw.Text(labels.pageOf(context.pageNumber, context.pagesCount)),
+              pw.Text(_pdfSafeText(labels.footer)),
+              pw.Text(
+                _pdfSafeText(labels.pageOf(context.pageNumber, context.pagesCount)),
+              ),
             ],
           );
         },
@@ -109,16 +144,23 @@ class ReportExportService {
           return [
             pw.SizedBox(height: 20),
             pw.TableHelper.fromTextArray(
-              headers: headers,
-              data: data,
+              headers: safeHeaders,
+              data: safeData,
               border: null,
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               headerDecoration: pw.BoxDecoration(
                 color: pdf_lib.PdfColors.grey300,
               ),
-              cellHeight: 30,
+              columnWidths: {
+                for (var i = 0; i < safeHeaders.length; i++)
+                  i: pw.FlexColumnWidth(i == 0 ? 2 : 1),
+              },
+              cellPadding: pw.EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 6,
+              ),
               cellAlignments: {
-                for (var i = 0; i < headers.length; i++)
+                for (var i = 0; i < safeHeaders.length; i++)
                   i: pw.Alignment.centerLeft,
               },
             ),

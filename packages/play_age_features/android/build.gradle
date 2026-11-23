@@ -1,0 +1,48 @@
+group = "com.reinlogic.play_age_features"
+version = "0.1.0"
+
+apply plugin: "com.android.library"
+
+// Same setup as age_range_signals 0.10.x, so it builds in every app it builds
+// in: AGP 9 compiles Kotlin itself unless the app sets
+// android.builtInKotlin=false; otherwise (or on AGP 8) apply the Kotlin plugin.
+def builtInKotlin = providers.gradleProperty("android.builtInKotlin")
+    .getOrElse("true").toBoolean()
+def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
+    .tokenize('.')[0].toInteger()
+
+if (agpMajor < 9 || !builtInKotlin) {
+    apply plugin: "org.jetbrains.kotlin.android"
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+android {
+    namespace = "com.reinlogic.play_age_features"
+    compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+
+    defaultConfig {
+        minSdk = 23
+    }
+
+    dependencies {
+        // 0.0.6 adds getApplicableAgeFeatures(). Gradle resolves the app to
+        // the highest version asked for, so age_range_signals (which asks for
+        // 0.0.4) also runs on 0.0.6; Google's 0.0.6 public API only adds to
+        // 0.0.4's. Remove this package when age_range_signals moves to 0.0.6+.
+        implementation("com.google.android.play:age-signals:0.0.6")
+    }
+}

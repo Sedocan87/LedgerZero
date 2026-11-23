@@ -47,8 +47,14 @@ class AppLockChannel(
             BIOMETRIC_WEAK or DEVICE_CREDENTIAL
         }
 
+    private val channel = MethodChannel(messenger, CHANNEL)
+
     init {
-        MethodChannel(messenger, CHANNEL).setMethodCallHandler(this)
+        channel.setMethodCallHandler(this)
+    }
+
+    fun dispose() {
+        channel.setMethodCallHandler(null)
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -69,10 +75,10 @@ class AppLockChannel(
         BiometricManager.from(activity).canAuthenticate(authenticators) ==
             BiometricManager.BIOMETRIC_SUCCESS
 
-    /** Whether the device has a PIN, pattern or password. */
+    /** Whether the device has a PIN, pattern or password. Fails closed if KeyguardManager is null. */
     private fun isDeviceSecure(): Boolean {
         val keyguard = activity.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-        return keyguard?.isDeviceSecure ?: false
+        return keyguard?.isDeviceSecure ?: true
     }
 
     /** "unavailable" only without a screen lock; otherwise "failed". */

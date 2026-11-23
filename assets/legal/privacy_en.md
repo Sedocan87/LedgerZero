@@ -13,7 +13,7 @@ LedgerZero is a budgeting app that keeps your data on your phone. There is no Le
 Everything you enter (accounts, transactions, budgets, categories, payees, notes, rules and settings) is stored only in the app's private storage on your phone. We, the publisher, never receive it.
 
 - **App lock.** If you turn on the app lock, Android checks your fingerprint, face or screen lock. The app only learns whether the check succeeded; it never sees biometric data.
-- **Error reports.** If you turn on crash reports (Settings > Security), error details are kept on your phone. They are only sent if you choose to send them to us yourself, for example by email.
+- **Diagnostic logs & crash reports.** Scrubbed warning and error logs (with amounts, SQL statements, emails and IBANs removed) are kept locally in the app's cache directory (excluded from Android backup) so issues can be diagnosed; if you turn on crash reports (Settings > Security), detailed crash reports are also kept locally. Nothing is ever uploaded automatically — logs and reports are only sent if you choose to share them yourself, and you can delete them anytime in Settings.
 
 ## Optional features
 
@@ -36,7 +36,7 @@ Legal basis: performance of the purchase contract (Art. 6(1)(b) GDPR), our legal
 
 ## Age signals
 
-Some regions, such as Texas and Brazil, require apps to respect age and parental-consent signals from the app store. When you tap the button to buy LedgerZero Pro, LedgerZero may ask Google Play's Age Signals service for your age group and whether a parent or guardian has approved recent changes to the app. Google Play may first ask whether you want to share this. If a parent or guardian has not approved, or has declined, the purchase is not offered; restoring an earlier purchase always works. Otherwise, purchases on a supervised account go through Google Play's own parental approval. LedgerZero uses the answer only on your phone, for this check; it is never stored or sent to us. Google handles the request under the Google Privacy Policy.
+Some regions, such as Texas, California and Brazil, require apps to respect age and parental-consent signals from the app store. When you open LedgerZero in a region where the law makes Google Play share this information, and when you tap the button to buy LedgerZero Pro, LedgerZero may ask Google Play's Age Signals service for your age group and whether a parent or guardian has approved recent changes to the app. Google Play may first ask whether you want to share this. If a parent or guardian has not approved, or has declined, the purchase is not offered; restoring an earlier purchase always works. Otherwise, purchases on a supervised account go through Google Play's own parental approval. LedgerZero uses the answer only on your phone, for this check; it is never stored or sent to us. Google handles the request under the Google Privacy Policy.
 
 Legal basis: our legal obligations under these regional laws (Art. 6(1)(c) GDPR) and our legitimate interest in following them wherever you are (Art. 6(1)(f) GDPR).
 

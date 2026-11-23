@@ -5,9 +5,12 @@ import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/database.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart'
     show cardPaymentHealStamp;
+import 'package:ledger_zero/domain/services/undo_service.dart';
 import 'package:ledger_zero/services/backup/sync_rebootstrap.dart';
 import 'package:ledger_zero/services/security/crypto/aead.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
+import 'package:ledger_zero/services/security/crypto/secure_random.dart';
+import 'package:ledger_zero/services/security/secure_store.dart';
 import 'package:ledger_zero/services/sync/change_applier.dart';
 import 'package:ledger_zero/services/sync/change_generator.dart';
 import 'package:ledger_zero/services/sync/format/sync_change.dart';
@@ -154,11 +157,16 @@ class SyncEngine {
   bool _deviceIdReconciled = false;
   final SyncOutbox _outbox;
   final SharedPreferences _prefs;
+  final SecureStore? _secureStore;
+  final UndoService? _undoService;
   final SyncEngineConfig config;
   final DateTime Function() _clock;
 
   late final SyncSchema _schema = SyncSchema.of(_db);
-  late final SyncLocalState _state = SyncLocalState(_db.syncDao);
+  late final SyncLocalState _state = SyncLocalState(
+    _db.syncDao,
+    secureStore: _secureStore,
+  );
   late final ChangeGenerator _generator = ChangeGenerator(
     _db,
     _schema,
@@ -198,6 +206,8 @@ class SyncEngine {
     required this.deviceId,
     required this._outbox,
     required this._prefs,
+    this._secureStore,
+    this._undoService,
     this.config = const SyncEngineConfig(),
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now {
@@ -370,105 +380,115 @@ class SyncEngine {
       return const SyncRunReport(setup: SyncSetupStatus.needsPassphrase);
     }
 
-    final remote = _RemoteIndex.from(listing, deviceId);
-    final rebootstrap = _prefs.getBool(SyncRebootstrap.prefsKey) ?? false;
-    if (rebootstrap) {
-      Logger.info('Sync: rebuilding sync state after a restore.');
-      await _db.syncDao.clearProgress();
-      await _db.syncDao.clearQuarantine();
-      // The outbox was emptied by the restore itself; files written since
-      // (none while sync is paused) are kept.
-      await _state.setOwnSequence(remote.maxSequence(deviceId));
-    } else {
-      final own = math.max(
-        await _state.ownSequence(),
-        remote.maxSequence(deviceId),
-      );
-      await _state.setOwnSequence(own);
-      final progress = await _db.syncDao.getProgress();
-      if ((progress[deviceId] ?? 0) < own) {
-        await _db.syncDao.setProgress(deviceId, own);
+    try {
+      final remote = _RemoteIndex.from(listing, deviceId);
+      final rebootstrap = _prefs.getBool(SyncRebootstrap.prefsKey) ?? false;
+      if (rebootstrap) {
+        Logger.info('Sync: rebuilding sync state after a restore.');
+        await _db.syncDao.clearProgress();
+        await _db.syncDao.clearQuarantine();
+        // Always clear the outbox on rebootstrap (including crash-recovered
+        // restores where discardOutbox() never ran) so pre-restore change
+        // files cannot be uploaded on top of the restored state.
+        await _outbox.clear();
+        await _state.setOwnSequence(remote.maxSequence(deviceId));
+      } else {
+        final own = math.max(
+          await _state.ownSequence(),
+          remote.maxSequence(deviceId),
+        );
+        await _state.setOwnSequence(own);
+        final progress = await _db.syncDao.getProgress();
+        if ((progress[deviceId] ?? 0) < own) {
+          await _db.syncDao.setProgress(deviceId, own);
+        }
       }
-    }
 
-    await _db.syncDao.pruneTombstones(
-      _now.subtract(config.tombstoneRetention).microsecondsSinceEpoch,
-    );
-    await _db.syncDao.trimConflicts(config.maxConflicts);
-
-    var uploaded = 0;
-    _manifestCreatedAt = manifest.createdAt;
-    if (!rebootstrap) {
-      cancel.check();
-      final fullUpload = await _state.fullUpload();
-      await _generator.generate(
-        key: key,
-        outbox: _outbox,
-        fullUpload: fullUpload != FullUpload.none,
-        reshareHorizon: fullUpload == FullUpload.reshare
-            ? _reshareHorizon
-            : null,
-        now: _now,
+      await _db.syncDao.pruneTombstones(
+        _now.subtract(config.tombstoneRetention).microsecondsSinceEpoch,
       );
-      if (fullUpload != FullUpload.none) {
+      await _db.syncDao.trimConflicts(config.maxConflicts);
+
+      var uploaded = 0;
+      _manifestCreatedAt = manifest.createdAt;
+      if (!rebootstrap) {
+        cancel.check();
+        final fullUpload = await _state.fullUpload();
+        await _generator.generate(
+          key: key,
+          outbox: _outbox,
+          fullUpload: fullUpload != FullUpload.none,
+          reshareHorizon: fullUpload == FullUpload.reshare
+              ? _reshareHorizon
+              : null,
+          now: _now,
+        );
+        if (fullUpload != FullUpload.none) {
+          await _state.setFullUpload(FullUpload.none);
+        }
+        uploaded += await _uploadOutbox(cancel);
+      }
+
+      cancel.check();
+      final applied = await _applyRemote(remote, key, cancel);
+      await _removeObsoleteRequests(remote);
+      if (applied.applied > 0) {
+        // Remote changes may have edited or deleted entities referenced by
+        // local undo snapshots; clear undo so stale snapshots cannot cause FK
+        // failures or clobber newer partner edits.
+        _undoService?.clear();
+        // Applied account rows keep the shared balance they were written
+        // with; this member's personal accounts follow the transactions on
+        // this phone (they differ after a restore).
+        await _db.refreshPersonalBalances();
+        // A card created, renamed, closed or moved on the other phone: its
+        // payment category normally arrives with it; this heals one that did
+        // not (stamped old, so the partner's own row always wins).
+        await _db.categoriesDao.syncCardPaymentCategories(
+          stampedAt: cardPaymentHealStamp,
+        );
+      }
+
+      if (rebootstrap) {
+        // Rows only the restored database has are shared again; rows that
+        // are newer elsewhere already replaced the restored ones. Old rows
+        // the folder does not know stay here (their tombstones may be gone).
+        cancel.check();
+        await _generator.generate(
+          key: key,
+          outbox: _outbox,
+          fullUpload: true,
+          reshareHorizon: _reshareHorizon,
+          now: _now,
+        );
         await _state.setFullUpload(FullUpload.none);
+        uploaded += await _uploadOutbox(cancel);
+        await _prefs.remove(SyncRebootstrap.prefsKey);
       }
-      uploaded += await _uploadOutbox(cancel);
-    }
 
-    cancel.check();
-    final applied = await _applyRemote(remote, key, cancel);
-    await _removeObsoleteRequests(remote);
-    if (applied.applied > 0) {
-      // Applied account rows keep the shared balance they were written
-      // with; this member's personal accounts follow the transactions on
-      // this phone (they differ after a restore).
-      await _db.refreshPersonalBalances();
-      // A card created, renamed, closed or moved on the other phone: its
-      // payment category normally arrives with it; this heals one that did
-      // not (stamped old, so the partner's own row always wins).
-      await _db.categoriesDao.syncCardPaymentCategories(
-        stampedAt: cardPaymentHealStamp,
-      );
-    }
-
-    if (rebootstrap) {
-      // Rows only the restored database has are shared again; rows that
-      // are newer elsewhere already replaced the restored ones. Old rows
-      // the folder does not know stay here (their tombstones may be gone).
       cancel.check();
-      await _generator.generate(
-        key: key,
-        outbox: _outbox,
-        fullUpload: true,
-        reshareHorizon: _reshareHorizon,
-        now: _now,
+      if (uploaded > 0 || applied.applied > 0) {
+        listing = await transport.listFiles();
+      }
+      final index = _RemoteIndex.from(listing, deviceId);
+      await _maybeWriteSnapshot(key, cancel, index);
+      await _compact(index);
+
+      await _prefs.setString(lastSyncKey, _now.toIso8601String());
+      return SyncRunReport(
+        setup: SyncSetupStatus.ready,
+        uploaded: uploaded,
+        applied: applied.applied,
+        conflicts: applied.conflicts,
+        newlyQuarantined: applied.quarantined,
+        newerSchemaPending: applied.newerSchema,
+        legacyFilesFound: remote.legacyFound,
+        waitingDevices: applied.waiting,
+        clockSkewSuspected: applied.futureTimestamps,
       );
-      await _state.setFullUpload(FullUpload.none);
-      uploaded += await _uploadOutbox(cancel);
-      await _prefs.remove(SyncRebootstrap.prefsKey);
+    } finally {
+      zeroBytes(key);
     }
-
-    cancel.check();
-    if (uploaded > 0 || applied.applied > 0) {
-      listing = await transport.listFiles();
-    }
-    final index = _RemoteIndex.from(listing, deviceId);
-    await _maybeWriteSnapshot(key, cancel, index);
-    await _compact(index);
-
-    await _prefs.setString(lastSyncKey, _now.toIso8601String());
-    return SyncRunReport(
-      setup: SyncSetupStatus.ready,
-      uploaded: uploaded,
-      applied: applied.applied,
-      conflicts: applied.conflicts,
-      newlyQuarantined: applied.quarantined,
-      newerSchemaPending: applied.newerSchema,
-      legacyFilesFound: remote.legacyFound,
-      waitingDevices: applied.waiting,
-      clockSkewSuspected: applied.futureTimestamps,
-    );
   }
 
   Future<int> _uploadOutbox(SyncCancellation cancel) async {
@@ -749,10 +769,15 @@ class SyncEngine {
     }
   }
 
+  /// Margin subtracted from `_manifestCreatedAt` when deciding if an
+  /// unreadable file is a leftover from an earlier folder, so a peer whose
+  /// clock is slightly behind does not have its first file silently dropped.
+  static const Duration _foreignSkewMargin = Duration(minutes: 15);
+
   /// Unauthenticated, but good enough to tell leftovers from damage: a
-  /// file of the current folder is written after its manifest.
+  /// file of the current folder is written after its manifest (within skew).
   bool _isForeign(SyncFileHeader header) =>
-      header.createdAt.isBefore(_manifestCreatedAt);
+      header.createdAt.isBefore(_manifestCreatedAt.subtract(_foreignSkewMargin));
 
   Future<void> _recordForeign(String name, SyncFileHeader header) {
     final now = _now;
@@ -967,9 +992,11 @@ class SyncEngine {
         continue;
       }
       downloads++;
+      SyncFileHeader? parsedHeader;
       try {
         final bytes = await transport.download(snapshot.$2);
         final header = SyncFileCodec.readHeader(bytes);
+        parsedHeader = header;
         final helps = header.vector.entries.any(
           (e) =>
               (needs == null || needs.contains(e.key)) &&
@@ -1008,11 +1035,8 @@ class SyncEngine {
       } on SyncFileNewerSchemaException {
         stats.newerSchema = true;
       } on AeadAuthenticationException catch (e) {
-        final header = SyncFileCodec.readHeader(
-          await transport.download(snapshot.$2),
-        );
-        if (_isForeign(header)) {
-          await _recordForeign(snapshot.$1.name, header);
+        if (parsedHeader != null && _isForeign(parsedHeader)) {
+          await _recordForeign(snapshot.$1.name, parsedHeader);
         } else {
           Logger.error('Sync: snapshot ${snapshot.$1.name} unusable', e);
         }

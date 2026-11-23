@@ -173,10 +173,13 @@ class _CardNotificationLogScreenState
         lastDate: _today,
         initialDateRange: _custom,
       );
-      if (picked == null) {
+      if (picked == null || !mounted) {
         return;
       }
       _custom = picked;
+    }
+    if (!mounted) {
+      return;
     }
     setState(() => _range = range);
     await _reload();

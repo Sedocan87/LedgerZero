@@ -36,40 +36,31 @@ class ReportNoteRepositoryImpl implements ReportNoteRepository {
   @override
   Future<void> saveNote(domain.ReportNote note) async {
     try {
-      // Check if note exists for this date to update or insert
-      // But the unique key is on date, so we can check if ID matches or Date matches.
-      // If ID exists, update. If not, insert.
-      // Or cleaner: use replace/insertOnConflictUpdate from Drift if configured.
-      // My DAO has insertNote and updateNote.
-
-      // Let's use insertOrReplace logic.
-      // Since `date` is unique, we can check if a note exists for that date.
-      final existing = await _dao.getNoteByDate(note.date);
-
-      if (existing != null) {
-        // Update
-        await _dao.updateNote(
-          ReportNotesCompanion(
-            id: Value(
-              existing.id,
-            ), // Keep original ID if it exists? Or use new one? Best to keep ID.
-            date: Value(note.date),
-            note: Value(note.note),
-            updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
-          ),
-        );
-      } else {
-        // Insert
-        await _dao.insertNote(
-          ReportNotesCompanion(
-            id: Value(note.id),
-            date: Value(note.date),
-            note: Value(note.note),
-            createdAt: Value(DateTime.now().toUtc().toIso8601String()),
-            updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
-          ),
-        );
-      }
+      await _dao.transaction(() async {
+        final existing = await _dao.getNoteByDate(note.date);
+        final now = DateTime.now().toUtc().toIso8601String();
+        if (existing != null) {
+          await _dao.updateNote(
+            ReportNotesCompanion(
+              id: Value(existing.id),
+              date: Value(note.date),
+              note: Value(note.note),
+              createdAt: Value(existing.createdAt ?? now),
+              updatedAt: Value(now),
+            ),
+          );
+        } else {
+          await _dao.insertNote(
+            ReportNotesCompanion(
+              id: Value(note.id),
+              date: Value(note.date),
+              note: Value(note.note),
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
+        }
+      });
     } catch (e, stack) {
       Logger.error('Failed to save report note', e, stack);
       throw const DatabaseException('Failed to save report note');

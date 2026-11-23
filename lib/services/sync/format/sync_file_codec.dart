@@ -216,12 +216,11 @@ class SyncFileCodec {
     }
     final List<int> body;
     try {
-      body = GZipCodec().decode(plain);
+      body = _gunzipBounded(plain, maxBodyBytes);
+    } on SyncFileFormatException {
+      rethrow;
     } catch (_) {
       throw const SyncFileFormatException('body is not gzip');
-    }
-    if (body.length > maxBodyBytes) {
-      throw const SyncFileFormatException('body too large');
     }
     final Object? json;
     try {
@@ -244,6 +243,14 @@ class SyncFileCodec {
       throw const SyncFileFormatException('change count mismatch');
     }
     return SyncFile(header, changes);
+  }
+
+  static Uint8List _gunzipBounded(Uint8List compressed, int maxBytes) {
+    final sink = _BoundedByteSink(maxBytes);
+    final decoder = GZipCodec().decoder.startChunkedConversion(sink);
+    decoder.add(compressed);
+    decoder.close();
+    return sink.builder.takeBytes();
   }
 
   static _Parts _split(Uint8List bytes) {
@@ -285,6 +292,24 @@ class SyncFileCodec {
     final data = ByteData(4)..setUint32(0, value);
     return data.buffer.asUint8List();
   }
+}
+
+class _BoundedByteSink extends ByteConversionSinkBase {
+  _BoundedByteSink(this.maxBytes);
+
+  final int maxBytes;
+  final BytesBuilder builder = BytesBuilder(copy: false);
+
+  @override
+  void add(List<int> chunk) {
+    if (builder.length + chunk.length > maxBytes) {
+      throw const SyncFileFormatException('body too large');
+    }
+    builder.add(chunk);
+  }
+
+  @override
+  void close() {}
 }
 
 class _Parts {

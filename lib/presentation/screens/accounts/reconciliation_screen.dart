@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
@@ -8,7 +9,7 @@ import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/presentation/widgets/common/app_loading_indicator.dart';
-import 'package:ledger_zero/presentation/widgets/common/error_view.dart';
+import 'package:ledger_zero/presentation/widgets/common/load_error_view.dart';
 
 final _reconcileAccountProvider = StreamProvider.family
     .autoDispose<Account?, String>((ref, id) {
@@ -177,7 +178,11 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
           return _buildForm(context, account);
         },
         loading: () => const AppLoadingIndicator(),
-        error: (e, s) => ErrorView(title: l10n.error, message: l10n.error),
+        error: (e, s) => LoadErrorView(
+          error: e,
+          onRetry: () =>
+              ref.invalidate(_reconcileAccountProvider(widget.accountId)),
+        ),
       ),
     );
   }
@@ -252,7 +257,7 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
               : TextStyle(
                   fontWeight: FontWeight.bold,
                   color: difference == 0
-                      ? Colors.green.shade700
+                      ? AppSemanticColors.of(context).success
                       : theme.colorScheme.error,
                 ),
         ),

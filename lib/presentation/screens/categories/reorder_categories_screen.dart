@@ -90,6 +90,7 @@ class _ReorderCategoriesScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
+            tooltip: l10n.save,
             onPressed: _isSaving ? null : _save,
           ),
         ],

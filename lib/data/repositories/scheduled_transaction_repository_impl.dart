@@ -31,7 +31,9 @@ class ScheduledTransactionRepositoryImpl
     DateTime date,
   ) async {
     try {
-      final rows = await _dao.getDueScheduledTransactions(date);
+      final rows = await _dao.getDueScheduledTransactions(
+        CalendarDate.normalize(date),
+      );
       return rows.map(_mapToDomain).toList();
     } catch (e, stack) {
       Logger.error('Failed to get due scheduled transactions', e, stack);

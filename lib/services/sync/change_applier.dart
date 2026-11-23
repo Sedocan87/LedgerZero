@@ -103,9 +103,12 @@ class ChangeApplier {
         'INSERT OR REPLACE INTO sync_applying (id) VALUES (1)',
       );
       final resolvedAt = (now ?? DateTime.now()).toUtc();
-      final personal = await PersonalRows.load(_db);
+      var personal = await PersonalRows.load(_db);
       for (final change in ordered) {
         await _applyOne(change, header, result, resolvedAt, personal);
+        if (change.table == 'accounts') {
+          personal = await PersonalRows.load(_db);
+        }
       }
       result.repaired = await _repairForeignKeys(resolvedAt);
       await _db.customStatement('DELETE FROM sync_applying');
@@ -205,14 +208,17 @@ class ChangeApplier {
       result.skipped++;
       return;
     }
-    if (change.deleted &&
-        local?.row != null &&
-        personal.isOwn(table.name, local!.row!)) {
+    if (local?.row != null && personal.isOwn(table.name, local!.row!)) {
       // The row is in one of this member's personal accounts: it lives on
-      // this phone only. A tombstone for it is the announcement that it
-      // left the shared budget (this phone's own, coming back after a
-      // restore or in a snapshot) or a delete the partner made on a copy
-      // that no longer exists. Neither may delete the row here.
+      // this phone only. Neither a tombstone nor an incoming upsert from
+      // another device may delete or overwrite it (or move it back to a
+      // shared account).
+      result.skipped++;
+      return;
+    }
+    if (!change.deleted && personal.isPrivate(table.name, row!)) {
+      // Incoming upsert targeting a personal account: personal rows never
+      // cross devices.
       result.skipped++;
       return;
     }

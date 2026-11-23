@@ -630,6 +630,11 @@ class NotificationCaptureService {
       if (parse.isRelease && account != null) {
         await _releaseAuthorisation(n, parse, account, nearby);
       }
+      if (_isSensitiveAuthCode(n, parse)) {
+        // Never retain OTP / TAN / 2FA verification codes in the 30-day log.
+        await _channel.remove([n.id]);
+        return _Outcome.ignored;
+      }
       await _channel.setStatus([n.id], CaptureStatus.skipped);
       return _Outcome.ignored;
     }
@@ -1425,17 +1430,57 @@ class NotificationCaptureService {
         : '${described.substring(0, 199)}…';
   }
 
+  static final RegExp _authCodePattern = RegExp(
+    r'\b(?:push\s*tan|sms\s*tan|photo\s*tan|einmalpasswort|einmalcode|'
+    r'sicherheitscode|bestätigungscode|verifizierungscode|freigabecode|'
+    r'anmeldecode|verification\s+code|security\s+code|'
+    r'one[- ]time\s+(?:password|code|passcode)|2fa|otp|'
+    r'tan[- ]?(?:code|nummer|freigabe)|ihre\s+tan|'
+    r'(?:your|ihr)\s+(?:code|pin)\s*(?:is|ist|:))\b',
+    caseSensitive: false,
+  );
+
+  static bool _isSensitiveAuthCode(
+    CapturedNotification n,
+    CardNotificationParse parse,
+  ) {
+    final combined = '${n.title ?? ''} ${n.text}';
+    return _authCodePattern.hasMatch(combined);
+  }
+
+  static final RegExp _memoIban = RegExp(
+    r'\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?\b',
+  );
+  static final RegExp _memoCardDigits = RegExp(
+    r'(?:\*{2,}|[xX•]{2,}|\b(?:card|karte|ending\s+in|endend\s+auf)\s*)\s*\d{4}\b',
+    caseSensitive: false,
+  );
+  static final RegExp _memoBalanceTail = RegExp(
+    r'(?:available\s+balance|new\s+balance|remaining\s+balance|'
+    r'neuer\s+kontostand|aktueller\s+kontostand|kontostand|verfügbarer\s+betrag|saldo)'
+    r'[^.\n]*',
+    caseSensitive: false,
+  );
+
   /// The memo of a transaction without a merchant: the line of a list of
-  /// payments, else title and text.
+  /// payments, else title and text (with IBANs, masked card numbers and
+  /// balance tails scrubbed so sensitive bank metadata stays out of the
+  /// unencrypted database and partner sync).
   static String _memoFrom(CapturedNotification n, CardNotificationParse parse) {
-    final text =
+    var text =
         (parse.line ??
                 [n.title, n.text]
                     .whereType<String>()
                     .where((s) => s.trim().isNotEmpty)
                     .join(': '))
+            .replaceAll(_memoIban, '')
+            .replaceAll(_memoCardDigits, '')
+            .replaceAll(_memoBalanceTail, '')
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
+    if (text.isEmpty) {
+      text = n.appLabel;
+    }
     return text.length <= 120 ? text : '${text.substring(0, 119)}…';
   }
 

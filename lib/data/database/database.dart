@@ -148,11 +148,12 @@ class AppDatabase extends _$AppDatabase {
         // offers the reset; restoring a backup below v20 is refused
         // (`RestoreService`). The next schema change adds its step here,
         // with drift_schemas/drift_schema_v20.json as its baseline.
-        if (from < minimumSchemaVersion) {
+        if (from < minimumSchemaVersion || from > currentSchemaVersion) {
           throw UnsupportedSchemaException(from);
         }
       },
       beforeOpen: (details) async {
+        await customStatement('PRAGMA busy_timeout = 5000');
         await customStatement('PRAGMA foreign_keys = ON');
         await customStatement('PRAGMA journal_mode = WAL');
         await customStatement('PRAGMA synchronous = NORMAL');
@@ -200,6 +201,46 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS $splitParentIndex '
       'ON transactions (parent_transaction_id, is_deleted)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_account_active_date '
+      'ON transactions (account_id, is_deleted, date)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_transfer_account '
+      'ON transactions (transfer_account_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_transfer_tx '
+      'ON transactions (transfer_transaction_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_next_date '
+      'ON scheduled_transactions (next_date)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_account '
+      'ON scheduled_transactions (account_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_category '
+      'ON scheduled_transactions (category_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_payee '
+      'ON scheduled_transactions (payee_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_categories_group '
+      'ON categories (category_group_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_payees_auto_category '
+      'ON payees (auto_category_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_payees_default_account '
+      'ON payees (default_account_id)',
     );
   }
 

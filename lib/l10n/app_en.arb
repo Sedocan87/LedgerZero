@@ -861,7 +861,7 @@
   "restoreConfirmMessage": "Everything on this device will be replaced by the backup. If you use sync, changes made on your other devices after this backup was created will sync back in.",
   "restoreAction": "Restore",
   "restoreSuccessTitle": "Restore complete",
-  "restoreSuccessMessage": "Your data was restored. If you use sync, this device will resynchronise and newer changes from your other devices will come back in.",
+  "restoreSuccessMessage": "Your data was restored. If you use sync, this device will resynchronize and newer changes from your other devices will come back in.",
   "restoreWrongPassword": "Wrong backup password, or the file is damaged.",
   "restoreInvalidFile": "This file is not a LedgerZero backup that can be restored.",
   "restoreNewerVersion": "This backup was made by a newer version of LedgerZero. Please update the app first.",
@@ -2077,7 +2077,7 @@
   "@highContrastTitle": {
     "description": "Accessibility switch"
   },
-  "highContrastSubtitle": "Stronger contrast for colours and borders",
+  "highContrastSubtitle": "Stronger contrast for colors and borders",
   "@highContrastSubtitle": {
     "description": "Accessibility switch subtitle"
   },
@@ -2157,7 +2157,7 @@
   "@guideTransactionsTitle": {
     "description": "User guide chapter title"
   },
-  "guideTransactionsBody": "Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorise transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.",
+  "guideTransactionsBody": "Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorize transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.",
   "@guideTransactionsBody": {
     "description": "User guide chapter text"
   },
@@ -3260,7 +3260,7 @@
   "@helpTbbTitle": {
     "description": "Help topic title"
   },
-  "helpTbbBody": "Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every euro has a job.",
+  "helpTbbBody": "Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every unit of your money has a job.",
   "@helpTbbBody": {
     "description": "Help topic text"
   },
@@ -4062,7 +4062,7 @@
   "@budgetCurrencyChangeAction": {"description": "Settings > Currency dialog: the one action once accounts are in the budget (relabels them, after a confirmation)"},
   "budgetCurrencyChangeConfirmTitle": "Change the budget currency to {currency}?",
   "@budgetCurrencyChangeConfirmTitle": {"description": "Confirmation before the accounts in the budget are relabelled to another currency", "placeholders": {"currency": {"type": "String", "example": "CHF"}}},
-  "budgetCurrencyChangeConfirmBody": "The accounts in your budget are relabelled from {from} to {to}. Amounts are NOT converted: 100 {from} becomes 100 {to}.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in {to}.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.",
+  "budgetCurrencyChangeConfirmBody": "The accounts in your budget are relabeled from {from} to {to}. Amounts are NOT converted: 100 {from} becomes 100 {to}.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in {to}.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.",
   "@budgetCurrencyChangeConfirmBody": {"description": "Confirmation before the accounts in the budget are relabelled: amounts are not converted", "placeholders": {"from": {"type": "String", "example": "EUR"}, "to": {"type": "String", "example": "CHF"}}},
   "budgetCurrencyChangeConfirmAction": "Change to {currency}",
   "@budgetCurrencyChangeConfirmAction": {"description": "Button that relabels accounts to another currency (amounts are not converted)", "placeholders": {"currency": {"type": "String", "example": "CHF"}}},
@@ -4146,7 +4146,7 @@
   "@proFeatureBudgetTemplatesDescription": {"description": "Pro feature description"},
   "proFeatureRules": "Rules",
   "@proFeatureRules": {"description": "Pro feature name"},
-  "proFeatureRulesDescription": "Categorise and rename transactions automatically.",
+  "proFeatureRulesDescription": "Categorize and rename transactions automatically.",
   "@proFeatureRulesDescription": {"description": "Pro feature description"},
   "proAlwaysFree": "Always free: budgeting with unlimited accounts and transactions, credit cards, CSV and YNAB import, export, backups and the app lock.",
   "@proAlwaysFree": {"description": "Pro screen: what stays free"},

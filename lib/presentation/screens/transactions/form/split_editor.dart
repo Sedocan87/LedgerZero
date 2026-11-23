@@ -188,7 +188,7 @@ class SplitEditor extends ConsumerWidget {
     final Color color;
     final String text;
     if (remaining == 0) {
-      color = AppColors.success;
+      color = AppSemanticColors.of(context).success;
       text = l10n.splitRemaining(amount);
     } else if (remaining > 0) {
       color = theme.colorScheme.onSurfaceVariant;

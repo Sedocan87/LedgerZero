@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:ledger_zero/core/errors/exceptions.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:ledger_zero/services/security/crypto/secure_random.dart';
 import 'package:ledger_zero/services/sync/lan/lan_auth.dart';
 import 'package:ledger_zero/services/sync/lan/lan_discovery.dart';
 import 'package:ledger_zero/services/sync/lan/lan_pairing.dart';
@@ -128,7 +129,11 @@ class LanSyncService {
     await pairingStore.delete();
     await peers.clear();
     await folder.clear();
+    final previous = _pairing;
     _setPairing(null);
+    if (previous != null) {
+      zeroBytes(previous.pairKey);
+    }
   }
 
   void _setPairing(LanPairing? pairing) {

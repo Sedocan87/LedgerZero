@@ -559,7 +559,7 @@ class YnabImportScreen extends ConsumerWidget {
           child: ElevatedButton(
             onPressed: viewModel.startImport,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
@@ -714,7 +714,7 @@ class YnabImportScreen extends ConsumerWidget {
             },
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(200, 50),
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: Text(l10n.ynabImportStartBudgeting),

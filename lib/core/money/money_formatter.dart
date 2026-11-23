@@ -68,7 +68,7 @@ class MoneyFormatter {
     final value = _displayValue(minor, digits);
     var text = _applySeparators(fmt.format(value));
     text = text.replaceAll(_placeholder, symbolFor(code));
-    if (signed && minor > 0) {
+    if (signed && value > 0) {
       text = '+$text';
     }
     return text;

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/auth_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/services/security/app_lock_authenticator.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -94,15 +95,16 @@ class AutoLockService {
   }
 
   void _onBackground() {
-    if (ExternalUiGuard.isActive) {
-      return;
-    }
-    if (!_inBackground) {
+    final justBackgrounded = !_inBackground;
+    if (justBackgrounded) {
       _inBackground = true;
       _backgroundedAt = _now();
       _stopwatch
         ..reset()
         ..start();
+    }
+    if (ExternalUiGuard.isActive) {
+      return;
     }
     final duration = _duration;
     if (duration < 0) {
@@ -112,10 +114,13 @@ class AutoLockService {
       unawaited(lock());
       return;
     }
-    _timer ??= _timerFactory(
-      Duration(minutes: duration),
-      () => unawaited(lock()),
-    );
+    final limit = Duration(minutes: duration);
+    final remaining = justBackgrounded ? limit : limit - elapsedInBackground;
+    if (remaining <= Duration.zero) {
+      unawaited(lock());
+      return;
+    }
+    _timer ??= _timerFactory(remaining, () => unawaited(lock()));
   }
 
   void _onForeground() {
@@ -126,6 +131,9 @@ class AutoLockService {
     }
     _inBackground = false;
     _stopwatch.stop();
+    if (ExternalUiGuard.isActive) {
+      return;
+    }
     final duration = _duration;
     if (duration > 0 && elapsedInBackground >= Duration(minutes: duration)) {
       unawaited(lock());
@@ -187,6 +195,7 @@ class AutoLockDurationNotifier extends StateNotifier<int> {
 
 final autoLockDurationProvider =
     StateNotifierProvider<AutoLockDurationNotifier, int>((ref) {
+      ref.watch(settingsGenerationProvider);
       final prefs = ref.watch(sharedPreferencesProvider);
       return AutoLockDurationNotifier(prefs);
     });

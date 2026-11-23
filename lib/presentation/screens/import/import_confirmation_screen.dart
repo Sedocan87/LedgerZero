@@ -335,8 +335,8 @@ class _ImportConfirmationScreenState
                             fmt.formatMoney(tx.amount, currencyCode: currency),
                             style: TextStyle(
                               color: tx.amount < 0
-                                  ? AppColors.expense
-                                  : AppColors.income,
+                                  ? AppSemanticColors.of(context).expense
+                                  : AppSemanticColors.of(context).income,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -408,7 +408,10 @@ class _ImportConfirmationScreenState
                         ],
                       ),
                       secondary: flagged || tx.hasUnmatchedCategory
-                          ? const Icon(Icons.warning, color: Colors.amber)
+                          ? Icon(
+                              Icons.warning,
+                              color: AppSemanticColors.of(context).warning,
+                            )
                           : const Icon(Icons.receipt),
                     );
                   },
@@ -460,7 +463,11 @@ class _ImportConfirmationScreenState
         ),
         if (_isImporting)
           const ModalBarrier(dismissible: false, color: Colors.black54),
-        if (_isImporting) const Center(child: CircularProgressIndicator()),
+        if (_isImporting)
+          const PopScope(
+            canPop: false,
+            child: Center(child: CircularProgressIndicator()),
+          ),
       ],
     );
   }

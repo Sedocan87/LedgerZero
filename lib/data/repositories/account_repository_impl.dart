@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/errors/exceptions.dart';
+import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/daos/accounts_dao.dart';
 import 'package:ledger_zero/data/database/database.dart';
@@ -168,7 +169,8 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Future<int> getClearedBalance(String id, {DateTime? upTo}) async {
     try {
-      return await _accountsDao.getClearedBalance(id, upTo: upTo);
+      final normalized = upTo == null ? null : CalendarDate.normalize(upTo);
+      return await _accountsDao.getClearedBalance(id, upTo: normalized);
     } catch (e, stackTrace) {
       Logger.error('Failed to compute cleared balance of $id', e, stackTrace);
       throw DatabaseException('Failed to compute cleared balance of $id', e);

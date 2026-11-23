@@ -69,7 +69,10 @@ void main() {
     await tester.enterText(amountField(1), '70');
     await tester.pump();
     expect(remainder(tester), r'Remaining: $0.00');
-    expect(remainderColor(tester), AppColors.success);
+    expect(
+      remainderColor(tester),
+      AppSemanticColors.fromScheme(ThemeData.light().colorScheme).success,
+    );
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 

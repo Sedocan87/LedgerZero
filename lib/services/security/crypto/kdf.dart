@@ -176,16 +176,20 @@ class KdfParams {
 }
 
 /// Derives a 32-byte key from [password] in a background isolate.
-Future<Uint8List> deriveKey(String password, KdfParams params) {
+Future<Uint8List> deriveKey(String password, KdfParams params) async {
   final passwordBytes = Uint8List.fromList(utf8.encode(password));
   final json = params.toJson();
-  return Isolate.run(() {
-    try {
-      return deriveKeySync(passwordBytes, KdfParams.fromJson(json));
-    } finally {
-      zeroBytes(passwordBytes);
-    }
-  });
+  try {
+    return await Isolate.run(() {
+      try {
+        return deriveKeySync(passwordBytes, KdfParams.fromJson(json));
+      } finally {
+        zeroBytes(passwordBytes);
+      }
+    });
+  } finally {
+    zeroBytes(passwordBytes);
+  }
 }
 
 /// Synchronous derivation. Prefer [deriveKey] on the UI isolate.

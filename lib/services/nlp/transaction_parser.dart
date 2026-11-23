@@ -1,5 +1,6 @@
 import 'package:ledger_zero/core/money/money.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
@@ -519,10 +520,11 @@ class TransactionParser {
 
     final lowerInput = input.toLowerCase();
 
-    // We need to fetch actual categories to match names/IDs
-    // Assuming categories are fetched or we filter from a list.
-    // Let's assume we can search by name or getting all categories.
-    final allCategories = await _categoryRepository.getAllCategories();
+    // Exclude hidden categories and credit-card payment categories (which
+    // cannot be assigned to ordinary transactions in TransactionService.save).
+    final allCategories = (await _categoryRepository.getAllCategories())
+        .where((c) => !c.isHidden && c.categoryGroupId != CardPayments.groupId)
+        .toList();
 
     for (final entry in keywordMap.entries) {
       if (containsWord(lowerInput, entry.key)) {
@@ -683,7 +685,13 @@ class TransactionParser {
           : (yearText.length == 2
                 ? 2000 + int.parse(yearText)
                 : int.parse(yearText));
-      return DateTime(year, month, day, 12);
+      final candidate = DateTime(year, month, day, 12);
+      if (candidate.year != year ||
+          candidate.month != month ||
+          candidate.day != day) {
+        continue;
+      }
+      return candidate;
     }
     return null;
   }

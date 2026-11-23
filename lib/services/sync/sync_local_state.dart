@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:ledger_zero/data/database/daos/sync_dao.dart';
+import 'package:ledger_zero/services/security/secure_store.dart';
 
 /// How the next run uploads every local row.
 enum FullUpload {
@@ -19,15 +20,19 @@ enum FullUpload {
   reshare,
 }
 
-/// Typed access to the `sync_kv` entries. Everything here lives in the
-/// database (and so in its encrypted backups), including the derived sync
-/// key (never in SharedPreferences or other files).
+/// Typed access to the `sync_kv` entries.
+///
+/// When [SecureStore] is provided (all production builds), the derived AES-256
+/// sync key is kept in Android KeyStore rather than in the unencrypted
+/// `db.sqlite` (and any legacy key in `sync_kv` is migrated and removed).
 class SyncLocalState {
   final SyncDao _dao;
+  final SecureStore? _secureStore;
 
-  SyncLocalState(this._dao);
+  SyncLocalState(this._dao, {this._secureStore});
 
   static const String _syncKey = 'sync_key';
+  static const String _secureSyncKey = 'lz_sync_key_v1';
   static const String _syncId = 'sync_id';
   static const String _ownSequence = 'own_sequence';
   static const String _fullUpload = 'full_upload_required';
@@ -37,6 +42,32 @@ class SyncLocalState {
   static const String _needsSnapshot = 'needs_snapshot';
 
   Future<Uint8List?> syncKey() async {
+    final store = _secureStore;
+    if (store != null) {
+      try {
+        final secureValue = await store.read(_secureSyncKey);
+        if (secureValue != null) {
+          // Ensure any legacy plaintext copy in db.sqlite is removed.
+          if (await _dao.getValue(_syncKey) != null) {
+            await _dao.deleteValue(_syncKey);
+          }
+          return Uint8List.fromList(base64.decode(secureValue));
+        }
+      } catch (_) {
+        // KeyStore unreadable: fall through to check legacy or re-derive.
+      }
+      final legacy = await _dao.getValue(_syncKey);
+      if (legacy != null) {
+        try {
+          await store.write(_secureSyncKey, legacy);
+          await _dao.deleteValue(_syncKey);
+        } catch (_) {
+          // Keep working even if KeyStore write fails transiently.
+        }
+        return Uint8List.fromList(base64.decode(legacy));
+      }
+      return null;
+    }
     final value = await _dao.getValue(_syncKey);
     return value == null ? null : Uint8List.fromList(base64.decode(value));
   }
@@ -50,11 +81,21 @@ class SyncLocalState {
 
   Future<void> setSyncKey(String syncId, Uint8List key) async {
     await _dao.setValue(_syncId, syncId);
-    await _dao.setValue(_syncKey, base64.encode(key));
+    final encoded = base64.encode(key);
+    final store = _secureStore;
+    if (store != null) {
+      await store.write(_secureSyncKey, encoded);
+      await _dao.deleteValue(_syncKey);
+    } else {
+      await _dao.setValue(_syncKey, encoded);
+    }
   }
 
   Future<void> forgetSyncKey() async {
     await _dao.deleteValue(_syncKey);
+    try {
+      await _secureStore?.delete(_secureSyncKey);
+    } catch (_) {}
   }
 
   Future<int> ownSequence() async =>

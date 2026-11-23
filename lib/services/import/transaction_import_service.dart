@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/payee.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/transaction.dart';
 import 'package:ledger_zero/domain/entities/transaction_filter.dart';
 import 'package:ledger_zero/domain/models/import_transaction.dart';
+import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
@@ -22,6 +25,7 @@ class TransactionImportService {
     required this._payeeRepository,
     required this._ruleMatchingService,
     required this._unitOfWork,
+    this._accountRepository,
     this._lastImportStore,
   });
 
@@ -29,6 +33,7 @@ class TransactionImportService {
   final PayeeRepository _payeeRepository;
   final RuleMatchingService _ruleMatchingService;
   final UnitOfWork _unitOfWork;
+  final AccountRepository? _accountRepository;
 
   /// Where the created transactions are recorded for "undo last import"
   /// (see [ImportUndoService]); `null`: not recorded.
@@ -79,27 +84,64 @@ class TransactionImportService {
       final existing = await _payeeRepository.getAllPayees();
       final payeesById = {for (final p in existing) p.id: p};
       final payeesByName = {for (final p in existing) _normalize(p.name): p};
+      final allAccounts = _accountRepository == null
+          ? const <Account>[]
+          : await _accountRepository.getAllAccounts();
+      final accountsById = {for (final a in allAccounts) a.id: a};
+      final paymentCategoryIds = CardPayments.categoryIds(allAccounts);
       final now = DateTime.now().toUtc();
-      final partnerOf = pairTransfers(rows, accountId, accountIdsByName);
+      final partnerOf = pairTransfers(
+        rows,
+        accountId,
+        accountIdsByName,
+        accountsById: accountsById,
+      );
       final ids = [for (final _ in rows) const Uuid().v4()];
+
+      String? sanitizeCategory(String? categoryId, Account? account) {
+        if (categoryId == null) {
+          return null;
+        }
+        if (paymentCategoryIds.contains(categoryId)) {
+          return null;
+        }
+        if (account != null && !account.onBudget) {
+          return null;
+        }
+        return categoryId;
+      }
 
       final transactions = <Transaction>[];
       for (var i = 0; i < rows.length; i++) {
         final row = rows[i];
         final target = row.accountId ?? accountId;
+        final account = accountsById[target];
         final partner = partnerOf[i];
         if (partner != null) {
+          final transferAccountId = rows[partner].accountId ?? accountId;
+          final otherAccount = accountsById[transferAccountId];
+          // Only transfers crossing the budget boundary may carry a category,
+          // and only on the on-budget leg.
+          final crossesBoundary =
+              account != null &&
+              otherAccount != null &&
+              account.onBudget != otherAccount.onBudget;
+          final transferCategory = crossesBoundary && account.onBudget
+              ? sanitizeCategory(row.categoryId, account)
+              : (account == null || otherAccount == null
+                    ? sanitizeCategory(row.categoryId, account)
+                    : null);
           transactions.add(
             Transaction(
               id: ids[i],
               accountId: target,
               date: CalendarDate.normalize(row.date),
               amount: row.amount,
-              categoryId: row.categoryId,
+              categoryId: transferCategory,
               memo: _nonEmpty(row.memo),
               cleared: row.cleared ?? TransactionClearStatus.cleared,
               approved: row.approved ?? true,
-              transferAccountId: rows[partner].accountId ?? accountId,
+              transferAccountId: transferAccountId,
               transferTransactionId: ids[partner],
               createdAt: now,
               updatedAt: now,
@@ -114,7 +156,7 @@ class TransactionImportService {
           accountId: target,
           date: CalendarDate.normalize(row.date),
           amount: row.amount,
-          categoryId: row.categoryId,
+          categoryId: sanitizeCategory(row.categoryId, account),
           memo: _nonEmpty(row.memo),
           cleared: row.cleared ?? TransactionClearStatus.cleared,
           approved: row.approved ?? true,
@@ -149,9 +191,37 @@ class TransactionImportService {
           transaction = transaction.copyWith(payeeId: payee.id);
         }
 
+        final finalAccount = accountsById[transaction.accountId] ?? account;
         final defaultCategory = payee?.autoCategoryId;
         if (transaction.categoryId == null && defaultCategory != null) {
-          transaction = transaction.copyWith(categoryId: defaultCategory);
+          final safeDefault = sanitizeCategory(defaultCategory, finalAccount);
+          if (safeDefault != null) {
+            transaction = transaction.copyWith(categoryId: safeDefault);
+          }
+        } else if (transaction.categoryId != null) {
+          final safeCategory = sanitizeCategory(
+            transaction.categoryId,
+            finalAccount,
+          );
+          if (safeCategory != transaction.categoryId) {
+            transaction = Transaction(
+              id: transaction.id,
+              accountId: transaction.accountId,
+              date: transaction.date,
+              amount: transaction.amount,
+              payeeId: transaction.payeeId,
+              categoryId: null,
+              memo: transaction.memo,
+              cleared: transaction.cleared,
+              approved: transaction.approved,
+              transferAccountId: transaction.transferAccountId,
+              transferTransactionId: transaction.transferTransactionId,
+              parentTransactionId: transaction.parentTransactionId,
+              isDeleted: transaction.isDeleted,
+              createdAt: transaction.createdAt,
+              updatedAt: transaction.updatedAt,
+            );
+          }
         }
         transactions.add(transaction);
       }
@@ -171,8 +241,9 @@ class TransactionImportService {
   static Map<int, int> pairTransfers(
     List<ImportTransaction> rows,
     String accountId,
-    Map<String, String> accountIdsByName,
-  ) {
+    Map<String, String> accountIdsByName, {
+    Map<String, Account> accountsById = const {},
+  }) {
     final partnerOf = <int, int>{};
     final waiting = <String, List<int>>{};
     String key(String account, String target, DateTime day, int amount) =>
@@ -189,6 +260,15 @@ class TransactionImportService {
       final target = accountIdsByName[CsvImportService.normalizePayee(name)];
       if (target == null || target == own) {
         continue;
+      }
+      final ownAccount = accountsById[own];
+      final targetAccount = accountsById[target];
+      if (ownAccount != null && targetAccount != null) {
+        if (ownAccount.isPartners ||
+            targetAccount.isPartners ||
+            ownAccount.currency != targetAccount.currency) {
+          continue;
+        }
       }
       final counterpart = waiting[key(target, own, row.date, -row.amount)];
       if (counterpart != null && counterpart.isNotEmpty) {
@@ -320,6 +400,7 @@ final transactionImportServiceProvider = Provider<TransactionImportService>((
     payeeRepository: ref.watch(payeeRepositoryProvider),
     ruleMatchingService: ref.watch(ruleMatchingServiceProvider),
     unitOfWork: ref.watch(unitOfWorkProvider),
+    accountRepository: ref.watch(accountRepositoryProvider),
     lastImportStore: ref.watch(lastImportStoreProvider),
   );
 });

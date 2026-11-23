@@ -64,10 +64,10 @@ screen all read the set.
 * A factory reset keeps the Pro unlock (it belongs to the Google account,
   not to the budget).
 * The Billing library adds the `com.android.vending.BILLING` permission,
-  its purchase activity, and a small Google Play services component
-  (`GoogleApiActivity`, the system dialog that asks to update Play
-  services). It adds no analytics SDK; the app's own code sends nothing
-  about the budget.
+  its purchase activity, Google Play services' `GoogleApiActivity` /
+  `gms.version` metadata, and `com.google.android.datatransport` for Play
+  Billing's own internal transport/diagnostics. It adds no analytics SDK;
+  the app's own code sends nothing about the budget.
 * There is no server-side receipt check: a determined user can patch the
   APK. For a niche one-time purchase that is accepted.
 
@@ -82,8 +82,10 @@ Applied from `AGE_SIGNALS_FIX.md` (age_range_signals 0.8.0+):
   account) and does not block; Family Link asks the parent and the purchase
   arrives as pending. Restore is never checked. The Pro screen and the PRO
   badges are shown to everyone.
-* Asked on the first tap on Buy in a session, never at start (Play may show
-  its age-sharing sheet), with a 6 s timeout; a timeout or an error counts as
+* Asked on the first tap on Buy in a session (Play may show its
+  age-sharing sheet), and at start only where Play reports mandatory sharing
+  (California AB 1043: `checkAtLaunch`, via the vendored `play_age_features`
+  package in `packages/play_age_features/`), with a 6 s timeout; a timeout or an error counts as
   `unknown` (no block) and is asked again at the next tap. The answer stays
   in memory for the session and is never stored, logged or sent (Texas
   §121.055(b)). The Data safety answer stays "no data collected".

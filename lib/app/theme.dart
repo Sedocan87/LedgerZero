@@ -36,8 +36,21 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   });
 
   /// The semantic colours for [scheme] (its brightness picks the values).
-  factory AppSemanticColors.fromScheme(ColorScheme scheme) {
+  factory AppSemanticColors.fromScheme(
+    ColorScheme scheme, {
+    bool highContrast = false,
+  }) {
     final light = scheme.brightness == Brightness.light;
+    if (highContrast) {
+      final success = light ? const Color(0xFF0A4D10) : const Color(0xFFA5E8A8);
+      return AppSemanticColors(
+        income: success,
+        expense: scheme.error,
+        success: success,
+        warning: light ? const Color(0xFF6B3200) : const Color(0xFFFFD180),
+        error: scheme.error,
+      );
+    }
     final success = light ? const Color(0xFF1B6E20) : const Color(0xFF81C784);
     return AppSemanticColors(
       income: success,
@@ -269,12 +282,24 @@ class AppTheme {
     );
 
     if (isHighContrast) {
-      // Very basic high contrast overwrite if needed, or rely on system
       colorScheme = colorScheme.copyWith(
         primary: brightness == Brightness.light ? Colors.black : Colors.white,
         onPrimary: brightness == Brightness.light ? Colors.white : Colors.black,
         surface: brightness == Brightness.light ? Colors.white : Colors.black,
         onSurface: brightness == Brightness.light ? Colors.black : Colors.white,
+        error: brightness == Brightness.light
+            ? const Color(0xFF8C0000)
+            : const Color(0xFFFFD6D1),
+        onError: brightness == Brightness.light ? Colors.white : Colors.black,
+        outline: brightness == Brightness.light
+            ? Colors.black
+            : Colors.white,
+        outlineVariant: brightness == Brightness.light
+            ? const Color(0xFF424242)
+            : const Color(0xFFBDBDBD),
+        surfaceContainerLow: brightness == Brightness.light
+            ? const Color(0xFFF5F5F5)
+            : const Color(0xFF121212),
       );
     }
 
@@ -286,7 +311,7 @@ class AppTheme {
       fontFamily: AppTextStyles.fontFamily,
       extensions: [
         ChartPalette.fromScheme(colorScheme, highContrast: isHighContrast),
-        AppSemanticColors.fromScheme(colorScheme),
+        AppSemanticColors.fromScheme(colorScheme, highContrast: isHighContrast),
       ],
 
       textTheme:

@@ -2,9 +2,6 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
-# Google Sign-In (Play services auth, used for Google Drive sync).
--keep class com.google.android.gms.** { *; }
-
 # SQLite is a native library bundled by the sqlite3 build hook and loaded
 # through dart:ffi: it has no Java classes to keep.
 

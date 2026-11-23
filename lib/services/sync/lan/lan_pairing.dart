@@ -157,9 +157,12 @@ class LanPairingStore {
   /// cannot read it any more (a lost KeyStore key, or the app was moved to
   /// a new phone): Wi-Fi sync then asks to pair again.
   Future<LanPairing?> read() async {
-    final String? value;
     try {
-      value = await _store.read(storageKey);
+      final value = await _store.read(storageKey);
+      if (value == null) {
+        return null;
+      }
+      return LanPairing.fromJson(jsonDecode(value) as Map<String, Object?>);
     } catch (e, stackTrace) {
       Logger.warning(
         'The Wi-Fi pairing cannot be read; forgetting it',
@@ -171,10 +174,6 @@ class LanPairingStore {
       } catch (_) {}
       return null;
     }
-    if (value == null) {
-      return null;
-    }
-    return LanPairing.fromJson(jsonDecode(value) as Map<String, Object?>);
   }
 
   Future<void> write(LanPairing pairing) =>

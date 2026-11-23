@@ -65,7 +65,8 @@ edit the generated files.
 
 ## Rating prompt
 
-Google Play's in-app review dialog (`in_app_review`) is requested at a good
+Google Play's in-app review dialog (`ReviewChannel.kt` calling
+`com.google.android.play:review`) is requested at a good
 moment, right after To Be Budgeted reaches zero, and only when it is due:
 at least 7 days after the first start, on at least 5 days of use, at most 3
 times and at least 120 days apart (`ReviewPrompter`). Google decides whether

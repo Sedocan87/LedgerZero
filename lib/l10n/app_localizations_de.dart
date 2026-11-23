@@ -3050,7 +3050,7 @@ class AppLocalizationsDe extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          '$count Daten weichen stark von den anderen ab. Bitte prüfen Sie sie in der Übersicht.',
+          '$count Datumsangaben weichen stark von den anderen ab. Bitte prüfen Sie sie in der Übersicht.',
       one:
           '1 Datum weicht stark von den anderen ab. Bitte prüfen Sie es in der Übersicht.',
     );
@@ -3252,7 +3252,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get accountOnBudgetChangeOff =>
-      'Saldo und Buchungen dieses Kontos zählen in keinem Monat mehr zu „Zu budgetieren“. Überweisungen zwischen diesem Konto und Ihren Budgetkonten bringen Geld aus dem Budget heraus oder hinein.';
+      'Saldo und Buchungen dieses Kontos zählen in keinem Monat mehr zu „Zu budgetieren“. Umbuchungen zwischen diesem Konto und Ihren Budgetkonten bringen Geld aus dem Budget heraus oder hinein.';
 
   @override
   String get accountOnBudgetChangeOn =>

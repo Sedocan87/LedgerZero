@@ -53,7 +53,10 @@ class RuleRepositoryImpl implements RuleRepository {
   @override
   Future<void> updateRule(domain.Rule rule) async {
     try {
-      await _rulesDao.updateRule(_mapToCompanion(rule));
+      final existing = await _rulesDao.getRuleById(rule.id);
+      await _rulesDao.updateRule(
+        _mapToCompanion(rule, existingCreatedAt: existing?.createdAt),
+      );
     } catch (e, stackTrace) {
       Logger.error('Failed to update rule', e, stackTrace);
       throw DatabaseException('Failed to update rule', e);
@@ -101,7 +104,11 @@ class RuleRepositoryImpl implements RuleRepository {
     );
   }
 
-  RulesCompanion _mapToCompanion(domain.Rule rule) {
+  RulesCompanion _mapToCompanion(
+    domain.Rule rule, {
+    String? existingCreatedAt,
+  }) {
+    final now = DateTime.now().toUtc().toIso8601String();
     return RulesCompanion(
       id: Value(rule.id),
       name: Value(rule.name),
@@ -111,10 +118,8 @@ class RuleRepositoryImpl implements RuleRepository {
       matchLogic: Value(rule.matchLogic),
       conditions: Value(rule.conditions),
       actions: Value(rule.actions),
-      createdAt: Value(
-        DateTime.now().toUtc().toIso8601String(),
-      ), // Should preserve if exists? usually handled by service/usecase
-      updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
+      createdAt: Value(existingCreatedAt ?? now),
+      updatedAt: Value(now),
     );
   }
 

@@ -347,6 +347,7 @@ class _NaturalLanguageInputScreenState
                       )
                     : IconButton(
                         icon: const Icon(Icons.clear),
+                        tooltip: l10n.clear,
                         onPressed: () {
                           _controller.clear();
                           _onTextChanged('');
@@ -455,10 +456,17 @@ class _NaturalLanguageInputScreenState
     final hasPayee = transaction.payeeName != null;
     final hasCategory = transaction.categoryName != null;
 
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = AppSemanticColors.of(context);
+    final confidenceColor = _getConfidenceColor(
+      transaction.confidence,
+      semantic,
+    );
+
     // Determine color based on income/expense
     final amountColor = transaction.isIncome
-        ? AppColors.income
-        : AppColors.expense;
+        ? semantic.income
+        : semantic.expense;
     final amountPrefix = transaction.isIncome ? '+' : '-';
 
     return AppCard(
@@ -483,14 +491,21 @@ class _NaturalLanguageInputScreenState
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getConfidenceColor(transaction.confidence),
+                    color: AppSemanticColors.tonal(
+                      confidenceColor,
+                      scheme.surface,
+                    ),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Text(
                     l10n.quickAddConfidence(
                       (transaction.confidence * 100).toInt(),
                     ),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(
+                      color: confidenceColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -510,7 +525,7 @@ class _NaturalLanguageInputScreenState
                   children: [
                     Icon(
                       hasAmount ? Icons.attach_money : Icons.money_off,
-                      color: hasAmount ? amountColor : Colors.grey,
+                      color: hasAmount ? amountColor : scheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Flexible(
@@ -520,7 +535,9 @@ class _NaturalLanguageInputScreenState
                             : l10n.noAmount,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(
-                              color: hasAmount ? amountColor : Colors.grey,
+                              color: hasAmount
+                                  ? amountColor
+                                  : scheme.onSurfaceVariant,
                               fontWeight: FontWeight.bold,
                             ),
                       ),
@@ -553,8 +570,8 @@ class _NaturalLanguageInputScreenState
               title: Text(transaction.payeeName ?? l10n.unknownPayee),
               subtitle: Text(hasPayee ? l10n.payee : l10n.payeeNotFound),
               trailing: hasPayee
-                  ? const Icon(Icons.check_circle, color: AppColors.success)
-                  : const Icon(Icons.help_outline, color: AppColors.warning),
+                  ? Icon(Icons.check_circle, color: semantic.success)
+                  : Icon(Icons.help_outline, color: semantic.warning),
             ),
 
             // Category
@@ -571,8 +588,8 @@ class _NaturalLanguageInputScreenState
               ),
               subtitle: Text(hasCategory ? l10n.category : l10n.uncategorized),
               trailing: hasCategory || transaction.isIncome
-                  ? const Icon(Icons.check_circle, color: AppColors.success)
-                  : const Icon(Icons.help_outline, color: AppColors.warning),
+                  ? Icon(Icons.check_circle, color: semantic.success)
+                  : Icon(Icons.help_outline, color: semantic.warning),
             ),
           ],
         ),
@@ -580,14 +597,14 @@ class _NaturalLanguageInputScreenState
     );
   }
 
-  Color _getConfidenceColor(double confidence) {
+  Color _getConfidenceColor(double confidence, AppSemanticColors semantic) {
     if (confidence >= 0.8) {
-      return AppColors.success;
+      return semantic.success;
     }
     if (confidence >= 0.5) {
-      return AppColors.warning;
+      return semantic.warning;
     }
-    return AppColors.error;
+    return semantic.error;
   }
 
   void _showCheatSheet(BuildContext context) {

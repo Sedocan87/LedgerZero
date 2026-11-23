@@ -127,6 +127,14 @@ class ScheduledTransactionService {
         TransactionValidationError.scheduleInvalidInterval,
       );
     }
+    if (next != null &&
+        schedule.occurrenceCount != null &&
+        schedule.occurrenceCount! < 1) {
+      throw ValidationException(
+        'Occurrence count must be at least 1',
+        TransactionValidationError.scheduleInvalidInterval,
+      );
+    }
   }
 
   /// Validates and stores [schedule] (created when [isNew], otherwise
@@ -336,6 +344,11 @@ class ScheduledTransactionService {
     }
 
     var current = scheduled;
+    if (current.nextDate != null &&
+        current.occurrenceCount != null &&
+        current.occurrenceCount! <= 0) {
+      current = current.copyWith(clearNextDate: true);
+    }
     var created = 0;
     var booked = 0;
     while (current.nextDate != null &&

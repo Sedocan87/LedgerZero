@@ -1469,7 +1469,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restoreSuccessMessage =>
-      'Your data was restored. If you use sync, this device will resynchronise and newer changes from your other devices will come back in.';
+      'Your data was restored. If you use sync, this device will resynchronize and newer changes from your other devices will come back in.';
 
   @override
   String get restoreWrongPassword =>
@@ -2728,8 +2728,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get highContrastTitle => 'High contrast';
 
   @override
-  String get highContrastSubtitle =>
-      'Stronger contrast for colours and borders';
+  String get highContrastSubtitle => 'Stronger contrast for colors and borders';
 
   @override
   String get faqBudgetingQ => 'How does envelope budgeting work?';
@@ -2799,7 +2798,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideTransactionsBody =>
-      'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorise transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.';
+      'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorize transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.';
 
   @override
   String get guideOverspendingTitle => 'Overspending';
@@ -3858,7 +3857,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpTbbBody =>
-      'Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every euro has a job.';
+      'Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every unit of your money has a job.';
 
   @override
   String get helpTbbSteps =>
@@ -5195,7 +5194,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String budgetCurrencyChangeConfirmBody(String from, String to) {
-    return 'The accounts in your budget are relabelled from $from to $to. Amounts are NOT converted: 100 $from becomes 100 $to.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in $to.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.';
+    return 'The accounts in your budget are relabeled from $from to $to. Amounts are NOT converted: 100 $from becomes 100 $to.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in $to.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.';
   }
 
   @override
@@ -5355,7 +5354,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get proFeatureRulesDescription =>
-      'Categorise and rename transactions automatically.';
+      'Categorize and rename transactions automatically.';
 
   @override
   String get proAlwaysFree =>

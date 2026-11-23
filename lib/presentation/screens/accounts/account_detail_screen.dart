@@ -287,6 +287,7 @@ class AccountDetailScreen extends ConsumerWidget {
           if (!readOnly) ...[
             IconButton(
               icon: const Icon(Icons.edit),
+              tooltip: l10n.editAccount,
               onPressed: () => context.goNamed(
                 'edit-account',
                 pathParameters: {'id': accountId},
@@ -401,8 +402,8 @@ class _CardPaymentCard extends ConsumerWidget {
                     : l10n.cardPaymentCovered,
                 style: TextStyle(
                   color: status.missing > 0
-                      ? AppColors.warning
-                      : AppColors.success,
+                      ? AppSemanticColors.of(context).warning
+                      : AppSemanticColors.of(context).success,
                 ),
               ),
             ],

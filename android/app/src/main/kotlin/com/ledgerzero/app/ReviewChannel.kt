@@ -21,9 +21,12 @@ class ReviewChannel(private val activity: Activity, messenger: BinaryMessenger) 
     }
 
     private val manager by lazy { ReviewManagerFactory.create(activity) }
+    private val channel = MethodChannel(messenger, CHANNEL)
+    @Volatile
+    private var disposed = false
 
     init {
-        MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
+        channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "isAvailable" -> result.success(playStoreInstalled())
                 "requestReview" -> requestReview(result)
@@ -31,6 +34,11 @@ class ReviewChannel(private val activity: Activity, messenger: BinaryMessenger) 
                 else -> result.notImplemented()
             }
         }
+    }
+
+    fun dispose() {
+        disposed = true
+        channel.setMethodCallHandler(null)
     }
 
     private fun playStoreInstalled(): Boolean = try {
@@ -42,12 +50,23 @@ class ReviewChannel(private val activity: Activity, messenger: BinaryMessenger) 
 
     private fun requestReview(result: MethodChannel.Result) {
         manager.requestReviewFlow().addOnCompleteListener { request ->
+            if (disposed) {
+                return@addOnCompleteListener
+            }
             if (!request.isSuccessful) {
                 result.error("unavailable", request.exception?.message, null)
                 return@addOnCompleteListener
             }
+            if (activity.isFinishing || activity.isDestroyed) {
+                result.success(null)
+                return@addOnCompleteListener
+            }
             manager.launchReviewFlow(activity, request.result)
-                .addOnCompleteListener { result.success(null) }
+                .addOnCompleteListener {
+                    if (!disposed) {
+                        result.success(null)
+                    }
+                }
         }
     }
 

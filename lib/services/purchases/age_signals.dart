@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:age_range_signals/age_range_signals.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:ledger_zero/core/utils/logger.dart';
+import 'package:play_age_features/play_age_features.dart';
 
 /// The user's age status from Google Play Age Signals (or, on iOS, Apple's
 /// Declared Age Range); faked in tests. The stores' terms allow using it
@@ -39,40 +41,106 @@ bool blocksPurchases(AgeSignalsStatus? status) => switch (status) {
 const Duration ageSignalsTimeout = Duration(seconds: 6);
 
 /// The age status checked before Pro is bought. Asked at the first tap on
-/// Buy in a session, never at launch: buying Pro is the only thing in
-/// LedgerZero that depends on age, Texas §121.054 sets no timeline for the
-/// check, and Play may show its age-sharing sheet, which belongs in front
-/// of a user who asked to buy. The answer is kept in memory for the session
+/// Buy in a session: buying Pro is the only thing in LedgerZero that
+/// depends on age, Texas §121.054 sets no timeline for the check, and Play
+/// may show its age-sharing sheet, which belongs in front of a user who
+/// asked to buy. At launch it is asked only where a law makes Play share
+/// the user's age ([checkAtLaunch], for California AB 1043); everyone else
+/// sees nothing at launch. The answer is kept in memory for the session
 /// and never written, logged or sent anywhere (Texas §121.055(b): delete it
 /// after the check). A timeout or an error counts as `unknown` and is not
 /// kept, so the next tap asks again; an answer that arrives after the
 /// timeout is kept.
 final class AgeSignalsGate {
-  AgeSignalsGate(this._signals, {this.timeout = ageSignalsTimeout});
+  AgeSignalsGate(
+    this._signals, {
+    this.timeout = ageSignalsTimeout,
+    Future<bool> Function()? isMandatorySharing,
+  }) : _isMandatorySharing = isMandatorySharing ?? _playMandatorySharing;
 
   final AgeSignals _signals;
   final Duration timeout;
+  final Future<bool> Function() _isMandatorySharing;
 
   AgeSignalsStatus? _known;
 
-  /// The request in flight; a second tap waits for the same one.
+  /// The request in flight; a second tap (or a tap during the launch check)
+  /// waits for the same one.
   Future<AgeSignalsStatus>? _asking;
 
   Future<AgeSignalsStatus> status() async {
     if (_known case final known?) {
       return known;
     }
+    Future<AgeSignalsStatus>? asking;
     try {
-      final asking = _asking ??= _signals
-          .status()
-          .then((status) => _known = status)
-          .whenComplete(() => _asking = null);
+      asking = _asking ??= _ask();
       return await asking.timeout(timeout);
     } on Object catch (e) {
+      // Let go of a request that didn't answer in time, so one that never
+      // answers can't make every later tap wait: the next tap asks again.
+      if (asking != null && identical(_asking, asking)) {
+        _asking = null;
+      }
       // Not the status itself: only that there was none.
       Logger.warning('Age signals unavailable: ${e.runtimeType}');
       return AgeSignalsStatus.unknown;
     }
+  }
+
+  Future<AgeSignalsStatus> _ask() {
+    late final Future<AgeSignalsStatus> request;
+    return request = _signals
+        .status()
+        .then((status) => _known = status)
+        .whenComplete(() {
+          if (identical(_asking, request)) {
+            _asking = null;
+          }
+        });
+  }
+
+  /// California's Digital Age Assurance Act (AB 1043, Civil Code
+  /// §1798.501(b)(1), from 2027-01-01) makes apps request the age signal
+  /// "when the application is downloaded and launched". So, once per launch,
+  /// ask Play whether a law makes it share this user's age; only then ask for
+  /// the signal (these users get no "share your age?" sheet in US states) and
+  /// keep it for the session, so the Buy tap reuses it. Nothing happens for
+  /// anyone else. Call it after the first frame, from a foregrounded app.
+  /// Never throws.
+  Future<void> checkAtLaunch() async {
+    final bool mandatory;
+    try {
+      mandatory = await _isMandatorySharing().timeout(timeout);
+    } on Object catch (e) {
+      // Not from Play (sideloaded or debug build: APP_NOT_OWNED), no Play
+      // Store, offline, ... The Buy tap still checks.
+      Logger.warning('Age features unavailable: ${e.runtimeType}');
+      return;
+    }
+    if (kDebugMode) {
+      Logger.debug('Age signals mandatory for this user: $mandatory');
+    }
+    if (mandatory) {
+      await status();
+    }
+  }
+
+  /// Debug builds only: `--dart-define=AGE_SIGNALS_FORCE_MANDATORY=true` makes
+  /// [checkAtLaunch] act as if Play reported mandatory sharing, to try the
+  /// launch path on a device outside California and Brazil.
+  static const bool _forceMandatory =
+      kDebugMode && bool.fromEnvironment('AGE_SIGNALS_FORCE_MANDATORY');
+
+  static Future<bool> _playMandatorySharing() {
+    // iOS: not asked at launch (LedgerZero ships on Android only).
+    if (kIsWeb || !Platform.isAndroid) {
+      return Future.value(false);
+    }
+    if (_forceMandatory) {
+      return Future.value(true);
+    }
+    return PlayAgeFeatures.isMandatorySharing();
   }
 }
 
