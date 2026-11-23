@@ -124,6 +124,10 @@ class _LockScreenState extends ConsumerState<LockScreen>
           case DatabaseFileState.tooOld:
             _setPhase(_Phase.tooOld);
             return;
+          case DatabaseFileState.tooNew:
+            Logger.error('Database schema is newer than this app version');
+            _setPhase(_Phase.openError);
+            return;
           case DatabaseFileState.missing:
           case DatabaseFileState.usable:
             ref.read(sessionProvider.notifier).open();
@@ -271,10 +275,18 @@ class _LockScreenState extends ConsumerState<LockScreen>
   }
 
   Widget _buildLocked(AppLocalizations l10n) {
+    final failureReason =
+        _authFailure == AppLockAuthenticator.missingChannelCode
+        ? l10n.errorOccurred
+        : _authFailure;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(Icons.lock_outline, size: 64, color: Colors.teal),
+        Icon(
+          Icons.lock_outline,
+          size: 64,
+          color: Theme.of(context).colorScheme.primary,
+        ),
         const SizedBox(height: 32),
         Text(
           l10n.lockScreenTitle,
@@ -291,10 +303,10 @@ class _LockScreenState extends ConsumerState<LockScreen>
           icon: const Icon(Icons.fingerprint),
           label: Text(l10n.loginUnlock),
         ),
-        if (_authFailure != null) ...[
+        if (failureReason != null) ...[
           const SizedBox(height: 16),
           Text(
-            l10n.lockScreenAuthFailed(_authFailure!),
+            l10n.lockScreenAuthFailed(failureReason),
             key: const Key('lock_auth_failed'),
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.error),

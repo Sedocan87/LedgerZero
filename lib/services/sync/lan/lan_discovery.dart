@@ -44,9 +44,12 @@ class LanDiscovery {
   final InternetAddress? broadcastAddress;
 
   static const int defaultPort = 47322;
+  static const int _maxNameLength = 64;
+  static const Duration _peerUpdateCooldown = Duration(seconds: 5);
 
   RawDatagramSocket? _socket;
   Timer? _timer;
+  final Map<String, DateTime> _lastProcessed = <String, DateTime>{};
 
   Future<void> start() async {
     if (_socket != null) {
@@ -91,14 +94,19 @@ class LanDiscovery {
       return;
     }
     final minute = DateTime.now().millisecondsSinceEpoch ~/ 60000;
+    final rawName = deviceName();
+    final safeName = rawName.length <= _maxNameLength
+        ? rawName
+        : rawName.substring(0, _maxNameLength);
     final beacon = utf8.encode(
       jsonEncode({
         'v': 1,
         'd': deviceId,
-        'n': deviceName(),
+        'n': safeName,
         'p': serverPort,
         'm': minute,
         't': auth.beaconTag(deviceId, serverPort, minute),
+        't2': auth.beaconTagWithName(deviceId, safeName, serverPort, minute),
       }),
     );
     try {
@@ -124,29 +132,52 @@ class LanDiscovery {
           device is! String ||
           device == deviceId ||
           serverPort is! int ||
+          serverPort < 1 ||
+          serverPort > 65535 ||
           minute is! int ||
           tag is! String) {
         return;
       }
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 60000;
-      if ((now - minute).abs() > 1 ||
-          auth.beaconTag(device, serverPort, minute) != tag) {
+      final rawName = json['n'] is String ? json['n'] as String : '';
+      final safeName = rawName.length <= _maxNameLength
+          ? rawName
+          : rawName.substring(0, _maxNameLength);
+      final nowMinute = DateTime.now().millisecondsSinceEpoch ~/ 60000;
+      if ((nowMinute - minute).abs() > 1 ||
+          !auth.verifyBeaconTag(
+            auth.beaconTag(device, serverPort, minute),
+            tag,
+          )) {
         return;
       }
+      final tag2 = json['t2'];
+      if (tag2 is String &&
+          !auth.verifyBeaconTag(
+            auth.beaconTagWithName(device, safeName, serverPort, minute),
+            tag2,
+          )) {
+        return;
+      }
+      final now = DateTime.now();
+      final last = _lastProcessed[device];
+      if (last != null && now.difference(last) < _peerUpdateCooldown) {
+        return;
+      }
+      _lastProcessed[device] = now;
       final known = peers[device];
       final peer = LanPeer(
         deviceId: device,
-        name: json['n'] as String? ?? '',
+        name: safeName,
         host: datagram.address.address,
         port: serverPort,
-        lastSeen: DateTime.now(),
+        lastSeen: now,
       );
       await peers.upsert(peer);
       final synced = known?.lastSync;
       if (known?.host != peer.host ||
           known?.port != peer.port ||
           synced == null ||
-          DateTime.now().difference(synced) > const Duration(minutes: 2)) {
+          now.difference(synced) > const Duration(minutes: 2)) {
         onPeerSeen?.call(peers[device]!);
       }
     } catch (_) {

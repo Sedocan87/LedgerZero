@@ -540,7 +540,6 @@ class _AddEditAccountScreenState extends ConsumerState<AddEditAccountScreen> {
                   ? l10n.accountUpdated
                   : l10n.accountCreated,
             ),
-            backgroundColor: Colors.green,
           ),
         );
       }

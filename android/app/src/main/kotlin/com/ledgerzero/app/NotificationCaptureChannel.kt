@@ -12,6 +12,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.Executors
 
 /**
  * Method channel for card notification capture (Dart side:
@@ -68,11 +69,20 @@ class NotificationCaptureChannel(
     private val store = CaptureStore.get(activity)
     private val channel = MethodChannel(messenger, CHANNEL)
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val ioExecutor = Executors.newSingleThreadExecutor()
+    @Volatile
+    private var disposed = false
 
     init {
         channel.setMethodCallHandler(this)
         CaptureStore.onCaptured = {
-            mainHandler.post { channel.invokeMethod("captured", null) }
+            if (!disposed) {
+                mainHandler.post {
+                    if (!disposed) {
+                        channel.invokeMethod("captured", null)
+                    }
+                }
+            }
         }
         // After an app update the system may leave the listener unbound
         // until the next reboot; asking for a rebind brings it back.
@@ -81,8 +91,30 @@ class NotificationCaptureChannel(
 
     /** Stops forwarding captures (the engine is going away). */
     fun dispose() {
+        disposed = true
         CaptureStore.onCaptured = null
+        mainHandler.removeCallbacksAndMessages(null)
         channel.setMethodCallHandler(null)
+        ioExecutor.shutdown()
+    }
+
+    private fun runOffMain(result: MethodChannel.Result, block: () -> Any?) {
+        ioExecutor.execute {
+            try {
+                val value = block()
+                mainHandler.post {
+                    if (!disposed) {
+                        result.success(value)
+                    }
+                }
+            } catch (e: Exception) {
+                mainHandler.post {
+                    if (!disposed) {
+                        result.error("failed", e.javaClass.simpleName, null)
+                    }
+                }
+            }
+        }
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -95,45 +127,53 @@ class NotificationCaptureChannel(
                     CardNotificationListener.requestRebindIfNeeded(activity)
                     result.success(CardNotificationListener.connected != null)
                 }
-                "storageResetAt" -> result.success(store.storageResetAt())
-                "acknowledgeStorageReset" -> {
+                "storageResetAt" -> runOffMain(result) { store.storageResetAt() }
+                "acknowledgeStorageReset" -> runOffMain(result) {
                     store.acknowledgeStorageReset()
-                    result.success(null)
+                    null
                 }
                 "openAccessSettings" -> {
                     openAccessSettings()
                     result.success(null)
                 }
-                "getSources" -> result.success(store.sources().toString())
+                "getSources" -> runOffMain(result) { store.sources().toString() }
                 "setSources" -> {
-                    store.setSources(JSONArray(call.argument<String>("sources") ?: "[]"))
-                    result.success(null)
+                    val raw = call.argument<String>("sources") ?: "[]"
+                    runOffMain(result) {
+                        store.setSources(JSONArray(raw))
+                        null
+                    }
                 }
-                "candidateApps" -> result.success(candidateApps().toString())
-                "pending" -> result.success(store.pending().toString())
-                "log" -> result.success(store.log().toString())
+                "candidateApps" -> runOffMain(result) { candidateApps().toString() }
+                "pending" -> runOffMain(result) { store.pending().toString() }
+                "log" -> runOffMain(result) { store.log().toString() }
                 "setStatus" -> {
-                    store.setStatus(
-                        call.argument<List<String>>("ids")?.toSet() ?: emptySet(),
-                        call.argument<String>("status") ?: CaptureStore.STATUS_PENDING,
-                        call.argument<String>("transactionId"),
-                        call.argument<String>("error"),
-                        call.argument<Boolean>("byUser") ?: false,
-                    )
-                    result.success(null)
+                    val ids = call.argument<List<String>>("ids")?.toSet() ?: emptySet()
+                    val status = call.argument<String>("status") ?: CaptureStore.STATUS_PENDING
+                    val transactionId = call.argument<String>("transactionId")
+                    val error = call.argument<String>("error")
+                    val byUser = call.argument<Boolean>("byUser") ?: false
+                    runOffMain(result) {
+                        store.setStatus(ids, status, transactionId, error, byUser)
+                        null
+                    }
                 }
-                "captureShowing" -> result.success(
-                    CardNotificationListener.connected
-                        ?.captureShowing(call.argument<String>("packageName") ?: "")
-                        ?: 0,
-                )
+                "captureShowing" -> {
+                    val pkg = call.argument<String>("packageName") ?: ""
+                    runOffMain(result) {
+                        CardNotificationListener.connected?.captureShowing(pkg) ?: 0
+                    }
+                }
                 "remove" -> {
-                    store.remove(call.argument<List<String>>("ids")?.toSet() ?: emptySet())
-                    result.success(null)
+                    val ids = call.argument<List<String>>("ids")?.toSet() ?: emptySet()
+                    runOffMain(result) {
+                        store.remove(ids)
+                        null
+                    }
                 }
-                "clear" -> {
+                "clear" -> runOffMain(result) {
                     store.clear()
-                    result.success(null)
+                    null
                 }
                 else -> result.notImplemented()
             }

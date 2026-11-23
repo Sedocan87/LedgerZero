@@ -41,6 +41,14 @@ class PlayProStore implements ProStore {
       if (purchase.productID != productId) {
         continue;
       }
+      if (purchase.status == PurchaseStatus.error &&
+          _isAlreadyOwnedError(purchase.error)) {
+        final alreadyOwned = await owned();
+        if (alreadyOwned == true) {
+          _updates.add(const ProPurchaseUpdate(ProPurchaseStatus.purchased));
+          continue;
+        }
+      }
       final update = switch (purchase.status) {
         PurchaseStatus.pending => const ProPurchaseUpdate(
           ProPurchaseStatus.pending,
@@ -60,6 +68,19 @@ class PlayProStore implements ProStore {
       }
       _updates.add(update);
     }
+  }
+
+  static bool _isAlreadyOwnedError(IAPError? error) {
+    if (error == null) {
+      return false;
+    }
+    final code = error.code.toLowerCase();
+    final message = error.message.toLowerCase();
+    return code.contains('already_owned') ||
+        code.contains('itemalreadyowned') ||
+        message.contains('already_owned') ||
+        message.contains('itemalreadyowned') ||
+        message.contains('item already owned');
   }
 
   Future<void> _complete(PurchaseDetails purchase) async {
@@ -131,7 +152,8 @@ class PlayProStore implements ProStore {
       var owned = false;
       for (final purchase in response.pastPurchases) {
         if (purchase.productID != productId ||
-            purchase.status == PurchaseStatus.pending) {
+            (purchase.status != PurchaseStatus.purchased &&
+                purchase.status != PurchaseStatus.restored)) {
           continue;
         }
         if (purchase.pendingCompletePurchase) {

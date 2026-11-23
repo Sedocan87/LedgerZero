@@ -1,6 +1,7 @@
 import 'package:csv/csv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/utils/text_decoding.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
 import 'package:ledger_zero/domain/entities/category_group.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
@@ -111,7 +112,11 @@ class CategoryCsvService {
         final hidden = const {'true', '1', 'yes'}.contains(hiddenText);
 
         var group = groups
-            .where((g) => g.name.toLowerCase() == groupName.toLowerCase())
+            .where(
+              (g) =>
+                  g.id != CardPayments.groupId &&
+                  g.name.toLowerCase() == groupName.toLowerCase(),
+            )
             .firstOrNull;
         if (group == null) {
           group = CategoryGroup(

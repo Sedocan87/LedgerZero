@@ -4,12 +4,14 @@ import 'package:ledger_zero/core/utils/picked_file.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 import 'package:ledger_zero/services/security/external_ui_guard.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/presentation/providers/l10n_provider.dart';
+import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 
 /// Outcome of a rule import.
 class RuleImportResult {
@@ -92,6 +94,15 @@ class RuleImportExportService {
     for (final item in jsonList) {
       try {
         final parsed = _ruleFromJson(item);
+        final hasUnsafeRegex = parsed.conditions.any(
+          (c) =>
+              c.operator == RuleConditionOperator.regex &&
+              !RuleMatchingService.isSafeRegex(c.value),
+        );
+        if (hasUnsafeRegex) {
+          Logger.warning('Skipping imported rule with unsafe regex pattern');
+          continue;
+        }
         final rule = await _withKnownReferences(parsed);
         dropped += parsed.actions.length - rule.actions.length;
         final existing = await repository.getRule(rule.id);
@@ -128,20 +139,21 @@ class RuleImportExportService {
   Future<bool> _targetExists(RuleAction action) async {
     switch (action.type) {
       case RuleActionType.setCategory:
-        return await ref
-                .read(categoryRepositoryProvider)
-                .getCategoryById(action.value) !=
-            null;
+        final category = await ref
+            .read(categoryRepositoryProvider)
+            .getCategoryById(action.value);
+        return category != null &&
+            category.categoryGroupId != CardPayments.groupId;
       case RuleActionType.setPayee:
         return await ref
                 .read(payeeRepositoryProvider)
                 .getPayeeById(action.value) !=
             null;
       case RuleActionType.setAccount:
-        return await ref
-                .read(accountRepositoryProvider)
-                .getAccountById(action.value) !=
-            null;
+        final account = await ref
+            .read(accountRepositoryProvider)
+            .getAccountById(action.value);
+        return account != null && !account.isClosed && !account.isPartners;
       case RuleActionType.setMemo:
       case RuleActionType.markCleared:
       case RuleActionType.markApproved:

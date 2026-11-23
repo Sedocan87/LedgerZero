@@ -21,6 +21,7 @@ import 'package:ledger_zero/presentation/widgets/common/unsaved_changes_guard.da
 import 'package:ledger_zero/presentation/widgets/pickers/account_selector.dart';
 import 'package:ledger_zero/presentation/widgets/pickers/category_selector.dart';
 import 'package:ledger_zero/presentation/widgets/pickers/payee_selector.dart';
+import 'package:ledger_zero/services/rules/rule_matching_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 
@@ -389,223 +390,27 @@ class _AddEditRuleScreenState extends ConsumerState<AddEditRuleScreen> {
     );
   }
 
-  void _showAddConditionDialog() {
-    RuleConditionType type = RuleConditionType.description;
-    // Only the operators the field is evaluated with are offered; a new
-    // field starts with its default operator.
-    RuleConditionOperator op = RuleCondition.operatorsFor(type).first;
-    final valueController = TextEditingController();
-    String? valueError;
-    final l10n = AppLocalizations.of(context)!;
-
-    showDialog(
+  Future<void> _showAddConditionDialog() async {
+    final condition = await showDialog<RuleCondition>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(l10n.ruleAddCondition),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<RuleConditionType>(
-                initialValue: type,
-                isExpanded: true,
-                decoration: InputDecoration(labelText: l10n.ruleFieldLabel),
-                items: RuleConditionType.values
-                    .map(
-                      (e) => DropdownMenuItem(
-                        value: e,
-                        child: Text(
-                          e.label(l10n),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setDialogState(() {
-                  if (v == type) {
-                    return;
-                  }
-                  type = v!;
-                  op = RuleCondition.operatorsFor(type).first;
-                  // A payee name or a text is no amount, and the other way
-                  // round.
-                  valueController.clear();
-                  valueError = null;
-                }),
-              ),
-              DropdownButtonFormField<RuleConditionOperator>(
-                // A key per field, so the reset operator is shown.
-                key: ValueKey(type),
-                initialValue: op,
-                isExpanded: true,
-                decoration: InputDecoration(labelText: l10n.ruleOperatorLabel),
-                items: RuleCondition.operatorsFor(type)
-                    .map(
-                      (e) => DropdownMenuItem(
-                        value: e,
-                        child: Text(
-                          e.label(l10n),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setDialogState(() => op = v!),
-              ),
-              if (type == RuleConditionType.payee)
-                TextField(
-                  controller: valueController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: l10n.pickerSelectPayee,
-                    suffixIcon: const Icon(Icons.arrow_drop_down),
-                  ),
-                  onTap: () {
-                    PayeeSelector.show(context, (payee) {
-                      valueController.text =
-                          payee.name; // Store Name for comparison
-                    });
-                  },
-                )
-              else if (type == RuleConditionType.amount)
-                TextField(
-                  controller: valueController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: true,
-                  ),
-                  decoration: InputDecoration(
-                    // Compared with the signed amount: -12.50 is an outflow.
-                    labelText: l10n.ruleAmountValueLabel,
-                    errorText: valueError,
-                  ),
-                )
-              else
-                TextField(
-                  controller: valueController,
-                  decoration: InputDecoration(labelText: l10n.ruleValueLabel),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.cancel),
-            ),
-            TextButton(
-              onPressed: () {
-                if (valueController.text.isEmpty) {
-                  return;
-                }
-                final RuleCondition condition;
-                if (type == RuleConditionType.amount) {
-                  // Amount conditions store minor units.
-                  final minor = ref
-                      .read(appFormatterProvider)
-                      .parseAmount(valueController.text);
-                  if (minor == null) {
-                    setDialogState(() => valueError = l10n.invalidAmount);
-                    return;
-                  }
-                  condition = RuleCondition.amount(operator: op, minor: minor);
-                } else {
-                  condition = RuleCondition(
-                    type: type,
-                    operator: op,
-                    value: valueController.text,
-                  );
-                }
-                setState(() => _conditions.add(condition));
-                Navigator.pop(ctx);
-              },
-              child: Text(l10n.add),
-            ),
-          ],
-        ),
-      ),
+      builder: (ctx) => const _AddConditionDialog(),
     );
+    if (condition != null && mounted) {
+      setState(() => _conditions.add(condition));
+    }
   }
 
-  void _showAddActionDialog() {
-    RuleActionType type = RuleActionType.setCategory;
-    final valueController = TextEditingController(
-      text: _defaultActionValue(type),
-    );
-    // Store readable name for display in dialog before save, but ID in valueController
-    String displayValue = '';
-    final l10n = AppLocalizations.of(context)!;
-
-    showDialog(
+  Future<void> _showAddActionDialog() async {
+    final action = await showDialog<RuleAction>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: Text(l10n.ruleAddAction),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<RuleActionType>(
-                  initialValue: type,
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: l10n.ruleActionLabel),
-                  items: RuleActionType.values
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(
-                            e.label(l10n),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    setDialogState(() {
-                      type = v!;
-                      // A yes/no action starts on "yes", as its dropdown
-                      // shows, so Add works without touching it.
-                      valueController.text = _defaultActionValue(type);
-                      displayValue = '';
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildActionValueInput(
-                  context,
-                  type,
-                  valueController,
-                  displayValue,
-                  (val, display) {
-                    setDialogState(() {
-                      displayValue = display;
-                    });
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.cancel),
-              ),
-              TextButton(
-                onPressed: () {
-                  if (valueController.text.isNotEmpty) {
-                    setState(() {
-                      _actions.add(
-                        RuleAction(type: type, value: valueController.text),
-                      );
-                    });
-                    Navigator.pop(ctx);
-                  }
-                },
-                child: Text(l10n.add),
-              ),
-            ],
-          );
-        },
+      builder: (ctx) => _AddActionDialog(
+        defaultActionValue: _defaultActionValue,
+        buildValueInput: _buildActionValueInput,
       ),
     );
+    if (action != null && mounted) {
+      setState(() => _actions.add(action));
+    }
   }
 
   /// The value a new action of [type] starts with: "true" for the yes/no
@@ -825,5 +630,246 @@ class _ActionDisplay extends ConsumerWidget {
     }
 
     return Text(description);
+  }
+}
+
+class _AddConditionDialog extends ConsumerStatefulWidget {
+  const _AddConditionDialog();
+
+  @override
+  ConsumerState<_AddConditionDialog> createState() =>
+      _AddConditionDialogState();
+}
+
+class _AddConditionDialogState extends ConsumerState<_AddConditionDialog> {
+  RuleConditionType _type = RuleConditionType.description;
+  late RuleConditionOperator _op = RuleCondition.operatorsFor(_type).first;
+  final TextEditingController _valueController = TextEditingController();
+  String? _valueError;
+
+  @override
+  void dispose() {
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.ruleAddCondition),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<RuleConditionType>(
+            initialValue: _type,
+            isExpanded: true,
+            decoration: InputDecoration(labelText: l10n.ruleFieldLabel),
+            items: RuleConditionType.values
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(e.label(l10n), overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) => setState(() {
+              if (v == _type) {
+                return;
+              }
+              _type = v!;
+              _op = RuleCondition.operatorsFor(_type).first;
+              _valueController.clear();
+              _valueError = null;
+            }),
+          ),
+          DropdownButtonFormField<RuleConditionOperator>(
+            key: ValueKey(_type),
+            initialValue: _op,
+            isExpanded: true,
+            decoration: InputDecoration(labelText: l10n.ruleOperatorLabel),
+            items: RuleCondition.operatorsFor(_type)
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(e.label(l10n), overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) => setState(() {
+              _op = v!;
+              _valueError = null;
+            }),
+          ),
+          if (_type == RuleConditionType.payee)
+            TextField(
+              controller: _valueController,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: l10n.pickerSelectPayee,
+                suffixIcon: const Icon(Icons.arrow_drop_down),
+              ),
+              onTap: () {
+                PayeeSelector.show(context, (payee) {
+                  _valueController.text = payee.name;
+                });
+              },
+            )
+          else if (_type == RuleConditionType.amount)
+            TextField(
+              controller: _valueController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: true,
+              ),
+              decoration: InputDecoration(
+                labelText: l10n.ruleAmountValueLabel,
+                errorText: _valueError,
+              ),
+            )
+          else
+            TextField(
+              controller: _valueController,
+              decoration: InputDecoration(
+                labelText: l10n.ruleValueLabel,
+                errorText: _valueError,
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(
+          onPressed: () {
+            if (_valueController.text.isEmpty) {
+              return;
+            }
+            final RuleCondition condition;
+            if (_type == RuleConditionType.amount) {
+              final minor = ref
+                  .read(appFormatterProvider)
+                  .parseAmount(_valueController.text);
+              if (minor == null) {
+                setState(() => _valueError = l10n.invalidAmount);
+                return;
+              }
+              condition = RuleCondition.amount(operator: _op, minor: minor);
+            } else {
+              if (_op == RuleConditionOperator.regex &&
+                  !RuleMatchingService.isSafeRegex(_valueController.text)) {
+                setState(() => _valueError = l10n.errorOccurred);
+                return;
+              }
+              condition = RuleCondition(
+                type: _type,
+                operator: _op,
+                value: _valueController.text,
+              );
+            }
+            Navigator.pop(context, condition);
+          },
+          child: Text(l10n.add),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddActionDialog extends StatefulWidget {
+  const _AddActionDialog({
+    required this.defaultActionValue,
+    required this.buildValueInput,
+  });
+
+  final String Function(RuleActionType) defaultActionValue;
+  final Widget Function(
+    BuildContext context,
+    RuleActionType type,
+    TextEditingController controller,
+    String displayValue,
+    void Function(String val, String display) onSelected,
+  )
+  buildValueInput;
+
+  @override
+  State<_AddActionDialog> createState() => _AddActionDialogState();
+}
+
+class _AddActionDialogState extends State<_AddActionDialog> {
+  RuleActionType _type = RuleActionType.setCategory;
+  late final TextEditingController _valueController = TextEditingController(
+    text: widget.defaultActionValue(_type),
+  );
+  String _displayValue = '';
+
+  @override
+  void dispose() {
+    _valueController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.ruleAddAction),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<RuleActionType>(
+            initialValue: _type,
+            isExpanded: true,
+            decoration: InputDecoration(labelText: l10n.ruleActionLabel),
+            items: RuleActionType.values
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(e.label(l10n), overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) {
+              setState(() {
+                _type = v!;
+                _valueController.text = widget.defaultActionValue(_type);
+                _displayValue = '';
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          widget.buildValueInput(
+            context,
+            _type,
+            _valueController,
+            _displayValue,
+            (val, display) {
+              setState(() {
+                _displayValue = display;
+              });
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(
+          onPressed: () {
+            if (_valueController.text.isNotEmpty) {
+              Navigator.pop(
+                context,
+                RuleAction(type: _type, value: _valueController.text),
+              );
+            }
+          },
+          child: Text(l10n.add),
+        ),
+      ],
+    );
   }
 }

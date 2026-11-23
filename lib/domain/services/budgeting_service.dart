@@ -310,11 +310,21 @@ class BudgetingService {
         paymentActivity: const {},
       );
     }
-    final first = CalendarDate.parseMonthKey(months.first);
-    final count = _monthsDifference(first, month) + 1;
-    for (var i = 0; i < count; i++) {
+    // Step only over months that have activity/budgets plus the target month
+    // (rather than every empty month in between): an empty month has zero
+    // budget and zero activity, so its only effect is resetting any negative
+    // available balances at the first boundary after the previous active month.
+    final targetKey = CalendarDate.monthKey(month);
+    final activeMonths = <String>[
+      for (final m in months)
+        if (m.compareTo(targetKey) <= 0) m,
+    ];
+    if (activeMonths.isEmpty || activeMonths.last != targetKey) {
+      activeMonths.add(targetKey);
+    }
+    for (var i = 0; i < activeMonths.length; i++) {
       if (i > 0) {
-        // Month boundary: last month's overspending leaves the category;
+        // Month boundary: last active month's overspending leaves the category;
         // its cash part is charged to To Be Budgeted, its credit part is
         // card debt.
         for (final entry in available.entries.toList()) {
@@ -330,9 +340,7 @@ class BudgetingService {
         }
         credit = _CardMonth(available, paymentOf);
       }
-      final key = CalendarDate.monthKey(
-        DateTime.utc(first.year, first.month + i, 1),
-      );
+      final key = activeMonths[i];
       for (final MapEntry(key: id, value: amount)
           in (budgetedByMonth[key] ?? const <String, int>{}).entries) {
         available[id] = (available[id] ?? 0) + amount;
@@ -534,7 +542,9 @@ class BudgetingService {
           category.id,
           prevMonth,
         );
-        final needed = targetAmount - priorAvailable;
+        // Overspending resets to 0 at month rollover; never inflate needed.
+        final carry = priorAvailable > 0 ? priorAvailable : 0;
+        final needed = targetAmount - carry;
         return needed > 0 ? needed : 0;
 
       case GoalType.targetBalanceByDate:
@@ -556,7 +566,8 @@ class BudgetingService {
           category.id,
           prevMonth,
         );
-        final needed = targetAmount - priorAvailable;
+        final carry = priorAvailable > 0 ? priorAvailable : 0;
+        final needed = targetAmount - carry;
 
         if (needed <= 0) {
           return 0;
@@ -1195,7 +1206,8 @@ class BudgetingService {
         case GoalType.targetBalance:
           final priorAvailable =
               prevMonthPerformance?[category.id]?['available'] ?? 0;
-          final needed = targetAmount - priorAvailable;
+          final carry = priorAvailable > 0 ? priorAvailable : 0;
+          final needed = targetAmount - carry;
           results[category.id] = needed > 0 ? needed : 0;
           break;
 
@@ -1213,7 +1225,8 @@ class BudgetingService {
 
           final priorAvailable =
               prevMonthPerformance?[category.id]?['available'] ?? 0;
-          final needed = targetAmount - priorAvailable;
+          final carry = priorAvailable > 0 ? priorAvailable : 0;
+          final needed = targetAmount - carry;
 
           if (needed <= 0) {
             results[category.id] = 0;

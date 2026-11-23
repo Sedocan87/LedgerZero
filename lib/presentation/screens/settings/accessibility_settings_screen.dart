@@ -20,10 +20,10 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
         children: [
           Text(
             l10n.accessibilityVisualSection,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),

@@ -118,6 +118,8 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
         case DatabaseFileState.damaged:
         case DatabaseFileState.tooOld:
           await deleteDatabaseFiles();
+        case DatabaseFileState.tooNew:
+          throw StateError('Database schema is newer than this app version');
         case DatabaseFileState.missing:
           break;
       }

@@ -319,7 +319,13 @@ class _AddIncomeSheetState extends ConsumerState<AddIncomeSheet> {
         // Salaries are usually wanted without manual approval.
         autoApprove: existing?.autoApprove ?? true,
         memo: existing?.memo,
-        anchorDay: existing?.anchorDay ?? _nextDate.day,
+        anchorDay:
+            existing != null &&
+                existing.nextDate != null &&
+                CalendarDate.normalize(existing.nextDate!) ==
+                    CalendarDate.normalize(_nextDate)
+            ? (existing.anchorDay ?? _nextDate.day)
+            : _nextDate.day,
         createdAt: existing?.createdAt ?? DateTime.now().toUtc(),
       );
 

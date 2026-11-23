@@ -13,7 +13,7 @@ LedgerZero ist eine Budget-App, die Ihre Daten auf Ihrem Handy behält. Es gibt 
 Alles, was Sie eingeben (Konten, Buchungen, Budgets, Kategorien, Empfänger, Notizen, Regeln und Einstellungen), wird nur im privaten Speicher der App auf Ihrem Handy gespeichert. Wir als Anbieter erhalten diese Daten nie.
 
 - **App-Sperre.** Wenn Sie die App-Sperre einschalten, prüft Android Ihren Fingerabdruck, Ihr Gesicht oder Ihre Displaysperre. Die App erfährt nur, ob die Prüfung erfolgreich war; biometrische Daten sieht sie nie.
-- **Fehlerberichte.** Wenn Sie Absturzberichte einschalten (Einstellungen > Sicherheit), werden Fehlerdetails auf Ihrem Handy gespeichert. Sie werden nur übermittelt, wenn Sie sie uns selbst senden, zum Beispiel per E-Mail.
+- **Diagnoseprotokolle & Absturzberichte.** Bereinigte Warn- und Fehlerprotokolle (ohne Beträge, SQL-Abfragen, E-Mail-Adressen und IBANs) werden lokal im Cache der App gespeichert (von der Android-Sicherung ausgeschlossen), damit Probleme nachvollzogen werden können. Wenn Sie Absturzberichte einschalten (Einstellungen > Sicherheit), werden zusätzlich detaillierte Absturzberichte lokal gespeichert. Nichts wird automatisch übertragen – Protokolle und Berichte verlassen Ihr Handy nur, wenn Sie sie selbst teilen, und können jederzeit in den Einstellungen gelöscht werden.
 
 ## Optionale Funktionen
 

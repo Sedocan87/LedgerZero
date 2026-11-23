@@ -1,5 +1,6 @@
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
+import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_action.dart';
 import 'package:ledger_zero/domain/entities/rules/rule_condition.dart';
@@ -143,9 +144,14 @@ class RuleMatchingService {
       switch (action.type) {
         case RuleActionType.setCategory:
           final categories = _categoryRepository;
-          result =
-              categories == null ||
-              await categories.getCategoryById(action.value) != null;
+          if (categories == null) {
+            result = true;
+          } else {
+            final category = await categories.getCategoryById(action.value);
+            result =
+                category != null &&
+                category.categoryGroupId != CardPayments.groupId;
+          }
         case RuleActionType.setPayee:
           result = await _payeeRepository.getPayeeById(action.value) != null;
         case RuleActionType.setAccount:
@@ -516,16 +522,65 @@ class RuleMatchingService {
       case RuleConditionOperator.endsWith:
         return normalizedInput.endsWith(normalizedValue);
       case RuleConditionOperator.regex:
-        try {
-          return RegExp(value, caseSensitive: false).hasMatch(input);
-        } catch (e) {
-          Logger.error('Invalid regex in rule', e);
+        final regex = compileSafeRegex(value);
+        if (regex == null) {
           return false;
         }
+        return regex.hasMatch(input);
       case RuleConditionOperator.greaterThan:
       case RuleConditionOperator.lessThan:
         return false;
     }
+  }
+
+  /// Maximum allowed length for a user/imported rule regex pattern.
+  static const int maxRegexLength = 256;
+  static const int _maxRegexCacheSize = 256;
+  static final Map<String, RegExp?> _regexCache = <String, RegExp?>{};
+
+  /// Detects common catastrophic backtracking (ReDoS) constructs such as
+  /// nested quantifiers `(a+)+`, `(a*)*`, `(a+)*`, `(a{1,5})+`, or repeated
+  /// quantified alternations inside a quantified group.
+  static final RegExp _nestedQuantifier = RegExp(
+    r'\([^()]*[+*][^()]*\)[+*{]|\([^()]*\{[0-9]+,[^()]*\}[+*{]',
+  );
+  static final RegExp _overlappingQuantifiers = RegExp(
+    r'(?:[+*]\?|\*\*|\+\+|\*\+|\+\*|\{[0-9]+,\}[+*])',
+  );
+
+  /// Returns whether [pattern] is valid and free of common ReDoS constructs.
+  static bool isSafeRegex(String pattern) => compileSafeRegex(pattern) != null;
+
+  /// Compiles and caches [pattern] if it is within [maxRegexLength] and free
+  /// of nested-quantifier ReDoS patterns; returns `null` otherwise.
+  static RegExp? compileSafeRegex(String pattern) {
+    if (_regexCache.containsKey(pattern)) {
+      return _regexCache[pattern];
+    }
+    if (pattern.length > maxRegexLength ||
+        _nestedQuantifier.hasMatch(pattern) ||
+        _overlappingQuantifiers.hasMatch(pattern)) {
+      Logger.warning('Rejected unsafe regex pattern in rule');
+      _cacheRegex(pattern, null);
+      return null;
+    }
+    try {
+      final compiled = RegExp(pattern, caseSensitive: false);
+      _cacheRegex(pattern, compiled);
+      return compiled;
+    } catch (e) {
+      // Log only runtimeType so user payee names in the pattern are not logged.
+      Logger.error('Invalid regex in rule: ${e.runtimeType}');
+      _cacheRegex(pattern, null);
+      return null;
+    }
+  }
+
+  static void _cacheRegex(String pattern, RegExp? compiled) {
+    if (_regexCache.length >= _maxRegexCacheSize) {
+      _regexCache.remove(_regexCache.keys.first);
+    }
+    _regexCache[pattern] = compiled;
   }
 
   /// The transaction with [action] applied, or `null` if the action does

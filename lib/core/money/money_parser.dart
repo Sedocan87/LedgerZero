@@ -42,7 +42,12 @@ class MoneyParser {
   /// Parses [input] or throws a [FormatException].
   int parse(String input) {
     final (negative, normalized) = _normalize(input);
-    final minor = Money.fromDecimalString(normalized);
+    final int? minor;
+    try {
+      minor = Money.fromDecimalString(normalized);
+    } on ArgumentError {
+      throw FormatException('Amount out of range', input);
+    }
     if (minor == null) {
       throw FormatException('Not an amount', input);
     }

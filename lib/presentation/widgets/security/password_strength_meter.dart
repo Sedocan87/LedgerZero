@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/services/security/password_policy.dart';
 
@@ -11,24 +12,38 @@ class PasswordStrengthMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final semantic = AppSemanticColors.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final strength = PasswordPolicy.evaluate(password);
     final (value, color, label) = switch (strength) {
       PasswordStrength.tooShort => (
         0.1,
-        Colors.red,
+        semantic.error,
         l10n.passwordStrengthTooShort,
       ),
-      PasswordStrength.common => (0.1, Colors.red, l10n.passwordStrengthCommon),
-      PasswordStrength.weak => (0.3, Colors.orange, l10n.passwordStrengthWeak),
-      PasswordStrength.fair => (0.55, Colors.amber, l10n.passwordStrengthFair),
+      PasswordStrength.common => (
+        0.1,
+        semantic.error,
+        l10n.passwordStrengthCommon,
+      ),
+      PasswordStrength.weak => (
+        0.3,
+        semantic.warning,
+        l10n.passwordStrengthWeak,
+      ),
+      PasswordStrength.fair => (
+        0.55,
+        semantic.warning,
+        l10n.passwordStrengthFair,
+      ),
       PasswordStrength.good => (
         0.8,
-        Colors.lightGreen,
+        scheme.primary,
         l10n.passwordStrengthGood,
       ),
       PasswordStrength.strong => (
         1.0,
-        Colors.green,
+        semantic.success,
         l10n.passwordStrengthStrong,
       ),
     };

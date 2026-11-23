@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/services/backup/backup_format.dart';
 import 'package:ledger_zero/services/backup/backup_service.dart';
+import 'package:ledger_zero/services/error/log_scrubber.dart';
 import 'package:ledger_zero/services/security/secure_store.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -201,7 +202,7 @@ class AutoBackupService {
       Logger.info('Automatic backup written: ${p.basename(file.path)}');
       return file;
     } catch (e, stackTrace) {
-      await _prefs.setString(lastErrorKey, _describe(e));
+      await _prefs.setString(lastErrorKey, LogScrubber.scrub(_describe(e)));
       Logger.warning('Automatic backup failed', e, stackTrace);
       rethrow;
     }

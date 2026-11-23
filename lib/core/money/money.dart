@@ -47,7 +47,17 @@ abstract final class Money {
     if (intPart.isEmpty && fracPart.isEmpty) {
       return null;
     }
-    final exponent = match.group(4) == null ? 0 : int.parse(match.group(4)!);
+    final expText = match.group(4);
+    final int exponent;
+    if (expText == null) {
+      exponent = 0;
+    } else {
+      final parsed = int.tryParse(expText);
+      if (parsed == null) {
+        throw ArgumentError('Exponent out of range: $input');
+      }
+      exponent = parsed;
+    }
     final minor = _roundDigits(intPart + fracPart, fracPart.length - exponent);
     return negative ? -minor : minor;
   }
@@ -56,9 +66,22 @@ abstract final class Money {
   /// 10^-[fractionDigits] to minor units (2 fraction digits), half away from
   /// zero.
   static int _roundDigits(String digits, int fractionDigits) {
-    var value = BigInt.parse(digits.isEmpty ? '0' : digits);
+    final trimmed = digits.replaceFirst(RegExp(r'^0+'), '');
+    if (trimmed.isEmpty) {
+      return 0;
+    }
     // We want value * 10^(2 - fractionDigits).
     final shift = 2 - fractionDigits;
+    // Guard against huge BigInt.pow allocations (e.g. "1e99999999").
+    // Max signed 64-bit int has 19 digits; anything shifting beyond 20 digits
+    // is guaranteed to overflow int64.
+    if (shift > 20 || trimmed.length + shift > 20) {
+      throw ArgumentError('Amount out of range: $digits');
+    }
+    if (shift < -(trimmed.length + 2)) {
+      return 0;
+    }
+    var value = BigInt.parse(trimmed);
     if (shift >= 0) {
       value *= BigInt.from(10).pow(shift);
     } else {

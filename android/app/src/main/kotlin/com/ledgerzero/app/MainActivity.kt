@@ -13,6 +13,9 @@ class MainActivity : FlutterFragmentActivity() {
         const val INSTALL_CHANNEL = "com.ledgerzero.app/install"
     }
 
+    private var appLock: AppLockChannel? = null
+    private var review: ReviewChannel? = null
+    private var installChannel: MethodChannel? = null
     private var notificationCapture: NotificationCaptureChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,22 +39,30 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        AppLockChannel(this, flutterEngine.dartExecutor.binaryMessenger)
-        ReviewChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
+        appLock = AppLockChannel(this, messenger)
+        review = ReviewChannel(this, messenger)
         // The directory that Android never backs up or moves to a new phone
         // (Context.getNoBackupFilesDir): its install marker tells a moved
         // install from the original (lib/services/backup/transferred_install.dart).
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INSTALL_CHANNEL)
-            .setMethodCallHandler { call, result ->
+        installChannel = MethodChannel(messenger, INSTALL_CHANNEL).also { channel ->
+            channel.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "noBackupDirectory" -> result.success(noBackupFilesDir.absolutePath)
                     else -> result.notImplemented()
                 }
             }
-        notificationCapture = NotificationCaptureChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        }
+        notificationCapture = NotificationCaptureChannel(this, messenger)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        appLock?.dispose()
+        appLock = null
+        review?.dispose()
+        review = null
+        installChannel?.setMethodCallHandler(null)
+        installChannel = null
         notificationCapture?.dispose()
         notificationCapture = null
         super.cleanUpFlutterEngine(flutterEngine)

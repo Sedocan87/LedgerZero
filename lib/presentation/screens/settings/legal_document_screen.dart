@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/services/legal/legal_documents.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final legalTextsProvider = Provider<LegalTexts>((ref) => const LegalTexts());
 
@@ -91,7 +95,7 @@ class _Block extends StatelessWidget {
       ),
       LegalParagraph(:final text) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: Text.rich(_inline(text, body), style: body),
+        child: _InlineRichText(text: text, style: body),
       ),
       LegalBullet(:final text) => Padding(
         padding: const EdgeInsets.only(bottom: 8, left: 4),
@@ -99,26 +103,109 @@ class _Block extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('•  ', style: body),
-            Expanded(child: Text.rich(_inline(text, body), style: body)),
+            Expanded(
+              child: _InlineRichText(text: text, style: body),
+            ),
           ],
         ),
       ),
     };
   }
+}
 
-  /// `**bold**` spans.
-  static TextSpan _inline(String text, TextStyle? style) {
-    final parts = text.split('**');
-    return TextSpan(
-      children: [
-        for (var i = 0; i < parts.length; i++)
+/// Renders `**bold**` spans and clickable `https://` URLs with properly
+/// disposed [TapGestureRecognizer]s.
+class _InlineRichText extends StatefulWidget {
+  const _InlineRichText({required this.text, this.style});
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  State<_InlineRichText> createState() => _InlineRichTextState();
+}
+
+class _InlineRichTextState extends State<_InlineRichText> {
+  static final RegExp _urlPattern = RegExp(r'https://[^\s)]+');
+  final List<TapGestureRecognizer> _recognizers = <TapGestureRecognizer>[];
+
+  void _disposeRecognizers() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+  }
+
+  @override
+  void dispose() {
+    _disposeRecognizers();
+    super.dispose();
+  }
+
+  List<InlineSpan> _linkify(
+    String segment, {
+    required bool bold,
+    required Color linkColor,
+  }) {
+    final baseStyle = bold
+        ? const TextStyle(fontWeight: FontWeight.w600)
+        : null;
+    final matches = _urlPattern.allMatches(segment).toList();
+    if (matches.isEmpty) {
+      return [TextSpan(text: segment, style: baseStyle)];
+    }
+    final spans = <InlineSpan>[];
+    var cursor = 0;
+    for (final match in matches) {
+      if (match.start > cursor) {
+        spans.add(
           TextSpan(
-            text: parts[i],
-            style: i.isOdd
-                ? const TextStyle(fontWeight: FontWeight.w600)
-                : null,
+            text: segment.substring(cursor, match.start),
+            style: baseStyle,
           ),
-      ],
+        );
+      }
+      final url = match.group(0)!;
+      final recognizer = TapGestureRecognizer()
+        ..onTap = () {
+          final uri = Uri.tryParse(url);
+          if (uri != null) {
+            unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+          }
+        };
+      _recognizers.add(recognizer);
+      spans.add(
+        TextSpan(
+          text: url,
+          recognizer: recognizer,
+          style: TextStyle(
+            fontWeight: bold ? FontWeight.w600 : null,
+            color: linkColor,
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      );
+      cursor = match.end;
+    }
+    if (cursor < segment.length) {
+      spans.add(TextSpan(text: segment.substring(cursor), style: baseStyle));
+    }
+    return spans;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _disposeRecognizers();
+    final linkColor = Theme.of(context).colorScheme.primary;
+    final parts = widget.text.split('**');
+    return Text.rich(
+      TextSpan(
+        children: [
+          for (var i = 0; i < parts.length; i++)
+            ..._linkify(parts[i], bold: i.isOdd, linkColor: linkColor),
+        ],
+      ),
+      style: widget.style,
     );
   }
 }

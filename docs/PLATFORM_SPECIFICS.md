@@ -64,12 +64,14 @@ This document outlines the platform-specific implementations, configurations, an
   manifest declares the matching `<queries>` intent). No storage
   permission and no account: the picked location (a folder, a USB stick,
   a cloud app's provider) receives the bytes.
-- **Google components**: none of the app's own. The merged manifest has no
-  Google sign-in or Play services activity, service or meta-data since
-  `google_sign_in` was removed; `<queries>` still names
-  `com.google.android.apps.walletnfcrel` and `com.google.android.gms`
-  because card capture offers Google Wallet (whose tap-to-pay notifications
-  Play services posts) in its app picker.
+- **Google components**: none of the app's own. `google_sign_in` and Drive
+  sync were removed; the only Play components in the merged manifest are
+  those pulled in by Google Play Billing (`in_app_purchase`, including
+  `GoogleApiActivity` and `com.google.android.datatransport` for Play
+  Billing), Play In-App Review, and Play Age Signals (see [PRO.md](PRO.md)).
+  `<queries>` names `com.google.android.apps.walletnfcrel` and
+  `com.google.android.gms` because card capture offers Google Wallet (whose
+  tap-to-pay notifications Play services posts) in its app picker.
 - **Deep links**: none. The app registers no URL scheme and no app links,
   and `flutter_deeplinking_enabled` is false on `MainActivity`, so neither
   web pages nor another app's explicit intent with a URI can open a screen

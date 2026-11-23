@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/domain/entities/rule.dart';
@@ -188,55 +189,66 @@ class RulesScreen extends ConsumerWidget {
       body: Column(
         children: [
           if (conflicts.isNotEmpty)
-            Container(
-              color: Colors.amber.shade100,
-              padding: const EdgeInsets.all(8.0),
-              width: double.infinity,
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber, color: Colors.amber),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.rulesConflictsFound(conflicts.length),
-                      style: const TextStyle(color: Colors.black87),
-                    ),
+            Builder(
+              builder: (context) {
+                final scheme = Theme.of(context).colorScheme;
+                final semantic = AppSemanticColors.of(context);
+                return Container(
+                  color: AppSemanticColors.tonal(
+                    semantic.warning,
+                    scheme.surface,
                   ),
-                  TextButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text(l10n.rulesConflictsTitle),
-                          content: SizedBox(
-                            width: double.maxFinite,
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: conflicts.length,
-                              itemBuilder: (ctx, i) => ListTile(
-                                title: Text(
-                                  l10n.rulesConflictPair(
-                                    conflicts[i].ruleA.name,
-                                    conflicts[i].ruleB.name,
+                  padding: const EdgeInsets.all(8.0),
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber, color: semantic.warning),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.rulesConflictsFound(conflicts.length),
+                          style: TextStyle(color: scheme.onSurface),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(l10n.rulesConflictsTitle),
+                              content: SizedBox(
+                                width: double.maxFinite,
+                                child: ListView.builder(
+                                  shrinkWrap: true,
+                                  itemCount: conflicts.length,
+                                  itemBuilder: (ctx, i) => ListTile(
+                                    title: Text(
+                                      l10n.rulesConflictPair(
+                                        conflicts[i].ruleA.name,
+                                        conflicts[i].ruleB.name,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      l10n.rulesConflictExplanation,
+                                    ),
                                   ),
                                 ),
-                                subtitle: Text(l10n.rulesConflictExplanation),
                               ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: Text(l10n.close),
+                                ),
+                              ],
                             ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: Text(l10n.close),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    child: Text(l10n.view),
+                          );
+                        },
+                        child: Text(l10n.view),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           Expanded(
             child: rulesAsync.when(
@@ -257,6 +269,7 @@ class RulesScreen extends ConsumerWidget {
                   );
                 }
                 return ReorderableListView.builder(
+                  buildDefaultDragHandles: false,
                   itemCount: rules.length,
                   onReorderItem: (oldIndex, newIndex) {
                     final item = rules.removeAt(oldIndex);
@@ -313,10 +326,12 @@ class RulesScreen extends ConsumerWidget {
                                   .updateRule(rule.copyWith(isActive: val));
                             },
                           ),
-                          const IconButton(
-                            icon: Icon(Icons.drag_handle),
-                            onPressed:
-                                null, // ReorderableListView handles this via long press or handle
+                          ReorderableDragStartListener(
+                            index: index,
+                            child: const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Icon(Icons.drag_handle),
+                            ),
                           ),
                         ],
                       ),

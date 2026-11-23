@@ -79,7 +79,6 @@ Future<void> bootstrap(
       run(
         UncontrolledProviderScope(container: container, child: const MyApp()),
       );
-      _checkAgeSignalsAtLaunch(container);
       return;
     }
 

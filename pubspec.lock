@@ -1063,7 +1063,7 @@ packages:
   play_age_features:
     dependency: "direct main"
     description:
-      path: "../play_age_features"
+      path: "packages/play_age_features"
       relative: true
     source: path
     version: "0.1.0"

@@ -68,7 +68,7 @@ class TransferredInstall {
   /// Whether [prefs] were moved here from another phone. Makes sure both
   /// copies of the install id agree afterwards (a new install writes them
   /// here; an install from before the marker existed adopts its id).
-  static Future<bool> detect(
+  static Future<({bool moved, String id, File marker})> _inspect(
     SharedPreferences prefs,
     Directory noBackupDirectory,
   ) async {
@@ -78,7 +78,7 @@ class TransferredInstall {
         : null;
     final prefsId = prefs.getString(prefsKey);
     if (prefsId != null && prefsId == markerId) {
-      return false;
+      return (moved: false, id: prefsId, marker: marker);
     }
     // No id in the preferences: a new install (or one from before the
     // marker existed), never a moved one. Otherwise the preferences came
@@ -87,10 +87,37 @@ class TransferredInstall {
     final id = (!moved && markerId != null && markerId.isNotEmpty)
         ? markerId
         : const Uuid().v4();
+    return (moved: moved, id: id, marker: marker);
+  }
+
+  static Future<void> _commitInstallId(
+    SharedPreferences prefs,
+    Directory noBackupDirectory,
+    File marker,
+    String id,
+  ) async {
     await noBackupDirectory.create(recursive: true);
     await marker.writeAsString(id, flush: true);
     await prefs.setString(prefsKey, id);
-    return moved;
+  }
+
+  static Future<bool> detect(
+    SharedPreferences prefs,
+    Directory noBackupDirectory,
+  ) async {
+    final inspection = await _inspect(prefs, noBackupDirectory);
+    if (!inspection.moved &&
+        prefs.getString(prefsKey) == inspection.id &&
+        await inspection.marker.exists()) {
+      return false;
+    }
+    await _commitInstallId(
+      prefs,
+      noBackupDirectory,
+      inspection.marker,
+      inspection.id,
+    );
+    return inspection.moved;
   }
 
   /// Makes the moved install a device of its own (see the class comment).
@@ -137,11 +164,21 @@ class TransferredInstall {
   }) async {
     try {
       final dir = await noBackupDirectory();
-      if (dir == null || !await detect(prefs, dir)) {
+      if (dir == null) {
         return;
       }
-      Logger.warning('This install was moved from another phone');
-      await becomeNewDevice(prefs, await databaseFile());
+      final inspection = await _inspect(prefs, dir);
+      if (inspection.moved) {
+        Logger.warning('This install was moved from another phone');
+        await becomeNewDevice(prefs, await databaseFile());
+        // Commit the new install marker only after becomeNewDevice() succeeds,
+        // so a crash/error mid-migration retries on next launch instead of
+        // silently cloning sync_device_id.
+        await _commitInstallId(prefs, dir, inspection.marker, inspection.id);
+      } else if (prefs.getString(prefsKey) != inspection.id ||
+          !await inspection.marker.exists()) {
+        await _commitInstallId(prefs, dir, inspection.marker, inspection.id);
+      }
     } catch (e, stackTrace) {
       Logger.error('Checking for a moved install failed', e, stackTrace);
     }

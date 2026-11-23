@@ -34,8 +34,11 @@ class RestoreFiles {
   File get previous => File('${database.path}.previous');
 
   /// Exists from just before the swap until it completed (or was rolled
-  /// back). While it exists, the live file may be missing.
+  /// back). While it exists, the live file may be missing or unverified.
   File get marker => File('${database.path}.restoring');
+
+  static const String phaseSwapping = 'swapping';
+  static const String phaseVerified = 'verified';
 
   /// Every file a restore can leave behind, the live database included.
   List<File> get all => [database, staged, previous, marker];
@@ -106,7 +109,17 @@ Future<RestoreRecovery?> recoverInterruptedRestore(File database) async {
   if (!marker && !staged && !previous) {
     return null;
   }
-  if (await database.exists() && isReadableDatabase(database)) {
+  final markerPhase = marker ? (await files.marker.readAsString()).trim() : '';
+  // If the crash occurred after moving the staged file into place but BEFORE
+  // verification/migration succeeded (phaseSwapping), check whether the live
+  // DB has a valid schema version and core tables; if not, roll back to
+  // .previous rather than deleting .previous.
+  final liveUsable = await database.exists() && isReadableDatabase(database);
+  final liveVerified =
+      liveUsable &&
+      (markerPhase != RestoreFiles.phaseSwapping ||
+          _isVerifiedRestoredDatabase(database));
+  if (liveVerified) {
     await deleteDatabaseFileSet(files.staged);
     await deleteDatabaseFileSet(files.previous);
     await deleteDatabaseFileSet(files.marker);
@@ -115,6 +128,18 @@ Future<RestoreRecovery?> recoverInterruptedRestore(File database) async {
       return RestoreRecovery.keptLive;
     }
     return null;
+  }
+  if (markerPhase == RestoreFiles.phaseSwapping &&
+      previous &&
+      isReadableDatabase(files.previous)) {
+    Logger.warning(
+      'Restore: interrupted unverified swap found; rolling back to previous.',
+    );
+    await deleteDatabaseFileSet(database);
+    await deleteDatabaseFileSet(files.staged);
+    await moveDatabaseFileSet(files.previous, database);
+    await deleteDatabaseFileSet(files.marker);
+    return RestoreRecovery.rolledBack;
   }
   if (staged && isReadableDatabase(files.staged)) {
     Logger.warning('Restore: interrupted swap found; completing it.');
@@ -135,6 +160,26 @@ Future<RestoreRecovery?> recoverInterruptedRestore(File database) async {
   // Nothing usable: leave every file in place.
   Logger.error('Restore: interrupted swap found, no usable copy');
   return null;
+}
+
+/// Checks that a database swapped in during a restore has a supported schema
+/// version and a readable `accounts` table before deleting `.previous`.
+bool _isVerifiedRestoredDatabase(File file) {
+  sqlite.Database? db;
+  try {
+    db = sqlite.sqlite3.open(file.path);
+    final version = db.select('PRAGMA user_version').first.values.first as int;
+    if (version < AppDatabase.minimumSchemaVersion ||
+        version > AppDatabase.currentSchemaVersion) {
+      return false;
+    }
+    db.select('SELECT count(*) FROM accounts');
+    return true;
+  } on sqlite.SqliteException {
+    return false;
+  } finally {
+    db?.close();
+  }
 }
 
 /// Whether [file] is an SQLite database whose schema can be read.
@@ -168,6 +213,9 @@ enum DatabaseFileState {
   /// A database of an early test version, older than
   /// [AppDatabase.minimumSchemaVersion] (not upgraded any more).
   tooOld,
+
+  /// A database written by a newer version of LedgerZero.
+  tooNew,
 }
 
 /// Checks [file] before the session opens it, after finishing an
@@ -185,13 +233,21 @@ Future<DatabaseFileState> checkDatabaseFile(File file) async {
   if (!file.existsSync()) {
     return DatabaseFileState.missing;
   }
-  final db = sqlite.sqlite3.open(file.path);
+  sqlite.Database? db;
   try {
     final int version;
     try {
+      db = sqlite.sqlite3.open(file.path);
       db.select('SELECT count(*) FROM sqlite_master');
       version = db.select('PRAGMA user_version').first.values.first as int;
     } on sqlite.SqliteException catch (e) {
+      // Transient I/O, permission or busy errors (PERM=3, BUSY=5, LOCKED=6,
+      // NOMEM=7, IOERR=10, FULL=13, CANTOPEN=14) may pass on retry, so
+      // propagate them instead of offering a factory reset immediately.
+      const transientCodes = {3, 5, 6, 7, 10, 13, 14};
+      if (transientCodes.contains(e.resultCode)) {
+        rethrow;
+      }
       Logger.error('The database file cannot be read (${e.resultCode})');
       return DatabaseFileState.damaged;
     }
@@ -199,9 +255,12 @@ Future<DatabaseFileState> checkDatabaseFile(File file) async {
     if (version != 0 && version < AppDatabase.minimumSchemaVersion) {
       return DatabaseFileState.tooOld;
     }
+    if (version > AppDatabase.currentSchemaVersion) {
+      return DatabaseFileState.tooNew;
+    }
     return DatabaseFileState.usable;
   } finally {
-    db.close();
+    db?.close();
   }
 }
 

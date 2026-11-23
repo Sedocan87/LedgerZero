@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
 import 'package:ledger_zero/services/security/crypto/aead.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:ledger_zero/services/security/crypto/secure_random.dart';
@@ -83,8 +82,14 @@ class BackupFormat {
   static final Uint8List magic = Uint8List.fromList(ascii.encode('LZBK'));
   static const int currentVersion = 2;
   static const int defaultChunkSize = 1 << 20;
+  static const int _minChunkSize = 1024;
   static const int _maxHeaderLength = 64 * 1024;
   static const int _noncePrefixLength = 7;
+
+  /// Hard ceiling on decompressed backup output (512 MiB) to guard against
+  /// decompression bombs.
+  static const int maxDecompressedBytes = 512 * 1024 * 1024;
+  static const int _maxV1InputBytes = 128 * 1024 * 1024;
 
   /// Encrypts the database file [plaintext] into [output].
   static Future<void> encryptFile({
@@ -232,7 +237,7 @@ class BackupFormat {
       noncePrefix = base64.decode(header['nonce_prefix'] as String);
       chunkSize = header['chunk_size'] as int;
       if (noncePrefix.length != _noncePrefixLength ||
-          chunkSize <= 0 ||
+          chunkSize < _minChunkSize ||
           chunkSize > 64 * defaultChunkSize) {
         throw const BackupFormatException('Invalid backup header');
       }
@@ -285,7 +290,11 @@ class BackupFormat {
 
       final sink = output.openWrite();
       try {
-        await sink.addStream(chunks().transform(gzip.decoder));
+        await sink.addStream(
+          chunks()
+              .transform(gzip.decoder)
+              .transform(_limitBytes(maxDecompressedBytes)),
+        );
       } on BackupException {
         rethrow;
       } on FormatException {
@@ -312,6 +321,10 @@ class BackupFormat {
     File output,
     String password,
   ) async {
+    final fileLength = await input.length();
+    if (fileLength > _maxV1InputBytes) {
+      throw const BackupFormatException('Backup file is too large');
+    }
     final bytes = await input.readAsBytes();
     if (bytes.length < 44 + AesGcm.tagLength) {
       throw const BackupFormatException('Not a LedgerZero backup');
@@ -329,8 +342,18 @@ class BackupFormat {
         nonce: Uint8List.fromList(iv),
         ciphertext: ciphertext,
       );
-      final plain = const GZipDecoder().decodeBytes(compressed);
-      await output.writeAsBytes(plain, flush: true);
+      final sink = output.openWrite();
+      try {
+        await sink.addStream(
+          Stream<List<int>>.value(compressed)
+              .transform(gzip.decoder)
+              .transform(_limitBytes(maxDecompressedBytes)),
+        );
+      } finally {
+        try {
+          await sink.close();
+        } catch (_) {}
+      }
     } on AeadAuthenticationException {
       throw const BackupAuthenticationException();
     } on BackupException {
@@ -341,6 +364,23 @@ class BackupFormat {
       zeroBytes(key);
     }
     return const BackupInfo(1);
+  }
+
+  static StreamTransformer<List<int>, List<int>> _limitBytes(int maxBytes) {
+    var total = 0;
+    return StreamTransformer.fromHandlers(
+      handleData: (data, sink) {
+        total += data.length;
+        if (total > maxBytes) {
+          sink.addError(
+            const BackupFormatException('Backup content is too large'),
+          );
+          sink.close();
+          return;
+        }
+        sink.add(data);
+      },
+    );
   }
 
   static bool _startsWithMagic(List<int> bytes) {

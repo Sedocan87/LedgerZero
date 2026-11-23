@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Outcome of [AppLockAuthenticator.authenticate].
@@ -28,6 +29,10 @@ enum AppLockResult {
 ///
 /// The app lock gates the UI only; the database does not depend on it.
 abstract class AppLockAuthenticator {
+  /// Sentinel set on [lastFailure] when the native channel is absent;
+  /// UI screens map this to a localized message rather than displaying it raw.
+  static const String missingChannelCode = 'missing_channel';
+
   /// Whether the device can show the prompt (it has a screen lock).
   Future<bool> canAuthenticate();
 
@@ -71,10 +76,14 @@ class PlatformAppLockAuthenticator implements AppLockAuthenticator {
       return AppLockResult.unavailable;
     }
     try {
-      await _channel.invokeMethod<bool>('authenticate', {
+      final verified = await _channel.invokeMethod<bool>('authenticate', {
         'title': title,
         'subtitle': subtitle,
       });
+      if (verified != true) {
+        lastFailure = null;
+        return AppLockResult.failed;
+      }
       lastFailure = null;
       return AppLockResult.success;
     } on PlatformException catch (e) {
@@ -90,7 +99,7 @@ class PlatformAppLockAuthenticator implements AppLockAuthenticator {
       }
     } on MissingPluginException {
       // A build without the native channel must not unlock without asking.
-      lastFailure = 'app lock channel missing';
+      lastFailure = AppLockAuthenticator.missingChannelCode;
       return AppLockResult.failed;
     }
   }
@@ -119,6 +128,7 @@ class AppLockEnabledNotifier extends StateNotifier<bool> {
 }
 
 final appLockEnabledProvider =
-    StateNotifierProvider<AppLockEnabledNotifier, bool>(
-      (ref) => AppLockEnabledNotifier(ref.watch(sharedPreferencesProvider)),
-    );
+    StateNotifierProvider<AppLockEnabledNotifier, bool>((ref) {
+      ref.watch(settingsGenerationProvider);
+      return AppLockEnabledNotifier(ref.watch(sharedPreferencesProvider));
+    });

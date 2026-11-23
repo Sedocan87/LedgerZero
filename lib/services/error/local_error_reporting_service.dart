@@ -39,8 +39,11 @@ class LocalErrorReportingService {
   static const String _crashDirName = 'crashes';
   static const String _logFileNamePrefix = 'app_log_';
   static const String _logFileExtension = '.jsonl';
-  static const String _errorStatsKey = 'error_stats';
+  static const String _errorStatsFileName = 'error_stats.json';
+  static const String _legacyErrorStatsKey = 'error_stats';
   static const int _maxLogFiles = 5;
+  static const int _maxCrashReports = 10;
+  static const int _maxErrorStatKeys = 100;
   static const int _maxFileSize = 1024 * 1024; // 1MB
 
   Directory? _documentsDirectory;
@@ -79,7 +82,9 @@ class LocalErrorReportingService {
           level: entry.level,
           message: LogScrubber.scrub(entry.message),
           error: entry.error == null ? null : LogScrubber.scrub(entry.error),
-          stackTrace: entry.stackTrace,
+          stackTrace: entry.stackTrace == null
+              ? null
+              : LogScrubber.scrub(entry.stackTrace),
         ).toJson(),
       );
       await file.writeAsString('$jsonLine\n', mode: FileMode.append);
@@ -178,6 +183,7 @@ class LocalErrorReportingService {
         }
 
         await file.writeAsString(buffer.toString());
+        await _pruneOldCrashReports(crashDir);
 
         // Also log to standard log (we already hold the lock).
         await _writeLog(
@@ -202,31 +208,63 @@ class LocalErrorReportingService {
     });
   }
 
+  Future<void> _pruneOldCrashReports(Directory crashDir) async {
+    try {
+      final reports =
+          (await crashDir.list().toList()).whereType<File>().toList()..sort(
+            (a, b) => path.basename(a.path).compareTo(path.basename(b.path)),
+          );
+      if (reports.length > _maxCrashReports) {
+        for (final file in reports.sublist(
+          0,
+          reports.length - _maxCrashReports,
+        )) {
+          try {
+            await file.delete();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<File> _statsFile() async {
+    final directory = await _directory;
+    return File(path.join(directory.path, _errorStatsFileName));
+  }
+
   Future<void> _incrementErrorCount(String errorType) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final statsString = prefs.getString(_errorStatsKey) ?? '{}';
-      final stats = Map<String, int>.from(jsonDecode(statsString));
-
-      // Simplify error type to avoid explosion of keys (optional, but good practice)
-      // For now, let's just use the first 50 chars of the error or a generic category if possible.
-      // But for analytics, maybe we just want "Crash", "Database", "Sync".
-      // Let's rely on the caller or just distinct keys.
-      // For this task, keeping it simple.
+      final directory = await _directory;
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      final file = await _statsFile();
+      final stats = await _readStatsFile(file);
       final key = errorType.length > 50
           ? errorType.substring(0, 50)
           : errorType;
-
+      if (!stats.containsKey(key) && stats.length >= _maxErrorStatKeys) {
+        stats.remove(stats.keys.first);
+      }
       stats[key] = (stats[key] ?? 0) + 1;
-      await prefs.setString(_errorStatsKey, jsonEncode(stats));
+      await file.writeAsString(jsonEncode(stats));
     } catch (_) {}
+  }
+
+  Future<Map<String, int>> _readStatsFile(File file) async {
+    if (!await file.exists()) {
+      return <String, int>{};
+    }
+    try {
+      return Map<String, int>.from(jsonDecode(await file.readAsString()));
+    } catch (_) {
+      return <String, int>{};
+    }
   }
 
   Future<Map<String, int>> getErrorStats() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final statsString = prefs.getString(_errorStatsKey) ?? '{}';
-      return Map<String, int>.from(jsonDecode(statsString));
+      return await _readStatsFile(await _statsFile());
     } catch (_) {
       return {};
     }
@@ -265,7 +303,7 @@ class LocalErrorReportingService {
           (await crashDir.list().toList()).whereType<File>().toList()
             ..sort((a, b) => a.path.compareTo(b.path));
       for (final report in reports) {
-        buffer.writeln(await report.readAsString());
+        buffer.writeln(LogScrubber.scrub(await report.readAsString()));
         buffer.writeln('---');
         entries++;
       }
@@ -296,7 +334,7 @@ class LocalErrorReportingService {
       }
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(_errorStatsKey);
+        await prefs.remove(_legacyErrorStatsKey);
       } catch (_) {}
     });
   }

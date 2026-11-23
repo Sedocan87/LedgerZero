@@ -55,6 +55,7 @@ class RestoreService {
   final DatabaseLifecycle? _lifecycle;
   final Future<File> Function()? _databaseFile;
   final SyncRebootstrap? _rebootstrap;
+  final void Function()? _onRestoreFinished;
   final Future<Directory> Function() _tempDirectory;
 
   RestoreService(
@@ -62,6 +63,7 @@ class RestoreService {
     this._lifecycle,
     this._databaseFile,
     this._rebootstrap,
+    this._onRestoreFinished,
     Future<Directory> Function()? tempDirectory,
   }) : _tempDirectory = tempDirectory ?? getTemporaryDirectory;
 
@@ -72,6 +74,8 @@ class RestoreService {
     'category_groups',
     'budgets',
     'payees',
+    'sync_kv',
+    'pending_sync_changes',
   };
 
   /// Replaces the whole database with the backup in [backupFile].
@@ -174,13 +178,19 @@ class RestoreService {
       // The flag goes first: sync is paused by the lifecycle, and a run that
       // starts after the reopen must already see it.
       await _rebootstrap?.markRequired();
+      var paused = false;
       try {
+        paused = true;
         await _swapIn(staged, dbFile, lifecycle);
+        await _rebootstrap?.discardOutbox();
       } catch (_) {
         await _rebootstrap?.clear();
         rethrow;
+      } finally {
+        if (paused) {
+          _onRestoreFinished?.call();
+        }
       }
-      await _rebootstrap?.discardOutbox();
     } catch (e) {
       Logger.error('Restore failed', e.runtimeType);
       rethrow;
@@ -196,6 +206,7 @@ class RestoreService {
     final version = _validate(plain);
     final db = sqlite.sqlite3.open(plain.path);
     try {
+      db.execute('PRAGMA trusted_schema = OFF');
       db.execute('DELETE FROM pending_sync_changes');
       // Never clone the backing phone's device id (see SyncDeviceId).
       db.execute('DELETE FROM sync_kv WHERE key = ?', [
@@ -317,6 +328,7 @@ class RestoreService {
   int _validate(File plain) {
     final db = sqlite.sqlite3.open(plain.path);
     try {
+      db.execute('PRAGMA trusted_schema = OFF');
       final List<sqlite.Row> integrity;
       try {
         integrity = db.select('PRAGMA integrity_check');
@@ -374,14 +386,15 @@ class RestoreService {
     final previous = files.previous;
     await lifecycle.close();
     await deleteDatabaseFileSet(previous);
-    // From here until the marker is removed the live file may be missing;
-    // `recoverInterruptedRestore` finishes the swap at the next open.
-    await files.marker.writeAsString('1', flush: true);
+    // From here until the marker is removed the live file may be missing or
+    // unverified; `recoverInterruptedRestore` finishes or rolls back the swap.
+    await files.marker.writeAsString(RestoreFiles.phaseSwapping, flush: true);
     await moveDatabaseFileSet(dbFile, previous);
     try {
-      await staged.rename(dbFile.path);
+      await moveDatabaseFileSet(staged, dbFile);
       final reopened = await lifecycle.reopen();
       await reopened.customSelect('SELECT count(*) FROM accounts').get();
+      await files.marker.writeAsString(RestoreFiles.phaseVerified, flush: true);
     } catch (e) {
       await lifecycle.close();
       await deleteDatabaseFileSet(dbFile);

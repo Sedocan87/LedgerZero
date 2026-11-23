@@ -17,55 +17,83 @@ Future<void> showSaveTemplateDialog(BuildContext context, WidgetRef ref) async {
       !context.mounted) {
     return;
   }
-  final controller = TextEditingController();
-  return showDialog(
+  return showDialog<void>(
     context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text(AppLocalizations.of(context)!.saveAsTemplate),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(AppLocalizations.of(context)!.createTemplateDescription),
-            const SizedBox(height: 16),
-            AppTextField(
-              controller: controller,
-              label: AppLocalizations.of(context)!.templateName,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context)!.cancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                final month = ref.read(selectedBudgetMonthProvider);
-                await ref
-                    .read(budgetingServiceProvider)
-                    .saveBudgetTemplate(name, month);
-                ref.invalidate(budgetTemplatesProvider);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        AppLocalizations.of(context)!.templateSaved,
-                      ),
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(AppLocalizations.of(context)!.save),
-          ),
-        ],
-      );
-    },
+    builder: (context) => const _SaveTemplateDialog(),
   );
+}
+
+class _SaveTemplateDialog extends ConsumerStatefulWidget {
+  const _SaveTemplateDialog();
+
+  @override
+  ConsumerState<_SaveTemplateDialog> createState() =>
+      _SaveTemplateDialogState();
+}
+
+class _SaveTemplateDialogState extends ConsumerState<_SaveTemplateDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_isSaving) {
+      return;
+    }
+    final name = _controller.text.trim();
+    if (name.isEmpty) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSaving = true);
+    try {
+      final month = ref.read(selectedBudgetMonthProvider);
+      await ref.read(budgetingServiceProvider).saveBudgetTemplate(name, month);
+      ref.invalidate(budgetTemplatesProvider);
+      if (mounted) {
+        Navigator.pop(context);
+        messenger.showSnackBar(SnackBar(content: Text(l10n.templateSaved)));
+      }
+    } catch (e, stack) {
+      Logger.error('Saving a budget template failed', e, stack);
+      if (mounted) {
+        setState(() => _isSaving = false);
+        messenger.showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.saveAsTemplate),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(l10n.createTemplateDescription),
+          const SizedBox(height: 16),
+          AppTextField(controller: _controller, label: l10n.templateName),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(
+          onPressed: _isSaving ? null : _save,
+          child: Text(l10n.save),
+        ),
+      ],
+    );
+  }
 }
 
 /// Asks before deleting [template] (it cannot be brought back) and says

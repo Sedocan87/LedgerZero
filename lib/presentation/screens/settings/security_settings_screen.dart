@@ -22,13 +22,28 @@ class SecuritySettingsScreen extends ConsumerWidget {
     bool enabled,
   ) async {
     final notifier = ref.read(appLockEnabledProvider.notifier);
-    if (!enabled) {
-      await notifier.set(false);
-      return;
-    }
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final authenticator = ref.read(appLockAuthenticatorProvider);
+    if (!enabled) {
+      // Require confirmation before turning App Lock off so an opportunist
+      // with a briefly unlocked phone cannot permanently disable it.
+      if (!await authenticator.canAuthenticate()) {
+        await notifier.set(false);
+        return;
+      }
+      final result = await ExternalUiGuard.run(
+        () => authenticator.authenticate(
+          title: l10n.appLockPromptTitle,
+          subtitle: l10n.appLockPromptSubtitle,
+        ),
+      );
+      if (result == AppLockResult.success ||
+          result == AppLockResult.unavailable) {
+        await notifier.set(false);
+      }
+      return;
+    }
     if (!await authenticator.canAuthenticate()) {
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.appLockNeedsScreenLock)),

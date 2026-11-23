@@ -541,7 +541,9 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
       ),
     );
 
-    // Available: a pill coloured by state.
+    // Available: a pill coloured by state (with a card icon on credit
+    // overspending so colour is never the sole cue).
+    final isCreditOverspent = available < 0 && widget.viewModel.isCreditOverspent;
     final availablePill = Container(
       padding: const EdgeInsets.symmetric(
         horizontal: BudgetColumns.pillPadding,
@@ -551,15 +553,26 @@ class _BudgetCategoryRowState extends ConsumerState<BudgetCategoryRow> {
         color: pillFill,
         borderRadius: BorderRadius.circular(AppRadius.full),
       ),
-      child: _FittedAmount(
-        available,
-        amountContext: AmountContext.available,
-        style: BudgetColumns.pillStyle(theme).copyWith(color: pillText),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isCreditOverspent) ...[
+            Icon(Icons.credit_card, size: 12, color: pillText),
+            const SizedBox(width: 3),
+          ],
+          Flexible(
+            child: _FittedAmount(
+              available,
+              amountContext: AmountContext.available,
+              style: BudgetColumns.pillStyle(theme).copyWith(color: pillText),
+            ),
+          ),
+        ],
       ),
     );
     final availableCell = Align(
       alignment: Alignment.centerRight,
-      child: available < 0 && widget.viewModel.isCreditOverspent
+      child: isCreditOverspent
           ? Tooltip(
               key: Key('budget.creditOverspent.${category.id}'),
               message: l10n?.budgetCreditOverspent ?? '',

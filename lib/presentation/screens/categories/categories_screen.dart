@@ -252,6 +252,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         actions: [
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
+            tooltip: _isSearching ? l10n.close : l10n.search,
             onPressed: () {
               setState(() {
                 if (_isSearching) {

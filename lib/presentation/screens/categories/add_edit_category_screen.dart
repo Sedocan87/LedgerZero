@@ -340,25 +340,45 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                     ),
                     const SizedBox(height: 8),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: categoryColors.map((colorValue) {
-                        return GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedColor = colorValue),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Color(colorValue),
-                              shape: BoxShape.circle,
-                              border: _selectedColor == colorValue
-                                  ? Border.all(color: Colors.black, width: 2)
-                                  : null,
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (var i = 0; i < categoryColors.length; i++)
+                          Semantics(
+                            button: true,
+                            selected: _selectedColor == categoryColors[i],
+                            label: l10n.colorOption(i + 1),
+                            child: InkResponse(
+                              onTap: () => setState(
+                                () => _selectedColor = categoryColors[i],
+                              ),
+                              radius: 24,
+                              child: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: Center(
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Color(categoryColors[i]),
+                                      shape: BoxShape.circle,
+                                      border:
+                                          _selectedColor == categoryColors[i]
+                                          ? Border.all(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface,
+                                              width: 2.5,
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        );
-                      }).toList(),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -371,18 +391,18 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                       runSpacing: 8,
                       children: categoryIcons.entries.map((entry) {
                         final isSelected = _selectedIcon == entry.key;
+                        final primary = Theme.of(context).colorScheme.primary;
                         return IconButton(
                           icon: Icon(entry.value),
-                          color: isSelected
-                              ? Theme.of(context).primaryColor
-                              : null,
+                          tooltip: '${l10n.icon}: ${entry.key}',
+                          color: isSelected ? primary : null,
                           onPressed: () =>
                               setState(() => _selectedIcon = entry.key),
                           style: isSelected
                               ? IconButton.styleFrom(
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).primaryColor.withValues(alpha: 0.1),
+                                  backgroundColor: primary.withValues(
+                                    alpha: 0.14,
+                                  ),
                                 )
                               : null,
                         );

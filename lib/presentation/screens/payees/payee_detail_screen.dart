@@ -221,8 +221,9 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
                 ...categoryIcons.entries.map((entry) {
                   return IconButton(
                     icon: Icon(entry.value),
+                    tooltip: '${l10n.icon}: ${entry.key}',
                     color: payee.icon == entry.key
-                        ? Theme.of(context).primaryColor
+                        ? Theme.of(context).colorScheme.primary
                         : null,
                     onPressed: () {
                       _updatePayee(payee.copyWith(icon: entry.key));
@@ -246,55 +247,89 @@ class _PayeeDetailScreenState extends ConsumerState<PayeeDetailScreen> {
         title: Text(l10n.color),
         content: SingleChildScrollView(
           child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 4,
+            runSpacing: 4,
             children: [
-              GestureDetector(
-                onTap: () {
-                  _updatePayee(
-                    Payee(
-                      id: payee.id,
-                      name: payee.name,
-                      autoCategoryId: payee.autoCategoryId,
-                      defaultAccountId: payee.defaultAccountId,
-                      createdAt: payee.createdAt,
-                      icon: payee.icon,
-                      color: null,
-                      notes: payee.notes,
-                      isFavorite: payee.isFavorite,
-                    ),
-                  );
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  child: const Icon(Icons.close, size: 16, color: Colors.grey),
-                ),
-              ),
-              ...categoryColors.map((colorValue) {
-                return GestureDetector(
+              Semantics(
+                button: true,
+                selected: payee.color == null,
+                label: l10n.clear,
+                child: InkResponse(
                   onTap: () {
-                    _updatePayee(payee.copyWith(color: colorValue));
+                    _updatePayee(
+                      Payee(
+                        id: payee.id,
+                        name: payee.name,
+                        autoCategoryId: payee.autoCategoryId,
+                        defaultAccountId: payee.defaultAccountId,
+                        createdAt: payee.createdAt,
+                        icon: payee.icon,
+                        color: null,
+                        notes: payee.notes,
+                        isFavorite: payee.isFavorite,
+                      ),
+                    );
                     Navigator.pop(context);
                   },
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Color(colorValue),
-                      shape: BoxShape.circle,
-                      border: payee.color == colorValue
-                          ? Border.all(color: Colors.black, width: 2)
-                          : null,
+                  radius: 24,
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Center(
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   ),
-                );
-              }),
+                ),
+              ),
+              for (var i = 0; i < categoryColors.length; i++)
+                Semantics(
+                  button: true,
+                  selected: payee.color == categoryColors[i],
+                  label: l10n.colorOption(i + 1),
+                  child: InkResponse(
+                    onTap: () {
+                      _updatePayee(payee.copyWith(color: categoryColors[i]));
+                      Navigator.pop(context);
+                    },
+                    radius: 24,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Center(
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Color(categoryColors[i]),
+                            shape: BoxShape.circle,
+                            border: payee.color == categoryColors[i]
+                                ? Border.all(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                    width: 2.5,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

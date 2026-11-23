@@ -97,6 +97,9 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         ),
       );
 
+      if (!mounted) {
+        return;
+      }
       if (picked != null) {
         setState(() {
           _isLoading = true;
@@ -171,8 +174,12 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
 
   void _showError(String message) {
     if (mounted) {
+      final scheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(message, style: TextStyle(color: scheme.onError)),
+          backgroundColor: scheme.error,
+        ),
       );
     }
   }
@@ -496,7 +503,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
         child: Column(
           children: [
             if (_selectedFile != null) ...[
-              const Icon(Icons.description, size: 48, color: Colors.teal),
+              Icon(Icons.description, size: 48, color: theme.colorScheme.primary),
               const SizedBox(height: 8),
               Text(
                 _selectedFile!.name,
@@ -515,7 +522,11 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                 label: Text(l10n.changeFile),
               ),
             ] else ...[
-              const Icon(Icons.upload_file, size: 64, color: Colors.grey),
+              Icon(
+                Icons.upload_file,
+                size: 64,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(height: 16),
               Text(l10n.selectFileToImport, style: theme.textTheme.titleMedium),
               const SizedBox(height: 16),

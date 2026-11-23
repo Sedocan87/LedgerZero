@@ -210,6 +210,10 @@ class LanServer {
   /// Requests handled at the same time.
   static const int maxConnections = 8;
 
+  /// Concurrent requests allowed from a single remote IP (prevents one LAN
+  /// host from exhausting all connection slots).
+  static const int maxConnectionsPerIp = 4;
+
   /// Bodies up to this size count as small (an exchange is a list of file
   /// names).
   static const int smallBody = 1024 * 1024;
@@ -220,6 +224,7 @@ class LanServer {
 
   int _active = 0;
   int _largeBodies = 0;
+  final Map<String, int> _activeByIp = <String, int>{};
 
   /// On a 401 for clock skew: the server's time, seconds since the epoch.
   static const String timeHeader = 'x-lz-time';
@@ -253,11 +258,17 @@ class LanServer {
 
   Future<void> _handle(HttpRequest request) async {
     final response = request.response;
-    if (_active >= maxConnections) {
+    final remoteIp = request.connectionInfo?.remoteAddress.address ?? '';
+    final ipCount = _activeByIp[remoteIp] ?? 0;
+    if (_active >= maxConnections ||
+        (remoteIp.isNotEmpty && ipCount >= maxConnectionsPerIp)) {
       await _refuse(response, HttpStatus.serviceUnavailable);
       return;
     }
     _active++;
+    if (remoteIp.isNotEmpty) {
+      _activeByIp[remoteIp] = ipCount + 1;
+    }
     var large = false;
     try {
       // Everything up to here costs no memory: nothing of the body has
@@ -267,8 +278,14 @@ class LanServer {
         await _refuse(response, HttpStatus.unauthorized);
         return;
       }
+      final path = request.uri.path;
+      final endpointMaxBody = switch (request.method) {
+        'GET' => 0,
+        'POST' when path == '/v1/exchange' => smallBody,
+        _ => maxBody,
+      };
       final length = request.contentLength;
-      if (length > maxBody) {
+      if (length > endpointMaxBody) {
         await _refuse(response, HttpStatus.requestEntityTooLarge);
         return;
       }
@@ -286,13 +303,20 @@ class LanServer {
         _largeBodies++;
         large = true;
       }
-      final body = await _readBody(request).timeout(bodyTimeout);
-      if (body == null) {
-        response.statusCode = HttpStatus.requestEntityTooLarge;
-        await response.close();
+      final Uint8List? body;
+      try {
+        body = await _readBody(
+          request,
+          maxBytes: endpointMaxBody,
+        ).timeout(bodyTimeout);
+      } on TimeoutException {
+        await _refuse(response, HttpStatus.requestTimeout);
         return;
       }
-      final path = request.uri.path;
+      if (body == null) {
+        await _refuse(response, HttpStatus.requestEntityTooLarge);
+        return;
+      }
       final check = auth.check(
         value: request.headers.value(LanAuth.header),
         method: request.method,
@@ -301,18 +325,22 @@ class LanServer {
         self: deviceId,
       );
       if (check is LanAuthSkewed && check.deviceId != deviceId) {
-        // A paired phone with a wrong clock: tell it the time here, signed,
-        // so it can show the user what to fix.
+        // A paired phone with a wrong clock: tell it the time in a signed
+        // response body (plus the legacy header for older peers).
+        final nowSeconds = auth.nowSeconds;
+        final skewBody = utf8.encode(jsonEncode({'time': nowSeconds}));
         response.statusCode = HttpStatus.unauthorized;
-        response.headers.set(timeHeader, '${auth.nowSeconds}');
+        response.headers.set(timeHeader, '$nowSeconds');
         response.headers.set(
           LanAuth.responseHeader,
           auth.signResponse(
             status: HttpStatus.unauthorized,
             nonce: check.nonce,
-            body: const [],
+            body: skewBody,
           ),
         );
+        response.contentLength = skewBody.length;
+        response.add(skewBody);
         await response.close();
         return;
       }
@@ -333,14 +361,17 @@ class LanServer {
       await response.close();
     } catch (e) {
       Logger.warning('Wi-Fi sync request failed: $e');
-      try {
-        response.statusCode = HttpStatus.internalServerError;
-        await response.close();
-      } catch (_) {
-        // Connection already gone.
-      }
+      await _refuse(response, HttpStatus.internalServerError);
     } finally {
       _active--;
+      if (remoteIp.isNotEmpty) {
+        final remaining = (_activeByIp[remoteIp] ?? 1) - 1;
+        if (remaining <= 0) {
+          _activeByIp.remove(remoteIp);
+        } else {
+          _activeByIp[remoteIp] = remaining;
+        }
+      }
       if (large) {
         _largeBodies--;
       }
@@ -411,8 +442,8 @@ class LanServer {
             : (HttpStatus.ok, bytes);
       }
       if (request.method == 'PUT') {
-        final existing = await folder.list();
-        if (existing[name] != body.length) {
+        final existingBytes = await folder.read(name);
+        if (existingBytes == null || !_bytesEqual(existingBytes, body)) {
           await folder.write(name, body);
           onReceived?.call();
         }
@@ -422,13 +453,28 @@ class LanServer {
     return (HttpStatus.notFound, const <int>[]);
   }
 
-  static Future<Uint8List?> _readBody(HttpRequest request) async {
+  static bool _bytesEqual(Uint8List a, Uint8List b) {
+    if (a.length != b.length) {
+      return false;
+    }
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static Future<Uint8List?> _readBody(
+    HttpRequest request, {
+    int maxBytes = maxBody,
+  }) async {
     final builder = BytesBuilder(copy: false);
     await for (final chunk in request) {
-      builder.add(chunk);
-      if (builder.length > maxBody) {
+      if (builder.length + chunk.length > maxBytes) {
         return null;
       }
+      builder.add(chunk);
     }
     return builder.takeBytes();
   }
@@ -513,6 +559,18 @@ class LanClient {
     List<int> body, {
     String? recipient,
   }) async {
+    final maxResponseBytes = path == '/v1/exchange'
+        ? 2 * 1024 * 1024
+        : LanServer.maxBody;
+    final deadline = DateTime.now().add(requestTimeout);
+    Duration remaining() {
+      final left = deadline.difference(DateTime.now());
+      if (left <= Duration.zero) {
+        throw TimeoutException('Wi-Fi sync request timed out', requestTimeout);
+      }
+      return left;
+    }
+
     final client = HttpClient()..connectionTimeout = connectTimeout;
     try {
       final signed = auth.sign(
@@ -527,14 +585,26 @@ class LanClient {
             method,
             Uri(scheme: 'http', host: to.host, port: to.port, path: path),
           )
-          .timeout(requestTimeout);
+          .timeout(remaining());
       request.headers.set(LanAuth.header, signed.value);
       request.contentLength = body.length;
       request.add(body);
-      final response = await request.close().timeout(requestTimeout);
+      final response = await request.close().timeout(remaining());
+      if (response.contentLength > maxResponseBytes) {
+        throw const HttpException('response too large');
+      }
       final builder = BytesBuilder(copy: false);
-      await for (final chunk in response.timeout(requestTimeout)) {
-        builder.add(chunk);
+      final iterator = StreamIterator<List<int>>(response);
+      try {
+        while (await iterator.moveNext().timeout(remaining())) {
+          final chunk = iterator.current;
+          if (builder.length + chunk.length > maxResponseBytes) {
+            throw const HttpException('response too large');
+          }
+          builder.add(chunk);
+        }
+      } finally {
+        await iterator.cancel();
       }
       final bytes = builder.takeBytes();
       if (!auth.verifyResponse(
@@ -545,13 +615,24 @@ class LanClient {
       )) {
         throw const HttpException('response not authentic');
       }
-      final theirTime = int.tryParse(
-        response.headers.value(LanServer.timeHeader) ?? '',
-      );
-      if (response.statusCode == HttpStatus.unauthorized && theirTime != null) {
-        throw LanClockSkewException(
-          Duration(seconds: theirTime - auth.nowSeconds),
+      if (response.statusCode == HttpStatus.unauthorized) {
+        int? theirTime;
+        if (bytes.isNotEmpty) {
+          try {
+            final parsed = jsonDecode(utf8.decode(bytes));
+            if (parsed is Map<String, Object?> && parsed['time'] is int) {
+              theirTime = parsed['time'] as int;
+            }
+          } catch (_) {}
+        }
+        theirTime ??= int.tryParse(
+          response.headers.value(LanServer.timeHeader) ?? '',
         );
+        if (theirTime != null) {
+          throw LanClockSkewException(
+            Duration(seconds: theirTime - auth.nowSeconds),
+          );
+        }
       }
       return (response.statusCode, bytes);
     } finally {

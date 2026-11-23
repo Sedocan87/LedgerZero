@@ -2639,7 +2639,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreSuccessMessage.
   ///
   /// In en, this message translates to:
-  /// **'Your data was restored. If you use sync, this device will resynchronise and newer changes from your other devices will come back in.'**
+  /// **'Your data was restored. If you use sync, this device will resynchronize and newer changes from your other devices will come back in.'**
   String get restoreSuccessMessage;
 
   /// No description provided for @restoreWrongPassword.
@@ -4690,7 +4690,7 @@ abstract class AppLocalizations {
   /// Accessibility switch subtitle
   ///
   /// In en, this message translates to:
-  /// **'Stronger contrast for colours and borders'**
+  /// **'Stronger contrast for colors and borders'**
   String get highContrastSubtitle;
 
   /// FAQ question
@@ -4810,7 +4810,7 @@ abstract class AppLocalizations {
   /// User guide chapter text
   ///
   /// In en, this message translates to:
-  /// **'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorise transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.'**
+  /// **'Record each expense with a payee and a category; it reduces what the category has available. Quick Add lets you type a transaction in one line, rules categorize transactions automatically, and with card notifications on, payments from your bank app arrive as transactions to approve.'**
   String get guideTransactionsBody;
 
   /// User guide chapter title
@@ -6472,7 +6472,7 @@ abstract class AppLocalizations {
   /// Help topic text
   ///
   /// In en, this message translates to:
-  /// **'Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every euro has a job.'**
+  /// **'Money in your budget accounts that has no job yet. Income without a category adds to it, and budgeting money to a category takes it out. Aim for zero: then every unit of your money has a job.'**
   String get helpTbbBody;
 
   /// Numbered steps of a help topic, one per line
@@ -8179,7 +8179,7 @@ abstract class AppLocalizations {
   /// Confirmation before the accounts in the budget are relabelled: amounts are not converted
   ///
   /// In en, this message translates to:
-  /// **'The accounts in your budget are relabelled from {from} to {to}. Amounts are NOT converted: 100 {from} becomes 100 {to}.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in {to}.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.'**
+  /// **'The accounts in your budget are relabeled from {from} to {to}. Amounts are NOT converted: 100 {from} becomes 100 {to}.\n\nThis is for a currency picked by mistake at setup. To really move to another currency, close these accounts and open new ones in {to}.\n\nAccounts outside the budget keep their currency. The change reaches the other phone with the next sync.'**
   String budgetCurrencyChangeConfirmBody(String from, String to);
 
   /// Button that relabels accounts to another currency (amounts are not converted)
@@ -8435,7 +8435,7 @@ abstract class AppLocalizations {
   /// Pro feature description
   ///
   /// In en, this message translates to:
-  /// **'Categorise and rename transactions automatically.'**
+  /// **'Categorize and rename transactions automatically.'**
   String get proFeatureRulesDescription;
 
   /// Pro screen: what stays free

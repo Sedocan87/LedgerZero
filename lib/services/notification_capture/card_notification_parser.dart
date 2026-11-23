@@ -494,7 +494,8 @@ class CardNotificationParser {
     if (list.length == 2 &&
         list[0].currency != null &&
         list[1].currency != null &&
-        list[0].currency != list[1].currency) {
+        list[0].currency != list[1].currency &&
+        !full.substring(list[0].end, list[1].start).contains('\n')) {
       list = [
         accountCurrency == null
             ? list.first
@@ -1227,22 +1228,26 @@ class CardNotificationParser {
     return merchant;
   }
 
+  static final RegExp _leadingAfterAmountPunct = RegExp(r'^[\s:–—-]+');
+  static final RegExp _leadingAfterAmountFrom = RegExp(
+    r'^(?:von|from)\s+(?=\S)',
+    caseSensitive: false,
+  );
+  static final RegExp _merchantAfterAmountPattern = RegExp(
+    '^([^\\n]+?)$_merchantEnd',
+    unicode: true,
+    caseSensitive: false,
+  );
+
   /// "Umsatz -12,50 € REWE SAGT DANKE" -> "REWE SAGT DANKE"; the creditor
   /// of a direct debit follows "von"/"from" ("Lastschrift 49,99 € von
   /// Vodafone GmbH" -> "Vodafone GmbH").
   String? _merchantAfterAmount(String text, _Amount amount) {
     final rest = text
         .substring(amount.end)
-        .replaceFirst(RegExp(r'^[\s:–—-]+'), '')
-        .replaceFirst(
-          RegExp(r'^(?:von|from)\s+(?=\S)', caseSensitive: false),
-          '',
-        );
-    final m = RegExp(
-      '^([^\\n]+?)$_merchantEnd',
-      unicode: true,
-      caseSensitive: false,
-    ).firstMatch(rest);
+        .replaceFirst(_leadingAfterAmountPunct, '')
+        .replaceFirst(_leadingAfterAmountFrom, '');
+    final m = _merchantAfterAmountPattern.firstMatch(rest);
     return m == null ? null : _cleanMerchant(m.group(1)!);
   }
 

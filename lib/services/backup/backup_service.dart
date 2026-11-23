@@ -7,6 +7,7 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:path/path.dart' as p;
+import 'package:uuid/uuid.dart';
 
 /// Creates encrypted backups (format v2, see [BackupFormat]).
 ///
@@ -40,8 +41,15 @@ class BackupService {
       throw const BackupException('A backup password is required');
     }
     final exportDir = await _files.exportDirectory();
+    final stagingDir = Directory(
+      p.join(exportDir.parent.path, '.backup_staging'),
+    );
+    await stagingDir.create(recursive: true);
+    await _cleanupStagingDirectory(stagingDir);
     final stamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final snapshot = File(p.join(exportDir.path, '.snapshot_$stamp.sqlite'));
+    final snapshot = File(
+      p.join(stagingDir.path, '.snapshot_${const Uuid().v4()}.sqlite'),
+    );
     final output = File(
       p.join(
         (directory ?? exportDir).path,
@@ -80,6 +88,16 @@ class BackupService {
   Future<void> writePlaintextSnapshot(File target) async {
     await _deleteDatabaseFiles(target);
     await _db.customStatement('VACUUM INTO ?', [target.path]);
+  }
+
+  static Future<void> _cleanupStagingDirectory(Directory dir) async {
+    try {
+      await for (final entity in dir.list()) {
+        if (entity is File) {
+          await _deleteIfExists(entity);
+        }
+      }
+    } catch (_) {}
   }
 
   static Future<void> _deleteIfExists(File file) async {

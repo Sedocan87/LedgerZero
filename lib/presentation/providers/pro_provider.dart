@@ -186,7 +186,12 @@ class ProController extends StateNotifier<ProState> {
     if (!mounted) {
       return;
     }
-    final available = state.storeAvailable ?? await _store.isAvailable();
+    final available = state.storeAvailable == true
+        ? true
+        : await _store.isAvailable();
+    if (!mounted) {
+      return;
+    }
     if (!available) {
       state = state.copyWith(
         busy: false,

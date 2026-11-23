@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/app/theme.dart';
 import 'package:ledger_zero/domain/entities/scheduled_transaction.dart';
 import 'package:ledger_zero/l10n/app_localizations.dart';
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
@@ -38,7 +39,7 @@ class ScheduledTransactionListItem extends ConsumerWidget {
     final theme = Theme.of(context);
     final isIncome = (transaction.amount ?? 0) >= 0;
     final amountColor = isIncome
-        ? Colors.green.shade700
+        ? AppSemanticColors.of(context).income
         : theme.colorScheme.error;
     final l10n = AppLocalizations.of(context)!;
 

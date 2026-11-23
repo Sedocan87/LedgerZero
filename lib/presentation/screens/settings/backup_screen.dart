@@ -110,32 +110,15 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   Future<String?> _askBackupPassword(AppLocalizations l10n) {
-    final controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.restorePasswordTitle),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          autofocus: true,
-          autocorrect: false,
-          enableSuggestions: false,
-          decoration: InputDecoration(labelText: l10n.backupPasswordLabel),
-          onSubmitted: (value) => Navigator.pop(context, value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: Text(l10n.ok),
-          ),
-        ],
+      builder: (context) => _BackupPasswordDialog(
+        title: l10n.restorePasswordTitle,
+        label: l10n.backupPasswordLabel,
+        cancel: l10n.cancel,
+        confirm: l10n.ok,
       ),
-    ).whenComplete(controller.dispose);
+    );
   }
 
   String _restoreError(AppLocalizations l10n, Object error) {
@@ -250,9 +233,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     ref.read(autoBackupGenerationProvider.notifier).state++;
   }
 
-  String _errorText(Object error) {
-    final text = error.toString();
-    return text.length > 120 ? '${text.substring(0, 120)}…' : text;
+  String _autoBackupError(AppLocalizations l10n, Object error) {
+    return switch (error) {
+      AutoBackupNotConfiguredException() => l10n.autoBackupPasswordMissing,
+      _ => l10n.errorOccurred,
+    };
   }
 
   /// Asks for a new backup password (typed twice, checked like every new
@@ -295,9 +280,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     try {
       await service.enable(password);
       messenger.showSnackBar(SnackBar(content: Text(l10n.autoBackupSaved)));
-    } catch (e) {
+    } catch (e, stack) {
+      Logger.error('Enabling automatic backup failed', e, stack);
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.autoBackupFailed(_errorText(e)))),
+        SnackBar(content: Text(l10n.autoBackupFailed(_autoBackupError(l10n, e)))),
       );
     } finally {
       if (mounted) {
@@ -314,9 +300,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     try {
       await ref.read(autoBackupServiceProvider).runNow();
       messenger.showSnackBar(SnackBar(content: Text(l10n.autoBackupSaved)));
-    } catch (e) {
+    } catch (e, stack) {
+      Logger.error('Manual automatic backup failed', e, stack);
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.autoBackupFailed(_errorText(e)))),
+        SnackBar(content: Text(l10n.autoBackupFailed(_autoBackupError(l10n, e)))),
       );
     } finally {
       if (mounted) {
@@ -978,6 +965,59 @@ class _NewBackupPasswordDialogState extends State<_NewBackupPasswordDialog> {
           key: const Key('autoBackup.confirmPassword'),
           onPressed: _submit,
           child: Text(widget.action),
+        ),
+      ],
+    );
+  }
+}
+
+class _BackupPasswordDialog extends StatefulWidget {
+  const _BackupPasswordDialog({
+    required this.title,
+    required this.label,
+    required this.cancel,
+    required this.confirm,
+  });
+
+  final String title;
+  final String label;
+  final String cancel;
+  final String confirm;
+
+  @override
+  State<_BackupPasswordDialog> createState() => _BackupPasswordDialogState();
+}
+
+class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        obscureText: true,
+        autofocus: true,
+        autocorrect: false,
+        enableSuggestions: false,
+        decoration: InputDecoration(labelText: widget.label),
+        onSubmitted: (value) => Navigator.pop(context, value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(widget.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: Text(widget.confirm),
         ),
       ],
     );

@@ -1,0 +1,27 @@
+name: play_age_features
+description: >-
+  Asks Google Play whether mandatory age-signal sharing applies to the current
+  user (Play Age Signals getApplicableAgeFeatures, library 0.0.6). A stopgap
+  until age_range_signals exposes it; see AGE_SIGNALS_CALIFORNIA.md next to
+  this folder.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.32.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.reinlogic.play_age_features
+        pluginClass: PlayAgeFeaturesPlugin

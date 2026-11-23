@@ -192,6 +192,12 @@ class TransactionService {
           TransactionValidationError.notFound,
         );
       }
+      if (existing.parentTransactionId != null) {
+        throw ValidationException(
+          'Split child ${existing.id} must be edited through its parent transaction',
+          TransactionValidationError.splitTransfer,
+        );
+      }
       if (existing.transferTransactionId != null) {
         counterpart = await _transactionRepository.getTransactionById(
           existing.transferTransactionId!,
@@ -424,6 +430,11 @@ class TransactionService {
       ?input.categoryId,
       for (final line in input.splits) ?line.categoryId,
     };
+    await _ensureNoPaymentCategoryIds(used);
+  }
+
+  Future<void> _ensureNoPaymentCategoryIds(Iterable<String> categoryIds) async {
+    final used = categoryIds.toSet();
     if (used.isEmpty) {
       return;
     }
@@ -559,17 +570,89 @@ class TransactionService {
   }
 
   Future<List<Transaction>> _groupsOf(Iterable<String> ids) async {
-    final rows = <String, Transaction>{};
-    for (final id in ids.toSet()) {
-      if (rows.containsKey(id)) {
-        continue;
+    final requested = ids.toSet().toList();
+    if (requested.isEmpty) {
+      return const [];
+    }
+    final fetched = <String, Transaction>{};
+    Future<void> loadByIds(List<String> batch) async {
+      const chunkSize = 500;
+      for (var i = 0; i < batch.length; i += chunkSize) {
+        final slice = batch.sublist(
+          i,
+          i + chunkSize > batch.length ? batch.length : i + chunkSize,
+        );
+        final found = await _transactionRepository
+            .getTransactionsByIdsIncludingDeleted(slice);
+        for (final t in found) {
+          if (!t.isDeleted) {
+            fetched[t.id] = t;
+          }
+        }
       }
-      final t = await _transactionRepository.getTransactionById(id);
-      if (t == null) {
-        continue;
+    }
+
+    // Batch-load requested rows first; fall back to individual fetches if a
+    // mock repository returns empty for getTransactionsByIdsIncludingDeleted.
+    await loadByIds(requested);
+    if (fetched.isEmpty) {
+      final rows = <String, Transaction>{};
+      for (final id in requested) {
+        if (rows.containsKey(id)) {
+          continue;
+        }
+        final t = await _transactionRepository.getTransactionById(id);
+        if (t == null) {
+          continue;
+        }
+        for (final row in await _linkedGroup(t)) {
+          rows[row.id] = row;
+        }
       }
-      for (final row in await _linkedGroup(t)) {
-        rows[row.id] = row;
+      return rows.values.toList();
+    }
+
+    // Load any missing parents or transfer counterparts in one chunked pass.
+    final relatedIds = <String>{};
+    for (final t in fetched.values) {
+      if (t.parentTransactionId != null &&
+          !fetched.containsKey(t.parentTransactionId)) {
+        relatedIds.add(t.parentTransactionId!);
+      }
+      if (t.transferTransactionId != null &&
+          !fetched.containsKey(t.transferTransactionId)) {
+        relatedIds.add(t.transferTransactionId!);
+      }
+    }
+    if (relatedIds.isNotEmpty) {
+      await loadByIds(relatedIds.toList());
+      // Any parent that is itself a transfer (defensive).
+      final moreRelated = <String>{
+        for (final t in fetched.values)
+          if (t.transferTransactionId != null &&
+              !fetched.containsKey(t.transferTransactionId))
+            t.transferTransactionId!,
+      };
+      if (moreRelated.isNotEmpty) {
+        await loadByIds(moreRelated.toList());
+      }
+    }
+
+    final rows = Map<String, Transaction>.of(fetched);
+    // Split parents always have no category and no transfer link; only inspect
+    // candidates that could have split children.
+    final splitParentCandidates = <String>{
+      for (final t in fetched.values)
+        if (t.parentTransactionId != null)
+          t.parentTransactionId!
+        else if (t.categoryId == null && t.transferTransactionId == null)
+          t.id,
+    };
+    for (final parentId in splitParentCandidates) {
+      for (final child in await _transactionRepository.getSplitTransactions(
+        parentId,
+      )) {
+        rows[child.id] = child;
       }
     }
     return rows.values.toList();
@@ -779,6 +862,7 @@ class TransactionService {
     List<String> ids,
     String categoryId,
   ) async {
+    await _ensureNoPaymentCategoryIds([categoryId]);
     final accounts = <String, Account?>{};
     Future<Account?> account(String id) async => accounts.containsKey(id)
         ? accounts[id]

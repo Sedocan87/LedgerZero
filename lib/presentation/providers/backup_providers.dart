@@ -9,6 +9,7 @@ import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/core/providers/shared_preferences_provider.dart';
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
+import 'package:ledger_zero/presentation/providers/settings_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync/sync_state.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/services/backup/auto_backup_service.dart';
@@ -31,7 +32,8 @@ final backupSchedulerProvider = Provider<BackupScheduler>((ref) {
 
 /// Whether Wi-Fi sync is chosen in Sync settings. Read from the stored
 /// setting; a provider of an older build (Google Drive) is no sync.
-final syncConfiguredProvider = Provider<bool>((ref) {
+final syncConfiguredProvider = Provider.autoDispose<bool>((ref) {
+  ref.watch(settingsGenerationProvider);
   final name = ref.watch(sharedPreferencesProvider).getString('sync_provider');
   return name == SyncProviderType.localWifi.name;
 });
@@ -158,10 +160,11 @@ class _ProviderDatabaseLifecycle implements DatabaseLifecycle {
 
   @override
   Future<AppDatabase> reopen() async {
+    // Clear any saved transaction filter so account/category IDs from the
+    // pre-restore database cannot make the restored Transactions tab look empty.
+    await _ref.read(sharedPreferencesProvider).remove('tx_filter');
     _ref.read(databaseGenerationProvider.notifier).state++;
-    final db = _ref.read(databaseProvider);
-    _ref.read(syncControllerProvider.notifier).resume();
-    return db;
+    return _ref.read(databaseProvider);
   }
 }
 
@@ -171,5 +174,6 @@ final restoreServiceProvider = Provider<RestoreService>((ref) {
     lifecycle: _ProviderDatabaseLifecycle(ref),
     databaseFile: databaseFile,
     rebootstrap: ref.watch(syncRebootstrapProvider),
+    onRestoreFinished: () => ref.read(syncControllerProvider.notifier).resume(),
   );
 });

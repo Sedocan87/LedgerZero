@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
+import 'package:uuid/uuid.dart';
 
 /// The sync folder of Wi-Fi sync, kept on this phone
 /// (`<documents>/sync/lan`). The sync engine reads and writes it like any
@@ -64,7 +65,7 @@ class LocalSyncFolder {
         await File('${dir.path}/$name').exists()) {
       return;
     }
-    final temp = File('${dir.path}/.$name.part');
+    final temp = File('${dir.path}/.$name.${const Uuid().v4()}.part');
     await temp.writeAsBytes(bytes, flush: true);
     await temp.rename('${dir.path}/$name');
     // Unlike change files and snapshots, a snapshot request has the same
@@ -120,7 +121,7 @@ class LocalSyncFolder {
         ? list.sublist(list.length - _maxDeleted)
         : list;
     final dir = await _dir();
-    final temp = File('${dir.path}/$_deletedFile.part');
+    final temp = File('${dir.path}/$_deletedFile.${const Uuid().v4()}.part');
     await temp.writeAsString(jsonEncode(kept), flush: true);
     await temp.rename('${dir.path}/$_deletedFile');
   }

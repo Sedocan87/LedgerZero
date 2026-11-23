@@ -82,6 +82,8 @@ final syncDependenciesProvider = Provider<SyncDependencies>((ref) {
       deviceId: SyncDeviceId.of(prefs),
       outbox: outbox,
       prefs: prefs,
+      secureStore: ref.read(secureStoreProvider),
+      undoService: ref.read(undoServiceProvider),
     ),
     dao: db.syncDao,
     // Keep-mine deletes go through the domain deletes, which clear the

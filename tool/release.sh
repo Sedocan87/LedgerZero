@@ -37,10 +37,15 @@ fail() { echo "release: $*" >&2; exit 1; }
 branch="$(git rev-parse --abbrev-ref HEAD)"
 [[ "$branch" == "main" ]] || echo "release: note: building from '$branch', not main." >&2
 
-python3 - <<'PY' || fail "fill in name, address and email in assets/legal/publisher.json (privacy policy, terms, imprint)."
+python3 - <<'PY' || fail "fill in name, address, email and effectiveDate in assets/legal/publisher.json (privacy policy, terms, imprint)."
 import json, sys
 p = json.load(open("assets/legal/publisher.json", encoding="utf-8"))
-ok = p.get("name", "").strip() and [a for a in p.get("address", []) if a.strip()] and p.get("email", "").strip()
+ok = (
+    p.get("name", "").strip()
+    and [a for a in p.get("address", []) if a.strip()]
+    and p.get("email", "").strip()
+    and p.get("effectiveDate", "").strip()
+)
 sys.exit(0 if ok else 1)
 PY
 
@@ -48,6 +53,10 @@ PY
 
 current="$(sed -n 's/^version: *\([0-9][0-9.]*\).*/\1/p' pubspec.yaml)"
 [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "pubspec.yaml has no version like 1.2.3."
+
+if [[ "$checks" == 1 ]]; then
+  bash tool/check.sh
+fi
 
 if [[ -n "$bump" ]]; then
   IFS=. read -r major minor patch <<<"$current"
@@ -69,10 +78,6 @@ fi
 
 build="$(git rev-list --count HEAD)"
 commit="$(git rev-parse --short HEAD)"
-
-if [[ "$checks" == 1 ]]; then
-  bash tool/check.sh
-fi
 
 python3 tool/legal/build_pages.py
 
