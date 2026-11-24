@@ -10,6 +10,7 @@ import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
 import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
@@ -166,6 +167,22 @@ class BudgetingService {
     return held;
   }
 
+  /// The day [account] starts (UTC midnight): the earlier of the local day
+  /// it was created on and [firstTransaction], the date of its earliest
+  /// transaction. Its starting balance is the balance at that day. `null`
+  /// for an account without a creation time (it always counts).
+  static DateTime? accountStart(Account account, DateTime? firstTransaction) {
+    final createdAt = account.createdAt;
+    if (createdAt == null) {
+      return null;
+    }
+    final created = CalendarDate.today(now: createdAt);
+    final first = firstTransaction == null
+        ? null
+        : CalendarDate.normalize(firstTransaction.toUtc());
+    return first != null && first.isBefore(created) ? first : created;
+  }
+
   /// The starting balances of the on-budget accounts by start month. An
   /// account exists from the earlier of the month it was created in and
   /// the month of its first transaction (imported or backdated history),
@@ -187,14 +204,7 @@ class BudgetingService {
       if (!account.onBudget) {
         continue;
       }
-      final createdAt = account.createdAt;
-      final created = createdAt == null
-          ? null
-          : CalendarDate.today(now: createdAt);
-      final first = firstDates[account.id]?.toUtc();
-      final start = created == null
-          ? null
-          : (first != null && first.isBefore(created) ? first : created);
+      final start = accountStart(account, firstDates[account.id]);
       startMonth[account.id] = start == null
           ? null
           : CalendarDate.monthKey(start);

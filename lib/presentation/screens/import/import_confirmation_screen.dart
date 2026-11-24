@@ -54,6 +54,14 @@ class _ImportConfirmationScreenState
   /// The file has an Account column but some rows leave it empty.
   bool _rowsWithoutAccountName = false;
 
+  /// The day each account with a starting balance starts (see
+  /// [TransactionImportService.accountStarts]).
+  Map<String, DateTime> _accountStarts = const {};
+
+  /// Take the rows dated before their account starts out of its starting
+  /// balance, which already holds them.
+  bool _adjustStartingBalances = true;
+
   @override
   void initState() {
     super.initState();
@@ -100,6 +108,7 @@ class _ImportConfirmationScreenState
                   ? importAccountFromFileValue
                   : null);
       });
+      await _loadAccountStarts(accounts);
       if (_accountId != null) {
         await _checkDuplicates(_accountId!);
       }
@@ -109,6 +118,36 @@ class _ImportConfirmationScreenState
         setState(() => _accounts = const []);
       }
     }
+  }
+
+  /// Reads when [accounts] start, for the warning about rows dated
+  /// before that.
+  Future<void> _loadAccountStarts(List<Account> accounts) async {
+    try {
+      final starts = await ref
+          .read(transactionImportServiceProvider)
+          .accountStarts(accounts);
+      if (mounted) {
+        setState(() => _accountStarts = starts);
+      }
+    } catch (e, st) {
+      // Only the warning is missing.
+      Logger.error('Reading when the accounts start failed', e, st);
+    }
+  }
+
+  /// Reads the accounts again after an undo gave balances back.
+  Future<void> _reloadAccounts() async {
+    final ids = {for (final a in _accounts ?? const <Account>[]) a.id};
+    final accounts = [
+      for (final a
+          in await ref.read(accountRepositoryProvider).getAllAccounts())
+        if (ids.contains(a.id)) a,
+    ];
+    if (mounted) {
+      setState(() => _accounts = accounts);
+    }
+    await _loadAccountStarts(accounts);
   }
 
   /// Sets each row's own account for the "account from file" choice, or
@@ -215,6 +254,14 @@ class _ImportConfirmationScreenState
     final transferCount = fromFile
         ? _transactions.where((t) => t.transferAccountName != null).length
         : 0;
+    final overlaps = accounts == null
+        ? const <StartingBalanceOverlap>[]
+        : TransactionImportService.startingBalanceOverlaps(
+            selected,
+            _defaultAccountId,
+            {for (final a in accounts) a.id: a},
+            _accountStarts,
+          );
     final busy = _isImporting || _checkingDuplicates;
 
     return Stack(
@@ -291,6 +338,58 @@ class _ImportConfirmationScreenState
                       _Banner(
                         text: l10n.importTransferLegs(transferCount),
                         warning: false,
+                      ),
+                    for (final o in overlaps)
+                      _Banner(
+                        key: Key('import_before_start_${o.account.id}'),
+                        text: l10n.importRowsBeforeAccountStart(
+                          o.rowIndexes.length,
+                          o.account.name,
+                          fmt.formatDate(o.start),
+                          fmt.formatMoney(
+                            o.account.startingBalance,
+                            currencyCode: o.account.currency,
+                          ),
+                        ),
+                      ),
+                    if (overlaps.isNotEmpty)
+                      CheckboxListTile(
+                        key: const Key('import_adjust_starting_balance'),
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _adjustStartingBalances,
+                        onChanged: busy
+                            ? null
+                            : (v) => setState(
+                                () => _adjustStartingBalances = v ?? false,
+                              ),
+                        title: Text(
+                          overlaps.length == 1
+                              ? l10n.importAdjustStartingBalance(
+                                  fmt.formatMoney(
+                                    overlaps.single.account.balance,
+                                    currencyCode:
+                                        overlaps.single.account.currency,
+                                  ),
+                                )
+                              : l10n.importAdjustStartingBalances,
+                        ),
+                        subtitle: Text(
+                          [
+                            for (final o in overlaps)
+                              l10n.importStartingBalanceChange(
+                                o.account.name,
+                                fmt.formatMoney(
+                                  o.account.startingBalance,
+                                  currencyCode: o.account.currency,
+                                ),
+                                fmt.formatMoney(
+                                  o.adjustedStartingBalance,
+                                  currencyCode: o.account.currency,
+                                ),
+                              ),
+                          ].join('\n'),
+                        ),
                       ),
                   ],
                 ),
@@ -451,7 +550,13 @@ class _ImportConfirmationScreenState
                           selected.isNotEmpty &&
                               !busy &&
                               _defaultAccountId != null
-                          ? () => _performImport(selected, _defaultAccountId!)
+                          ? () => _performImport(
+                              selected,
+                              _defaultAccountId!,
+                              adjustStartingBalances:
+                                  overlaps.isNotEmpty &&
+                                  _adjustStartingBalances,
+                            )
                           : null,
                       child: Text(l10n.import),
                     ),
@@ -494,6 +599,9 @@ class _ImportConfirmationScreenState
       }
     }
     // The rows are importable again: nothing of them exists any more.
+    if (mounted) {
+      await _reloadAccounts();
+    }
     final accountId = _accountId;
     if (mounted && accountId != null) {
       await _checkDuplicates(accountId);
@@ -502,8 +610,9 @@ class _ImportConfirmationScreenState
 
   Future<void> _performImport(
     List<ImportTransaction> transactions,
-    String accountId,
-  ) async {
+    String accountId, {
+    bool adjustStartingBalances = false,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     final importService = ref.read(transactionImportServiceProvider);
 
@@ -516,6 +625,7 @@ class _ImportConfirmationScreenState
         transactions,
         accountId,
         accountIdsByName: _accountIdsByName,
+        adjustStartingBalances: adjustStartingBalances,
       );
 
       if (!mounted) {

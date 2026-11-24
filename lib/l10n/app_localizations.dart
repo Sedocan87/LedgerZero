@@ -7087,6 +7087,35 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}'**
   String importTransferLegs(int count);
 
+  /// CSV import review warning: rows older than the account's start, whose starting balance already holds them
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row is dated before {account} starts ({date}). Its starting balance of {amount} already includes it, so it would be counted twice.} other{{count} rows are dated before {account} starts ({date}). Its starting balance of {amount} already includes them, so they would be counted twice.}}'**
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  );
+
+  /// CSV import review: checkbox (default on) that subtracts the earlier rows from the account's starting balance
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the starting balance so these rows leave today\'s balance of {amount} unchanged'**
+  String importAdjustStartingBalance(String amount);
+
+  /// CSV import review: the same checkbox when rows of several accounts are affected
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the starting balances so these rows leave today\'s balances unchanged'**
+  String get importAdjustStartingBalances;
+
+  /// CSV import review: how the checkbox changes an account's starting balance
+  ///
+  /// In en, this message translates to:
+  /// **'{account}: starting balance {from} → {to}'**
+  String importStartingBalanceChange(String account, String from, String to);
+
   /// YNAB import preview: dropdown label
   ///
   /// In en, this message translates to:

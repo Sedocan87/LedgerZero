@@ -4312,6 +4312,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows are dated before $account starts ($date). Its starting balance of $amount already includes them, so they would be counted twice.',
+      one:
+          '1 row is dated before $account starts ($date). Its starting balance of $amount already includes it, so it would be counted twice.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importAdjustStartingBalance(String amount) {
+    return 'Adjust the starting balance so these rows leave today\'s balance of $amount unchanged';
+  }
+
+  @override
+  String get importAdjustStartingBalances =>
+      'Adjust the starting balances so these rows leave today\'s balances unchanged';
+
+  @override
+  String importStartingBalanceChange(String account, String from, String to) {
+    return '$account: starting balance $from → $to';
+  }
+
+  @override
   String get ynabImportDateFormat => 'Date format in Register.csv';
 
   @override
