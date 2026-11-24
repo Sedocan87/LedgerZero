@@ -104,7 +104,8 @@ iOS 17+) can call; not built yet.
      days, unapproved, amount unchanged, not added by the user) with rows
      it did not book: same account, day and amount, matching merchant
      (`merchantsMatch`, so the phones may have read the merchant
-     differently). If exactly one such row exists, exactly one phone gives
+     differently; both rows must name one, a row without a payee is never
+     a twin). If exactly one such row exists, exactly one phone gives
      way: the one whose copy is unapproved while the other is approved,
      else the one with the greater transaction id. It deletes its own row
      and logs the notification as `duplicate` ("Add anyway" if it was a

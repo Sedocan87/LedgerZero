@@ -1198,8 +1198,13 @@ class NotificationCaptureService {
             ?nearby.payeeNames[t.payeeId],
             ?nearby.origins[t.id]?.merchant,
           ];
-          return names.isEmpty ||
-              others.isEmpty ||
+          // Both sides must name the merchant: a deleted booking is only
+          // worth it on positive evidence. Two people of a household who
+          // pay the same amount on the same day (each with their own
+          // card, on the shared account) are told apart by nothing else,
+          // and a row without a payee may be anything.
+          return names.isNotEmpty &&
+              others.isNotEmpty &&
               others.any((name) => _namesAgree(name, names));
         }
 
