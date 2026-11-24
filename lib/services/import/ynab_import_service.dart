@@ -113,7 +113,8 @@ class YnabImportService {
     if (!_fourDigitYear.hasMatch(trimmed)) {
       throw FormatException('Register date must have a 4-digit year', value);
     }
-    final parsed = parser.parseStrict(trimmed);
+    // UTC: a local midnight that the clocks skip would not parse.
+    final parsed = parser.parseStrict(trimmed, true);
     if (parsed.year < _minRegisterYear || parsed.year > _maxRegisterYear) {
       throw FormatException('Register date year out of range', value);
     }
@@ -596,7 +597,10 @@ class YnabImportService {
       throw YnabImportException(failure, 'Not a readable ZIP file: $e');
     }
     if (archive.files.length > _maxZipEntries) {
-      throw YnabImportException(failure, 'The ZIP file contains too many entries');
+      throw YnabImportException(
+        failure,
+        'The ZIP file contains too many entries',
+      );
     }
     final files = <(String, List<int>)>[];
     var totalBytes = 0;
@@ -706,7 +710,10 @@ class YnabImportService {
     final text = value.trim();
     for (final format in ['MMM yyyy', 'MMMM yyyy', ...registerDateFormats]) {
       try {
-        final parsed = DateFormat(format, _exportLocale).parseStrict(text);
+        final parsed = DateFormat(
+          format,
+          _exportLocale,
+        ).parseStrict(text, true);
         return DateTime(parsed.year, parsed.month);
       } on FormatException {
         // Try the next format.

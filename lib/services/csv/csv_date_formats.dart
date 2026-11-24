@@ -67,8 +67,12 @@ const int csvMaxYear = 2100;
 /// Strict parsing of one CSV date cell with [format]: the cell must have
 /// the shape of the format (a `yy` year has exactly two digits, a `yyyy`
 /// year four), parse strictly, and lie within [csvMinYear]..[csvMaxYear].
-/// Returns `null` otherwise. The result is a local `DateTime` (callers turn
-/// it into a calendar day).
+/// Returns `null` otherwise. The result is a UTC `DateTime` whose fields
+/// are the file's day and time (callers turn it into a calendar day).
+///
+/// Parsed in UTC, not local time: a local time that does not exist (the
+/// hour skipped when the clocks spring forward, e.g. `2026-03-29 02:30` in
+/// Berlin) would make intl reject the cell.
 DateTime? parseCsvDate(String value, String format) {
   var text = value.trim();
   if (format.contains("'T'")) {
@@ -80,7 +84,7 @@ DateTime? parseCsvDate(String value, String format) {
   final DateTime parsed;
   try {
     // Numeric patterns need no locale symbols; en_US is always built in.
-    parsed = DateFormat(format, 'en_US').parseStrict(text);
+    parsed = DateFormat(format, 'en_US').parseStrict(text, true);
   } on FormatException {
     return null;
   } on ArgumentError {

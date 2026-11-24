@@ -40,7 +40,7 @@ void main() {
     test('two-digit years are read as dd.MM.yy within this century (I2)', () {
       final d = detectCsvDateFormat(['18.10.26', '02.10.26']);
       expect(d.format, 'dd.MM.yy');
-      expect(parseCsvDate('18.10.26', 'dd.MM.yy'), DateTime(2026, 10, 18));
+      expect(parseCsvDate('18.10.26', 'dd.MM.yy'), DateTime.utc(2026, 10, 18));
       // A yy format does not swallow four-digit years and vice versa.
       expect(parseCsvDate('18.10.2026', 'dd.MM.yy'), isNull);
       expect(parseCsvDate('18.10.26', 'dd.MM.yyyy'), isNull);
@@ -58,19 +58,23 @@ void main() {
         (
           ['2024-02-01T10:00:00Z', '2024-02-13T23:59:59Z'],
           "yyyy-MM-dd'T'HH:mm:ss",
-          DateTime(2024, 2, 1, 10),
+          DateTime.utc(2024, 2, 1, 10),
         ),
         (
           ['2024-02-01T23:30:00.123+01:00'],
           "yyyy-MM-dd'T'HH:mm:ss",
-          DateTime(2024, 2, 1, 23, 30),
+          DateTime.utc(2024, 2, 1, 23, 30),
         ),
         (
           ['01.02.2024 10:00:00', '13.02.2024 09:30:15'],
           'dd.MM.yyyy HH:mm:ss',
-          DateTime(2024, 2, 1, 10),
+          DateTime.utc(2024, 2, 1, 10),
         ),
-        (['01 Feb 2024', '13 Mar 2024'], 'dd MMM yyyy', DateTime(2024, 2, 1)),
+        (
+          ['01 Feb 2024', '13 Mar 2024'],
+          'dd MMM yyyy',
+          DateTime.utc(2024, 2, 1),
+        ),
       ]) {
         final d = detectCsvDateFormat(values);
         expect(d.format, format, reason: '$values');
@@ -104,7 +108,10 @@ void main() {
       ]) {
         expect(isUsableCsvDateFormat(pattern), isFalse, reason: pattern);
       }
-      expect(parseCsvDate('Feb 1, 2024', 'MMM d, yyyy'), DateTime(2024, 2, 1));
+      expect(
+        parseCsvDate('Feb 1, 2024', 'MMM d, yyyy'),
+        DateTime.utc(2024, 2, 1),
+      );
     });
 
     test('timestamps (Revolut) are recognised', () {
@@ -121,7 +128,39 @@ void main() {
       expect(parseCsvDate('18.10.2101', 'dd.MM.yyyy'), isNull);
       expect(parseCsvDate('31.02.2026', 'dd.MM.yyyy'), isNull);
       expect(parseCsvDate('18/10/2026', 'MM/dd/yyyy'), isNull);
-      expect(parseCsvDate('2026-10-18', 'yyyy-MM-dd'), DateTime(2026, 10, 18));
+      expect(
+        parseCsvDate('2026-10-18', 'yyyy-MM-dd'),
+        DateTime.utc(2026, 10, 18),
+      );
+    });
+
+    test('reads in UTC, so a local time the clocks skip still parses and '
+        'the calendar day is the one the file writes', () {
+      // 02:30 on the night Berlin springs forward does not exist in local
+      // time there; intl's local parsing rejects it (check by running this
+      // file with TZ=Europe/Berlin).
+      final gap = parseCsvDate('2026-03-29 02:30:00', 'yyyy-MM-dd HH:mm:ss');
+      expect(gap, DateTime.utc(2026, 3, 29, 2, 30));
+      expect(gap!.isUtc, isTrue);
+      for (final (value, format) in [
+        ('2026-03-29', 'yyyy-MM-dd'),
+        ('29.03.2026 02:30', 'dd.MM.yyyy HH:mm'),
+        ('2026-03-29T00:00:00+02:00', "yyyy-MM-dd'T'HH:mm:ss"),
+        ('2026-03-29T23:59:59Z', "yyyy-MM-dd'T'HH:mm:ss"),
+        ('29 Mar 2026', 'dd MMM yyyy'),
+      ]) {
+        final parsed = parseCsvDate(value, format);
+        expect(
+          (parsed!.year, parsed.month, parsed.day),
+          (2026, 3, 29),
+          reason: value,
+        );
+      }
+      // The autumn hour that occurs twice is no problem either.
+      expect(
+        parseCsvDate('2026-10-25 02:30:00', 'yyyy-MM-dd HH:mm:ss'),
+        DateTime.utc(2026, 10, 25, 2, 30),
+      );
     });
   });
 
