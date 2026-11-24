@@ -97,23 +97,26 @@ class KdfParams {
 
   /// Rejects malformed parameters and values large enough to be a
   /// denial-of-service when read from an untrusted file.
+  /// The limits leave a few times the defaults as headroom: a crafted
+  /// backup must not run the phone out of memory or stall it before the
+  /// password is checked.
   void validate() {
     if (salt.length < 8 || salt.length > 64) {
       throw const KdfParamsException('salt length out of range');
     }
     switch (algorithm) {
       case KdfAlgorithm.argon2id:
-        if (iterations < 1 || iterations > 64) {
+        if (iterations < 1 || iterations > 16) {
           throw const KdfParamsException('argon2 iterations out of range');
         }
         if (parallelism < 1 || parallelism > 16) {
           throw const KdfParamsException('argon2 parallelism out of range');
         }
-        if (memoryKiB < 8 * parallelism || memoryKiB > 1024 * 1024) {
+        if (memoryKiB < 8 * parallelism || memoryKiB > 256 * 1024) {
           throw const KdfParamsException('argon2 memory out of range');
         }
       case KdfAlgorithm.pbkdf2Sha256:
-        if (iterations < 1000 || iterations > 50000000) {
+        if (iterations < 1000 || iterations > 4 * minPbkdf2Iterations) {
           throw const KdfParamsException('pbkdf2 iterations out of range');
         }
     }
