@@ -5632,13 +5632,13 @@ abstract class AppLocalizations {
   /// Prominent disclosure shown before opening the system notification access screen (Google Play policy)
   ///
   /// In en, this message translates to:
-  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.'**
+  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose. Their title and text are kept encrypted on this device: for 30 days in Captured notifications, so you can add a payment again, and for up to 90 days while one waits to be booked (for example while LedgerZero Pro is not active). From a payment, LedgerZero books the amount, merchant and date; when it finds no merchant, a line of the text becomes the memo, which Wi-Fi sync shares with your paired phone. Notifications are not sent anywhere else. You can revoke access at any time in the system settings.'**
   String get cardNotificationsDisclosureBody;
 
   /// No description provided for @cardNotificationsContinue.
   ///
   /// In en, this message translates to:
-  /// **'Continue'**
+  /// **'Agree'**
   String get cardNotificationsContinue;
 
   /// No description provided for @cardNotificationsAppsTitle.

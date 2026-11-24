@@ -185,7 +185,7 @@ void main() {
 
     await tester.tap(find.text('Grant access'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.text('Agree'));
     await tester.pumpAndSettle();
     expect(channel.accessSettingsOpened, 1);
   });

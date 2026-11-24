@@ -3337,10 +3337,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardNotificationsDisclosureBody =>
-      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.';
+      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose. Their title and text are kept encrypted on this device: for 30 days in Captured notifications, so you can add a payment again, and for up to 90 days while one waits to be booked (for example while LedgerZero Pro is not active). From a payment, LedgerZero books the amount, merchant and date; when it finds no merchant, a line of the text becomes the memo, which Wi-Fi sync shares with your paired phone. Notifications are not sent anywhere else. You can revoke access at any time in the system settings.';
 
   @override
-  String get cardNotificationsContinue => 'Continue';
+  String get cardNotificationsContinue => 'Agree';
 
   @override
   String get cardNotificationsAppsTitle => 'Apps';

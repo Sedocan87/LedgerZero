@@ -116,7 +116,8 @@ class ProController extends StateNotifier<ProState> {
   final SharedPreferences _prefs;
   final ProStore _store;
 
-  /// Asked on Buy only (never at start, never on Restore); null: no check.
+  /// Asked on Buy (never on Restore); null: no check. The launch check
+  /// (bootstrap) only asks whether the law applies, not for the age.
   final AgeSignalsGate? _ageGate;
 
   /// Development builds have a switch that unlocks Pro without a purchase
