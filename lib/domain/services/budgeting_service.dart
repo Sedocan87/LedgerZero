@@ -926,11 +926,16 @@ class BudgetingService {
 
   // --- Filling a new month ---
 
-  /// The sync timestamp of an automatic fill of [month]: its first day,
-  /// 00:00 UTC (see [fillEmptyCategories]). A hand edit never has exactly
-  /// this time, so sync can tell the two apart.
-  static DateTime automaticFillStamp(DateTime month) =>
-      CalendarDate.startOfMonthUtc(month);
+  /// The sync timestamp of an automatic fill of [month]: 00:00 UTC of the
+  /// day before its first day (see [fillEmptyCategories]). The month begins
+  /// nowhere on earth before 10:00 UTC of that day (UTC+14), so a hand edit
+  /// made after the fill is always newer, also in the first hours of the
+  /// month east of UTC (like [ScheduleStamps.occurrence]). A hand edit never
+  /// has exactly this time, so sync can tell the two apart.
+  static DateTime automaticFillStamp(DateTime month) {
+    final first = CalendarDate.startOfMonthUtc(month);
+    return DateTime.utc(first.year, first.month, first.day - 1);
+  }
 
   /// The positive budgets of the month before [month], per category.
   Future<Map<String, int>> budgetsOfPreviousMonth(DateTime month) async {

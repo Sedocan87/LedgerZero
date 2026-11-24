@@ -37,6 +37,20 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
+    // MainActivity is exported (the launcher starts it), so any app can
+    // start it with extras. The Flutter embedding would take the first
+    // route, a cached engine or Dart entrypoint arguments from them; the
+    // app always starts at its own start route with its own engine.
+    // Notification taps reach the app through the notification plugin,
+    // not through these extras.
+    override fun getInitialRoute(): String = "/"
+
+    override fun getCachedEngineId(): String? = null
+
+    override fun getCachedEngineGroupId(): String? = null
+
+    override fun getDartEntrypointArgs(): List<String>? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
