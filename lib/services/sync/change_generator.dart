@@ -89,6 +89,12 @@ class ChangeGenerator {
           recordId,
         ), () => _Aggregate());
         aggregate.local = true;
+        if (row.read<String>('action') != 'DELETE') {
+          aggregate.changedAt = math.max(
+            aggregate.changedAt,
+            SyncSchema.versionOf(row.readNullable<String>('changed_at')),
+          );
+        }
         if (row.read<String>('action') == 'DELETE') {
           aggregate.deleteVersion = math.max(
             aggregate.deleteVersion,
@@ -141,6 +147,7 @@ class ChangeGenerator {
 
       final upserts = <_Entry>[];
       final deletes = <_Entry>[];
+      final restamps = <(String, String, String)>[];
       aggregates.forEach((k, aggregate) {
         final (table, id) = k;
         final row = rows[k];
@@ -172,7 +179,29 @@ class ChangeGenerator {
             }
             return;
           }
-          final version = SyncSchema.versionOf(row['updated_at']);
+          var version = SyncSchema.versionOf(row['updated_at']);
+          if (aggregate.local &&
+              known != null &&
+              version <= known.version &&
+              isLiveEdit(version, aggregate.changedAt)) {
+            // Edited here after this device took a newer version from
+            // another device (its clock is ahead, or ours behind): the
+            // wall-clock stamp would lose to the version it replaces, the
+            // other devices would skip the edit and the two copies would
+            // disagree for good. The edit is newer than everything this
+            // device has seen, so it gets the next version (and the row the
+            // same stamp, so a later full upload sends the same version).
+            // Rows stamped on purpose in the past (card payment heals,
+            // the automatic month fill, schedule occurrences) keep their
+            // stamp: they are meant to lose against real edits.
+            version = known.version + 1;
+            final stamp = DateTime.fromMicrosecondsSinceEpoch(
+              version,
+              isUtc: true,
+            ).toIso8601String();
+            row['updated_at'] = stamp;
+            restamps.add((table, id, stamp));
+          }
           if (!aggregate.local &&
               horizon != null &&
               version < horizon &&
@@ -236,6 +265,24 @@ class ChangeGenerator {
         }
       });
 
+      if (restamps.isNotEmpty) {
+        // Written like an applied change file: the sync triggers neither
+        // capture the write nor replace the stamp with the clock time.
+        await _db.customStatement(
+          'INSERT OR REPLACE INTO sync_applying (id) VALUES (1)',
+        );
+        try {
+          for (final (table, id, stamp) in restamps) {
+            await _db.customStatement(
+              'UPDATE "$table" SET updated_at = ? WHERE id = ?',
+              [stamp, id],
+            );
+          }
+        } finally {
+          await _db.customStatement('DELETE FROM sync_applying');
+        }
+      }
+
       upserts.sort((a, b) {
         final byRank = a.rank.compareTo(b.rank);
         if (byRank != 0) {
@@ -297,6 +344,16 @@ class ChangeGenerator {
       return written;
     });
   }
+
+  /// How far a row's `updated_at` may be from the time its change was
+  /// captured for the write to count as a live edit (stamped with the
+  /// clock), as opposed to a row stamped on purpose with an older time.
+  static const int liveEditToleranceMicros = 5 * Duration.microsecondsPerSecond;
+
+  /// Whether a row stamped [version] and captured at [changedAt] (both µs)
+  /// is a live edit; see [liveEditToleranceMicros].
+  static bool isLiveEdit(int version, int changedAt) =>
+      changedAt > 0 && (changedAt - version).abs() <= liveEditToleranceMicros;
 
   Future<void> _deletePending(int maxId) {
     return _db.customStatement(
@@ -402,6 +459,9 @@ class _Aggregate {
   /// Added by a full upload for a row the folder knows that no longer
   /// exists here (no captured delete).
   bool vanished = false;
+
+  /// Capture time of the latest captured insert or update (µs), 0 if none.
+  int changedAt = 0;
 }
 
 class _Entry {
