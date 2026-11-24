@@ -2669,8 +2669,8 @@ abstract class AppLocalizations {
   /// No description provided for @selectiveRestoreSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Transactions merged.'**
-  String get selectiveRestoreSuccess;
+  /// **'{count, plural, =0{Nothing to merge: every transaction of these dates is already here.} =1{1 transaction merged.} other{{count} transactions merged.}}'**
+  String selectiveRestoreSuccess(int count);
 
   /// No description provided for @syncPendingChanges.
   ///

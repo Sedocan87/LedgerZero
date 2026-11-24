@@ -866,7 +866,14 @@
   "restoreInvalidFile": "This file is not a LedgerZero backup that can be restored.",
   "restoreNewerVersion": "This backup was made by a newer version of LedgerZero. Please update the app first.",
   "restoreFailed": "The restore failed. Your data was not changed.",
-  "selectiveRestoreSuccess": "Transactions merged.",
+  "selectiveRestoreSuccess": "{count, plural, =0{Nothing to merge: every transaction of these dates is already here.} =1{1 transaction merged.} other{{count} transactions merged.}}",
+  "@selectiveRestoreSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "syncPendingChanges": "{count, plural, =0{All changes uploaded} =1{1 change waiting to upload} other{{count} changes waiting to upload}}",
   "@syncPendingChanges": {
     "placeholders": {

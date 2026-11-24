@@ -233,8 +233,10 @@ class RestoreService {
   /// * Every inserted row gets `updated_at` = now, so sync treats it as a
   ///   fresh edit (an older timestamp would lose against the partner's
   ///   newer version or tombstone and leave the phones diverged).
-  /// Rows whose id already exists are left untouched.
-  Future<void> selectiveRestore(
+  /// Rows whose id already exists are left untouched, except transactions
+  /// deleted here since the backup (deletes are soft): those come back.
+  /// Returns how many transactions (not counting split lines) came back.
+  Future<int> selectiveRestore(
     File backupFile,
     DateTime start,
     DateTime end, {
@@ -272,6 +274,7 @@ class RestoreService {
             await merge.insertTransaction(tx, family);
           }
         });
+        return merge.restored;
       } finally {
         await tempDb.close();
       }
@@ -511,6 +514,9 @@ class _SelectiveMerge {
   /// Ids that were left out (partner's account, or a parent left out).
   final Set<String> _skipped = {};
 
+  /// Transactions (not split lines) inserted or brought back.
+  int restored = 0;
+
   /// Accounts already checked: id -> usable here (exists or was copied).
   final Map<String, bool> _accounts = {};
 
@@ -525,10 +531,18 @@ class _SelectiveMerge {
     Transaction tx,
     Map<String, Transaction> family,
   ) async {
-    if (await _exists(db.transactions, tx.id)) {
+    final local = await (db.select(
+      db.transactions,
+    )..where((t) => t.id.equals(tx.id))).getSingleOrNull();
+    if (local != null && (!local.isDeleted || tx.isDeleted)) {
       _available.add(tx.id);
       return;
     }
+    if (local == null && tx.isDeleted) {
+      return; // deleted when the backup was made
+    }
+    // New here, or deleted here since the backup (deletes are soft, so
+    // the row is still there): the backup's version replaces it.
     final parent = tx.parentTransactionId;
     if (parent != null && !_available.contains(parent)) {
       _skipped.add(tx.id); // its parent was left out
@@ -565,13 +579,16 @@ class _SelectiveMerge {
     }
     await db
         .into(db.transactions)
-        .insert(
+        .insertOnConflictUpdate(
           row.copyWith(
             createdAt: Value(row.createdAt ?? now),
             updatedAt: Value(now),
           ),
         );
     _available.add(tx.id);
+    if (tx.parentTransactionId == null) {
+      restored++;
+    }
   }
 
   Future<bool> _exists(TableInfo<Table, dynamic> table, String id) async {

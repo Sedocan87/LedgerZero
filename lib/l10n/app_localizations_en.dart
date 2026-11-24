@@ -1487,7 +1487,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreFailed => 'The restore failed. Your data was not changed.';
 
   @override
-  String get selectiveRestoreSuccess => 'Transactions merged.';
+  String selectiveRestoreSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions merged.',
+      one: '1 transaction merged.',
+      zero:
+          'Nothing to merge: every transaction of these dates is already here.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String syncPendingChanges(int count) {

@@ -1501,7 +1501,17 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Wiederherstellung ist fehlgeschlagen. Ihre Daten wurden nicht verändert.';
 
   @override
-  String get selectiveRestoreSuccess => 'Transaktionen übernommen.';
+  String selectiveRestoreSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Transaktionen übernommen.',
+      one: '1 Transaktion übernommen.',
+      zero:
+          'Nichts zu übernehmen: alle Transaktionen dieses Zeitraums sind schon da.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String syncPendingChanges(int count) {

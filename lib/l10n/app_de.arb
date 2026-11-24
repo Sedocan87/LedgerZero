@@ -427,7 +427,7 @@
   "restoreInvalidFile": "Diese Datei ist keine wiederherstellbare LedgerZero-Sicherung.",
   "restoreNewerVersion": "Diese Sicherung wurde mit einer neueren Version von LedgerZero erstellt. Bitte aktualisieren Sie zuerst die App.",
   "restoreFailed": "Die Wiederherstellung ist fehlgeschlagen. Ihre Daten wurden nicht verändert.",
-  "selectiveRestoreSuccess": "Transaktionen übernommen.",
+  "selectiveRestoreSuccess": "{count, plural, =0{Nichts zu übernehmen: alle Transaktionen dieses Zeitraums sind schon da.} =1{1 Transaktion übernommen.} other{{count} Transaktionen übernommen.}}",
   "syncPendingChanges": "{count, plural, =0{Alle Änderungen hochgeladen} =1{1 Änderung wartet auf das Hochladen} other{{count} Änderungen warten auf das Hochladen}}",
   "syncUpdateAppRequired": "Ein anderes Gerät verwendet eine neuere Version von LedgerZero. Aktualisieren Sie die App, um dessen Änderungen zu synchronisieren.",
   "syncLegacyFolderFound": "Der Sync-Ordner enthält noch Dateien einer älteren LedgerZero-Version (Endung .json.gz). Sie werden nicht mehr verwendet und können gelöscht werden.",
