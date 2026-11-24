@@ -143,9 +143,30 @@ class ProController extends StateNotifier<ProState> {
   bool get _forDevelopment =>
       developmentBuild && (_prefs.getBool(developmentKey) ?? false);
 
+  /// When the store was last asked by [refresh].
+  DateTime? _lastRefresh;
+
+  /// How often [refreshOnResume] asks the store at most.
+  static const Duration resumeRefreshInterval = Duration(minutes: 1);
+
+  /// [refresh] when the app comes back to the foreground: a payment that
+  /// was pending completed, a refund, a promo code redeemed in the Play
+  /// Store, or an acknowledgement that failed and must be retried within
+  /// three days. Not more than once per [resumeRefreshInterval] (unlocking
+  /// with the fingerprint also passes through resumed).
+  Future<void> refreshOnResume({DateTime? now}) async {
+    final at = now ?? DateTime.now();
+    final last = _lastRefresh;
+    if (last != null && at.difference(last) < resumeRefreshInterval) {
+      return;
+    }
+    await refresh(now: at);
+  }
+
   /// Checks the store: availability, price and whether Pro is owned. Never
   /// throws.
-  Future<void> refresh() async {
+  Future<void> refresh({DateTime? now}) async {
+    _lastRefresh = now ?? DateTime.now();
     try {
       final available = await _store.isAvailable();
       if (!mounted) {

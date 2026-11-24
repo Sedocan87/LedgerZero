@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:ledger_zero/core/constants/pro_features.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
@@ -83,12 +84,29 @@ class PlayProStore implements ProStore {
         message.contains('item already owned');
   }
 
-  Future<void> _complete(PurchaseDetails purchase) async {
+  /// Acknowledges [purchase]; Play refunds a purchase that is not
+  /// acknowledged within three days. On Android the plugin reports a
+  /// failed acknowledgement as a BillingResult instead of throwing. A
+  /// failure is retried by the next [owned] (at start and when the app
+  /// comes back to the foreground).
+  Future<bool> _complete(PurchaseDetails purchase) async {
     try {
-      await _iap.completePurchase(purchase);
+      // The facade is typed Future<void> but hands over the platform's
+      // result.
+      final Object? result =
+          await (_iap.completePurchase(purchase) as Future<Object?>);
+      if (result is BillingResultWrapper &&
+          result.responseCode != BillingResponse.ok) {
+        Logger.warning(
+          'Acknowledging the Pro purchase failed: ${result.responseCode} '
+          '${result.debugMessage ?? ''}',
+        );
+        return false;
+      }
+      return true;
     } catch (e) {
-      // Retried at the next start ([owned] acknowledges what is left).
       Logger.warning('Acknowledging the Pro purchase failed: $e');
+      return false;
     }
   }
 

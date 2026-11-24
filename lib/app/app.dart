@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/presentation/providers/pro_provider.dart';
 import 'package:ledger_zero/presentation/providers/review_provider.dart';
 import 'package:ledger_zero/presentation/providers/settings_defaults_guard.dart';
 import 'package:ledger_zero/app/theme.dart';
@@ -90,6 +91,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       unawaited(ref.read(reviewPrompterProvider).recordActiveDay());
       ref.read(exportFileServiceProvider).sweepStale();
       ref.read(syncControllerProvider.notifier).onAppResumed();
+      unawaited(ref.read(proControllerProvider.notifier).refreshOnResume());
       _processCapturedNotifications();
       // A payday or a new month may have come while the app was in the
       // background.
