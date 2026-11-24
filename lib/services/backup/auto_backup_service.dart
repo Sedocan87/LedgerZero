@@ -143,18 +143,23 @@ class AutoBackupService {
 
   /// Whether a run is due now: on, and the last success is older than
   /// [interval] (or there is none), and the last try is older than
-  /// [retryAfter].
+  /// [retryAfter]. A time in the future (the clock was set ahead once)
+  /// counts as none, or backups would stop until the date catches up.
   bool get isDue {
     if (!isEnabled) {
       return false;
     }
     final now = _now();
     final success = lastSuccess;
-    if (success != null && now.difference(success) < interval) {
+    if (success != null &&
+        !success.isAfter(now) &&
+        now.difference(success) < interval) {
       return false;
     }
     final attempt = lastAttempt;
-    if (attempt != null && now.difference(attempt) < retryAfter) {
+    if (attempt != null &&
+        !attempt.isAfter(now) &&
+        now.difference(attempt) < retryAfter) {
       return false;
     }
     return true;
@@ -251,8 +256,15 @@ class AutoBackupService {
   }
 
   /// Keeps the newest [keep] backups (and [keepFile] whatever its time).
+  /// Files stamped in the future (written while the clock was ahead) go
+  /// first, or they would be kept for good while real backups are deleted.
   Future<void> _rotate(Directory dir, {required File keepFile}) async {
-    final backups = await listBackups();
+    final now = _now();
+    final all = await listBackups();
+    final backups = [
+      ...all.where((b) => !b.createdAt.isAfter(now)),
+      ...all.where((b) => b.createdAt.isAfter(now)),
+    ];
     final keepPath = p.normalize(keepFile.path);
     var kept = 0;
     for (final backup in backups) {
