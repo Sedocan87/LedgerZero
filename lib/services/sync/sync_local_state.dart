@@ -91,6 +91,11 @@ class SyncLocalState {
     }
   }
 
+  /// Deletes the sync key from [store] without the database (factory
+  /// reset, after the database is gone).
+  static Future<void> deleteSecureSyncKey(SecureStore store) =>
+      store.delete(_secureSyncKey);
+
   Future<void> forgetSyncKey() async {
     await _dao.deleteValue(_syncKey);
     try {

@@ -77,6 +77,25 @@ void main() {
         () => KdfParams.fromJson({'alg': 'md5', 'salt': 'AAAAAAAAAAA='}),
         throwsA(isA<KdfParamsException>()),
       );
+      // A gibibyte of memory or millions of rounds: refused before any
+      // work, not just values that overflow.
+      for (final change in <Map<String, Object>>[
+        {'m': 1024 * 1024},
+        {'t': 64},
+      ]) {
+        expect(
+          () =>
+              KdfParams.fromJson(KdfParams.argon2id().toJson()..addAll(change)),
+          throwsA(isA<KdfParamsException>()),
+        );
+      }
+      expect(
+        () => KdfParams.pbkdf2(iterations: 50000000),
+        throwsA(isA<KdfParamsException>()),
+      );
+      // What the app writes is accepted.
+      KdfParams.argon2id().validate();
+      KdfParams.pbkdf2().validate();
     });
 
     test('derives in a background isolate', () async {

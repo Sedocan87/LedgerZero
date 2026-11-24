@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:ledger_zero/core/utils/logger.dart';
 import 'package:ledger_zero/data/database/database.dart';
+import 'package:ledger_zero/services/sync/change_generator.dart';
 import 'package:ledger_zero/services/sync/format/sync_change.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_codec.dart';
 import 'package:ledger_zero/services/sync/format/sync_file_name.dart';
@@ -308,8 +309,24 @@ class ChangeApplier {
           known.deviceId == _deviceId ? (known.sequence ?? 0) : null,
         );
       }
-      // Edited here and not sent yet (or never sent).
-      return _Local(row, version, _deviceId, _unsent);
+      // Edited here and not sent yet (or never sent). It competes with the
+      // version the generator will give it: a live edit is never older
+      // than the version it replaced (see ChangeGenerator.generate).
+      final raised =
+          known != null &&
+          pending != null &&
+          pending.read<String>('action') != 'DELETE' &&
+          version <= known.version &&
+          ChangeGenerator.isLiveEdit(
+            version,
+            SyncSchema.versionOf(pending.readNullable<String>('changed_at')),
+          );
+      return _Local(
+        row,
+        raised ? known.version + 1 : version,
+        _deviceId,
+        _unsent,
+      );
     }
     if (pending != null && pending.read<String>('action') == 'DELETE') {
       final changedAt = SyncSchema.versionOf(

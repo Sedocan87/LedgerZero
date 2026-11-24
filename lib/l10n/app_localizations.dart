@@ -2669,8 +2669,8 @@ abstract class AppLocalizations {
   /// No description provided for @selectiveRestoreSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Transactions merged.'**
-  String get selectiveRestoreSuccess;
+  /// **'{count, plural, =0{Nothing to merge: every transaction of these dates is already here.} =1{1 transaction merged.} other{{count} transactions merged.}}'**
+  String selectiveRestoreSuccess(int count);
 
   /// No description provided for @syncPendingChanges.
   ///
@@ -5632,13 +5632,13 @@ abstract class AppLocalizations {
   /// Prominent disclosure shown before opening the system notification access screen (Google Play policy)
   ///
   /// In en, this message translates to:
-  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.'**
+  /// **'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose. Their title and text are kept encrypted on this device: for 30 days in Captured notifications, so you can add a payment again, and for up to 90 days while one waits to be booked (for example while LedgerZero Pro is not active). From a payment, LedgerZero books the amount, merchant and date; when it finds no merchant, a line of the text becomes the memo, which Wi-Fi sync shares with your paired phone. Notifications are not sent anywhere else. You can revoke access at any time in the system settings.'**
   String get cardNotificationsDisclosureBody;
 
   /// No description provided for @cardNotificationsContinue.
   ///
   /// In en, this message translates to:
-  /// **'Continue'**
+  /// **'Agree'**
   String get cardNotificationsContinue;
 
   /// No description provided for @cardNotificationsAppsTitle.
@@ -7087,6 +7087,35 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}'**
   String importTransferLegs(int count);
 
+  /// CSV import review warning: rows older than the account's start, whose starting balance already holds them
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row is dated before {account} starts ({date}). Its starting balance of {amount} already includes it, so it would be counted twice.} other{{count} rows are dated before {account} starts ({date}). Its starting balance of {amount} already includes them, so they would be counted twice.}}'**
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  );
+
+  /// CSV import review: checkbox (default on) that subtracts the earlier rows from the account's starting balance
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the starting balance so these rows leave today\'s balance of {amount} unchanged'**
+  String importAdjustStartingBalance(String amount);
+
+  /// CSV import review: the same checkbox when rows of several accounts are affected
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the starting balances so these rows leave today\'s balances unchanged'**
+  String get importAdjustStartingBalances;
+
+  /// CSV import review: how the checkbox changes an account's starting balance
+  ///
+  /// In en, this message translates to:
+  /// **'{account}: starting balance {from} → {to}'**
+  String importStartingBalanceChange(String account, String from, String to);
+
   /// YNAB import preview: dropdown label
   ///
   /// In en, this message translates to:
@@ -7108,8 +7137,26 @@ abstract class AppLocalizations {
   /// YNAB import preview: explains the tracking switch (nYNAB CSV)
   ///
   /// In en, this message translates to:
-  /// **'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.'**
+  /// **'Accounts whose rows have no category are preset as tracking accounts (YNAB allows categories only in budget accounts); their money stays outside the budget.'**
   String get ynabImportTrackingHint;
+
+  /// YNAB import preview warning: export accounts that go into existing accounts of the same name
+  ///
+  /// In en, this message translates to:
+  /// **'Already in LedgerZero: {accounts}. The YNAB data is added to these accounts, which keep their own budget or tracking setting.'**
+  String ynabImportMergedAccounts(String accounts);
+
+  /// YNAB import preview warning: an existing account's starting balance is replaced by YNAB's Starting Balance row
+  ///
+  /// In en, this message translates to:
+  /// **'{account}: its starting balance of {amount} is set to 0 because the YNAB data brings its own starting balance. Otherwise the opening balance would be counted twice.'**
+  String ynabImportMergedStartingBalance(String account, String amount);
+
+  /// YNAB import preview: subtitle of an account that already exists (its tracking switch is disabled)
+  ///
+  /// In en, this message translates to:
+  /// **'Existing account – the YNAB data is added to it'**
+  String get ynabImportMergedAccount;
 
   /// YNAB import preview stat row
   ///

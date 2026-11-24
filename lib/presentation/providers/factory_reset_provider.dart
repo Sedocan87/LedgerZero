@@ -10,6 +10,7 @@ import 'package:ledger_zero/presentation/providers/notification_capture_provider
 import 'package:ledger_zero/presentation/providers/session_provider.dart';
 import 'package:ledger_zero/presentation/providers/sync_providers.dart';
 import 'package:ledger_zero/services/error/local_error_reporting_service.dart';
+import 'package:ledger_zero/services/sync/sync_local_state.dart';
 import 'package:ledger_zero/services/sync/sync_outbox.dart';
 
 /// Deletes everything LedgerZero stores on this device and returns the app
@@ -28,6 +29,7 @@ class FactoryResetService {
     required this.clearCapturedNotifications,
     required this.deleteErrorReports,
     required this.unpairWifiSync,
+    required this.forgetSyncKey,
     required this.deleteSyncFiles,
     required this.clearPreferences,
     required this.markNotOnboarded,
@@ -53,6 +55,9 @@ class FactoryResetService {
   /// re-onboarded phone cannot serve the old folder to the old peer.
   final Future<void> Function() unpairWifiSync;
 
+  /// The sync key in the Android KeyStore (it outlives the database).
+  final Future<void> Function() forgetSyncKey;
+
   /// `<documents>/sync` (outbox and Wi-Fi sync folder).
   final Future<void> Function() deleteSyncFiles;
 
@@ -71,6 +76,7 @@ class FactoryResetService {
       ('clear captured notifications', clearCapturedNotifications),
       ('delete error reports', deleteErrorReports),
       ('unpair Wi-Fi sync', unpairWifiSync),
+      ('forget sync key', forgetSyncKey),
       ('delete sync files', deleteSyncFiles),
       ('clear preferences', clearPreferences),
     ]) {
@@ -113,6 +119,8 @@ final factoryResetServiceProvider = Provider<FactoryResetService>((ref) {
         ref.read(notificationCaptureChannelProvider).clear(),
     deleteErrorReports: () => LocalErrorReportingService().deleteAll(),
     unpairWifiSync: () => ref.read(lanSyncServiceProvider).unpair(),
+    forgetSyncKey: () =>
+        SyncLocalState.deleteSecureSyncKey(ref.read(secureStoreProvider)),
     deleteSyncFiles: SyncOutbox.deleteAllSyncFiles,
     clearPreferences: () =>
         clearPreferencesKeepingPro(ref.read(sharedPreferencesProvider)),

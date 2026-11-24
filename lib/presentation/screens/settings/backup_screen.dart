@@ -283,7 +283,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     } catch (e, stack) {
       Logger.error('Enabling automatic backup failed', e, stack);
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.autoBackupFailed(_autoBackupError(l10n, e)))),
+        SnackBar(
+          content: Text(l10n.autoBackupFailed(_autoBackupError(l10n, e))),
+        ),
       );
     } finally {
       if (mounted) {
@@ -303,7 +305,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     } catch (e, stack) {
       Logger.error('Manual automatic backup failed', e, stack);
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.autoBackupFailed(_autoBackupError(l10n, e)))),
+        SnackBar(
+          content: Text(l10n.autoBackupFailed(_autoBackupError(l10n, e))),
+        ),
       );
     } finally {
       if (mounted) {
@@ -580,7 +584,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isLoading = true);
     try {
-      await ref
+      final restored = await ref
           .read(restoreServiceProvider)
           .selectiveRestore(
             file,
@@ -597,7 +601,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             password: password,
           );
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.selectiveRestoreSuccess)),
+        SnackBar(content: Text(l10n.selectiveRestoreSuccess(restored))),
       );
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(_restoreError(l10n, e))));

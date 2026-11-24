@@ -34,6 +34,7 @@ void main() {
       clearCapturedNotifications: step('capture'),
       deleteErrorReports: step('reports'),
       unpairWifiSync: step('unpair'),
+      forgetSyncKey: step('sync key'),
       deleteSyncFiles: deleteSyncFiles ?? step('sync files'),
       clearPreferences: step('prefs'),
       markNotOnboarded: () => log.add('onboarding'),

@@ -205,6 +205,47 @@ void main() {
       );
     });
 
+    test('an edit after taking a version from a clock that runs ahead '
+        'wins on both', () async {
+      final a = await device();
+      final b = await device();
+      await connect([a, b]);
+      await addAccount(a, 'x', 'Original');
+      await syncAll([a, b]);
+      // A's clock runs two minutes ahead of B's.
+      final ahead = DateTime.now()
+          .toUtc()
+          .add(const Duration(minutes: 2))
+          .toIso8601String();
+      await a.exec(
+        "UPDATE accounts SET name = 'A edit', updated_at = ? WHERE id = 'x'",
+        [ahead],
+      );
+      await syncAll([a, b]);
+      expect(
+        (await b.rows("SELECT name FROM accounts WHERE id='x'")).single['name'],
+        'A edit',
+      );
+      // B fixes it a moment later, stamped by its own (slower) clock.
+      await b.exec("UPDATE accounts SET name = 'B fix' WHERE id = 'x'");
+      await syncAll([a, b]);
+
+      await expectConverged([a, b]);
+      expect(
+        (await a.rows("SELECT name FROM accounts WHERE id='x'")).single['name'],
+        'B fix',
+      );
+      expect(await a.db.syncDao.getConflicts(), isEmpty);
+      // A later full upload sends the same version (the row was stamped).
+      final stamp = (await b.rows(
+        "SELECT updated_at FROM accounts WHERE id='x'",
+      )).single['updated_at'];
+      expect(
+        DateTime.parse(stamp! as String).isAfter(DateTime.parse(ahead)),
+        isTrue,
+      );
+    });
+
     test('delete newer than update: delete wins on both', () async {
       final a = await device();
       final b = await device();

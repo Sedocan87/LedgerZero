@@ -553,6 +553,42 @@ void main() {
       for (final t in await db.select(db.transactions).get()) t.id: t,
     };
 
+    test('transactions deleted since the backup come back', () async {
+      final db = lifecycle.open();
+      await addAccount(db, 'a1', 'Checking');
+      await tx(db, id: 'kept', account: 'a1', amount: -100);
+      await tx(db, id: 'gone', account: 'a1', amount: -200);
+      final backup = await backupService(
+        db,
+      ).createBackup(password: 'backup pw');
+      // Deleted in the app: a soft delete, the row stays.
+      await (db.update(db.transactions)..where((t) => t.id.equals('gone')))
+          .write(const TransactionsCompanion(isDeleted: Value(true)));
+
+      final restored = await restoreService().selectiveRestore(
+        backup,
+        DateTime.utc(2024, 5, 1),
+        DateTime.utc(2024, 5, 31),
+        password: 'backup pw',
+      );
+
+      expect(restored, 1);
+      final rows = await byId(db);
+      expect(rows['gone']!.isDeleted, isFalse);
+      expect(rows['gone']!.amount, -200);
+      expect(rows['kept']!.isDeleted, isFalse);
+      // Nothing left to bring back.
+      expect(
+        await restoreService().selectiveRestore(
+          backup,
+          DateTime.utc(2024, 5, 1),
+          DateTime.utc(2024, 5, 31),
+          password: 'backup pw',
+        ),
+        0,
+      );
+    });
+
     test('row families travel together, missing accounts are copied, rows '
         'become fresh edits', () async {
       final db = lifecycle.open();

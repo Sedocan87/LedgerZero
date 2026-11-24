@@ -83,10 +83,12 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
   final Future<String?> Function()? _fixedCurrency;
 
   /// Marks the account [accountId] of the parsed data as a tracking
-  /// (off-budget) account or a budget account.
+  /// (off-budget) account or a budget account. Not for an account that
+  /// goes into an existing one: that keeps its own setting.
   void setTracking(String accountId, bool tracking) {
     final data = state.parsedData;
-    if (data == null) {
+    if (data == null ||
+        state.accountMerges.any((m) => m.ynabAccountId == accountId)) {
       return;
     }
     state = state.copyWith(
@@ -305,14 +307,28 @@ class YnabImportViewModel extends StateNotifier<YnabImportState> {
       final previous = fingerprint == null
           ? null
           : await _history.importedAt(fingerprint);
+      // An account that goes into an existing one keeps that account's
+      // budget setting; the preview shows it so.
+      final merges = await _dataMapper.accountMerges(data);
+      final existingOnBudget = {
+        for (final m in merges) m.ynabAccountId: m.onBudget,
+      };
       if (!mounted) {
         return;
       }
       state = state.copyWith(
-        parsedData: data,
+        parsedData: merges.isEmpty
+            ? data
+            : data.copyWith(
+                accounts: [
+                  for (final a in data.accounts)
+                    a.copyWith(onBudget: existingOnBudget[a.id]),
+                ],
+              ),
         currentStep: YnabImportStep.preview,
         isLoading: false,
         previousImportAt: previous,
+        accountMerges: merges,
       );
     } on YnabImportException catch (e, stackTrace) {
       Logger.error('YNAB import: invalid export', e, stackTrace);

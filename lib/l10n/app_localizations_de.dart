@@ -1501,7 +1501,17 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Wiederherstellung ist fehlgeschlagen. Ihre Daten wurden nicht verändert.';
 
   @override
-  String get selectiveRestoreSuccess => 'Transaktionen übernommen.';
+  String selectiveRestoreSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Transaktionen übernommen.',
+      one: '1 Transaktion übernommen.',
+      zero:
+          'Nichts zu übernehmen: alle Transaktionen dieses Zeitraums sind schon da.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String syncPendingChanges(int count) {
@@ -3349,10 +3359,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardNotificationsDisclosureBody =>
-      'Android fragt Sie gleich, ob LedgerZero auf Benachrichtigungen zugreifen darf. Android erteilt diesen Zugriff für alle Apps, LedgerZero liest aber nur Benachrichtigungen der Bank-, Karten- oder Wallet-Apps, die Sie auswählen, und übernimmt daraus nur Betrag, Händler und Zeitpunkt einer Zahlung. Benachrichtigungen werden nirgendwohin gesendet. Erfasste Benachrichtigungen bleiben 30 Tage verschlüsselt auf diesem Gerät, damit Sie eine Zahlung erneut hinzufügen können. Sie können den Zugriff jederzeit in den Systemeinstellungen widerrufen.';
+      'Android fragt Sie gleich, ob LedgerZero auf Benachrichtigungen zugreifen darf. Android erteilt diesen Zugriff für alle Apps, LedgerZero liest aber nur Benachrichtigungen der Bank-, Karten- oder Wallet-Apps, die Sie auswählen. Deren Titel und Text bleiben verschlüsselt auf diesem Gerät: 30 Tage unter „Erfasste Benachrichtigungen“, damit Sie eine Zahlung erneut hinzufügen können, und bis zu 90 Tage, solange eine auf die Buchung wartet (zum Beispiel, solange LedgerZero Pro nicht aktiv ist). Aus einer Zahlung bucht LedgerZero Betrag, Händler und Datum; findet es keinen Händler, wird eine Zeile des Textes zur Notiz, die die WLAN-Synchronisierung mit Ihrem gekoppelten Handy teilt. Sonst werden Benachrichtigungen nirgendwohin gesendet. Sie können den Zugriff jederzeit in den Systemeinstellungen widerrufen.';
 
   @override
-  String get cardNotificationsContinue => 'Weiter';
+  String get cardNotificationsContinue => 'Zustimmen';
 
   @override
   String get cardNotificationsAppsTitle => 'Apps';
@@ -4340,6 +4350,38 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen liegen vor dem Beginn von $account ($date). Der Anfangssaldo von $amount enthält sie bereits, sie würden also doppelt gezählt.',
+      one:
+          '1 Zeile liegt vor dem Beginn von $account ($date). Der Anfangssaldo von $amount enthält sie bereits, sie würde also doppelt gezählt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importAdjustStartingBalance(String amount) {
+    return 'Anfangssaldo anpassen, damit diese Zeilen den heutigen Kontostand von $amount nicht verändern';
+  }
+
+  @override
+  String get importAdjustStartingBalances =>
+      'Anfangssalden anpassen, damit diese Zeilen die heutigen Kontostände nicht verändern';
+
+  @override
+  String importStartingBalanceChange(String account, String from, String to) {
+    return '$account: Anfangssaldo $from → $to';
+  }
+
+  @override
   String get ynabImportDateFormat => 'Datumsformat in Register.csv';
 
   @override
@@ -4352,7 +4394,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ynabImportTrackingHint =>
-      'Konten mit nur einem Anfangssaldo und Umbuchungen sind als Tracking-Konten voreingestellt; ihr Geld bleibt außerhalb des Budgets.';
+      'Konten, deren Buchungen keine Kategorie haben, sind als Tracking-Konten voreingestellt (YNAB erlaubt Kategorien nur in Budgetkonten); ihr Geld bleibt außerhalb des Budgets.';
+
+  @override
+  String ynabImportMergedAccounts(String accounts) {
+    return 'Bereits in LedgerZero vorhanden: $accounts. Die YNAB-Daten werden diesen Konten hinzugefügt; sie behalten ihre Einstellung als Budget- oder Tracking-Konto.';
+  }
+
+  @override
+  String ynabImportMergedStartingBalance(String account, String amount) {
+    return '$account: Der Anfangssaldo von $amount wird auf 0 gesetzt, weil die YNAB-Daten einen eigenen Anfangssaldo mitbringen. Sonst würde der Anfangssaldo doppelt gezählt.';
+  }
+
+  @override
+  String get ynabImportMergedAccount =>
+      'Vorhandenes Konto – die YNAB-Daten werden ihm hinzugefügt';
 
   @override
   String get ynabImportCategoriesCount => 'Kategorien';

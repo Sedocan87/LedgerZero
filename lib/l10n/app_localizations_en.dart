@@ -1487,7 +1487,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreFailed => 'The restore failed. Your data was not changed.';
 
   @override
-  String get selectiveRestoreSuccess => 'Transactions merged.';
+  String selectiveRestoreSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions merged.',
+      one: '1 transaction merged.',
+      zero:
+          'Nothing to merge: every transaction of these dates is already here.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String syncPendingChanges(int count) {
@@ -3327,10 +3337,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardNotificationsDisclosureBody =>
-      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.';
+      'Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose. Their title and text are kept encrypted on this device: for 30 days in Captured notifications, so you can add a payment again, and for up to 90 days while one waits to be booked (for example while LedgerZero Pro is not active). From a payment, LedgerZero books the amount, merchant and date; when it finds no merchant, a line of the text becomes the memo, which Wi-Fi sync shares with your paired phone. Notifications are not sent anywhere else. You can revoke access at any time in the system settings.';
 
   @override
-  String get cardNotificationsContinue => 'Continue';
+  String get cardNotificationsContinue => 'Agree';
 
   @override
   String get cardNotificationsAppsTitle => 'Apps';
@@ -4312,6 +4322,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows are dated before $account starts ($date). Its starting balance of $amount already includes them, so they would be counted twice.',
+      one:
+          '1 row is dated before $account starts ($date). Its starting balance of $amount already includes it, so it would be counted twice.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importAdjustStartingBalance(String amount) {
+    return 'Adjust the starting balance so these rows leave today\'s balance of $amount unchanged';
+  }
+
+  @override
+  String get importAdjustStartingBalances =>
+      'Adjust the starting balances so these rows leave today\'s balances unchanged';
+
+  @override
+  String importStartingBalanceChange(String account, String from, String to) {
+    return '$account: starting balance $from → $to';
+  }
+
+  @override
   String get ynabImportDateFormat => 'Date format in Register.csv';
 
   @override
@@ -4324,7 +4366,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ynabImportTrackingHint =>
-      'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.';
+      'Accounts whose rows have no category are preset as tracking accounts (YNAB allows categories only in budget accounts); their money stays outside the budget.';
+
+  @override
+  String ynabImportMergedAccounts(String accounts) {
+    return 'Already in LedgerZero: $accounts. The YNAB data is added to these accounts, which keep their own budget or tracking setting.';
+  }
+
+  @override
+  String ynabImportMergedStartingBalance(String account, String amount) {
+    return '$account: its starting balance of $amount is set to 0 because the YNAB data brings its own starting balance. Otherwise the opening balance would be counted twice.';
+  }
+
+  @override
+  String get ynabImportMergedAccount =>
+      'Existing account – the YNAB data is added to it';
 
   @override
   String get ynabImportCategoriesCount => 'Categories';

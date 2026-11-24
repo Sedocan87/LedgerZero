@@ -212,6 +212,43 @@ void main() {
     expect(listed.every((b) => b.sizeBytes > 0), isTrue);
   });
 
+  test('a clock that was set ahead once does not stop the backups', () async {
+    final auto = service(keep: 2);
+    await auto.enable('correct horse battery');
+    // A run while the clock was a year ahead...
+    final real = now;
+    now = DateTime(2027, 10, 19, 9);
+    await auto.runNow();
+    // ...then the clock is right again.
+    now = real.add(const Duration(days: 1));
+    expect(auto.isDue, isTrue);
+    expect(await auto.runIfDue(), isNotNull);
+    now = now.add(const Duration(days: 1));
+    expect(await auto.runIfDue(), isNotNull);
+    // The file from the future goes first; the real backups stay.
+    expect(backupNames(), [
+      'ledgerzero_auto_20261020_090000.lzbk',
+      'ledgerzero_auto_20261021_090000.lzbk',
+    ]);
+  });
+
+  test(
+    'a manual and an automatic backup at the same time both succeed',
+    () async {
+      final auto = service();
+      await auto.enable('correct horse battery');
+      now = now.add(const Duration(days: 1));
+      final results = await Future.wait([
+        auto.runNow(),
+        backupService().createBackup(password: 'manual pw'),
+      ]);
+      for (final file in results) {
+        expect(file.existsSync(), isTrue);
+        expect(file.lengthSync(), greaterThan(0));
+      }
+    },
+  );
+
   test('other files in the folder are ignored', () async {
     final auto = service();
     await auto.enable('correct horse battery');

@@ -7,6 +7,7 @@ import 'package:ledger_zero/services/backup/backup_scheduler.dart';
 import 'package:ledger_zero/services/export/export_file_service.dart';
 import 'package:ledger_zero/services/security/crypto/kdf.dart';
 import 'package:path/path.dart' as p;
+import 'package:synchronized/synchronized.dart';
 import 'package:uuid/uuid.dart';
 
 /// Creates encrypted backups (format v2, see [BackupFormat]).
@@ -40,6 +41,25 @@ class BackupService {
     if (password.isEmpty) {
       throw const BackupException('A backup password is required');
     }
+    // One backup at a time (a manual one while the automatic one runs on
+    // resume): each run clears the shared staging folder of leftovers from
+    // a crash, which would delete the other run's snapshot.
+    return _stagingLock.synchronized(
+      () => _createBackup(
+        password: password,
+        directory: directory,
+        filename: filename,
+      ),
+    );
+  }
+
+  static final Lock _stagingLock = Lock();
+
+  Future<File> _createBackup({
+    required String password,
+    Directory? directory,
+    String? filename,
+  }) async {
     final exportDir = await _files.exportDirectory();
     final stagingDir = Directory(
       p.join(exportDir.parent.path, '.backup_staging'),

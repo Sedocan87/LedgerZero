@@ -1030,6 +1030,26 @@ void main() {
       expect(statusOf(mine), CaptureStatus.added);
     });
 
+    test('a row from the other phone without a payee is left alone', () async {
+      final mine = capture('Kartenzahlung 12,50 EUR bei REWE');
+      await service.processPending();
+      await t.transactions.createTransaction(
+        Transaction(
+          id: '00000000-other',
+          accountId: accountId,
+          date: CalendarDate.normalize(postedAt),
+          amount: -1250,
+          approved: false,
+        ),
+      );
+
+      final result = await service.processPending();
+
+      expect(result.duplicates, 0);
+      expect(await rowIds(), hasLength(2));
+      expect(statusOf(mine), CaptureStatus.added);
+    });
+
     test('a payment the other phone booked first is held as a duplicate '
         'when this phone gets to it', () async {
       await fromOtherPhone('00000000-other', amount: -1250, payee: 'REWE');

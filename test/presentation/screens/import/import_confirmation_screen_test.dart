@@ -331,4 +331,74 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
   });
+
+  testWidgets('rows older than the account are flagged; the checkbox '
+      '(on by default) takes them out of the starting balance, and undo '
+      'gives them back', (tester) async {
+    final rows = [
+      ImportTransaction(
+        date: DateTime.utc(2024, 1, 2),
+        amount: -1234,
+        payeeName: 'Bakery',
+      ),
+    ];
+    // Created today with today's balance as its starting balance.
+    final t = await pumpReview(
+      tester,
+      rows,
+      seed: (t) => t.addAccount(
+        id: 'a-checking',
+        name: 'Checking',
+        startingBalance: 100000,
+      ),
+    );
+    expect(
+      find.byKey(const Key('import_before_start_a-checking')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('1 row is dated before Checking starts'),
+      findsOneWidget,
+    );
+    final checkbox = find.byKey(const Key('import_adjust_starting_balance'));
+    expect(tester.widget<CheckboxListTile>(checkbox).value, isTrue);
+    expect(
+      find.textContaining("today's balance of \$1,000.00"),
+      findsOneWidget,
+    );
+    expect(find.textContaining('\$1,000.00 → \$1,012.34'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await tester.pumpAndSettle();
+    var checking = (await t.accounts.getAccountById('a-checking'))!;
+    expect(checking.startingBalance, 101234);
+    expect(checking.balance, 100000);
+
+    await tester.tap(find.byKey(const Key('import_undo')));
+    await tester.pumpAndSettle();
+    checking = (await t.accounts.getAccountById('a-checking'))!;
+    expect(checking.startingBalance, 100000);
+    expect(checking.balance, 100000);
+    // Ready to import again, still flagged.
+    expect(
+      find.byKey(const Key('import_before_start_a-checking')),
+      findsOneWidget,
+    );
+
+    // Unticked: the starting balance is left alone. (The snack bar of the
+    // undo is gone first: it covers the Import button.)
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await tester.tap(checkbox);
+    await tester.pumpAndSettle();
+    expect(tester.widget<CheckboxListTile>(checkbox).value, isFalse);
+    await tester.tap(find.widgetWithText(FilledButton, 'Import'));
+    await tester.pumpAndSettle();
+    checking = (await t.accounts.getAccountById('a-checking'))!;
+    expect(checking.startingBalance, 100000);
+    expect(checking.balance, 100000 - 1234);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
+  });
 }

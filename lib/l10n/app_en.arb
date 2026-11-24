@@ -866,7 +866,14 @@
   "restoreInvalidFile": "This file is not a LedgerZero backup that can be restored.",
   "restoreNewerVersion": "This backup was made by a newer version of LedgerZero. Please update the app first.",
   "restoreFailed": "The restore failed. Your data was not changed.",
-  "selectiveRestoreSuccess": "Transactions merged.",
+  "selectiveRestoreSuccess": "{count, plural, =0{Nothing to merge: every transaction of these dates is already here.} =1{1 transaction merged.} other{{count} transactions merged.}}",
+  "@selectiveRestoreSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "syncPendingChanges": "{count, plural, =0{All changes uploaded} =1{1 change waiting to upload} other{{count} changes waiting to upload}}",
   "@syncPendingChanges": {
     "placeholders": {
@@ -2785,11 +2792,11 @@
   "cardNotificationsGrantAccess": "Grant access",
   "cardNotificationsManageAccess": "Manage in system settings",
   "cardNotificationsDisclosureTitle": "Allow LedgerZero to read notifications?",
-  "cardNotificationsDisclosureBody": "Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose, and only takes the amount, merchant and time of a payment from them. Notifications are never sent anywhere. Captured notifications are kept encrypted on this device for 30 days, so you can add a payment again. You can revoke access at any time in the system settings.",
+  "cardNotificationsDisclosureBody": "Android will now ask you to give LedgerZero access to notifications. Android grants this access for all apps, but LedgerZero only reads notifications from the bank, card or wallet apps you choose. Their title and text are kept encrypted on this device: for 30 days in Captured notifications, so you can add a payment again, and for up to 90 days while one waits to be booked (for example while LedgerZero Pro is not active). From a payment, LedgerZero books the amount, merchant and date; when it finds no merchant, a line of the text becomes the memo, which Wi-Fi sync shares with your paired phone. Notifications are not sent anywhere else. You can revoke access at any time in the system settings.",
   "@cardNotificationsDisclosureBody": {
     "description": "Prominent disclosure shown before opening the system notification access screen (Google Play policy)"
   },
-  "cardNotificationsContinue": "Continue",
+  "cardNotificationsContinue": "Agree",
   "cardNotificationsAppsTitle": "Apps",
   "cardNotificationsNoApps": "No apps chosen yet.",
   "cardNotificationsAddApp": "Add app",
@@ -3700,14 +3707,28 @@
   "@importPossibleDuplicates": {"description": "Import review banner", "placeholders": {"count": {"type": "int"}}},
   "importTransferLegs": "{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}",
   "@importTransferLegs": {"description": "Import review banner", "placeholders": {"count": {"type": "int"}}},
+  "importRowsBeforeAccountStart": "{count, plural, =1{1 row is dated before {account} starts ({date}). Its starting balance of {amount} already includes it, so it would be counted twice.} other{{count} rows are dated before {account} starts ({date}). Its starting balance of {amount} already includes them, so they would be counted twice.}}",
+  "@importRowsBeforeAccountStart": {"description": "CSV import review warning: rows older than the account's start, whose starting balance already holds them", "placeholders": {"count": {"type": "int"}, "account": {"type": "String"}, "date": {"type": "String"}, "amount": {"type": "String"}}},
+  "importAdjustStartingBalance": "Adjust the starting balance so these rows leave today's balance of {amount} unchanged",
+  "@importAdjustStartingBalance": {"description": "CSV import review: checkbox (default on) that subtracts the earlier rows from the account's starting balance", "placeholders": {"amount": {"type": "String"}}},
+  "importAdjustStartingBalances": "Adjust the starting balances so these rows leave today's balances unchanged",
+  "@importAdjustStartingBalances": {"description": "CSV import review: the same checkbox when rows of several accounts are affected"},
+  "importStartingBalanceChange": "{account}: starting balance {from} → {to}",
+  "@importStartingBalanceChange": {"description": "CSV import review: how the checkbox changes an account's starting balance", "placeholders": {"account": {"type": "String"}, "from": {"type": "String"}, "to": {"type": "String"}}},
   "ynabImportDateFormat": "Date format in Register.csv",
   "@ynabImportDateFormat": {"description": "YNAB import preview: dropdown label"},
   "ynabImportDateFormatAmbiguous": "No day above 12 in the file: day and month could be swapped. Check a date and switch the format if needed.",
   "@ynabImportDateFormatAmbiguous": {"description": "YNAB import preview: both date orders fit"},
   "ynabImportTrackingSwitch": "Tracking account (outside the budget)",
   "@ynabImportTrackingSwitch": {"description": "YNAB import preview: switch under an account"},
-  "ynabImportTrackingHint": "Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.",
+  "ynabImportTrackingHint": "Accounts whose rows have no category are preset as tracking accounts (YNAB allows categories only in budget accounts); their money stays outside the budget.",
   "@ynabImportTrackingHint": {"description": "YNAB import preview: explains the tracking switch (nYNAB CSV)"},
+  "ynabImportMergedAccounts": "Already in LedgerZero: {accounts}. The YNAB data is added to these accounts, which keep their own budget or tracking setting.",
+  "@ynabImportMergedAccounts": {"description": "YNAB import preview warning: export accounts that go into existing accounts of the same name", "placeholders": {"accounts": {"type": "String"}}},
+  "ynabImportMergedStartingBalance": "{account}: its starting balance of {amount} is set to 0 because the YNAB data brings its own starting balance. Otherwise the opening balance would be counted twice.",
+  "@ynabImportMergedStartingBalance": {"description": "YNAB import preview warning: an existing account's starting balance is replaced by YNAB's Starting Balance row", "placeholders": {"account": {"type": "String"}, "amount": {"type": "String"}}},
+  "ynabImportMergedAccount": "Existing account – the YNAB data is added to it",
+  "@ynabImportMergedAccount": {"description": "YNAB import preview: subtitle of an account that already exists (its tracking switch is disabled)"},
   "ynabImportCategoriesCount": "Categories",
   "@ynabImportCategoriesCount": {"description": "YNAB import preview stat row"},
   "ynabImportCategoriesOnlyInBudget": "Categories only in Budget.csv",

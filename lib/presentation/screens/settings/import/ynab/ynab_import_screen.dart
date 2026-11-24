@@ -8,6 +8,7 @@ import 'package:ledger_zero/presentation/providers/budget_currency_provider.dart
 import 'package:ledger_zero/presentation/providers/formatter_provider.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_state.dart';
 import 'package:ledger_zero/presentation/screens/settings/import/ynab/ynab_import_view_model.dart';
+import 'package:ledger_zero/services/import/ynab_data_mapper.dart';
 
 class YnabImportScreen extends ConsumerWidget {
   const YnabImportScreen({super.key});
@@ -360,6 +361,10 @@ class YnabImportScreen extends ConsumerWidget {
             ),
           ),
         ],
+        if (state.accountMerges.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _mergeWarning(context, ref, l10n, state.accountMerges),
+        ],
         if (dateFormat != null && dateFormatChoices.length > 1) ...[
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
@@ -419,12 +424,17 @@ class YnabImportScreen extends ConsumerWidget {
                             );
                           }
                           final acc = data.accounts[index];
+                          final merged = state.accountMerges.any(
+                            (m) => m.ynabAccountId == acc.id,
+                          );
                           return SwitchListTile(
                             key: Key('ynab_tracking_${acc.id}'),
                             secondary: const Icon(Icons.account_balance_wallet),
                             title: Text(acc.name),
                             subtitle: Text(
-                              acc.onBudget
+                              merged
+                                  ? l10n.ynabImportMergedAccount
+                                  : acc.onBudget
                                   ? l10n.ynabImportAccountSubtitle(
                                       _accountTypeLabel(l10n, acc.type),
                                       acc.isClosed
@@ -434,8 +444,11 @@ class YnabImportScreen extends ConsumerWidget {
                                   : l10n.ynabImportTrackingAccount,
                             ),
                             value: !acc.onBudget,
-                            onChanged: (tracking) =>
-                                viewModel.setTracking(acc.id, tracking),
+                            // An existing account keeps its setting.
+                            onChanged: merged
+                                ? null
+                                : (tracking) =>
+                                      viewModel.setTracking(acc.id, tracking),
                           );
                         },
                       ),
@@ -567,6 +580,64 @@ class YnabImportScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Which accounts go into existing ones, and whose starting balance the
+  /// import sets to 0 (YNAB's own starting balance replaces it).
+  Widget _mergeWarning(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    List<YnabAccountMerge> merges,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final fmt = ref.watch(appFormatterProvider);
+    final style = TextStyle(color: scheme.onErrorContainer);
+    return Container(
+      key: const Key('ynab_merged_accounts'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning, color: scheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.ynabImportMergedAccounts(
+                    {for (final m in merges) m.name}.join(', '),
+                  ),
+                  style: style,
+                ),
+                for (final m in merges)
+                  if (m.replacedStartingBalance != 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        l10n.ynabImportMergedStartingBalance(
+                          m.name,
+                          fmt.formatMoney(
+                            m.replacedStartingBalance,
+                            currencyCode: m.currency,
+                          ),
+                        ),
+                        key: Key('ynab_merged_start_${m.ynabAccountId}'),
+                        style: style,
+                      ),
+                    ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

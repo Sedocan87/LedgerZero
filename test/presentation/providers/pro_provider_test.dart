@@ -79,6 +79,22 @@ void main() {
     expect(prefs.getBool(ProController.unlockedKey), isFalse);
   });
 
+  test('coming back to the foreground asks the store again, at most once '
+      'a minute', () async {
+    final c = await controller(refresh: false);
+    final t0 = DateTime(2026, 11, 24, 12);
+    await c.refresh(now: t0);
+    expect(store.ownedCalls, 1);
+
+    // A refund or a completed pending payment while in the background.
+    store.ownedAnswer = true;
+    await c.refreshOnResume(now: t0.add(const Duration(seconds: 20)));
+    expect(store.ownedCalls, 1, reason: 'too soon (fingerprint unlock)');
+    await c.refreshOnResume(now: t0.add(const Duration(minutes: 2)));
+    expect(store.ownedCalls, 2);
+    expect(c.state.unlocked, isTrue);
+  });
+
   test('buying: the purchase sheet, then the store confirms', () async {
     final c = await controller();
     await c.buy();

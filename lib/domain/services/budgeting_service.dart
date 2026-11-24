@@ -10,6 +10,7 @@ import 'package:ledger_zero/domain/repositories/budget_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/category_repository.dart';
 import 'package:ledger_zero/domain/repositories/budget_template_repository.dart';
+import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/budget.dart';
 import 'package:ledger_zero/domain/entities/card_payments.dart';
 import 'package:ledger_zero/domain/entities/category.dart';
@@ -166,6 +167,22 @@ class BudgetingService {
     return held;
   }
 
+  /// The day [account] starts (UTC midnight): the earlier of the local day
+  /// it was created on and [firstTransaction], the date of its earliest
+  /// transaction. Its starting balance is the balance at that day. `null`
+  /// for an account without a creation time (it always counts).
+  static DateTime? accountStart(Account account, DateTime? firstTransaction) {
+    final createdAt = account.createdAt;
+    if (createdAt == null) {
+      return null;
+    }
+    final created = CalendarDate.today(now: createdAt);
+    final first = firstTransaction == null
+        ? null
+        : CalendarDate.normalize(firstTransaction.toUtc());
+    return first != null && first.isBefore(created) ? first : created;
+  }
+
   /// The starting balances of the on-budget accounts by start month. An
   /// account exists from the earlier of the month it was created in and
   /// the month of its first transaction (imported or backdated history),
@@ -187,14 +204,7 @@ class BudgetingService {
       if (!account.onBudget) {
         continue;
       }
-      final createdAt = account.createdAt;
-      final created = createdAt == null
-          ? null
-          : CalendarDate.today(now: createdAt);
-      final first = firstDates[account.id]?.toUtc();
-      final start = created == null
-          ? null
-          : (first != null && first.isBefore(created) ? first : created);
+      final start = accountStart(account, firstDates[account.id]);
       startMonth[account.id] = start == null
           ? null
           : CalendarDate.monthKey(start);
@@ -926,11 +936,16 @@ class BudgetingService {
 
   // --- Filling a new month ---
 
-  /// The sync timestamp of an automatic fill of [month]: its first day,
-  /// 00:00 UTC (see [fillEmptyCategories]). A hand edit never has exactly
-  /// this time, so sync can tell the two apart.
-  static DateTime automaticFillStamp(DateTime month) =>
-      CalendarDate.startOfMonthUtc(month);
+  /// The sync timestamp of an automatic fill of [month]: 00:00 UTC of the
+  /// day before its first day (see [fillEmptyCategories]). The month begins
+  /// nowhere on earth before 10:00 UTC of that day (UTC+14), so a hand edit
+  /// made after the fill is always newer, also in the first hours of the
+  /// month east of UTC (like [ScheduleStamps.occurrence]). A hand edit never
+  /// has exactly this time, so sync can tell the two apart.
+  static DateTime automaticFillStamp(DateTime month) {
+    final first = CalendarDate.startOfMonthUtc(month);
+    return DateTime.utc(first.year, first.month, first.day - 1);
+  }
 
   /// The positive budgets of the month before [month], per category.
   Future<Map<String, int>> budgetsOfPreviousMonth(DateTime month) async {
