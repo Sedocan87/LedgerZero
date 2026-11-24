@@ -192,17 +192,32 @@ class YnabImportService {
   /// file is ambiguous); it must still fit every date.
   ///
   /// Tracking accounts: the CSV does not say which accounts are off
-  /// budget, but YNAB leaves a trace. A transfer between two budget
+  /// budget, but YNAB leaves traces, since it allows a category only in a
+  /// budget account. A budget account's "Starting Balance" row is
+  /// categorised "Inflow: Ready to Assign" (older exports: "To be
+  /// Budgeted"); every row of a tracking account (its starting balance,
+  /// "Market Change", interest) has none. A transfer between two budget
   /// accounts has no category on either leg, while a transfer between a
   /// budget account and a tracking account always carries one on the
   /// budget-side leg (the spending category, "Uncategorized", or
-  /// "Inflow: Ready to Assign" for money coming back). So an account
-  /// whose own rows are only its "Starting Balance" and transfer legs is
-  /// a tracking account when one of the legs facing it in a budget
-  /// account has a category, and a budget account (a savings account that
-  /// is only ever topped up) when none has. Without any such leg there
-  /// is no trace and it is taken to be a tracking account (a house, a
-  /// loan). The user can change every account in the preview.
+  /// "Inflow: Ready to Assign" for money coming back). In order, an
+  /// account is:
+  ///
+  /// 1. a budget account when it has a category in the Credit Card
+  ///    Payments group or a categorised row besides its starting balance;
+  /// 2. otherwise, when legs in such budget accounts face it: a tracking
+  ///    account if one of them has a category, a budget account (a savings
+  ///    account that is only ever topped up) if none has;
+  /// 3. otherwise a budget account if its starting balance is
+  ///    categorised, and a tracking account (a house, a loan, a brokerage
+  ///    account with only uncategorised rows) if not.
+  ///
+  /// The user can change every account in the preview.
+  ///
+  /// Credit cards: when the export has YNAB's Credit Card Payments group,
+  /// exactly the accounts with a category there are credit cards (see
+  /// [YnabDataMapper]); otherwise the type is guessed from the name
+  /// ([mapAccountType]).
   Future<YnabImportData> parseCsvExport({
     required String registerCsvContent,
     required String budgetCsvContent,
@@ -215,6 +230,7 @@ class YnabImportService {
     final budgetEntries = <YnabBudgetEntry>[];
     String? chosenDateFormat;
     var dateFormatCandidates = const <String>[];
+    final lines = <_RegisterLine>[];
     // One decimal separator for the whole export: YNAB writes every
     // amount the same way, so "€1.234" (no decimals) is read as 1234.
     final amountParser = MoneyParser(
@@ -268,7 +284,6 @@ class YnabImportService {
       // Track unique entities to avoid duplicates in list
       final accountNames = <String>{};
       final categoryKeys = <String>{}; // "Group|Category"
-      final lines = <_RegisterLine>[];
 
       final usableRows = [
         for (final row in rows)
@@ -361,42 +376,6 @@ class YnabImportService {
         );
       }
       transactions.addAll(_groupRegisterLines(lines));
-
-      // Tracking accounts (see the method comment). Accounts with rows
-      // of their own (purchases, income) are budget accounts.
-      final hasOwnRows = <String>{};
-      for (final line in lines) {
-        final isStart = line.payee.trim().toLowerCase() == 'starting balance';
-        if (!isStart && transferTargetName(line.payee) == null) {
-          hasOwnRows.add(line.accountName);
-        }
-      }
-      // The legs in those budget accounts, by the account they face.
-      final facingLegs = <String, int>{};
-      final categorisedFacingLegs = <String, int>{};
-      for (final line in lines) {
-        final target = transferTargetName(line.payee);
-        if (target == null || !hasOwnRows.contains(line.accountName)) {
-          continue;
-        }
-        facingLegs[target] = (facingLegs[target] ?? 0) + 1;
-        if (line.category.trim().isNotEmpty || line.group.trim().isNotEmpty) {
-          categorisedFacingLegs[target] =
-              (categorisedFacingLegs[target] ?? 0) + 1;
-        }
-      }
-      for (var i = 0; i < accounts.length; i++) {
-        final id = accounts[i].id;
-        if (hasOwnRows.contains(id)) {
-          continue;
-        }
-        final tracking =
-            !facingLegs.containsKey(id) ||
-            categorisedFacingLegs.containsKey(id);
-        if (tracking) {
-          accounts[i] = accounts[i].copyWith(onBudget: false);
-        }
-      }
     }
 
     // 2. Parse Budget CSV
@@ -490,7 +469,8 @@ class YnabImportService {
     // YNAB's Credit Card Payments group names the credit cards: those
     // accounts are cards whatever their name suggests, and their payment
     // categories map onto the cards' own (not counted as categories that
-    // only Budget.csv has).
+    // only Budget.csv has). With the group, no other account is a card
+    // ("Alliant Credit Union", "Prepaid Card").
     final cardGroups = {
       for (final g in categoryGroups)
         if (YnabDataMapper.isCardPaymentGroup(g.name)) g.id,
@@ -499,6 +479,7 @@ class YnabImportService {
       for (final c in categories)
         if (cardGroups.contains(c.groupId)) c.name,
     };
+    _markTrackingAccounts(accounts, lines, cardNames);
     for (var i = 0; i < accounts.length; i++) {
       final a = accounts[i];
       if (a.onBudget && cardNames.contains(a.name)) {
@@ -506,6 +487,10 @@ class YnabImportService {
         if (budgetOnlyCards.contains(a.name)) {
           categoriesOnlyInBudget--;
         }
+      } else if (cardGroups.isNotEmpty && a.type == AccountType.credit) {
+        accounts[i] = a.copyWith(
+          type: mapAccountType(a.name, creditCard: false),
+        );
       }
     }
 
@@ -1471,6 +1456,61 @@ class YnabImportService {
     return name == null || name.isEmpty ? null : name;
   }
 
+  /// Marks the tracking accounts of a CSV export: the rules of
+  /// [parseCsvExport]. [cardNames] are the accounts with a category in the
+  /// Credit Card Payments group.
+  static void _markTrackingAccounts(
+    List<YnabAccount> accounts,
+    List<_RegisterLine> lines,
+    Set<String> cardNames,
+  ) {
+    bool categorised(_RegisterLine l) =>
+        l.category.trim().isNotEmpty || l.group.trim().isNotEmpty;
+    bool isStart(_RegisterLine l) =>
+        l.payee.trim().toLowerCase() == 'starting balance';
+
+    // Rule 1: a category on any row but the starting balance (transfer
+    // legs included) means a budget account.
+    final budget = {...cardNames};
+    final categorisedStart = <String>{};
+    for (final line in lines) {
+      if (!categorised(line)) {
+        continue;
+      }
+      if (isStart(line)) {
+        categorisedStart.add(line.accountName);
+      } else {
+        budget.add(line.accountName);
+      }
+    }
+    // Rule 2: the legs in those budget accounts, by the account they face.
+    final facingLegs = <String>{};
+    final categorisedFacingLegs = <String>{};
+    for (final line in lines) {
+      final target = transferTargetName(line.payee);
+      if (target == null || !budget.contains(line.accountName)) {
+        continue;
+      }
+      facingLegs.add(target);
+      if (categorised(line)) {
+        categorisedFacingLegs.add(target);
+      }
+    }
+    for (var i = 0; i < accounts.length; i++) {
+      final id = accounts[i].id;
+      if (budget.contains(id)) {
+        continue;
+      }
+      final tracking = facingLegs.contains(id)
+          ? categorisedFacingLegs.contains(id)
+          // Rule 3.
+          : !categorisedStart.contains(id);
+      if (tracking) {
+        accounts[i] = accounts[i].copyWith(onBudget: false);
+      }
+    }
+  }
+
   /// Guesses the account type from a YNAB account type or, for a CSV
   /// export (which has no type column), the account NAME, in English or
   /// German. Unrecognised names are checking accounts.
@@ -1478,19 +1518,33 @@ class YnabImportService {
   /// German names are often compounds ("Tagesgeldkonto", "Aktiendepot"), so
   /// most keywords match anywhere in the name; short or ambiguous ones
   /// ("Visa", "ETF", "Cash") only as whole words. Bank names that merely
-  /// contain a keyword (Sparkasse, Sparda-Bank) do not count.
-  static AccountType mapAccountType(String ynabType) {
+  /// contain a keyword (Sparkasse, Sparda-Bank) do not count, nor do
+  /// cards that are not credit cards (prepaid, gift and debit cards) or a
+  /// credit union. With [creditCard] `false` the name is never taken for a
+  /// credit card (the export says which accounts are cards).
+  static AccountType mapAccountType(String ynabType, {bool creditCard = true}) {
     final normalized = ynabType.toLowerCase().trim().replaceAll(
       RegExp(r'\b(sparkasse|sparda)\w*'),
       ' ',
     );
+    final mayBeCard = creditCard && !_notCreditCard.hasMatch(normalized);
     for (final (type, pattern) in _accountTypeKeywords) {
+      if (type == AccountType.credit && !mayBeCard) {
+        continue;
+      }
       if (pattern.hasMatch(normalized)) {
         return type;
       }
     }
     return AccountType.checking; // Default
   }
+
+  /// Names that mention a card or credit but are no credit card.
+  static final RegExp _notCreditCard = RegExp(
+    r'credit[\s-]*union|kreditgenossenschaft|\bprepaid|prepaidkarte|'
+    r'gift[\s-]*cards?\b|geschenkkarte|guthabenkarte|\bdebit|girocard|'
+    r'\bec[\s-]*karte',
+  );
 
   /// Checked in order: the first match wins (a "Home Depot Card" is a
   /// credit card, an "ETF-Sparplan" an investment, a "Sparkonto" savings).
@@ -1502,7 +1556,7 @@ class YnabImportService {
     (
       AccountType.credit,
       RegExp(
-        r'credit|card|kreditkarte|\bvisa\b|mastercard|\bamex\b|'
+        r'credit|cards?\b|kreditkarte|\bvisa\b|mastercard|\bamex\b|'
         r'american express',
       ),
     ),
