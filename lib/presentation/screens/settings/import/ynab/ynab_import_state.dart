@@ -76,6 +76,10 @@ class YnabImportState {
   /// or `null`.
   final DateTime? previousImportAt;
 
+  /// The parsed accounts that go into an existing account of the same
+  /// name (see `YnabDataMapper.accountMerges`).
+  final List<YnabAccountMerge> accountMerges;
+
   const YnabImportState({
     this.currentStep = YnabImportStep.selectMethod,
     this.method,
@@ -93,6 +97,7 @@ class YnabImportState {
     this.currency = 'USD',
     this.summary,
     this.previousImportAt,
+    this.accountMerges = const [],
   });
 
   /// The name of the chosen register / budget file, or `null`.
@@ -119,6 +124,7 @@ class YnabImportState {
     String? currency,
     YnabImportSummary? summary,
     DateTime? previousImportAt,
+    List<YnabAccountMerge>? accountMerges,
     bool clearParsedData = false,
   }) {
     return YnabImportState(
@@ -148,6 +154,9 @@ class YnabImportState {
       previousImportAt: clearParsedData
           ? null
           : (previousImportAt ?? this.previousImportAt),
+      accountMerges: clearParsedData
+          ? const []
+          : (accountMerges ?? this.accountMerges),
     );
   }
 }

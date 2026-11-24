@@ -163,6 +163,40 @@ void main() {
     final accounts = await t.accounts.getAllAccounts();
     expect(accounts.singleWhere((a) => a.name == 'House').onBudget, isTrue);
   });
+
+  test('accounts that already exist are listed with the starting balance '
+      'the import replaces; they keep their budget setting', () async {
+    final t = TestDatabase();
+    addTearDown(t.close);
+    await t.addAccount(name: 'Checking', startingBalance: 100000);
+    // YNAB's House is a tracking account; this one is on budget.
+    await t.addAccount(name: 'House');
+    final vm = _viewModel(t, InMemoryYnabImportHistory());
+    await vm.validateAndParse();
+
+    expect(
+      {
+        for (final m in vm.state.accountMerges)
+          m.ynabAccountId: m.replacedStartingBalance,
+      },
+      {'Checking': 100000, 'House': 0},
+    );
+    bool onBudget(String id) =>
+        vm.state.parsedData!.accounts.singleWhere((a) => a.id == id).onBudget;
+    expect(onBudget('House'), isTrue);
+    vm.setTracking('House', true);
+    expect(onBudget('House'), isTrue);
+
+    await vm.startImport();
+    final accounts = {
+      for (final a in await t.accounts.getAllAccounts()) a.name: a,
+    };
+    expect(accounts['Checking']!.startingBalance, 0);
+    expect(accounts['Checking']!.balance, 100000 - 1000 - 2000);
+    expect(accounts['House']!.onBudget, isTrue);
+    expect(vm.state.summary!.trackingAccounts, 0);
+  });
+
   test('a budget file without its columns and an unreadable amount are '
       'shown as errors; nothing is parsed (F3, F9)', () async {
     final t = TestDatabase();

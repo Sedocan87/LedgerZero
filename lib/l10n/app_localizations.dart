@@ -7108,8 +7108,26 @@ abstract class AppLocalizations {
   /// YNAB import preview: explains the tracking switch (nYNAB CSV)
   ///
   /// In en, this message translates to:
-  /// **'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.'**
+  /// **'Accounts whose rows have no category are preset as tracking accounts (YNAB allows categories only in budget accounts); their money stays outside the budget.'**
   String get ynabImportTrackingHint;
+
+  /// YNAB import preview warning: export accounts that go into existing accounts of the same name
+  ///
+  /// In en, this message translates to:
+  /// **'Already in LedgerZero: {accounts}. The YNAB data is added to these accounts, which keep their own budget or tracking setting.'**
+  String ynabImportMergedAccounts(String accounts);
+
+  /// YNAB import preview warning: an existing account's starting balance is replaced by YNAB's Starting Balance row
+  ///
+  /// In en, this message translates to:
+  /// **'{account}: its starting balance of {amount} is set to 0 because the YNAB data brings its own starting balance. Otherwise the opening balance would be counted twice.'**
+  String ynabImportMergedStartingBalance(String account, String amount);
+
+  /// YNAB import preview: subtitle of an account that already exists (its tracking switch is disabled)
+  ///
+  /// In en, this message translates to:
+  /// **'Existing account – the YNAB data is added to it'**
+  String get ynabImportMergedAccount;
 
   /// YNAB import preview stat row
   ///

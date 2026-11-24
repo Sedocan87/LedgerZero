@@ -4352,7 +4352,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ynabImportTrackingHint =>
-      'Konten mit nur einem Anfangssaldo und Umbuchungen sind als Tracking-Konten voreingestellt; ihr Geld bleibt außerhalb des Budgets.';
+      'Konten, deren Buchungen keine Kategorie haben, sind als Tracking-Konten voreingestellt (YNAB erlaubt Kategorien nur in Budgetkonten); ihr Geld bleibt außerhalb des Budgets.';
+
+  @override
+  String ynabImportMergedAccounts(String accounts) {
+    return 'Bereits in LedgerZero vorhanden: $accounts. Die YNAB-Daten werden diesen Konten hinzugefügt; sie behalten ihre Einstellung als Budget- oder Tracking-Konto.';
+  }
+
+  @override
+  String ynabImportMergedStartingBalance(String account, String amount) {
+    return '$account: Der Anfangssaldo von $amount wird auf 0 gesetzt, weil die YNAB-Daten einen eigenen Anfangssaldo mitbringen. Sonst würde der Anfangssaldo doppelt gezählt.';
+  }
+
+  @override
+  String get ynabImportMergedAccount =>
+      'Vorhandenes Konto – die YNAB-Daten werden ihm hinzugefügt';
 
   @override
   String get ynabImportCategoriesCount => 'Kategorien';

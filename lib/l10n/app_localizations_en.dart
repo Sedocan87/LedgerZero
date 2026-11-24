@@ -4324,7 +4324,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ynabImportTrackingHint =>
-      'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.';
+      'Accounts whose rows have no category are preset as tracking accounts (YNAB allows categories only in budget accounts); their money stays outside the budget.';
+
+  @override
+  String ynabImportMergedAccounts(String accounts) {
+    return 'Already in LedgerZero: $accounts. The YNAB data is added to these accounts, which keep their own budget or tracking setting.';
+  }
+
+  @override
+  String ynabImportMergedStartingBalance(String account, String amount) {
+    return '$account: its starting balance of $amount is set to 0 because the YNAB data brings its own starting balance. Otherwise the opening balance would be counted twice.';
+  }
+
+  @override
+  String get ynabImportMergedAccount =>
+      'Existing account – the YNAB data is added to it';
 
   @override
   String get ynabImportCategoriesCount => 'Categories';
