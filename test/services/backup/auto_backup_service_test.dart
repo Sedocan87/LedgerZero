@@ -232,6 +232,23 @@ void main() {
     ]);
   });
 
+  test(
+    'a manual and an automatic backup at the same time both succeed',
+    () async {
+      final auto = service();
+      await auto.enable('correct horse battery');
+      now = now.add(const Duration(days: 1));
+      final results = await Future.wait([
+        auto.runNow(),
+        backupService().createBackup(password: 'manual pw'),
+      ]);
+      for (final file in results) {
+        expect(file.existsSync(), isTrue);
+        expect(file.lengthSync(), greaterThan(0));
+      }
+    },
+  );
+
   test('other files in the folder are ignored', () async {
     final auto = service();
     await auto.enable('correct horse battery');
