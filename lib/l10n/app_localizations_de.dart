@@ -4350,6 +4350,38 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Zeilen liegen vor dem Beginn von $account ($date). Der Anfangssaldo von $amount enthält sie bereits, sie würden also doppelt gezählt.',
+      one:
+          '1 Zeile liegt vor dem Beginn von $account ($date). Der Anfangssaldo von $amount enthält sie bereits, sie würde also doppelt gezählt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importAdjustStartingBalance(String amount) {
+    return 'Anfangssaldo anpassen, damit diese Zeilen den heutigen Kontostand von $amount nicht verändern';
+  }
+
+  @override
+  String get importAdjustStartingBalances =>
+      'Anfangssalden anpassen, damit diese Zeilen die heutigen Kontostände nicht verändern';
+
+  @override
+  String importStartingBalanceChange(String account, String from, String to) {
+    return '$account: Anfangssaldo $from → $to';
+  }
+
+  @override
   String get ynabImportDateFormat => 'Datumsformat in Register.csv';
 
   @override
@@ -4362,7 +4394,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get ynabImportTrackingHint =>
-      'Konten mit nur einem Anfangssaldo und Umbuchungen sind als Tracking-Konten voreingestellt; ihr Geld bleibt außerhalb des Budgets.';
+      'Konten, deren Buchungen keine Kategorie haben, sind als Tracking-Konten voreingestellt (YNAB erlaubt Kategorien nur in Budgetkonten); ihr Geld bleibt außerhalb des Budgets.';
+
+  @override
+  String ynabImportMergedAccounts(String accounts) {
+    return 'Bereits in LedgerZero vorhanden: $accounts. Die YNAB-Daten werden diesen Konten hinzugefügt; sie behalten ihre Einstellung als Budget- oder Tracking-Konto.';
+  }
+
+  @override
+  String ynabImportMergedStartingBalance(String account, String amount) {
+    return '$account: Der Anfangssaldo von $amount wird auf 0 gesetzt, weil die YNAB-Daten einen eigenen Anfangssaldo mitbringen. Sonst würde der Anfangssaldo doppelt gezählt.';
+  }
+
+  @override
+  String get ynabImportMergedAccount =>
+      'Vorhandenes Konto – die YNAB-Daten werden ihm hinzugefügt';
 
   @override
   String get ynabImportCategoriesCount => 'Kategorien';

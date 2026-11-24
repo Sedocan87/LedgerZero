@@ -501,8 +501,10 @@ void main() {
       );
       // Savings has only a transfer leg, but the Checking leg facing it
       // has no category: a transfer between two budget accounts (F5).
-      expect(parsed.accounts.singleWhere((a) => a.name == 'Savings').onBudget,
-          isTrue);
+      expect(
+        parsed.accounts.singleWhere((a) => a.name == 'Savings').onBudget,
+        isTrue,
+      );
       final data = parsed.copyWith(
         accounts: [for (final a in parsed.accounts) a.copyWith(onBudget: true)],
       );
@@ -926,6 +928,111 @@ void main() {
       );
       await _expectInvariant(t, january);
       await expectLedgerInvariant(t, january);
+    });
+  });
+
+  group('YnabDataMapper (tracking rows, card names, existing accounts)', () {
+    // A budget account, a credit union (no credit card) and a brokerage
+    // tracking account with its own "Market Change" row.
+    const register =
+        '''"Account","Flag","Date","Payee","Category Group/Category","Category Group","Category","Memo","Outflow","Inflow","Cleared"
+"Checking","","01/01/2025","Starting Balance","Inflow: Ready to Assign","Inflow","Ready to Assign","","\$0.00","\$1,000.00","Reconciled"
+"Alliant Credit Union","","01/01/2025","Starting Balance","Inflow: Ready to Assign","Inflow","Ready to Assign","","\$0.00","\$500.00","Reconciled"
+"Alliant Credit Union","","01/10/2025","Supermarket","Everyday: Food","Everyday","Food","","\$50.00","\$0.00","Cleared"
+"Brokerage","","01/01/2025","Starting Balance","","","","","\$0.00","\$5,000.00","Cleared"
+"Brokerage","","01/20/2025","Market Change","","","","","\$0.00","\$300.00","Cleared"
+''';
+    const budget =
+        '''"Month","Category Group/Category","Category Group","Category","Budgeted","Activity","Available"
+"Jan 2025","Everyday: Food","Everyday","Food","\$100.00","-\$50.00","\$50.00"
+''';
+
+    Future<YnabImportData> parse() => YnabImportService().parseCsvExport(
+      registerCsvContent: register,
+      budgetCsvContent: budget,
+    );
+
+    test('a tracking account with its own rows stays out of To Be Budgeted; '
+        'a credit union is no credit card', () async {
+      final data = await parse();
+      await _mapper(t).importData(data, currency: 'USD');
+
+      final accounts = {
+        for (final a in await t.accounts.getAllAccounts()) a.name: a,
+      };
+      expect(accounts['Brokerage']!.onBudget, isFalse);
+      expect(accounts['Brokerage']!.balance, 530000);
+      expect(accounts['Alliant Credit Union']!.type, AccountType.checking);
+      expect(accounts['Alliant Credit Union']!.onBudget, isTrue);
+      // 1000 + 500 in, 100 budgeted; the brokerage's 5300 is not budget
+      // money.
+      expect(await t.budgeting.calculateTBB(january), 140000);
+      await _expectInvariant(t, january);
+    });
+
+    test('an existing account of the same name gets YNAB\'s starting '
+        'balance instead of its own, so the balance is not doubled; it '
+        'keeps its budget setting', () async {
+      await t.addAccount(name: 'Checking', startingBalance: 100000);
+      // Exists on budget here, YNAB says tracking: the account keeps its
+      // setting.
+      await t.addAccount(name: 'Brokerage', type: AccountType.investment);
+      final data = await parse();
+
+      final merges = await _mapper(t).accountMerges(data);
+      expect(
+        {
+          for (final m in merges)
+            m.name: (m.replacedStartingBalance, m.onBudget),
+        },
+        {'Checking': (100000, true), 'Brokerage': (0, true)},
+      );
+
+      await _mapper(t).importData(data, currency: 'USD');
+      final accounts = {
+        for (final a in await t.accounts.getAllAccounts()) a.name: a,
+      };
+      expect(accounts.length, 3);
+      expect(accounts['Checking']!.startingBalance, 0);
+      expect(accounts['Checking']!.balance, 100000);
+      expect(accounts['Brokerage']!.onBudget, isTrue);
+      await _expectInvariant(t, january);
+    });
+
+    test('an existing account keeps its starting balance when the export '
+        'has no Starting Balance row for it', () async {
+      await t.addAccount(name: 'Checking', startingBalance: 20000);
+      final data = YnabImportData(
+        accounts: [
+          YnabAccount(
+            id: 'Checking',
+            name: 'Checking',
+            type: AccountType.checking,
+          ),
+        ],
+        categoryGroups: const [],
+        categories: const [],
+        transactions: [
+          YnabTransaction(
+            id: 'tx1',
+            accountId: 'Checking',
+            date: DateTime.utc(2025, 1, 5),
+            payeeName: 'Shop',
+            amount: -1000,
+          ),
+        ],
+        budgetEntries: const [],
+        source: 'CSV',
+        importedAt: DateTime.utc(2025, 2, 1),
+      );
+      expect(
+        (await _mapper(t).accountMerges(data)).single.replacedStartingBalance,
+        0,
+      );
+      await _mapper(t).importData(data, currency: 'USD');
+      final checking = (await t.accounts.getAllAccounts()).single;
+      expect(checking.startingBalance, 20000);
+      expect(checking.balance, 19000);
     });
   });
 }

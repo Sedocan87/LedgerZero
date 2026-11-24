@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledger_zero/core/money/money.dart';
 import 'package:ledger_zero/core/time/calendar_date.dart';
 import 'package:ledger_zero/domain/entities/account.dart';
 import 'package:ledger_zero/domain/entities/card_payments.dart';
@@ -11,6 +12,7 @@ import 'package:ledger_zero/domain/repositories/account_repository.dart';
 import 'package:ledger_zero/domain/repositories/payee_repository.dart';
 import 'package:ledger_zero/domain/repositories/transaction_repository.dart';
 import 'package:ledger_zero/domain/repositories/unit_of_work.dart';
+import 'package:ledger_zero/domain/services/budgeting_service.dart';
 import 'package:ledger_zero/presentation/providers/repository_providers.dart';
 import 'package:ledger_zero/presentation/providers/service_providers.dart';
 import 'package:ledger_zero/services/csv/csv_import_service.dart';
@@ -71,14 +73,21 @@ class TransactionImportService {
   /// the rows' categories are kept, which matters only for a transfer that
   /// crosses the budget boundary). A leg without counterpart is imported as
   /// a normal row.
+  ///
+  /// With [adjustStartingBalances], the rows dated before their account
+  /// starts ([startingBalanceOverlaps]) are taken out of its starting
+  /// balance, which already holds them; the undo of the import puts them
+  /// back.
   Future<int> importTransactions(
     List<ImportTransaction> rows,
     String accountId, {
     Map<String, String> accountIdsByName = const {},
+    bool adjustStartingBalances = false,
   }) async {
     if (rows.isEmpty) {
       return 0;
     }
+    final startingBalanceRows = <String, List<String>>{};
     final created = await _unitOfWork.run(() async {
       final rules = await _ruleMatchingService.loadActiveRules();
       final existing = await _payeeRepository.getAllPayees();
@@ -226,14 +235,106 @@ class TransactionImportService {
         transactions.add(transaction);
       }
 
+      // Before the rows are written: they would move the start.
+      if (adjustStartingBalances && _accountRepository != null) {
+        final overlaps = startingBalanceOverlaps(
+          rows,
+          accountId,
+          accountsById,
+          await accountStarts(allAccounts),
+        );
+        for (final overlap in overlaps) {
+          await _accountRepository.updateAccount(
+            overlap.account.copyWith(
+              startingBalance: overlap.adjustedStartingBalance,
+              updatedAt: now,
+            ),
+          );
+          startingBalanceRows[overlap.account.id] = [
+            for (final i in overlap.rowIndexes) ids[i],
+          ];
+        }
+      }
+
       await _transactionRepository.batchCreateTransactions(transactions);
       return transactions;
     });
     final store = _lastImportStore;
     if (store != null) {
-      await ImportUndoService.record(store, created, DateTime.now().toUtc());
+      await ImportUndoService.record(
+        store,
+        created,
+        DateTime.now().toUtc(),
+        startingBalanceRows: startingBalanceRows,
+      );
     }
     return created.length;
+  }
+
+  /// The day each of [accounts] with a starting balance starts (see
+  /// `BudgetingService.accountStart`); for an account without a creation
+  /// time, the day of its first transaction. Accounts with neither, or
+  /// without a starting balance, are left out.
+  Future<Map<String, DateTime>> accountStarts(
+    Iterable<Account> accounts,
+  ) async {
+    final result = <String, DateTime>{};
+    for (final account in accounts) {
+      if (account.startingBalance == 0) {
+        continue;
+      }
+      DateTime? first;
+      for (final t in await _transactionRepository.getTransactionsByAccount(
+        account.id,
+      )) {
+        if (!t.isDeleted && (first == null || t.date.isBefore(first))) {
+          first = t.date;
+        }
+      }
+      final start =
+          BudgetingService.accountStart(account, first) ??
+          (first == null ? null : CalendarDate.normalize(first));
+      if (start != null) {
+        result[account.id] = start;
+      }
+    }
+    return result;
+  }
+
+  /// The rows of [rows] dated before their account starts ([starts], see
+  /// [accountStarts]), by account, for the accounts with a starting
+  /// balance. The starting balance is the balance at the start (the
+  /// account form asks for the current balance), so it already holds
+  /// these rows: imported as well, they would count twice. A row goes
+  /// into its own [ImportTransaction.accountId], else into [accountId].
+  static List<StartingBalanceOverlap> startingBalanceOverlaps(
+    List<ImportTransaction> rows,
+    String? accountId,
+    Map<String, Account> accountsById,
+    Map<String, DateTime> starts,
+  ) {
+    final indexes = <String, List<int>>{};
+    for (var i = 0; i < rows.length; i++) {
+      final target = rows[i].accountId ?? accountId;
+      final start = starts[target];
+      final account = accountsById[target];
+      if (start == null ||
+          account == null ||
+          account.startingBalance == 0 ||
+          !CalendarDate.normalize(rows[i].date).isBefore(start)) {
+        continue;
+      }
+      indexes.putIfAbsent(target!, () => []).add(i);
+    }
+    return [
+      for (final MapEntry(key: id, value: rowIndexes) in indexes.entries)
+        StartingBalanceOverlap(
+          account: accountsById[id]!,
+          start: starts[id]!,
+          rowIndexes: rowIndexes,
+          net: Money.sum(rowIndexes.map((i) => rows[i].amount)),
+        ),
+    ];
   }
 
   /// Pairs the transfer legs among [rows]: index -> index of the other leg
@@ -404,3 +505,30 @@ final transactionImportServiceProvider = Provider<TransactionImportService>((
     lastImportStore: ref.watch(lastImportStoreProvider),
   );
 });
+
+/// Rows of an import dated before their account starts, while the account
+/// has a starting balance (see
+/// [TransactionImportService.startingBalanceOverlaps]).
+class StartingBalanceOverlap {
+  const StartingBalanceOverlap({
+    required this.account,
+    required this.start,
+    required this.rowIndexes,
+    required this.net,
+  });
+
+  final Account account;
+
+  /// The day the account starts.
+  final DateTime start;
+
+  /// Indexes of the rows in the list that was checked.
+  final List<int> rowIndexes;
+
+  /// The sum of those rows (minor units).
+  final int net;
+
+  /// The starting balance that keeps today's balance when the rows are
+  /// imported.
+  int get adjustedStartingBalance => account.startingBalance - net;
+}

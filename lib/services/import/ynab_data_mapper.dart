@@ -50,6 +50,12 @@ import 'package:uuid/uuid.dart';
 ///   negative starting balance row is uncategorised card spending: existing
 ///   debt, which does not reduce To Be Budgeted (as in YNAB) and shows as
 ///   missing on the card's payment category.
+/// * An export account with the name of an existing account (not the
+///   partner's) is imported into that account, which keeps its type,
+///   currency and budget setting. When the export has a "Starting Balance"
+///   row for it, the account's own starting balance is set to 0: YNAB's
+///   row replaces it, or the opening balance would count twice. The
+///   preview lists such accounts ([accountMerges]).
 /// * nYNAB's "Credit Card Payments" group: each of its categories is named
 ///   after a credit card account. The account becomes a credit card (the
 ///   name heuristic aside), and the category maps onto that card's payment
@@ -129,6 +135,44 @@ class YnabDataMapper {
       for (final c in data.categories)
         if (groups.contains(c.groupId)) c.name,
     };
+  }
+
+  /// Whether [tx] is YNAB's "Starting Balance" row of its account.
+  static bool isStartingBalanceRow(YnabTransaction tx) =>
+      tx.payeeName?.trim().toLowerCase() == 'starting balance';
+
+  /// The accounts of [data] that the import writes into an existing
+  /// account of the same name (see the class comment).
+  Future<List<YnabAccountMerge>> accountMerges(YnabImportData data) async =>
+      _accountMerges(data, await _accountRepo.getAllAccounts());
+
+  static List<YnabAccountMerge> _accountMerges(
+    YnabImportData data,
+    List<Account> existingAccounts,
+  ) {
+    // Never a partner's personal account (read-only on this phone).
+    final byName = {
+      for (final a in existingAccounts)
+        if (!a.isPartners) a.name: a,
+    };
+    final withStartRow = {
+      for (final tx in data.transactions)
+        if (isStartingBalanceRow(tx)) tx.accountId,
+    };
+    return [
+      for (final y in data.accounts)
+        if (byName[y.name] case final existing?)
+          YnabAccountMerge(
+            ynabAccountId: y.id,
+            accountId: existing.id,
+            name: existing.name,
+            currency: existing.currency,
+            onBudget: existing.onBudget,
+            replacedStartingBalance: withStartRow.contains(y.id)
+                ? existing.startingBalance
+                : 0,
+          ),
+    ];
   }
 
   /// Imports [data]; new accounts get [currency] (ISO code).
@@ -383,6 +427,20 @@ class YnabDataMapper {
       for (final a in existingAccounts)
         if (!a.isPartners) a.name: a.id,
     };
+    // YNAB's "Starting Balance" row replaces a reused account's own
+    // starting balance, so the opening balance is not counted twice.
+    final byId = {for (final a in existingAccounts) a.id: a};
+    for (final merge in _accountMerges(data, existingAccounts)) {
+      final existing = byId.remove(merge.accountId);
+      if (existing != null && merge.replacedStartingBalance != 0) {
+        await _accountRepo.updateAccount(
+          existing.copyWith(
+            startingBalance: 0,
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
+      }
+    }
     // An account with a category in YNAB's Credit Card Payments group is a
     // credit card, whatever its name suggests.
     final cards = cardPaymentNames(data);
@@ -820,4 +878,35 @@ class YnabImportSummary {
 
   /// Tracking accounts, imported as off-budget accounts.
   final int trackingAccounts;
+}
+
+/// An account of a YNAB export with the name of an existing LedgerZero
+/// account: the import adds to that account instead of creating one (see
+/// [YnabDataMapper.accountMerges]).
+class YnabAccountMerge {
+  const YnabAccountMerge({
+    required this.ynabAccountId,
+    required this.accountId,
+    required this.name,
+    required this.currency,
+    required this.onBudget,
+    required this.replacedStartingBalance,
+  });
+
+  /// The [YnabAccount.id] in the export.
+  final String ynabAccountId;
+
+  /// The existing account.
+  final String accountId;
+  final String name;
+  final String currency;
+
+  /// The existing account's budget setting, which it keeps (the export's
+  /// and the preview's choice do not apply to it).
+  final bool onBudget;
+
+  /// The existing account's starting balance (minor units) that the
+  /// import sets to 0, because the export has a "Starting Balance" row for
+  /// the account; 0 when nothing is replaced.
+  final int replacedStartingBalance;
 }

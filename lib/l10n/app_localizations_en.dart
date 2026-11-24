@@ -4322,6 +4322,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count rows are dated before $account starts ($date). Its starting balance of $amount already includes them, so they would be counted twice.',
+      one:
+          '1 row is dated before $account starts ($date). Its starting balance of $amount already includes it, so it would be counted twice.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importAdjustStartingBalance(String amount) {
+    return 'Adjust the starting balance so these rows leave today\'s balance of $amount unchanged';
+  }
+
+  @override
+  String get importAdjustStartingBalances =>
+      'Adjust the starting balances so these rows leave today\'s balances unchanged';
+
+  @override
+  String importStartingBalanceChange(String account, String from, String to) {
+    return '$account: starting balance $from → $to';
+  }
+
+  @override
   String get ynabImportDateFormat => 'Date format in Register.csv';
 
   @override
@@ -4334,7 +4366,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ynabImportTrackingHint =>
-      'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.';
+      'Accounts whose rows have no category are preset as tracking accounts (YNAB allows categories only in budget accounts); their money stays outside the budget.';
+
+  @override
+  String ynabImportMergedAccounts(String accounts) {
+    return 'Already in LedgerZero: $accounts. The YNAB data is added to these accounts, which keep their own budget or tracking setting.';
+  }
+
+  @override
+  String ynabImportMergedStartingBalance(String account, String amount) {
+    return '$account: its starting balance of $amount is set to 0 because the YNAB data brings its own starting balance. Otherwise the opening balance would be counted twice.';
+  }
+
+  @override
+  String get ynabImportMergedAccount =>
+      'Existing account – the YNAB data is added to it';
 
   @override
   String get ynabImportCategoriesCount => 'Categories';

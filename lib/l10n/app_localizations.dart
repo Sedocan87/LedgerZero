@@ -7087,6 +7087,35 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 row is a transfer and will be linked to its counterpart when both accounts are imported.} other{{count} rows are transfers and will be linked to their counterparts when both accounts are imported.}}'**
   String importTransferLegs(int count);
 
+  /// CSV import review warning: rows older than the account's start, whose starting balance already holds them
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 row is dated before {account} starts ({date}). Its starting balance of {amount} already includes it, so it would be counted twice.} other{{count} rows are dated before {account} starts ({date}). Its starting balance of {amount} already includes them, so they would be counted twice.}}'**
+  String importRowsBeforeAccountStart(
+    int count,
+    String account,
+    String date,
+    String amount,
+  );
+
+  /// CSV import review: checkbox (default on) that subtracts the earlier rows from the account's starting balance
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the starting balance so these rows leave today\'s balance of {amount} unchanged'**
+  String importAdjustStartingBalance(String amount);
+
+  /// CSV import review: the same checkbox when rows of several accounts are affected
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the starting balances so these rows leave today\'s balances unchanged'**
+  String get importAdjustStartingBalances;
+
+  /// CSV import review: how the checkbox changes an account's starting balance
+  ///
+  /// In en, this message translates to:
+  /// **'{account}: starting balance {from} → {to}'**
+  String importStartingBalanceChange(String account, String from, String to);
+
   /// YNAB import preview: dropdown label
   ///
   /// In en, this message translates to:
@@ -7108,8 +7137,26 @@ abstract class AppLocalizations {
   /// YNAB import preview: explains the tracking switch (nYNAB CSV)
   ///
   /// In en, this message translates to:
-  /// **'Accounts with only a starting balance and transfers are preset as tracking accounts; their money stays outside the budget.'**
+  /// **'Accounts whose rows have no category are preset as tracking accounts (YNAB allows categories only in budget accounts); their money stays outside the budget.'**
   String get ynabImportTrackingHint;
+
+  /// YNAB import preview warning: export accounts that go into existing accounts of the same name
+  ///
+  /// In en, this message translates to:
+  /// **'Already in LedgerZero: {accounts}. The YNAB data is added to these accounts, which keep their own budget or tracking setting.'**
+  String ynabImportMergedAccounts(String accounts);
+
+  /// YNAB import preview warning: an existing account's starting balance is replaced by YNAB's Starting Balance row
+  ///
+  /// In en, this message translates to:
+  /// **'{account}: its starting balance of {amount} is set to 0 because the YNAB data brings its own starting balance. Otherwise the opening balance would be counted twice.'**
+  String ynabImportMergedStartingBalance(String account, String amount);
+
+  /// YNAB import preview: subtitle of an account that already exists (its tracking switch is disabled)
+  ///
+  /// In en, this message translates to:
+  /// **'Existing account – the YNAB data is added to it'**
+  String get ynabImportMergedAccount;
 
   /// YNAB import preview stat row
   ///

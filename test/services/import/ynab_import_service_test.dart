@@ -103,6 +103,36 @@ void main() {
       });
     });
 
+    test(
+      'credit unions, prepaid, gift and debit cards are no credit cards',
+      () {
+        expectTypes({
+          'Alliant Credit Union': AccountType.checking,
+          'Navy Federal Credit Union Savings': AccountType.savings,
+          'Prepaid Card': AccountType.checking,
+          'Visa Prepaid': AccountType.checking,
+          'Amazon Gift Card': AccountType.checking,
+          'Geschenkkarte': AccountType.checking,
+          'Debit Card': AccountType.checking,
+          'Girocard': AccountType.checking,
+          'EC-Karte': AccountType.checking,
+          'Cardinal Bank': AccountType.checking,
+          // Still cards: compounds and brand names.
+          'Barclaycard': AccountType.credit,
+          'Visa Card': AccountType.credit,
+          'lineOfCredit': AccountType.credit,
+        });
+        expect(
+          YnabImportService.mapAccountType('Chase Visa', creditCard: false),
+          AccountType.checking,
+        );
+        expect(
+          YnabImportService.mapAccountType('Card Savings', creditCard: false),
+          AccountType.savings,
+        );
+      },
+    );
+
     test('a CSV export guesses the type from German account names', () async {
       final csv = [
         _header,
@@ -1350,6 +1380,291 @@ void main() {
           'Darlehen': false,
           'Haus': false,
           'Depot 2': false,
+        },
+      );
+    });
+
+    test('a tracking account with rows of its own ("Market Change") is off '
+        'budget: none of its rows has a category', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          _header,
+          _row(
+            'Checking',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '\$1,000.00',
+          ),
+          _row(
+            'Checking',
+            '01/10/2025',
+            'Shop',
+            'Everyday',
+            'Food',
+            '',
+            '\$50.00',
+            '',
+          ),
+          _row(
+            'Brokerage',
+            '01/01/2025',
+            'Starting Balance',
+            '',
+            '',
+            '',
+            '',
+            '\$5,000.00',
+          ),
+          _row(
+            'Brokerage',
+            '01/20/2025',
+            'Market Change',
+            '',
+            '',
+            '',
+            '',
+            '\$300.00',
+          ),
+          _row(
+            'Brokerage',
+            '02/20/2025',
+            'Market Change',
+            '',
+            '',
+            '',
+            '\$120.00',
+            '',
+          ),
+          _row(
+            'Mortgage',
+            '01/01/2025',
+            'Starting Balance',
+            '',
+            '',
+            '',
+            '\$200,000.00',
+            '',
+          ),
+          _row(
+            'Mortgage',
+            '01/31/2025',
+            'Interest',
+            '',
+            '',
+            '',
+            '\$500.00',
+            '',
+          ),
+        ].join('\n'),
+        budgetCsvContent: '',
+      );
+      expect(
+        {for (final a in data.accounts) a.name: a.onBudget},
+        {'Checking': true, 'Brokerage': false, 'Mortgage': false},
+      );
+    });
+
+    test('a budget account stays on budget with only its categorised '
+        'starting balance, or with uncategorised rows besides it', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          _header,
+          // Only the starting balance (older exports: "To be Budgeted").
+          _row(
+            'Cash',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'To be Budgeted',
+            '',
+            '',
+            '\$80.00',
+          ),
+          // New rows nobody has categorised yet.
+          _row(
+            'Savings',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '\$2,000.00',
+          ),
+          _row('Savings', '01/31/2025', 'Interest', '', '', '', '', '\$3.00'),
+          // A budget card that is only paid off: its starting balance (debt)
+          // has no category, but the payment from Checking has none either.
+          _row(
+            'Checking',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '\$1,000.00',
+          ),
+          _row(
+            'Checking',
+            '01/02/2025',
+            'Shop',
+            'Everyday',
+            'Food',
+            '',
+            '\$5.00',
+            '',
+          ),
+          _row(
+            'Checking',
+            '01/05/2025',
+            'Transfer : Store Card',
+            '',
+            '',
+            '',
+            '\$40.00',
+            '',
+          ),
+          _row(
+            'Store Card',
+            '01/01/2025',
+            'Starting Balance',
+            '',
+            '',
+            '',
+            '\$100.00',
+            '',
+          ),
+          _row(
+            'Store Card',
+            '01/05/2025',
+            'Transfer : Checking',
+            '',
+            '',
+            '',
+            '',
+            '\$40.00',
+          ),
+        ].join('\n'),
+        budgetCsvContent: '',
+      );
+      expect(
+        {for (final a in data.accounts) a.name: a.onBudget},
+        {'Cash': true, 'Savings': true, 'Checking': true, 'Store Card': true},
+      );
+    });
+
+    test('an account with a Credit Card Payments category is a budget card; '
+        'with that group no other account is a card', () async {
+      final data = await service.parseCsvExport(
+        registerCsvContent: [
+          _header,
+          _row(
+            'Alliant Credit Union',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '\$500.00',
+          ),
+          _row(
+            'Alliant Credit Union',
+            '01/10/2025',
+            'Supermarket',
+            'Everyday',
+            'Food',
+            '',
+            '\$50.00',
+            '',
+          ),
+          _row(
+            'Gift Card',
+            '01/01/2025',
+            'Starting Balance',
+            'Inflow',
+            'Ready to Assign',
+            '',
+            '',
+            '\$25.00',
+          ),
+          _row(
+            'Chase Visa',
+            '01/12/2025',
+            'Shop',
+            'Everyday',
+            'Food',
+            '',
+            '\$10.00',
+            '',
+          ),
+          // Uncategorised starting debt only: the payment category says it
+          // is a budget card.
+          _row(
+            'Freedom',
+            '01/01/2025',
+            'Starting Balance',
+            '',
+            '',
+            '',
+            '\$300.00',
+            '',
+          ),
+        ].join('\n'),
+        budgetCsvContent: [
+          '"Month","Category Group/Category","Category Group","Category",'
+              '"Budgeted","Activity","Available"',
+          '"Jan 2025","Credit Card Payments: Freedom","Credit Card Payments",'
+              '"Freedom","\$0.00","\$0.00","\$0.00"',
+        ].join('\n'),
+      );
+      expect(
+        {for (final a in data.accounts) a.name: (a.type, a.onBudget)},
+        {
+          'Alliant Credit Union': (AccountType.checking, true),
+          'Gift Card': (AccountType.checking, true),
+          // A card name, but no payment category: not a card.
+          'Chase Visa': (AccountType.checking, true),
+          'Freedom': (AccountType.credit, true),
+        },
+      );
+
+      // Without the group, the name decides.
+      final guessed = await service.parseCsvExport(
+        registerCsvContent: [
+          _header,
+          _row(
+            'Chase Visa',
+            '01/12/2025',
+            'Shop',
+            'Everyday',
+            'Food',
+            '',
+            '\$10.00',
+            '',
+          ),
+          _row(
+            'Alliant Credit Union',
+            '01/12/2025',
+            'Shop',
+            'Everyday',
+            'Food',
+            '',
+            '\$10.00',
+            '',
+          ),
+        ].join('\n'),
+        budgetCsvContent: '',
+      );
+      expect(
+        {for (final a in guessed.accounts) a.name: a.type},
+        {
+          'Chase Visa': AccountType.credit,
+          'Alliant Credit Union': AccountType.checking,
         },
       );
     });
